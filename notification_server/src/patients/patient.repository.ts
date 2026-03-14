@@ -21,10 +21,10 @@ export class PatientEmailConflictError extends Error {
 // ─── Paginated result type ────────────────────────────────────────────────────
 
 export interface PaginatedPatients {
-  data:       Patient[];
-  total:      number;
-  page:       number;
-  pageSize:   number;
+  data: Patient[];
+  total: number;
+  page: number;
+  pageSize: number;
   totalPages: number;
 }
 
@@ -37,12 +37,12 @@ export const patientRepository = {
     try {
       return await prisma.patient.create({
         data: {
-          name:           dto.name,
-          lastName:       dto.lastName,
+          name: dto.name,
+          lastName: dto.lastName,
           whatsappNumber: dto.whatsappNumber ?? null,
-          smsNumber:      dto.smsNumber      ?? null,
-          email:          dto.email.toLowerCase(),
-          status:         dto.status,
+          smsNumber: dto.smsNumber ?? null,
+          email: dto.email.toLowerCase(),
+          status: dto.status,
         },
       });
     } catch (err) {
@@ -72,19 +72,19 @@ export const patientRepository = {
       ...(status && { status }),
       ...(search && {
         OR: [
-          { name:     { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
-          { email:    { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
         ],
       }),
     };
 
-    const [data, total] = await prisma.$transaction([
+    const [ data, total ] = await prisma.$transaction([
       prisma.patient.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { [orderBy]: order },
+        orderBy: { [ orderBy ]: order },
       }),
       prisma.patient.count({ where }),
     ]);
@@ -107,12 +107,12 @@ export const patientRepository = {
       return await prisma.patient.update({
         where: { id },
         data: {
-          ...(dto.name            !== undefined && { name:           dto.name }),
-          ...(dto.lastName        !== undefined && { lastName:       dto.lastName }),
-          ...(dto.whatsappNumber  !== undefined && { whatsappNumber: dto.whatsappNumber || null }),
-          ...(dto.smsNumber       !== undefined && { smsNumber:      dto.smsNumber      || null }),
-          ...(dto.email           !== undefined && { email:          dto.email.toLowerCase() }),
-          ...(dto.status          !== undefined && { status:         dto.status }),
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+          ...({ whatsappNumber: dto.whatsappNumber || null }),
+          ...({ smsNumber: dto.smsNumber || null }),
+          ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
+          ...(dto.status !== undefined && { status: dto.status }),
         },
       });
     } catch (err) {
@@ -129,6 +129,6 @@ export const patientRepository = {
   // ── Delete ───────────────────────────────────────────────────────────────────
   async delete(id: string): Promise<Patient> {
     await patientRepository.findById(id);
-    return prisma.patient.delete({ where: { id } });
+    return prisma.patient.update({ where: { id }, data: { status: 'ARCHIVED' } });
   },
 };

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import Sidebar from './components/Sidebar';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Channel = "whatsapp" | "sms" | "email";
 type Status = "scheduled" | "sent" | "failed" | "pending";
@@ -262,31 +264,9 @@ const btnSecondary: React.CSSProperties = {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
-  const [ activeNav, setActiveNav ] = useState("dashboard");
   const [ showModal, setShowModal ] = useState(false);
   const [ filterStatus, setFilterStatus ] = useState<Status | "all">("all");
   const [ search, setSearch ] = useState("");
-
-  const test = async () => {
-    const body = {
-      "contentSid": "HXb5b62575e6e4ff6129ad7c8efe1f983e",
-      "contentVariables": {
-        "1": "12/1",
-        "2": "3pm"
-      },
-      "to": "+18196795271"
-    }
-
-    const response = await fetch("http://localhost:3001/notify/whatsapp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const data = await response.json();
-    console.log(data);
-  }
 
   const filtered = APPOINTMENTS.filter(a => {
     const matchStatus = filterStatus === "all" || a.reminderStatus === filterStatus;
@@ -301,14 +281,6 @@ export default function NotificationsPage() {
     sent: APPOINTMENTS.filter(a => a.reminderStatus === "sent").length,
     failed: APPOINTMENTS.filter(a => a.reminderStatus === "failed").length,
   };
-
-  const NAV_ITEMS = [
-    { id: "dashboard", icon: "⬛", label: "Panel Principal" },
-    { id: "patients", icon: "👤", label: "Pacientes" },
-    { id: "reminders", icon: "🔔", label: "Recordatorios" },
-    { id: "templates", icon: "📄", label: "Plantillas" },
-    { id: "settings", icon: "⚙️", label: "Configuración" },
-  ];
 
   return (
     <>
@@ -325,63 +297,7 @@ export default function NotificationsPage() {
 
       <div style={{ display: "flex", minHeight: "100vh", background: "#F8F7F4", fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-        <aside style={{
-          width: 240, background: "#1E3A5F", display: "flex", flexDirection: "column",
-          position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 50,
-        }}>
-          {/* Logo */}
-          <div style={{ padding: "28px 24px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, background: "#3B82F6",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18,
-              }}>🏥</div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>Manuela Cardona</div>
-                <div style={{ fontSize: 11, color: "#93C5FD", fontWeight: 500 }}>Alertas de Pacientes</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px 16px" }} />
-
-          {/* Nav */}
-          <nav style={{ flex: 1, padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-            {NAV_ITEMS.map(item => (
-              <button key={item.id} onClick={() => setActiveNav(item.id)} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "10px 14px", borderRadius: 10, border: "none",
-                background: activeNav === item.id ? "rgba(255,255,255,0.12)" : "transparent",
-                color: activeNav === item.id ? "#fff" : "rgba(255,255,255,0.55)",
-                fontSize: 14, fontWeight: activeNav === item.id ? 600 : 400,
-                cursor: "pointer", width: "100%", textAlign: "left",
-                transition: "all 0.15s",
-                borderLeft: activeNav === item.id ? "3px solid #60A5FA" : "3px solid transparent",
-              }}>
-                <span>{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* User footer */}
-          <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%", background: "#3B82F6",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 700, color: "#fff",
-              }}>DR</div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Dr. Manuela Cardona</div>
-                <div style={{ fontSize: 11, color: "#93C5FD" }}>Administradora</div>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <Sidebar />
 
         {/* ── Main ────────────────────────────────────────────────────────────── */}
         <main style={{ marginLeft: 240, flex: 1, padding: "36px 40px", maxWidth: "calc(100% - 240px)" }}>
@@ -406,14 +322,6 @@ export default function NotificationsPage() {
               padding: "12px 24px", fontSize: 14,
             }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Programar Recordatorio
-            </button>
-            <button onClick={() => test()} style={{
-              ...btnPrimary,
-              display: "flex", alignItems: "center", gap: 8,
-              boxShadow: "0 4px 14px rgba(30,58,95,0.3)",
-              padding: "12px 24px", fontSize: 14,
-            }}>
-              Test
             </button>
           </div>
 
