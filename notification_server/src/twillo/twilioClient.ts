@@ -1,7 +1,8 @@
 import twilio, { type Twilio } from 'twilio';
-import { config } from './config.js';
-import { logger } from './logger.js';
-import type { SendWhatsAppRequest, NotificationResult, SendSmsRequest } from './types.js';
+import { config } from '../utils/config.js';
+import { logger } from '../utils/logger.js';
+import { type SendWhatsAppRequest, type NotificationResult, type SendSmsRequest, Channel } from '../utils/types.js';
+import { validateE164 } from './twilloValidator.js';
 
 
 let _client: Twilio | null = null;
@@ -12,15 +13,6 @@ function getClient(): Twilio {
     logger.info('Twilio client initialised');
   }
   return _client;
-}
-
-function validateE164(phone: string): void {
-  const e164 = /^\+[1-9]\d{7,14}$/;
-  if (!e164.test(phone)) {
-    throw new Error(
-      `Invalid phone number "${phone}". Must be E.164 format, e.g. +15551234567`
-    );
-  }
 }
 
 export async function sendWhatsApp(
@@ -45,12 +37,12 @@ export async function sendWhatsApp(
 
   const message = await getClient().messages.create(messageParams);
 
-  logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message queued');
+  logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
 
   return {
     success: true,
     messageSid: message.sid,
-    channel: 'whatsapp',
+    channel: Channel.WHATSAPP,
     to: req.to,
     sentAt: new Date().toISOString(),
   };
@@ -76,7 +68,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
   return {
     success: true,
     messageSid: message.sid,
-    channel: 'sms',
+    channel: Channel.SMS,
     to: req.to,
     sentAt: new Date().toISOString(),
   };

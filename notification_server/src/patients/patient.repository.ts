@@ -1,47 +1,10 @@
-import { Prisma } from '@prisma/client';
-import { prisma } from '../prismaClient.js';
+import type { Patient } from '@prisma/client';
+import { prisma } from '../prisma/prismaClient.js';
+import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
+import type { PaginatedPatients } from '../utils/types.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery } from './patient.schemas.js';
 
-// ─── Custom error types ───────────────────────────────────────────────────────
-
-export class PatientNotFoundError extends Error {
-  constructor(id: string) {
-    super(`Patient with id "${id}" not found`);
-    this.name = 'PatientNotFoundError';
-  }
-}
-
-export class PatientEmailConflictError extends Error {
-  constructor(email: string) {
-    super(`A patient with email "${email}" already exists`);
-    this.name = 'PatientEmailConflictError';
-  }
-}
-
-// ─── Paginated result type ────────────────────────────────────────────────────
-export interface Patient {
-  id: string,
-  name: string,
-  lastName: string,
-  whatsappNumber: string,
-  smsNumber: string | null,
-  email: string,
-  status: string,
-}
-
-export interface PaginatedPatients {
-  data: Patient[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-// ─── Repository ───────────────────────────────────────────────────────────────
-
 export const patientRepository = {
-
-  // ── Create ──────────────────────────────────────────────────────────────────
   async create(dto: CreatePatientDto): Promise<Patient> {
     try {
       return await prisma.patient.create({
@@ -55,29 +18,24 @@ export const patientRepository = {
         },
       });
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002') {
         throw new PatientEmailConflictError(dto.email);
       }
       throw err;
     }
   },
 
-  // ── Find by ID ───────────────────────────────────────────────────────────────
   async findById(id: string): Promise<Patient> {
     const patient = await prisma.patient.findUnique({ where: { id } });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;
   },
 
-  // ── List (paginated + filtered) ──────────────────────────────────────────────
   async findMany(query: ListPatientsQuery): Promise<PaginatedPatients> {
     const { status, search, page, pageSize, orderBy, order } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.PatientWhereInput = {
+    const where: any = {
       ...(status && { status }),
       ...(search && {
         OR: [
@@ -107,9 +65,7 @@ export const patientRepository = {
     };
   },
 
-  // ── Update (partial) ─────────────────────────────────────────────────────────
   async update(id: string, dto: UpdatePatientDto): Promise<Patient> {
-    // Ensure patient exists first
     await patientRepository.findById(id);
 
     try {
@@ -125,19 +81,15 @@ export const patientRepository = {
         },
       });
     } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
+      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002') {
         throw new PatientEmailConflictError(dto.email!);
       }
       throw err;
     }
   },
 
-  // ── Delete ───────────────────────────────────────────────────────────────────
   async delete(id: string): Promise<Patient> {
     await patientRepository.findById(id);
-    return prisma.patient.update({ where: { id }, data: { status: 'ARCHIVED' } });
+    return prisma.patient.delete({ where: { id }});
   },
 };

@@ -1,5 +1,4 @@
-// This is your Prisma schema file.
-// Run `npx prisma migrate dev --name init` after setting DATABASE_URL in .env
+// Run: npx prisma migrate dev --name add_reminders_appointments
 
 generator client {
   provider = "prisma-client-js"
@@ -10,16 +9,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Patient ──────────────────────────────────────────────────────────────────
+
 model Patient {
-  id              String   @id @default(uuid()) @db.Uuid
-  name            String   @db.VarChar(100)
-  lastName        String   @db.VarChar(100)
-  whatsappNumber  String?  @db.VarChar(20)
-  smsNumber       String?  @db.VarChar(20)
-  email           String   @unique @db.VarChar(255)
-  status          PatientStatus @default(ACTIVE)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String        @db.VarChar(100)
+  lastName       String        @db.VarChar(100)
+  whatsappNumber String?       @db.VarChar(20)
+  smsNumber      String?       @db.VarChar(20)
+  email          String        @unique @db.VarChar(255)
+  status         PatientStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  appointments   Appointment[]
 
   @@map("patients")
 }
@@ -28,4 +31,79 @@ enum PatientStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
+}
+
+// ─── Reminder ─────────────────────────────────────────────────────────────────
+
+model Reminder {
+  id          String         @id @default(uuid()) @db.Uuid
+  channel     Channel
+  to          String         @db.VarChar(30)
+  status      ReminderStatus @default(PENDING)
+  contentSid  String?        @db.VarChar(100)
+  mode        ReminderMode
+  scheduledAt DateTime?
+  sendAt      DateTime
+  error       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  appointments Appointment[]
+
+  @@index([status])
+  @@index([sendAt])
+  @@map("reminders")
+}
+
+enum Channel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum ReminderMode {
+  IMMEDIATE
+  SCHEDULED
+}
+
+// ─── Appointment ──────────────────────────────────────────────────────────────
+
+model Appointment {
+  id         String            @id @default(uuid()) @db.Uuid
+  patientId  String            @db.Uuid
+  date       String            @db.VarChar(10)   // YYYY-MM-DD
+  time       String            @db.VarChar(5)    // HH:MM
+  status     AppointmentStatus @default(SCHEDULED)
+  reminderId String?           @db.Uuid
+  type       String            @db.VarChar(120)
+  location   String            @db.VarChar(255)
+  meetingUrl String?           @db.VarChar(500)
+  price      String            @db.VarChar(20)   // e.g. "150.00"
+  payed      Boolean           @default(false)
+  duration   String            @db.VarChar(20)   // e.g. "30 min"
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  patient    Patient           @relation(fields: [patientId],  references: [id], onDelete: Cascade)
+  reminder   Reminder?         @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([date])
+  @@index([status])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
-import type { ApiResponse } from './types.js';
+import { apiError } from './apiUtils.js';
+import { Channel } from './types.js';
 
 
 const e164 = z
@@ -25,7 +26,7 @@ export const sendSmsSchema = z.object({
 });
 
 export const scheduleSchema = z.object({
-  channel: z.enum([ 'whatsapp', 'sms' ]),
+  channel: z.nativeEnum(Channel),
   payload: z.union([ sendWhatsAppSchema, sendSmsSchema ]),
   sendAt: futureIso,
 });
@@ -34,12 +35,7 @@ export function validate<T>(schema: z.ZodType<T>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const response: ApiResponse = {
-        success: false,
-        error: result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; '),
-        timestamp: new Date().toISOString(),
-      };
-      res.status(400).json(response);
+      apiError(res, result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; '), 400);
       return;
     }
     req.body = result.data;

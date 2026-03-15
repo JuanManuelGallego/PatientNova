@@ -4,48 +4,16 @@ import {
   updatePatientSchema,
   listPatientsSchema,
   uuidParamSchema,
+  type ListPatientsQuery,
 } from './patient.schemas.js';
 import {
   patientRepository,
-  PatientNotFoundError,
-  PatientEmailConflictError,
 } from './patient.repository.js';
-import { logger } from '../logger.js';
-import type { ApiResponse } from '../types.js';
+import { logger } from '../utils/logger.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
+import { handleError, ok } from '../utils/apiUtils.js';
 
 export const patientRouter = Router();
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function ok<T>(res: Response, data: T, status = 200) {
-  const body: ApiResponse<T> = {
-    success: true,
-    data,
-    timestamp: new Date().toISOString(),
-  };
-  res.status(status).json(body);
-}
-
-function handleError(res: Response, err: unknown) {
-  if (err instanceof PatientNotFoundError) {
-    const body: ApiResponse = { success: false, error: err.message, timestamp: new Date().toISOString() };
-    return res.status(404).json(body);
-  }
-  if (err instanceof PatientEmailConflictError) {
-    const body: ApiResponse = { success: false, error: err.message, timestamp: new Date().toISOString() };
-    return res.status(409).json(body);
-  }
-  logger.error({ err }, 'Unexpected patient error');
-  const body: ApiResponse = {
-    success: false,
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : String(err),
-    timestamp: new Date().toISOString(),
-  };
-  return res.status(500).json(body);
-}
-
-// ─── Routes ───────────────────────────────────────────────────────────────────
 
 /**
  * GET /patients
@@ -61,12 +29,12 @@ function handleError(res: Response, err: unknown) {
  *
  * Response: { data: Patient[], total, page, pageSize, totalPages }
  */
-patientRouter.get(
+patientRouter.get<{}, any, any, ListPatientsQuery>(
   '/',
   validateQuery(listPatientsSchema),
-  async (req: Request, res: Response) => {
+  async (req: Request<{}, any, any, ListPatientsQuery>, res: Response) => {
     try {
-      const result = await patientRepository.findMany(req.query as any);
+      const result = await patientRepository.findMany(req.query);
       ok(res, result);
     } catch (err) {
       handleError(res, err);

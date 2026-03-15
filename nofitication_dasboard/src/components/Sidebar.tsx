@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
     { id: "dashboard", path: "/", icon: "⬛", label: "Panel Principal" },
     { id: "patients", path: "/patients", icon: "👤", label: "Pacientes" },
+    { id: "appointments", path: "/appointments", icon: "📅", label: "Citas" },
     { id: "reminders", path: "/reminders", icon: "🔔", label: "Recordatorios" },
     { id: "templates", path: "/templates", icon: "📄", label: "Plantillas" },
     { id: "settings", path: "/settings", icon: "⚙️", label: "Configuración" },
