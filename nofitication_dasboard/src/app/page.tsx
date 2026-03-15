@@ -2,81 +2,43 @@
 
 import { useState } from "react";
 
-import Sidebar from './components/Sidebar';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-type Channel = "whatsapp" | "sms" | "email";
-type Status = "scheduled" | "sent" | "failed" | "pending";
-
-interface Patient {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  avatar: string;
-}
-
-interface Appointment {
-  id: string;
-  patient: Patient;
-  date: string;
-  time: string;
-  type: string;
-  reminderChannels: Channel[];
-  reminderStatus: Status;
-  reminderScheduledFor: string;
-}
+import Sidebar from '../components/Sidebar';
+import { Patient, PatientStatus } from "../types/Patient";
+import { Channel, CHANNEL_ICON, REMINDER_STATUS_CONFIG, ReminderStatus } from "../types/Reminder";
+import { Appointment } from "../types/Appointment";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const PATIENTS: Patient[] = [
-  { id: "p1", name: "Marie Tremblay", phone: "+1 514-555-0101", email: "marie.t@email.com", avatar: "MT" },
-  { id: "p2", name: "James Okafor", phone: "+1 514-555-0182", email: "j.okafor@email.com", avatar: "JO" },
-  { id: "p3", name: "Sophie Lefebvre", phone: "+1 514-555-0234", email: "slefebvre@email.com", avatar: "SL" },
-  { id: "p4", name: "Lucas Bergeron", phone: "+1 514-555-0356", email: "lbergeron@email.com", avatar: "LB" },
-  { id: "p5", name: "Aisha Patel", phone: "+1 514-555-0478", email: "a.patel@email.com", avatar: "AP" },
+  { id: "p1", name: "Marie", lastName: "Tremblay", whatsappNumber: "+1 514-555-0101", smsNumber: "+1 514-555-0101", email: "marie.t@email.com", status: PatientStatus.ACTIVE, createdAt: "2023-01-01", updatedAt: "2023-01-01", avatar: "MT" },
+  { id: "p2", name: "James", lastName: "Okafor", whatsappNumber: "+1 514-555-0182", smsNumber: "+1 514-555-0182", email: "j.okafor@email.com", status: PatientStatus.ACTIVE, createdAt: "2023-01-01", updatedAt: "2023-01-01", avatar: "JO" },
+  { id: "p3", name: "Sophie", lastName: "Lefebvre", whatsappNumber: "+1 514-555-0234", smsNumber: "+1 514-555-0234", email: "slefebvre@email.com", status: PatientStatus.ACTIVE, createdAt: "2023-01-01", updatedAt: "2023-01-01", avatar: "SL" },
+  { id: "p4", name: "Lucas", lastName: "Bergeron", whatsappNumber: "+1 514-555-0356", smsNumber: "+1 514-555-0356", email: "lbergeron@email.com", status: PatientStatus.ACTIVE, createdAt: "2023-01-01", updatedAt: "2023-01-01", avatar: "LB" },
 ];
 
 const APPOINTMENTS: Appointment[] = [
   {
     id: "a1", patient: PATIENTS[ 0 ], date: "2026-03-16", time: "09:00",
-    type: "Revisión General", reminderChannels: [ "email", "sms" ],
+    type: "Revisión General", reminderChannels: [ Channel.SMS, Channel.WHATSAPP ],
     reminderStatus: "scheduled", reminderScheduledFor: "2026-03-15 09:00",
   },
   {
     id: "a2", patient: PATIENTS[ 1 ], date: "2026-03-16", time: "10:30",
-    type: "Revisión de Análisis de Sangre", reminderChannels: [ "whatsapp" ],
+    type: "Revisión de Análisis de Sangre", reminderChannels: [ Channel.WHATSAPP ],
     reminderStatus: "sent", reminderScheduledFor: "2026-03-15 10:30",
   },
   {
     id: "a3", patient: PATIENTS[ 2 ], date: "2026-03-17", time: "14:00",
-    type: "Consulta de Seguimiento", reminderChannels: [ "email" ],
+    type: "Consulta de Seguimiento", reminderChannels: [ Channel.EMAIL ],
     reminderStatus: "pending", reminderScheduledFor: "2026-03-16 14:00",
   },
   {
     id: "a4", patient: PATIENTS[ 3 ], date: "2026-03-18", time: "11:00",
-    type: "Vacunación", reminderChannels: [ "sms", "whatsapp" ],
+    type: "Vacunación", reminderChannels: [ Channel.SMS, Channel.WHATSAPP ],
     reminderStatus: "scheduled", reminderScheduledFor: "2026-03-17 11:00",
-  },
-  {
-    id: "a5", patient: PATIENTS[ 4 ], date: "2026-03-19", time: "15:30",
-    type: "Cribado Cardiológico", reminderChannels: [ "email", "sms", "whatsapp" ],
-    reminderStatus: "failed", reminderScheduledFor: "2026-03-18 15:30",
-  },
+  }
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string }> = {
-  scheduled: { label: "Programado", color: "#2563EB", bg: "#EFF6FF" },
-  sent: { label: "Enviado", color: "#16A34A", bg: "#F0FDF4" },
-  failed: { label: "Fallido", color: "#DC2626", bg: "#FEF2F2" },
-  pending: { label: "Pendiente", color: "#D97706", bg: "#FFFBEB" },
-};
-
-const CHANNEL_ICONS: Record<Channel, string> = {
-  whatsapp: "💬",
-  sms: "📱",
-  email: "✉️",
-};
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("es-ES", {
@@ -109,13 +71,13 @@ function ChannelBadge({ channel }: { channel: Channel }) {
       padding: "2px 10px", borderRadius: 20,
       background: "#F3F4F6", fontSize: 12, fontWeight: 500, color: "#374151",
     }}>
-      {CHANNEL_ICONS[ channel ]} {channel}
+      {CHANNEL_ICON[ channel ]} {channel}
     </span>
   );
 }
 
-function StatusPill({ status }: { status: Status }) {
-  const c = STATUS_CONFIG[ status ];
+function StatusPill({ status }: { status: ReminderStatus }) {
+  const c = REMINDER_STATUS_CONFIG[ status ];
   return (
     <span style={{
       display: "inline-block",
@@ -207,7 +169,7 @@ function ScheduleModal({ onClose }: { onClose: () => void }) {
                   borderRadius: 12, background: selected.channels.includes(c) ? "#EFF6FF" : "#fff",
                   cursor: "pointer", transition: "all 0.15s",
                 }}>
-                  <span style={{ fontSize: 22 }}>{CHANNEL_ICONS[ c ]}</span>
+                  <span style={{ fontSize: 22 }}>{CHANNEL_ICON[ c ]}</span>
                   <div style={{ textAlign: "left" }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#111827", textTransform: "capitalize" }}>{c}</div>
                     <div style={{ fontSize: 12, color: "#9CA3AF" }}>
@@ -265,7 +227,7 @@ const btnSecondary: React.CSSProperties = {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
   const [ showModal, setShowModal ] = useState(false);
-  const [ filterStatus, setFilterStatus ] = useState<Status | "all">("all");
+  const [ filterStatus, setFilterStatus ] = useState<ReminderStatus | "all">("all");
   const [ search, setSearch ] = useState("");
 
   const filtered = APPOINTMENTS.filter(a => {
@@ -397,7 +359,7 @@ export default function NotificationsPage() {
                         }}>{appt.patient.avatar}</div>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{appt.patient.name}</div>
-                          <div style={{ fontSize: 12, color: "#9CA3AF" }}>{appt.patient.phone}</div>
+                          <div style={{ fontSize: 12, color: "#9CA3AF" }}>{appt.patient.email}</div>
                         </div>
                       </div>
                     </td>

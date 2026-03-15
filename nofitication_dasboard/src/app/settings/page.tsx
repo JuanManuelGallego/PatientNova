@@ -1,8 +1,8 @@
 "use client";
 
-import Sidebar from '../components/Sidebar';
+import Sidebar from '../../components/Sidebar';
 
-export default function TemplatesPage() {
+export default function SettingsPage() {
     return (
         <>
             <style>{`
@@ -23,10 +23,10 @@ export default function TemplatesPage() {
                         fontSize: 30, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em",
                         fontFamily: "'Playfair Display', Georgia, serif", marginBottom: 6,
                     }}>
-                        Plantillas
+                        Configuración
                     </h1>
                     <p style={{ fontSize: 14, color: "#9CA3AF" }}>
-                        Página de plantillas - Próximamente
+                        Página de configuración - Próximamente
                     </p>
                 </main>
             </div>
