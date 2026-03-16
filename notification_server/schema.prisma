@@ -15,6 +15,7 @@ model Patient {
   id             String        @id @default(uuid()) @db.Uuid
   name           String        @db.VarChar(100)
   lastName       String        @db.VarChar(100)
+  fullName       String?       @db.VarChar(200)
   whatsappNumber String?       @db.VarChar(20)
   smsNumber      String?       @db.VarChar(20)
   email          String        @unique @db.VarChar(255)
@@ -23,6 +24,7 @@ model Patient {
   updatedAt      DateTime      @updatedAt
 
   appointments   Appointment[]
+  reminders      Reminder[] @relation("PatientReminders")
 
   @@map("patients")
 }
@@ -37,10 +39,12 @@ enum PatientStatus {
 
 model Reminder {
   id          String         @id @default(uuid()) @db.Uuid
+  patientId   String?        @db.Uuid
   channel     Channel
   to          String         @db.VarChar(30)
   status      ReminderStatus @default(PENDING)
   contentSid  String?        @db.VarChar(100)
+  messageId   String?        @db.VarChar(100)
   mode        ReminderMode
   scheduledAt DateTime?
   sendAt      DateTime
@@ -49,9 +53,11 @@ model Reminder {
   updatedAt   DateTime       @updatedAt
 
   appointments Appointment[]
+  patient      Patient?       @relation("PatientReminders", fields: [patientId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([sendAt])
+  @@index([patientId])
   @@map("reminders")
 }
 

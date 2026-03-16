@@ -181,7 +181,7 @@ export default function PatientsPage() {
                                                     {getInitials(p.name, p.lastName)}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.name} {p.lastName}</div>
+                                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.fullName}</div>
                                                 </div>
                                             </div>
                                         </td>

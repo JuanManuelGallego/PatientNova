@@ -18,6 +18,7 @@ export const sendWhatsAppSchema = z
     to: e164,
     contentSid: z.string().startsWith('HX'),
     contentVariables: z.record(z.string()).optional(),
+    patientId: z.string().uuid().optional(),
   });
 
 export const sendSmsSchema = z.object({

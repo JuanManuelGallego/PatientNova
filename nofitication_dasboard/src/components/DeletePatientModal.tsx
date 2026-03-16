@@ -39,7 +39,7 @@ export function DeletePatientModal({ patient, onClose, onDeleted }: {
                         Eliminar Paciente
                     </h2>
                     <p style={{ fontSize: 14, color: "#6B7280", margin: 0 }}>
-                        ¿Estás seguro que deseas eliminar a <strong>{patient.name} {patient.lastName}</strong>? Esta acción no se puede deshacer.
+                        ¿Estás seguro que deseas eliminar a <strong>{patient.fullName}</strong>? Esta acción no se puede deshacer.
                     </p>
                 </div>
                 {error && (

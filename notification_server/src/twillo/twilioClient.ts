@@ -1,7 +1,7 @@
 import twilio, { type Twilio } from 'twilio';
 import { config } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
-import { type SendWhatsAppRequest, type NotificationResult, type SendSmsRequest, Channel } from '../utils/types.js';
+import { type SendWhatsAppRequest, type NotificationResult, type SendSmsRequest, Channel, type ScheduleRequest } from '../utils/types.js';
 import { validateE164 } from './twilloValidator.js';
 
 
@@ -44,6 +44,41 @@ export async function sendWhatsApp(
     messageSid: message.sid,
     channel: Channel.WHATSAPP,
     to: req.to,
+    sentAt: new Date().toISOString(),
+  };
+}
+
+
+export async function scheduleWhatsApp(
+  req: ScheduleRequest
+): Promise<NotificationResult> {
+  validateE164(req.payload.to);
+
+  const to = `whatsapp:${req.payload.to}`;
+  const from = config.twilio.whatsappFrom;
+
+  logger.info({ to, from }, 'Sending WhatsApp message');
+
+  const messageParams: Parameters<Twilio[ 'messages' ][ 'create' ]>[ 0 ] =
+  {
+    from,
+    to,
+    sendAt: new Date(req.sendAt),
+    contentSid: req.payload.contentSid,
+    ...(req.payload.contentVariables
+      ? { contentVariables: JSON.stringify(req.payload.contentVariables) }
+      : {}),
+  }
+
+  const message = await getClient().messages.create(messageParams);
+
+  logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
+
+  return {
+    success: true,
+    messageSid: message.sid,
+    channel: Channel.WHATSAPP,
+    to: req.payload.to,
     sentAt: new Date().toISOString(),
   };
 }

@@ -271,7 +271,6 @@ export default function AppointmentsPage() {
       {showCreate && (
         <AppointmentModal
           patients={patients}
-          reminders={reminders}
           onClose={() => { setShowCreate(false); setPrefillDate(null); }}
           onSaved={fetchAll}
           appt={undefined}
@@ -281,7 +280,6 @@ export default function AppointmentsPage() {
         <AppointmentModal
           appt={editAppt}
           patients={patients}
-          reminders={reminders}
           onClose={() => setEditAppt(null)}
           onSaved={fetchAll}
         />

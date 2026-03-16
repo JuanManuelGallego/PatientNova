@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
-import { logger } from './utils/logger.js';
-import { sendWhatsApp, sendSms } from './twillo/twilioClient.js';
-import { Channel, type ScheduleRequest, type ScheduleResult } from './utils/types.js';
+import { logger } from '../utils/logger.js';
+import { sendWhatsApp, sendSms } from './twilioClient.js';
+import { Channel, type ScheduleRequest, type ScheduleResult } from '../utils/types.js';
 
 // ─── In-memory job store ──────────────────────────────────────────────────────
 // Replace with BullMQ + Redis for production persistence and retries.
@@ -44,10 +44,11 @@ export function scheduleNotification(req: ScheduleRequest): ScheduleResult {
     logger.info({ jobId: id, channel: req.channel }, 'Executing scheduled notification');
 
     try {
-      const result =
-        req.channel === Channel.WHATSAPP
-          ? await sendWhatsApp(req.payload as Parameters<typeof sendWhatsApp>[ 0 ])
-          : await sendSms(req.payload as Parameters<typeof sendSms>[ 0 ]);
+      const result = await sendWhatsApp(req.payload as Parameters<typeof sendWhatsApp>[ 0 ])
+      // const result =
+      //   req.channel === Channel.WHATSAPP
+      //     ? await sendWhatsApp(req.payload as Parameters<typeof sendWhatsApp>[ 0 ])
+      //     : await sendSms(req.payload as Parameters<typeof sendSms>[ 0 ]);
 
       job.status = 'sent';
       job.messageSid = result.messageSid || '';

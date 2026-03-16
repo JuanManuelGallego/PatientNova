@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from 'express';
 
 import { handleError, ok } from '../utils/apiUtils.js';
-import { sendSms, sendWhatsApp } from '../twillo/twilioClient.js';
+import { scheduleWhatsApp, sendSms, sendWhatsApp } from '../twillo/twilioClient.js';
 import { scheduleSchema, sendSmsSchema, sendWhatsAppSchema, validate } from '../utils/validation.js';
-import { scheduleNotification, listJobs, getJob, cancelJob } from '../scheduler.js';
+import { scheduleNotification, listJobs, getJob, cancelJob } from '../twillo/scheduler.js';
 import { reminderRepository } from '../reminders/reminder.repository.js';
 import { Channel } from '../utils/types.js';
 import { ReminderMode, ReminderStatus } from '@prisma/client';
@@ -32,8 +32,10 @@ notifyRouter.post(
         contentSid: req.body.contentSid,
         mode: ReminderMode.IMMEDIATE,
         sendAt: new Date().toISOString(),
-        to: req.body.to,
-        status: ReminderStatus.SENT
+        status: ReminderStatus.SENT,
+        to: req.body.payload.to,
+        messageId: result.messageSid,
+        patientId: req.body.patientId,
       })
       ok(res, result, 201);
     } catch (err) {
@@ -76,9 +78,21 @@ notifyRouter.post(
 notifyRouter.post(
   '/schedule',
   validate(scheduleSchema),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      const result = scheduleNotification(req.body);
+      const result = await scheduleWhatsApp(req.body);
+      reminderRepository.create({
+        channel: req.body.channel,
+        contentSid: req.body.contentSid,
+        mode: ReminderMode.SCHEDULED,
+        scheduledAt: new Date().toISOString(),
+        sendAt: req.body.sendAt,
+        status: ReminderStatus.PENDING,
+        to: req.body.payload.to,
+        patientId: req.body.patientId,
+        messageId: result.messageSid,
+      })
+
       ok(res, result, 201);
     } catch (err) {
       handleError(res, err);

@@ -11,6 +11,7 @@ export const patientRepository = {
         data: {
           name: dto.name,
           lastName: dto.lastName,
+          fullName: `${dto.name} ${dto.lastName}`,
           whatsappNumber: dto.whatsappNumber ?? null,
           smsNumber: dto.smsNumber ?? null,
           email: dto.email.toLowerCase(),

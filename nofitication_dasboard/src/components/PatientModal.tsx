@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { labelStyle, inputStyle, btnSecondary, btnPrimary } from "../styles/theme";
+import { labelStyle, inputStyle, btnSecondary, btnPrimary, btnDisabled } from "../styles/theme";
 import { API_BASE } from "../types/API";
 import { Patient, PatientStatus } from "../types/Patient";
+import { validateEmail, validatePhoneNumber } from "../utils/DataValidator";
 
 export function PatientModal({
     onClose,
@@ -23,11 +24,34 @@ export function PatientModal({
         smsNumber: patient?.smsNumber ?? "",
         status: patient?.status ?? "ACTIVE" as PatientStatus,
     });
+    const isValid = !!form.name && !!form.lastName && !!form.email;
 
     const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
         setForm(f => ({ ...f, [ field ]: e.target.value }));
 
+    function validateForm() {
+        if (!form.name || !form.lastName || !form.email) {
+            setError("Por favor, completa todos los campos requeridos.");
+            return false;
+        }
+        if (form.email && !validateEmail(form.email)) {
+            setError("Por favor, ingresa un correo electrónico válido.");
+            return false;
+        }
+        if (form.whatsappNumber && !validatePhoneNumber(form.whatsappNumber)) {
+            setError("Por favor, ingresa un número de WhatsApp válido (formato E.164).");
+            return false;
+        }
+        if (form.smsNumber && !validatePhoneNumber(form.smsNumber)) {
+            setError("Por favor, ingresa un número de SMS válido (formato E.164).");
+            return false;
+        }
+        setError(null);
+        return true;
+    }
+
     async function handleSubmit() {
+        if (!validateForm()) return;
         setSaving(true);
         setError(null);
         try {
@@ -75,7 +99,7 @@ export function PatientModal({
                             {isEdit ? "Editar Paciente" : "Nuevo Paciente"}
                         </h2>
                         <p style={{ fontSize: 13, color: "#9CA3AF", margin: "4px 0 0" }}>
-                            {isEdit ? `Modificando: ${patient!.name} ${patient!.lastName}` : "Registrar un nuevo paciente en el sistema"}
+                            {isEdit ? `Modificando: ${patient!.fullName}` : "Registrar un nuevo paciente en el sistema"}
                         </p>
                     </div>
                     <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#6B7280" }}>✕</button>
@@ -118,9 +142,9 @@ export function PatientModal({
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 28 }}>
                     <button onClick={onClose} style={btnSecondary} disabled={saving}>Cancelar</button>
-                    <button onClick={handleSubmit} disabled={saving} style={{
-                        ...btnPrimary,
-                        opacity: saving ? 0.7 : 1,
+                    <button onClick={handleSubmit} disabled={saving || !isValid} style={{
+                        ...isValid ? btnPrimary : btnDisabled,
+                        opacity: saving || !isValid ? 0.7 : 1,
                         display: "flex", alignItems: "center", gap: 8,
                     }}>
                         {saving ? "Guardando…" : isEdit ? "Guardar Cambios" : "Crear Paciente"}
@@ -130,4 +154,3 @@ export function PatientModal({
         </div>
     );
 }
-

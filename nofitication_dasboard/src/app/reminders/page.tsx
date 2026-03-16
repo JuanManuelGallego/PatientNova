@@ -172,8 +172,8 @@ export default function RemindersPage() {
                                     {!loadingReminders && filteredActive.map((reminder, i) => (
                                         <tr key={reminder.id} style={{ borderBottom: i < filteredActive.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                                             <td style={tdStyle}>
-                                                {/* TODO: Change for Patient full name when available */}
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.whatsappNumber === reminder.to)?.name ?? "—"} {patients.find(p => p.whatsappNumber === reminder.to)?.lastName ?? "—"}</div>
+                                                {/* TODO: Change for Patient from reminder */}
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.whatsappNumber === reminder.to)?.fullName ?? "—"}</div>
                                                 <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                             </td>
                                             <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
@@ -227,15 +227,15 @@ export default function RemindersPage() {
                                     {!loadingReminders && filteredHistory.map((reminder, i) => (
                                         <tr key={reminder.id} style={{ borderBottom: i < filteredHistory.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                                             <td style={tdStyle}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.whatsappNumber === reminder.to)?.name ?? "—"} {patients.find(p => p.whatsappNumber === reminder.to)?.lastName ?? "—"}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.whatsappNumber === reminder.to)?.fullName ?? "—"}</div>
                                                 <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                             </td>
                                             <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
                                             <td style={tdStyle}><ReminderStatusPill status={reminder.status} /></td>
                                             <td style={{ ...tdStyle, fontSize: 13, color: "#6B7280" }}>{fmtDateTime(reminder.sendAt)}</td>
                                             <td style={{ ...tdStyle, fontSize: 12, color: "#9CA3AF", fontFamily: "monospace" }}>
-                                                {reminder.contentSid ? (
-                                                    <span title={reminder.contentSid}>{reminder.contentSid.slice(0, 16)}…</span>
+                                                {reminder.messageId ? (
+                                                    <span title={reminder.messageId}>{reminder.messageId}</span>
                                                 ) : "—"}
                                             </td>
                                             <td style={{ ...tdStyle, fontSize: 12, color: "#DC2626", maxWidth: 200 }}>

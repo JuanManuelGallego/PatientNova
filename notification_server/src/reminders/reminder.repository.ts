@@ -1,24 +1,26 @@
-import { Prisma, ReminderStatus, type Reminder, type ReminderChannel } from '@prisma/client';
+import { Prisma, ReminderStatus, type Reminder, type Channel } from '@prisma/client';
 import { prisma } from '../prisma/prismaClient.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery } from './reminder.schemas.js';
 import { ReminderNotFoundError, ReminderNotCancellableError } from '../utils/errors.js';
 import type { PaginatedReminders } from '../utils/types.js';
 
-function toReminderChannel(channel: string): ReminderChannel {
-  return channel.toUpperCase() as ReminderChannel;
+function toChannel(channel: string): Channel {
+  return channel.toUpperCase() as Channel;
 }
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto): Promise<Reminder> {
     return prisma.reminder.create({
       data: {
-        channel: toReminderChannel(dto.channel),
+        channel: toChannel(dto.channel),
         to: dto.to,
         mode: dto.mode,
         contentSid: dto.contentSid ?? null,
         sendAt: new Date(dto.sendAt),
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
         status: dto.status ?? ReminderStatus.PENDING,
+        messageId: dto.messageId ?? null,
+        patientId: dto.patientId ?? null,
       },
     });
   },
@@ -38,7 +40,7 @@ export const reminderRepository = {
 
     const where: Prisma.ReminderWhereInput = {
       ...(status && { status }),
-      ...(channel && { channel: toReminderChannel(channel) }),
+      ...(channel && { channel: toChannel(channel) }),
     };
 
     const [ data, total ] = await prisma.$transaction([
@@ -54,7 +56,7 @@ export const reminderRepository = {
     return prisma.reminder.update({
       where: { id },
       data: {
-        ...(dto.channel !== undefined && { channel: toReminderChannel(dto.channel) }),
+        ...(dto.channel !== undefined && { channel: toChannel(dto.channel) }),
         ...(dto.to !== undefined && { to: dto.to }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.contentSid !== undefined && { contentSid: dto.contentSid }),

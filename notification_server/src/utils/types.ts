@@ -1,9 +1,9 @@
 import type { Patient, Prisma, Reminder } from "@prisma/client";
 
 export enum Channel {
-  WHATSAPP = 'whatsapp',
-  SMS = 'sms',
-  EMAIL = 'email',
+  WHATSAPP = 'WHATSAPP',
+  SMS = 'SMS',
+  EMAIL = 'EMAIL',
 }
 
 export interface SendWhatsAppRequest {
@@ -19,7 +19,7 @@ export interface SendSmsRequest {
 
 export interface ScheduleRequest {
   channel: Channel;
-  payload: SendWhatsAppRequest | SendSmsRequest;
+  payload: SendWhatsAppRequest /*| SendSmsRequest*/;
   sendAt: string;
 }
 

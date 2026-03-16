@@ -6,6 +6,7 @@ import { Patient } from "../types/Patient";
 import { ScheduledReminderJob, CHANNEL_LABEL, CHANNEL_ICON, Channel, ReminderMode } from "../types/Reminder";
 import { getAvatarColor, getInitials } from "../utils/AvatarHelper";
 import { fmtDateTime } from "../utils/TimeUtils";
+import { channel } from "diagnostics_channel";
 
 export function ReminderModal({
     onClose, onSaved, patients, job,
@@ -38,13 +39,42 @@ export function ReminderModal({
         (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
             setForm(f => ({ ...f, [ field ]: e.target.value }));
 
+    function validateForm() {
+        if (!selectedPatient) {
+            setError("Selecciona un paciente");
+            return false;
+        }
+        if (!form.appointmentType) {
+            setError("Selecciona un tipo de cita");
+            return false;
+        }
+        if (!form.channel) {
+            setError("Selecciona un canal de notificación");
+            return false;
+        }
+        if (!form.message.trim()) {
+            setError("El mensaje no puede estar vacío");
+            return false;
+        }
+        if (form.channel === Channel.WHATSAPP && !selectedPatient.whatsappNumber) {
+            setError("El paciente no tiene número de WhatsApp");
+            return false;
+        }
+        if (form.channel === Channel.SMS && !selectedPatient.smsNumber) {
+            setError("El paciente no tiene número de SMS");
+            return false;
+        }
+        if (mode === ReminderMode.SCHEDULED && !form.sendAt) {
+            setError("Selecciona fecha y hora de envío");
+            return false;
+        }
+        setError(null);
+        return true;
+    }
     function buildPayload() {
-        if (!selectedPatient) throw new Error("Selecciona un paciente");
         const to = form.channel === Channel.WHATSAPP
-            ? selectedPatient.whatsappNumber
-            : selectedPatient.smsNumber;
-        if (!to) throw new Error(`El paciente no tiene número de ${CHANNEL_LABEL[ form.channel ]}`);
-        if (!form.message.trim()) throw new Error("El mensaje no puede estar vacío");
+            ? selectedPatient!.whatsappNumber
+            : selectedPatient!.smsNumber;
 
         return {
             to,
@@ -53,14 +83,36 @@ export function ReminderModal({
                 "1": "12/1",
                 "2": "3pm"
             },
-            ...(mode === ReminderMode.SCHEDULED && { sendAt: new Date(form.sendAt).toISOString() }),
+            patientId: form.patientId,
         };
     }
 
+    function buildScheduledPayload() {
+        const to = form.channel === Channel.WHATSAPP
+            ? selectedPatient!.whatsappNumber
+            : selectedPatient!.smsNumber;
+
+        return {
+            channel: form.channel,
+            payload: {
+                to,
+                contentSid: "HXb5b62575e6e4ff6129ad7c8efe1f983e",
+                contentVariables: {
+                    "1": "12/1",
+                    "2": "3pm"
+                },
+                patientId: form.patientId,
+            },
+            sendAt: new Date(form.sendAt).toISOString(),
+        };
+    }
+
+
     async function handleSubmit() {
+        if (!validateForm()) return;
         setSaving(true); setError(null);
         try {
-            const body = buildPayload();
+            const body = mode === ReminderMode.NOW ? buildPayload() : buildScheduledPayload();
             const url = mode === ReminderMode.NOW
                 ? `${API_BASE}/notify/${form.channel}`
                 : `${API_BASE}/notify/schedule`;
@@ -143,12 +195,12 @@ export function ReminderModal({
                             <select style={inp} value={form.patientId} onChange={set("patientId")}>
                                 <option value="">Seleccionar paciente…</option>
                                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
+                                    <option key={p.id} value={p.id}>{p.fullName}</option>
                                 ))}
                             </select>
                         </label>
                         <label style={lbl}>
-                            Tipo de cita <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(referencia)</span>
+                            Tipo de cita
                             <select style={inp} value={form.appointmentType} onChange={set("appointmentType")}>
                                 <option value="">Seleccionar tipo…</option>
                                 {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -230,7 +282,7 @@ export function ReminderModal({
                         <div style={{ background: "#F8F7F4", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Resumen del recordatorio</div>
                             {[
-                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" },
+                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.fullName}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
                                 { k: "Programado", v: form.sendAt ? fmtDateTime(form.sendAt) : "—" },

@@ -40,7 +40,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
         for (const pid of selected) {
             const p = patients.find(x => x.id === pid)!;
             const to = channel === Channel.WHATSAPP ? p.whatsappNumber : p.smsNumber;
-            if (!to) { res.push({ patientId: pid, name: `${p.name} ${p.lastName}`, channel, status: "skipped", reason: "Sin número" }); continue; }
+            if (!to) { res.push({ patientId: pid, name: `${p.fullName}`, channel, status: "skipped", reason: "Sin número" }); continue; }
             try {
                 const url = mode === ReminderMode.NOW ? `${API_BASE}/notify/${channel}` : `${API_BASE}/notify/schedule`;
                 const body = mode === ReminderMode.NOW
@@ -48,9 +48,9 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                     : { channel, payload: { to, body: message }, sendAt: new Date(sendAt).toISOString() };
                 const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
                 const json = await r.json();
-                res.push({ patientId: pid, name: `${p.name} ${p.lastName}`, channel, status: json.success ? "ok" : "error", reason: json.error });
+                res.push({ patientId: pid, name: `${p.fullName}`, channel, status: json.success ? "ok" : "error", reason: json.error });
             } catch (e) {
-                res.push({ patientId: pid, name: `${p.name} ${p.lastName}`, channel, status: "error", reason: String(e) });
+                res.push({ patientId: pid, name: `${p.fullName}`, channel, status: "error", reason: String(e) });
             }
         }
         setResults(res);
@@ -90,7 +90,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                     <div>
                         <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 14 }}>Canal de notificación</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                            {([ "whatsapp", "sms" ] as Channel[]).map(c => (
+                            {Object.values(Channel).map(c => (
                                 <button key={c} onClick={() => setChannel(c)} style={{
                                     display: "flex", alignItems: "center", gap: 12,
                                     padding: "16px 20px", border: `2px solid ${channel === c ? "#1E3A5F" : "#E5E7EB"}`,
@@ -100,7 +100,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                                     <div style={{ textAlign: "left" }}>
                                         <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{CHANNEL_LABEL[ c ]}</div>
                                         <div style={{ fontSize: 12, color: "#9CA3AF" }}>
-                                            {patients.filter(p => p.status === "ACTIVE" && (c === "whatsapp" ? !!p.whatsappNumber : !!p.smsNumber)).length} pacientes disponibles
+                                            {patients.filter(p => p.status === "ACTIVE" && (c === Channel.WHATSAPP ? !!p.whatsappNumber : !!p.smsNumber)).length} pacientes disponibles
                                         </div>
                                     </div>
                                     {channel === c && <span style={{ marginLeft: "auto", color: "#1E3A5F", fontSize: 18 }}>✓</span>}
@@ -181,8 +181,8 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                                     {getInitials(p.name, p.lastName)}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.name} {p.lastName}</div>
-                                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{channel === "whatsapp" ? p.whatsappNumber : p.smsNumber}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{p.fullName}</div>
+                                    <div style={{ fontSize: 12, color: "#9CA3AF" }}>{channel === Channel.WHATSAPP ? p.whatsappNumber : p.smsNumber}</div>
                                 </div>
                             </div>
                         ))}

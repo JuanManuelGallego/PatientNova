@@ -1,14 +1,15 @@
 export interface Reminder {
-    id: string;
     channel: Channel;
-    to: string;
-    status: ReminderStatus;
     contentSid?: string;
+    createdAt: string;
+    error?: string;
+    id: string;
+    messageId?: string;
     mode: ReminderMode;
     scheduledAt?: string;
     sendAt: string;
-    error?: string;
-    createdAt: string;
+    status: ReminderStatus;
+    to: string;
     updatedAt: string;
 }
 
