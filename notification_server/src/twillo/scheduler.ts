@@ -1,130 +1,141 @@
-import { randomUUID } from 'crypto';
+import cron from 'node-cron';
+import { ReminderStatus, Channel } from '@prisma/client';
+import { prisma } from '../prisma/prismaClient.js';
 import { logger } from '../utils/logger.js';
-import { sendWhatsApp, sendSms } from './twilioClient.js';
-import { Channel, type ScheduleRequest, type ScheduleResult } from '../utils/types.js';
+import { sendWhatsApp } from './twilioClient.js';
+import { reminderRepository } from '../reminders/reminder.repository.js';
 
-// ─── In-memory job store ──────────────────────────────────────────────────────
-// Replace with BullMQ + Redis for production persistence and retries.
+/**
+ * Worker function that finds appointments needing reminders in the next minute
+ * and sends the reminders via Twilio
+ */
+export async function reminderWorker(): Promise<void> {
+  try {
+    logger.info('Running reminder scheduler worker...')
+    
+    const now = new Date();
+    const oneSecondAgo = new Date(now.getTime() - 1000); // Subtract 1 second to account for any slight delays in execution
+    const oneMinuteFromNow = new Date(now.getTime() + 60 * 1000);
+    const remindersToSend = await prisma.reminder.findMany({
+      where: {
+        status: ReminderStatus.PENDING,
+        sendAt: {
+          gte: oneSecondAgo,
+          lte: oneMinuteFromNow,
+        },
+      },
+      include: {
+        patient: true,
+      },
+    });
 
-type JobStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
-
-interface ScheduledJob {
-  id: string;
-  request: ScheduleRequest;
-  sendAt: Date;
-  scheduledAt: Date;
-  status: JobStatus;
-  timer: ReturnType<typeof setTimeout>;
-  messageSid?: string;
-  error?: string;
-}
-
-const jobs = new Map<string, ScheduledJob>();
-
-// ─── Schedule ─────────────────────────────────────────────────────────────────
-
-export function scheduleNotification(req: ScheduleRequest): ScheduleResult {
-  const sendAt = new Date(req.sendAt);
-  const now = new Date();
-
-  if (isNaN(sendAt.getTime())) {
-    throw new Error(`Invalid sendAt date: "${req.sendAt}"`);
-  }
-  if (sendAt <= now) {
-    throw new Error(`sendAt must be in the future (received: ${req.sendAt})`);
-  }
-
-  const delayMs = sendAt.getTime() - now.getTime();
-  const id = randomUUID();
-
-  const timer = setTimeout(async () => {
-    const job = jobs.get(id);
-    if (!job || job.status === 'cancelled') return;
-
-    logger.info({ jobId: id, channel: req.channel }, 'Executing scheduled notification');
-
-    try {
-      const result = await sendWhatsApp(req.payload as Parameters<typeof sendWhatsApp>[ 0 ])
-      // const result =
-      //   req.channel === Channel.WHATSAPP
-      //     ? await sendWhatsApp(req.payload as Parameters<typeof sendWhatsApp>[ 0 ])
-      //     : await sendSms(req.payload as Parameters<typeof sendSms>[ 0 ]);
-
-      job.status = 'sent';
-      job.messageSid = result.messageSid || '';
-      logger.info({ jobId: id, sid: result.messageSid }, 'Scheduled notification sent');
-    } catch (err) {
-      job.status = 'failed';
-      job.error = err instanceof Error ? err.message : String(err);
-      logger.error({ jobId: id, error: job.error }, 'Scheduled notification failed');
+    if (remindersToSend.length === 0) {
+      logger.info('No reminders to send at this time');
+      return;
     }
-  }, delayMs);
 
-  const to =
-    'to' in req.payload ? req.payload.to : '(unknown)';
+    logger.info(`Found ${remindersToSend.length} reminder(s) to send`);
+    
+    for (const reminder of remindersToSend) {
+      try {
+        
+        let recipient = reminder.to;
+        const channel = reminder.channel;
 
-  const job: ScheduledJob = {
-    id,
-    request: req,
-    sendAt,
-    scheduledAt: now,
-    status: 'pending',
-    timer,
-  };
+        
+        if (!recipient && reminder.patient) {
+          if (channel === Channel.WHATSAPP && reminder.patient.whatsappNumber) {
+            recipient = reminder.patient.whatsappNumber;
+          } else if (channel === Channel.SMS && reminder.patient.smsNumber) {
+            recipient = reminder.patient.smsNumber;
+          }
+        }
 
-  jobs.set(id, job);
+        if (!recipient) {
+          logger.warn(
+            { reminderId: reminder.id, channel },
+            `No recipient found for reminder with channel ${channel}`
+          );
+          await reminderRepository.update(reminder.id, {
+            status: ReminderStatus.FAILED,
+            error: `No recipient available for channel ${channel}`,
+          });
+          continue;
+        }
+        
+        if (channel === Channel.WHATSAPP) {
+          const result = await sendWhatsApp({
+            to: recipient,
+            contentSid: reminder.contentSid || '',
+            ...(reminder.contentVariables && { contentVariables: reminder.contentVariables as Record<string, string> }),
+          });
 
-  logger.info(
-    { jobId: id, channel: req.channel, to, sendAt: sendAt.toISOString(), delayMs },
-    'Notification scheduled'
-  );
-
-  return {
-    jobId: id,
-    channel: req.channel,
-    to,
-    sendAt: sendAt.toISOString(),
-    scheduledAt: now.toISOString(),
-  };
-}
-
-// ─── Cancel ───────────────────────────────────────────────────────────────────
-
-export function cancelJob(jobId: string): boolean {
-  const job = jobs.get(jobId);
-  if (!job) return false;
-  if (job.status !== 'pending') {
-    throw new Error(`Job ${jobId} is "${job.status}" and cannot be cancelled`);
+          if (result.success) {
+            logger.info({ reminderId: reminder.id, messageSid: result.messageSid }, 'Reminder sent successfully');
+            await reminderRepository.update(reminder.id, {
+              status: ReminderStatus.SENT,
+              messageId: result.messageSid,
+              sendAt: new Date().toISOString(),
+            });
+          } else {
+            logger.error({ reminderId: reminder.id }, 'Failed to send reminder');
+            await reminderRepository.update(reminder.id, {
+              status: ReminderStatus.FAILED,
+              error: 'Failed to send WhatsApp message',
+            });
+          }
+        } else if (channel === Channel.SMS) {
+          logger.warn({ reminderId: reminder.id }, 'SMS channel not yet implemented');
+          await reminderRepository.update(reminder.id, {
+            status: ReminderStatus.FAILED,
+            error: 'SMS channel not yet implemented',
+          });
+        } else if (channel === Channel.EMAIL) {
+          logger.warn({ reminderId: reminder.id }, 'EMAIL channel not yet implemented');
+          await reminderRepository.update(reminder.id, {
+            status: ReminderStatus.FAILED,
+            error: 'EMAIL channel not yet implemented',
+          });
+        }
+      } catch (error) {
+        logger.error({ reminderId: reminder.id, error }, 'Error processing reminder');
+        try {
+          await reminderRepository.update(reminder.id, {
+            status: ReminderStatus.FAILED,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        } catch (updateError) {
+          logger.error({ reminderId: reminder.id, updateError }, 'Failed to update reminder status');
+        }
+      }
+    }
+  } catch (error) {
+    logger.error({ error }, 'Error in reminder scheduler worker');
   }
-  clearTimeout(job.timer);
-  job.status = 'cancelled';
-  logger.info({ jobId }, 'Scheduled notification cancelled');
-  return true;
 }
 
-// ─── Inspect ──────────────────────────────────────────────────────────────────
+/**
+ * Initialize the cron scheduler to run the reminder worker every minute
+ */
+export function initializeScheduler(): void {
+  logger.info('Initializing reminder scheduler...');
 
-export function getJob(jobId: string) {
-  const job = jobs.get(jobId);
-  if (!job) return null;
-  return serializeJob(job);
+  const task = cron.schedule('* * * * *', async () => {
+    await reminderWorker();
+  });
+
+  logger.info('Reminder scheduler initialized - running every minute');
+  (global as any).schedulerTask = task;
 }
 
-export function listJobs(statusFilter?: JobStatus) {
-  const all = [ ...jobs.values() ];
-  const filtered = statusFilter ? all.filter(j => j.status === statusFilter) : all;
-  return filtered.map(serializeJob);
-}
-
-function serializeJob(job: ScheduledJob) {
-  return {
-    id: job.id,
-    channel: job.request.channel,
-    to: 'to' in job.request.payload ? job.request.payload.to : null,
-    sendAt: job.sendAt.toISOString(),
-    scheduledAt: job.scheduledAt.toISOString(),
-    status: job.status,
-    messageSid: job.messageSid,
-    error: job.error,
-  };
+/**
+ * Gracefully stop the scheduler
+ */
+export function stopScheduler(): void {
+  const task = (global as any).schedulerTask;
+  if (task) {
+    task.stop();
+    task.destroy();
+    logger.info('Reminder scheduler stopped');
+  }
 }

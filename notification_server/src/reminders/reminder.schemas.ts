@@ -10,12 +10,17 @@ const isoDate = z
   .string()
   .datetime({ message: 'Must be a valid ISO-8601 datetime string' });
 
+const contentVariablesSchema = z
+  .record(z.string(), z.string())
+  .optional();
+
 export const createReminderSchema = z
   .object({
     channel: z.nativeEnum(Channel),
     to: e164,
     mode: z.nativeEnum(ReminderMode),
     contentSid: z.string().max(100).optional(),
+    contentVariables: contentVariablesSchema,
     sendAt: isoDate,
     scheduledAt: isoDate.optional(),
     status: z.nativeEnum(ReminderStatus).optional(),
@@ -36,6 +41,7 @@ export const updateReminderSchema = z
     channel: z.nativeEnum(Channel).optional(),
     to: e164.optional(),
     status: z.nativeEnum(ReminderStatus).optional(),
+    contentVariables: contentVariablesSchema,
     contentSid: z.string().max(100).optional(),
     mode: z.nativeEnum(ReminderMode).optional(),
     scheduledAt: isoDate.optional(),

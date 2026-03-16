@@ -44,6 +44,7 @@ model Reminder {
   to          String         @db.VarChar(30)
   status      ReminderStatus @default(PENDING)
   contentSid  String?        @db.VarChar(100)
+  contentVariables Json?
   messageId   String?        @db.VarChar(100)
   mode        ReminderMode
   scheduledAt DateTime?

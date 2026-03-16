@@ -6,7 +6,6 @@ import { Patient } from "../types/Patient";
 import { ScheduledReminderJob, CHANNEL_LABEL, CHANNEL_ICON, Channel, ReminderMode } from "../types/Reminder";
 import { getAvatarColor, getInitials } from "../utils/AvatarHelper";
 import { fmtDateTime } from "../utils/TimeUtils";
-import { channel } from "diagnostics_channel";
 
 export function ReminderModal({
     onClose, onSaved, patients, job,
@@ -31,7 +30,7 @@ export function ReminderModal({
 
     const isValid = step === 1
         ? !!form.patientId && !!form.appointmentType
-        : step === 2 ? !!form.channel && !!form.message.trim() : mode === ReminderMode.SCHEDULED ? !!form.sendAt : true;
+        : step === 2 ? !!form.channel && !!form.message.trim() && (mode === ReminderMode.SCHEDULED ? !!form.sendAt : true) : true;
 
     const selectedPatient = patients.find(p => p.id === form.patientId);
 
@@ -71,6 +70,7 @@ export function ReminderModal({
         setError(null);
         return true;
     }
+
     function buildPayload() {
         const to = form.channel === Channel.WHATSAPP
             ? selectedPatient!.whatsappNumber
@@ -94,20 +94,18 @@ export function ReminderModal({
 
         return {
             channel: form.channel,
-            payload: {
-                to,
-                contentSid: "HXb5b62575e6e4ff6129ad7c8efe1f983e",
-                contentVariables: {
-                    "1": "12/1",
-                    "2": "3pm"
-                },
-                patientId: form.patientId,
+            mode: mode,
+            scheduledAt: new Date().toISOString(),
+            patientId: form.patientId,
+            to,
+            contentSid: "HXb5b62575e6e4ff6129ad7c8efe1f983e",
+            contentVariables: {
+                "1": "12/1",
+                "2": "3pm"
             },
             sendAt: new Date(form.sendAt).toISOString(),
         };
     }
-
-
     async function handleSubmit() {
         if (!validateForm()) return;
         setSaving(true); setError(null);
@@ -115,7 +113,7 @@ export function ReminderModal({
             const body = mode === ReminderMode.NOW ? buildPayload() : buildScheduledPayload();
             const url = mode === ReminderMode.NOW
                 ? `${API_BASE}/notify/${form.channel}`
-                : `${API_BASE}/notify/schedule`;
+                : `${API_BASE}/reminders`;
 
             const res = await fetch(url, {
                 method: "POST",
@@ -132,7 +130,7 @@ export function ReminderModal({
         }
     }
 
-    const totalSteps = mode === ReminderMode.SCHEDULED ? 3 : 2;
+    const totalSteps = 3;
 
     return (
         <div style={{
@@ -210,7 +208,6 @@ export function ReminderModal({
                 )}
                 {step === 2 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                        {/* Patient summary */}
                         {selectedPatient && (
                             <div style={{
                                 display: "flex", alignItems: "center", gap: 12,
@@ -259,6 +256,11 @@ export function ReminderModal({
                                 })}
                             </div>
                         </div>
+                        {mode === ReminderMode.SCHEDULED && <label style={lbl}>
+                            Fecha y hora de envío
+                            <input type="datetime-local" style={inp} value={form.sendAt} onChange={set("sendAt")} min={new Date().toISOString().slice(0, 16)} />
+                        </label>
+                        }
                         <label style={lbl}>
                             Mensaje
                             <textarea
@@ -271,21 +273,15 @@ export function ReminderModal({
                         </label>
                     </div>
                 )}
-                {step === 3 && mode === ReminderMode.SCHEDULED && (
+                {step === 3 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                        <label style={lbl}>
-                            Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={form.sendAt} onChange={set("sendAt")} min={new Date().toISOString().slice(0, 16)} />
-                        </label>
-
-                        {/* Summary card */}
                         <div style={{ background: "#F8F7F4", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Resumen del recordatorio</div>
                             {[
                                 { k: "Paciente", v: selectedPatient ? `${selectedPatient.fullName}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
-                                { k: "Programado", v: form.sendAt ? fmtDateTime(form.sendAt) : "—" },
+                                { k: "Programado", v: mode === ReminderMode.NOW ? "Imediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
                             ].map(({ k, v }) => (
                                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                                     <span style={{ color: "#6B7280" }}>{k}</span>
