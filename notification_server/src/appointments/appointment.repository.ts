@@ -1,21 +1,36 @@
-import { Prisma, type Appointment } from '@prisma/client';
+import { Prisma, ReminderMode, ReminderStatus, type Appointment, type Reminder } from '@prisma/client';
 import { prisma } from '../prisma/prismaClient.js';
-import type {
-  CreateAppointmentDto,
-  UpdateAppointmentDto,
-  ListAppointmentsQuery,
+import {
+  type CreateAppointmentDto,
+  type UpdateAppointmentDto,
+  type ListAppointmentsQuery,
+  ReminderType,
 } from './appointment.schemas.js';
 import { AppointmentPatientNotFoundError, AppointmentReminderNotFoundError, AppointmentNotFoundError } from '../utils/errors.js';
-import { appointmentInclude, type AppointmentWithRelations, type PaginatedAppointments } from '../utils/types.js';
+import { appointmentInclude, Channel, type AppointmentWithRelations, type PaginatedAppointments } from '../utils/types.js';
+import { reminderRepository } from '../reminders/reminder.repository.js';
 
 export const appointmentRepository = {
   async create(dto: CreateAppointmentDto): Promise<AppointmentWithRelations> {
     const patient = await prisma.patient.findUnique({ where: { id: dto.patientId } });
     if (!patient) throw new AppointmentPatientNotFoundError(dto.patientId);
 
-    if (dto.reminderId) {
-      const reminder = await prisma.reminder.findUnique({ where: { id: dto.reminderId } });
-      if (!reminder) throw new AppointmentReminderNotFoundError(dto.reminderId);
+    let reminder: Reminder | null = null
+    if (dto.reminderType !== ReminderType.NONE) {
+      reminder = await reminderRepository.create({
+        channel: Channel.WHATSAPP,
+        to: patient.whatsappNumber ?? "",
+        mode: ReminderMode.SCHEDULED,
+        sendAt: getReminderSendAt(dto.date, dto.time, dto.reminderType),
+        patientId: dto.patientId,
+        status: ReminderStatus.PENDING,
+        contentSid: "HXb5b62575e6e4ff6129ad7c8efe1f983e",
+        contentVariables: {
+          "1": "12/1",
+          "2": "3pm"
+        },
+        scheduledAt: new Date().toISOString(),
+      })
     }
 
     return prisma.appointment.create({
@@ -24,7 +39,7 @@ export const appointmentRepository = {
         date: dto.date,
         time: dto.time,
         status: dto.status,
-        reminderId: dto.reminderId ?? null,
+        reminderId: reminder?.id || null,
         type: dto.type,
         location: dto.location,
         meetingUrl: dto.meetingUrl || null,
@@ -123,3 +138,17 @@ export const appointmentRepository = {
     });
   },
 };
+
+function getReminderSendAt(date: string, time: string, reminderType: ReminderType): string {
+  switch (reminderType) {
+    case ReminderType.ONE_HOUR_BEFORE:
+      return new Date(new Date(`${date}T${time}:00`).getTime() - 60 * 60 * 1000).toISOString();
+    case ReminderType.ONE_DAY_BEFORE:
+      return new Date(new Date(`${date}T${time}:00`).getTime() - 24 * 60 * 60 * 1000).toISOString();
+    case ReminderType.ONE_WEEK_BEFORE:
+      return new Date(new Date(`${date}T${time}:00`).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    default:
+      return new Date(`${date}T${time}:00`).toISOString();
+  }
+}
+

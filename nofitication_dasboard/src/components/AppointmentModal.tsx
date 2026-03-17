@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Appointment, APPOINTMENT_LOCATIONS, APPOINTMENT_TYPES, AppointmentDuration, AppointmentForm, AppointmentStatus, STATUS_CFG } from "../types/Appointment";
+import { Appointment, APPOINTMENT_LOCATIONS, APPOINTMENT_TYPES, AppointmentDuration, AppointmentForm, AppointmentStatus, LOCATION_CFG, STATUS_CFG } from "../types/Appointment";
 import { Patient } from "../types/Patient";
 import { ReminderType } from "../types/Reminder";
 import { today } from "../utils/TimeUtils";
@@ -26,7 +26,6 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
     date: appt?.date ?? today(),
     time: appt?.time ?? "09:00",
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
-    reminderId: appt?.reminderId ?? undefined,
     type: appt?.type ?? APPOINTMENT_TYPES[ 1 ].name,
     location: appt?.location ?? "",
     meetingUrl: appt?.meetingUrl ?? undefined,
@@ -53,11 +52,11 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
     try {
       const body = {
         ...form,
-        reminderId: form.reminderId,
         meetingUrl: form.meetingUrl,
         type: form.type,
         price: form.price,
         duration: form.duration,
+        reminderType: form.reminderType,
       };
       if (isEdit) {
         await updateAppointment(appt!.id, body);
@@ -170,7 +169,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
               Ubicación
               <select style={inp} value={form.location} onChange={set("location")}>
                 <option value="">Seleccionar ubicación…</option>
-                {APPOINTMENT_LOCATIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                {APPOINTMENT_LOCATIONS.map(d => <option key={d} value={d}>{LOCATION_CFG[ d ]?.label || d}</option>)}
               </select>
             </label>
 

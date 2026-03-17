@@ -10,7 +10,7 @@ import { SkeletonRow } from "@/src/components/Skeleton";
 import { StatCard } from "@/src/components/StatCard";
 import { AppointmentStatusPill } from "@/src/components/StatusPill";
 import { btnPrimary, btnSecondary, inp, tdStyle, thStyle } from "@/src/styles/theme";
-import { Appointment, AppointmentStatus } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus, LOCATION_CFG } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
 import { Reminder } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
@@ -197,8 +197,8 @@ export default function AppointmentsPage() {
                         <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{a.time}</td>
                         <td style={{ ...tdStyle, fontSize: 12, color: "#9CA3AF" }}>{a.duration}</td>
                         <td style={{ ...tdStyle, fontSize: 12, color: "#6B7280", maxWidth: 130 }}>
-                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {a.meetingUrl ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563EB" }}>🔗 Virtual</a> : a.location}
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", backgroundColor: LOCATION_CFG[ a.location ]?.bg || "#F3F4F6", color: LOCATION_CFG[ a.location ]?.color || "#374151", padding: "4px 10px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 500, fontSize: 12 }}>
+                            {a.meetingUrl ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563EB", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>🔗 Virtual</a> : a.location}
                           </div>
                         </td>
                         <td style={tdStyle} onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
