@@ -15,7 +15,7 @@ import { ReminderDrawer } from '@/src/components/ReminderDrawer';
 import { BulkSendWizard } from '@/src/components/BulkSendWizard';
 import { EmptyState } from '@/src/components/EmptyState';
 import { SkeletonRow } from '@/src/components/Skeleton';
-import { DeleteReminderModal } from '@/src/components/DeleteReminderModal';
+import { CancelReminderModal } from '@/src/components/CancelReminderModal';
 import { useFetchReminders } from '@/src/api/useFetchReminders';
 import { useFetchPatients } from '@/src/api/useFetchPatients';
 
@@ -271,7 +271,7 @@ export default function RemindersPage() {
                 />
             )}
             {cancelReminder && (
-                <DeleteReminderModal
+                <CancelReminderModal
                     reminder={cancelReminder}
                     onClose={() => setCancelReminder(null)}
                     onCanceled={() => { setCancelReminder(null); fetchReminders(); }}

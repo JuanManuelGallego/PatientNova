@@ -1,6 +1,7 @@
 export interface Reminder {
     channel: Channel;
     contentSid?: string;
+    contentVariables?: Record<string, string>;
     createdAt: string;
     error?: string;
     id: string;

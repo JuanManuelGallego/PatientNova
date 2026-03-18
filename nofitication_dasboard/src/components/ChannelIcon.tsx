@@ -1,4 +1,4 @@
-import { Channel, CHANNEL_ICON, CHANNEL_LABEL, getChannelIconAndLabel } from "../types/Reminder";
+import { Channel, CHANNEL_ICON, getChannelIconAndLabel } from "../types/Reminder";
 
 export function ChannelIcon({ type, value }: { type: Channel; value: string | null }) {
     if (!value) {
@@ -20,7 +20,6 @@ export function ChannelIcon({ type, value }: { type: Channel; value: string | nu
 }
 
 export function ChannelBadge({ channel }: { channel: Channel }) {
-    console.log(CHANNEL_ICON[channel], CHANNEL_LABEL[channel])
     return (
         <span style={{
             display: "inline-flex", alignItems: "center", gap: 5,

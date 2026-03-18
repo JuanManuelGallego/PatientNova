@@ -3,21 +3,18 @@ import { btnSecondary } from "../styles/theme";
 import { Reminder, ReminderStatus } from "../types/Reminder";
 import { useUpdateReminder } from "../api/useUpdateReminder";
 
-export function DeleteReminderModal({ reminder, patientName, onClose, onCanceled }: {
+export function CancelReminderModal({ reminder, patientName, onClose, onCanceled }: {
     reminder: Reminder; patientName?: string; onClose: () => void; onCanceled: () => void;
 }) {
     const { updateReminder, loading: deleting } = useUpdateReminder();
     const [ error, setError ] = useState<string | null>(null);
 
-    async function handleDelete() {
+    async function handleCancel() {
         setError(null);
         try {
             await updateReminder(reminder.id, { status: ReminderStatus.CANCELLED });
-            onCanceled();
-            onClose();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Error desconocido");
-        }
+            onCanceled(); onClose();
+        } catch (err) { setError(err instanceof Error ? err.message : "Error desconocido"); }
     }
 
     return (
@@ -45,7 +42,7 @@ export function DeleteReminderModal({ reminder, patientName, onClose, onCanceled
                 )}
                 <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={onClose} style={{ ...btnSecondary, flex: 1 }} disabled={deleting}>Regresar</button>
-                    <button onClick={handleDelete} disabled={deleting} style={{
+                    <button onClick={handleCancel} disabled={deleting} style={{
                         flex: 1, padding: "10px 22px", background: "#DC2626", color: "#fff",
                         border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600,
                         cursor: "pointer", opacity: deleting ? 0.7 : 1,

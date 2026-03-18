@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/prisma/seed.ts"
+    "db:seed": "tsx src/prisma/seed.ts",
+    "db:format": "npx prisma db push --accept-data-loss",
+    "db:wipe": "npx prisma migrate reset --force --skip-seed"
   },
   "author": "",
   "license": "ISC",

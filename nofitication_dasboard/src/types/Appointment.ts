@@ -1,36 +1,37 @@
-import { Reminder } from "./Reminder";
+import { Reminder, ReminderType } from "./Reminder";
 
 export interface Appointment {
-    id: string;
-    patientId: string;
+    createdAt: string;
     date: string;
-    time: string;
-    status: AppointmentStatus;
-    reminderId: string | null;
-    type: string;
+    duration: string;
+    id: string;
     location: string;
     meetingUrl: string | null;
-    payed: boolean;
-    createdAt: string;
-    updatedAt: string;
+    notes: string;
     patient: { id: string; name: string; lastName: string; email: string };
-    reminder: Reminder | null;
+    patientId: string;
+    payed: boolean;
     price: string;
-    duration: string;
+    reminder: Reminder | null;
+    reminderId: string | null;
+    status: AppointmentStatus;
+    type: string;
+    updatedAt: string;
 }
 
 export interface AppointmentForm {
-    patientId: string;
     date: string;
-    time: string;
-    status: AppointmentStatus;
-    type: string;
+    duration: string;
     location: string;
     meetingUrl?: string;
-    price: string;
+    notes?: string;
+    patientId: string;
     payed: boolean;
-    duration: string;
-    reminderType: string;
+    price: string;
+    reminderId?: string;
+    reminderType: ReminderType;
+    status: AppointmentStatus;
+    type: string;
 }
 
 export enum AppointmentStatus {
@@ -63,10 +64,10 @@ export interface AppointmentType {
 }
 
 export const APPOINTMENT_TYPES: AppointmentType[] = [
-    { id: "1", name: AppointmentName.KID, price: "120.000", duration: AppointmentDuration.MIN_45 },
-    { id: "2", name: AppointmentName.INDIVIDUAL, price: "150.000", duration: AppointmentDuration.MIN_50 },
-    { id: "3", name: AppointmentName.COUPLE, price: "240.000", duration: AppointmentDuration.MIN_60 },
-    { id: "4", name: AppointmentName.FAMILY, price: "300.000", duration: AppointmentDuration.MIN_90 },
+    { id: "1", name: AppointmentName.KID, price: "115000", duration: AppointmentDuration.MIN_60 },
+    { id: "2", name: AppointmentName.INDIVIDUAL, price: "115000", duration: AppointmentDuration.MIN_60 },
+    { id: "3", name: AppointmentName.COUPLE, price: "220000", duration: AppointmentDuration.MIN_60 },
+    { id: "4", name: AppointmentName.FAMILY, price: "220000", duration: AppointmentDuration.MIN_60 },
 ];
 
 export const STATUS_CFG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
@@ -83,7 +84,7 @@ export const APPOINTMENT_LOCATIONS: string[] = [
     "Vamos a Terapia",
     "Virtual", ]
 
-    export const LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
+export const LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
     [ "ACTA" ]: { label: "ACTA", color: "#ab63e6", bg: "#ecc4ffa8", dot: "#3B82F6", icon: "🏛️" },
     [ "Sentido y Realidad" ]: { label: "Sentido y Realidad", color: "#30b493", bg: "#9debb57e", dot: "#22C55E", icon: "🌱" },
     [ "Vamos a Terapia" ]: { label: "Vamos a Terapia", color: "#399efc", bg: "#c7e8fe", dot: "#fbbf24", icon: "🏢" },

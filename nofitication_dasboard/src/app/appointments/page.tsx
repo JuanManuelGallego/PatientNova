@@ -1,18 +1,16 @@
-"use client";
-
+"use client";;
 import { AppointmentDrawer } from "@/src/components/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/AppointmentModal";
 import { CalendarView } from "@/src/components/CalendarView";
-import { DeleteModal } from "@/src/components/DeleteAppointmentModal";
+import { CancelAppointmentModal } from "@/src/components/CancelAppointmentModal";
 import { PayBadge } from "@/src/components/PayBadge";
 import Sidebar from "@/src/components/Sidebar";
 import { SkeletonRow } from "@/src/components/Skeleton";
 import { StatCard } from "@/src/components/StatCard";
-import { AppointmentStatusPill } from "@/src/components/StatusPill";
+import { AppointmentStatusPill, EmptyStatusPill, ReminderStatusPill } from "@/src/components/StatusPill";
 import { btnPrimary, btnSecondary, inp, tdStyle, thStyle } from "@/src/styles/theme";
 import { Appointment, AppointmentStatus, LOCATION_CFG } from "@/src/types/Appointment";
-import { Patient } from "@/src/types/Patient";
-import { Reminder } from "@/src/types/Reminder";
+import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { today, fmtDate } from "@/src/utils/TimeUtils";
 import { useState, useEffect } from "react";
@@ -26,7 +24,7 @@ export default function AppointmentsPage() {
   const [ appointments, setAppointments ] = useState<Appointment[]>([]);
   const { patients } = useFetchPatients();
   const { appointments: remoteAppointments, loading, error, fetchAppointments } = useFetchAppointments();
-  const { reminders } = useFetchReminders();
+  const { reminders, fetchReminders } = useFetchReminders();
 
   const [ viewMode, setViewMode ] = useState<ViewMode>("list");
   const [ filterStatus, setFilterStatus ] = useState<AppointmentStatus | "ALL">(AppointmentStatus.SCHEDULED);
@@ -75,8 +73,7 @@ export default function AppointmentsPage() {
   const revenue = appointments
     .filter(a => a.payed)
     .reduce((sum, a) => sum + parseFloat(a.price || "0"), 0)
-    .toFixed(2);
-
+    .toLocaleString("es-ES");
   return (
     <>
       <style>{`
@@ -127,7 +124,7 @@ export default function AppointmentsPage() {
             <StatCard label="Hoy" value={counts.today} sub="citas de hoy" accent="#3B82F6" />
             <StatCard label="Próximas" value={counts.upcoming} sub="sin confirmar" accent="#D97706" />
             <StatCard label="Sin pagar" value={counts.unpaid} sub="requieren cobro" accent="#DC2626" />
-            <StatCard label="Ingresos" value={`$${revenue}`} sub="total cobrado" accent="#16A34A" />
+            <StatCard label="Ingresos" value={`$ ${revenue}`} sub="total cobrado" accent="#16A34A" />
           </div>
           {error && (
             <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 12, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -169,7 +166,7 @@ export default function AppointmentsPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#F9FAFB" }}>
-                      {[ "Paciente", "Tipo", "Fecha", "Hora", "Duración", "Ubicación", "Estado", "Pago", "" ].map(h => (
+                      {[ "Paciente", "Tipo", "Fecha", "Recordatorio", "Ubicación", "Estado", "Pago", "" ].map(h => (
                         <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
@@ -194,10 +191,9 @@ export default function AppointmentsPage() {
                           <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.type}</div>
                         </td>
                         <td style={{ ...tdStyle, fontSize: 13, color: "#111827", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(a.date)}</td>
-                        <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{a.time}</td>
-                        <td style={{ ...tdStyle, fontSize: 12, color: "#9CA3AF" }}>{a.duration}</td>
+                        <td style={{ ...tdStyle, fontSize: 12, color: "#000000" }}>{a.reminderId ? <ReminderStatusPill status={reminders.find(r => r.id === a.reminderId)?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
                         <td style={{ ...tdStyle, fontSize: 12, color: "#6B7280", maxWidth: 130 }}>
-                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", backgroundColor: LOCATION_CFG[ a.location ]?.bg || "#F3F4F6", color: LOCATION_CFG[ a.location ]?.color || "#374151", padding: "4px 10px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 500, fontSize: 12 }}>
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", backgroundColor: LOCATION_CFG[ a.location ]?.bg || "#F3F4F6", color: LOCATION_CFG[ a.location ]?.color || "#374151", padding: "4px 10px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 12 }}>
                             {a.meetingUrl ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#2563EB", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>🔗 Virtual</a> : a.location}
                           </div>
                         </td>
@@ -258,7 +254,7 @@ export default function AppointmentsPage() {
           appt={undefined}
           patients={patients}
           onClose={() => { setShowCreate(false); setPrefillDate(null); }}
-          onSaved={fetchAppointments}
+          onSaved={() => { fetchAppointments(); fetchReminders(); }}
         />
       )}
       {editAppt && (
@@ -266,7 +262,7 @@ export default function AppointmentsPage() {
           appt={editAppt}
           patients={patients}
           onClose={() => setEditAppt(null)}
-          onSaved={fetchAppointments}
+          onSaved={() => { fetchAppointments(); fetchReminders(); }}
         />
       )}
       {viewAppt && !editAppt && !deleteAppt && (
@@ -279,10 +275,10 @@ export default function AppointmentsPage() {
         />
       )}
       {deleteAppt && (
-        <DeleteModal
+        <CancelAppointmentModal
           appt={deleteAppt}
           onClose={() => setDeleteAppt(null)}
-          onDeleted={fetchAppointments}
+          onCanceled={() => { fetchAppointments(); fetchReminders(); }}
         />
       )}
     </>

@@ -1,9 +1,10 @@
 import { btnPrimary } from "../styles/theme";
 import { Appointment, STATUS_CFG } from "../types/Appointment";
 import { getAvatarColor, getInitials } from "../utils/AvatarHelper";
-import { fmtDate } from "../utils/TimeUtils";
+import { fmtDate, fmtDateTime } from "../utils/TimeUtils";
 import { PayBadge } from "./PayBadge";
 import { AppointmentStatusPill } from "./StatusPill";
+import { CHANNEL_LABEL, REMINDER_STATUS_CONFIG } from '../types/Reminder';
 
 export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
     appt: Appointment;
@@ -15,16 +16,12 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
     const s = STATUS_CFG[ appt.status ];
     return (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex" }} onClick={onClose}>
-            {/* Overlay */}
             <div style={{ flex: 1, background: "rgba(17,24,39,0.4)", backdropFilter: "blur(3px)" }} />
-            {/* Drawer */}
             <div style={{
                 width: 420, background: "#fff", height: "100%", overflowY: "auto",
                 boxShadow: "-10px 0 40px rgba(0,0,0,0.15)", animation: "slideInRight 0.25s ease",
                 display: "flex", flexDirection: "column",
             }} onClick={e => e.stopPropagation()}>
-
-                {/* Header strip */}
                 <div style={{ background: s.bg, padding: "24px 24px 20px", borderBottom: `3px solid ${s.dot}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
@@ -35,11 +32,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                         <button onClick={onClose} style={{ background: "rgba(0,0,0,0.08)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#6B7280" }}>✕</button>
                     </div>
                 </div>
-
-                {/* Content */}
                 <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
-
-                    {/* Patient */}
                     <Section title="Paciente">
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                             <div style={{ width: 42, height: 42, borderRadius: "50%", background: getAvatarColor(appt.patient.id), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#1E3A5F", flexShrink: 0 }}>
@@ -51,15 +44,11 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                             </div>
                         </div>
                     </Section>
-
-                    {/* Date & Time */}
                     <Section title="Fecha y Hora">
                         <Row icon="📅" label="Fecha" value={fmtDate(appt.date)} />
-                        <Row icon="🕐" label="Hora" value={appt.time} />
+                        <Row icon="🕐" label="Hora" value={fmtDateTime(appt.date)} />
                         <Row icon="⏱️" label="Duración" value={appt.duration} />
                     </Section>
-
-                    {/* Location */}
                     <Section title="Lugar">
                         <Row icon="📍" label="Ubicación" value={appt.location} />
                         {appt.meetingUrl && (
@@ -69,8 +58,6 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                             </div>
                         )}
                     </Section>
-
-                    {/* Payment */}
                     <Section title="Pago">
                         <Row icon="💰" label="Precio" value={`$${appt.price}`} />
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -82,24 +69,18 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                             )}
                         </div>
                     </Section>
-
-                    {/* Reminder */}
                     {appt.reminder && (
                         <Section title="Recordatorio Vinculado">
-                            <Row icon={appt.reminder.channel === "WHATSAPP" ? "💬" : "📱"} label="Canal" value={appt.reminder.channel} />
-                            <Row icon="📤" label="Estado" value={appt.reminder.status} />
+                            <Row icon={appt.reminder.channel === "WHATSAPP" ? "💬" : "📱"} label="Canal" value={CHANNEL_LABEL[ appt.reminder.channel ]} />
+                            <Row icon="📤" label="Estado" value={REMINDER_STATUS_CONFIG[ appt.reminder.status ].label} />
                             <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sendAt).toLocaleString("es-ES")} />
                         </Section>
                     )}
-
-                    {/* Meta */}
                     <Section title="Información del sistema">
                         <Row icon="🆔" label="ID" value={<span style={{ fontFamily: "monospace", fontSize: 11 }}>{appt.id}</span>} />
                         <Row icon="📆" label="Creada" value={new Date(appt.createdAt).toLocaleString("es-ES")} />
                     </Section>
                 </div>
-
-                {/* Footer actions */}
                 <div style={{ padding: "16px 24px", borderTop: "1px solid #F3F4F6", display: "flex", gap: 8 }}>
                     <button onClick={onEdit} style={{ ...btnPrimary, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                         ✏️ Editar

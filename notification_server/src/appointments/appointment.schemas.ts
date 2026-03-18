@@ -1,14 +1,6 @@
 import { AppointmentStatus } from '@prisma/client';
 import { z } from 'zod';
 
-const dateStr = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD format');
-
-const timeStr = z
-  .string()
-  .regex(/^\d{2}:\d{2}$/, 'Time must be HH:MM format');
-
 export enum ReminderType {
   NONE = "NINGUNO",
   ONE_HOUR_BEFORE = "1_HORA_ANTES",
@@ -18,8 +10,7 @@ export enum ReminderType {
 
 export const createAppointmentSchema = z.object({
   patientId: z.string().uuid('patientId must be a valid UUID'),
-  date: dateStr,
-  time: timeStr,
+  date: z.string().datetime(),
   status: z.nativeEnum(AppointmentStatus).default(AppointmentStatus.SCHEDULED),
   type: z.string().min(1, 'type is required').max(120),
   location: z.string().min(1, 'location is required').max(255),
@@ -27,14 +18,14 @@ export const createAppointmentSchema = z.object({
   price: z.string().min(1, 'price is required').max(20),
   payed: z.boolean().default(false),
   duration: z.string().min(1, 'duration is required').max(20),
-  reminderType: z.nativeEnum(ReminderType),
+  reminderId: z.string().uuid().nullable().optional(),
+  notes: z.string().max(500).optional(),
 });
 
 export const updateAppointmentSchema = z
   .object({
     patientId: z.string().uuid().optional(),
-    date: dateStr.optional(),
-    time: timeStr.optional(),
+    date: z.string().datetime(),
     status: z.nativeEnum(AppointmentStatus).optional(),
     reminderId: z.string().uuid().nullable().optional(),
     type: z.string().min(1).max(120).optional(),
@@ -43,6 +34,7 @@ export const updateAppointmentSchema = z
     price: z.string().min(1).max(20).optional(),
     payed: z.boolean().optional(),
     duration: z.string().min(1).max(20).optional(),
+    notes: z.string().max(500).optional(),
   })
   .refine(
     (d) => Object.keys(d).length > 0,
@@ -52,9 +44,9 @@ export const updateAppointmentSchema = z
 export const listAppointmentsSchema = z.object({
   patientId: z.string().uuid().optional(),
   status: z.nativeEnum(AppointmentStatus).optional(),
-  date: dateStr.optional(),
-  dateFrom: dateStr.optional(),
-  dateTo: dateStr.optional(),
+  date: z.string().date().optional(),
+  dateFrom: z.string().date().optional(),
+  dateTo: z.string().date().optional(),
   payed: z.enum([ 'true', 'false' ]).transform(v => v === 'true').optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),

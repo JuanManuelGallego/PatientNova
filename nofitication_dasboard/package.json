@@ -9,8 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@mantine/core": "^8.3.18",
+    "@mantine/dates": "^8.3.18",
+    "@types/flatpickr": "^3.0.2",
+    "antd": "^6.3.3",
+    "dayjs": "^1.11.20",
+    "flatpickr": "^4.6.13",
     "next": "16.1.6",
     "react": "19.2.3",
+    "react-datepicker": "^9.1.0",
     "react-dom": "19.2.3"
   },
   "devDependencies": {

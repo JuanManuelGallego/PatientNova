@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Appointment, APPOINTMENT_LOCATIONS, APPOINTMENT_TYPES, AppointmentDuration, AppointmentForm, AppointmentStatus, LOCATION_CFG, STATUS_CFG } from "../types/Appointment";
 import { Patient } from "../types/Patient";
-import { ReminderType } from "../types/Reminder";
-import { today } from "../utils/TimeUtils";
+import { Channel, CHANNEL_ICON, CHANNEL_LABEL, Reminder, ReminderMode, ReminderStatus, ReminderType } from "../types/Reminder";
 import { btnDisabled, btnPrimary, btnSecondary, inp, lbl } from "../styles/theme";
 import { getAvatarColor, getInitials } from "../utils/AvatarHelper";
 import { useCreateAppointment } from "../api/useCreateAppointment";
 import { useUpdateAppointment } from "../api/useUpdateAppointment";
+import { useCreateReminder } from "../api/useCreateReminder";
+import { useUpdateReminder } from "../api/useUpdateReminder";
+import { getDate, getReminderSendAt, getTime, isReminderTypeFeasible } from "../utils/TimeUtils";
+import { DateTimePicker } from "./DateTimePicker";
 
 export function AppointmentModal({ appt, patients, onClose, onSaved }: {
   appt?: Appointment;
@@ -17,14 +20,16 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
   const isEdit = !!appt;
   const { createAppointment } = useCreateAppointment();
   const { updateAppointment } = useUpdateAppointment();
+  const { createReminder } = useCreateReminder();
+  const { updateReminder } = useUpdateReminder();
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
+  const [ reminderChannel, setReminderChannel ] = useState<Channel>(Channel.WHATSAPP);
 
   const [ form, setForm ] = useState<AppointmentForm>({
     patientId: appt?.patientId ?? "",
-    date: appt?.date ?? today(),
-    time: appt?.time ?? "09:00",
+    date: appt?.date ?? "",
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
     type: appt?.type ?? APPOINTMENT_TYPES[ 1 ].name,
     location: appt?.location ?? "",
@@ -33,12 +38,13 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
     payed: appt?.payed ?? false,
     duration: appt?.duration ?? APPOINTMENT_TYPES[ 1 ].duration,
     reminderType: appt?.reminderId ? ReminderType.ONE_DAY_BEFORE : ReminderType.NONE,
+    notes: appt?.notes ?? undefined,
   });
 
   const isValid = step === 1
-    ? !!form.patientId && !!form.type
+    ? !!form.patientId && !!form.type && !!form.date
     : step === 2
-      ? !!form.date && !!form.time && !!form.location && (form.location !== "Virtual" || !!form.meetingUrl)
+      ? !!form.location && (form.reminderType !== ReminderType.NONE ? reminderChannel : true)
       : !!form.price;
 
   const set = (field: keyof AppointmentForm) =>
@@ -47,21 +53,42 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
 
   const selectedPatient = patients.find(p => p.id === form.patientId);
 
+  function buildReminderPayload(): Partial<Reminder> {
+    return {
+      to: reminderChannel === Channel.WHATSAPP ? selectedPatient?.whatsappNumber || "" : selectedPatient?.smsNumber || "",
+      contentSid: "HXb5b62575e6e4ff6129ad7c8efe1f983e",
+      contentVariables: {
+        "1": "12/1",
+        "2": "3pm"
+      },
+      patientId: form.patientId,
+      channel: reminderChannel,
+      mode: ReminderMode.SCHEDULED,
+      status: ReminderStatus.PENDING,
+      scheduledAt: new Date().toISOString(),
+      sendAt: new Date(getReminderSendAt(form.date, form.reminderType)).toISOString(),
+    };
+  }
+
   async function handleSubmit() {
     setSaving(true); setError(null);
     try {
-      const body = {
-        ...form,
-        meetingUrl: form.meetingUrl,
-        type: form.type,
-        price: form.price,
-        duration: form.duration,
-        reminderType: form.reminderType,
-      };
       if (isEdit) {
-        await updateAppointment(appt!.id, body);
+        if (appt!.reminderId) {
+          await updateReminder(appt!.reminderId, buildReminderPayload()); // Remove new scheduledAt???
+        } else if (form.reminderType !== ReminderType.NONE) {
+          const reminder = await createReminder(buildReminderPayload())
+          form.reminderId = reminder.id;
+        }
+
+        await updateAppointment(appt!.id, form);
       } else {
-        await createAppointment(body);
+        if (form.reminderType !== ReminderType.NONE) {
+          const reminder = await createReminder(buildReminderPayload())
+          form.reminderId = reminder.id;
+        }
+
+        await createAppointment(form);
       }
       onSaved(); onClose();
     } catch (err) {
@@ -70,12 +97,9 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
   }
 
   const steps = [ "Paciente & Tipo", "Lugar & Hora", "Pago & Estado" ];
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.55)", backdropFilter: "blur(4px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 20, padding: 36, width: 580, maxWidth: "calc(100vw - 40px)", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)", animation: "slideUp 0.2s ease" }} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "'Playfair Display', Georgia, serif" }}>
@@ -85,22 +109,17 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
           </div>
           <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#6B7280" }}>✕</button>
         </div>
-
-        {/* Progress */}
         <div style={{ display: "flex", gap: 5, marginBottom: 28 }}>
           {steps.map((_, i) => (
             <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < step ? "#1E3A5F" : "#E5E7EB", transition: "background 0.3s" }} />
           ))}
         </div>
-
         {error && (
           <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 18, fontSize: 13, color: "#DC2626" }}>⚠️ {error}</div>
         )}
-
-        {/* ── Step 1: Patient & Type ── */}
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <label style={lbl}>
+            {!isEdit && <label style={lbl}>
               Paciente
               <select style={inp} value={form.patientId} onChange={set("patientId")}>
                 <option value="">Seleccionar paciente…</option>
@@ -108,7 +127,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                   <option key={p.id} value={p.id}>{p.fullName} — {p.email}</option>
                 ))}
               </select>
-            </label>
+            </label>}
 
             {selectedPatient && (
               <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#F8F7F4", borderRadius: 12, padding: "12px 16px" }}>
@@ -121,7 +140,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                 </div>
               </div>
             )}
-
+              <DateTimePicker date={form.date} onChanged={(date) => setForm(f => ({ ...f, date: date }))} />
             <label style={lbl}>
               Tipo de cita
               <select style={inp} value={form.type} onChange={(e) => {
@@ -132,32 +151,10 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
               </select>
             </label>
 
-            <label style={lbl}>
-              Recordatorio <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(opcional)</span>
-              <select style={inp} value={form.reminderType} onChange={set("reminderType")}>
-                <option value={ReminderType.NONE}>Sin recordatorio</option>
-                <option value={ReminderType.ONE_HOUR_BEFORE}>1 hora antes</option>
-                <option value={ReminderType.ONE_DAY_BEFORE}>1 día antes</option>
-                <option value={ReminderType.ONE_WEEK_BEFORE}>1 semana antes</option>
-              </select>
-            </label>
           </div>
         )}
-
-        {/* ── Step 2: Date, Time, Location ── */}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <label style={lbl}>
-                Fecha
-                <input type="date" style={inp} value={form.date} onChange={set("date")} />
-              </label>
-              <label style={lbl}>
-                Hora
-                <input type="time" style={inp} value={form.time} onChange={set("time")} />
-              </label>
-            </div>
-
             <label style={lbl}>
               Duración
               <select style={inp} value={form.duration} onChange={set("duration")}>
@@ -179,10 +176,47 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                 <input type="url" style={inp} value={form.meetingUrl} onChange={set("meetingUrl")} placeholder="https://meet.example.com/sala" />
               </label>
             )}
+            <label style={lbl}>
+              Recordatorio <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(opcional)</span>
+              <select style={inp} value={form.reminderType} onChange={set("reminderType")}>
+                <option value={ReminderType.NONE}>Sin recordatorio</option>
+                <option value={ReminderType.ONE_HOUR_BEFORE} disabled={!isReminderTypeFeasible(form.date, ReminderType.ONE_HOUR_BEFORE)}>1 hora antes</option>
+                <option value={ReminderType.ONE_DAY_BEFORE} disabled={!isReminderTypeFeasible(form.date, ReminderType.ONE_DAY_BEFORE)}>1 día antes</option>
+                <option value={ReminderType.ONE_WEEK_BEFORE} disabled={!isReminderTypeFeasible(form.date, ReminderType.ONE_WEEK_BEFORE)}>1 semana antes</option>
+              </select>
+            </label>
+            {form.reminderType !== ReminderType.NONE && (<div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Canal de notificación</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                {Object.values(Channel).map(c => {
+                  const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber);
+                  return (
+                    <button key={c} onClick={() => available && setReminderChannel(c)} style={{
+                      flex: 1, display: "flex", alignItems: "center", gap: 10,
+                      padding: "12px 16px", borderRadius: 12,
+                      border: `2px solid ${reminderChannel === c ? "#1E3A5F" : "#E5E7EB"}`,
+                      background: !available ? "#F9FAFB" : reminderChannel === c ? "#EFF6FF" : "#fff",
+                      cursor: available ? "pointer" : "not-allowed",
+                      opacity: available ? 1 : 0.5,
+                    }}>
+                      <span style={{ fontSize: 22 }}>{CHANNEL_ICON[ c ]}</span>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{CHANNEL_LABEL[ c ]}</div>
+                        <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                          {available
+                            ? (c === Channel.WHATSAPP ? selectedPatient?.whatsappNumber : selectedPatient?.smsNumber)
+                            : "No disponible"}
+                        </div>
+                      </div>
+                      {reminderChannel === c && available && <span style={{ marginLeft: "auto", color: "#1E3A5F" }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            )}
           </div>
         )}
-
-        {/* ── Step 3: Price, Payment, Status ── */}
         {step === 3 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -224,14 +258,12 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
               </div>
               {form.payed && <div style={{ marginTop: 10, fontSize: 13, color: "#16A34A", fontWeight: 500 }}>✓ Marcado como pagado</div>}
             </div>
-
-            {/* Summary */}
             <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Resumen</div>
               {[
                 [ "Paciente", selectedPatient ? selectedPatient.fullName : "—" ],
                 [ "Tipo", form.type || "—" ],
-                [ "Fecha", `${form.date} a las ${form.time}` ],
+                [ "Fecha", `${getDate(form.date)} a las ${getTime(form.date)}` ],
                 [ "Duración", form.duration ],
                 [ "Ubicación", form.location || "—" ],
                 [ "Precio", `$${form.price}` ],
@@ -245,8 +277,6 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
             </div>
           </div>
         )}
-
-        {/* Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 28 }}>
           {step > 1 && <button onClick={() => setStep(s => s - 1)} style={btnSecondary} disabled={saving}>Atrás</button>}
           {step < steps.length

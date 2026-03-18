@@ -81,19 +81,19 @@ enum ReminderMode {
 // ─── Appointment ──────────────────────────────────────────────────────────────
 
 model Appointment {
+  createdAt  DateTime          @default(now())
+  date       DateTime          @default(now())
+  duration   String            @db.VarChar(20)   // e.g. "30 min"
   id         String            @id @default(uuid()) @db.Uuid
-  patientId  String            @db.Uuid
-  date       String            @db.VarChar(10)   // YYYY-MM-DD
-  time       String            @db.VarChar(5)    // HH:MM
-  status     AppointmentStatus @default(SCHEDULED)
-  reminderId String?           @db.Uuid
-  type       String            @db.VarChar(120)
   location   String            @db.VarChar(255)
   meetingUrl String?           @db.VarChar(500)
-  price      String            @db.VarChar(20)   // e.g. "150.00"
+  notes      String?            @db.VarChar(500)
+  patientId  String            @db.Uuid
   payed      Boolean           @default(false)
-  duration   String            @db.VarChar(20)   // e.g. "30 min"
-  createdAt  DateTime          @default(now())
+  price      String            @db.VarChar(20)   // e.g. "150.000"
+  reminderId String?           @db.Uuid
+  status     AppointmentStatus @default(SCHEDULED)
+  type       String            @db.VarChar(120)
   updatedAt  DateTime          @updatedAt
 
   patient    Patient           @relation(fields: [patientId],  references: [id], onDelete: Cascade)
