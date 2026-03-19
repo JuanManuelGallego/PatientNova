@@ -27,13 +27,13 @@ export function ReminderModal({
         patientId: "",
         channel: Channel.WHATSAPP,
         message: "",
-        sendAt: "",
+        scheduledAt: "",
         appointmentType: "",
     });
 
     const isValid = step === 1
         ? !!form.patientId && !!form.appointmentType
-        : step === 2 ? !!form.channel && !!form.message.trim() && (mode === ReminderMode.SCHEDULED ? !!form.sendAt : true) : true;
+        : step === 2 ? !!form.channel && !!form.message.trim() && (mode === ReminderMode.SCHEDULED ? !!form.scheduledAt : true) : true;
 
     const selectedPatient = patients.find(p => p.id === form.patientId);
 
@@ -66,7 +66,7 @@ export function ReminderModal({
             setError("El paciente no tiene número de SMS");
             return false;
         }
-        if (mode === ReminderMode.SCHEDULED && !form.sendAt) {
+        if (mode === ReminderMode.SCHEDULED && !form.scheduledAt) {
             setError("Selecciona fecha y hora de envío");
             return false;
         }
@@ -95,8 +95,7 @@ export function ReminderModal({
             ...buildPayload(),
             channel: form.channel,
             mode: mode,
-            scheduledAt: new Date().toISOString(),
-            sendAt: new Date(form.sendAt).toISOString(),
+            scheduledAt: new Date(form.scheduledAt).toISOString(),
         };
     }
 
@@ -247,7 +246,7 @@ export function ReminderModal({
                         </div>
                         {mode === ReminderMode.SCHEDULED && <label style={lbl}>
                             Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={form.sendAt} onChange={set("sendAt")} min={new Date().toISOString().slice(0, 16)} />
+                            <input type="datetime-local" style={inp} value={form.scheduledAt} onChange={set("scheduledAt")} min={new Date().toISOString().slice(0, 16)} />
                         </label>
                         }
                         <label style={lbl}>
@@ -270,7 +269,7 @@ export function ReminderModal({
                                 { k: "Paciente", v: selectedPatient ? `${selectedPatient.fullName}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
-                                { k: "Programado", v: mode === ReminderMode.NOW ? "Imediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
+                                { k: "Programado", v: mode === ReminderMode.NOW ? "Imediatamente" : form.scheduledAt ? fmtDateTime(form.scheduledAt) : "—" },
                             ].map(({ k, v }) => (
                                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                                     <span style={{ color: "#6B7280" }}>{k}</span>

@@ -11,7 +11,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
     const [ channel, setChannel ] = useState<Channel>(Channel.WHATSAPP);
     const [ message, setMessage ] = useState("");
     const [ mode, setMode ] = useState<ReminderMode>(ReminderMode.NOW);
-    const [ sendAt, setSendAt ] = useState("");
+    const [ sentAt, setsentAt ] = useState("");
     const [ selected, setSelected ] = useState<Set<string>>(new Set());
     const [ sending, setSending ] = useState(false);
     const [ results, setResults ] = useState<BulkRemindersResult[]>([]);
@@ -45,7 +45,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                 const url = mode === ReminderMode.NOW ? `${API_BASE}/notify/${channel}` : `${API_BASE}/notify/schedule`;
                 const body = mode === ReminderMode.NOW
                     ? { to, body: message }
-                    : { channel, payload: { to, body: message }, sendAt: new Date(sendAt).toISOString() };
+                    : { channel, payload: { to, body: message }, sentAt: new Date(sentAt).toISOString() };
                 const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
                 const json = await r.json();
                 res.push({ patientId: pid, name: `${p.fullName}`, channel, status: json.success ? "ok" : "error", reason: json.error });
@@ -130,7 +130,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                     {mode === ReminderMode.SCHEDULED && (
                         <label style={lbl}>
                             Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={sendAt} onChange={e => setSendAt(e.target.value)} min={new Date().toISOString().slice(0, 16)} />
+                            <input type="datetime-local" style={inp} value={sentAt} onChange={e => setsentAt(e.target.value)} min={new Date().toISOString().slice(0, 16)} />
                         </label>
                     )}
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>

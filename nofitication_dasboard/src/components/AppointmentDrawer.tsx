@@ -69,11 +69,14 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                             )}
                         </div>
                     </Section>
+                    <Section title="Notas">
+                        <Row icon="📝" label="Notas" value={`${appt.notes || "Ninguna Nota"}`} />
+                    </Section>
                     {appt.reminder && (
                         <Section title="Recordatorio Vinculado">
                             <Row icon={appt.reminder.channel === "WHATSAPP" ? "💬" : "📱"} label="Canal" value={CHANNEL_LABEL[ appt.reminder.channel ]} />
                             <Row icon="📤" label="Estado" value={REMINDER_STATUS_CONFIG[ appt.reminder.status ].label} />
-                            <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sendAt).toLocaleString("es-ES")} />
+                            <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sentAt).toLocaleString("es-ES")} />
                         </Section>
                     )}
                     <Section title="Información del sistema">

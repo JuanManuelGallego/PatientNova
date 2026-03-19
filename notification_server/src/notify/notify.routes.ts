@@ -29,13 +29,13 @@ notifyRouter.post(
       reminderRepository.create({
         channel: Channel.WHATSAPP,
         contentSid: req.body.contentSid,
+        contentVariables: req.body.contentVariables,
+        messageId: result.messageSid,
         mode: ReminderMode.IMMEDIATE,
-        sendAt: new Date().toISOString(),
+        patientId: req.body.patientId,
+        sentAt: new Date().toISOString(),
         status: ReminderStatus.SENT,
         to: req.body.to,
-        messageId: result.messageSid,
-        patientId: req.body.patientId,
-        contentVariables: req.body.contentVariables,
       })
       ok(res, result, 201);
     } catch (err) {
@@ -71,7 +71,7 @@ notifyRouter.post(
  * Body:
  *   {
  *     "channel": "whatsapp" | "sms",
- *     "sendAt": "2026-03-20T15:00:00.000Z",
+ *     "sentAt": "2026-03-20T15:00:00.000Z",
  *     "payload": { ...WhatsApp or SMS payload... }
  *   }
  */
@@ -86,7 +86,7 @@ notifyRouter.post(
         contentSid: req.body.contentSid,
         mode: ReminderMode.SCHEDULED,
         scheduledAt: new Date().toISOString(),
-        sendAt: req.body.sendAt,
+        sentAt: req.body.sentAt,
         status: ReminderStatus.PENDING,
         to: req.body.payload.to,
         patientId: req.body.patientId,

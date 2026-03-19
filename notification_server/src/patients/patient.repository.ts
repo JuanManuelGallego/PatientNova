@@ -75,6 +75,7 @@ export const patientRepository = {
         data: {
           ...(dto.name !== undefined && { name: dto.name }),
           ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+          fullName: `${dto.name} ${dto.lastName}`,
           ...({ whatsappNumber: dto.whatsappNumber || null }),
           ...({ smsNumber: dto.smsNumber || null }),
           ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
@@ -91,6 +92,6 @@ export const patientRepository = {
 
   async delete(id: string): Promise<Patient> {
     await patientRepository.findById(id);
-    return prisma.patient.delete({ where: { id }});
+    return prisma.patient.delete({ where: { id } });
   },
 };

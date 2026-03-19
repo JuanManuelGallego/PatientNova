@@ -8,7 +8,7 @@ export interface Reminder {
     messageId?: string;
     mode: ReminderMode;
     scheduledAt?: string;
-    sendAt: string;
+    sentAt: string;
     status: ReminderStatus;
     to: string;
     updatedAt: string;
@@ -77,7 +77,7 @@ export interface ScheduledReminderJob {
     id: string;
     channel: Channel;
     to: string | null;
-    sendAt: string;
+    sentAt: string;
     scheduledAt: string;
     status: ReminderStatus;
     messageSid?: string;

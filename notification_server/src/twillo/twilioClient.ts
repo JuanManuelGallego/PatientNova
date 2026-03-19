@@ -63,7 +63,7 @@ export async function scheduleWhatsApp(
   {
     from,
     to,
-    sendAt: new Date(req.sendAt),
+    sentAt: new Date(req.sentAt),
     contentSid: req.payload.contentSid,
     ...(req.payload.contentVariables
       ? { contentVariables: JSON.stringify(req.payload.contentVariables) }

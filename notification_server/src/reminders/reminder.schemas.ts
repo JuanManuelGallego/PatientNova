@@ -21,7 +21,7 @@ export const createReminderSchema = z
     mode: z.nativeEnum(ReminderMode),
     contentSid: z.string().max(100).optional(),
     contentVariables: contentVariablesSchema,
-    sendAt: isoDate,
+    sentAt: isoDate.optional(),
     scheduledAt: isoDate.optional(),
     status: z.nativeEnum(ReminderStatus).optional(),
     messageId: z.string().max(100).optional(),
@@ -30,10 +30,6 @@ export const createReminderSchema = z
   .refine(
     (d) => d.mode === ReminderMode.IMMEDIATE || !!d.scheduledAt,
     { message: 'scheduledAt is required when mode is SCHEDULED', path: [ 'scheduledAt' ] }
-  )
-  .refine(
-    (d) => new Date(d.sendAt) > new Date(),
-    { message: 'sendAt must be in the future', path: [ 'sendAt' ] }
   );
 
 export const updateReminderSchema = z
@@ -45,7 +41,7 @@ export const updateReminderSchema = z
     contentSid: z.string().max(100).optional(),
     mode: z.nativeEnum(ReminderMode).optional(),
     scheduledAt: isoDate.optional(),
-    sendAt: isoDate.optional(),
+    sentAt: isoDate.optional(),
     error: z.string().max(1000).optional(),
     messageId: z.string().max(100).optional(),
     patientId: z.string().uuid().optional(),
@@ -60,7 +56,7 @@ export const listRemindersSchema = z.object({
   channel: z.nativeEnum(Channel).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum([ 'sendAt', 'createdAt', 'status' ]).default('sendAt'),
+  orderBy: z.enum([ 'sentAt', 'createdAt', 'status' ]).default('sentAt'),
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
 });
 

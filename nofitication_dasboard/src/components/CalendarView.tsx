@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { btnSecondary } from "../styles/theme";
-import { Appointment, STATUS_CFG } from "../types/Appointment";
-import { today, MONTH_NAMES_ES, DAY_NAMES_ES } from "../utils/TimeUtils";
+import { Appointment, AppointmentStatus, LOCATION_CFG, STATUS_CFG } from "../types/Appointment";
+import { today, MONTH_NAMES_ES, DAY_NAMES_ES, getDate, getTime } from "../utils/TimeUtils";
 
 export function CalendarView({ appointments, onDayClick, onApptClick }: {
     appointments: Appointment[];
@@ -21,12 +21,13 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
     const apptByDate = useMemo(() => {
         const map: Record<string, Appointment[]> = {};
         for (const a of appointments) {
-            if (!map[ a.date ]) map[ a.date ] = [];
-            map[ a.date ].push(a);
+            const date = getDate(a.date)
+            if (!map[ date ]) map[ date ] = [];
+            map[ date ].push(a);
         }
         return map;
     }, [ appointments ]);
-
+    console.log(apptByDate)
     function cellDate(cell: number): string | null {
         const day = cell - startOffset + 1;
         if (day < 1 || day > daysInMonth) return null;
@@ -59,6 +60,7 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
                 {Array.from({ length: rows * 7 }).map((_, i) => {
                     const date = cellDate(i);
+                    console.log("cell Date: ", date)
                     const isToday = date === todayStr;
                     const appts = date ? (apptByDate[ date ] ?? []) : [];
                     return (
@@ -89,12 +91,12 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
                                         {appts.slice(0, 3).map(a => (
                                             <div key={a.id} onClick={e => { e.stopPropagation(); onApptClick(a); }} style={{
                                                 fontSize: 10, fontWeight: 600, padding: "2px 5px", borderRadius: 4,
-                                                background: STATUS_CFG[ a.status ].bg,
-                                                color: STATUS_CFG[ a.status ].color,
+                                                background: LOCATION_CFG[ a.location ].bg,
+                                                color: LOCATION_CFG[ a.location ].color,
                                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                                                 cursor: "pointer",
                                             }}>
-                                                {a.time} {a.patient.name}
+                                                {getTime(a.date)} {a.patient.name} - {a.location} {a.status == AppointmentStatus.CONFIRMED && "✅"}
                                             </div>
                                         ))}
                                         {appts.length > 3 && (

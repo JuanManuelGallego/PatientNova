@@ -8,7 +8,7 @@ import { useCreateAppointment } from "../api/useCreateAppointment";
 import { useUpdateAppointment } from "../api/useUpdateAppointment";
 import { useCreateReminder } from "../api/useCreateReminder";
 import { useUpdateReminder } from "../api/useUpdateReminder";
-import { getDate, getReminderSendAt, getTime, isReminderTypeFeasible } from "../utils/TimeUtils";
+import { getDate, getRemindersentAt as getReminderscheduledAt, getTime, isReminderTypeFeasible } from "../utils/TimeUtils";
 import { DateTimePicker } from "./DateTimePicker";
 
 export function AppointmentModal({ appt, patients, onClose, onSaved }: {
@@ -65,8 +65,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
       channel: reminderChannel,
       mode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
-      scheduledAt: new Date().toISOString(),
-      sendAt: new Date(getReminderSendAt(form.date, form.reminderType)).toISOString(),
+      scheduledAt: new Date(getReminderscheduledAt(form.date, form.reminderType)).toISOString(), //ScheduledFor instead
     };
   }
 
@@ -124,7 +123,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
               <select style={inp} value={form.patientId} onChange={set("patientId")}>
                 <option value="">Seleccionar paciente…</option>
                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                  <option key={p.id} value={p.id}>{p.fullName} — {p.email}</option>
+                  <option key={p.id} value={p.id}>{p.fullName}</option>
                 ))}
               </select>
             </label>}
@@ -140,7 +139,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                 </div>
               </div>
             )}
-              <DateTimePicker date={form.date} onChanged={(date) => setForm(f => ({ ...f, date: date }))} />
+            <DateTimePicker date={form.date} onChanged={(date) => setForm(f => ({ ...f, date: date }))} />
             <label style={lbl}>
               Tipo de cita
               <select style={inp} value={form.type} onChange={(e) => {
@@ -238,7 +237,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
             </div>
 
             {/* Payment toggle */}
-            <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px" }}>
+            {/* <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>Estado de pago</div>
@@ -257,7 +256,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                 </button>
               </div>
               {form.payed && <div style={{ marginTop: 10, fontSize: 13, color: "#16A34A", fontWeight: 500 }}>✓ Marcado como pagado</div>}
-            </div>
+            </div> */}
             <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Resumen</div>
               {[
@@ -274,6 +273,12 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                   <span style={{ color: "#111827", fontWeight: 500 }}>{v}</span>
                 </div>
               ))}
+            </div>
+            <div>
+              <label style={lbl}>
+                Notas
+                <input style={inp} onChange={set("notes")}></input>
+              </label>
             </div>
           </div>
         )}

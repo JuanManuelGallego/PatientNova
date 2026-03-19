@@ -25,7 +25,7 @@ export const createAppointmentSchema = z.object({
 export const updateAppointmentSchema = z
   .object({
     patientId: z.string().uuid().optional(),
-    date: z.string().datetime(),
+    date: z.string().datetime().optional(),
     status: z.nativeEnum(AppointmentStatus).optional(),
     reminderId: z.string().uuid().nullable().optional(),
     type: z.string().min(1).max(120).optional(),

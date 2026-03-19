@@ -2,12 +2,12 @@ import app from "./app.js";
 import { config } from "./utils/config.js";
 import { logger } from "./utils/logger.js";
 import { prisma } from "./prisma/prismaClient.js";
-import { initializeScheduler, stopScheduler } from "./twillo/scheduler.js";
+import { initializeSchedulers, stopScheduler } from "./utils/scheduler.js";
 
 async function start() {
   await prisma.$connect();
   logger.info('Database connected');
-  initializeScheduler();
+  initializeSchedulers();
 
   const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`);

@@ -50,7 +50,7 @@ export function ReminderDrawer({ reminder, patientName, onClose, onEdit, onCance
 
                     {/* Scheduling */}
                     <Section title="Programación">
-                        <Row icon="⏰" label={isPending ? "Se envia el" : "Enviado el"} value={fmtDateTime(reminder.sendAt)} />
+                        <Row icon="⏰" label={isPending ? "Se envia el" : "Enviado el"} value={fmtDateTime(reminder.sentAt)} />
                         {reminder.scheduledAt && <Row icon="🗓️" label="Programado" value={fmtDateTime(reminder.scheduledAt)} />}
                     </Section>
 

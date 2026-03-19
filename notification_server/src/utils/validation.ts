@@ -11,7 +11,7 @@ const e164 = z
 const futureIso = z
   .string()
   .datetime({ message: 'Must be a valid ISO-8601 datetime string' })
-  .refine(v => new Date(v) > new Date(), { message: 'sendAt must be in the future' });
+  .refine(v => new Date(v) > new Date(), { message: 'sentAt must be in the future' });
 
 export const sendWhatsAppSchema = z
   .object({
@@ -29,7 +29,7 @@ export const sendSmsSchema = z.object({
 export const scheduleSchema = z.object({
   channel: z.nativeEnum(Channel),
   payload: z.union([ sendWhatsAppSchema, sendSmsSchema ]),
-  sendAt: futureIso,
+  sentAt: futureIso,
 });
 
 export function validate<T>(schema: z.ZodType<T>) {

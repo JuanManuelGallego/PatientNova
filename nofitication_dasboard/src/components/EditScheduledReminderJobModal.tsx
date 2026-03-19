@@ -6,7 +6,7 @@ import { isoToLocal } from "../utils/TimeUtils";
 import { Patient } from "../types/Patient";
 
 export function EditScheduledReminderModal({ reminder, patients, onClose, onSaved }: { reminder: Reminder; patients: Patient[]; onClose: () => void; onSaved: () => void }) {
-    const [ sendAt, setSendAt ] = useState(isoToLocal(reminder.sendAt));
+    const [ sentAt, setsentAt ] = useState(isoToLocal(reminder.sentAt));
     const [ saving, setSaving ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export function EditScheduledReminderModal({ reminder, patients, onClose, onSave
         try {
             const body = {
                 scheduledAt: new Date().toISOString(),
-                sendAt: new Date(sendAt).toISOString(),
+                sentAt: new Date(sentAt).toISOString(),
                 status: ReminderStatus.PENDING
             }
             const res = await fetch(`${API_BASE}/reminders/${reminder.id}`, {
@@ -41,17 +41,17 @@ export function EditScheduledReminderModal({ reminder, patients, onClose, onSave
                 <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "14px 16px", marginBottom: 20, fontSize: 13 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span style={{ color: "#6B7280" }}>Canal</span>
-                        <span style={{  color: "#6B7280" , fontWeight: 600 }}>{CHANNEL_ICON[ reminder.channel ]} {CHANNEL_LABEL[ reminder.channel ]}</span>
+                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{CHANNEL_ICON[ reminder.channel ]} {CHANNEL_LABEL[ reminder.channel ]}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "#6B7280" }}>Destinatario</span>
-                        <span style={{  color: "#6B7280", fontWeight: 600 }}>{patients.find(p => p.id === reminder.patientId)?.fullName ?? "—"}</span>
+                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{patients.find(p => p.id === reminder.patientId)?.fullName ?? "—"}</span>
                     </div>
                 </div>
                 {error && <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#DC2626" }}>⚠️ {error}</div>}
                 <label style={lbl}>
                     Nueva fecha y hora de envío
-                    <input type="datetime-local" style={inp} value={sendAt} min={new Date().toISOString().slice(0, 16)} onChange={e => setSendAt(e.target.value)} />
+                    <input type="datetime-local" style={inp} value={sentAt} min={new Date().toISOString().slice(0, 16)} onChange={e => setsentAt(e.target.value)} />
                 </label>
                 <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                     <button onClick={onClose} style={{ ...btnSecondary, flex: 1 }} disabled={saving}>Cancelar</button>

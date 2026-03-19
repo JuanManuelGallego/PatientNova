@@ -22,7 +22,7 @@ export const reminderRouter = Router();
  *   channel  — WHATSAPP | SMS
  *   page     — default 1
  *   pageSize — default 20, max 100
- *   orderBy  — sendAt | createdAt | status  (default: sendAt)
+ *   orderBy  — sentAt | createdAt | status  (default: sentAt)
  *   order    — asc | desc  (default: asc)
  */
 reminderRouter.get<{}, any, any, ListRemindersQuery>(
@@ -59,7 +59,7 @@ reminderRouter.get(
  *     "channel":     "WHATSAPP",
  *     "to":          "+15551234567",
  *     "mode":        "SCHEDULED",
- *     "sendAt":      "2026-04-01T10:00:00Z",
+ *     "sentAt":      "2026-04-01T10:00:00Z",
  *     "scheduledAt": "2026-03-31T10:00:00Z",  // required when mode=SCHEDULED
  *     "contentSid":  "HXabc..."               // optional Twilio template SID
  *   }

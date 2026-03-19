@@ -20,7 +20,7 @@ export interface SendSmsRequest {
 export interface ScheduleRequest {
   channel: Channel;
   payload: SendWhatsAppRequest /*| SendSmsRequest*/;
-  sendAt: string;
+  sentAt: string;
 }
 
 export interface NotificationResult {
@@ -36,13 +36,13 @@ export interface ScheduleResult {
   jobId: string;
   channel: Channel;
   to: string;
-  sendAt: string;
+  sentAt: string;
   scheduledAt: string;
 }
 
 export const appointmentInclude = {
   patient: { select: { id: true, name: true, lastName: true, email: true } },
-  reminder: { select: { id: true, channel: true, status: true, sendAt: true } },
+  reminder: { select: { id: true, channel: true, status: true, sentAt: true } },
 } satisfies Prisma.AppointmentInclude;
 
 export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{

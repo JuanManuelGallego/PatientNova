@@ -203,7 +203,7 @@ export default function AppointmentsPage() {
                             <PayBadge payed={a.payed} />
                             {!a.payed && a.status !== AppointmentStatus.CANCELLED && (
                               <button onClick={() => handlePay(a.id)} disabled={payingId === a.id} style={{ padding: "3px 9px", fontSize: 11, fontWeight: 600, background: "#DCFCE7", border: "none", borderRadius: 6, color: "#16A34A", cursor: "pointer", opacity: payingId === a.id ? 0.6 : 1 }}>
-                                {payingId === a.id ? "…" : "Cobrar"}
+                                {payingId === a.id ? "…" : "Pagó"}
                               </button>
                             )}
                           </div>
