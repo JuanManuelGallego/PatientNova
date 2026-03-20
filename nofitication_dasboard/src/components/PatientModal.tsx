@@ -95,7 +95,7 @@ export function PatientModal({
                             {isEdit ? "Editar Paciente" : "Nuevo Paciente"}
                         </h2>
                         <p style={{ fontSize: 13, color: "#9CA3AF", margin: "4px 0 0" }}>
-                            {isEdit ? `Modificando: ${patient!.fullName}` : "Registrar un nuevo paciente en el sistema"}
+                            {isEdit ? `Modificando: ${patient!.name}` : "Registrar un nuevo paciente en el sistema"}
                         </p>
                     </div>
                     <button onClick={onClose} style={{ background: "#F3F4F6", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#6B7280" }}>✕</button>

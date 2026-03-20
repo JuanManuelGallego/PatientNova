@@ -181,7 +181,7 @@ export function ReminderModal({
                             <select style={inp} value={form.patientId} onChange={set("patientId")}>
                                 <option value="">Seleccionar paciente…</option>
                                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                                    <option key={p.id} value={p.id}>{p.fullName}</option>
+                                    <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
                         </label>
@@ -266,7 +266,7 @@ export function ReminderModal({
                         <div style={{ background: "#F8F7F4", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Resumen del recordatorio</div>
                             {[
-                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.fullName}` : "—" },
+                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.name}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
                                 { k: "Programado", v: sendMode === ReminderMode.IMMEDIATE ? "Imediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },

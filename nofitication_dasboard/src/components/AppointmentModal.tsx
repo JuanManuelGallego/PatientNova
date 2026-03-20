@@ -65,7 +65,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
       channel: reminderChannel,
       sendMode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
-      sendAt: new Date(getReminderscheduledSendTime(form.date, form.reminderType)).toISOString(), //sendAt instead
+      sendAt: new Date(getReminderscheduledSendTime(form.date, form.reminderType)).toISOString(), //sendAt instead  
     };
   }
 
@@ -123,7 +123,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
               <select style={inp} value={form.patientId} onChange={set("patientId")}>
                 <option value="">Seleccionar paciente…</option>
                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                  <option key={p.id} value={p.id}>{p.fullName}</option>
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </label>}
@@ -260,7 +260,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
             <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Resumen</div>
               {[
-                [ "Paciente", selectedPatient ? selectedPatient.fullName : "—" ],
+                [ "Paciente", selectedPatient ? selectedPatient.name : "—" ],
                 [ "Tipo", form.type || "—" ],
                 [ "Fecha", `${getDate(form.date)} a las ${getTime(form.date)}` ],
                 [ "Duración", form.duration ],

@@ -14,7 +14,6 @@ model Patient {
 
   name           String        @db.VarChar(100)
   lastName       String        @db.VarChar(100)
-  fullName       String?       @db.VarChar(200)
 
   whatsappNumber String?       @db.VarChar(20)
   smsNumber      String?       @db.VarChar(20)

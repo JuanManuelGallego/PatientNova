@@ -1,4 +1,4 @@
-import type { Patient } from '@prisma/client';
+import { PatientStatus, type Patient } from '@prisma/client';
 import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
 import type { PaginatedPatients } from '../utils/types.js';
@@ -11,15 +11,16 @@ export const patientRepository = {
         data: {
           name: dto.name,
           lastName: dto.lastName,
-          fullName: `${dto.name} ${dto.lastName}`,
           whatsappNumber: dto.whatsappNumber ?? null,
           smsNumber: dto.smsNumber ?? null,
-          email: dto.email.toLowerCase(),
+          email: dto.email?.toLowerCase() ?? null,
+          dateOfBirth: dto.dateOfBirth ?? null,
+          notes: dto.notes ?? null,
           status: dto.status,
         },
       });
     } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002') {
+      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002' && dto.email) {
         throw new PatientEmailConflictError(dto.email);
       }
       throw err;
@@ -43,6 +44,8 @@ export const patientRepository = {
           { name: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
+          { whatsappNumber: { contains: search, mode: 'insensitive' } },
+          { smsNumber: { contains: search, mode: 'insensitive' } },
         ],
       }),
     };
@@ -75,11 +78,13 @@ export const patientRepository = {
         data: {
           ...(dto.name !== undefined && { name: dto.name }),
           ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-          fullName: `${dto.name} ${dto.lastName}`,
-          ...({ whatsappNumber: dto.whatsappNumber || null }),
-          ...({ smsNumber: dto.smsNumber || null }),
-          ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
+          ...(dto.whatsappNumber !== undefined && { whatsappNumber: dto.whatsappNumber || null }),
+          ...(dto.smsNumber !== undefined && { smsNumber: dto.smsNumber || null }),
+          ...(dto.email !== undefined && { email: dto.email?.toLowerCase() || null }),
+          ...(dto.dateOfBirth !== undefined && { dateOfBirth: dto.dateOfBirth || null }),
+          ...(dto.notes !== undefined && { notes: dto.notes || null }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.status === PatientStatus.ARCHIVED && { archivedAt: new Date().toISOString() })
         },
       });
     } catch (err) {

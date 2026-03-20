@@ -14,7 +14,6 @@ export interface Patient {
     avatar: string;
     createdAt: string;
     email: string;
-    fullName: string;
     id: string;
     lastName: string;
     name: string;

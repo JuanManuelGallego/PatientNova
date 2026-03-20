@@ -45,7 +45,7 @@ export function EditScheduledReminderModal({ reminder, patients, onClose, onSave
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "#6B7280" }}>Destinatario</span>
-                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{patients.find(p => p.id === reminder.patientId)?.fullName ?? "—"}</span>
+                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</span>
                     </div>
                 </div>
                 {error && <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#DC2626" }}>⚠️ {error}</div>}

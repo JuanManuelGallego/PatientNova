@@ -147,7 +147,7 @@ export default function RemindersPage() {
                                         <tr key={reminder.id} style={{ borderBottom: i < filteredActive.length - 1 ? "1px solid #F3F4F6" : "none", cursor: "pointer" }}
                                             onClick={() => setViewReminder(reminder)}>
                                             <td style={tdStyle}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.fullName ?? "—"}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</div>
                                                 <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                             </td>
                                             <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
@@ -203,7 +203,7 @@ export default function RemindersPage() {
                                             onClick={() => setViewReminder(reminder)}>
 
                                             <td style={tdStyle}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.fullName ?? "—"}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</div>
                                                 <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                             </td>
                                             <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
@@ -261,7 +261,7 @@ export default function RemindersPage() {
             {viewReminder && (
                 <ReminderDrawer
                     reminder={viewReminder}
-                    patientName={patients.find(p => p.id === viewReminder.patientId)?.fullName}
+                    patientName={patients.find(p => p.id === viewReminder.patientId)?.name}
                     onClose={() => setViewReminder(null)}
                     onEdit={() => { setEditReminder(viewReminder); setViewReminder(null); }}
                     onCancel={() => { setCancelReminder(viewReminder); setViewReminder(null); }}
@@ -272,7 +272,7 @@ export default function RemindersPage() {
                     reminder={cancelReminder}
                     onClose={() => setCancelReminder(null)}
                     onCanceled={() => { setCancelReminder(null); fetchReminders(); }}
-                    patientName={patients.find(p => p.id === cancelReminder.patientId)?.fullName}
+                    patientName={patients.find(p => p.id === cancelReminder.patientId)?.name}
                 />
 
             )}

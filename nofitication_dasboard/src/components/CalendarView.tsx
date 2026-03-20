@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { btnSecondary } from "../styles/theme";
-import { Appointment, AppointmentStatus, LOCATION_CFG, STATUS_CFG } from "../types/Appointment";
+import { Appointment, AppointmentStatus, LOCATION_CFG } from "../types/Appointment";
 import { today, MONTH_NAMES_ES, DAY_NAMES_ES, getDate, getTime } from "../utils/TimeUtils";
 
 export function CalendarView({ appointments, onDayClick, onApptClick }: {
@@ -13,7 +13,7 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
 
     const firstDay = new Date(calYear, calMonth, 1);
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    // Monday-based offset
+
     const startOffset = (firstDay.getDay() + 6) % 7;
     const cells = startOffset + daysInMonth;
     const rows = Math.ceil(cells / 7);
@@ -38,7 +38,6 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
 
     return (
         <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-            {/* Calendar header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid #F3F4F6" }}>
                 <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); } else setCalMonth(m => m - 1); }}
                     style={{ ...btnSecondary, padding: "7px 14px", fontSize: 16 }}>‹</button>
@@ -48,15 +47,11 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
                 <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }}
                     style={{ ...btnSecondary, padding: "7px 14px", fontSize: 16 }}>›</button>
             </div>
-
-            {/* Day name headers */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", background: "#F9FAFB" }}>
                 {DAY_NAMES_ES.map(d => (
                     <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.05em" }}>{d}</div>
                 ))}
             </div>
-
-            {/* Cells */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
                 {Array.from({ length: rows * 7 }).map((_, i) => {
                     const date = cellDate(i);
