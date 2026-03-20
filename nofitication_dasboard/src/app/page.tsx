@@ -19,22 +19,22 @@ const APPOINTMENTS: Appointment[] = [
   {
     id: "a1", patient: PATIENTS[ 0 ], date: "2026-03-16", time: "09:00",
     type: "Revisión General", reminderChannels: [ Channel.SMS, Channel.WHATSAPP ],
-    reminderStatus: "scheduled", reminderScheduledFor: "2026-03-15 09:00",
+    reminderStatus: "scheduled", reminderscheduledSendTime: "2026-03-15 09:00",
   },
   {
     id: "a2", patient: PATIENTS[ 1 ], date: "2026-03-16", time: "10:30",
     type: "Revisión de Análisis de Sangre", reminderChannels: [ Channel.WHATSAPP ],
-    reminderStatus: "sent", reminderScheduledFor: "2026-03-15 10:30",
+    reminderStatus: "sent", reminderscheduledSendTime: "2026-03-15 10:30",
   },
   {
     id: "a3", patient: PATIENTS[ 2 ], date: "2026-03-17", time: "14:00",
     type: "Consulta de Seguimiento", reminderChannels: [ Channel.EMAIL ],
-    reminderStatus: "pending", reminderScheduledFor: "2026-03-16 14:00",
+    reminderStatus: "pending", reminderscheduledSendTime: "2026-03-16 14:00",
   },
   {
     id: "a4", patient: PATIENTS[ 3 ], date: "2026-03-18", time: "11:00",
     type: "Vacunación", reminderChannels: [ Channel.SMS, Channel.WHATSAPP ],
-    reminderStatus: "scheduled", reminderScheduledFor: "2026-03-17 11:00",
+    reminderStatus: "scheduled", reminderscheduledSendTime: "2026-03-17 11:00",
   }
 ];
 
@@ -377,7 +377,7 @@ export default function NotificationsPage() {
                       </div>
                     </td>
                     {/* Scheduled */}
-                    <td style={{ padding: "14px 20px", fontSize: 13, color: "#6B7280" }}>{appt.reminderScheduledFor}</td>
+                    <td style={{ padding: "14px 20px", fontSize: 13, color: "#6B7280" }}>{appt.reminderscheduledSendTime}</td>
                     {/* Status */}
                     <td style={{ padding: "14px 20px" }}><StatusPill status={appt.reminderStatus} /></td>
                     {/* Actions */}

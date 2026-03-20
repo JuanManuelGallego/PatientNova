@@ -58,9 +58,9 @@ reminderRouter.get(
  *   {
  *     "channel":     "WHATSAPP",
  *     "to":          "+15551234567",
- *     "mode":        "SCHEDULED",
+ *     "sendMode":        "SCHEDULED",
  *     "sentAt":      "2026-04-01T10:00:00Z",
- *     "scheduledAt": "2026-03-31T10:00:00Z",  // required when mode=SCHEDULED
+ *     "sendAt": "2026-03-31T10:00:00Z",  // required when sendMode=SCHEDULED
  *     "contentSid":  "HXabc..."               // optional Twilio template SID
  *   }
  */

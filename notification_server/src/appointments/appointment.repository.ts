@@ -11,27 +11,28 @@ import { appointmentInclude, type AppointmentWithRelations, type PaginatedAppoin
 export const appointmentRepository = {
   async create(dto: CreateAppointmentDto): Promise<AppointmentWithRelations> {
 
-    if (dto.patientId) {
-      const patient = await prisma.patient.findUnique({ where: { id: dto.patientId } });
-      if (!patient) throw new AppointmentPatientNotFoundError(dto.patientId);
-    }
+    const patient = await prisma.patient.findUnique({ where: { id: dto.patientId } });
+    if (!patient) throw new AppointmentPatientNotFoundError(dto.patientId);
+
     if (dto.reminderId) {
       const reminder = await prisma.reminder.findUnique({ where: { id: dto.reminderId } });
       if (!reminder) throw new AppointmentReminderNotFoundError(dto.reminderId);
     }
 
     const appointmentData: Prisma.AppointmentUncheckedCreateInput = {
-      patientId: dto.patientId,
-      date: dto.date,
-      status: dto.status,
-      reminderId: dto.reminderId || null,
-      type: dto.type,
+      startAt: dto.startAt,
+      endAt: dto.endAt,
+      timezone: dto.timezone || "",
+      price: dto.price,
+      currency: dto.currency || "CST",
+      paid: dto.paid,
       location: dto.location,
       meetingUrl: dto.meetingUrl || null,
-      price: dto.price,
-      payed: dto.payed,
-      duration: dto.duration,
       notes: dto.notes || null,
+      type: dto.type,
+      status: dto.status,
+      patientId: dto.patientId,
+      reminderId: dto.reminderId || null,
     };
 
     return prisma.appointment.create({
@@ -50,17 +51,17 @@ export const appointmentRepository = {
   },
 
   async findMany(query: ListAppointmentsQuery): Promise<PaginatedAppointments> {
-    const { patientId, status, date, dateFrom, dateTo, payed, page, pageSize, orderBy, order } = query;
+    const { patientId, status, startAt, dateFrom, dateTo, paid, page, pageSize, orderBy, order } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.AppointmentWhereInput = {
       ...(patientId && { patientId }),
       ...(status && { status }),
-      ...(payed !== undefined && { payed }),
-      ...(date && { date }),
+      ...(paid !== undefined && { paid }),
+      ...(startAt && { startAt }),
       ...(dateFrom || dateTo
         ? {
-          date: {
+          startAt: {
             ...(dateFrom && { gte: dateFrom }),
             ...(dateTo && { lte: dateTo }),
           },
@@ -85,27 +86,26 @@ export const appointmentRepository = {
   async update(id: string, dto: UpdateAppointmentDto): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id);
 
-    if (dto.patientId) {
-      const patient = await prisma.patient.findUnique({ where: { id: dto.patientId } });
-      if (!patient) throw new AppointmentPatientNotFoundError(dto.patientId);
-    }
     if (dto.reminderId) {
       const reminder = await prisma.reminder.findUnique({ where: { id: dto.reminderId } });
       if (!reminder) throw new AppointmentReminderNotFoundError(dto.reminderId);
     }
 
     const appointmentData: Prisma.AppointmentUncheckedUpdateInput = {
-      ...(dto.patientId !== undefined && { patientId: dto.patientId }),
-      ...(dto.date !== undefined && { date: dto.date }),
-      ...(dto.status !== undefined && { status: dto.status }),
-      ...(dto.reminderId !== undefined && { reminderId: dto.reminderId }),
-      ...(dto.type !== undefined && { type: dto.type }),
-      ...(dto.location !== undefined && { location: dto.location }),
-      ...(dto.meetingUrl !== undefined && { meetingUrl: dto.meetingUrl || null }),
+      ...(dto.startAt !== undefined && { startAt: dto.startAt }),
+      ...(dto.endAt !== undefined && { endAt: dto.endAt }),
+      ...(dto.timezone !== undefined && { timezone: dto.timezone }),
       ...(dto.price !== undefined && { price: dto.price }),
-      ...(dto.payed !== undefined && { payed: dto.payed }),
-      ...(dto.duration !== undefined && { duration: dto.duration }),
-      ...(dto.notes !== undefined && { notes: dto.notes || null }),
+      ...(dto.currency !== undefined && { currency: dto.currency }),
+      ...(dto.paid !== undefined && { paid: dto.paid }),
+      ...(dto.location !== undefined && { location: dto.location }),
+      ...(dto.meetingUrl !== undefined && { meetingUrl: dto.meetingUrl }),
+      ...(dto.notes !== undefined && { notes: dto.notes }),
+      ...(dto.type !== undefined && { type: dto.type }),
+      ...(dto.status !== undefined && { status: dto.status }),
+      ...(dto.cancelledAt !== undefined && { cancelledAt: dto.cancelledAt }),
+      ...(dto.completedAt !== undefined && { completedAt: dto.completedAt }),
+      ...(dto.reminderId !== undefined && { reminderId: dto.reminderId }),
     }
 
     return prisma.appointment.update({
@@ -124,7 +124,7 @@ export const appointmentRepository = {
     await appointmentRepository.findById(id);
     return prisma.appointment.update({
       where: { id },
-      data: { payed: true },
+      data: { paid: true },
       include: appointmentInclude,
     });
   },

@@ -50,7 +50,7 @@ export async function reminderWorker(): Promise<void> {
     const remindersToSend = await prisma.reminder.findMany({
       where: {
         status: ReminderStatus.PENDING,
-        scheduledAt: {
+        sendAt: {
           lte: oneMinuteFromNow,
         },
       },
@@ -158,7 +158,7 @@ export async function appointmentWorker(): Promise<void> {
           AppointmentStatus.CONFIRMED,
           AppointmentStatus.SCHEDULED,
         ],
-      }, date: {
+      }, startAt: {
         lte: lastHour,
       },
     },

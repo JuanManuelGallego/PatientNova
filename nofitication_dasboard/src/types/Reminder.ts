@@ -6,8 +6,8 @@ export interface Reminder {
     error?: string;
     id: string;
     messageId?: string;
-    mode: ReminderMode;
-    scheduledAt?: string;
+    sendMode: ReminderMode;
+    sendAt?: string;
     sentAt: string;
     status: ReminderStatus;
     to: string;
@@ -29,7 +29,7 @@ export enum Channel {
 }
 
 export enum ReminderMode {
-    NOW = "IMMEDIATE",
+    IMMEDIATE = "IMMEDIATE",
     SCHEDULED = "SCHEDULED",
 }
 
@@ -78,7 +78,7 @@ export interface ScheduledReminderJob {
     channel: Channel;
     to: string | null;
     sentAt: string;
-    scheduledAt: string;
+    sendAt: string;
     status: ReminderStatus;
     messageSid?: string;
     error?: string;

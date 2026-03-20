@@ -22,13 +22,13 @@ export const appointmentRouter = Router();
  * Query params:
  *   patientId — filter by patient UUID
  *   status    — SCHEDULED | CONFIRMED | COMPLETED | CANCELLED | NO_SHOW
- *   date      — exact date filter   (YYYY-MM-DD)
+ *   startAt      — exact date filter   (YYYY-MM-DD)
  *   dateFrom  — range start         (YYYY-MM-DD)
  *   dateTo    — range end           (YYYY-MM-DD)
- *   payed     — true | false
+ *   paid     — true | false
  *   page      — default 1
  *   pageSize  — default 20, max 100
- *   orderBy   — date | createdAt | status | price  (default: date)
+ *   orderBy   — startAt | createdAt | status | price  (default: startAt)
  *   order     — asc | desc  (default: asc)
  *
  * Response includes joined patient and reminder objects.
@@ -65,13 +65,13 @@ appointmentRouter.get(
  * Body:
  *   {
  *     "patientId":  "uuid",
- *     "date":       "2026-04-10",
+ *     "startAt":       "2026-04-10",
  *     "time":       "09:00",
  *     "type":       "Revisión General",
  *     "location":   "Consultorio 3, Clínica Central",
  *     "price":      "150.00",
  *     "duration":   "30 min",
- *     "payed":      false,
+ *     "paid":      false,
  *     "status":     "SCHEDULED",       // optional, default: SCHEDULED
  *     "reminderId": "uuid",            // optional
  *     "meetingUrl": "https://..."      // optional
@@ -108,7 +108,7 @@ appointmentRouter.patch(
 
 /**
  * POST /appointments/:id/pay
- * Convenience endpoint — marks the appointment as paid (payed = true).
+ * Convenience endpoint — marks the appointment as paid (paid = true).
  */
 appointmentRouter.post(
   '/:id/pay',

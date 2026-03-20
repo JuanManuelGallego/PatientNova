@@ -152,13 +152,13 @@ export default function RemindersPage() {
                                             </td>
                                             <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
                                             <td style={tdStyle}><ReminderStatusPill status={reminder.status} /></td>
-                                            <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{fmtDateTime(reminder.scheduledAt)}</td>
+                                            <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{fmtDateTime(reminder.sendAt)}</td>
                                             <td style={{ ...tdStyle, fontSize: 13, color: "#6B7280", whiteSpace: "nowrap" }}>
                                                 <span style={{ background: "#EFF6FF", color: "#2563EB", padding: "3px 9px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                                                    {fmtRelative(reminder.scheduledAt)}
+                                                    {fmtRelative(reminder.sendAt)}
                                                 </span>
                                             </td>
-                                            <td style={{ ...tdStyle, fontSize: 13, color: "#9CA3AF" }}>{fmtDateTime(reminder.scheduledAt)}</td>
+                                            <td style={{ ...tdStyle, fontSize: 13, color: "#9CA3AF" }}>{fmtDateTime(reminder.sendAt)}</td>
                                             <td style={tdStyle} onClick={e => e.stopPropagation()}>
                                                 <div style={{ display: "flex", gap: 6 }}>
                                                     <button onClick={() => setEditReminder(reminder)} style={{ padding: "5px 12px", fontSize: 12, fontWeight: 600, background: "#EFF6FF", border: "none", borderRadius: 7, color: "#2563EB", cursor: "pointer" }}>

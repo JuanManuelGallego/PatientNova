@@ -45,13 +45,13 @@ export function ReminderDrawer({ reminder, patientName, onClose, onEdit, onCance
                     <Section title="Destinatario">
                         <Row icon="👤" label="Nombre" value={patientName ?? "—"} />
                         <Row icon="📞" label="Número" value={<span style={{ fontFamily: "monospace" }}>{reminder.to}</span>} />
-                        <Row icon="📢" label="Modo" value={reminder.mode === ReminderMode.NOW ? "Inmediato" : "Programado"} />
+                        <Row icon="📢" label="Modo" value={reminder.sendMode === ReminderMode.IMMEDIATE ? "Inmediato" : "Programado"} />
                     </Section>
 
                     {/* Scheduling */}
                     <Section title="Programación">
                         <Row icon="⏰" label={isPending ? "Se envia el" : "Enviado el"} value={fmtDateTime(reminder.sentAt)} />
-                        {reminder.scheduledAt && <Row icon="🗓️" label="Programado" value={fmtDateTime(reminder.scheduledAt)} />}
+                        {reminder.sendAt && <Row icon="🗓️" label="Programado" value={fmtDateTime(reminder.sendAt)} />}
                     </Section>
 
 

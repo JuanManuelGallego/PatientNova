@@ -8,7 +8,7 @@ import { useCreateAppointment } from "../api/useCreateAppointment";
 import { useUpdateAppointment } from "../api/useUpdateAppointment";
 import { useCreateReminder } from "../api/useCreateReminder";
 import { useUpdateReminder } from "../api/useUpdateReminder";
-import { getDate, getRemindersentAt as getReminderscheduledAt, getTime, isReminderTypeFeasible } from "../utils/TimeUtils";
+import { getDate, getRemindersentAt as getReminderscheduledSendTime, getTime, isReminderTypeFeasible } from "../utils/TimeUtils";
 import { DateTimePicker } from "./DateTimePicker";
 
 export function AppointmentModal({ appt, patients, onClose, onSaved }: {
@@ -63,9 +63,9 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
       },
       patientId: form.patientId,
       channel: reminderChannel,
-      mode: ReminderMode.SCHEDULED,
+      sendMode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
-      scheduledAt: new Date(getReminderscheduledAt(form.date, form.reminderType)).toISOString(), //ScheduledFor instead
+      sendAt: new Date(getReminderscheduledSendTime(form.date, form.reminderType)).toISOString(), //sendAt instead
     };
   }
 
@@ -74,7 +74,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
     try {
       if (isEdit) {
         if (appt!.reminderId) {
-          await updateReminder(appt!.reminderId, buildReminderPayload()); // Remove new scheduledAt???
+          await updateReminder(appt!.reminderId, buildReminderPayload()); // Remove new sendAt???
         } else if (form.reminderType !== ReminderType.NONE) {
           const reminder = await createReminder(buildReminderPayload())
           form.reminderId = reminder.id;

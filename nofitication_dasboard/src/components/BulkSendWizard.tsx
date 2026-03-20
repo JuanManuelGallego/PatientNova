@@ -10,7 +10,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
     const [ step, setStep ] = useState(1);
     const [ channel, setChannel ] = useState<Channel>(Channel.WHATSAPP);
     const [ message, setMessage ] = useState("");
-    const [ mode, setMode ] = useState<ReminderMode>(ReminderMode.NOW);
+    const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
     const [ sentAt, setsentAt ] = useState("");
     const [ selected, setSelected ] = useState<Set<string>>(new Set());
     const [ sending, setSending ] = useState(false);
@@ -42,8 +42,8 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
             const to = channel === Channel.WHATSAPP ? p.whatsappNumber : p.smsNumber;
             if (!to) { res.push({ patientId: pid, name: `${p.fullName}`, channel, status: "skipped", reason: "Sin número" }); continue; }
             try {
-                const url = mode === ReminderMode.NOW ? `${API_BASE}/notify/${channel}` : `${API_BASE}/notify/schedule`;
-                const body = mode === ReminderMode.NOW
+                const url = sendMode === ReminderMode.IMMEDIATE ? `${API_BASE}/notify/${channel}` : `${API_BASE}/notify/schedule`;
+                const body = sendMode === ReminderMode.IMMEDIATE
                     ? { to, body: message }
                     : { channel, payload: { to, body: message }, sentAt: new Date(sentAt).toISOString() };
                 const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -112,13 +112,13 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                         <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 14 }}>Tipo de envío</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                             {([
-                                { k: ReminderMode.NOW, icon: "⚡", title: "Enviar ahora", sub: "Envío inmediato a todos" },
+                                { k: ReminderMode.IMMEDIATE, icon: "⚡", title: "Enviar ahora", sub: "Envío inmediato a todos" },
                                 { k: ReminderMode.SCHEDULED, icon: "🗓️", title: "Programar envío", sub: "Elegir fecha y hora" },
                             ] as const).map(opt => (
                                 <button key={opt.k} onClick={() => setMode(opt.k)} style={{
                                     display: "flex", flexDirection: "column", gap: 4, padding: "14px 18px",
-                                    border: `2px solid ${mode === opt.k ? "#1E3A5F" : "#E5E7EB"}`,
-                                    borderRadius: 14, background: mode === opt.k ? "#EFF6FF" : "#fff", cursor: "pointer", textAlign: "left",
+                                    border: `2px solid ${sendMode === opt.k ? "#1E3A5F" : "#E5E7EB"}`,
+                                    borderRadius: 14, background: sendMode === opt.k ? "#EFF6FF" : "#fff", cursor: "pointer", textAlign: "left",
                                 }}>
                                     <span style={{ fontSize: 22 }}>{opt.icon}</span>
                                     <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{opt.title}</span>
@@ -127,7 +127,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                             ))}
                         </div>
                     </div>
-                    {mode === ReminderMode.SCHEDULED && (
+                    {sendMode === ReminderMode.SCHEDULED && (
                         <label style={lbl}>
                             Fecha y hora de envío
                             <input type="datetime-local" style={inp} value={sentAt} onChange={e => setsentAt(e.target.value)} min={new Date().toISOString().slice(0, 16)} />
@@ -241,7 +241,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                                     <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                                     Enviando {results.length}/{selected.size}…
                                 </>
-                            ) : `${mode === ReminderMode.NOW ? "⚡ Enviar" : "🗓️ Programar"} a ${selected.size} pacientes`}
+                            ) : `${sendMode === ReminderMode.IMMEDIATE ? "⚡ Enviar" : "🗓️ Programar"} a ${selected.size} pacientes`}
                         </button>
                     </div>
                 </div>

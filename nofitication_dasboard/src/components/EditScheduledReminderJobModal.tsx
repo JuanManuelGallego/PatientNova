@@ -14,7 +14,7 @@ export function EditScheduledReminderModal({ reminder, patients, onClose, onSave
         setSaving(true); setError(null);
         try {
             const body = {
-                scheduledAt: new Date().toISOString(),
+                sendAt: new Date().toISOString(),
                 sentAt: new Date(sentAt).toISOString(),
                 status: ReminderStatus.PENDING
             }

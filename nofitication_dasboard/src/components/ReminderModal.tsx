@@ -20,20 +20,20 @@ export function ReminderModal({
     const { createReminder } = useCreateReminder();
     const { notify } = useNotify();
     const [ step, setStep ] = useState(1);
-    const [ mode, setMode ] = useState<ReminderMode>(ReminderMode.NOW);
+    const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
     const [ saving, setSaving ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
     const [ form, setForm ] = useState({
         patientId: "",
         channel: Channel.WHATSAPP,
         message: "",
-        scheduledAt: "",
+        sendAt: "",
         appointmentType: "",
     });
 
     const isValid = step === 1
         ? !!form.patientId && !!form.appointmentType
-        : step === 2 ? !!form.channel && !!form.message.trim() && (mode === ReminderMode.SCHEDULED ? !!form.scheduledAt : true) : true;
+        : step === 2 ? !!form.channel && !!form.message.trim() && (sendMode === ReminderMode.SCHEDULED ? !!form.sendAt : true) : true;
 
     const selectedPatient = patients.find(p => p.id === form.patientId);
 
@@ -66,7 +66,7 @@ export function ReminderModal({
             setError("El paciente no tiene número de SMS");
             return false;
         }
-        if (mode === ReminderMode.SCHEDULED && !form.scheduledAt) {
+        if (sendMode === ReminderMode.SCHEDULED && !form.sendAt) {
             setError("Selecciona fecha y hora de envío");
             return false;
         }
@@ -94,8 +94,8 @@ export function ReminderModal({
         return {
             ...buildPayload(),
             channel: form.channel,
-            mode: mode,
-            scheduledAt: new Date(form.scheduledAt).toISOString(),
+            sendMode: sendMode,
+            sendAt: new Date(form.sendAt).toISOString(),
         };
     }
 
@@ -103,7 +103,7 @@ export function ReminderModal({
         if (!validateForm()) return;
         setSaving(true); setError(null);
         try {
-            if (mode === ReminderMode.NOW) {
+            if (sendMode === ReminderMode.IMMEDIATE) {
                 const body = buildPayload();
                 await notify(form.channel, body);
             } else {
@@ -157,21 +157,21 @@ export function ReminderModal({
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Tipo de envío</div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                                 {([
-                                    { key: ReminderMode.NOW, icon: "⚡", title: "Enviar ahora", sub: "Se envía inmediatamente" },
+                                    { key: ReminderMode.IMMEDIATE, icon: "⚡", title: "Enviar ahora", sub: "Se envía inmediatamente" },
                                     { key: ReminderMode.SCHEDULED, icon: "🗓️", title: "Programar envío", sub: "Elegir fecha y hora" },
                                 ] as const).map(opt => (
                                     <button key={opt.key} onClick={() => setMode(opt.key)} style={{
                                         display: "flex", flexDirection: "column", alignItems: "flex-start",
                                         gap: 4, padding: "14px 16px",
-                                        border: `2px solid ${mode === opt.key ? "#1E3A5F" : "#E5E7EB"}`,
+                                        border: `2px solid ${sendMode === opt.key ? "#1E3A5F" : "#E5E7EB"}`,
                                         borderRadius: 12,
-                                        background: mode === opt.key ? "#EFF6FF" : "#fff",
+                                        background: sendMode === opt.key ? "#EFF6FF" : "#fff",
                                         cursor: "pointer", textAlign: "left",
                                     }}>
                                         <span style={{ fontSize: 22 }}>{opt.icon}</span>
                                         <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{opt.title}</span>
                                         <span style={{ fontSize: 12, color: "#9CA3AF" }}>{opt.sub}</span>
-                                        {mode === opt.key && <span style={{ marginLeft: "auto", color: "#1E3A5F", fontSize: 16, alignSelf: "flex-end" }}>✓</span>}
+                                        {sendMode === opt.key && <span style={{ marginLeft: "auto", color: "#1E3A5F", fontSize: 16, alignSelf: "flex-end" }}>✓</span>}
                                     </button>
                                 ))}
                             </div>
@@ -244,9 +244,9 @@ export function ReminderModal({
                                 })}
                             </div>
                         </div>
-                        {mode === ReminderMode.SCHEDULED && <label style={lbl}>
+                        {sendMode === ReminderMode.SCHEDULED && <label style={lbl}>
                             Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={form.scheduledAt} onChange={set("scheduledAt")} min={new Date().toISOString().slice(0, 16)} />
+                            <input type="datetime-local" style={inp} value={form.sendAt} onChange={set("sendAt")} min={new Date().toISOString().slice(0, 16)} />
                         </label>
                         }
                         <label style={lbl}>
@@ -269,7 +269,7 @@ export function ReminderModal({
                                 { k: "Paciente", v: selectedPatient ? `${selectedPatient.fullName}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
-                                { k: "Programado", v: mode === ReminderMode.NOW ? "Imediatamente" : form.scheduledAt ? fmtDateTime(form.scheduledAt) : "—" },
+                                { k: "Programado", v: sendMode === ReminderMode.IMMEDIATE ? "Imediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
                             ].map(({ k, v }) => (
                                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                                     <span style={{ color: "#6B7280" }}>{k}</span>
@@ -288,7 +288,7 @@ export function ReminderModal({
                     {step < totalSteps
                         ? <button onClick={() => { setError(null); setStep(s => s + 1); }} disabled={!isValid} style={isValid ? btnPrimary : btnDisabled}>Continuar →</button>
                         : <button onClick={handleSubmit} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.7 : 1 }}>
-                            {saving ? "Enviando…" : mode === ReminderMode.NOW ? "⚡ Enviar ahora" : "🗓️ Programar"}
+                            {saving ? "Enviando…" : sendMode === ReminderMode.IMMEDIATE ? "⚡ Enviar ahora" : "🗓️ Programar"}
                         </button>
                     }
                 </div>

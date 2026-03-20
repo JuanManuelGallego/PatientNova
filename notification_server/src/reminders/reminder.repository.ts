@@ -16,9 +16,9 @@ export const reminderRepository = {
         contentSid: dto.contentSid ?? null,
         ...(dto.contentVariables && { contentVariables: dto.contentVariables }),
         messageId: dto.messageId ?? null,
-        mode: dto.mode,
+        sendMode: dto.sendMode,
         patientId: dto.patientId ?? null,
-        scheduledAt:dto.scheduledAt ? new Date(dto.scheduledAt) : null,
+        sendAt: dto.sendAt ? new Date(dto.sendAt) : null,
         sentAt: dto.sentAt ? new Date(dto.sentAt) : null,
         status: dto.status ?? ReminderStatus.PENDING,
         to: dto.to,
@@ -29,7 +29,7 @@ export const reminderRepository = {
   async findById(id: string): Promise<Reminder> {
     const reminder = await prisma.reminder.findUnique({
       where: { id },
-      include: { appointments: true },
+      include: { appointment: true },
     });
     if (!reminder) throw new ReminderNotFoundError(id);
     return reminder;
@@ -62,9 +62,9 @@ export const reminderRepository = {
         ...(dto.contentVariables !== undefined && { contentVariables: dto.contentVariables }),
         ...(dto.error !== undefined && { error: dto.error }),
         ...(dto.messageId !== undefined && { messageId: dto.messageId }),
-        ...(dto.mode !== undefined && { mode: dto.mode }),
+        ...(dto.sendMode !== undefined && { sendMode: dto.sendMode }),
         ...(dto.patientId !== undefined && { patientId: dto.patientId }),
-        ...(dto.scheduledAt !== undefined && { scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null }),
+        ...(dto.sendAt !== undefined && { sendAt: dto.sendAt ? new Date(dto.sendAt) : null }),
         ...(dto.sentAt !== undefined && { sentAt: new Date(dto.sentAt) }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.to !== undefined && { to: dto.to }),

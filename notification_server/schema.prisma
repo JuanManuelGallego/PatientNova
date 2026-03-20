@@ -11,19 +11,29 @@ datasource db {
 
 model Patient {
   id             String        @id @default(uuid()) @db.Uuid
+
   name           String        @db.VarChar(100)
   lastName       String        @db.VarChar(100)
   fullName       String?       @db.VarChar(200)
+
   whatsappNumber String?       @db.VarChar(20)
   smsNumber      String?       @db.VarChar(20)
-  email          String        @unique @db.VarChar(255)
+  email          String?        @unique @db.VarChar(255)
+
+  dateOfBirth    DateTime?
+  notes          String?       @db.VarChar(500)
+
   status         PatientStatus @default(ACTIVE)
+  archivedAt     DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  appointments   Appointment[]
-  reminders      Reminder[] @relation("PatientReminders")
+  appointments   Appointment[] @relation("PatientAppointments")
+  reminders      Reminder[]    @relation("PatientReminders")
 
+  @@index([name])
+  @@index([lastName])
+  @@index([status])
   @@map("patients")
 }
 
@@ -36,27 +46,35 @@ enum PatientStatus {
 // ─── Reminder ─────────────────────────────────────────────────────────────────
 
 model Reminder {
-  channel     Channel
-  contentSid  String?        @db.VarChar(100)
-  contentVariables Json?
-  createdAt   DateTime       @default(now())
-  error       String?
-  id          String         @id @default(uuid()) @db.Uuid
-  messageId   String?        @db.VarChar(100)
-  mode        ReminderMode
-  patientId   String?        @db.Uuid
-  scheduledAt DateTime?
-  sentAt      DateTime?
-  status      ReminderStatus @default(PENDING)
-  to          String         @db.VarChar(30)
-  updatedAt   DateTime       @updatedAt
+  id                String         @id @default(uuid()) @db.Uuid
 
-  appointments Appointment[]
-  patient      Patient?       @relation("PatientReminders", fields: [patientId], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  channel           Channel
+  to                String         @db.VarChar(30)
+
+  contentSid        String?        @db.VarChar(100)
+  contentVariables  Json?
+  
+  status            ReminderStatus @default(PENDING)
+  error             String?
+  
+  sendMode          ReminderMode
+  sendAt            DateTime?
+  sentAt            DateTime?
+  messageId         String?        @db.VarChar(100)
+
+  appointmentId     String?        @unique @db.Uuid
+  patientId         String?        @db.Uuid
+
+  appointment       Appointment?   @relation("AppointmentReminder", fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient           Patient?       @relation("PatientReminders", fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([status])
-  @@index([scheduledAt])
+  @@index([sendAt])
   @@index([patientId])
+  @@index([status, sendAt])
   @@map("reminders")
 }
 
@@ -81,27 +99,39 @@ enum ReminderMode {
 // ─── Appointment ──────────────────────────────────────────────────────────────
 
 model Appointment {
-  createdAt  DateTime          @default(now())
-  date       DateTime          @default(now())
-  duration   String            @db.VarChar(20)   // e.g. "30 min"
-  id         String            @id @default(uuid()) @db.Uuid
-  location   String            @db.VarChar(255)
-  meetingUrl String?           @db.VarChar(500)
-  notes      String?            @db.VarChar(500)
-  patientId  String            @db.Uuid
-  payed      Boolean           @default(false)
-  price      String            @db.VarChar(20)   // e.g. "150.000"
-  reminderId String?           @db.Uuid
-  status     AppointmentStatus @default(SCHEDULED)
-  type       String            @db.VarChar(120)
-  updatedAt  DateTime          @updatedAt
+  id            String            @id @default(uuid()) @db.Uuid
 
-  patient    Patient           @relation(fields: [patientId],  references: [id], onDelete: Cascade)
-  reminder   Reminder?         @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  startAt       DateTime
+  endAt         DateTime
+  timezone      String?           @db.VarChar(50)@default("CST")
+
+  price         Int
+  currency      String?           @default("COP") @db.Char(3)
+  paid          Boolean           @default(false)
+
+  location      String            @db.VarChar(255)
+  meetingUrl    String?           @db.VarChar(500)
+  notes         String?           @db.VarChar(500)
+  type          String
+
+  status        AppointmentStatus @default(SCHEDULED)
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  completedAt   DateTime?
+
+  patientId     String            @db.Uuid
+  reminderId    String?           @db.Uuid
+  
+  patient       Patient           @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  reminder      Reminder?         @relation("AppointmentReminder")
 
   @@index([patientId])
-  @@index([date])
+  @@index([startAt])
   @@index([status])
+  @@index([startAt, status])
   @@map("appointments")
 }
 

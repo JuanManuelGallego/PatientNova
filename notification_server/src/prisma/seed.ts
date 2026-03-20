@@ -44,25 +44,25 @@ async function main() {
   const reminders = await Promise.all([
     prisma.reminder.create({
       data: {
-        channel: 'WHATSAPP', to: '+15551110001', mode: 'SCHEDULED',
-        status: 'PENDING', sentAt: tomorrow, scheduledAt: tomorrow,
+        channel: 'WHATSAPP', to: '+15551110001', sendMode: 'SCHEDULED',
+        status: 'PENDING', sentAt: tomorrow, sendAt: tomorrow,
       },
     }),
     prisma.reminder.create({
       data: {
-        channel: 'SMS', to: '+15551110003', mode: 'SCHEDULED',
-        status: 'PENDING', sentAt: nextWeek, scheduledAt: nextWeek,
+        channel: 'SMS', to: '+15551110003', sendMode: 'SCHEDULED',
+        status: 'PENDING', sentAt: nextWeek, sendAt: nextWeek,
       },
     }),
     prisma.reminder.create({
       data: {
-        channel: 'WHATSAPP', to: '+15551110002', mode: 'IMMEDIATE',
+        channel: 'WHATSAPP', to: '+15551110002', sendMode: 'IMMEDIATE',
         status: 'SENT', sentAt: yesterday,
       },
     }),
     prisma.reminder.create({
       data: {
-        channel: 'SMS', to: '+15551110004', mode: 'IMMEDIATE',
+        channel: 'SMS', to: '+15551110004', sendMode: 'IMMEDIATE',
         status: 'FAILED', sentAt: yesterday, error: 'Invalid destination number',
       },
     }),
@@ -75,37 +75,37 @@ async function main() {
     prisma.appointment.create({
       data: {
         patientId: patients[ 0 ].id, reminderId: reminders[ 0 ].id,
-        date: '2026-04-10', time: '09:00', type: 'Revisión General',
+        startAt: '2026-04-10', time: '09:00', type: 'Revisión General',
         location: 'Consultorio 3, Clínica Central', price: '150.00',
-        payed: true, duration: '30 min', status: 'CONFIRMED',
+        paid: true, duration: '30 min', status: 'CONFIRMED',
       },
     }),
     prisma.appointment.create({
       data: {
         patientId: patients[ 1 ].id, reminderId: reminders[ 1 ].id,
-        date: '2026-04-12', time: '11:00', type: 'Revisión de Análisis de Sangre',
+        startAt: '2026-04-12', time: '11:00', type: 'Revisión de Análisis de Sangre',
         location: 'Laboratorio Norte', price: '80.00',
-        payed: false, duration: '15 min', status: 'SCHEDULED',
+        paid: false, duration: '15 min', status: 'SCHEDULED',
       },
     }),
     prisma.appointment.create({
       data: {
         patientId: patients[ 2 ].id,
-        date: '2026-04-14', time: '14:30', type: 'Consulta de Seguimiento',
+        startAt: '2026-04-14', time: '14:30', type: 'Consulta de Seguimiento',
         location: 'Telemedicina', meetingUrl: 'https://meet.example.com/room-xyz',
-        price: '100.00', payed: false, duration: '45 min', status: 'SCHEDULED',
+        price: '100.00', paid: false, duration: '45 min', status: 'SCHEDULED',
       },
     }),
     prisma.appointment.create({
       data: {
         patientId: patients[ 3 ].id,
-        date: '2026-03-01', time: '10:00', type: 'Vacunación',
+        startAt: '2026-03-01', time: '10:00', type: 'Vacunación',
         location: 'Centro de Salud Sur', price: '60.00',
-        payed: true, duration: '10 min', status: 'COMPLETED',
+        paid: true, duration: '10 min', status: 'COMPLETED',
       },
     }),
   ]);
-  appts.forEach(a => console.log(`  ✓ ${a.type} — ${a.date} ${a.time} [${a.status}]`));
+  appts.forEach(a => console.log(`  ✓ ${a.type} — ${a.startAt} ${a.time} [${a.status}]`));
 
   console.log(`\n✅ Seed complete: ${patients.length} patients, ${reminders.length} reminders, ${appts.length} appointments.`);
 }

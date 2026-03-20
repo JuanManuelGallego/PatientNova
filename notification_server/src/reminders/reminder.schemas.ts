@@ -18,18 +18,18 @@ export const createReminderSchema = z
   .object({
     channel: z.nativeEnum(Channel),
     to: e164,
-    mode: z.nativeEnum(ReminderMode),
+    sendMode: z.nativeEnum(ReminderMode),
     contentSid: z.string().max(100).optional(),
     contentVariables: contentVariablesSchema,
     sentAt: isoDate.optional(),
-    scheduledAt: isoDate.optional(),
+    sendAt: isoDate.optional(),
     status: z.nativeEnum(ReminderStatus).optional(),
     messageId: z.string().max(100).optional(),
     patientId: z.string().uuid().optional(),
   })
   .refine(
-    (d) => d.mode === ReminderMode.IMMEDIATE || !!d.scheduledAt,
-    { message: 'scheduledAt is required when mode is SCHEDULED', path: [ 'scheduledAt' ] }
+    (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
+    { message: 'sendAt is required when sendMode is SCHEDULED', path: [ 'sendAt' ] }
   );
 
 export const updateReminderSchema = z
@@ -39,8 +39,8 @@ export const updateReminderSchema = z
     status: z.nativeEnum(ReminderStatus).optional(),
     contentVariables: contentVariablesSchema,
     contentSid: z.string().max(100).optional(),
-    mode: z.nativeEnum(ReminderMode).optional(),
-    scheduledAt: isoDate.optional(),
+    sendMode: z.nativeEnum(ReminderMode).optional(),
+    sendAt: isoDate.optional(),
     sentAt: isoDate.optional(),
     error: z.string().max(1000).optional(),
     messageId: z.string().max(100).optional(),

@@ -37,7 +37,7 @@ export interface ScheduleResult {
   channel: Channel;
   to: string;
   sentAt: string;
-  scheduledAt: string;
+  sendAt: string;
 }
 
 export const appointmentInclude = {
