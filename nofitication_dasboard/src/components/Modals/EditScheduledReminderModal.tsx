@@ -1,29 +1,24 @@
-import { lbl, inp, btnSecondary, btnPrimary } from "@/src/styles/theme";
-import { API_BASE } from "@/src/types/API";
-import { Patient } from "@/src/types/Patient";
+import { lbl, btnSecondary, btnPrimary } from "@/src/styles/theme";
+import { DateTimePicker } from "../DateTimePicker";
 import { Reminder, ReminderStatus, CHANNEL_ICON, CHANNEL_LABEL } from "@/src/types/Reminder";
 import { useState } from "react";
+import { RequiredField } from "../Info/Requiered";
+import { useUpdateReminder } from "@/src/api/useUpdateReminder";
 
-export function EditScheduledReminderModal({ reminder, patients, onClose, onSaved }: { reminder: Reminder; patients: Patient[]; onClose: () => void; onSaved: () => void }) {
+export function EditScheduledReminderModal({ reminder, onClose, onSaved }: { reminder: Reminder; onClose: () => void; onSaved: () => void }) {
     const [ sendAt, setsendAt ] = useState(reminder.sendAt);
     const [ saving, setSaving ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
+    const { updateReminder } = useUpdateReminder();
 
     async function handleSave() {
         setSaving(true); setError(null);
         try {
             const body = {
-                sendAt: new Date().toISOString(),
-                sentAt: new Date(sendAt).toISOString(),
+                sendAt: sendAt,
                 status: ReminderStatus.PENDING
             }
-            const res = await fetch(`${API_BASE}/reminders/${reminder.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            const json = await res.json();
-            if (!res.ok || !json.success) throw new Error(json.error ?? "Error al reprogramar");
+            await updateReminder(reminder.id, body);
             onSaved(); onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error");
@@ -44,13 +39,13 @@ export function EditScheduledReminderModal({ reminder, patients, onClose, onSave
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span style={{ color: "#6B7280" }}>Destinatario</span>
-                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</span>
+                        <span style={{ color: "#6B7280", fontWeight: 600 }}>{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</span>
                     </div>
                 </div>
                 {error && <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#DC2626" }}>⚠️ {error}</div>}
                 <label style={lbl}>
-                    Nueva fecha y hora de envío
-                    <input type="datetime-local" style={inp} value={new Date(sendAt).toISOString().slice(0, 16)} min={new Date().toISOString().slice(0, 16)} onChange={e => setsendAt(new Date(e.target.value).toISOString())} />
+                    <RequiredField label="Nueva fecha y hora de envío" />
+                    <DateTimePicker date={sendAt} onChanged={setsendAt} showTime isFuture />
                 </label>
                 <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                     <button onClick={onClose} style={{ ...btnSecondary, flex: 1 }} disabled={saving}>Cancelar</button>

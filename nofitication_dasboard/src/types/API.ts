@@ -1,5 +1,6 @@
 import { PatientStatus } from './Patient';
 import { AppointmentStatus } from './Appointment';
+import { Channel, ReminderStatus } from './Reminder';
 export interface ApiPaginatedResponse {
     success: boolean;
     data: {
@@ -41,6 +42,22 @@ export interface AppointmentStats {
     paidRevenue: number,
     unpaidRevenue: number,
     unpaidCount: number
+}
+
+export interface ReminderStats {
+    total: number;
+    todayCount: number;
+    byStatus: {
+        [ ReminderStatus.PENDING ]: number;
+        [ ReminderStatus.SENT ]: number;
+        [ ReminderStatus.FAILED ]: number;
+        [ ReminderStatus.CANCELLED ]: number;
+    };
+    byChannel: {
+        [ Channel.WHATSAPP ]: number;
+        [ Channel.SMS ]: number;
+        [ Channel.EMAIL ]: number;
+    };
 }
 
 export const API_BASE = "http://localhost:3001";

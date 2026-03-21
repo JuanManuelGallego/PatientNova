@@ -113,3 +113,15 @@ export enum ReminderType {
     ONE_DAY_BEFORE = "1_DIA_ANTES",
     ONE_WEEK_BEFORE = "1_SEMANA_ANTES",
 }
+
+export interface FetchRemindersFilters {
+    status?: ReminderStatus[],
+    search?: string,
+    patientId?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    page?: number,
+    pageSize?: number,
+    orderBy?: 'sendAt' | 'createdAt' | 'status',
+    order?: 'asc' | 'desc',
+}

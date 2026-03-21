@@ -4,9 +4,8 @@ import { fmtDateAndTime } from "@/src/utils/TimeUtils";
 import { ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
 
-export function ReminderDrawer({ reminder, patientName, onClose, onEdit, onCancel }: {
+export function ReminderDrawer({ reminder, onClose, onEdit, onCancel }: {
     reminder: Reminder;
-    patientName?: string;
     onClose: () => void;
     onEdit: () => void;
     onCancel: () => void;
@@ -36,7 +35,7 @@ export function ReminderDrawer({ reminder, patientName, onClose, onEdit, onCance
                 </div>
                 <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
                     <Section title="Destinatario">
-                        <Row icon="👤" label="Nombre" value={patientName ?? "—"} />
+                        <Row icon="👤" label="Nombre" value={`${reminder.patient?.name ?? "—"} ${reminder.patient?.lastName ?? "—"}`} />
                         <Row icon="📞" label="Número" value={<span style={{ fontFamily: "monospace" }}>{reminder.to}</span>} />
                         <Row icon="📢" label="Modo" value={reminder.sendMode === ReminderMode.IMMEDIATE ? "Inmediato" : "Programado"} />
                     </Section>

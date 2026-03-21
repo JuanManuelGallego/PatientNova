@@ -93,7 +93,7 @@ export function CalendarView({ appointments, onDayClick, onApptClick }: {
                                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                                                 cursor: "pointer",
                                             }}>
-                                                {formatTime(a.startAt)} {a.patient.name} - {a.location} {a.status == AppointmentStatus.CONFIRMED && "✅"}
+                                                {formatTime(a.startAt)} {a.patient.name} {a.patient.lastName} - {a.location} {a.status == AppointmentStatus.CONFIRMED && "✅"}
                                             </div>
                                         ))}
                                         {appts.length > 3 && (

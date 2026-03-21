@@ -1,4 +1,5 @@
 import { lbl, inp, btnPrimary, btnSecondary, thStyle, tdStyle } from "@/src/styles/theme";
+import { DateTimePicker } from "../DateTimePicker";
 import { API_BASE } from "@/src/types/API";
 import { Patient } from "@/src/types/Patient";
 import { ReminderMode, BulkRemindersResult, CHANNEL_ICON, CHANNEL_LABEL, Channel } from "@/src/types/Reminder";
@@ -130,7 +131,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
                     {sendMode === ReminderMode.SCHEDULED && (
                         <label style={lbl}>
                             Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={sentAt} onChange={e => setsentAt(e.target.value)} min={new Date().toISOString().slice(0, 16)} />
+                            <DateTimePicker date={sentAt} onChanged={setsentAt} showTime isFuture />
                         </label>
                     )}
                     <div style={{ display: "flex", justifyContent: "flex-end" }}>

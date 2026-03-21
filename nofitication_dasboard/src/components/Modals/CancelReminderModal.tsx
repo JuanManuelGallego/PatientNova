@@ -3,8 +3,8 @@ import { btnSecondary } from "@/src/styles/theme";
 import { Reminder, ReminderStatus } from "@/src/types/Reminder";
 import { useState } from "react";
 
-export function CancelReminderModal({ reminder, patientName, onClose, onCanceled }: {
-    reminder: Reminder; patientName?: string; onClose: () => void; onCanceled: () => void;
+export function CancelReminderModal({ reminder, onClose, onCanceled }: {
+    reminder: Reminder; onClose: () => void; onCanceled: () => void;
 }) {
     const { updateReminder, loading: deleting } = useUpdateReminder();
     const [ error, setError ] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function CancelReminderModal({ reminder, patientName, onClose, onCanceled
                         Cancelar Recordatorio
                     </h2>
                     <p style={{ fontSize: 14, color: "#6B7280", margin: 0 }}>
-                        ¿Estás seguro que deseas cancelar el recordatorio para <strong>{patientName}</strong>?.
+                        ¿Estás seguro que deseas cancelar el recordatorio para <strong>{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</strong>?
                     </p>
                 </div>
                 {error && (

@@ -21,6 +21,7 @@ import { useFetchReminders } from "@/src/api/useFetchReminders";
 import { ReminderStatusPill, EmptyStatusPill, AppointmentStatusPill } from "@/src/components/Info/StatusPill";
 import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
+import { useDebounceState } from "@/src/utils/useDebounceState";
 
 type ViewMode = "list" | "calendar";
 const PAGE_SIZE = 10;
@@ -35,6 +36,7 @@ export default function AppointmentsPage() {
   const [ filterStatus, setFilterStatus ] = useState<AppointmentStatus | "ALL">("ALL");
   const [ filterpaid, setFilterpaid ] = useState<"ALL" | "true" | "false">("ALL");
   const [ search, setSearch ] = useState("");
+  const debouncedSearch = useDebounceState(search, 250);
   const [ dateFilter, setDateFilter ] = useState("");
   const [ page, setPage ] = useState(1);
 
@@ -50,13 +52,14 @@ export default function AppointmentsPage() {
     startAt: undefined,
     dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
     dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
-    search: search.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
     paid: filterpaid !== "ALL" ? filterpaid === "true" : undefined,
     page: page,
     pageSize: PAGE_SIZE,
     orderBy: 'startAt',
     order: 'asc',
-  }), [ filterStatus, filterpaid, search, dateFilter, page ]);
+  }), [ filterStatus, filterpaid, debouncedSearch, dateFilter, page ]);
+
   const { appointments, loading, error, fetchAppointments, total, totalPages } = useFetchAppointments(filters);
 
   async function handlePay(id: string) {

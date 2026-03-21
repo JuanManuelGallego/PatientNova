@@ -3,8 +3,10 @@ import {
   createReminderSchema,
   updateReminderSchema,
   listRemindersSchema,
+  reminderStatsSchema,
   uuidParamSchema,
   type ListRemindersQuery,
+  type ReminderStatsQuery,
 } from './reminder.schemas.js';
 import { reminderRepository } from './reminder.repository.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
@@ -24,6 +26,21 @@ reminderRouter.get<{}, any, any, ListRemindersQuery>(
     try {
       const result = await reminderRepository.findMany(req.query);
       ok(res, result);
+    } catch (err) { handleError(res, err); }
+  }
+);
+
+/**
+ * GET /reminders/stats
+ * Aggregate statistics: totals by status and channel.
+ * Optional filters: patientId, dateFrom, dateTo.
+ */
+reminderRouter.get<{}, any, any, ReminderStatsQuery>(
+  '/stats',
+  validateQuery(reminderStatsSchema),
+  async (req: Request<{}, any, any, ReminderStatsQuery>, res: Response) => {
+    try {
+      ok(res, await reminderRepository.getStats(req.query));
     } catch (err) { handleError(res, err); }
   }
 );

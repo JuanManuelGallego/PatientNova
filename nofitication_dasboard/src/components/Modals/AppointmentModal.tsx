@@ -133,7 +133,7 @@ export function AppointmentModal({ appt, patients, prefillDate, onClose, onSaved
               <select style={inp} value={form.patientId} onChange={set("patientId")}>
                 <option value="">Seleccionar paciente…</option>
                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
                 ))}
               </select>
             </label>}
@@ -245,7 +245,7 @@ export function AppointmentModal({ appt, patients, prefillDate, onClose, onSaved
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <label style={lbl}>
-                Precio
+                <RequiredField label="Precio" />
                 <div style={{ position: "relative" }}>
                   <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>$</span>
                   <input type="number" step="0.01" style={{ ...inp, paddingLeft: 28 }} value={form.price} onChange={set("price")} placeholder="150.00" />
@@ -285,7 +285,7 @@ export function AppointmentModal({ appt, patients, prefillDate, onClose, onSaved
             <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Resumen</div>
               {[
-                [ "Paciente", selectedPatient ? selectedPatient.name : "—" ],
+                [ "Paciente", selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" ],
                 [ "Tipo", form.type || "—" ],
                 [ "Fecha", `${formatDate(form.startAt)} a las ${formatTime(form.startAt)}` ],
                 [ "Duración", form.duration ],

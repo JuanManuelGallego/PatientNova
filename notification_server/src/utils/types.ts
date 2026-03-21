@@ -49,6 +49,15 @@ export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
   include: typeof appointmentInclude;
 }>;
 
+export const reminderInclude = {
+  appointment: { select: { id: true, startAt: true, type: true, location: true } },
+  patient: { select: { id: true, name: true, lastName: true, email: true } },
+} satisfies Prisma.ReminderInclude;
+
+export type ReminderWithRelations = Prisma.ReminderGetPayload<{
+  include: typeof reminderInclude;
+}>;
+
 export interface PaginatedAppointments {
   data: AppointmentWithRelations[];
   total: number;
@@ -77,9 +86,16 @@ export interface PaginatedPatients {
 
 
 export interface PaginatedReminders {
-  data: Reminder[];
+  data: ReminderWithRelations[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface ReminderStats {
+  total: number;
+  todayCount: number;
+  byStatus: Record<string, number>;
+  byChannel: Record<string, number>;
 }

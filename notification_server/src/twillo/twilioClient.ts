@@ -40,11 +40,12 @@ export async function sendWhatsApp(
   logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
 
   return {
-    success: true,
+    success: message.status === 'queued' || message.status === 'sent',
     messageSid: message.sid,
     channel: Channel.WHATSAPP,
     to: req.to,
     sentAt: new Date().toISOString(),
+    error: message.errorMessage,
   };
 }
 
@@ -75,11 +76,12 @@ export async function scheduleWhatsApp(
   logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
 
   return {
-    success: true,
+    success: message.status === 'queued' || message.status === 'sent',
     messageSid: message.sid,
     channel: Channel.WHATSAPP,
     to: req.payload.to,
     sentAt: new Date().toISOString(),
+    error: message.errorMessage,
   };
 }
 
@@ -101,7 +103,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
   logger.info({ sid: message.sid, status: message.status }, 'SMS queued');
 
   return {
-    success: true,
+    success: message.status === 'queued' || message.status === 'sent',
     messageSid: message.sid,
     channel: Channel.SMS,
     to: req.to,

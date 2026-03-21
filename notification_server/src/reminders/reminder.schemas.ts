@@ -50,15 +50,24 @@ export const updateReminderSchema = z
   );
 
 export const listRemindersSchema = z.object({
-  status: z.nativeEnum(ReminderStatus).optional(),
-  channel: z.nativeEnum(Channel).optional(),
+  status: z.union([
+    z.nativeEnum(ReminderStatus),
+    z.array(z.nativeEnum(ReminderStatus))
+  ]).optional(),
+  search: z.string().optional(),
   patientId: z.string().uuid().optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum([ 'sentAt', 'createdAt', 'status' ]).default('sentAt'),
+  orderBy: z.enum([ 'sendAt', 'createdAt', 'status' ]).default('sendAt'),
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
+});
+
+export const reminderStatsSchema = z.object({
+  patientId: z.string().uuid().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
 });
 
 
@@ -69,3 +78,4 @@ export const uuidParamSchema = z.object({
 export type CreateReminderDto = z.infer<typeof createReminderSchema>;
 export type UpdateReminderDto = z.infer<typeof updateReminderSchema>;
 export type ListRemindersQuery = z.infer<typeof listRemindersSchema>;
+export type ReminderStatsQuery = z.infer<typeof reminderStatsSchema>;

@@ -1,6 +1,6 @@
 "use client";;
-import { useState } from "react";
-import { Reminder, ReminderStatus } from '@/src/types/Reminder';
+import { useMemo, useState } from "react";
+import { FetchRemindersFilters, Reminder, ReminderStatus } from '@/src/types/Reminder';
 import { btnPrimary, tdStyle } from '@/src/styles/theme';
 import { fmtDateAndTime, fmtRelative } from '@/src/utils/TimeUtils';
 import { StatCard } from '@/src/components/Info/StatCard';
@@ -17,35 +17,36 @@ import { useFetchPatients } from '@/src/api/useFetchPatients';
 import { ErrorBanner } from '@/src/components/Info/ErrorBanner';
 import { ReminderStatusPill } from '@/src/components/Info/StatusPill';
 import Sidebar from "@/src/components/Navigation/Sidebar";
+import { useFetchRemindersStats } from "@/src/api/useFetchRemindersStats";
+import { useDebounceState } from "@/src/utils/useDebounceState";
 
 type ActiveTab = "Active" | "History" | "Bulk";
+const PAGE_SIZE = 10;
 
 export default function RemindersPage() {
-    const [ activeTab, setActiveTab ] = useState<ActiveTab>("Active");
-    const { reminders, loading: loadingReminders, error: errorReminders, fetchReminders } = useFetchReminders();
     const { patients } = useFetchPatients();
+    const { stats } = useFetchRemindersStats();
+    const [ activeTab, setActiveTab ] = useState<ActiveTab>("Active");
+    const [ page, setPage ] = useState(1);
+
     const [ showCreate, setShowCreate ] = useState(false);
     const [ editReminder, setEditReminder ] = useState<Reminder | null>(null);
     const [ search, setSearch ] = useState("");
+    const debouncedSearch = useDebounceState(search, 250);
+
     const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
     const [ cancelReminder, setCancelReminder ] = useState<Reminder | null>(null);
 
-    const active = reminders.filter(reminder => reminder.status === ReminderStatus.PENDING);
-    const history = reminders.filter(reminder => reminder.status !== ReminderStatus.PENDING);
+    const filters = useMemo<FetchRemindersFilters>(() => ({
+        status: activeTab === "Active" ? [ ReminderStatus.PENDING ] : activeTab === "History" ? [ ReminderStatus.SENT, ReminderStatus.FAILED, ReminderStatus.CANCELLED ] : undefined,
+        page,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch.trim() || undefined,
+        orderBy: "sendAt",
+        order: "asc",
+    }), [ page, debouncedSearch, activeTab ]);
 
-    const filteredActive = active.filter(reminder =>
-        !search || (reminder.to ?? "").includes(search) || reminder.channel.includes(search)
-    );
-    const filteredHistory = history.filter(reminder =>
-        !search || (reminder.to ?? "").includes(search) || reminder.channel.includes(search)
-    );
-
-    const counts = {
-        active: active.length,
-        sent: reminders.filter(reminder => reminder.status === ReminderStatus.SENT).length,
-        failed: reminders.filter(reminder => reminder.status === ReminderStatus.FAILED).length,
-        cancelled: reminders.filter(reminder => reminder.status === ReminderStatus.CANCELLED).length,
-    };
+    const { reminders, loading, error, fetchReminders, total, totalPages } = useFetchReminders(filters);
 
     return (
         <>
@@ -71,15 +72,15 @@ export default function RemindersPage() {
                         </div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 36 }}>
-                        <StatCard label="Activos" value={counts.active} sub="en cola de envío" accent="#2563EB" />
-                        <StatCard label="Enviados" value={counts.sent} sub="entregados" accent="#16A34A" />
-                        <StatCard label="Fallidos" value={counts.failed} sub="requieren atención" accent="#DC2626" />
-                        <StatCard label="Cancelados" value={counts.cancelled} sub="fuera de la cola" accent="#9CA3AF" />
+                        <StatCard label="Activos" value={stats?.byStatus[ ReminderStatus.PENDING ] || 0} sub="en cola de envío" accent="#2563EB" />
+                        <StatCard label="Enviados" value={stats?.byStatus[ ReminderStatus.SENT ] || 0} sub="entregados" accent="#16A34A" />
+                        <StatCard label="Fallidos" value={stats?.byStatus[ ReminderStatus.FAILED ] || 0} sub="requieren atención" accent="#DC2626" />
+                        <StatCard label="Cancelados" value={stats?.byStatus[ ReminderStatus.CANCELLED ] || 0} sub="fuera de la cola" accent="#9CA3AF" />
                     </div>
                     <div style={{ display: "flex", gap: 4, background: "#fff", borderRadius: 12, padding: 5, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", width: "fit-content" }}>
                         {([
-                            { key: "Active", label: "Activos", badge: counts.active },
-                            { key: "History", label: "Historial", badge: counts.sent + counts.failed + counts.cancelled },
+                            { key: "Active", label: "Activos", badge: stats?.byStatus[ ReminderStatus.PENDING ] || 0 },
+                            { key: "History", label: "Historial", badge: (stats?.byStatus[ ReminderStatus.SENT ] || 0) + (stats?.byStatus[ ReminderStatus.FAILED ] || 0) + (stats?.byStatus[ ReminderStatus.CANCELLED ] || 0) },
                             { key: "Bulk", label: "Envío Masivo", badge: null },
                         ] as const).map(tab => (
                             <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -107,25 +108,25 @@ export default function RemindersPage() {
                             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                         }}>
                             <input
-                                placeholder="Buscar por número, canal…"
+                                placeholder="Buscar por nombre, número, canal…"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 style={{ flex: 1, padding: "9px 14px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit", color: "#111827", background: "#FAFAFA" }}
                             />
                         </div>
                     )}
-                    {errorReminders && activeTab !== "Bulk" && <ErrorBanner msg={errorReminders} onRetry={fetchReminders} />}
+                    {error && activeTab !== "Bulk" && <ErrorBanner msg={error} onRetry={fetchReminders} />}
                     {activeTab === "Active" && (
                         <DataTable
                             columns={[ "Destinatario", "Canal", "Estado", "Programado para", "En", "Creado el", "" ]}
-                            rows={filteredActive}
-                            loading={loadingReminders}
+                            rows={reminders}
+                            loading={loading}
                             skeletonCount={4}
                             renderRow={(reminder, i) => (
-                                <tr key={reminder.id} style={{ borderBottom: i < filteredActive.length - 1 ? "1px solid #F3F4F6" : "none", cursor: "pointer" }}
+                                <tr key={reminder.id} style={{ borderBottom: i < reminders.length - 1 ? "1px solid #F3F4F6" : "none", cursor: "pointer" }}
                                     onClick={() => setViewReminder(reminder)}>
                                     <td style={tdStyle}>
-                                        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</div>
                                         <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                     </td>
                                     <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
@@ -148,8 +149,28 @@ export default function RemindersPage() {
                             emptyState={<EmptyState icon="🔔" title="Sin recordatorios activos" sub="Haz clic en Nuevo Recordatorio para programar el primero." />}
                             footer={
                                 <>
-                                    <span style={{ fontSize: 13, color: "#9CA3AF" }}><strong style={{ color: "#374151" }}>{filteredActive.length}</strong> recordatorio(s) activo(s)</span>
-                                    <span style={{ fontSize: 12, color: "#D1D5DB" }}>Actualizado: {new Date().toLocaleTimeString("es-ES")}</span>
+                                    <span style={{ fontSize: 13, color: "#9CA3AF" }}>
+                                        Mostrando <strong style={{ color: "#374151" }}>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}</strong> de <strong style={{ color: "#374151" }}>{total}</strong> recordatorios
+                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        {page !== 1 && <button onClick={() => setPage(p => Math.max(1, p - 1))} style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid #E5E7EB", background: page === 1 ? "#F9FAFB" : "#fff", color: page === 1 ? "#D1D5DB" : "#374151", fontSize: 13, fontWeight: 500, cursor: page === 1 ? "default" : "pointer" }}>← Anterior</button>}
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                                            .reduce<(number | "...")[]>((acc, n, idx, arr) => {
+                                                if (idx > 0 && n - (arr[ idx - 1 ] as number) > 1) acc.push("...");
+                                                acc.push(n);
+                                                return acc;
+                                            }, [])
+                                            .map((item, idx) =>
+                                                item === "..." ? (
+                                                    <span key={`ellipsis-${idx}`} style={{ fontSize: 13, color: "#9CA3AF", padding: "0 4px" }}>…</span>
+                                                ) : (
+                                                    <button key={item} onClick={() => setPage(item as number)} style={{ width: 32, height: 32, borderRadius: 7, border: "1.5px solid", borderColor: page === item ? "#1E3A5F" : "#E5E7EB", background: page === item ? "#1E3A5F" : "#fff", color: page === item ? "#fff" : "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{item}</button>
+                                                )
+                                            )
+                                        }
+                                        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid #E5E7EB", background: page === totalPages ? "#F9FAFB" : "#fff", color: page === totalPages ? "#D1D5DB" : "#374151", fontSize: 13, fontWeight: 500, cursor: page === totalPages ? "default" : "pointer" }}>Siguiente →</button>
+                                    </div>
                                 </>
                             }
                         />
@@ -157,14 +178,14 @@ export default function RemindersPage() {
                     {activeTab === "History" && (
                         <DataTable
                             columns={[ "Destinatario", "Canal", "Estado", "Enviado", "ID Mensaje", "Error" ]}
-                            rows={filteredHistory}
-                            loading={loadingReminders}
+                            rows={reminders}
+                            loading={loading}
                             skeletonCount={5}
                             renderRow={(reminder, i) => (
-                                <tr key={reminder.id} style={{ borderBottom: i < filteredHistory.length - 1 ? "1px solid #F3F4F6" : "none", cursor: "pointer" }}
+                                <tr key={reminder.id} style={{ borderBottom: i < reminders.length - 1 ? "1px solid #F3F4F6" : "none", cursor: "pointer" }}
                                     onClick={() => setViewReminder(reminder)}>
                                     <td style={tdStyle}>
-                                        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{patients.find(p => p.id === reminder.patientId)?.name ?? "—"}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</div>
                                         <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{reminder.to}</div>
                                     </td>
                                     <td style={tdStyle}><ChannelBadge channel={reminder.channel} /></td>
@@ -183,7 +204,30 @@ export default function RemindersPage() {
                             )}
                             emptyState={<EmptyState icon="📋" title="Sin historial aún" sub="Los recordatorios enviados, fallidos y cancelados aparecerán aquí." />}
                             footer={
-                                <span style={{ fontSize: 13, color: "#9CA3AF" }}><strong style={{ color: "#374151" }}>{filteredHistory.length}</strong> registros en el historial</span>
+                                <>
+                                    <span style={{ fontSize: 13, color: "#9CA3AF" }}>
+                                        Mostrando <strong style={{ color: "#374151" }}>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}</strong> de <strong style={{ color: "#374151" }}>{total}</strong> recordatorios
+                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        {page !== 1 && <button onClick={() => setPage(p => Math.max(1, p - 1))} style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid #E5E7EB", background: page === 1 ? "#F9FAFB" : "#fff", color: page === 1 ? "#D1D5DB" : "#374151", fontSize: 13, fontWeight: 500, cursor: page === 1 ? "default" : "pointer" }}>← Anterior</button>}
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                                            .reduce<(number | "...")[]>((acc, n, idx, arr) => {
+                                                if (idx > 0 && n - (arr[ idx - 1 ] as number) > 1) acc.push("...");
+                                                acc.push(n);
+                                                return acc;
+                                            }, [])
+                                            .map((item, idx) =>
+                                                item === "..." ? (
+                                                    <span key={`ellipsis-${idx}`} style={{ fontSize: 13, color: "#9CA3AF", padding: "0 4px" }}>…</span>
+                                                ) : (
+                                                    <button key={item} onClick={() => setPage(item as number)} style={{ width: 32, height: 32, borderRadius: 7, border: "1.5px solid", borderColor: page === item ? "#1E3A5F" : "#E5E7EB", background: page === item ? "#1E3A5F" : "#fff", color: page === item ? "#fff" : "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{item}</button>
+                                                )
+                                            )
+                                        }
+                                        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid #E5E7EB", background: page === totalPages ? "#F9FAFB" : "#fff", color: page === totalPages ? "#D1D5DB" : "#374151", fontSize: 13, fontWeight: 500, cursor: page === totalPages ? "default" : "pointer" }}>Siguiente →</button>
+                                    </div>
+                                </>
                             }
                         />
                     )}
@@ -207,12 +251,11 @@ export default function RemindersPage() {
                 <ReminderModal patients={patients} onClose={() => { setShowCreate(false); fetchReminders() }} onSaved={fetchReminders} />
             )}
             {editReminder && (
-                <EditScheduledReminderModal reminder={editReminder} patients={patients} onClose={() => setEditReminder(null)} onSaved={fetchReminders} />
+                <EditScheduledReminderModal reminder={editReminder} onClose={() => setEditReminder(null)} onSaved={fetchReminders} />
             )}
             {viewReminder && (
                 <ReminderDrawer
                     reminder={viewReminder}
-                    patientName={patients.find(p => p.id === viewReminder.patientId)?.name}
                     onClose={() => setViewReminder(null)}
                     onEdit={() => { setEditReminder(viewReminder); setViewReminder(null); }}
                     onCancel={() => { setCancelReminder(viewReminder); setViewReminder(null); }}
@@ -223,9 +266,7 @@ export default function RemindersPage() {
                     reminder={cancelReminder}
                     onClose={() => setCancelReminder(null)}
                     onCanceled={() => { setCancelReminder(null); fetchReminders(); }}
-                    patientName={patients.find(p => p.id === cancelReminder.patientId)?.name}
                 />
-
             )}
         </>
     );

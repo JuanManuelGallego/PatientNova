@@ -9,7 +9,7 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { ChannelIcon } from "@/src/components/Info/ChannelIcon";
 import { DataTable } from "@/src/components/DataTable";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
-import { ArchivePatientModal } from "@/src/components/Modals/DeletePatientModal";
+import { ArchivePatientModal } from "@/src/components/Modals/ArchivedPatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";

@@ -7,6 +7,8 @@ import { Reminder, ReminderMode, CHANNEL_ICON, CHANNEL_LABEL, Channel } from "@/
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
+import { DateTimePicker } from "../DateTimePicker";
+import { RequiredField } from "../Info/Requiered";
 
 export function ReminderModal({
     onClose, onSaved, patients, reminder,
@@ -154,7 +156,7 @@ export function ReminderModal({
                 {step === 1 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Tipo de envío</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}><RequiredField label="Tipo de envío" /></div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                                 {([
                                     { key: ReminderMode.IMMEDIATE, icon: "⚡", title: "Enviar ahora", sub: "Se envía inmediatamente" },
@@ -177,16 +179,16 @@ export function ReminderModal({
                             </div>
                         </div>
                         <label style={lbl}>
-                            Paciente
+                            <RequiredField label="Paciente" />
                             <select style={inp} value={form.patientId} onChange={set("patientId")}>
                                 <option value="">Seleccionar paciente…</option>
                                 {patients.filter(p => p.status === "ACTIVE").map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                    <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
                                 ))}
                             </select>
                         </label>
                         <label style={lbl}>
-                            Tipo de cita
+                            <RequiredField label="Tipo de cita" />
                             <select style={inp} value={form.appointmentType} onChange={set("appointmentType")}>
                                 <option value="">Seleccionar tipo…</option>
                                 {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -216,7 +218,7 @@ export function ReminderModal({
                             </div>
                         )}
                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Canal de notificación</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}><RequiredField label="Canal de notificación" /></div>
                             <div style={{ display: "flex", gap: 10 }}>
                                 {Object.values(Channel).map(c => {
                                     const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber);
@@ -245,12 +247,12 @@ export function ReminderModal({
                             </div>
                         </div>
                         {sendMode === ReminderMode.SCHEDULED && <label style={lbl}>
-                            Fecha y hora de envío
-                            <input type="datetime-local" style={inp} value={form.sendAt} onChange={set("sendAt")} min={new Date().toISOString().slice(0, 16)} />
+                            <RequiredField label="Fecha y hora de envío" />
+                            <DateTimePicker date={form.sendAt} onChanged={(d) => setForm(f => ({ ...f, sendAt: d }))} showTime isFuture />
                         </label>
                         }
                         <label style={lbl}>
-                            Mensaje
+                            <RequiredField label="Mensaje" />
                             <textarea
                                 style={{ ...inp, minHeight: 100, resize: "vertical" }}
                                 value={form.message}
@@ -266,7 +268,7 @@ export function ReminderModal({
                         <div style={{ background: "#F8F7F4", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Resumen del recordatorio</div>
                             {[
-                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.name}` : "—" },
+                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" },
                                 { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
                                 { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
                                 { k: "Programado", v: sendMode === ReminderMode.IMMEDIATE ? "Imediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
