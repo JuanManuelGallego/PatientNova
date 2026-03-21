@@ -356,7 +356,7 @@ export default function NotificationsPage() {
                     <td style={{ padding: "14px 20px", fontSize: 14, color: "#374151" }}>{appt.type}</td>
                     {/* Date */}
                     <td style={{ padding: "14px 20px" }}>
-                      <div style={{ fontSize: 14, color: "#111827", fontWeight: 500 }}>{formatDate(appt.date)}</div>
+                      <div style={{ fontSize: 14, color: "#111827", fontWeight: 500 }}>{formatDate(appt.startAt)}</div>
                       <div style={{ fontSize: 12, color: "#9CA3AF" }}>{appt.time}</div>
                     </td>
                     {/* Channels */}

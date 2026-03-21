@@ -28,7 +28,7 @@ export interface Appointment {
     patientId: string;
     reminderId?: string | null;
 
-    patient?: Patient;
+    patient: Patient;
     reminder?: Reminder | null;
 }
 
@@ -39,7 +39,7 @@ export interface AppointmentForm {
     meetingUrl?: string;
     notes?: string;
     patientId: string;
-    payed: boolean;
+    paid: boolean;
     price: string;
     reminderId?: string;
     reminderType: ReminderType;

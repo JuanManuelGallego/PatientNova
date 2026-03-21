@@ -35,7 +35,7 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
     location: appt?.location ?? "",
     meetingUrl: appt?.meetingUrl ?? undefined,
     price: appt?.price ?? APPOINTMENT_TYPES[ 1 ].price,
-    payed: appt?.payed ?? false,
+    paid: appt?.paid ?? false,
     duration: appt?.duration ?? APPOINTMENT_TYPES[ 1 ].duration,
     reminderType: appt?.reminderId ? ReminderType.ONE_DAY_BEFORE : ReminderType.NONE,
     notes: appt?.notes ?? undefined,
@@ -243,19 +243,19 @@ export function AppointmentModal({ appt, patients, onClose, onSaved }: {
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>Estado de pago</div>
                   <div style={{ fontSize: 12, color: "#9CA3AF" }}>¿El paciente ya realizó el pago?</div>
                 </div>
-                <button onClick={() => setForm(f => ({ ...f, payed: !f.payed }))} style={{
+                <button onClick={() => setForm(f => ({ ...f, paid: !f.paid }))} style={{
                   width: 48, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
-                  background: form.payed ? "#16A34A" : "#D1D5DB",
+                  background: form.paid ? "#16A34A" : "#D1D5DB",
                   position: "relative", transition: "background 0.2s",
                 }}>
                   <span style={{
-                    position: "absolute", top: 3, left: form.payed ? 26 : 3,
+                    position: "absolute", top: 3, left: form.paid ? 26 : 3,
                     width: 20, height: 20, borderRadius: "50%", background: "#fff",
                     transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                   }} />
                 </button>
               </div>
-              {form.payed && <div style={{ marginTop: 10, fontSize: 13, color: "#16A34A", fontWeight: 500 }}>✓ Marcado como pagado</div>}
+              {form.paid && <div style={{ marginTop: 10, fontSize: 13, color: "#16A34A", fontWeight: 500 }}>✓ Marcado como pagado</div>}
             </div> */}
             <div style={{ background: "#F8F7F4", borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Resumen</div>

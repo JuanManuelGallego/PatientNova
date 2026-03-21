@@ -29,7 +29,7 @@ export default function AppointmentsPage() {
 
   const [ viewMode, setViewMode ] = useState<ViewMode>("list");
   const [ filterStatus, setFilterStatus ] = useState<AppointmentStatus | "ALL">(AppointmentStatus.SCHEDULED);
-  const [ filterPayed, setFilterPayed ] = useState<"ALL" | "true" | "false">("ALL");
+  const [ filterpaid, setFilterpaid ] = useState<"ALL" | "true" | "false">("ALL");
   const [ search, setSearch ] = useState("");
   const [ dateFilter, setDateFilter ] = useState("");
 
@@ -54,27 +54,28 @@ export default function AppointmentsPage() {
 
   const filtered = appointments.filter(a => {
     if (filterStatus !== "ALL" && a.status !== filterStatus) return false;
-    if (filterPayed !== "ALL" && String(a.payed) !== filterPayed) return false;
-    if (dateFilter && a.date !== dateFilter) return false;
+    if (filterpaid !== "ALL" && String(a.paid) !== filterpaid) return false;
+    if (dateFilter && a.startAt !== new Date(dateFilter)) return false;
     if (search) {
       const q = search.toLowerCase();
-      return [ a.type, a.location, a.patient.name, a.patient.lastName, a.patient.email ].some(v => v.toLowerCase().includes(q));
+      return [ a.type, a.location, a.patient?.name ?? '', a.patient?.lastName ?? '', a.patient?.email ?? '' ].some(v => v.toLowerCase().includes(q));
     }
     return true;
   });
 
   const counts = {
     total: appointments.length,
-    today: appointments.filter(a => a.date === today()).length,
-    upcoming: appointments.filter(a => a.date > today() && a.status === AppointmentStatus.SCHEDULED).length,
-    unpaid: appointments.filter(a => !a.payed && a.status !== AppointmentStatus.CANCELLED).length,
+    today: appointments.filter(a => a.startAt.getDate() === new Date().getDate()).length,
+    upcoming: appointments.filter(a => a.startAt > new Date() && a.status === AppointmentStatus.SCHEDULED).length,
+    unpaid: appointments.filter(a => !a.paid && a.status !== AppointmentStatus.CANCELLED).length,
     completed: appointments.filter(a => a.status === AppointmentStatus.COMPLETED).length,
   };
 
   const revenue = appointments
-    .filter(a => a.payed)
-    .reduce((sum, a) => sum + parseFloat(a.price || "0"), 0)
+    .filter(a => a.paid)
+    .reduce((sum, a) => sum + a.price, 0)
     .toLocaleString("es-ES");
+
   return (
     <>
       <div style={{ display: "flex", minHeight: "100vh", background: "#F8F7F4", fontFamily: "'DM Sans', sans-serif" }}>
@@ -145,7 +146,7 @@ export default function AppointmentsPage() {
                     }}>{l}</button>
                   ))}
                 </div>
-                <select value={filterPayed} onChange={e => setFilterPayed(e.target.value as "true" | "false" | "ALL")} style={{ ...inp, width: "auto", padding: "8px 12px", fontSize: 13 }}>
+                <select value={filterpaid} onChange={e => setFilterpaid(e.target.value as "true" | "false" | "ALL")} style={{ ...inp, width: "auto", padding: "8px 12px", fontSize: 13 }}>
                   <option value="ALL">💳 Todos</option>
                   <option value="true">💳 Pagados</option>
                   <option value="false">⏳ Sin pagar</option>
@@ -173,7 +174,7 @@ export default function AppointmentsPage() {
                     <td style={{ ...tdStyle, fontSize: 13, color: "#374151", maxWidth: 140 }}>
                       <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.type}</div>
                     </td>
-                    <td style={{ ...tdStyle, fontSize: 13, color: "#111827", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(a.date)}</td>
+                    <td style={{ ...tdStyle, fontSize: 13, color: "#111827", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(a.startAt)}</td>
                     <td style={{ ...tdStyle, fontSize: 12, color: "#000000" }}>{a.reminderId ? <ReminderStatusPill status={reminders.find(r => r.id === a.reminderId)?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
                     <td style={{ ...tdStyle, fontSize: 12, color: "#6B7280", maxWidth: 130 }}>
                       <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", backgroundColor: LOCATION_CFG[ a.location ]?.bg || "#F3F4F6", color: LOCATION_CFG[ a.location ]?.color || "#374151", padding: "4px 10px", borderRadius: 8, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 12 }}>
@@ -183,8 +184,8 @@ export default function AppointmentsPage() {
                     <td style={tdStyle} onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
                     <td style={tdStyle} onClick={e => e.stopPropagation()}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <PayBadge payed={a.payed} />
-                        {!a.payed && a.status !== AppointmentStatus.CANCELLED && (
+                        <PayBadge paid={a.paid} />
+                        {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
                           <button onClick={() => handlePay(a.id)} disabled={payingId === a.id} style={{ padding: "3px 9px", fontSize: 11, fontWeight: 600, background: "#DCFCE7", border: "none", borderRadius: 6, color: "#16A34A", cursor: "pointer", opacity: payingId === a.id ? 0.6 : 1 }}>
                             {payingId === a.id ? "…" : "Pagó"}
                           </button>

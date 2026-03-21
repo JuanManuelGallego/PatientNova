@@ -2,7 +2,7 @@ import { btnPrimary } from "@/src/styles/theme";
 import { Appointment, STATUS_CFG } from "@/src/types/Appointment";
 import { CHANNEL_LABEL, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { fmtDate, fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtDateAndTime, getDuration } from "@/src/utils/TimeUtils";
 import { PayBadge } from "../Info/PayBadge";
 import { AppointmentStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
@@ -46,9 +46,9 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                         </div>
                     </Section>
                     <Section title="Fecha y Hora">
-                        <Row icon="📅" label="Fecha" value={fmtDate(appt.date)} />
-                        <Row icon="🕐" label="Hora" value={fmtDateTime(appt.date)} />
-                        <Row icon="⏱️" label="Duración" value={appt.duration} />
+                        <Row icon="📅" label="Fecha" value={fmtDate(appt.startAt)} />
+                        <Row icon="🕐" label="Hora" value={fmtDateAndTime(appt.startAt)} />
+                        <Row icon="⏱️" label="Duración" value={getDuration(appt.startAt, appt.endAt)} />
                     </Section>
                     <Section title="Lugar">
                         <Row icon="📍" label="Ubicación" value={appt.location} />
@@ -62,8 +62,8 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                     <Section title="Pago">
                         <Row icon="💰" label="Precio" value={`$${appt.price}`} />
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <Row icon="💳" label="Estado" value={<PayBadge payed={appt.payed} />} />
-                            {!appt.payed && (
+                            <Row icon="💳" label="Estado" value={<PayBadge paid={appt.paid} />} />
+                            {!appt.paid && (
                                 <button onClick={onPay} style={{ ...btnPrimary, padding: "6px 14px", fontSize: 12, background: "#16A34A" }}>
                                     Marcar pagado
                                 </button>
@@ -77,7 +77,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                         <Section title="Recordatorio Vinculado">
                             <Row icon={appt.reminder.channel === "WHATSAPP" ? "💬" : "📱"} label="Canal" value={CHANNEL_LABEL[ appt.reminder.channel ]} />
                             <Row icon="📤" label="Estado" value={REMINDER_STATUS_CONFIG[ appt.reminder.status ].label} />
-                            <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sentAt).toLocaleString("es-ES")} />
+                            <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sendAt).toLocaleString("es-ES")} />
                         </Section>
                     )}
                     <Section title="Información del sistema">

@@ -27,7 +27,7 @@ export function CancelAppointmentModal({ appt, onClose, onCanceled }: { appt: Ap
                     <div style={{ fontSize: 44, marginBottom: 12 }}>🚫</div>
                     <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: "0 0 8px", fontFamily: "'Playfair Display', Georgia, serif" }}>Cancelar Cita</h2>
                     <p style={{ fontSize: 14, color: "#6B7280" }}>
-                        ¿Estás seguro que deseas cancelar la cita de <br /><strong>{appt.patient.name} {appt.patient.lastName}</strong> del <strong>{fmtDate(appt.date)}</strong>?
+                        ¿Estás seguro que deseas cancelar la cita de <br /><strong>{appt.patient.name} {appt.patient.lastName}</strong> del <strong>{fmtDate(appt.startAt)}</strong>?
                     </p>
                 </div>
                 {error && <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#DC2626" }}>⚠️ {error}</div>}

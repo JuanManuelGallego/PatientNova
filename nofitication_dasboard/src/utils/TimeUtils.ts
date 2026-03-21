@@ -7,12 +7,20 @@ function fmtDateTime(iso: string | undefined) {
     });
 }
 
-function fmtDate(d: string | undefined) {
+function fmtDateAndTime(d: Date | undefined) {
     if (!d) return "Invalid Date"
-    return new Date(d).toLocaleDateString("es-ES", {
+    return d.toLocaleString("es-ES", {
+        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+}
+
+function fmtDate(d: Date | undefined): string {
+    if (!d) return "Invalid Date"
+    return d.toLocaleDateString("es-ES", {
         weekday: "short", day: "numeric", month: "short",
     });
 }
+
 
 function isoToLocal(iso: string) {
     const date = new Date(iso);
@@ -82,4 +90,10 @@ function getTime(iso: string) {
     return new Date(iso).toISOString().slice(11, 16);
 }
 
-export { fmtDateTime, fmtDate, isoToLocal, fmtRelative, today, MONTH_NAMES_ES, DAY_NAMES_ES, getRemindersentAt, isReminderTypeFeasible, getDate, getTime };
+function getDuration(startAt: Date, endAt: Date): string {
+    const diff = (endAt.getTime() - startAt.getTime()) / 60000;
+    if (diff < 60) return `${diff} min`;
+    return `${Math.round(diff / 60)} h`;
+}
+
+export { fmtDateTime, fmtDate, isoToLocal, fmtRelative, today, MONTH_NAMES_ES, DAY_NAMES_ES, getRemindersentAt, isReminderTypeFeasible, getDate, getTime, fmtDateAndTime, getDuration };
