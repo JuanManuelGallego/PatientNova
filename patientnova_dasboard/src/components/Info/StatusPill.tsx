@@ -1,4 +1,4 @@
-import { AppointmentStatus, STATUS_CFG } from "@/src/types/Appointment";
+import { AppointmentStatus, APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { PatientStatus, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { ReminderStatus, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 
@@ -23,7 +23,7 @@ export function ReminderStatusPill({ status }: { status: ReminderStatus }) {
 }
 
 export function AppointmentStatusPill({ status }: { status: AppointmentStatus }) {
-    const c = STATUS_CFG[ status ];
+    const c = APPT_STATUS_CFG[ status ];
     return (
         <span className="pill" style={{ background: c.bg, color: c.color }}>
             <span className="pill__dot" style={{ background: c.dot }} />

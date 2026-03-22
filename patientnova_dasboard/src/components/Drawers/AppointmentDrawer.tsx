@@ -1,10 +1,11 @@
-import { Appointment, STATUS_CFG } from "@/src/types/Appointment";
-import { CHANNEL_LABEL, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
+import { Appointment, APPT_STATUS_CFG } from "@/src/types/Appointment";
+import { CHANNEL_LABEL, getChannelIcon, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { fmtDate, fmtTime, getDuration } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtDateTime, fmtTime, getDuration } from "@/src/utils/TimeUtils";
 import { PayBadge } from "../Info/PayBadge";
-import { AppointmentStatusPill } from "../Info/StatusPill";
+import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
+import { getChannelIconAndLabel } from '../../types/Reminder';
 
 export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
     appt: Appointment;
@@ -13,7 +14,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
     onPay: () => void;
     onDelete: () => void;
 }) {
-    const s = STATUS_CFG[ appt.status ];
+    const s = APPT_STATUS_CFG[ appt.status ];
     return (
         <div className="drawer-overlay" onClick={onClose}>
             <div className="drawer-backdrop" />
@@ -70,9 +71,17 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                     </Section>
                     {appt.reminder && (
                         <Section title="Recordatorio Vinculado">
-                            <Row icon={appt.reminder.channel === "WHATSAPP" ? "💬" : "📱"} label="Canal" value={CHANNEL_LABEL[ appt.reminder.channel ]} />
-                            <Row icon="📤" label="Estado" value={REMINDER_STATUS_CONFIG[ appt.reminder.status ].label} />
-                            <Row icon="🗓️" label="Envío" value={new Date(appt.reminder.sendAt).toLocaleString("es-ES")} />
+                            <div className="card-list">
+                                <div key={appt.reminder.id} className="linked-card" style={{ borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[ appt.reminder.status ].dot}` }}>
+                                    <div className="linked-card__header">
+                                        <div>
+                                            <div className="linked-card__title">{getChannelIconAndLabel(appt.reminder.channel)}</div>
+                                            <div className="linked-card__meta">📅 {fmtDateTime(appt.reminder.sendAt.toString())}</div>
+                                        </div>
+                                        <ReminderStatusPill status={appt.reminder.status} />
+                                    </div>
+                                </div>
+                            </div>
                         </Section>
                     )}
                     <Section title="Información del sistema">

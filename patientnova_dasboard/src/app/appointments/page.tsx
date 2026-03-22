@@ -9,7 +9,7 @@ import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { Appointment, AppointmentStatus, FetchAppointmentsFilters, LOCATION_CFG } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus, FetchAppointmentsFilters, APT_LOCATION_CFG } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateAndTime } from "@/src/utils/TimeUtils";
@@ -141,7 +141,7 @@ function AppointmentsPageContent() {
                 <td className="td td--datetime">{fmtDateAndTime(a.startAt)}</td>
                 <td className="td">{a.reminder ? <ReminderStatusPill status={a.reminder?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
                 <td className="td td--muted" style={{ maxWidth: 130 }}>
-                  <div className="location-badge" style={{ background: LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)" }}>
+                  <div className="location-badge" style={{ background: APT_LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: APT_LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)" }}>
                     {a.meetingUrl
                       ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="location-badge__link">🔗 Virtual</a>
                       : a.location}

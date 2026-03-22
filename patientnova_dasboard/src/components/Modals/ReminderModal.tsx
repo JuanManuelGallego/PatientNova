@@ -1,21 +1,13 @@
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useNotify } from "@/src/api/useNotify";
-import { APPOINTMENT_TYPES } from "@/src/types/Appointment";
+import { AppointmentType, APPT_TYPE_CFG } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
-import { Reminder, ReminderMode, CHANNEL_ICON, CHANNEL_LABEL, Channel } from "@/src/types/Reminder";
+import { Reminder, ReminderMode, CHANNEL_ICON, CHANNEL_LABEL, Channel, ReminderForm } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
 import { RequiredField } from "../Info/Requiered";
-
-type ReminderForm = {
-    patientId: string;
-    channel: Channel;
-    message: string;
-    sendAt: string;
-    appointmentType: string;
-};
 
 export function ReminderModal({
     onClose, onSaved, patients, reminder,
@@ -37,7 +29,7 @@ export function ReminderModal({
         channel: Channel.WHATSAPP,
         message: "",
         sendAt: "",
-        appointmentType: "",
+        appointmentType: undefined,
     });
 
     const isValid = step === 1
@@ -190,7 +182,7 @@ function SendModeAndPatientStep({ sendMode, setMode, form, set, patients }: {
                 <RequiredField label="Tipo de cita" />
                 <select className="form-input" value={form.appointmentType} onChange={set("appointmentType")}>
                     <option value="">Seleccionar tipo…</option>
-                    {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    {Object.keys(APPT_TYPE_CFG).map(t => <option key={t} value={t}>{APPT_TYPE_CFG[ t as AppointmentType ].label}</option>)}
                 </select>
             </label>
         </div>

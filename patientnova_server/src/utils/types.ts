@@ -50,7 +50,7 @@ export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
 }>;
 
 export const reminderInclude = {
-  appointment: { select: { id: true, startAt: true, type: true, location: true } },
+  appointment: { select: { id: true, startAt: true, type: true, location: true, status: true } },
   patient: { select: { id: true, name: true, lastName: true, email: true } },
 } satisfies Prisma.ReminderInclude;
 

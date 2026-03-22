@@ -55,11 +55,11 @@ export enum AppointmentStatus {
     NO_SHOW = "NO_SHOW"
 }
 
-export enum AppointmentName {
-    INDIVIDUAL = 'Individual',
-    KID = 'Niño',
-    COUPLE = 'Pareja',
-    FAMILY = 'Familia',
+export enum AppointmentType {
+    INDIVIDUAL = 'INDIVIDUAL',
+    KID = 'KID',
+    COUPLE = 'COUPLE',
+    FAMILY = 'FAMILY',
 }
 
 export enum AppointmentDuration {
@@ -69,21 +69,14 @@ export enum AppointmentDuration {
     MIN_90 = '90 min',
 }
 
-export interface AppointmentType {
-    id: string;
-    name: AppointmentName;
-    price: number;
-    duration: AppointmentDuration;
+export const APPT_TYPE_CFG: Record<AppointmentType, { label: string; price: number; duration: AppointmentDuration }> = {
+    [ AppointmentType.KID ]: { label: "Niño", price: 115000, duration: AppointmentDuration.MIN_60 },
+    [ AppointmentType.INDIVIDUAL ]: { label: "Individual", price: 115000, duration: AppointmentDuration.MIN_60 },
+    [ AppointmentType.COUPLE ]: { label: "Pareja", price: 220000, duration: AppointmentDuration.MIN_60 },
+    [ AppointmentType.FAMILY ]: { label: "Familia", price: 220000, duration: AppointmentDuration.MIN_60 },
 }
 
-export const APPOINTMENT_TYPES: AppointmentType[] = [
-    { id: "1", name: AppointmentName.KID, price: 115000, duration: AppointmentDuration.MIN_60 },
-    { id: "2", name: AppointmentName.INDIVIDUAL, price: 115000, duration: AppointmentDuration.MIN_60 },
-    { id: "3", name: AppointmentName.COUPLE, price: 220000, duration: AppointmentDuration.MIN_60 },
-    { id: "4", name: AppointmentName.FAMILY, price: 220000, duration: AppointmentDuration.MIN_60 },
-];
-
-export const STATUS_CFG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
+export const APPT_STATUS_CFG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
     [ AppointmentStatus.SCHEDULED ]: { label: "Programada", color: "#2563EB", bg: "#EFF6FF", dot: "#3B82F6", icon: "🗓️" },
     [ AppointmentStatus.CONFIRMED ]: { label: "Confirmada", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "✅" },
     [ AppointmentStatus.COMPLETED ]: { label: "Completada", color: "#7C3AED", bg: "#F5F3FF", dot: "#8B5CF6", icon: "🏁" },
@@ -97,11 +90,11 @@ export const APPOINTMENT_LOCATIONS: string[] = [
     "Vamos a Terapia",
     "Virtual", ]
 
-export const LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
+export const APT_LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
     [ "ACTA" ]: { label: "ACTA", color: "#ab63e6", bg: "#ecc4ffa8", dot: "#3B82F6", icon: "🏛️" },
     [ "Sentido y Realidad" ]: { label: "Sentido y Realidad", color: "#30b493", bg: "#9debb57e", dot: "#22C55E", icon: "🌱" },
     [ "Vamos a Terapia" ]: { label: "Vamos a Terapia", color: "#399efc", bg: "#c7e8fe", dot: "#fbbf24", icon: "🏢" },
-    [ "Virtual" ]: { label: "Virtual", color: "#f56d73", bg: "#FEF2F2", dot: "#EF4444", icon: "�" },
+    [ "Virtual" ]: { label: "Virtual", color: "#f56d73", bg: "#FEF2F2", dot: "#EF4444", icon: "💻" },
 };
 
 export interface FetchAppointmentsFilters {

@@ -1,4 +1,4 @@
-import { STATUS_CFG } from "@/src/types/Appointment";
+import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { Patient, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime } from "@/src/utils/TimeUtils";
@@ -55,7 +55,7 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
                         <Section title="Citas Vinculadas">
                             <div className="card-list">
                                 {patient.appointments.map(apt => {
-                                    const aptStatus = STATUS_CFG[ apt.status ];
+                                    const aptStatus = APPT_STATUS_CFG[ apt.status ];
                                     return (
                                         <div key={apt.id} className="linked-card" style={{ borderLeft: `3px solid ${aptStatus.dot}` }}>
                                             <div className="linked-card__header">

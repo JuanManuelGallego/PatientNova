@@ -5,7 +5,7 @@ import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import Sidebar from "@/src/components/Navigation/Sidebar";
-import { Appointment, LOCATION_CFG, AppointmentStatus } from "@/src/types/Appointment";
+import { Appointment, APT_LOCATION_CFG, AppointmentStatus } from "@/src/types/Appointment";
 import { today, MONTH_NAMES_ES, DAY_NAMES_ES, formatTime, fmtDate } from "@/src/utils/TimeUtils";
 import { useState, useMemo, useEffect, useCallback } from "react";
 
@@ -164,8 +164,8 @@ export default function CalendarPage() {
                                     isCompleted ? "cal-chip--completed" : "",
                                   ].filter(Boolean).join(" ")}
                                   style={{
-                                    background: LOCATION_CFG[ a.location ]?.bg ?? "var(--c-gray-200)",
-                                    color: LOCATION_CFG[ a.location ]?.color ?? "var(--c-gray-700)",
+                                    background: APT_LOCATION_CFG[ a.location ]?.bg ?? "var(--c-gray-200)",
+                                    color: APT_LOCATION_CFG[ a.location ]?.color ?? "var(--c-gray-700)",
                                   }}
                                   title={`${a.patient.name} ${a.patient.lastName} — ${a.location} — ${a.status}`}
                                 >
@@ -213,7 +213,7 @@ export default function CalendarPage() {
                   >
                     <div
                       className="cal-day-panel__appt-dot"
-                      style={{ background: LOCATION_CFG[ a.location ]?.dot ?? "var(--c-gray-400)" }}
+                      style={{ background: APT_LOCATION_CFG[ a.location ]?.dot ?? "var(--c-gray-400)" }}
                     />
                     <span className="cal-day-panel__appt-name">{a.patient.name} {a.patient.lastName}</span>
                     <span className="cal-day-panel__appt-time">{formatTime(a.startAt)}</span>

@@ -1,5 +1,5 @@
 import { AppointmentDuration } from "../types/Appointment";
-import { ReminderType } from "../types/Reminder";
+import { REMINDER_TYPE_CONFIG, ReminderType } from "../types/Reminder";
 
 function fmtDateTime(iso: string | undefined): string {
     if (!iso) return "Invalid Date"
@@ -71,14 +71,7 @@ function isReminderTypeFeasible(date: string, reminderType: ReminderType): boole
     const now = new Date();
     const timeUntilAppointment = new Date(date).getTime() - now.getTime();
 
-    const reminderOffsets: Record<ReminderType, number> = {
-        [ ReminderType.ONE_HOUR_BEFORE ]: 60 * 60 * 1000,
-        [ ReminderType.ONE_DAY_BEFORE ]: 24 * 60 * 60 * 1000,
-        [ ReminderType.ONE_WEEK_BEFORE ]: 7 * 24 * 60 * 60 * 1000,
-        [ ReminderType.NONE ]: 0,
-    };
-
-    const requiredTime = reminderOffsets[ reminderType ];
+    const requiredTime = REMINDER_TYPE_CONFIG[ reminderType ].offsetMs;
     return timeUntilAppointment > requiredTime;
 }
 
@@ -86,11 +79,11 @@ function isReminderTypeFeasible(date: string, reminderType: ReminderType): boole
 function getRemindersendAt(date: string, reminderType: ReminderType): string {
     switch (reminderType) {
         case ReminderType.ONE_HOUR_BEFORE:
-            return new Date(new Date(date).getTime() - 60 * 60 * 1000).toISOString();
+            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_HOUR_BEFORE ].offsetMs).toISOString();
         case ReminderType.ONE_DAY_BEFORE:
-            return new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toISOString();
+            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_DAY_BEFORE ].offsetMs).toISOString();
         case ReminderType.ONE_WEEK_BEFORE:
-            return new Date(new Date(date).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_WEEK_BEFORE ].offsetMs).toISOString();
         default:
             return date;
     }
@@ -136,11 +129,10 @@ function getDate(date: string): string {
 }
 
 function getReminderType(startAt: string, sendAt: string): ReminderType {
-    console.log("Calculating reminder type with startAt:", startAt, "and sendAt:", sendAt);
-    const diff = (new Date(startAt).getTime() - new Date(sendAt).getTime()) / 60000;
-    if (diff === 60) return ReminderType.ONE_HOUR_BEFORE;
-    if (diff === 24 * 60) return ReminderType.ONE_DAY_BEFORE;
-    if (diff === 7 * 24 * 60) return ReminderType.ONE_WEEK_BEFORE;
+    const diff = (new Date(startAt).getTime() - new Date(sendAt).getTime());
+    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_HOUR_BEFORE ].offsetMs) return ReminderType.ONE_HOUR_BEFORE;
+    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_DAY_BEFORE ].offsetMs) return ReminderType.ONE_DAY_BEFORE;
+    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_WEEK_BEFORE ].offsetMs) return ReminderType.ONE_WEEK_BEFORE;
     return ReminderType.NONE;
 }
 

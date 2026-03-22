@@ -2,8 +2,8 @@ import { useCreateAppointment } from "@/src/api/useCreateAppointment";
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useUpdateReminder } from "@/src/api/useUpdateReminder";
-import { Appointment, AppointmentForm, AppointmentStatus, APPOINTMENT_TYPES, AppointmentDuration, APPOINTMENT_LOCATIONS, LOCATION_CFG, STATUS_CFG } from "@/src/types/Appointment";
-import { ReminderType, Reminder, ReminderMode, ReminderStatus, CHANNEL_ICON, CHANNEL_LABEL, Channel } from "@/src/types/Reminder";
+import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType } from "@/src/types/Appointment";
+import { ReminderType, Reminder, ReminderMode, ReminderStatus, CHANNEL_ICON, CHANNEL_LABEL, Channel, REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { isReminderTypeFeasible, formatDate, formatTime, getDuration, getRemindersendAt, getAppointmentEndTime, getTommorrowSixAm, getReminderType } from "@/src/utils/TimeUtils";
 import { useState } from "react";
@@ -36,9 +36,9 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     type: appt?.type ?? "",
     location: appt?.location ?? "",
     meetingUrl: appt?.meetingUrl ?? undefined,
-    price: appt?.price ?? APPOINTMENT_TYPES[ 1 ].price,
+    price: appt?.price ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].price,
     paid: appt?.paid ?? false,
-    duration: getDuration(appt?.startAt, appt?.endAt) ?? APPOINTMENT_TYPES[ 1 ].duration,
+    duration: getDuration(appt?.startAt, appt?.endAt) ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].duration,
     reminderType: appt?.reminder ? getReminderType(appt.startAt, appt.reminder.sendAt) : ReminderType.NONE,
     notes: appt?.notes ?? undefined,
   });
@@ -191,10 +191,10 @@ function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient }
     <label className="form-label">
       <RequiredField label="Tipo de cita" />
       <select className="form-input" value={form.type} onChange={(e) => {
-        setForm(f => ({ ...f, type: e.target.value, price: APPOINTMENT_TYPES.find(t => t.name === e.target.value)?.price ?? APPOINTMENT_TYPES[ 0 ].price, duration: APPOINTMENT_TYPES.find(t => t.name === e.target.value)?.duration ?? APPOINTMENT_TYPES[ 0 ].duration }))
+        setForm(f => ({ ...f, type: e.target.value, price: APPT_TYPE_CFG[e.target.value as AppointmentType]?.price ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].price, duration: APPT_TYPE_CFG[e.target.value as AppointmentType]?.duration ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].duration }))
       }}>
         <option value="">Seleccionar tipo…</option>
-        {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+        {(Object.keys(APPT_TYPE_CFG) as AppointmentType[]).map(t => <option key={t} value={t}>{APPT_TYPE_CFG[t].label}</option>)}
       </select>
     </label>
   </div>)
@@ -214,7 +214,7 @@ function LocationAndTimeStep({ form, set, selectedPatient, reminderChannel, setR
         <RequiredField label="Ubicación" />
         <select className="form-input" value={form.location} onChange={set("location")}>
           <option value="">Seleccionar ubicación…</option>
-          {APPOINTMENT_LOCATIONS.map(d => <option key={d} value={d}>{LOCATION_CFG[ d ]?.label || d}</option>)}
+          {APPOINTMENT_LOCATIONS.map(d => <option key={d} value={d}>{APT_LOCATION_CFG[ d ]?.label || d}</option>)}
         </select>
       </label>
 
@@ -290,8 +290,8 @@ function PaymentAndStatusStep({ form, set, selectedPatient }: { form: Appointmen
         <label className="form-label">
           Estado
           <select className="form-input" value={form.status} onChange={set("status")}>
-            {(Object.keys(STATUS_CFG) as AppointmentStatus[]).map(s => (
-              <option key={s} value={s}>{STATUS_CFG[ s ].icon} {STATUS_CFG[ s ].label}</option>
+            {(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(s => (
+              <option key={s} value={s}>{APPT_STATUS_CFG[ s ].icon} {APPT_STATUS_CFG[ s ].label}</option>
             ))}
           </select>
         </label>
@@ -306,7 +306,7 @@ function PaymentAndStatusStep({ form, set, selectedPatient }: { form: Appointmen
           [ "Duración", form.duration ],
           [ "Ubicación", form.location || "—" ],
           [ "Precio", `$${form.price}` ],
-          [ "Recordatorio", form.reminderType !== ReminderType.NONE ? form.reminderType!.replaceAll("_", " ").toLowerCase() : "Sin recordatorio" ],
+          [ "Recordatorio", form.reminderType !== ReminderType.NONE ? REMINDER_TYPE_CONFIG[ form.reminderType ].label : "Sin recordatorio" ],
         ].map(([ k, v ]) => (
           <div key={k} className="summary-row">
             <span className="summary-row__key">{k}</span>

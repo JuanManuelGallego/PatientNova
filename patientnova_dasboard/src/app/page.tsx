@@ -9,7 +9,7 @@ import { useFetchAppointmentsStats } from "../api/useFetchAppointmentsStats";
 import { useFetchRemindersStats } from "../api/useFetchRemindersStats";
 import { useFetchAppointments } from "../api/useFetchAppointments";
 import { useFetchReminders } from "../api/useFetchReminders";
-import { LOCATION_CFG } from "../types/Appointment";
+import { APT_LOCATION_CFG } from "../types/Appointment";
 import { ReminderStatus, CHANNEL_ICON } from "../types/Reminder";
 import { PatientStatus } from "../types/Patient";
 import { fmtDateAndTime, fmtRelative, today } from "../utils/TimeUtils";
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="dash-list-item__right">
-                        <div className="location-badge" style={{ background: LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)", fontSize: 11 }}>
+                        <div className="location-badge" style={{ background: APT_LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: APT_LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)", fontSize: 11 }}>
                           {a.location}
                         </div>
                         <AppointmentStatusPill status={a.status} />

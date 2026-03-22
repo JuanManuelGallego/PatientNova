@@ -1,4 +1,4 @@
-import { Appointment } from "./Appointment";
+import { Appointment, AppointmentType } from "./Appointment";
 import { Patient } from "./Patient";
 
 export interface Reminder {
@@ -27,6 +27,14 @@ export interface Reminder {
     appointment?: Appointment | null;
     patient?: Patient;
 }
+
+export type ReminderForm = {
+    patientId: string;
+    channel: Channel;
+    message: string;
+    sendAt: string;
+    appointmentType?: AppointmentType;
+};
 
 export enum ReminderStatus {
     PENDING = "PENDING",
@@ -115,6 +123,13 @@ export enum ReminderType {
     ONE_DAY_BEFORE = "1_DIA_ANTES",
     ONE_WEEK_BEFORE = "1_SEMANA_ANTES",
 }
+
+export const REMINDER_TYPE_CONFIG: Record<ReminderType, { label: string; offsetMs: number }> = {
+    [ ReminderType.NONE ]: { label: "Ninguno", offsetMs: 0 },
+    [ ReminderType.ONE_HOUR_BEFORE ]: { label: "1 hora antes", offsetMs: 60 * 60 * 1000 },
+    [ ReminderType.ONE_DAY_BEFORE ]: { label: "1 día antes", offsetMs: 24 * 60 * 60 * 1000 },
+    [ ReminderType.ONE_WEEK_BEFORE ]: { label: "1 semana antes", offsetMs: 7 * 24 * 60 * 60 * 1000 },
+};
 
 export interface FetchRemindersFilters {
     status?: ReminderStatus[],
