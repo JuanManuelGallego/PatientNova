@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
+import { DM_Sans } from "next/font/google";
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: [ "latin" ],
+  weight: [ "400", "500", "600", "700" ],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Patient Nova",
@@ -12,14 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={dmSans.className}>
       <body>
-        {children}
+        <NuqsAdapter>
+          {children}
+        </NuqsAdapter>
       </body>
     </html>
   );

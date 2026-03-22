@@ -4,9 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
-const NAV_ITEMS = [
-    { id: "dashboard", path: "/", icon: "⬛", label: "Vista General" },
-    { id: "patients", path: "/patients", icon: "👤", label: "Pacientes" },
+export const NAV_ITEMS = [
+    { id: "dashboard", path: "/", icon: "🏠", label: "Vista General" },
+    { id: "patients", path: "/patients", icon: "🪪", label: "Pacientes" },
     { id: "appointments", path: "/appointments", icon: "📝", label: "Citas" },
     { id: "calendar", path: "/calendar", icon: "📆", label: "Calendario" },
     { id: "reminders", path: "/reminders", icon: "🔔", label: "Recordatorios" },

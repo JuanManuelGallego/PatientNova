@@ -60,7 +60,7 @@ export const listRemindersSchema = z.object({
   dateTo: z.string().datetime().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  orderBy: z.enum([ 'sendAt', 'createdAt', 'status' ]).default('sendAt'),
+  orderBy: z.enum([ 'sendAt', 'createdAt', 'status', 'updatedAt' ]).default('sendAt'),
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
 });
 

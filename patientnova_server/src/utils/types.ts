@@ -42,7 +42,7 @@ export interface ScheduleResult {
 
 export const appointmentInclude = {
   patient: { select: { id: true, name: true, lastName: true, email: true } },
-  reminder: { select: { id: true, channel: true, status: true, sentAt: true } },
+  reminder: { select: { id: true, channel: true, status: true, sendAt: true } },
 } satisfies Prisma.AppointmentInclude;
 
 export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{

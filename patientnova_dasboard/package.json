@@ -16,6 +16,7 @@
     "dayjs": "^1.11.20",
     "flatpickr": "^4.6.13",
     "next": "16.1.6",
+    "nuqs": "^2.8.9",
     "react": "19.2.3",
     "react-datepicker": "^9.1.0",
     "react-dom": "19.2.3"

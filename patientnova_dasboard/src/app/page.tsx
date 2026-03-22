@@ -180,7 +180,7 @@ export default function DashboardPage() {
           <h3 className="dash-section-title">Acceso Rápido</h3>
           <div className="dash-nav-grid">
             {[
-              { href: "/patients", icon: "👤", label: "Pacientes", desc: `${patientStats?.total ?? 0} registrados`, accent: "var(--c-brand)" },
+              { href: "/patients", icon: "🪪", label: "Pacientes", desc: `${patientStats?.total ?? 0} registrados`, accent: "var(--c-brand)" },
               { href: "/appointments", icon: "📝", label: "Citas", desc: `${apptStats?.total ?? 0} en total`, accent: "var(--c-brand-accent)" },
               { href: "/calendar", icon: "📆", label: "Calendario", desc: "Vista mensual", accent: "var(--c-success)" },
               { href: "/reminders", icon: "🔔", label: "Recordatorios", desc: `${reminderStats?.total ?? 0} creados`, accent: "var(--c-link)" },

@@ -9,6 +9,14 @@ import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
 import { RequiredField } from "../Info/Requiered";
 
+type ReminderForm = {
+    patientId: string;
+    channel: Channel;
+    message: string;
+    sendAt: string;
+    appointmentType: string;
+};
+
 export function ReminderModal({
     onClose, onSaved, patients, reminder,
 }: {
@@ -24,7 +32,7 @@ export function ReminderModal({
     const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
     const [ saving, setSaving ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
-    const [ form, setForm ] = useState({
+    const [ form, setForm ] = useState<ReminderForm>({
         patientId: "",
         channel: Channel.WHATSAPP,
         message: "",
@@ -38,8 +46,8 @@ export function ReminderModal({
 
     const selectedPatient = patients.find(p => p.id === form.patientId);
 
-    const set = (field: string) =>
-        (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    const set: SetField = (field) =>
+        (e) =>
             setForm(f => ({ ...f, [ field ]: e.target.value }));
 
     function validateForm() {
@@ -121,127 +129,9 @@ export function ReminderModal({
                 {error && (
                     <div className="error-inline">⚠️ {error}</div>
                 )}
-                {step === 1 && (
-                    <div className="form-stack">
-                        <div>
-                            <div className="channel-section-label"><RequiredField label="Tipo de envío" /></div>
-                            <div className="form-grid-2">
-                                {([
-                                    { key: ReminderMode.IMMEDIATE, icon: "⚡", title: "Enviar ahora", sub: "Se envía inmediatamente" },
-                                    { key: ReminderMode.SCHEDULED, icon: "🗓️", title: "Programar envío", sub: "Elegir fecha y hora" },
-                                ] as const).map(opt => (
-                                    <button
-                                        key={opt.key}
-                                        onClick={() => setMode(opt.key)}
-                                        className={`selection-card selection-card--column${sendMode === opt.key ? " selection-card--active" : ""}`}
-                                    >
-                                        <span style={{ fontSize: 22 }}>{opt.icon}</span>
-                                        <span className="patient-preview__name">{opt.title}</span>
-                                        <span className="patient-preview__detail">{opt.sub}</span>
-                                        {sendMode === opt.key && <span style={{ marginLeft: "auto", color: "var(--c-brand)", fontSize: 16, alignSelf: "flex-end" }}>✓</span>}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <label className="form-label">
-                            <RequiredField label="Paciente" />
-                            <select className="form-input" value={form.patientId} onChange={set("patientId")}>
-                                <option value="">Seleccionar paciente…</option>
-                                {patients.filter(p => p.status === "ACTIVE").map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
-                                ))}
-                            </select>
-                        </label>
-                        <label className="form-label">
-                            <RequiredField label="Tipo de cita" />
-                            <select className="form-input" value={form.appointmentType} onChange={set("appointmentType")}>
-                                <option value="">Seleccionar tipo…</option>
-                                {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                        </label>
-                    </div>
-                )}
-                {step === 2 && (
-                    <div className="form-stack">
-                        {selectedPatient && (
-                            <div className="patient-preview">
-                                <div className="avatar avatar--md" style={{ background: getAvatarColor(selectedPatient.id) }}>
-                                    {getInitials(selectedPatient.name, selectedPatient.lastName)}
-                                </div>
-                                <div>
-                                    <div className="patient-preview__name">{selectedPatient.name} {selectedPatient.lastName}</div>
-                                    <div className="patient-preview__detail">{selectedPatient.email}</div>
-                                </div>
-                            </div>
-                        )}
-                        <div>
-                            <div className="channel-section-label"><RequiredField label="Canal de notificación" /></div>
-                            <div style={{ display: "flex", gap: 10 }}>
-                                {Object.values(Channel).map(c => {
-                                    const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber);
-                                    return (
-                                        <button
-                                            key={c}
-                                            onClick={() => available && setForm(f => ({ ...f, channel: c }))}
-                                            className={`selection-card${form.channel === c ? " selection-card--active" : ""}${!available ? " selection-card--disabled" : ""}`}
-                                            style={{ flex: 1 }}
-                                        >
-                                            <span style={{ fontSize: 22 }}>{CHANNEL_ICON[ c ]}</span>
-                                            <div>
-                                                <div className="patient-preview__name">{CHANNEL_LABEL[ c ]}</div>
-                                                <div className="patient-preview__detail">
-                                                    {available
-                                                        ? (c === Channel.WHATSAPP ? selectedPatient?.whatsappNumber : selectedPatient?.smsNumber)
-                                                        : "No disponible"}
-                                                </div>
-                                            </div>
-                                            {form.channel === c && available && <span style={{ marginLeft: "auto", color: "var(--c-brand)" }}>✓</span>}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        {sendMode === ReminderMode.SCHEDULED && (
-                            <label className="form-label">
-                                <RequiredField label="Fecha y hora de envío" />
-                                <DateTimePicker date={form.sendAt} onChanged={(d) => setForm(f => ({ ...f, sendAt: d }))} showTime isFuture />
-                            </label>
-                        )}
-                        <label className="form-label">
-                            <RequiredField label="Mensaje" />
-                            <textarea
-                                className="form-input form-input--textarea"
-                                style={{ minHeight: 100 }}
-                                value={form.message}
-                                onChange={set("message")}
-                                placeholder={`Hola ${selectedPatient?.name ?? "{nombre}"}, le recordamos su cita${form.appointmentType ? ` de ${form.appointmentType}` : ""} próximamente. Por favor confirme su asistencia.`}
-                            />
-                            <span className="form-input-hint">{form.message.length} / 1600 caracteres</span>
-                        </label>
-                    </div>
-                )}
-                {step === 3 && (
-                    <div className="form-stack">
-                        <div className="summary-card">
-                            <div className="summary-card__label">Resumen del recordatorio</div>
-                            {[
-                                { k: "Paciente", v: selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" },
-                                { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
-                                { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
-                                { k: "Programado", v: sendMode === ReminderMode.IMMEDIATE ? "Inmediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
-                            ].map(({ k, v }) => (
-                                <div key={k} className="summary-row">
-                                    <span className="summary-row__key">{k}</span>
-                                    <span className="summary-row__value">{v}</span>
-                                </div>
-                            ))}
-                            <div className="summary-card__divider">
-                                <div className="summary-card__sublabel">Mensaje</div>
-                                <div className="summary-card__body">{form.message || "—"}</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {step === 1 && <SendModeAndPatientStep sendMode={sendMode} setMode={setMode} form={form} set={set} patients={patients} />}
+                {step === 2 && <ChannelAndMessageStep form={form} setForm={setForm} selectedPatient={selectedPatient} sendMode={sendMode} set={set} />}
+                {step === 3 && <SummaryStep form={form} selectedPatient={selectedPatient} sendMode={sendMode} />}
                 <div className="modal-footer">
                     {step > 1 && <button onClick={() => setStep(s => s - 1)} className="btn-secondary" disabled={saving}>Atrás</button>}
                     {step < totalSteps
@@ -250,6 +140,154 @@ export function ReminderModal({
                             {saving ? "Enviando…" : sendMode === ReminderMode.IMMEDIATE ? "⚡ Enviar ahora" : "🗓️ Programar"}
                         </button>
                     }
+                </div>
+            </div>
+        </div>
+    );
+}
+
+type SetField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+
+function SendModeAndPatientStep({ sendMode, setMode, form, set, patients }: {
+    sendMode: ReminderMode;
+    setMode: (m: ReminderMode) => void;
+    form: ReminderForm;
+    set: SetField;
+    patients: Patient[];
+}) {
+    return (
+        <div className="form-stack">
+            <div>
+                <div className="channel-section-label"><RequiredField label="Tipo de envío" /></div>
+                <div className="form-grid-2">
+                    {([
+                        { key: ReminderMode.IMMEDIATE, icon: "⚡", title: "Enviar ahora", sub: "Se envía inmediatamente" },
+                        { key: ReminderMode.SCHEDULED, icon: "🗓️", title: "Programar envío", sub: "Elegir fecha y hora" },
+                    ] as const).map(opt => (
+                        <button
+                            key={opt.key}
+                            onClick={() => setMode(opt.key)}
+                            className={`selection-card selection-card--column${sendMode === opt.key ? " selection-card--active" : ""}`}
+                        >
+                            <span style={{ fontSize: 22 }}>{opt.icon}</span>
+                            <span className="patient-preview__name">{opt.title}</span>
+                            <span className="patient-preview__detail">{opt.sub}</span>
+                            {sendMode === opt.key && <span style={{ marginLeft: "auto", color: "var(--c-brand)", fontSize: 16, alignSelf: "flex-end" }}>✓</span>}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <label className="form-label">
+                <RequiredField label="Paciente" />
+                <select className="form-input" value={form.patientId} onChange={set("patientId")}>
+                    <option value="">Seleccionar paciente…</option>
+                    {patients.filter(p => p.status === "ACTIVE").map(p => (
+                        <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
+                    ))}
+                </select>
+            </label>
+            <label className="form-label">
+                <RequiredField label="Tipo de cita" />
+                <select className="form-input" value={form.appointmentType} onChange={set("appointmentType")}>
+                    <option value="">Seleccionar tipo…</option>
+                    {APPOINTMENT_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+            </label>
+        </div>
+    );
+}
+
+function ChannelAndMessageStep({ form, setForm, selectedPatient, sendMode, set }: {
+    form: ReminderForm;
+    setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
+    selectedPatient: Patient | undefined;
+    sendMode: ReminderMode;
+    set: SetField;
+}) {
+    return (
+        <div className="form-stack">
+            {selectedPatient && (
+                <div className="patient-preview">
+                    <div className="avatar avatar--md" style={{ background: getAvatarColor(selectedPatient.id) }}>
+                        {getInitials(selectedPatient.name, selectedPatient.lastName)}
+                    </div>
+                    <div>
+                        <div className="patient-preview__name">{selectedPatient.name} {selectedPatient.lastName}</div>
+                        <div className="patient-preview__detail">{selectedPatient.email}</div>
+                    </div>
+                </div>
+            )}
+            <div>
+                <div className="channel-section-label"><RequiredField label="Canal de notificación" /></div>
+                <div style={{ display: "flex", gap: 10 }}>
+                    {Object.values(Channel).map(c => {
+                        const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber);
+                        return (
+                            <button
+                                key={c}
+                                onClick={() => available && setForm(f => ({ ...f, channel: c }))}
+                                className={`selection-card${form.channel === c ? " selection-card--active" : ""}${!available ? " selection-card--disabled" : ""}`}
+                                style={{ flex: 1 }}
+                            >
+                                <span style={{ fontSize: 22 }}>{CHANNEL_ICON[ c ]}</span>
+                                <div>
+                                    <div className="patient-preview__name">{CHANNEL_LABEL[ c ]}</div>
+                                    <div className="patient-preview__detail">
+                                        {available
+                                            ? (c === Channel.WHATSAPP ? selectedPatient?.whatsappNumber : selectedPatient?.smsNumber)
+                                            : "No disponible"}
+                                    </div>
+                                </div>
+                                {form.channel === c && available && <span style={{ marginLeft: "auto", color: "var(--c-brand)" }}>✓</span>}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+            {sendMode === ReminderMode.SCHEDULED && (
+                <label className="form-label">
+                    <RequiredField label="Fecha y hora de envío" />
+                    <DateTimePicker date={form.sendAt} onChanged={(d) => setForm(f => ({ ...f, sendAt: d }))} showTime isFuture />
+                </label>
+            )}
+            <label className="form-label">
+                <RequiredField label="Mensaje" />
+                <textarea
+                    className="form-input form-input--textarea"
+                    style={{ minHeight: 100 }}
+                    value={form.message}
+                    onChange={set("message")}
+                    placeholder={`Hola ${selectedPatient?.name ?? "{nombre}"}, le recordamos su cita${form.appointmentType ? ` de ${form.appointmentType}` : ""} próximamente. Por favor confirme su asistencia.`}
+                />
+                <span className="form-input-hint">{form.message.length} / 1600 caracteres</span>
+            </label>
+        </div>
+    );
+}
+
+function SummaryStep({ form, selectedPatient, sendMode }: {
+    form: ReminderForm;
+    selectedPatient: Patient | undefined;
+    sendMode: ReminderMode;
+}) {
+    return (
+        <div className="form-stack">
+            <div className="summary-card">
+                <div className="summary-card__label">Resumen del recordatorio</div>
+                {[
+                    { k: "Paciente", v: selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" },
+                    { k: "Canal", v: `${CHANNEL_ICON[ form.channel ]} ${CHANNEL_LABEL[ form.channel ]}` },
+                    { k: "Enviará a", v: form.channel === Channel.WHATSAPP ? (selectedPatient?.whatsappNumber ?? "—") : (selectedPatient?.smsNumber ?? "—") },
+                    { k: "Programado", v: sendMode === ReminderMode.IMMEDIATE ? "Inmediatamente" : form.sendAt ? fmtDateTime(form.sendAt) : "—" },
+                ].map(({ k, v }) => (
+                    <div key={k} className="summary-row">
+                        <span className="summary-row__key">{k}</span>
+                        <span className="summary-row__value">{v}</span>
+                    </div>
+                ))}
+                <div className="summary-card__divider">
+                    <div className="summary-card__sublabel">Mensaje</div>
+                    <div className="summary-card__body">{form.message || "—"}</div>
                 </div>
             </div>
         </div>

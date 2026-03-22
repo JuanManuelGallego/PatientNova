@@ -13,25 +13,26 @@ import { Appointment, AppointmentStatus, FetchAppointmentsFilters, LOCATION_CFG 
 import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateAndTime } from "@/src/utils/TimeUtils";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/useFetchAppointments";
 import { ReminderStatusPill, EmptyStatusPill, AppointmentStatusPill } from "@/src/components/Info/StatusPill";
 import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useDebounceState } from "@/src/utils/useDebounceState";
+import { useQueryState, parseAsInteger, parseAsString, parseAsStringEnum } from 'nuqs';
 
 const PAGE_SIZE = 10;
 
-export default function AppointmentsPage() {
+function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
   const { updateAppointment } = useUpdateAppointment();
 
-  const [ filterStatus, setFilterStatus ] = useState<AppointmentStatus | "ALL">("ALL");
-  const [ filterpaid, setFilterpaid ] = useState<"ALL" | "true" | "false">("ALL");
-  const [ search, setSearch ] = useState("");
+  const [ filterStatus, setFilterStatus ] = useQueryState("filterStatus", parseAsStringEnum<AppointmentStatus | "ALL">([ "ALL", AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW ]).withDefault("ALL"));
+  const [ filterpaid, setFilterpaid ] = useQueryState("filterpaid", parseAsStringEnum<"ALL" | "true" | "false">([ "ALL", "true", "false" ]).withDefault("ALL"));
+  const [ dateFilter, setDateFilter ] = useQueryState("dateFilter", parseAsString.withDefault(""));
+  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [ search, setSearch ] = useQueryState("search", parseAsString.withDefault(""));
   const debouncedSearch = useDebounceState(search, 250);
-  const [ dateFilter, setDateFilter ] = useState("");
-  const [ page, setPage ] = useState(1);
 
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
@@ -201,4 +202,8 @@ export default function AppointmentsPage() {
       )}
     </>
   );
+}
+
+export default function AppointmentsPage() {
+  return <Suspense><AppointmentsPageContent /></Suspense>;
 }

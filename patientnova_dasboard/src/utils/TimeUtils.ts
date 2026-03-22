@@ -135,6 +135,15 @@ function getDate(date: string): string {
     return date.slice(0, 10);
 }
 
+function getReminderType(startAt: string, sendAt: string): ReminderType {
+    console.log("Calculating reminder type with startAt:", startAt, "and sendAt:", sendAt);
+    const diff = (new Date(startAt).getTime() - new Date(sendAt).getTime()) / 60000;
+    if (diff === 60) return ReminderType.ONE_HOUR_BEFORE;
+    if (diff === 24 * 60) return ReminderType.ONE_DAY_BEFORE;
+    if (diff === 7 * 24 * 60) return ReminderType.ONE_WEEK_BEFORE;
+    return ReminderType.NONE;
+}
+
 export {
     fmtDate,
     fmtTime,
@@ -148,6 +157,7 @@ export {
     getAppointmentEndTime,
     getDuration,
     getRemindersendAt,
+    getReminderType,
     getTommorrowSixAm,
     isoToLocal,
     isReminderTypeFeasible,

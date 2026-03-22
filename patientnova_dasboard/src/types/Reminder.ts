@@ -124,6 +124,6 @@ export interface FetchRemindersFilters {
     dateTo?: string,
     page?: number,
     pageSize?: number,
-    orderBy?: 'sendAt' | 'createdAt' | 'status',
+    orderBy?: 'sendAt' | 'createdAt' | 'status' | 'updatedAt',
     order?: 'asc' | 'desc',
 }
