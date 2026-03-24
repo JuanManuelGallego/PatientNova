@@ -8,6 +8,7 @@ import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
+import { CustomSelect } from "@/src/components/CustomSelect";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment, AppointmentStatus, FetchAppointmentsFilters, APT_LOCATION_CFG } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
@@ -20,6 +21,7 @@ import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useDebounceState } from "@/src/utils/useDebounceState";
 import { useQueryState, parseAsInteger, parseAsString, parseAsStringEnum } from 'nuqs';
+import { APPT_TYPE_CFG } from '../../types/Appointment';
 
 const PAGE_SIZE = 10;
 
@@ -111,11 +113,16 @@ function AppointmentsPageContent() {
                 <button key={k} onClick={() => setFilterStatus(k)} className={`filter-chip ${filterStatus === k ? "filter-chip--active" : ""}`}>{l}</button>
               ))}
             </div>
-            <select value={filterpaid} onChange={e => setFilterpaid(e.target.value as "true" | "false" | "ALL")} className="form-input form-input--auto">
-              <option value="ALL">💳 Todas</option>
-              <option value="true">💳 Pagadas</option>
-              <option value="false">⏳ Sin pagar</option>
-            </select>
+            <CustomSelect
+              value={filterpaid}
+              className="form-input--auto"
+              options={[
+                { value: "ALL", label: "💳 Todas" },
+                { value: "true", label: "💳 Pagadas" },
+                { value: "false", label: "⏳ Sin pagar" },
+              ]}
+              onChange={(v) => setFilterpaid(v as "true" | "false" | "ALL")}
+            />
           </div>
           <DataTable
             columns={[ "Paciente", "Tipo", "Fecha", "Recordatorio", "Ubicación", "Estado", "Pago", "" ]}
@@ -136,7 +143,7 @@ function AppointmentsPageContent() {
                   </div>
                 </td>
                 <td className="td td--date" style={{ maxWidth: 140 }}>
-                  <div className="text-ellipsis">{a.type}</div>
+                  <div className="text-ellipsis">{APPT_TYPE_CFG[ a.type ]?.label ?? "Desconocido"}</div>
                 </td>
                 <td className="td td--datetime">{fmtDateAndTime(a.startAt)}</td>
                 <td className="td">{a.reminder ? <ReminderStatusPill status={a.reminder?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>

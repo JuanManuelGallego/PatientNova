@@ -54,7 +54,8 @@ function fmtRelative(d: string | undefined): string {
 }
 
 function today(): string {
-    return new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 const MONTH_NAMES_ES = [
@@ -136,6 +137,88 @@ function getReminderType(startAt: string, sendAt: string): ReminderType {
     return ReminderType.NONE;
 }
 
+function easterSunday(year: number): Date {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month, day);
+}
+
+function nextMonday(date: Date): Date {
+    const d = new Date(date);
+    const dow = d.getDay();
+    if (dow === 1) return d;
+    const diff = dow === 0 ? 1 : 8 - dow;
+    d.setDate(d.getDate() + diff);
+    return d;
+}
+
+function addDays(date: Date, days: number): Date {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+}
+
+function dateToStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+interface ColombianHoliday { date: string; name: string; }
+
+function getColombianHolidays(year: number): ColombianHoliday[] {
+    const easter = easterSunday(year);
+    const fixed: [ number, number, string ][] = [
+        [ 0, 1, "Año Nuevo" ],
+        [ 4, 1, "Día del Trabajo" ],
+        [ 6, 20, "Día de la Independencia" ],
+        [ 7, 7, "Batalla de Boyacá" ],
+        [ 11, 8, "Inmaculada Concepción" ],
+        [ 11, 25, "Navidad" ],
+    ];
+    const emiliani: [ number, number, string ][] = [
+        [ 0, 6, "Día de los Reyes Magos" ],
+        [ 2, 19, "Día de San José" ],
+        [ 5, 29, "San Pedro y San Pablo" ],
+        [ 7, 15, "Asunción de la Virgen" ],
+        [ 9, 12, "Día de la Raza" ],
+        [ 10, 1, "Todos los Santos" ],
+        [ 10, 11, "Independencia de Cartagena" ],
+    ];
+    const easterBased: [ number, string, boolean ][] = [
+        [ -3, "Jueves Santo", false ],
+        [ -2, "Viernes Santo", false ],
+        [ 43, "Ascensión del Señor", true ],
+        [ 64, "Corpus Christi", true ],
+        [ 71, "Sagrado Corazón", true ],
+    ];
+
+    const holidays: ColombianHoliday[] = [];
+
+    for (const [ m, d, name ] of fixed) {
+        holidays.push({ date: dateToStr(new Date(year, m, d)), name });
+    }
+    for (const [ m, d, name ] of emiliani) {
+        holidays.push({ date: dateToStr(nextMonday(new Date(year, m, d))), name });
+    }
+    for (const [ offset, name, toMonday ] of easterBased) {
+        const d = addDays(easter, offset);
+        holidays.push({ date: dateToStr(toMonday ? nextMonday(d) : d), name });
+    }
+
+    return holidays;
+}
+
 export {
     fmtDate,
     fmtTime,
@@ -154,6 +237,9 @@ export {
     isoToLocal,
     isReminderTypeFeasible,
     today,
+    getColombianHolidays,
     MONTH_NAMES_ES,
     DAY_NAMES_ES,
 };
+
+export type { ColombianHoliday };

@@ -18,7 +18,7 @@ export interface Appointment {
     location: string;
     meetingUrl?: string | null;
     notes?: string | null;
-    type: string;
+    type: AppointmentType;
 
     status: AppointmentStatus;
     confirmedAt?: string | null;
@@ -36,11 +36,11 @@ export interface AppointmentForm {
     startAt: string;
     duration: string;
     price: number;
-    paid: boolean;
+    paid: AppointmentPaidStatus;
     location: string;
     meetingUrl?: string;
     notes?: string;
-    type: string;
+    type: AppointmentType;
     status: AppointmentStatus;
     patientId: string;
     reminderId?: string;
@@ -68,6 +68,16 @@ export enum AppointmentDuration {
     MIN_60 = '1 h',
     MIN_90 = '90 min',
 }
+
+export enum AppointmentPaidStatus {
+    PAID = 'PAID',
+    UNPAID = 'UNPAID',
+}
+
+export const APPT_PAID_STATUS_CFG: Record<AppointmentPaidStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
+    [ AppointmentPaidStatus.PAID ]: { label: "Pagado", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "💳" },
+    [ AppointmentPaidStatus.UNPAID ]: { label: "Pendiente", color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444", icon: "⏳" },
+};
 
 export const APPT_TYPE_CFG: Record<AppointmentType, { label: string; price: number; duration: AppointmentDuration }> = {
     [ AppointmentType.KID ]: { label: "Niño", price: 115000, duration: AppointmentDuration.MIN_60 },

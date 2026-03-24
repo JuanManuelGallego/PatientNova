@@ -36,7 +36,7 @@ const COUNTRY_CODES = [
     { code: "+53", iso: "cu", label: "CU" },
 ];
 
-function flagUrl(iso: string) {
+export function flagUrl(iso: string) {
     return `https://flagcdn.com/w40/${iso}.png`;
 }
 

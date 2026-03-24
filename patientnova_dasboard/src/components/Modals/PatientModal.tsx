@@ -6,6 +6,7 @@ import { useState } from "react";
 import { RequiredField } from "../Info/Requiered";
 import { DateTimePicker } from "../DateTimePicker";
 import { CountryCodeInput } from "../CountryCodeInput";
+import { CustomSelect } from "../CustomSelect";
 
 export function PatientModal({
   onClose,
@@ -136,13 +137,11 @@ export function PatientModal({
           </label>
           {isEdit && <label className="form-label">
             Estado
-            <select className="form-input" value={form.status} onChange={set("status")}>
-              {Object.values(PatientStatus).map(s => (
-                <option key={s} value={s}>
-                  {PATIENT_STATUS_CONFIG[ s ].icon} {PATIENT_STATUS_CONFIG[ s ].label}
-                </option>
-              ))}
-            </select>
+            <CustomSelect
+              value={form.status}
+              options={Object.values(PatientStatus).map(s => ({ value: s, label: `${PATIENT_STATUS_CONFIG[ s ].icon} ${PATIENT_STATUS_CONFIG[ s ].label}` }))}
+              onChange={(v) => setForm(f => ({ ...f, status: v as PatientStatus }))}
+            />
           </label>}
         </div>
         <div className="modal-footer">

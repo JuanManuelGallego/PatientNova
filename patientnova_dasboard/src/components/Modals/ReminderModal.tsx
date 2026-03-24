@@ -7,6 +7,7 @@ import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
+import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Requiered";
 
 export function ReminderModal({
@@ -121,7 +122,7 @@ export function ReminderModal({
                 {error && (
                     <div className="error-inline">⚠️ {error}</div>
                 )}
-                {step === 1 && <SendModeAndPatientStep sendMode={sendMode} setMode={setMode} form={form} set={set} patients={patients} />}
+                {step === 1 && <SendModeAndPatientStep sendMode={sendMode} setMode={setMode} form={form} setForm={setForm} patients={patients} />}
                 {step === 2 && <ChannelAndMessageStep form={form} setForm={setForm} selectedPatient={selectedPatient} sendMode={sendMode} set={set} />}
                 {step === 3 && <SummaryStep form={form} selectedPatient={selectedPatient} sendMode={sendMode} />}
                 <div className="modal-footer">
@@ -140,11 +141,11 @@ export function ReminderModal({
 
 type SetField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
 
-function SendModeAndPatientStep({ sendMode, setMode, form, set, patients }: {
+function SendModeAndPatientStep({ sendMode, setMode, form, setForm, patients }: {
     sendMode: ReminderMode;
     setMode: (m: ReminderMode) => void;
     form: ReminderForm;
-    set: SetField;
+    setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
     patients: Patient[];
 }) {
     return (
@@ -171,19 +172,21 @@ function SendModeAndPatientStep({ sendMode, setMode, form, set, patients }: {
             </div>
             <label className="form-label">
                 <RequiredField label="Paciente" />
-                <select className="form-input" value={form.patientId} onChange={set("patientId")}>
-                    <option value="">Seleccionar paciente…</option>
-                    {patients.filter(p => p.status === "ACTIVE").map(p => (
-                        <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
-                    ))}
-                </select>
+                <CustomSelect
+                    value={form.patientId}
+                    placeholder="Seleccionar paciente…"
+                    options={patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` }))}
+                    onChange={(v) => setForm(f => ({ ...f, patientId: v }))}
+                />
             </label>
             <label className="form-label">
                 <RequiredField label="Tipo de cita" />
-                <select className="form-input" value={form.appointmentType} onChange={set("appointmentType")}>
-                    <option value="">Seleccionar tipo…</option>
-                    {Object.keys(APPT_TYPE_CFG).map(t => <option key={t} value={t}>{APPT_TYPE_CFG[ t as AppointmentType ].label}</option>)}
-                </select>
+                <CustomSelect
+                    value={form.appointmentType ?? ""}
+                    placeholder="Seleccionar tipo…"
+                    options={Object.keys(APPT_TYPE_CFG).map(t => ({ value: t, label: APPT_TYPE_CFG[ t as AppointmentType ].label }))}
+                    onChange={(v) => setForm(f => ({ ...f, appointmentType: v as AppointmentType }))}
+                />
             </label>
         </div>
     );
@@ -213,7 +216,7 @@ function ChannelAndMessageStep({ form, setForm, selectedPatient, sendMode, set }
                 <div className="channel-section-label"><RequiredField label="Canal de notificación" /></div>
                 <div style={{ display: "flex", gap: 10 }}>
                     {Object.values(Channel).map(c => {
-                        const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber);
+                        const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) //|| (c === Channel.SMS && !!selectedPatient?.smsNumber) || (c === Channel.EMAIL && !!selectedPatient?.email);
                         return (
                             <button
                                 key={c}

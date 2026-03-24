@@ -2,12 +2,13 @@ import { useCreateAppointment } from "@/src/api/useCreateAppointment";
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useUpdateReminder } from "@/src/api/useUpdateReminder";
-import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType } from "@/src/types/Appointment";
+import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType, APPT_PAID_STATUS_CFG, AppointmentPaidStatus } from "@/src/types/Appointment";
 import { ReminderType, Reminder, ReminderMode, ReminderStatus, CHANNEL_ICON, CHANNEL_LABEL, Channel, REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { isReminderTypeFeasible, formatDate, formatTime, getDuration, getRemindersendAt, getAppointmentEndTime, getTommorrowSixAm, getReminderType } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { AppointmentDateTimePicker } from "../AppointmentDateTimePicker";
+import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Requiered";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { Patient } from "@/src/types/Patient";
@@ -33,12 +34,12 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     patientId: appt?.patient.id ?? "",
     startAt: appt?.startAt ?? prefillDate ?? getTommorrowSixAm(),
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
-    type: appt?.type ?? "",
+    type: appt?.type ?? AppointmentType.INDIVIDUAL,
     location: appt?.location ?? "",
     meetingUrl: appt?.meetingUrl ?? undefined,
-    price: appt?.price ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].price,
-    paid: appt?.paid ?? false,
-    duration: getDuration(appt?.startAt, appt?.endAt) ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].duration,
+    price: appt?.price ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].price,
+    paid: appt?.paid ? AppointmentPaidStatus.PAID : AppointmentPaidStatus.UNPAID,
+    duration: getDuration(appt?.startAt, appt?.endAt) ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].duration,
     reminderType: appt?.reminder ? getReminderType(appt.startAt, appt.reminder.sendAt) : ReminderType.NONE,
     notes: appt?.notes ?? undefined,
   });
@@ -86,6 +87,7 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     return {
       ...form,
       endAt: getAppointmentEndTime(form.startAt, form.duration as AppointmentDuration),
+      paid: form.paid === AppointmentPaidStatus.PAID,
     }
   }
 
@@ -142,8 +144,8 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
           <div className="error-inline">⚠️ {error}</div>
         )}
         {step === 1 && <PatientAndTypeStep form={form} setForm={setForm} patients={patients} isEdit={isEdit} selectedPatient={selectedPatient} />}
-        {step === 2 && <LocationAndTimeStep form={form} set={set} selectedPatient={selectedPatient} reminderChannel={reminderChannel} setReminderChannel={setReminderChannel} />}
-        {step === 3 && <PaymentAndStatusStep form={form} set={set} selectedPatient={selectedPatient} />}
+        {step === 2 && <LocationAndTimeStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} reminderChannel={reminderChannel} setReminderChannel={setReminderChannel} />}
+        {step === 3 && <PaymentAndStatusStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} />}
         <div className="modal-footer">
           {step > 1 && <button onClick={() => setStep(s => s - 1)} className="btn-secondary" disabled={saving}>Atrás</button>}
           {step < steps.length
@@ -165,12 +167,12 @@ function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient }
   return (<div className="form-stack">
     {!isEdit && <label className="form-label">
       <RequiredField label="Paciente" />
-      <select className="form-input" value={form.patientId} onChange={(e) => setForm(f => ({ ...f, patientId: e.target.value }))}>
-        <option value="">Seleccionar paciente…</option>
-        {patients.filter(p => p.status === "ACTIVE").map(p => (
-          <option key={p.id} value={p.id}>{p.name} {p.lastName}</option>
-        ))}
-      </select>
+      <CustomSelect
+        value={form.patientId}
+        placeholder="Seleccionar paciente…"
+        options={patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` }))}
+        onChange={(v) => setForm(f => ({ ...f, patientId: v }))}
+      />
     </label>}
 
     {selectedPatient && (
@@ -190,32 +192,37 @@ function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient }
     </label>
     <label className="form-label">
       <RequiredField label="Tipo de cita" />
-      <select className="form-input" value={form.type} onChange={(e) => {
-        setForm(f => ({ ...f, type: e.target.value, price: APPT_TYPE_CFG[e.target.value as AppointmentType]?.price ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].price, duration: APPT_TYPE_CFG[e.target.value as AppointmentType]?.duration ?? APPT_TYPE_CFG[AppointmentType.INDIVIDUAL].duration }))
-      }}>
-        <option value="">Seleccionar tipo…</option>
-        {(Object.keys(APPT_TYPE_CFG) as AppointmentType[]).map(t => <option key={t} value={t}>{APPT_TYPE_CFG[t].label}</option>)}
-      </select>
+      <CustomSelect
+        value={form.type}
+        placeholder="Seleccionar tipo…"
+        options={(Object.keys(APPT_TYPE_CFG) as AppointmentType[]).map(t => ({ value: t, label: APPT_TYPE_CFG[ t ].label }))}
+        onChange={(v) => setForm(f => ({ ...f, type: v as AppointmentType, price: APPT_TYPE_CFG[ v as AppointmentType ]?.price ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].price, duration: APPT_TYPE_CFG[ v as AppointmentType ]?.duration ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].duration }))}
+      />
     </label>
   </div>)
 }
 
-function LocationAndTimeStep({ form, set, selectedPatient, reminderChannel, setReminderChannel }: { form: AppointmentForm; set: SetField; selectedPatient: Patient | undefined; reminderChannel: Channel; setReminderChannel: (c: Channel) => void }) {
+function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChannel, setReminderChannel }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined; reminderChannel: Channel; setReminderChannel: (c: Channel) => void }) {
+  const setField = (field: keyof AppointmentForm) => (value: string) => setForm(f => ({ ...f, [ field ]: value }));
   return (
     <div className="form-stack">
       <label className="form-label">
         <RequiredField label="Duración" />
-        <select className="form-input" value={form.duration} onChange={set("duration")}>
-          {Object.values(AppointmentDuration).map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+        <CustomSelect
+          value={form.duration}
+          options={Object.values(AppointmentDuration).map(d => ({ value: d, label: d }))}
+          onChange={setField("duration")}
+        />
       </label>
 
       <label className="form-label">
         <RequiredField label="Ubicación" />
-        <select className="form-input" value={form.location} onChange={set("location")}>
-          <option value="">Seleccionar ubicación…</option>
-          {APPOINTMENT_LOCATIONS.map(d => <option key={d} value={d}>{APT_LOCATION_CFG[ d ]?.label || d}</option>)}
-        </select>
+        <CustomSelect
+          value={form.location}
+          placeholder="Seleccionar ubicación…"
+          options={APPOINTMENT_LOCATIONS.map(d => ({ value: d, label: APT_LOCATION_CFG[ d ]?.label || d }))}
+          onChange={setField("location")}
+        />
       </label>
 
       {form.location === "Virtual" && (
@@ -228,19 +235,23 @@ function LocationAndTimeStep({ form, set, selectedPatient, reminderChannel, setR
         <div>
           <label className="form-label">
             Recordatorio
-            <select className="form-input" value={form.reminderType} onChange={set("reminderType")}>
-              <option value={ReminderType.NONE}>Sin recordatorio</option>
-              <option value={ReminderType.ONE_HOUR_BEFORE} disabled={!isReminderTypeFeasible(form.startAt, ReminderType.ONE_HOUR_BEFORE)}>1 hora antes</option>
-              <option value={ReminderType.ONE_DAY_BEFORE} disabled={!isReminderTypeFeasible(form.startAt, ReminderType.ONE_DAY_BEFORE)}>1 día antes</option>
-              <option value={ReminderType.ONE_WEEK_BEFORE} disabled={!isReminderTypeFeasible(form.startAt, ReminderType.ONE_WEEK_BEFORE)}>1 semana antes</option>
-            </select>
+            <CustomSelect
+              value={form.reminderType}
+              options={[
+                { value: ReminderType.NONE, label: "Sin recordatorio" },
+                { value: ReminderType.ONE_HOUR_BEFORE, label: "1 hora antes", disabled: !isReminderTypeFeasible(form.startAt, ReminderType.ONE_HOUR_BEFORE) },
+                { value: ReminderType.ONE_DAY_BEFORE, label: "1 día antes", disabled: !isReminderTypeFeasible(form.startAt, ReminderType.ONE_DAY_BEFORE) },
+                { value: ReminderType.ONE_WEEK_BEFORE, label: "1 semana antes", disabled: !isReminderTypeFeasible(form.startAt, ReminderType.ONE_WEEK_BEFORE) },
+              ]}
+              onChange={setField("reminderType")}
+            />
           </label>
           {form.reminderType !== ReminderType.NONE && (
             <div>
               <div className="channel-section-label">Canal de notificación</div>
               <div style={{ display: "flex", gap: 10 }}>
                 {Object.values(Channel).map(c => {
-                  const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) || (c === Channel.SMS && !!selectedPatient?.smsNumber) || (c === Channel.EMAIL && !!selectedPatient?.email);
+                  const available = (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) //|| (c === Channel.SMS && !!selectedPatient?.smsNumber) || (c === Channel.EMAIL && !!selectedPatient?.email);
                   return (
                     <button
                       key={c}
@@ -276,7 +287,8 @@ function LocationAndTimeStep({ form, set, selectedPatient, reminderChannel, setR
   );
 }
 
-function PaymentAndStatusStep({ form, set, selectedPatient }: { form: AppointmentForm; set: SetField; selectedPatient: Patient | undefined }) {
+function PaymentAndStatusStep({ form, set, setForm, selectedPatient }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined }) {
+  const setField = (field: keyof AppointmentForm) => (value: string) => setForm(f => ({ ...f, [ field ]: value }));
   return (
     <div className="form-stack">
       <div className="form-grid-2">
@@ -288,12 +300,20 @@ function PaymentAndStatusStep({ form, set, selectedPatient }: { form: Appointmen
           </div>
         </label>
         <label className="form-label">
+          Pago
+          <CustomSelect
+            value={form.paid}
+            options={(Object.keys(APPT_PAID_STATUS_CFG) as AppointmentPaidStatus[]).map(s => ({ value: s, label: `${APPT_PAID_STATUS_CFG[ s ].icon} ${APPT_PAID_STATUS_CFG[ s ].label}` }))}
+            onChange={setField("paid")}
+          />
+        </label>
+        <label className="form-label">
           Estado
-          <select className="form-input" value={form.status} onChange={set("status")}>
-            {(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(s => (
-              <option key={s} value={s}>{APPT_STATUS_CFG[ s ].icon} {APPT_STATUS_CFG[ s ].label}</option>
-            ))}
-          </select>
+          <CustomSelect
+            value={form.status}
+            options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(s => ({ value: s, label: `${APPT_STATUS_CFG[ s ].icon} ${APPT_STATUS_CFG[ s ].label}` }))}
+            onChange={setField("status")}
+          />
         </label>
       </div>
 
@@ -301,7 +321,7 @@ function PaymentAndStatusStep({ form, set, selectedPatient }: { form: Appointmen
         <div className="summary-card__label">Resumen</div>
         {[
           [ "Paciente", selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" ],
-          [ "Tipo", form.type || "—" ],
+          [ "Tipo", APPT_TYPE_CFG[ form.type ]?.label ?? "—" ],
           [ "Fecha", `${formatDate(form.startAt)} a las ${formatTime(form.startAt)}` ],
           [ "Duración", form.duration ],
           [ "Ubicación", form.location || "—" ],

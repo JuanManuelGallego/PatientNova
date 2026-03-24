@@ -1,12 +1,14 @@
 "use client";
 import { useFetchAppointments } from "@/src/api/useFetchAppointments";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
+import { flagUrl } from "@/src/components/CountryCodeInput";
 import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import Sidebar from "@/src/components/Navigation/Sidebar";
 import { Appointment, APT_LOCATION_CFG, AppointmentStatus } from "@/src/types/Appointment";
-import { today, MONTH_NAMES_ES, DAY_NAMES_ES, formatTime, fmtDate } from "@/src/utils/TimeUtils";
+import { today, MONTH_NAMES_ES, DAY_NAMES_ES, formatTime, fmtDate, getColombianHolidays } from "@/src/utils/TimeUtils";
+import Image from "next/image";
 import { useState, useMemo, useEffect, useCallback } from "react";
 
 const TODAY_STR = today();
@@ -42,6 +44,13 @@ export default function CalendarPage() {
     }
     return map;
   }, [ appointments ]);
+
+  const holidayMap = useMemo(() => {
+    const holidays = getColombianHolidays(calYear);
+    const map: Record<string, string> = {};
+    for (const h of holidays) map[ h.date ] = h.name;
+    return map;
+  }, [ calYear ]);
 
   function cellDate(cell: number): string | null {
     const day = cell - startOffset + 1;
@@ -127,6 +136,7 @@ export default function CalendarPage() {
                   const isToday = date === TODAY_STR;
                   const isPast = date !== null && date < TODAY_STR;
                   const appts = date ? (apptByDate[ date ] ?? []) : [];
+                  const holiday = date ? holidayMap[ date ] : undefined;
                   const noRightBorder = (i + 1) % 7 === 0;
                   const noBottomBorder = i >= rows * 7 - 7;
 
@@ -138,6 +148,7 @@ export default function CalendarPage() {
                         "cal-cell",
                         !date ? "cal-cell--empty" : "",
                         isToday ? "cal-cell--today" : "",
+                        holiday ? "cal-cell--holiday" : "",
                         isPast && !isToday ? "cal-cell--past" : "",
                         noRightBorder ? "cal-cell--no-right-border" : "",
                         noBottomBorder ? "cal-cell--no-bottom-border" : "",
@@ -148,6 +159,18 @@ export default function CalendarPage() {
                           <div className={`cal-day-number${isToday ? " cal-day-number--today" : ""}`}>
                             {parseInt(date.slice(8))}
                           </div>
+                          {holiday && (
+                            <div className="cal-holiday-label" title={holiday}>
+                              <Image
+                                className="phone-input-flag"
+                                src={flagUrl("co")}
+                                alt={"Colombia"}
+                                width={20}
+                                height={15}
+                              />
+                              {" "}{holiday}
+                            </div>)
+                          }
                           <div className="cal-chips">
                             {appts.slice(0, 3).map(a => {
                               const isCancelled = a.status === AppointmentStatus.CANCELLED;
