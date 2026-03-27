@@ -12,6 +12,7 @@ export const useDeletePatient = () => {
         try {
             const res = await fetch(`${API_BASE}/patients/${patientId}`, {
                 method: "DELETE",
+                credentials: 'include',
             });
 
             if (!res.ok) {

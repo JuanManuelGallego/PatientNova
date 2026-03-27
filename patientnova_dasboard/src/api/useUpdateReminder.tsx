@@ -13,6 +13,7 @@ export const useUpdateReminder = () => {
         try {
             const res = await fetch(`${API_BASE}/reminders/${reminderId}`, {
                 method: "PATCH",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

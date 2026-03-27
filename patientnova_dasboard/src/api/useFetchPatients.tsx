@@ -12,11 +12,13 @@ export const useFetchPatients = (filters?: FetchPatientsFilters) => {
 
     const fetchPatients = useCallback(
         async (overrideFilters?: FetchPatientsFilters) => {
-            setLoading(true);  setError(null);
+            setLoading(true); setError(null);
 
             try {
                 const queryString = buildPatientQueryString(overrideFilters ?? filters);
-                const res = await fetch(`${API_BASE}/patients${queryString}`);
+                const res = await fetch(`${API_BASE}/patients${queryString}`, {
+                    credentials: 'include', 
+                });
 
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);

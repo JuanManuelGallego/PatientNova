@@ -100,7 +100,7 @@ export const APPOINTMENT_LOCATIONS: string[] = [
     "Vamos a Terapia",
     "Virtual", ]
 
-export const APT_LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
+export const APPT_LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
     [ "ACTA" ]: { label: "ACTA", color: "#ab63e6", bg: "#ecc4ffa8", dot: "#3B82F6", icon: "🏛️" },
     [ "Sentido y Realidad" ]: { label: "Sentido y Realidad", color: "#30b493", bg: "#9debb57e", dot: "#22C55E", icon: "🌱" },
     [ "Vamos a Terapia" ]: { label: "Vamos a Terapia", color: "#399efc", bg: "#c7e8fe", dot: "#fbbf24", icon: "🏢" },

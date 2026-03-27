@@ -13,6 +13,7 @@ export const useUpdatePatient = () => {
         try {
             const res = await fetch(`${API_BASE}/patients/${patientId}`, {
                 method: "PATCH",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

@@ -13,6 +13,7 @@ export const useCreatePatient = () => {
         try {
             const res = await fetch(`${API_BASE}/patients`, {
                 method: "POST",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

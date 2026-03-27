@@ -13,6 +13,7 @@ export const useCreateReminder = () => {
         try {
             const res = await fetch(`${API_BASE}/reminders`, {
                 method: "POST",
+                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

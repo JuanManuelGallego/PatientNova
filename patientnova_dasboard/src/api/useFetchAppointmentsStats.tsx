@@ -11,7 +11,9 @@ export const useFetchAppointmentsStats = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`${API_BASE}/appointments/stats`);
+                const res = await fetch(`${API_BASE}/appointments/stats`,{
+                    credentials: 'include', 
+                });
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);
                 }

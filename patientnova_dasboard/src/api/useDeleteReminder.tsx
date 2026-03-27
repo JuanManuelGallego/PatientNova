@@ -12,6 +12,7 @@ export const useDeleteReminder = () => {
         try {
             const res = await fetch(`${API_BASE}/reminders/${reminderId}`, {
                 method: "DELETE",
+                credentials: 'include',
             });
 
             if (!res.ok) {

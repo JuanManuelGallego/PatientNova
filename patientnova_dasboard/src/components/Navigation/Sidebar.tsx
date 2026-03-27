@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/src/api/useAuth';
+import { useRouter } from "next/navigation";
 
 export const NAV_ITEMS = [
     { id: "dashboard", path: "/", icon: "🏠", label: "Vista General" },
@@ -16,6 +18,8 @@ export const NAV_ITEMS = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { logout } = useAuth();
 
     return (
         <aside className="sidebar">
@@ -43,16 +47,55 @@ export default function Sidebar() {
                 })}
             </nav>
             <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    {/* Avatar */}
                     <div style={{
-                        width: 34, height: 34, borderRadius: "50%", background: "var(--c-brand-accent)",
+                        flexShrink: 0, // Prevents the circle from squishing
+                        width: 38, height: 38, borderRadius: "50%", background: "var(--c-brand-accent)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 700, color: "var(--c-white)",
+                        fontSize: 14, fontWeight: 700, color: "var(--c-white)",
                     }}>DR</div>
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--c-white)" }}>Dr. Manuela Cardona</div>
-                        <div style={{ fontSize: 11, color: "var(--c-brand-sub)" }}>Administradora</div>
+
+                    {/* Text Container - Now with flex: 1 to push the button to the edge */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "var(--c-white)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis" // Adds "..." if name is too long
+                        }}>
+                            Dr. Manuela Cardona
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--c-brand-sub)" }}>
+                            Administradora
+                        </div>
                     </div>
+
+                    {/* Logout Icon Button - Takes less horizontal space than text */}
+                    <button
+                        onClick={() => { logout?.(); router.push("/") }}
+                        title="Cerrar sesión"
+                        style={{
+                            flexShrink: 0,
+                            background: "rgba(255,255,255,0.05)",
+                            border: "none",
+                            borderRadius: "8px",
+                            width: "32px",
+                            height: "32px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            color: "#ff4d4d",
+                            transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,77,77,0.15)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                    >
+                        <span style={{ fontSize: '16px' }}>➜]</span> {/* Or use a Logout Icon from a library */}
+                    </button>
                 </div>
             </div>
         </aside>

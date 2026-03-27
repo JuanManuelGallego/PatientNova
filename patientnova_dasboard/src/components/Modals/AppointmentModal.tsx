@@ -2,7 +2,7 @@ import { useCreateAppointment } from "@/src/api/useCreateAppointment";
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useUpdateReminder } from "@/src/api/useUpdateReminder";
-import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType, APPT_PAID_STATUS_CFG, AppointmentPaidStatus, REMINDER_TEMPLATE } from "@/src/types/Appointment";
+import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APPT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType, APPT_PAID_STATUS_CFG, AppointmentPaidStatus, REMINDER_TEMPLATE } from "@/src/types/Appointment";
 import { ReminderType, Reminder, ReminderMode, ReminderStatus, CHANNEL_ICON, CHANNEL_LABEL, Channel, REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { isReminderTypeFeasible, formatDate, formatTime, getDuration, getRemindersendAt, getAppointmentEndTime, getTommorrowSixAm, getReminderType, getDate } from "@/src/utils/TimeUtils";
@@ -221,7 +221,7 @@ function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChan
         <CustomSelect
           value={form.location}
           placeholder="Seleccionar ubicación…"
-          options={APPOINTMENT_LOCATIONS.map(d => ({ value: d, label: APT_LOCATION_CFG[ d ]?.label || d }))}
+          options={APPOINTMENT_LOCATIONS.map(d => ({ value: d, label: APPT_LOCATION_CFG[ d ]?.label || d }))}
           onChange={setField("location")}
         />
       </label>

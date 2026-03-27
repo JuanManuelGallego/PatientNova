@@ -11,7 +11,9 @@ export const useFetchPatientsStats = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch(`${API_BASE}/patients/stats`);
+                const res = await fetch(`${API_BASE}/patients/stats`,{
+                    credentials: 'include', 
+                });
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);
                 }

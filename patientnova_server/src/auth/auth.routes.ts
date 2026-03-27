@@ -86,7 +86,18 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    ok(res, { user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } });
+    ok(res, {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
+        jobTitle: user.jobTitle,
+        role: user.role,
+        status: user.status
+      }
+    });
   } catch {
     apiError(res, 'Login failed', 500);
   }
