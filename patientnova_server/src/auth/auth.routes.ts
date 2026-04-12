@@ -137,8 +137,9 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
       where: { id: req.user!.id },
       data: { refreshTokenVersion: { increment: 1 } },
     });
-    res.clearCookie('token');
-    res.clearCookie('refreshToken', { path: '/auth/refresh' });
+    const cookieDefaults = getCookieDefaults();
+    res.clearCookie('token', cookieDefaults);
+    res.clearCookie('refreshToken', { ...cookieDefaults, path: '/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
     console.error('[logout] Error during logout:', err);
