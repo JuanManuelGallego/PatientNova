@@ -2,7 +2,7 @@ import { Appointment, APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { CHANNEL_CFG, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDate, fmtDateTime, fmtTime, getDuration } from "@/src/utils/TimeUtils";
-import { PayBadge } from "../Info/PayBadge";
+import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
 
@@ -57,7 +57,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                     <Section title="Pago">
                         <Row icon="💰" label="Precio" value={`$${appt.price}`} />
                         <div className="row-between">
-                            <Row icon="💳" label="Estado" value={<PayBadge paid={appt.paid} />} />
+                            <Row icon="💳" label="Estado" value={<PayStatusPill paid={appt.paid} />} />
                             {!appt.paid && (
                                 <button onClick={onPay} className="btn-primary btn-primary--success">
                                     Marcar pagado

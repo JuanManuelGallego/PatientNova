@@ -1,4 +1,4 @@
-export function PayBadge({ paid }: { paid: boolean }) {
+export function PayStatusPill({ paid }: { paid: boolean }) {
     return (
         <span className="pill" style={{
             background: paid ? "var(--c-success-bg)" : "var(--c-warning-light)",

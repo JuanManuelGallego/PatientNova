@@ -207,7 +207,6 @@ model AppointmentLocation {
 
   name         String   @db.VarChar(100)
   address      String?  @db.VarChar(255)
-  meetingUrl   String?  @db.VarChar(500)
   color        String?  @db.VarChar(20)
   bg           String?  @db.VarChar(20)
   dot          String?  @db.VarChar(20)

@@ -102,7 +102,6 @@ export interface AppointmentLocation {
     id: string;
     name: string;
     address?: string | null;
-    meetingUrl?: string | null;
     color?: string | null;
     bg?: string | null;
     dot?: string | null;

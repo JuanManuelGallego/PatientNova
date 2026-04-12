@@ -10,6 +10,8 @@ export interface UpdateProfilePayload {
     jobTitle?: string;
     avatarUrl?: string | null;
     timezone?: string;
+    phoneNumber?: string;
+    whatsappNumber?: string;
 }
 
 export const useUpdateProfile = () => {

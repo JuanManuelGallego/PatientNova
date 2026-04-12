@@ -14,7 +14,6 @@ export const locationRepository = {
       data: {
         name: dto.name,
         address: dto.address ?? null,
-        meetingUrl: dto.meetingUrl ?? null,
         color: dto.color ?? null,
         bg: dto.bg ?? null,
         dot: dto.dot ?? null,
@@ -56,7 +55,6 @@ export const locationRepository = {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.meetingUrl !== undefined && { meetingUrl: dto.meetingUrl }),
         ...(dto.color !== undefined && { color: dto.color }),
         ...(dto.bg !== undefined && { bg: dto.bg }),
         ...(dto.dot !== undefined && { dot: dto.dot }),

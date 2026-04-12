@@ -5,8 +5,10 @@ import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ProfileTab } from "./profileTab";
 import { SecurityTab } from "./securityTab";
+import { LocationsTab } from "./locationsTab";
+import { AppointmentTypesTab } from "./appointmentTypesTab";
 
-enum ActiveTab { Profile = "👤 Perfil", Security = "🔒 Seguridad" }
+enum ActiveTab { Profile = "👤 Profile", Security = "🔒 Security", Locations = "📍 Ubicaciones", AppointmentTypes = "📅 Tipos de Cita" }
 
 export default function SettingsPage() {
     const [ tab, setTab ] = useState<ActiveTab>(ActiveTab.Profile);
@@ -18,20 +20,21 @@ export default function SettingsPage() {
                 subtitle="Gestiona tu perfil y seguridad"
                 style={{ marginBottom: 28 }}
             />
-            <div className="tab-nav" style={{ width: "fit-content", marginBottom: 28 }}>
-                <button className={`filter-chip ${tab === ActiveTab.Profile ? "filter-chip--active" : ""}`} onClick={() => setTab(ActiveTab.Profile)}>
-                    {ActiveTab.Profile}
-                </button>
-                <button className={`filter-chip ${tab === ActiveTab.Security ? "filter-chip--active" : ""}`} onClick={() => setTab(ActiveTab.Security)}>
-                    {ActiveTab.Security}
-                </button>
+            <div className="tab-nav" style={{ marginBottom: 28 }}>
+                {(Object.values(ActiveTab) as ActiveTab[]).map((t) => (
+                    <button
+                        key={t}
+                        className={`filter-chip${tab === t ? " filter-chip--active" : ""}`}
+                        onClick={() => setTab(t)}
+                    >
+                        <span className="tab-icon">{t.split(" ")[ 0 ]}</span>{t.slice(2)}
+                    </button>
+                ))}
             </div>
-            {tab === ActiveTab.Profile && (
-                <ProfileTab />
-            )}
-            {tab === ActiveTab.Security && (
-                <SecurityTab />
-            )}
+            {tab === ActiveTab.Profile && (<ProfileTab />)}
+            {tab === ActiveTab.Security && (<SecurityTab />)}
+            {tab === ActiveTab.Locations && (<LocationsTab />)}
+            {tab === ActiveTab.AppointmentTypes && (<AppointmentTypesTab />)}
         </PageLayout>
     );
 }

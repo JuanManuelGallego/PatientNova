@@ -1,7 +1,7 @@
 import { UpdateProfilePayload, useUpdateProfile } from "@/src/api/useUpdateProfile";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { User } from "@/src/types/User";
-import { resizeToBase64 } from "@/src/utils/AvatarHelper";
+import { getInitials, resizeToBase64 } from "@/src/utils/AvatarHelper";
 import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import Image from "next/image";
 import { useState, useRef } from "react";
@@ -15,13 +15,15 @@ export function ProfileTab() {
     const [ displayName, setDisplayName ] = useState(user?.displayName ?? "");
     const [ jobTitle, setJobTitle ] = useState(user?.jobTitle ?? "");
     const [ timezone, setTimezone ] = useState(user?.timezone ?? "America/Bogota");
+    const [ phoneNumber, setPhoneNumber ] = useState(user?.phoneNumber ?? "");
+    const [ whatsappNumber, setWhatsappNumber ] = useState(user?.whatsappNumber ?? "");
     const [ avatarPreview, setAvatarPreview ] = useState<string | null>(user?.avatarUrl ?? null);
     const { updateProfile, loading: saving, error: apiError } = useUpdateProfile();
     const [ success, setSuccess ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const initials = `${user?.firstName?.[ 0 ] ?? ""}${user?.lastName?.[ 0 ] ?? ""}`.toUpperCase() || "?";
+    const initials = getInitials(user?.firstName?.[ 0 ] ?? "?", user?.lastName?.[ 0 ] ?? "?");
 
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[ 0 ];
@@ -49,9 +51,11 @@ export function ProfileTab() {
                 jobTitle: jobTitle.trim() || undefined,
                 avatarUrl: avatarPreview,
                 timezone,
+                phoneNumber: phoneNumber.trim() || undefined,
+                whatsappNumber: whatsappNumber.trim() || undefined,
             }
             const updated = await updateProfile(payload);
-            
+
             updateUser(updated as User);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3500);
@@ -157,9 +161,24 @@ export function ProfileTab() {
                             <span className="form-input-hint">Afecta el cálculo de &quot;citas de hoy&quot; en el servidor</span>
                         </label>
                         <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
+                            <span className="form-input-hint" style={{ marginBottom: 12, display: "block" }}>
+                                Estos datos se usan para recibir notificaciones sobre tus citas
+                            </span>
+                            <div className="form-grid-2">
+                                <label className="form-label">
+                                    Teléfono (SMS)
+                                    <input className="form-input" type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="+573001234567" />
+                                </label>
+                                <label className="form-label">
+                                    WhatsApp
+                                    <input className="form-input" type="tel" value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="+573001234567" />
+                                </label>
+                            </div>
+                        </div>
+                        <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
                             <label className="form-label" style={{ opacity: 0.7 }}>
                                 Correo electrónico
-                                <input className="form-input" type="email" value={user?.email && ""} readOnly style={{ background: "var(--c-gray-50)", cursor: "not-allowed" }} />
+                                <input className="form-input" type="email" value={user?.email} readOnly style={{ background: "var(--c-gray-50)", cursor: "not-allowed" }} />
                                 <span className="form-input-hint">El correo no se puede modificar</span>
                             </label>
                         </div>

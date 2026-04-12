@@ -2,7 +2,7 @@
 import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
-import { PayBadge } from "@/src/components/Info/PayBadge";
+import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
@@ -23,6 +23,7 @@ import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useDebounceState } from "@/src/utils/useDebounceState";
 import { useQueryState, parseAsInteger, parseAsString, parseAsStringEnum } from 'nuqs';
+import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 
 const PAGE_SIZE = 10;
 
@@ -135,13 +136,11 @@ function AppointmentsPageContent() {
                   </div>
                 </div>
               </td>
-              <td className="td td--date" style={{ maxWidth: 140 }}>
-                <div className="text-ellipsis">{a.appointmentType?.name ?? "Desconocido"}</div>
-              </td>
+              <td className="td"><AppointmentTypePill appointmentType={a.appointmentType} /></td>
               <td className="td td--datetime">{fmtDateAndTime(a.startAt)}</td>
               <td className="td">{a.reminder ? <ReminderStatusPill status={a.reminder?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
               <td className="td td--muted" style={{ maxWidth: 130 }}>
-                <div className="location-badge" style={{ background:a.appointmentLocation.bg || "var(--c-gray-100)", color: a.appointmentLocation.color || "var(--c-gray-700)" }}>
+                <div className="location-badge" style={{ background: a.appointmentLocation.bg || "var(--c-gray-100)", color: a.appointmentLocation.color || "var(--c-gray-700)" }}>
                   {a.meetingUrl
                     ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="location-badge__link">🔗 Virtual</a>
                     : a.appointmentLocation.name}
@@ -150,7 +149,7 @@ function AppointmentsPageContent() {
               <td className="td" onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <div className="td-actions">
-                  <PayBadge paid={a.paid} />
+                  <PayStatusPill paid={a.paid} />
                   {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
                     <button onClick={() => handlePay(a.id)} className="btn-pay">Pagó</button>
                   )}

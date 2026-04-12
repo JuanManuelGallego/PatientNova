@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const createLocationSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),
   address: z.string().max(255).nullable().optional(),
-  meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
   color: z.string().max(20).nullable().optional(),
   bg: z.string().max(20).nullable().optional(),
   dot: z.string().max(20).nullable().optional(),
@@ -16,7 +15,6 @@ export const updateLocationSchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
     address: z.string().max(255).nullable().optional(),
-    meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
     bg: z.string().max(20).nullable().optional(),
     dot: z.string().max(20).nullable().optional(),
