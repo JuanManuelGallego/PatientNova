@@ -16,9 +16,7 @@ export const useFetchReminders = (filters?: FetchRemindersFilters) => {
 
         try {
             const queryString = buildReminderQueryString(filters);
-            const res = await fetchWithAuth(`${API_BASE}/reminders${queryString}`,{
-                    credentials: 'include', 
-                });
+            const res = await fetchWithAuth(`${API_BASE}/reminders${queryString}`);
 
             if (!res.ok) {
                 throw new Error(`Server error: ${res.status}`);

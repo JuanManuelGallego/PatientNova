@@ -17,7 +17,6 @@ import { PatientStatus } from '@/src/types/Patient';
 import { getInitials, getAvatarColor } from '@/src/utils/AvatarHelper';
 import { fmtDateAndTime, fmtRelative } from '@/src/utils/TimeUtils';
 import { AppointmentStatusPill, ReminderStatusPill } from '@/src/components/Info/StatusPill';
-import { APPT_LOCATION_CFG, APPT_TYPE_CFG } from '@/src/types/Appointment'
 import { useAuthContext } from "../AuthContext";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 
@@ -116,12 +115,12 @@ export default function DashboardPage() {
                                             </div>
                                             <div>
                                                 <div className="dash-list-item__name">{a.patient.name} {a.patient.lastName}</div>
-                                                <div className="dash-list-item__meta">{APPT_TYPE_CFG[ a.type ].label} · {fmtDateAndTime(a.startAt)}</div>
+                                                <div className="dash-list-item__meta">{a.appointmentType?.name} · {fmtDateAndTime(a.startAt)}</div>
                                             </div>
                                         </div>
                                         <div className="dash-list-item__right">
-                                            <div className="location-badge" style={{ background: APPT_LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: APPT_LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)", fontSize: 11 }}>
-                                                {a.location}
+                                            <div className="location-badge" style={{ background: a.appointmentLocation.bg || "var(--c-gray-100)", color: a.appointmentLocation.color || "var(--c-gray-700)", fontSize: 11 }}>
+                                                {a.appointmentLocation.name}
                                             </div>
                                             <AppointmentStatusPill status={a.status} />
                                         </div>

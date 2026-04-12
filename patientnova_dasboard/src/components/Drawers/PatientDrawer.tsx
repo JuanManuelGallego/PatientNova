@@ -60,13 +60,13 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
                                         <div key={apt.id} className="linked-card" style={{ borderLeft: `3px solid ${aptStatus.dot}` }}>
                                             <div className="linked-card__header">
                                                 <div>
-                                                    <div className="linked-card__title">{apt.type}</div>
+                                                    <div className="linked-card__title">{apt.appointmentType.name}</div>
                                                     <div className="linked-card__meta">📅 {fmtDateTime(apt.startAt.toString())}</div>
                                                 </div>
                                                 <AppointmentStatusPill status={apt.status} />
                                             </div>
                                             <div className="linked-card__footer">
-                                                <span>📍 {apt.location}</span>
+                                                <span>📍 {apt.appointmentLocation.name}</span>
                                                 {apt.paid && <span>💰 Pagada</span>}
                                             </div>
                                         </div>

@@ -17,9 +17,7 @@ export const useFetchPatients = (filters?: FetchPatientsFilters) => {
 
             try {
                 const queryString = buildPatientQueryString(overrideFilters ?? filters);
-                const res = await fetchWithAuth(`${API_BASE}/patients${queryString}`, {
-                    credentials: 'include', 
-                });
+                const res = await fetchWithAuth(`${API_BASE}/patients${queryString}`);
 
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);

@@ -7,7 +7,7 @@ import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
-import { Appointment, APPT_LOCATION_CFG, AppointmentStatus } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus } from "@/src/types/Appointment";
 import { today, MONTH_NAMES_ES, DAY_NAMES_ES, formatTime, fmtDate, getColombianHolidays } from "@/src/utils/TimeUtils";
 import Image from "next/image";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -106,110 +106,110 @@ export default function CalendarPage() {
           }
         />
 
-          <div className="table-card">
-            <div className="cal-nav-header">
-              <button onClick={prevMonth} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 16 }}>&#8249;</button>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span className="cal-month-label">{MONTH_NAMES_ES[ calMonth ]} {calYear}</span>
-                <button onClick={goToday} className="btn-secondary btn-secondary--sm">Hoy</button>
-              </div>
-              <button onClick={nextMonth} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 16 }}>&#8250;</button>
+        <div className="table-card">
+          <div className="cal-nav-header">
+            <button onClick={prevMonth} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 16 }}>&#8249;</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span className="cal-month-label">{MONTH_NAMES_ES[ calMonth ]} {calYear}</span>
+              <button onClick={goToday} className="btn-secondary btn-secondary--sm">Hoy</button>
             </div>
-
-            <div className="cal-day-headers">
-              {DAY_NAMES_ES.map(d => (
-                <div key={d} className="cal-day-header">{d}</div>
-              ))}
-            </div>
-
-            {loading ? (
-              <div className="cal-loading">Cargando citas…</div>
-            ) : (
-              <div className="cal-grid">
-                {Array.from({ length: rows * 7 }).map((_, i) => {
-                  const date = cellDate(i);
-                  const isToday = date === TODAY_STR;
-                  const isPast = date !== null && date < TODAY_STR;
-                  const appts = date ? (apptByDate[ date ] ?? []) : [];
-                  const holiday = date ? holidayMap[ date ] : undefined;
-                  const noRightBorder = (i + 1) % 7 === 0;
-                  const noBottomBorder = i >= rows * 7 - 7;
-
-                  return (
-                    <div
-                      key={i}
-                      onClick={() => { if (date) setSelectedDay(date); }}
-                      className={[
-                        "cal-cell",
-                        !date ? "cal-cell--empty" : "",
-                        isToday ? "cal-cell--today" : "",
-                        holiday ? "cal-cell--holiday" : "",
-                        isPast && !isToday ? "cal-cell--past" : "",
-                        noRightBorder ? "cal-cell--no-right-border" : "",
-                        noBottomBorder ? "cal-cell--no-bottom-border" : "",
-                      ].filter(Boolean).join(" ")}
-                    >
-                      {date && (
-                        <>
-                          <div className={`cal-day-number${isToday ? " cal-day-number--today" : ""}`}>
-                            {parseInt(date.slice(8))}
-                          </div>
-                          {holiday && (
-                            <div className="cal-holiday-label" title={holiday}>
-                              <Image
-                                className="phone-input-flag"
-                                src={flagUrl("co")}
-                                alt={"Colombia"}
-                                width={20}
-                                height={15}
-                              />
-                              {" "}{holiday}
-                            </div>)
-                          }
-                          <div className="cal-chips">
-                            {appts.slice(0, 3).map(a => {
-                              const isCancelled = a.status === AppointmentStatus.CANCELLED;
-                              const isNoShow = a.status === AppointmentStatus.NO_SHOW;
-                              const isCompleted = a.status === AppointmentStatus.COMPLETED;
-                              return (
-                                <div
-                                  key={a.id}
-                                  onClick={e => { e.stopPropagation(); setViewAppt(a); }}
-                                  className={[
-                                    "cal-chip",
-                                    isCancelled ? "cal-chip--cancelled" : "",
-                                    isNoShow ? "cal-chip--no-show" : "",
-                                    isCompleted ? "cal-chip--completed" : "",
-                                  ].filter(Boolean).join(" ")}
-                                  style={{
-                                    background: APPT_LOCATION_CFG[ a.location ]?.bg ?? "var(--c-gray-200)",
-                                    color: APPT_LOCATION_CFG[ a.location ]?.color ?? "var(--c-gray-700)",
-                                  }}
-                                  title={`${a.patient.name} ${a.patient.lastName} — ${a.location} — ${a.status}`}
-                                >
-                                  {formatTime(a.startAt)} {a.patient.name} {a.patient.lastName} — {a.location}
-                                  {a.status === AppointmentStatus.CONFIRMED && " ✅"}
-                                  {a.status === AppointmentStatus.SCHEDULED && " ⌛"}
-                                </div>
-                              );
-                            })}
-                            {appts.length > 3 && (
-                              <button
-                                className="cal-overflow-btn"
-                                onClick={e => { e.stopPropagation(); setSelectedDay(date); }}
-                              >
-                                +{appts.length - 3} más
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <button onClick={nextMonth} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 16 }}>&#8250;</button>
           </div>
+
+          <div className="cal-day-headers">
+            {DAY_NAMES_ES.map(d => (
+              <div key={d} className="cal-day-header">{d}</div>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="cal-loading">Cargando citas…</div>
+          ) : (
+            <div className="cal-grid">
+              {Array.from({ length: rows * 7 }).map((_, i) => {
+                const date = cellDate(i);
+                const isToday = date === TODAY_STR;
+                const isPast = date !== null && date < TODAY_STR;
+                const appts = date ? (apptByDate[ date ] ?? []) : [];
+                const holiday = date ? holidayMap[ date ] : undefined;
+                const noRightBorder = (i + 1) % 7 === 0;
+                const noBottomBorder = i >= rows * 7 - 7;
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => { if (date) setSelectedDay(date); }}
+                    className={[
+                      "cal-cell",
+                      !date ? "cal-cell--empty" : "",
+                      isToday ? "cal-cell--today" : "",
+                      holiday ? "cal-cell--holiday" : "",
+                      isPast && !isToday ? "cal-cell--past" : "",
+                      noRightBorder ? "cal-cell--no-right-border" : "",
+                      noBottomBorder ? "cal-cell--no-bottom-border" : "",
+                    ].filter(Boolean).join(" ")}
+                  >
+                    {date && (
+                      <>
+                        <div className={`cal-day-number${isToday ? " cal-day-number--today" : ""}`}>
+                          {parseInt(date.slice(8))}
+                        </div>
+                        {holiday && (
+                          <div className="cal-holiday-label" title={holiday}>
+                            <Image
+                              className="phone-input-flag"
+                              src={flagUrl("co")}
+                              alt={"Colombia"}
+                              width={20}
+                              height={15}
+                            />
+                            {" "}{holiday}
+                          </div>)
+                        }
+                        <div className="cal-chips">
+                          {appts.slice(0, 3).map(a => {
+                            const isCancelled = a.status === AppointmentStatus.CANCELLED;
+                            const isNoShow = a.status === AppointmentStatus.NO_SHOW;
+                            const isCompleted = a.status === AppointmentStatus.COMPLETED;
+                            return (
+                              <div
+                                key={a.id}
+                                onClick={e => { e.stopPropagation(); setViewAppt(a); }}
+                                className={[
+                                  "cal-chip",
+                                  isCancelled ? "cal-chip--cancelled" : "",
+                                  isNoShow ? "cal-chip--no-show" : "",
+                                  isCompleted ? "cal-chip--completed" : "",
+                                ].filter(Boolean).join(" ")}
+                                style={{
+                                  background: a.appointmentLocation.bg ?? "var(--c-gray-200)",
+                                  color: a.appointmentLocation.color ?? "var(--c-gray-700)",
+                                }}
+                                title={`${a.patient.name} ${a.patient.lastName} — ${a.appointmentLocation.name} — ${a.status}`}
+                              >
+                                {formatTime(a.startAt)} {a.patient.name} {a.patient.lastName} — {a.appointmentLocation.name}
+                                {a.status === AppointmentStatus.CONFIRMED && " ✅"}
+                                {a.status === AppointmentStatus.SCHEDULED && " ⌛"}
+                              </div>
+                            );
+                          })}
+                          {appts.length > 3 && (
+                            <button
+                              className="cal-overflow-btn"
+                              onClick={e => { e.stopPropagation(); setSelectedDay(date); }}
+                            >
+                              +{appts.length - 3} más
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </PageLayout>
       {selectedDay && (
         <div className="cal-day-panel-overlay" onClick={() => setSelectedDay(null)}>
@@ -230,7 +230,7 @@ export default function CalendarPage() {
                   >
                     <div
                       className="cal-day-panel__appt-dot"
-                      style={{ background: APPT_LOCATION_CFG[ a.location ]?.dot ?? "var(--c-gray-400)" }}
+                      style={{ background: a.appointmentLocation.dot ?? "var(--c-gray-400)" }}
                     />
                     <span className="cal-day-panel__appt-name">{a.patient.name} {a.patient.lastName}</span>
                     <span className="cal-day-panel__appt-time">{formatTime(a.startAt)}</span>

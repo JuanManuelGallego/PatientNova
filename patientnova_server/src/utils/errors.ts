@@ -50,3 +50,27 @@ export class AppointmentReminderNotFoundError extends ApiError {
     super(`Reminder with id "${reminderId}" does not exist`, 422)
   }
 }
+
+export class LocationNotFoundError extends ApiError {
+  constructor(id: string) {
+    super(`Appointment location with id "${id}" not found`, 404)
+  }
+}
+
+export class LocationNameConflictError extends ApiError {
+  constructor(name: string) {
+    super(`An appointment location named "${name}" already exists`, 409)
+  }
+}
+
+export class AppointmentTypeNotFoundError extends ApiError {
+  constructor(id: string) {
+    super(`Appointment type with id "${id}" not found`, 404)
+  }
+}
+
+export class AppointmentTypeNameConflictError extends ApiError {
+  constructor(name: string) {
+    super(`An appointment type named "${name}" already exists`, 409)
+  }
+}

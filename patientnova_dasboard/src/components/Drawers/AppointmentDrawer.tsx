@@ -22,7 +22,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                     <div className="drawer-header__top">
                         <div>
                             <div className="drawer-header__icon">{s.icon}</div>
-                            <h2 className="drawer-header__title">{appt.type}</h2>
+                            <h2 className="drawer-header__title">{appt.appointmentType.name}</h2>
                             <div className="drawer-header__status"><AppointmentStatusPill status={appt.status} /></div>
                         </div>
                         <button onClick={onClose} className="btn-close--transparent">✕</button>
@@ -46,11 +46,11 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                         <Row icon="⏱️" label="Duración" value={getDuration(appt.startAt, appt.endAt)} />
                     </Section>
                     <Section title="Lugar">
-                        <Row icon="📍" label="Ubicación" value={appt.location} />
-                        {appt.meetingUrl && (
+                        <Row icon="📍" label="Ubicación" value={appt.appointmentLocation.name} />
+                        {appt.appointmentLocation.meetingUrl && (
                             <div className="detail-row">
                                 <span className="detail-row__icon">🔗</span>
-                                <a href={appt.meetingUrl} target="_blank" rel="noopener noreferrer" className="meeting-link">Unirse a la videollamada</a>
+                                <a href={appt.appointmentLocation.meetingUrl} target="_blank" rel="noopener noreferrer" className="meeting-link">Unirse a la videollamada</a>
                             </div>
                         )}
                     </Section>

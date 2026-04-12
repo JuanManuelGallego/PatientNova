@@ -14,7 +14,6 @@ export const useUpdatePatient = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/patients/${patientId}`, {
                 method: "PATCH",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

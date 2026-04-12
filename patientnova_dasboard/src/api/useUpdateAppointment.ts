@@ -14,7 +14,6 @@ export const useUpdateAppointment = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/appointments/${appointmentId}`, {
                 method: "PATCH",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

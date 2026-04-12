@@ -1,6 +1,5 @@
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useNotify } from "@/src/api/useNotify";
-import { AppointmentType, APPT_TYPE_CFG } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
 import { Reminder, ReminderMode, Channel, ReminderForm, CHANNEL_CFG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
@@ -10,6 +9,7 @@ import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Requiered";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
+import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
 
 export function ReminderModal({
     onClose, onSaved, reminder,
@@ -22,6 +22,7 @@ export function ReminderModal({
     const { createReminder } = useCreateReminder();
     const { notify } = useNotify();
     const { patients } = useFetchPatients();
+
     const [ step, setStep ] = useState(1);
     const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
     const [ saving, setSaving ] = useState(false);
@@ -150,6 +151,8 @@ function SendModeAndPatientStep({ sendMode, setMode, form, setForm, patients }: 
     setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
     patients: Patient[];
 }) {
+    const { appointmentTypes } = useFetchAppointmentTypes();
+
     return (
         <div className="form-stack">
             <div>
@@ -184,10 +187,10 @@ function SendModeAndPatientStep({ sendMode, setMode, form, setForm, patients }: 
             <label className="form-label">
                 <RequiredField label="Tipo de cita" />
                 <CustomSelect
-                    value={form.appointmentType ?? ""}
+                    value={form.appointmentType?.id ?? ""}
                     placeholder="Seleccionar tipo…"
-                    options={Object.keys(APPT_TYPE_CFG).map(t => ({ value: t, label: APPT_TYPE_CFG[ t as AppointmentType ].label }))}
-                    onChange={(v) => setForm(f => ({ ...f, appointmentType: v as AppointmentType }))}
+                    options={appointmentTypes.map(t => ({ value: t.id, label: t.name }))}
+                    onChange={(v) => setForm(f => ({ ...f, appointmentType: appointmentTypes.find(t => t.id === v) }))}
                 />
             </label>
         </div>

@@ -14,7 +14,6 @@ export const useUpdateReminder = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/reminders/${reminderId}`, {
                 method: "PATCH",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

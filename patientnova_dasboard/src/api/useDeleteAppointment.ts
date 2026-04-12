@@ -13,7 +13,6 @@ export const useDeleteAppointment = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/appointments/${appointmentId}`, {
                 method: "DELETE",
-                credentials: 'include',
             });
 
             if (!res.ok) {

@@ -15,10 +15,8 @@ export interface Appointment {
     currency: string;
     paid: boolean;
 
-    location: string;
     meetingUrl?: string | null;
     notes?: string | null;
-    type: AppointmentType;
 
     status: AppointmentStatus;
     confirmedAt?: string | null;
@@ -27,9 +25,13 @@ export interface Appointment {
 
     patientId: string;
     reminderId?: string | null;
+    locationId?: string | null;
+    typeId?: string | null;
 
     patient: Patient;
     reminder?: Reminder | null;
+    appointmentLocation: AppointmentLocation;
+    appointmentType: AppointmentType;
 }
 
 export interface AppointmentForm {
@@ -37,29 +39,14 @@ export interface AppointmentForm {
     duration: string;
     price: number;
     paid: AppointmentPaidStatus;
-    location: string;
+    locationId: string;
     meetingUrl?: string;
     notes?: string;
-    type: AppointmentType;
+    typeId: string;
     status: AppointmentStatus;
     patientId: string;
     reminderId?: string;
     reminderType: ReminderType;
-}
-
-export enum AppointmentStatus {
-    SCHEDULED = "SCHEDULED",
-    CONFIRMED = "CONFIRMED",
-    COMPLETED = "COMPLETED",
-    CANCELLED = "CANCELLED",
-    NO_SHOW = "NO_SHOW"
-}
-
-export enum AppointmentType {
-    INDIVIDUAL = 'INDIVIDUAL',
-    KID = 'KID',
-    COUPLE = 'COUPLE',
-    FAMILY = 'FAMILY',
 }
 
 export enum AppointmentDuration {
@@ -79,11 +66,12 @@ export const APPT_PAID_STATUS_CFG: Record<AppointmentPaidStatus, { label: string
     [ AppointmentPaidStatus.UNPAID ]: { label: "Pendiente", color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444", icon: "⏳" },
 };
 
-export const APPT_TYPE_CFG: Record<AppointmentType, { label: string; price: number; duration: AppointmentDuration }> = {
-    [ AppointmentType.KID ]: { label: "Niño", price: 115000, duration: AppointmentDuration.MIN_60 },
-    [ AppointmentType.INDIVIDUAL ]: { label: "Individual", price: 115000, duration: AppointmentDuration.MIN_60 },
-    [ AppointmentType.COUPLE ]: { label: "Pareja", price: 220000, duration: AppointmentDuration.MIN_60 },
-    [ AppointmentType.FAMILY ]: { label: "Familia", price: 220000, duration: AppointmentDuration.MIN_60 },
+export enum AppointmentStatus {
+    SCHEDULED = "SCHEDULED",
+    CONFIRMED = "CONFIRMED",
+    COMPLETED = "COMPLETED",
+    CANCELLED = "CANCELLED",
+    NO_SHOW = "NO_SHOW"
 }
 
 export const APPT_STATUS_CFG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
@@ -92,19 +80,6 @@ export const APPT_STATUS_CFG: Record<AppointmentStatus, { label: string; color: 
     [ AppointmentStatus.COMPLETED ]: { label: "Completada", color: "#7C3AED", bg: "#F5F3FF", dot: "#8B5CF6", icon: "🏁" },
     [ AppointmentStatus.CANCELLED ]: { label: "Cancelada", color: "#6B7280", bg: "#F3F4F6", dot: "#9CA3AF", icon: "✖️" },
     [ AppointmentStatus.NO_SHOW ]: { label: "No asistió", color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444", icon: "🚫" },
-};
-
-export const APPOINTMENT_LOCATIONS: string[] = [
-    "ACTA",
-    "Sentido y Realidad",
-    "Vamos a Terapia",
-    "Virtual", ]
-
-export const APPT_LOCATION_CFG: Record<string, { label: string; color: string; bg: string; dot: string; icon: string }> = {
-    [ "ACTA" ]: { label: "ACTA", color: "#ab63e6", bg: "#ecc4ffa8", dot: "#3B82F6", icon: "🏛️" },
-    [ "Sentido y Realidad" ]: { label: "Sentido y Realidad", color: "#30b493", bg: "#9debb57e", dot: "#22C55E", icon: "🌱" },
-    [ "Vamos a Terapia" ]: { label: "Vamos a Terapia", color: "#399efc", bg: "#c7e8fe", dot: "#fbbf24", icon: "🏢" },
-    [ "Virtual" ]: { label: "Virtual", color: "#f56d73", bg: "#FEF2F2", dot: "#EF4444", icon: "💻" },
 };
 
 export interface FetchAppointmentsFilters {
@@ -122,3 +97,27 @@ export interface FetchAppointmentsFilters {
 }
 
 export const REMINDER_TEMPLATE = "Asunto: Recordatorio de cita médica - Dra. Manuela Cardona\nBuen día!\nLe escribimos para recordarle su próxima cita con la Dra. Manuela Cardona:\nFecha: {{1}}\nHora: {{2}}\nLe recordamos cordialmente que el pago de la consulta debe estar gestionado y confirmado antes del inicio de la sesión.\nQuedamos a su disposición para cualquier duda. ¡Feliz día!"
+
+export interface AppointmentLocation {
+    id: string;
+    name: string;
+    address?: string | null;
+    meetingUrl?: string | null;
+    color?: string | null;
+    bg?: string | null;
+    dot?: string | null;
+    icon?: string | null;
+    isVirtual: boolean;
+    isActive: boolean;
+}
+
+export interface AppointmentType {
+    id: string;
+    name: string;
+    description?: string | null;
+    defaultDuration: number;
+    defaultPrice?: number | null;
+    color?: string | null;
+    icon?: string | null;
+    isActive: boolean;
+}

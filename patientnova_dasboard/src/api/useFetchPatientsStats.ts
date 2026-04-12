@@ -12,9 +12,7 @@ export const useFetchPatientsStats = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetchWithAuth(`${API_BASE}/patients/stats`,{
-                    credentials: 'include', 
-                });
+                const res = await fetchWithAuth(`${API_BASE}/patients/stats`);
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);
                 }

@@ -13,7 +13,6 @@ export const useChangePassword = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/auth/change-password`, {
                 method: "PATCH",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json"
                 },

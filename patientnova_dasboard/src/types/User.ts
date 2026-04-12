@@ -9,6 +9,28 @@ export interface User {
     role: AdminRole
     status: AdminStatus
     timezone: string
+    phoneNumber?: string | null
+    whatsappNumber?: string | null
+    notificationPreferences?: NotificationPreferences | null
+}
+
+export interface NotificationPreferences {
+    defaultChannel?: 'WHATSAPP' | 'SMS' | 'EMAIL';
+    enabledChannels?: {
+        whatsapp?: boolean;
+        sms?: boolean;
+        email?: boolean;
+    };
+    reminderTimings?: string[];
+    quietHours?: {
+        enabled: boolean;
+        start?: string;
+        end?: string;
+    };
+    frequencyCap?: {
+        enabled: boolean;
+        maxPerDay?: number;
+    };
 }
 
 export enum AdminRole {

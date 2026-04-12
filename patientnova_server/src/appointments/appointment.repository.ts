@@ -26,7 +26,7 @@ function getTodayBoundsInTz(timezone: string): { start: Date; end: Date } {
     }).format(now).replace(' ', 'T');
 
   const localStr = fmt(tz);
-  const utcStr   = fmt('UTC');
+  const utcStr = fmt('UTC');
 
   // UTC offset in ms: positive for zones ahead of UTC (e.g. UTC+5), negative for behind
   const offsetMs = new Date(localStr + 'Z').getTime() - new Date(utcStr + 'Z').getTime();
@@ -58,10 +58,10 @@ export const appointmentRepository = {
         price: dto.price,
         currency: dto.currency || 'COP',
         paid: dto.paid,
-        location: dto.location,
+        locationId: dto.locationId,
         meetingUrl: dto.meetingUrl || null,
         notes: dto.notes || null,
-        type: dto.type,
+        typeId: dto.typeId,
         status: dto.status,
         patientId: dto.patientId,
         ...(dto.reminderId && { reminder: { connect: { id: dto.reminderId } }, reminderId: dto.reminderId }),
@@ -80,7 +80,7 @@ export const appointmentRepository = {
   },
 
   async findMany(query: ListAppointmentsQuery, userId: string, timezone = 'UTC'): Promise<PaginatedAppointments> {
-    const { patientId, status, startAt, dateFrom, dateTo, paid, search, page, pageSize, orderBy, order } = query;
+    const { patientId, status, startAt, dateFrom, dateTo, paid, search, page, pageSize, orderBy, order, locationId, typeId } = query;
     const skip = (page - 1) * pageSize;
     const { start: todayStart, end: todayEnd } = getTodayBoundsInTz(timezone);
 
@@ -88,6 +88,8 @@ export const appointmentRepository = {
     const where: Prisma.AppointmentWhereInput = {
       patient: { userId },
       ...(patientId && { patientId }),
+      ...(locationId && { locationId }),
+      ...(typeId && { typeId }),
       ...(status && { status }),
       ...(paid !== undefined && { paid }),
       ...(startAt && {
@@ -98,13 +100,11 @@ export const appointmentRepository = {
       }),
       ...(search && {
         OR: [
-          { location: { contains: search, mode: 'insensitive' } },
-          { type: { contains: search, mode: 'insensitive' } },
           {
             patient: {
               OR: [
                 { name: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } }
+                { lastName: { contains: search, mode: 'insensitive' } },
               ]
             }
           } ]
@@ -150,10 +150,10 @@ export const appointmentRepository = {
         ...(dto.price !== undefined && { price: dto.price }),
         ...(dto.currency !== undefined && { currency: dto.currency }),
         ...(dto.paid !== undefined && { paid: dto.paid }),
-        ...(dto.location !== undefined && { location: dto.location }),
+        ...(dto.locationId !== undefined && { locationId: dto.locationId }),
         ...(dto.meetingUrl !== undefined && { meetingUrl: dto.meetingUrl }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
-        ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.typeId !== undefined && { typeId: dto.typeId }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.status === AppointmentStatus.CONFIRMED && { confirmedAt: new Date() }),
         ...(dto.status === AppointmentStatus.CANCELLED && { cancelledAt: new Date() }),

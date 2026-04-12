@@ -14,7 +14,6 @@ export const useCreateReminder = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/reminders`, {
                 method: "POST",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

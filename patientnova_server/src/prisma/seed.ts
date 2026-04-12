@@ -101,6 +101,43 @@ async function seed() {
 
         console.log(`✅ Created ${patients.length} test patients`);
 
+        // ─── Seed Default Locations & Types ──────────────────────────────────────
+        console.log('📍 Creating default appointment locations...');
+        await prisma.appointmentLocation.deleteMany({ where: { userId: user.id } });
+        const locations = await Promise.all([
+            prisma.appointmentLocation.create({
+                data: { name: 'ACTA', address: null, isVirtual: false, color: '#2563EB', icon: '🏢', userId: user.id },
+            }),
+            prisma.appointmentLocation.create({
+                data: { name: 'Sentido y Realidad', address: null, isVirtual: false, color: '#059669', icon: '🧠', userId: user.id },
+            }),
+            prisma.appointmentLocation.create({
+                data: { name: 'Vamos a Terapia', address: null, isVirtual: false, color: '#D97706', icon: '💬', userId: user.id },
+            }),
+            prisma.appointmentLocation.create({
+                data: { name: 'Virtual', meetingUrl: null, isVirtual: true, color: '#7C3AED', icon: '💻', userId: user.id },
+            }),
+        ]);
+        console.log(`✅ Created ${locations.length} default locations`);
+
+        console.log('🧠 Creating default appointment types...');
+        await prisma.appointmentType.deleteMany({ where: { userId: user.id } });
+        const types = await Promise.all([
+            prisma.appointmentType.create({
+                data: { name: 'Individual', defaultDuration: 60, defaultPrice: 115000, color: '#2563EB', icon: '🧑', userId: user.id },
+            }),
+            prisma.appointmentType.create({
+                data: { name: 'Niño', defaultDuration: 60, defaultPrice: 115000, color: '#059669', icon: '👶', userId: user.id },
+            }),
+            prisma.appointmentType.create({
+                data: { name: 'Pareja', defaultDuration: 60, defaultPrice: 220000, color: '#D97706', icon: '👫', userId: user.id },
+            }),
+            prisma.appointmentType.create({
+                data: { name: 'Familia', defaultDuration: 60, defaultPrice: 220000, color: '#7C3AED', icon: '👨‍👩‍👧‍👦', userId: user.id },
+            }),
+        ]);
+        console.log(`✅ Created ${types.length} default appointment types`);
+
         // ─── Seed Appointments ────────────────────────────────────────────────────
         console.log('📅 Creating test appointments...');
         const now = new Date();
@@ -114,14 +151,14 @@ async function seed() {
                     startAt: futureDate1,
                     endAt: new Date(futureDate1.getTime() + 60 * 60 * 1000),
                     timezone: 'America/New_York',
-                    price: 250000,
+                    price: 115000,
                     currency: 'COP',
                     paid: false,
-                    location: 'Clinic Room A',
                     notes: 'Initial consultation',
-                    type: 'CONSULTATION',
                     status: AppointmentStatus.SCHEDULED,
                     patientId: patients[ 0 ].id,
+                    locationId: locations[ 0 ].id,
+                    typeId: types[ 0 ].id,
                 },
             }),
             prisma.appointment.create({
@@ -129,14 +166,14 @@ async function seed() {
                     startAt: futureDate2,
                     endAt: new Date(futureDate2.getTime() + 45 * 60 * 1000),
                     timezone: 'America/New_York',
-                    price: 150000,
+                    price: 115000,
                     currency: 'COP',
                     paid: true,
-                    location: 'Online',
                     meetingUrl: 'https://meet.example.com/session-123',
-                    type: 'FOLLOW_UP',
                     status: AppointmentStatus.CONFIRMED,
                     patientId: patients[ 1 ].id,
+                    locationId: locations[ 3 ].id,
+                    typeId: types[ 0 ].id,
                 },
             }),
             prisma.appointment.create({
@@ -144,14 +181,14 @@ async function seed() {
                     startAt: futureDate3,
                     endAt: new Date(futureDate3.getTime() + 30 * 60 * 1000),
                     timezone: 'America/New_York',
-                    price: 100000,
+                    price: 115000,
                     currency: 'COP',
                     paid: false,
-                    location: 'Clinic Room B',
                     notes: 'Routine check-up',
-                    type: 'CHECK_UP',
                     status: AppointmentStatus.SCHEDULED,
                     patientId: patients[ 2 ].id,
+                    locationId: locations[ 1 ].id,
+                    typeId: types[ 0 ].id,
                 },
             }),
             prisma.appointment.create({
@@ -159,14 +196,14 @@ async function seed() {
                     startAt: futureDate1,
                     endAt: new Date(futureDate1.getTime() + 90 * 60 * 1000),
                     timezone: 'America/New_York',
-                    price: 300000,
+                    price: 220000,
                     currency: 'COP',
                     paid: true,
-                    location: 'Hospital - Surgery Room',
                     notes: 'Pre-surgery assessment',
-                    type: 'SURGICAL_CONSULT',
                     status: AppointmentStatus.CONFIRMED,
                     patientId: patients[ 3 ].id,
+                    locationId: locations[ 2 ].id,
+                    typeId: types[ 2 ].id,
                 },
             }),
         ]);
@@ -252,6 +289,8 @@ async function seed() {
         console.log('\n📊 Seeded Data Summary:');
         console.log(`   • Users: 1`);
         console.log(`   • Patients: ${patients.length}`);
+        console.log(`   • Locations: ${locations.length}`);
+        console.log(`   • Appointment Types: ${types.length}`);
         console.log(`   • Appointments: ${appointments.length}`);
         console.log(`   • Reminders: ${reminders.length}`);
     } catch (error) {

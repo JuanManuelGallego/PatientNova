@@ -14,7 +14,6 @@ export const useCreateAppointment = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/appointments`, {
                 method: "POST",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

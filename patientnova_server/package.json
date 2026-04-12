@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx src/prisma/seed.ts",
     "db:seed-admin": "tsx src/prisma/seedAdmin.ts",
+    "db:seed-config": "tsx src/prisma/seedDefaultConfig.ts",
     "db:format": "npx prisma db push --accept-data-loss",
     "db:wipe": "npx prisma migrate reset --force --skip-seed"
   },

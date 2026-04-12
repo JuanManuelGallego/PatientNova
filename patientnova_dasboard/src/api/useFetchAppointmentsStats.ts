@@ -12,9 +12,7 @@ export const useFetchAppointmentsStats = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetchWithAuth(`${API_BASE}/appointments/stats`,{
-                    credentials: 'include', 
-                });
+                const res = await fetchWithAuth(`${API_BASE}/appointments/stats`);
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);
                 }

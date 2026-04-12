@@ -11,6 +11,8 @@ import { appointmentRouter } from './appointments/appointment.routes.js';
 import { reminderRouter } from './reminders/reminder.routes.js';
 import { notifyRouter } from './notify/notify.routes.js';
 import { authRouter } from './auth/auth.routes.js';
+import { locationRouter } from './locations/location.routes.js';
+import { appointmentTypeRouter } from './appointment-types/appointment-type.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
@@ -66,6 +68,8 @@ app.use('/notify', authenticate, requireAdmin, notifyRouter);
 app.use('/patients', authenticate, requireAdminForWrites, patientRouter);
 app.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
 app.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);
+app.use('/locations', authenticate, requireAdminForWrites, locationRouter);
+app.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 
 app.use((_req: Request, res: Response) => {
     apiError(res, 'Route not found', 404);

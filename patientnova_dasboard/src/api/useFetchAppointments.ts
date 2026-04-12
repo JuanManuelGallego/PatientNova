@@ -16,9 +16,7 @@ export const useFetchAppointments = (filters?: FetchAppointmentsFilters) => {
 
         try {
             const query = buildAppointmentQueryString(filters);
-            const res = await fetchWithAuth(`${API_BASE}/appointments${query}`, {
-                    credentials: 'include', 
-                });
+            const res = await fetchWithAuth(`${API_BASE}/appointments${query}`);
 
             if (!res.ok) {
                 throw new Error(`Server error: ${res.status}`);

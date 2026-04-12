@@ -13,7 +13,6 @@ export const useNotify = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/notify/${channel.toLowerCase()}`, {
                 method: "POST",
-                credentials: 'include',
                 headers: {
                     "Content-Type": "application/json",
                 },

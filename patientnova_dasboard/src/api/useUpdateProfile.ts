@@ -23,7 +23,6 @@ export const useUpdateProfile = () => {
         try {
             const res = await fetchWithAuth(`${API_BASE}/auth/me`, {
                 method: "PATCH",
-                credentials: 'include',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });

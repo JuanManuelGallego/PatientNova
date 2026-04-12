@@ -12,9 +12,7 @@ export const useFetchRemindersStats = () => {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetchWithAuth(`${API_BASE}/reminders/stats`,{
-                    credentials: 'include', 
-                });
+                const res = await fetchWithAuth(`${API_BASE}/reminders/stats`);
                 if (!res.ok) {
                     throw new Error(`Server error: ${res.status}`);
                 }

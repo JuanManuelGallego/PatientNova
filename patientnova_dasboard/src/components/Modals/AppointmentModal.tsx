@@ -2,7 +2,7 @@ import { useCreateAppointment } from "@/src/api/useCreateAppointment";
 import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useUpdateReminder } from "@/src/api/useUpdateReminder";
-import { Appointment, AppointmentForm, AppointmentStatus, APPT_TYPE_CFG, AppointmentDuration, APPOINTMENT_LOCATIONS, APPT_LOCATION_CFG, APPT_STATUS_CFG, AppointmentType, APPT_PAID_STATUS_CFG, AppointmentPaidStatus, REMINDER_TEMPLATE } from "@/src/types/Appointment";
+import { Appointment, AppointmentForm, AppointmentStatus, AppointmentDuration, APPT_STATUS_CFG, APPT_PAID_STATUS_CFG, AppointmentPaidStatus, REMINDER_TEMPLATE, AppointmentLocation, AppointmentType } from "@/src/types/Appointment";
 import { ReminderType, Reminder, ReminderMode, ReminderStatus, CHANNEL_CFG, Channel, REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { isReminderTypeFeasible, formatDate, formatTime, getDuration, getRemindersendAt, getAppointmentEndTime, getTommorrowSixAm, getReminderType, getDate } from "@/src/utils/TimeUtils";
@@ -12,6 +12,8 @@ import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Requiered";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { Patient } from "@/src/types/Patient";
+import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/useFetchLocations";
 
 export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
   appt?: Appointment;
@@ -25,6 +27,9 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
   const { updateAppointment } = useUpdateAppointment();
   const { createReminder } = useCreateReminder();
   const { updateReminder } = useUpdateReminder();
+  const { locations } = useFetchLocations();
+  const { appointmentTypes } = useFetchAppointmentTypes();
+
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
@@ -34,12 +39,12 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     patientId: appt?.patient.id ?? "",
     startAt: appt?.startAt ?? prefillDate ?? getTommorrowSixAm(),
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
-    type: appt?.type ?? AppointmentType.INDIVIDUAL,
-    location: appt?.location ?? "",
+    typeId: appt?.appointmentType.id ?? "",
+    locationId: appt?.appointmentLocation.id ?? "",
     meetingUrl: appt?.meetingUrl ?? undefined,
-    price: appt?.price ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].price,
+    price: appt?.price ?? 0,
     paid: appt?.paid ? AppointmentPaidStatus.PAID : AppointmentPaidStatus.UNPAID,
-    duration: getDuration(appt?.startAt, appt?.endAt) ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].duration,
+    duration: getDuration(appt?.startAt, appt?.endAt) ?? AppointmentDuration.MIN_60,
     reminderType: appt?.reminder ? getReminderType(appt.startAt, appt.reminder.sendAt) : ReminderType.NONE,
     notes: appt?.notes ?? undefined,
   });
@@ -56,9 +61,9 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
       : !!selectedPatient?.email;
 
   const isValid = step === 1
-    ? !!form.patientId && !!form.type && !!form.startAt
+    ? !!form.patientId && !!form.typeId && !!form.startAt
     : step === 2
-      ? !!form.location && (form.reminderType !== ReminderType.NONE ? selectedChannelAvailable : true)
+      ? !!form.locationId && (form.reminderType !== ReminderType.NONE ? selectedChannelAvailable : true)
       : !!form.price;
 
   function buildReminderPayload(): Partial<Reminder> {
@@ -144,9 +149,9 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
         {error && (
           <div className="error-inline">⚠️ {error}</div>
         )}
-        {step === 1 && <PatientAndTypeStep form={form} setForm={setForm} patients={patients} isEdit={isEdit} selectedPatient={selectedPatient} />}
-        {step === 2 && <LocationAndTimeStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} reminderChannel={reminderChannel} setReminderChannel={setReminderChannel} />}
-        {step === 3 && <PaymentAndStatusStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} />}
+        {step === 1 && <PatientAndTypeStep form={form} setForm={setForm} patients={patients} isEdit={isEdit} selectedPatient={selectedPatient} appointmentTypes={appointmentTypes} />}
+        {step === 2 && <LocationAndTimeStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} reminderChannel={reminderChannel} setReminderChannel={setReminderChannel} locations={locations} />}
+        {step === 3 && <PaymentAndStatusStep form={form} set={set} setForm={setForm} selectedPatient={selectedPatient} locations={locations} appointmentTypes={appointmentTypes} />}
         <div className="modal-footer">
           {step > 1 && <button onClick={() => setStep(s => s - 1)} className="btn-secondary" disabled={saving}>Atrás</button>}
           {step < steps.length
@@ -164,14 +169,14 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
 
 type SetField = (field: keyof AppointmentForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
 
-function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient }: { form: AppointmentForm; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; patients: Patient[]; isEdit: boolean; selectedPatient: Patient | undefined }) {
+function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes }: { form: AppointmentForm; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; patients: Patient[]; isEdit: boolean; selectedPatient: Patient | undefined; appointmentTypes: AppointmentType[] }) {
   return (<div className="form-stack">
     {!isEdit && <label className="form-label">
       <RequiredField label="Paciente" />
       <CustomSelect
         value={form.patientId}
         placeholder="Seleccionar paciente…"
-        options={patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` }))}
+        options={patients.length > 0 ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` })) : [ { value: "", label: "No hay pacientes registrados" } ]}
         onChange={(v) => setForm(f => ({ ...f, patientId: v }))}
       />
     </label>}
@@ -194,17 +199,18 @@ function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient }
     <label className="form-label">
       <RequiredField label="Tipo de cita" />
       <CustomSelect
-        value={form.type}
+        value={form.typeId}
         placeholder="Seleccionar tipo…"
-        options={(Object.keys(APPT_TYPE_CFG) as AppointmentType[]).map(t => ({ value: t, label: APPT_TYPE_CFG[ t ].label }))}
-        onChange={(v) => setForm(f => ({ ...f, type: v as AppointmentType, price: APPT_TYPE_CFG[ v as AppointmentType ]?.price ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].price, duration: APPT_TYPE_CFG[ v as AppointmentType ]?.duration ?? APPT_TYPE_CFG[ AppointmentType.INDIVIDUAL ].duration }))}
+        options={appointmentTypes.map(t => ({ value: t.id, label: t.name }))}
+        onChange={(v) => setForm(f => ({ ...f, typeId: v, price: appointmentTypes.find(t => t.id === v)?.defaultPrice ?? 0, duration: AppointmentDuration.MIN_60 }))}
       />
     </label>
   </div>)
 }
 
-function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChannel, setReminderChannel }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined; reminderChannel: Channel; setReminderChannel: (c: Channel) => void }) {
+function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChannel, setReminderChannel, locations }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined; reminderChannel: Channel; setReminderChannel: (c: Channel) => void; locations: AppointmentLocation[] }) {
   const setField = (field: keyof AppointmentForm) => (value: string) => setForm(f => ({ ...f, [ field ]: value }));
+
   return (
     <div className="form-stack">
       <label className="form-label">
@@ -219,14 +225,14 @@ function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChan
       <label className="form-label">
         <RequiredField label="Ubicación" />
         <CustomSelect
-          value={form.location}
+          value={form.locationId}
           placeholder="Seleccionar ubicación…"
-          options={APPOINTMENT_LOCATIONS.map(d => ({ value: d, label: APPT_LOCATION_CFG[ d ]?.label || d }))}
-          onChange={setField("location")}
+          options={locations.map(d => ({ value: d.id, label: d.name }))}
+          onChange={setField("locationId")}
         />
       </label>
 
-      {form.location === "Virtual" && (
+      {locations.find(l => l.id === form.locationId)?.isVirtual && (
         <label className="form-label">
           URL de videollamada
           <input type="url" className="form-input" value={form.meetingUrl} onChange={set("meetingUrl")} placeholder="https://meet.example.com/sala" />
@@ -288,8 +294,9 @@ function LocationAndTimeStep({ form, set, setForm, selectedPatient, reminderChan
   );
 }
 
-function PaymentAndStatusStep({ form, set, setForm, selectedPatient }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined }) {
+function PaymentAndStatusStep({ form, set, setForm, selectedPatient, locations, appointmentTypes }: { form: AppointmentForm; set: SetField; setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>; selectedPatient: Patient | undefined; locations: AppointmentLocation[]; appointmentTypes: AppointmentType[] }) {
   const setField = (field: keyof AppointmentForm) => (value: string) => setForm(f => ({ ...f, [ field ]: value }));
+
   return (
     <div className="form-stack">
       <div className="form-grid-2">
@@ -322,10 +329,10 @@ function PaymentAndStatusStep({ form, set, setForm, selectedPatient }: { form: A
         <div className="summary-card__label">Resumen</div>
         {[
           [ "Paciente", selectedPatient ? `${selectedPatient.name} ${selectedPatient.lastName}` : "—" ],
-          [ "Tipo", APPT_TYPE_CFG[ form.type ]?.label ?? "—" ],
+          [ "Tipo", appointmentTypes.find(t => t.id === form.typeId)?.name || "—" ],
           [ "Fecha", `${formatDate(form.startAt)} a las ${formatTime(form.startAt)}` ],
           [ "Duración", form.duration ],
-          [ "Ubicación", form.location || "—" ],
+          [ "Ubicación", locations.find(l => l.id === form.locationId)?.name || "—" ],
           [ "Precio", `$${form.price}` ],
           [ "Recordatorio", form.reminderType !== ReminderType.NONE ? REMINDER_TYPE_CONFIG[ form.reminderType ].label : "Sin recordatorio" ],
         ].map(([ k, v ]) => (

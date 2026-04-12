@@ -12,7 +12,7 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { Appointment, AppointmentStatus, FetchAppointmentsFilters, APPT_LOCATION_CFG } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateAndTime } from "@/src/utils/TimeUtils";
@@ -23,7 +23,6 @@ import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
 import { useDebounceState } from "@/src/utils/useDebounceState";
 import { useQueryState, parseAsInteger, parseAsString, parseAsStringEnum } from 'nuqs';
-import { APPT_TYPE_CFG } from '../../types/Appointment';
 
 const PAGE_SIZE = 10;
 
@@ -118,56 +117,56 @@ function AppointmentsPageContent() {
             onChange={(v) => setFilterpaid(v as "true" | "false" | "ALL")}
           />
         </FilterBar>
-          <DataTable
-            columns={[ "Paciente", "Tipo", "Fecha", "Recordatorio", "Ubicación", "Estado", "Pago", "" ]}
-            rows={appointments}
-            loading={loading}
-            skeletonCount={6}
-            renderRow={(a) => (
-              <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)}>
-                <td className="td">
-                  <div className="td-identity">
-                    <div className="avatar avatar--sm" style={{ background: getAvatarColor(a.patient.id) }}>
-                      {getInitials(a.patient.name, a.patient.lastName)}
-                    </div>
-                    <div>
-                      <div className="td-name__primary">{a.patient.name} {a.patient.lastName}</div>
-                      <div className="td-name__secondary">{a.patient.email}</div>
-                    </div>
+        <DataTable
+          columns={[ "Paciente", "Tipo", "Fecha", "Recordatorio", "Ubicación", "Estado", "Pago", "" ]}
+          rows={appointments}
+          loading={loading}
+          skeletonCount={6}
+          renderRow={(a) => (
+            <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)}>
+              <td className="td">
+                <div className="td-identity">
+                  <div className="avatar avatar--sm" style={{ background: getAvatarColor(a.patient.id) }}>
+                    {getInitials(a.patient.name, a.patient.lastName)}
                   </div>
-                </td>
-                <td className="td td--date" style={{ maxWidth: 140 }}>
-                  <div className="text-ellipsis">{APPT_TYPE_CFG[ a.type ]?.label ?? "Desconocido"}</div>
-                </td>
-                <td className="td td--datetime">{fmtDateAndTime(a.startAt)}</td>
-                <td className="td">{a.reminder ? <ReminderStatusPill status={a.reminder?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
-                <td className="td td--muted" style={{ maxWidth: 130 }}>
-                  <div className="location-badge" style={{ background: APPT_LOCATION_CFG[ a.location ]?.bg || "var(--c-gray-100)", color: APPT_LOCATION_CFG[ a.location ]?.color || "var(--c-gray-700)" }}>
-                    {a.meetingUrl
-                      ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="location-badge__link">🔗 Virtual</a>
-                      : a.location}
+                  <div>
+                    <div className="td-name__primary">{a.patient.name} {a.patient.lastName}</div>
+                    <div className="td-name__secondary">{a.patient.email}</div>
                   </div>
-                </td>
-                <td className="td" onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
-                <td className="td" onClick={e => e.stopPropagation()}>
-                  <div className="td-actions">
-                    <PayBadge paid={a.paid} />
-                    {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
-                      <button onClick={() => handlePay(a.id)} className="btn-pay">Pagó</button>
-                    )}
-                  </div>
-                </td>
-                <td className="td" onClick={e => e.stopPropagation()}>
-                  <div className="td-actions">
-                    <button onClick={() => setEditAppt(a)} className="btn-action-edit">Editar</button>
-                    <button onClick={() => setDeleteAppt(a)} className="btn-action-delete">✕</button>
-                  </div>
-                </td>
-              </tr>
-            )}
-            emptyState={<EmptyState icon="🔍" title="Sin resultados" sub="Prueba ajustando los filtros o crea una nueva cita." />}
-            footer={<TableFooter page={page} pageSize={PAGE_SIZE} total={total} totalPages={totalPages} label="citas" onPageChange={setPage} />}
-          />
+                </div>
+              </td>
+              <td className="td td--date" style={{ maxWidth: 140 }}>
+                <div className="text-ellipsis">{a.appointmentType?.name ?? "Desconocido"}</div>
+              </td>
+              <td className="td td--datetime">{fmtDateAndTime(a.startAt)}</td>
+              <td className="td">{a.reminder ? <ReminderStatusPill status={a.reminder?.status || ReminderStatus.FAILED} /> : <EmptyStatusPill label="Sin Recordatorio" />}</td>
+              <td className="td td--muted" style={{ maxWidth: 130 }}>
+                <div className="location-badge" style={{ background:a.appointmentLocation.bg || "var(--c-gray-100)", color: a.appointmentLocation.color || "var(--c-gray-700)" }}>
+                  {a.meetingUrl
+                    ? <a href={a.meetingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="location-badge__link">🔗 Virtual</a>
+                    : a.appointmentLocation.name}
+                </div>
+              </td>
+              <td className="td" onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
+              <td className="td" onClick={e => e.stopPropagation()}>
+                <div className="td-actions">
+                  <PayBadge paid={a.paid} />
+                  {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
+                    <button onClick={() => handlePay(a.id)} className="btn-pay">Pagó</button>
+                  )}
+                </div>
+              </td>
+              <td className="td" onClick={e => e.stopPropagation()}>
+                <div className="td-actions">
+                  <button onClick={() => setEditAppt(a)} className="btn-action-edit">Editar</button>
+                  <button onClick={() => setDeleteAppt(a)} className="btn-action-delete">✕</button>
+                </div>
+              </td>
+            </tr>
+          )}
+          emptyState={<EmptyState icon="🔍" title="Sin resultados" sub="Prueba ajustando los filtros o crea una nueva cita." />}
+          footer={<TableFooter page={page} pageSize={PAGE_SIZE} total={total} totalPages={totalPages} label="citas" onPageChange={setPage} />}
+        />
       </PageLayout>
       {showCreate && (
         <AppointmentModal
