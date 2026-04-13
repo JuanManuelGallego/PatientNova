@@ -1,0 +1,348 @@
+/* ================================================================
+   Landing Page
+   ================================================================ */
+
+/* Nav */
+.landingNav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--c-gray-200);
+}
+
+.landingNavInner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.landingNavBrand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.landingNavLogoText {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--c-brand);
+    letter-spacing: -0.01em;
+}
+
+.landingNavActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.landingLangToggle {
+    background: var(--c-gray-100);
+    border: 1px solid var(--c-gray-200);
+    border-radius: var(--r-lg);
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--c-gray-700);
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.landingLangToggle:hover {
+    background: var(--c-gray-200);
+}
+
+/* Container */
+.landingContainer {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 32px;
+}
+
+/* Hero */
+.landingHero {
+    background: linear-gradient(145deg, var(--c-brand) 0%, #0d2240 100%);
+    padding: 108px 0 120px;
+    text-align: center;
+}
+
+.landingHeroBadge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--c-brand-sub);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--r-full);
+    padding: 6px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+}
+
+.landingHeroTitle {
+    font-size: 54px;
+    font-weight: 700;
+    color: var(--c-white);
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    max-width: 740px;
+    margin: 0 auto 20px;
+}
+
+.landingHeroSubtitle {
+    font-size: 18px;
+    color: var(--c-brand-sub);
+    max-width: 540px;
+    margin: 0 auto 44px;
+    line-height: 1.65;
+    font-weight: 400;
+}
+
+.landingHeroCta {
+    font-size: 16px;
+    padding: 14px 36px;
+    letter-spacing: -0.01em;
+}
+
+/* Sections */
+.landingSection {
+    padding: 96px 0;
+    background: var(--c-page-bg);
+}
+
+.landingSectionWhite {
+    background: var(--c-white);
+}
+
+.landingSectionHeader {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.landingSectionTitle {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    letter-spacing: -0.025em;
+    margin-bottom: 14px;
+    line-height: 1.2;
+}
+
+.landingSectionSubtitle {
+    font-size: 16px;
+    color: var(--c-gray-500);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.65;
+}
+
+/* Feature cards */
+.landingFeaturesGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.landingFeatureCard {
+    background: var(--c-surface);
+    border-radius: var(--r-3xl);
+    padding: 36px 32px;
+    box-shadow: var(--shadow-card-lg);
+    border: 1px solid var(--c-gray-100);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landingFeatureCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.09);
+}
+
+.landingFeatureCardIcon {
+    font-size: 38px;
+    margin-bottom: 18px;
+    display: block;
+}
+
+.landingFeatureCardTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+}
+
+.landingFeatureCardDesc {
+    font-size: 14px;
+    color: var(--c-gray-500);
+    line-height: 1.65;
+}
+
+/* How it works */
+.landingSteps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+}
+
+.landingStep {
+    text-align: center;
+    padding: 8px 12px;
+}
+
+.landingStepNum {
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--c-brand-accent);
+    opacity: 0.25;
+    line-height: 1;
+    margin-bottom: 18px;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.landingStepTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+}
+
+.landingStepDesc {
+    font-size: 14px;
+    color: var(--c-gray-500);
+    line-height: 1.65;
+}
+
+/* CTA Banner */
+.landingCtaBanner {
+    background: linear-gradient(145deg, var(--c-brand) 0%, #0d2240 100%);
+    padding: 88px 0;
+    text-align: center;
+}
+
+.landingCtaBannerTitle {
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--c-white);
+    margin-bottom: 14px;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+}
+
+.landingCtaBannerSubtitle {
+    font-size: 16px;
+    color: var(--c-brand-sub);
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+.landingCtaBannerBtn {
+    font-size: 16px;
+    padding: 14px 36px;
+    background: var(--c-white) !important;
+    color: var(--c-brand) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+    letter-spacing: -0.01em;
+}
+
+.landingCtaBannerBtn:hover {
+    background: var(--c-gray-100) !important;
+}
+
+/* Footer */
+.landingFooter {
+    background: var(--c-white);
+    border-top: 1px solid var(--c-gray-200);
+    padding: 40px 0;
+    text-align: center;
+}
+
+.landingFooterInner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.landingFooterBrand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.landingFooterTagline {
+    font-size: 13px;
+    color: var(--c-gray-500);
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.landingFooterCopy {
+    font-size: 12px;
+    color: var(--c-gray-400);
+}
+
+/* Landing login modal overrides */
+.landingModalTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    letter-spacing: -0.01em;
+}
+
+.landingModalSubtitle {
+    font-size: 13px;
+    color: var(--c-gray-400);
+    margin-top: 3px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .landingHeroTitle {
+        font-size: 36px;
+    }
+
+    .landingHero {
+        padding: 72px 0 80px;
+    }
+
+    .landingFeaturesGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .landingSteps {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .landingSectionTitle {
+        font-size: 28px;
+    }
+
+    .landingCtaBannerTitle {
+        font-size: 28px;
+    }
+
+    .landingNavInner {
+        padding: 0 20px;
+    }
+
+    .landingContainer {
+        padding: 0 20px;
+    }
+
+    .landingSection {
+        padding: 64px 0;
+    }
+}

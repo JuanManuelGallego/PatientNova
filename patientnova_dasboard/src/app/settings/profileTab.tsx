@@ -1,4 +1,4 @@
-import { UpdateProfilePayload, useUpdateProfile } from "@/src/api/useUpdateProfile";
+import { useUpdateProfile } from "@/src/api/useUpdateProfile";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { User } from "@/src/types/User";
 import { getInitials, resizeToBase64 } from "@/src/utils/AvatarHelper";
@@ -15,8 +15,6 @@ export function ProfileTab() {
     const [ displayName, setDisplayName ] = useState(user?.displayName ?? "");
     const [ jobTitle, setJobTitle ] = useState(user?.jobTitle ?? "");
     const [ timezone, setTimezone ] = useState(user?.timezone ?? "America/Bogota");
-    const [ phoneNumber, setPhoneNumber ] = useState(user?.phoneNumber ?? "");
-    const [ whatsappNumber, setWhatsappNumber ] = useState(user?.whatsappNumber ?? "");
     const [ avatarPreview, setAvatarPreview ] = useState<string | null>(user?.avatarUrl ?? null);
     const { updateProfile, loading: saving, error: apiError } = useUpdateProfile();
     const [ success, setSuccess ] = useState(false);
@@ -44,15 +42,13 @@ export function ProfileTab() {
         setSuccess(false);
         setError(null);
         try {
-            const payload: UpdateProfilePayload = {
+            const payload: Partial<User> = {
                 firstName: firstName.trim() || undefined,
                 lastName: lastName.trim() || undefined,
                 displayName: displayName.trim() || undefined,
                 jobTitle: jobTitle.trim() || undefined,
-                avatarUrl: avatarPreview,
+                avatarUrl: avatarPreview || undefined,
                 timezone,
-                phoneNumber: phoneNumber.trim() || undefined,
-                whatsappNumber: whatsappNumber.trim() || undefined,
             }
             const updated = await updateProfile(payload);
 
@@ -160,21 +156,6 @@ export function ProfileTab() {
                             </select>
                             <span className="form-input-hint">Afecta el cálculo de &quot;citas de hoy&quot; en el servidor</span>
                         </label>
-                        <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
-                            <span className="form-input-hint" style={{ marginBottom: 12, display: "block" }}>
-                                Estos datos se usan para recibir notificaciones sobre tus citas
-                            </span>
-                            <div className="form-grid-2">
-                                <label className="form-label">
-                                    Teléfono (SMS)
-                                    <input className="form-input" type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="+573001234567" />
-                                </label>
-                                <label className="form-label">
-                                    WhatsApp
-                                    <input className="form-input" type="tel" value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="+573001234567" />
-                                </label>
-                            </div>
-                        </div>
                         <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
                             <label className="form-label" style={{ opacity: 0.7 }}>
                                 Correo electrónico

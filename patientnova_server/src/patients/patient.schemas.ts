@@ -1,11 +1,6 @@
 import { PatientStatus } from '@prisma/client';
 import { z } from 'zod';
-
-const e164OrEmpty = z
-  .string()
-  .regex(/^\+[1-9]\d{7,14}$/, 'Must be E.164 format (e.g. +15551234567)')
-  .nullish()
-  .or(z.literal(''));
+import { e164OrEmpty } from '../utils/types.js';
 
 export const createPatientSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),

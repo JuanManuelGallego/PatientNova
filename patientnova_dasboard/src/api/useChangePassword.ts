@@ -11,7 +11,7 @@ export const useChangePassword = () => {
         setError(null);
 
         try {
-            const res = await fetchWithAuth(`${API_BASE}/auth/change-password`, {
+            const res = await fetchWithAuth(`${API_BASE}/user/me/change-password`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json"

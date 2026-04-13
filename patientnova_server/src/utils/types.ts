@@ -1,4 +1,5 @@
 import type { Patient, Prisma, Reminder } from "@prisma/client";
+import z from "zod";
 
 export enum Channel {
   WHATSAPP = 'WHATSAPP',
@@ -101,3 +102,39 @@ export interface ReminderStats {
   byStatus: Record<string, number>;
   byChannel: Record<string, number>;
 }
+
+
+export const userInclude = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  displayName: true,
+  avatarUrl: true,
+  jobTitle: true,
+  role: true,
+  status: true,
+  timezone: true,
+  lastLoginAt: true,
+  reminderActive: true,
+  reminderChannel: true,
+  phoneNumber: true,
+  whatsappNumber: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+export const e164OrEmpty = z
+  .string()
+  .regex(/^\+[1-9]\d{7,14}$/, 'Must be E.164 format (e.g. +15551234567)')
+  .nullish()
+  .or(z.literal(''));
+
+  
+ export const strongPassword = z
+      .string()
+      .min(8, 'At least 8 characters')
+      .refine(p => /[A-Z]/.test(p), 'At least one uppercase letter')
+      .refine(p => /[a-z]/.test(p), 'At least one lowercase letter')
+      .refine(p => /[0-9]/.test(p), 'At least one number')
+      .refine(p => /[!@#$%^&*(),.?":{}|<>]/.test(p), 'At least one special character');

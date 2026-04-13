@@ -74,3 +74,21 @@ export class AppointmentTypeNameConflictError extends ApiError {
     super(`An appointment type named "${name}" already exists`, 409)
   }
 }
+
+export class UserNotFoundError extends ApiError {
+  constructor(id: string) {
+    super(`User with id "${id}" not found`, 404)
+  }
+}
+
+export class UserEmailConflictError extends ApiError {
+  constructor(email: string) {
+    super(`A user with email "${email}" already exists`, 409)
+  }
+}
+
+export class UserInvalidCredentialsError extends ApiError {
+  constructor() {
+    super('Current password is incorrect', 401)
+  }
+}

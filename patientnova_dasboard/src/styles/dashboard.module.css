@@ -1,0 +1,263 @@
+/* ================================================================
+   Dashboard – Home Page
+   ================================================================ */
+.dashWelcome {
+    background: linear-gradient(135deg, var(--c-brand) 0%, #2d5a8e 100%);
+    border-radius: var(--r-3xl);
+    padding: 28px 32px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: 0 4px 20px rgba(30, 58, 95, 0.2);
+}
+
+.dashWelcomeText {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashWelcomeGreeting {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--c-white);
+    letter-spacing: -0.01em;
+}
+
+.dashWelcomeSummary {
+    font-size: 14px;
+    color: var(--c-brand-sub);
+    line-height: 1.5;
+}
+
+.dashWelcomeSummary strong {
+    color: var(--c-white);
+    font-weight: 600;
+}
+
+.dashWelcomeActions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.dashWelcomeActions :global(.btn--secondary) {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--c-white);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dashWelcomeActions :global(.btn--secondary):hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Two-column card grid */
+.dashGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 36px;
+}
+
+/* Dashboard card */
+.dashCard {
+    background: var(--c-surface);
+    border-radius: var(--r-3xl);
+    box-shadow: var(--shadow-card-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashCardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 24px 0;
+}
+
+.dashCardTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    letter-spacing: -0.01em;
+}
+
+.dashCardSub {
+    font-size: 12px;
+    color: var(--c-gray-400);
+    margin-top: 2px;
+}
+
+.dashCardLink {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-link);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 4px 0;
+}
+
+.dashCardLink:hover {
+    text-decoration: underline;
+}
+
+.dashCardBody {
+    padding: 16px 24px 20px;
+    flex: 1;
+}
+
+/* List inside card */
+.dashList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dashListItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--r-lg);
+    transition: background 0.15s;
+    cursor: pointer;
+}
+
+.dashListItem:hover {
+    background: var(--c-gray-50);
+}
+
+.dashListItemLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.dashListItemRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.dashListItemName {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashListItemMeta {
+    font-size: 12px;
+    color: var(--c-gray-400);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashChannelIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--c-info-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+/* Empty state in card */
+.dashEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    gap: 8px;
+}
+
+.dashEmptyIcon {
+    font-size: 32px;
+    opacity: 0.5;
+}
+
+.dashEmptyText {
+    font-size: 13px;
+    color: var(--c-gray-400);
+    font-weight: 500;
+}
+
+/* Skeleton */
+.dashSkeletonList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.dashSkeletonRow {
+    height: 44px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+}
+
+/* Quick navigation */
+.dashQuickNav {
+    margin-bottom: 24px;
+}
+
+.dashSectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+}
+
+.dashNavGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.dashNavCard {
+    background: var(--c-surface);
+    border-radius: var(--r-3xl);
+    box-shadow: var(--shadow-card);
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: box-shadow 0.15s, transform 0.15s;
+    cursor: pointer;
+}
+
+.dashNavCard:hover {
+    box-shadow: var(--shadow-card-lg), 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.dashNavCardIcon {
+    font-size: 26px;
+    flex-shrink: 0;
+}
+
+.dashNavCardLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c-gray-900);
+}
+
+.dashNavCardDesc {
+    font-size: 12px;
+    color: var(--c-gray-400);
+    margin-top: 2px;
+}

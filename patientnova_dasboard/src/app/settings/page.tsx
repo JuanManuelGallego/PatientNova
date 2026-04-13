@@ -7,8 +7,9 @@ import { ProfileTab } from "./profileTab";
 import { SecurityTab } from "./securityTab";
 import { LocationsTab } from "./locationsTab";
 import { AppointmentTypesTab } from "./appointmentTypesTab";
+import { RemindersTab } from "./remindersTab";
 
-enum ActiveTab { Profile = "👤 Profile", Security = "🔒 Security", Locations = "📍 Ubicaciones", AppointmentTypes = "📅 Tipos de Cita" }
+enum ActiveTab { Profile = "👤 Profile", Security = "🔒 Security", Locations = "📍 Ubicaciones", AppointmentTypes = "📅 Tipos de Cita", Notifications = "🔔 Recordatorios" }
 
 export default function SettingsPage() {
     const [ tab, setTab ] = useState<ActiveTab>(ActiveTab.Profile);
@@ -35,6 +36,7 @@ export default function SettingsPage() {
             {tab === ActiveTab.Security && (<SecurityTab />)}
             {tab === ActiveTab.Locations && (<LocationsTab />)}
             {tab === ActiveTab.AppointmentTypes && (<AppointmentTypesTab />)}
+            {tab === ActiveTab.Notifications && (<RemindersTab />)}
         </PageLayout>
     );
 }

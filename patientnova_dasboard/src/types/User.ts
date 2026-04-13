@@ -1,3 +1,5 @@
+import { Channel } from "./Reminder";
+
 export interface User {
     id: string;
     email: string;
@@ -11,7 +13,8 @@ export interface User {
     timezone: string
     phoneNumber?: string | null
     whatsappNumber?: string | null
-    notificationPreferences?: NotificationPreferences | null
+    reminderActive: boolean
+    reminderChannel?: Channel
 }
 
 export interface NotificationPreferences {

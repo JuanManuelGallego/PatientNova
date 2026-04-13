@@ -1,0 +1,277 @@
+/* ================================================================
+   Calendar
+   ================================================================ */
+.calNavHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--c-gray-100);
+}
+
+.calMonthLabel {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+}
+
+.calDayHeaders {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--c-gray-50);
+    border-bottom: 1px solid var(--c-gray-100);
+}
+
+.calDayHeader {
+    padding: 10px 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-gray-400);
+    letter-spacing: 0.05em;
+}
+
+.calGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.calCell {
+    min-height: 140px;
+    padding: 8px 10px;
+    border-right: 1px solid var(--c-gray-100);
+    border-bottom: 1px solid var(--c-gray-100);
+    background: var(--c-white);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.calCell:hover {
+    background: var(--c-gray-100);
+}
+
+.calCellEmpty {
+    background: var(--c-input-bg);
+    cursor: default;
+}
+
+.calCellEmpty:hover {
+    background: var(--c-input-bg);
+}
+
+.calCellToday {
+    background: var(--c-today-bg);
+}
+
+.calCellToday:hover {
+    background: var(--c-today-hover-bg);
+}
+
+.calCellPast {
+    opacity: 0.35;
+}
+
+.calCellNoRightBorder {
+    border-right: none;
+}
+
+.calCellNoBottomBorder {
+    border-bottom: none;
+}
+
+.calLoading {
+    padding: 60px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--c-gray-400);
+}
+
+.calDayNumber {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-gray-700);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.calDayNumberToday {
+    background: var(--c-brand);
+    color: var(--c-white);
+    font-weight: 700;
+}
+
+.calCellHoliday {
+    background: rgba(255, 215, 0, 0.07);
+}
+
+.calCellHoliday:hover {
+    background: rgba(255, 215, 0, 0.13);
+}
+
+.calHolidayLabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: #b8860b;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 2px;
+}
+
+.calChips {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.calChip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+.calChipCancelled {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
+.calChipNoShow {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
+.calChipCompleted {
+    opacity: 0.65;
+}
+
+.calOverflowBtn {
+    font-size: 10px;
+    color: var(--c-gray-400);
+    padding-left: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.calOverflowBtn:hover {
+    color: var(--c-brand);
+    text-decoration: underline;
+}
+
+/* Day detail panel */
+.calDayPanelOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background: var(--c-backdrop-light);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calDayPanel {
+    background: var(--c-surface);
+    border-radius: var(--r-3xl);
+    padding: 28px;
+    width: 420px;
+    max-width: calc(100vw - 40px);
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-modal);
+    animation: calSlideUp 0.2s ease;
+}
+
+@keyframes calSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.calDayPanelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calDayPanelTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c-gray-900);
+}
+
+.calDayPanelApptList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.calDayPanelApptItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--r-lg);
+    background: var(--c-gray-50);
+    cursor: pointer;
+    transition: background 0.1s;
+    border: 1px solid var(--c-gray-100);
+}
+
+.calDayPanelApptItem:hover {
+    background: var(--c-brand-light);
+    border-color: var(--c-brand);
+}
+
+.calDayPanelApptDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.calDayPanelApptName {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-gray-900);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calDayPanelApptTime {
+    font-size: 12px;
+    color: var(--c-gray-400);
+    white-space: nowrap;
+}
+
+.calDayPanelEmpty {
+    font-size: 13px;
+    color: var(--c-gray-400);
+    text-align: center;
+    padding: 20px 0;
+    margin-bottom: 20px;
+}

@@ -1,0 +1,68 @@
+/* ================================================================
+   Login Page
+   ================================================================ */
+.loginShell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--c-page-bg);
+    padding: 24px;
+}
+
+.loginCard {
+    width: 100%;
+    max-width: 420px;
+    background: var(--c-surface);
+    border-radius: var(--r-4xl);
+    box-shadow: var(--shadow-modal);
+    padding: 40px;
+}
+
+.loginCardHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.loginCardLogo {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.loginCardTitle {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--c-brand);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+}
+
+.loginCardSubtitle {
+    font-size: 14px;
+    color: var(--c-gray-400);
+}
+
+.loginCardForm {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.loginCardError {
+    font-size: 13px;
+    color: var(--c-error);
+    background: var(--c-error-bg);
+    border: 1px solid var(--c-error-border);
+    border-radius: var(--r-lg);
+    padding: 10px 14px;
+}
+
+.loginCardSubmit {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    margin-top: 4px;
+}

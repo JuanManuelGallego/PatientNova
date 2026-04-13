@@ -3,27 +3,16 @@ import { API_BASE, ApiResponse } from "../types/API";
 import { User } from "../types/User";
 import { fetchWithAuth } from "./fetchWithAuth";
 
-export interface UpdateProfilePayload {
-    firstName?: string;
-    lastName?: string;
-    displayName?: string;
-    jobTitle?: string;
-    avatarUrl?: string | null;
-    timezone?: string;
-    phoneNumber?: string;
-    whatsappNumber?: string;
-}
-
 export const useUpdateProfile = () => {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
 
-    const updateProfile = useCallback(async (payload: UpdateProfilePayload) => {
+    const updateProfile = useCallback(async (payload: Partial<User>) => {
         setLoading(true);
         setError(null);
 
         try {
-            const res = await fetchWithAuth(`${API_BASE}/auth/me`, {
+            const res = await fetchWithAuth(`${API_BASE}/users/me`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),

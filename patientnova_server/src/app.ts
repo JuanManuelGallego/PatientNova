@@ -11,6 +11,7 @@ import { appointmentRouter } from './appointments/appointment.routes.js';
 import { reminderRouter } from './reminders/reminder.routes.js';
 import { notifyRouter } from './notify/notify.routes.js';
 import { authRouter } from './auth/auth.routes.js';
+import { userRouter } from './users/user.routes.js';
 import { locationRouter } from './locations/location.routes.js';
 import { appointmentTypeRouter } from './appointment-types/appointment-type.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
@@ -57,13 +58,13 @@ app.use(
         }
     }));
 
-// Strict rate limit scoped to login and register only — not /me or /refresh
+// Strict rate limit scoped to login only — not /me or /refresh
 const authWriteLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
 app.use('/auth/login', authWriteLimit);
-app.use('/auth/register', authWriteLimit);
 
 app.use('/', router);
 app.use('/auth', authRouter);
+app.use('/users', authenticate, requireAdmin, userRouter);
 app.use('/notify', authenticate, requireAdmin, notifyRouter);
 app.use('/patients', authenticate, requireAdminForWrites, patientRouter);
 app.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
