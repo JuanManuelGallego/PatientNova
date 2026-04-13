@@ -25,7 +25,7 @@ export const userRepository = {
                 phoneNumber: dto.phoneNumber ?? null,
                 whatsappNumber: dto.whatsappNumber ?? null,
                 reminderActive: dto.reminderActive ?? false,
-                reminderChannel: dto.reminderChannel,
+                reminderChannel: dto.reminderChannel ?? null,
                 timezone: dto.timezone ?? 'America/Bogota',
             },
             select: userInclude,
