@@ -1,13 +1,14 @@
 import { Prisma, ReminderStatus, type Reminder, type Channel } from '@prisma/client';
 import { prisma } from '../prisma/prismaClient.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
-import { ReminderNotFoundError, ReminderNotCancellableError } from '../utils/errors.js';
-import { reminderInclude, type PaginatedReminders, type ReminderStats } from '../utils/types.js';
+import { PatientNotFoundError, ReminderNotFoundError } from '../utils/errors.js';
+import { paginate, type Paginated } from '../utils/pagination.js';
+import { reminderInclude, type ReminderWithRelations, type ReminderStats } from '../utils/types.js';
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
     const patient = await prisma.patient.findFirst({ where: { id: dto.patientId, userId } });
-    if (!patient) throw new Error(`Patient ${dto.patientId} not found`);
+    if (!patient) throw new PatientNotFoundError(dto.patientId);
     return prisma.reminder.create({
       data: {
         channel: dto.channel,
@@ -35,7 +36,7 @@ export const reminderRepository = {
     return reminder;
   },
 
-  async findMany(query: ListRemindersQuery, userId: string): Promise<PaginatedReminders> {
+  async findMany(query: ListRemindersQuery, userId: string): Promise<Paginated<ReminderWithRelations>> {
     const { status, search, patientId, dateTo, dateFrom, page, pageSize, orderBy, order } = query;
     const skip = (page - 1) * pageSize;
 
@@ -69,12 +70,12 @@ export const reminderRepository = {
         } : {})
     };
 
-    const [ data, total ] = await prisma.$transaction([
-      prisma.reminder.findMany({ where, skip, take: pageSize, orderBy: { [ orderBy ]: order }, include: reminderInclude }),
+    return paginate(
+      prisma.reminder.findMany({ where, skip, take: pageSize, orderBy: { [orderBy]: order }, include: reminderInclude }),
       prisma.reminder.count({ where }),
-    ]);
-
-    return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+      page,
+      pageSize,
+    );
   },
 
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
@@ -98,10 +99,7 @@ export const reminderRepository = {
   },
 
   async cancel(id: string, userId: string): Promise<Reminder> {
-    const reminder = await reminderRepository.findById(id, userId);
-    if (reminder.status !== 'PENDING') {
-      throw new ReminderNotCancellableError(reminder.status);
-    }
+    await reminderRepository.findById(id, userId);
     return prisma.reminder.update({ where: { id }, data: { status: 'CANCELLED' }, include: reminderInclude });
   },
 

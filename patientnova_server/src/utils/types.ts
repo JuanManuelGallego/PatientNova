@@ -1,11 +1,6 @@
 import type { Patient, Prisma, Reminder } from "@prisma/client";
+import { type Channel } from "@prisma/client";
 import z from "zod";
-
-export enum Channel {
-  WHATSAPP = 'WHATSAPP',
-  SMS = 'SMS',
-  EMAIL = 'EMAIL',
-}
 
 export interface SendWhatsAppRequest {
   to: string;

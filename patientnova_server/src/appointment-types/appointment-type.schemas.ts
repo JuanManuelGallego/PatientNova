@@ -24,9 +24,5 @@ export const updateAppointmentTypeSchema = z
     { message: 'At least one valid field must be provided for update' }
   );
 
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
-export type CreateAppointmentTypeDto = z.infer<typeof createAppointmentTypeSchema>;
+export type CreateAppointmentTypeDto= z.infer<typeof createAppointmentTypeSchema>;
 export type UpdateAppointmentTypeDto = z.infer<typeof updateAppointmentTypeSchema>;

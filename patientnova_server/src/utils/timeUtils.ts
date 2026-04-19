@@ -34,7 +34,28 @@ export function localToUtc(year: number, month: number, day: number, hour: numbe
     return new Date(2 * refDate.getTime() - localMs);
 }
 
-/** Returns the UTC start (00:00:00) and end (23:59:59) of tomorrow in the given IANA timezone. */
+/** Returns the UTC start (00:00:00.000) and end (23:59:59.999) of today in the given IANA timezone. */
+export function getTodayBoundsInTz(timezone: string): { start: Date; end: Date } {
+  const tz = (() => { try { Intl.DateTimeFormat(undefined, { timeZone: timezone }); return timezone; } catch { return 'UTC'; } })();
+  const now = new Date();
+
+  const fmt = (zone: string) =>
+    new Intl.DateTimeFormat('sv-SE', {
+      timeZone: zone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23',
+    }).format(now).replace(' ', 'T');
+
+  const localStr = fmt(tz);
+  const utcStr = fmt('UTC');
+
+  const offsetMs = new Date(localStr + 'Z').getTime() - new Date(utcStr + 'Z').getTime();
+  const localDateStr = localStr.slice(0, 10);
+  const startMs = new Date(localDateStr + 'T00:00:00.000Z').getTime() - offsetMs;
+
+  return { start: new Date(startMs), end: new Date(startMs + 86_400_000 - 1) };
+}
 export function getTomorrowUTCRange(timezone: string): { start: Date; end: Date } {
     const { year, month, day } = getLocalTimeParts(timezone);
     // Date.UTC handles day-of-month overflow (e.g. April 31 → May 1)

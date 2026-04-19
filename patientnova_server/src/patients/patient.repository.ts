@@ -1,8 +1,14 @@
-import { PatientStatus, type Patient } from '@prisma/client';
+import { PatientStatus, type Patient, type Prisma } from '@prisma/client';
 import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
-import type { PaginatedPatients } from '../utils/types.js';
+import { paginate, type Paginated } from '../utils/pagination.js';
+import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery } from './patient.schemas.js';
+
+type PatientWithRelations = Patient & {
+  appointments: { id: string }[];
+  reminders: { id: string }[];
+};
 
 export const patientRepository = {
   async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
@@ -20,7 +26,7 @@ export const patientRepository = {
         },
       });
     } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002' && dto.email) {
+      if (isPrismaUniqueConstraintError(err) && dto.email) {
         throw new PatientEmailConflictError(dto.email);
       }
       throw err;
@@ -45,23 +51,29 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
+  /** Fetches a patient without relations. Throws if not found. */
   async findById(id: string, userId: string): Promise<Patient> {
+    const patient = await prisma.patient.findFirst({ where: { id, userId } });
+    if (!patient) throw new PatientNotFoundError(id);
+    return patient;
+  },
+
+  /** Fetches a patient including appointments and reminders. Throws if not found. */
+  async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
     const patient = await prisma.patient.findFirst({
       where: { id, userId },
-      include: {
-        appointments: true,
-        reminders: true,
-      },
+      include: { appointments: true, reminders: true },
     });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;
   },
 
-  async findMany(query: ListPatientsQuery, userId: string): Promise<PaginatedPatients> {
+  /** Lists patients. Does NOT load relations — use `findByIdWithRelations` when you need them. */
+  async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
     const { status, search, page, pageSize, orderBy, order } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: any = {
+    const where: Prisma.PatientWhereInput = {
       userId,
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
@@ -77,12 +89,12 @@ export const patientRepository = {
       }),
     };
 
-    const [ data, total ] = await prisma.$transaction([
+    return paginate(
       prisma.patient.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { [ orderBy ]: order },
+        orderBy: { [orderBy]: order },
         include: {
           appointments: true,
           reminders: true,
@@ -90,15 +102,9 @@ export const patientRepository = {
         },
       }),
       prisma.patient.count({ where }),
-    ]);
-
-    return {
-      data,
-      total,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
+    );
   },
 
   async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
@@ -119,7 +125,7 @@ export const patientRepository = {
         },
       });
     } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err && (err as any).code === 'P2002') {
+      if (isPrismaUniqueConstraintError(err)) {
         throw new PatientEmailConflictError(dto.email!);
       }
       throw err;

@@ -3,7 +3,6 @@ import {
   createPatientSchema,
   updatePatientSchema,
   listPatientsSchema,
-  uuidParamSchema,
   type ListPatientsQuery,
 } from './patient.schemas.js';
 import {
@@ -11,7 +10,9 @@ import {
 } from './patient.repository.js';
 import { logger } from '../utils/logger.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { handleError, ok } from '../utils/apiUtils.js';
+import { ok } from '../utils/apiUtils.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { uuidParamSchema } from '../utils/schemas.js';
 
 export const patientRouter = Router();
 
@@ -23,14 +24,9 @@ export const patientRouter = Router();
 patientRouter.get<{}, any, any, ListPatientsQuery>(
   '/',
   validateQuery(listPatientsSchema),
-  async (req: Request<{}, any, any, ListPatientsQuery>, res: Response) => {
-    try {
-      const result = await patientRepository.findMany(req.query, req.user!.id);
-      ok(res, result);
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request<{}, any, any, ListPatientsQuery>, res: Response) => {
+    ok(res, await patientRepository.findMany(req.query, req.user!.id));
+  })
 );
 
 /**
@@ -40,14 +36,9 @@ patientRouter.get<{}, any, any, ListPatientsQuery>(
  */
 patientRouter.get(
   '/stats',
-  async (req: Request, res: Response) => {
-    try {
-      const stats = await patientRepository.getStats(req.user!.id);
-      ok(res, stats);
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await patientRepository.getStats(req.user!.id));
+  })
 );
 
 /**
@@ -57,14 +48,9 @@ patientRouter.get(
 patientRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const patient = await patientRepository.findById(req.params.id as string, req.user!.id);
-      ok(res, patient);
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await patientRepository.findByIdWithRelations(req.params.id as string, req.user!.id));
+  })
 );
 
 /**
@@ -74,15 +60,11 @@ patientRouter.get(
 patientRouter.post(
   '/',
   validateBody(createPatientSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const patient = await patientRepository.create(req.body, req.user!.id);
-      logger.info({ patientId: patient.id }, 'Patient created');
-      ok(res, patient, 201);
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const patient = await patientRepository.create(req.body, req.user!.id);
+    logger.info({ patientId: patient.id }, 'Patient created');
+    ok(res, patient, 201);
+  })
 );
 
 /**
@@ -93,15 +75,11 @@ patientRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
   validateBody(updatePatientSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const patient = await patientRepository.update(req.params.id as string, req.body, req.user!.id);
-      logger.info({ patientId: patient.id }, 'Patient updated');
-      ok(res, patient);
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const patient = await patientRepository.update(req.params.id as string, req.body, req.user!.id);
+    logger.info({ patientId: patient.id }, 'Patient updated');
+    ok(res, patient);
+  })
 );
 
 /**
@@ -112,13 +90,9 @@ patientRouter.patch(
 patientRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const patient = await patientRepository.delete(req.params.id as string, req.user!.id);
-      logger.info({ patientId: patient.id }, 'Patient deleted');
-      ok(res, { deleted: true, id: patient.id });
-    } catch (err) {
-      handleError(res, err);
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const patient = await patientRepository.delete(req.params.id as string, req.user!.id);
+    logger.info({ patientId: patient.id }, 'Patient deleted');
+    ok(res, { deleted: true, id: patient.id });
+  })
 );

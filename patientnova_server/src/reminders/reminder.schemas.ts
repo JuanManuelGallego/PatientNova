@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Channel } from '../utils/types.js';
+import { Channel } from '@prisma/client';
 import { ReminderMode, ReminderStatus } from '@prisma/client';
 
 // this will break with emails
@@ -72,12 +72,7 @@ export const reminderStatsSchema = z.object({
   dateTo: z.string().datetime().optional(),
 });
 
-
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
-export type CreateReminderDto = z.infer<typeof createReminderSchema>;
+export type CreateReminderDto= z.infer<typeof createReminderSchema>;
 export type UpdateReminderDto = z.infer<typeof updateReminderSchema>;
 export type ListRemindersQuery = z.infer<typeof listRemindersSchema>;
 export type ReminderStatsQuery = z.infer<typeof reminderStatsSchema>;

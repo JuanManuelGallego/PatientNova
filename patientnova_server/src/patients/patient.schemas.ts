@@ -38,10 +38,6 @@ export const listPatientsSchema = z.object({
   to: z.string().datetime().optional(),
 });
 
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
 export type CreatePatientDto = z.infer<typeof createPatientSchema>;
 export type UpdatePatientDto = z.infer<typeof updatePatientSchema>;
 export type ListPatientsQuery = z.infer<typeof listPatientsSchema>;

@@ -104,3 +104,15 @@ export class UserInvalidCredentialsError extends ApiError {
     super('Current password is incorrect', 401)
   }
 }
+
+export class AppointmentStatusTransitionError extends ApiError {
+  constructor(currentStatus: string, action: string) {
+    super(`Cannot ${action} an appointment with status "${currentStatus}"`, 409)
+  }
+}
+
+export class ReminderSendAtInPastError extends ApiError {
+  constructor() {
+    super('Scheduled reminders must have a sendAt time in the future', 422)
+  }
+}

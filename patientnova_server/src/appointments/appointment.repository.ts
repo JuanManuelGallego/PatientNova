@@ -7,38 +7,9 @@ import {
   type AppointmentStatsQuery,
 } from './appointment.schemas.js';
 import { AppointmentPatientNotFoundError, AppointmentReminderNotFoundError, AppointmentNotFoundError } from '../utils/errors.js';
-import { appointmentInclude, type AppointmentWithRelations, type PaginatedAppointments, type AppointmentStats } from '../utils/types.js';
-
-/**
- * Returns the UTC start and end of "today" in the given IANA timezone.
- * Falls back to UTC if the timezone is invalid.
- */
-function getTodayBoundsInTz(timezone: string): { start: Date; end: Date } {
-  const tz = (() => { try { Intl.DateTimeFormat(undefined, { timeZone: timezone }); return timezone; } catch { return 'UTC'; } })();
-  const now = new Date();
-
-  const fmt = (zone: string) =>
-    new Intl.DateTimeFormat('sv-SE', {
-      timeZone: zone,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hourCycle: 'h23',
-    }).format(now).replace(' ', 'T');
-
-  const localStr = fmt(tz);
-  const utcStr = fmt('UTC');
-
-  // UTC offset in ms: positive for zones ahead of UTC (e.g. UTC+5), negative for behind
-  const offsetMs = new Date(localStr + 'Z').getTime() - new Date(utcStr + 'Z').getTime();
-
-  // Today's date in the target timezone ("YYYY-MM-DD")
-  const localDateStr = localStr.slice(0, 10);
-
-  // Midnight of that date, expressed as UTC
-  const startMs = new Date(localDateStr + 'T00:00:00.000Z').getTime() - offsetMs;
-
-  return { start: new Date(startMs), end: new Date(startMs + 86_400_000 - 1) };
-}
+import { paginate, type Paginated } from '../utils/pagination.js';
+import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from '../utils/types.js';
+import { getTodayBoundsInTz } from '../utils/timeUtils.js';
 
 export const appointmentRepository = {
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
@@ -79,7 +50,7 @@ export const appointmentRepository = {
     return appt;
   },
 
-  async findMany(query: ListAppointmentsQuery, userId: string, timezone = 'UTC'): Promise<PaginatedAppointments> {
+  async findMany(query: ListAppointmentsQuery, userId: string, timezone = 'UTC'): Promise<Paginated<AppointmentWithRelations>> {
     const { patientId, status, startAt, dateFrom, dateTo, paid, search, page, pageSize, orderBy, order, locationId, typeId } = query;
     const skip = (page - 1) * pageSize;
     const { start: todayStart, end: todayEnd } = getTodayBoundsInTz(timezone);
@@ -121,18 +92,18 @@ export const appointmentRepository = {
         : {}),
     };
 
-    const [ data, total ] = await prisma.$transaction([
+    return paginate(
       prisma.appointment.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { [ orderBy ]: order },
+        orderBy: { [orderBy]: order },
         include: appointmentInclude,
       }),
       prisma.appointment.count({ where }),
-    ]);
-
-    return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+      page,
+      pageSize,
+    );
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {

@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 
 import { logger } from './utils/logger.js';
 import { config } from './utils/config.js';
+import { FIFTEEN_MINUTES_MS } from './utils/constants.js';
 import { router } from './routes.js';
 import { patientRouter } from './patients/patient.routes.js';
 import { appointmentRouter } from './appointments/appointment.routes.js';
@@ -16,9 +17,11 @@ import { locationRouter } from './locations/location.routes.js';
 import { appointmentTypeRouter } from './appointment-types/appointment-type.routes.js';
 import { medicalRecordRouter } from './medical-records/medical-record.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
-import { twilioWebhookRouter } from './twillo/twilio.webhook.routes.js';
+import { twilioWebhookRouter } from './twilio/twilio.webhook.routes.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './utils/swagger.js';
 
 const app: Application = express();
 
@@ -61,11 +64,12 @@ app.use(
     }));
 
 // Strict rate limit scoped to login only — not /me or /refresh
-const authWriteLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
+const authWriteLimit = rateLimit({ windowMs: FIFTEEN_MINUTES_MS, max: 50, standardHeaders: true, legacyHeaders: false });
 app.use('/auth/login', authWriteLimit);
 
 app.use('/', router);
 app.use('/auth', authRouter);
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Public Twilio webhook — uses urlencoded body (not JSON) and validates Twilio signature internally
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);

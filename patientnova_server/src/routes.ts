@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { getMessageStatus } from './twillo/twilioClient.js';
+import { getMessageStatus } from './twilio/twilioClient.js';
 import { prisma } from './prisma/prismaClient.js';
 import { apiError, ok } from './utils/apiUtils.js';
 

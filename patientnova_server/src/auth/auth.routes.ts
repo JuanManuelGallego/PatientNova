@@ -4,8 +4,27 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/prismaClient.js';
 import { apiError, ok } from '../utils/apiUtils.js';
 import { config } from '../utils/config.js';
+import { FIFTEEN_MINUTES_MS, SEVEN_DAYS_MS } from '../utils/constants.js';
 import { authenticate } from '../middlewares/authenticate.js';
-import { userInclude } from '../utils/types.js';
+import { logger } from '../utils/logger.js';
+import { toUserResponse } from '../users/user.dto.js';
+
+interface RefreshTokenPayload {
+  type: string;
+  id: string;
+  version: number;
+}
+
+function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'type' in payload &&
+    'id' in payload &&
+    'version' in payload &&
+    (payload as RefreshTokenPayload).type === 'refresh'
+  );
+}
 
 export const authRouter = Router();
 
@@ -60,8 +79,8 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       return apiError(res, 'Invalid credentials', 401);
     }
 
-    // Reset failed attempts on successful login
-    await prisma.user.update({
+    // Reset failed attempts on successful login and capture updated user for response
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         lastLoginAt: new Date(),
@@ -87,16 +106,16 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     res.cookie('token', accessToken, {
       ...cookieDefaults,
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: FIFTEEN_MINUTES_MS,
     });
 
     res.cookie('refreshToken', refreshToken, {
       ...cookieDefaults,
       path: '/auth/refresh',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: SEVEN_DAYS_MS,
     });
 
-    ok(res, await prisma.user.findUnique({ where: { id: user.id }, select: userInclude }));
+    ok(res, toUserResponse(updatedUser));
   } catch {
     apiError(res, 'Login failed', 500);
   }
@@ -118,7 +137,7 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
     res.clearCookie('refreshToken', { ...cookieDefaults, path: '/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
-    console.error('[logout] Error during logout:', err);
+    logger.error({ err }, 'Logout failed');
     return res.status(500).json({ error: 'Logout failed' });
   }
 });
@@ -133,15 +152,15 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
     if (!token) return apiError(res, 'No refresh token', 401);
 
     const payload = jwt.verify(token, config.auth.jwtSecret);
-    if (typeof payload !== 'object' || payload === null || (payload as any).type !== 'refresh') {
+    if (!isRefreshTokenPayload(payload)) {
       return apiError(res, 'Invalid refresh token', 401);
     }
 
-    const user = await prisma.user.findUnique({ where: { id: (payload as any).id } });
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user || user.status !== 'ACTIVE') return apiError(res, 'Invalid refresh token', 401);
 
     // Reject if the token version no longer matches (user has logged out)
-    if ((payload as any).version !== user.refreshTokenVersion) {
+    if (payload.version !== user.refreshTokenVersion) {
       return apiError(res, 'Refresh token has been revoked', 401);
     }
 
@@ -153,7 +172,7 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
 
     res.cookie('token', accessToken, {
       ...getCookieDefaults(),
-      maxAge: 15 * 60 * 1000,
+      maxAge: FIFTEEN_MINUTES_MS,
     });
 
     ok(res, { message: 'Token refreshed' });

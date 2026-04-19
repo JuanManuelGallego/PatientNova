@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../utils/config.js';
 import { apiError } from '../utils/apiUtils.js';
+import { logger } from '../utils/logger.js';
 
 export interface AuthPayload {
   id: string;
@@ -65,7 +66,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     };
     next();
   } catch (err) {
-    console.warn(`[authenticate] Auth failure - ${(err as Error).message} - IP: ${req.ip}`);
+    logger.warn({ err, ip: req.ip }, 'Auth failure');
     if (err instanceof jwt.TokenExpiredError) {
       return apiError(res, 'Token expired', 401);
     }

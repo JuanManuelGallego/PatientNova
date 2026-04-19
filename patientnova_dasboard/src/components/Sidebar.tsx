@@ -13,7 +13,6 @@ export const NAV_ITEMS = [
     { id: "appointments", path: "/appointments", icon: "📝", label: "Citas" },
     { id: "calendar", path: "/calendar", icon: "📆", label: "Calendario" },
     { id: "reminders", path: "/reminders", icon: "🔔", label: "Recordatorios" },
-    { id: "templates", path: "/templates", icon: "📄", label: "Plantillas" },
     { id: "settings", path: "/settings", icon: "⚙️", label: "Configuración" },
 ];
 

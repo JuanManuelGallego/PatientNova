@@ -58,11 +58,7 @@ export const listMedicalRecordsSchema = z.object({
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
 });
 
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
-export type CreateMedicalRecordDto = z.infer<typeof createMedicalRecordSchema>;
+export type CreateMedicalRecordDto= z.infer<typeof createMedicalRecordSchema>;
 export type UpdateMedicalRecordDto = z.infer<typeof updateMedicalRecordSchema>;
 export type ListMedicalRecordsQuery = z.infer<typeof listMedicalRecordsSchema>;
 export type FamilyMemberDto = z.infer<typeof familyMemberSchema>;

@@ -55,7 +55,6 @@ export default function DashboardPage() {
   const { reminders: activeReminders, loading: loadingReminders } = useFetchReminders(reminderFilters);
 
   const pendingReminders = (reminderStats?.byStatus[ ReminderStatus.PENDING ] ?? 0) + (reminderStats?.byStatus[ ReminderStatus.QUEUED ] ?? 0);
-  const failedReminders = reminderStats?.byStatus[ ReminderStatus.FAILED ] ?? 0;
 
   return (
     <PageLayout>
@@ -66,9 +65,6 @@ export default function DashboardPage() {
       <div className="dash-welcome fade-in">
         <div className="dash-welcome__text">
           <span className="dash-welcome__greeting">Buenos días, {user?.displayName} </span>
-          <span className="dash-welcome__summary">
-            {failedReminders > 0 && <> · <span style={{ color: "var(--c-error)" }}>{failedReminders} fallidos</span></>}
-          </span>
         </div>
         <div className="dash-welcome__actions">
           <button className="btn-primary btn-hero" onClick={() => setShowApptModal(true)}>

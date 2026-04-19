@@ -1,7 +1,5 @@
 import { z } from 'zod';
-import type { Request, Response, NextFunction } from 'express';
-import { apiError } from './apiUtils.js';
-import { Channel } from './types.js';
+import { Channel } from '@prisma/client';
 
 
 const e164 = z
@@ -36,15 +34,3 @@ export const scheduleSchema = z.object({
   payload: z.union([ sendWhatsAppSchema, sendSmsSchema ]),
   sentAt: futureIso,
 });
-
-export function validate<T>(schema: z.ZodType<T>) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      apiError(res, result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; '), 400);
-      return;
-    }
-    req.body = result.data;
-    next();
-  };
-}

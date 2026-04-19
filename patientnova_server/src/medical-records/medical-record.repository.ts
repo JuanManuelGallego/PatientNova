@@ -1,5 +1,8 @@
 import { prisma } from '../prisma/prismaClient.js';
+import { type Prisma } from '@prisma/client';
 import { PatientNotFoundError, MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
+import { paginate, type Paginated } from '../utils/pagination.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 
 export const medicalRecordRepository = {
@@ -82,7 +85,7 @@ export const medicalRecordRepository = {
     const { patientId, search, page, pageSize, orderBy, order } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: any = { patient: { userId } };
+    const where: Prisma.MedicalRecordWhereInput = { patient: { userId } };
     if (patientId) where.patientId = patientId;
     if (search) {
       where.OR = [
@@ -92,27 +95,27 @@ export const medicalRecordRepository = {
       ];
     }
 
-    const [ data, total ] = await prisma.$transaction([
+    return paginate(
       prisma.medicalRecord.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { [ orderBy ]: order },
+        orderBy: { [orderBy]: order },
         include: {
           familyMembers: true,
           evolutionNotes: { orderBy: { date: 'desc' } },
         },
       }),
       prisma.medicalRecord.count({ where }),
-    ]);
-
-    return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+      page,
+      pageSize,
+    );
   },
 
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
     await medicalRecordRepository.findById(id, userId);
 
-    console.log('Updating medical record with data:', dto);
+    logger.info({ id, fields: Object.keys(dto) }, 'Updating medical record');
 
     return prisma.medicalRecord.update({
       where: { id },
@@ -125,6 +128,7 @@ export const medicalRecordRepository = {
         ...(dto.birthPlace !== undefined && { birthPlace: dto.birthPlace }),
         ...(dto.consultationReason !== undefined && { consultationReason: dto.consultationReason }),
         ...(dto.earlyDevelopment !== undefined && { earlyDevelopment: dto.earlyDevelopment }),
+        ...(dto.schoolAndWork !== undefined && { schoolAndWork: dto.schoolAndWork }),
         ...(dto.lifestyleHabits !== undefined && { lifestyleHabits: dto.lifestyleHabits }),
         ...(dto.traumaticEvents !== undefined && { traumaticEvents: dto.traumaticEvents }),
         ...(dto.emotionalConsiderations !== undefined && { emotionalConsiderations: dto.emotionalConsiderations }),

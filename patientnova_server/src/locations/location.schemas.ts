@@ -28,9 +28,5 @@ export const updateLocationSchema = z
     { message: 'At least one valid field must be provided for update' }
   );
 
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
-export type CreateLocationDto = z.infer<typeof createLocationSchema>;
+export type CreateLocationDto= z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;

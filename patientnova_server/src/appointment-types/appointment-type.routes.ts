@@ -2,12 +2,13 @@ import { Router, type Request, type Response } from 'express';
 import {
   createAppointmentTypeSchema,
   updateAppointmentTypeSchema,
-  uuidParamSchema,
 } from './appointment-type.schemas.js';
 import { appointmentTypeRepository } from './appointment-type.repository.js';
 import { validateBody, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
-import { handleError, ok } from '../utils/apiUtils.js';
+import { ok } from '../utils/apiUtils.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { uuidParamSchema } from '../utils/schemas.js';
 
 export const appointmentTypeRouter = Router();
 
@@ -15,11 +16,9 @@ export const appointmentTypeRouter = Router();
  * GET /appointment-types
  * List all appointment types for the authenticated user.
  */
-appointmentTypeRouter.get('/', async (req: Request, res: Response) => {
-  try {
-    ok(res, await appointmentTypeRepository.findMany(req.user!.id));
-  } catch (err) { handleError(res, err); }
-});
+appointmentTypeRouter.get('/', asyncHandler(async (req: Request, res: Response) => {
+  ok(res, await appointmentTypeRepository.findMany(req.user!.id));
+}));
 
 /**
  * GET /appointment-types/:id
@@ -28,11 +27,9 @@ appointmentTypeRouter.get('/', async (req: Request, res: Response) => {
 appointmentTypeRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
-  async (req: Request, res: Response) => {
-    try {
-      ok(res, await appointmentTypeRepository.findById(req.params.id as string, req.user!.id));
-    } catch (err) { handleError(res, err); }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await appointmentTypeRepository.findById(req.params.id as string, req.user!.id));
+  })
 );
 
 /**
@@ -42,13 +39,11 @@ appointmentTypeRouter.get(
 appointmentTypeRouter.post(
   '/',
   validateBody(createAppointmentTypeSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const type = await appointmentTypeRepository.create(req.body, req.user!.id);
-      logger.info({ typeId: type.id }, 'Appointment type created');
-      ok(res, type, 201);
-    } catch (err) { handleError(res, err); }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const type = await appointmentTypeRepository.create(req.body, req.user!.id);
+    logger.info({ typeId: type.id }, 'Appointment type created');
+    ok(res, type, 201);
+  })
 );
 
 /**
@@ -59,13 +54,11 @@ appointmentTypeRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
   validateBody(updateAppointmentTypeSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const type = await appointmentTypeRepository.update(req.params.id as string, req.body, req.user!.id);
-      logger.info({ typeId: type.id }, 'Appointment type updated');
-      ok(res, type);
-    } catch (err) { handleError(res, err); }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const type = await appointmentTypeRepository.update(req.params.id as string, req.body, req.user!.id);
+    logger.info({ typeId: type.id }, 'Appointment type updated');
+    ok(res, type);
+  })
 );
 
 /**
@@ -75,11 +68,9 @@ appointmentTypeRouter.patch(
 appointmentTypeRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const type = await appointmentTypeRepository.delete(req.params.id as string, req.user!.id);
-      logger.info({ typeId: type.id }, 'Appointment type deactivated');
-      ok(res, { deactivated: true, id: type.id });
-    } catch (err) { handleError(res, err); }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const type = await appointmentTypeRepository.delete(req.params.id as string, req.user!.id);
+    logger.info({ typeId: type.id }, 'Appointment type deactivated');
+    ok(res, { deactivated: true, id: type.id });
+  })
 );

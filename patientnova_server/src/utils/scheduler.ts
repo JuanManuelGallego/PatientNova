@@ -2,9 +2,10 @@ import cron from "node-cron";
 import { ReminderStatus, Channel, type Reminder, AppointmentStatus, type Appointment } from "@prisma/client";
 import { prisma } from "../prisma/prismaClient.js";
 import { logger } from "./logger.js";
-import { getMessageStatus, sendSms, sendWhatsApp } from "../twillo/twilioClient.js";
+import { getMessageStatus, sendSms, sendWhatsApp } from "../twilio/twilioClient.js";
 import { getLocalTimeParts, getTomorrowUTCRange } from "./timeUtils.js";
 import { APPT_SID_MAP, config } from "./config.js";
+import { ONE_HOUR_MS, ONE_DAY_MS, REMINDER_LOOKAHEAD_MS, DAILY_REMINDER_HOUR, DEFAULT_LOCALE } from "./constants.js";
 
 let schedulerTask: cron.ScheduledTask | null = null;
 
@@ -82,7 +83,7 @@ export async function reminderWorker(sentReminders: TrackedReminder[]): Promise<
   try {
     logger.info("Running reminder scheduler worker...");
     const now = new Date();
-    const oneMinuteFromNow = new Date(now.getTime() + 60 * 950); // 950ms to account for processing time
+    const oneMinuteFromNow = new Date(now.getTime() + REMINDER_LOOKAHEAD_MS);
     const remindersToSend = await prisma.reminder.findMany({
       where: {
         status: ReminderStatus.PENDING,
@@ -180,7 +181,7 @@ export async function reminderWorker(sentReminders: TrackedReminder[]): Promise<
 export async function appointmentWorker(): Promise<void> {
   logger.info("Running appointment worker...");
   const now = new Date();
-  const lastHour = new Date(now.getTime() - 60 * 60 * 1000);
+  const lastHour = new Date(now.getTime() - ONE_HOUR_MS);
   const appointmentsToComplete = await prisma.appointment.findMany({
     where: {
       status: {
@@ -215,7 +216,7 @@ type AppointmentWithDetails = Appointment & {
 };
 
 function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezone: string): string[] {
-  const dateFormatter = new Intl.DateTimeFormat("es-ES", {
+  const dateFormatter = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -263,7 +264,7 @@ export async function dailyReminderWorker(): Promise<void> {
     try {
       const { hour, minute } = getLocalTimeParts(user.timezone);
       // Only trigger at exactly 6:00 PM in the user's timezone (cron runs every minute)
-      if (hour !== 18 || minute !== 0) continue;
+      if (hour !== DAILY_REMINDER_HOUR || minute !== 0) continue;
 
       const channel = user.reminderChannel!;
       const { start: tomorrowStart, end: tomorrowEnd } = getTomorrowUTCRange(user.timezone);
@@ -288,7 +289,7 @@ export async function dailyReminderWorker(): Promise<void> {
       logger.info({ userId: user.id, count: appointments.length }, "Creating daily reminders for tomorrow's appointments");
 
       const userName = user.displayName ? user.displayName : `${user.firstName} ${user.lastName}`;
-      const tomorrowDate = new Intl.DateTimeFormat("es-ES", { timeZone: user.timezone, weekday: "long", month: "long", day: "numeric" }).format(new Date().getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowDate = new Intl.DateTimeFormat(DEFAULT_LOCALE, { timeZone: user.timezone, weekday: "long", month: "long", day: "numeric" }).format(new Date().getTime() + ONE_DAY_MS);
       const payload = buildAppointmentsPayload(appointments, user.timezone);
 
       try {

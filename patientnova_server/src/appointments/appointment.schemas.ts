@@ -56,10 +56,6 @@ export const listAppointmentsSchema = z.object({
   order: z.enum([ 'asc', 'desc' ]).default('asc'),
 });
 
-export const uuidParamSchema = z.object({
-  id: z.string().uuid('id must be a valid UUID'),
-});
-
 export const appointmentStatsSchema = z.object({
   patientId: z.string().uuid().optional(),
   dateFrom: z.string().datetime().optional(),

@@ -9,7 +9,8 @@ import { userRepository } from './user.repository.js';
 import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
-import { handleError, ok } from '../utils/apiUtils.js';
+import { ok } from '../utils/apiUtils.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const userRouter = Router();
 
@@ -22,13 +23,11 @@ userRouter.post(
     authenticate,
     requireSuperAdmin,
     validateBody(createUserSchema),
-    async (req: Request, res: Response) => {
-        try {
-            const user = await userRepository.create(req.body);
-            logger.info({ userId: user.id, email: user.email }, 'User created');
-            ok(res, user, 201);
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        const user = await userRepository.create(req.body);
+        logger.info({ userId: user.id, email: user.email }, 'User created');
+        ok(res, user, 201);
+    })
 );
 
 /**
@@ -39,11 +38,9 @@ userRouter.get(
     '/',
     authenticate,
     requireSuperAdmin,
-    async (_req: Request, res: Response) => {
-        try {
-            ok(res, await userRepository.findMany());
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (_req: Request, res: Response) => {
+        ok(res, await userRepository.findMany());
+    })
 );
 
 /**
@@ -53,26 +50,22 @@ userRouter.get(
 userRouter.get(
     '/me',
     authenticate,
-    async (req: Request, res: Response) => {
-        try {
-            ok(res, await userRepository.findById(req.user!.id));
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        ok(res, await userRepository.findById(req.user!.id));
+    })
 );
 
 /**
- * GET /users
- * Super-admin only. Get an user by ID.
+ * GET /users/:id
+ * Super-admin only. Get a user by ID.
  */
 userRouter.get(
     '/:id',
     authenticate,
     requireSuperAdmin,
-    async (req: Request, res: Response) => {
-        try {
-            ok(res, await userRepository.findById(req.params.id as string));
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        ok(res, await userRepository.findById(req.params.id as string));
+    })
 );
 
 /**
@@ -83,13 +76,11 @@ userRouter.patch(
     '/me',
     authenticate,
     validateBody(updateUserSchema),
-    async (req: Request, res: Response) => {
-        try {
-            const user = await userRepository.update(req.user!.id, req.body);
-            logger.info({ userId: user.id }, 'User profile updated');
-            ok(res, user);
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        const user = await userRepository.update(req.user!.id, req.body);
+        logger.info({ userId: user.id }, 'User profile updated');
+        ok(res, user);
+    })
 );
 
 /**
@@ -101,13 +92,11 @@ userRouter.patch(
     '/me/change-password',
     authenticate,
     validateBody(changePasswordSchema),
-    async (req: Request, res: Response) => {
-        try {
-            await userRepository.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
-            logger.info({ userId: req.user!.id }, 'User password changed');
-            ok(res, { message: 'Password changed successfully' });
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        await userRepository.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+        logger.info({ userId: req.user!.id }, 'User password changed');
+        ok(res, { message: 'Password changed successfully' });
+    })
 );
 
 /**
@@ -120,11 +109,9 @@ userRouter.patch(
     authenticate,
     requireSuperAdmin,
     validateBody(superAdminUpdateUserSchema),
-    async (req: Request, res: Response) => {
-        try {
-            const user = await userRepository.update(req.params.id as string, req.body);
-            logger.info({ userId: user.id }, 'User updated by super-admin');
-            ok(res, user);
-        } catch (err) { handleError(res, err); }
-    }
+    asyncHandler(async (req: Request, res: Response) => {
+        const user = await userRepository.update(req.params.id as string, req.body);
+        logger.info({ userId: user.id }, 'User updated by super-admin');
+        ok(res, user);
+    })
 );
