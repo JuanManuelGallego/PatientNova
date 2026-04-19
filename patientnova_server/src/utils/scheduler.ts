@@ -243,14 +243,14 @@ function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezo
   const sections: string[] = [];
 
   if (confirmed.length > 0) {
-    sections.push(`✅ *Confirmadas (${confirmed.length})*\n${confirmed.map(formatAppointment).join(" | ")}`);
+    sections.push(`*Confirmadas* : \n${confirmed.map(formatAppointment).join("\n")}`);
   }
 
   if (scheduled.length > 0) {
-    sections.push(`🕐 *Pendientes de confirmación (${scheduled.length})*\n${scheduled.map(formatAppointment).join(" | ")}`);
+    sections.push(`*Pendientes de confirmación* : \n${scheduled.map(formatAppointment).join("\n")}`);
   }
 
-  return sections.join(" ------- ");
+  return sections.join("\n\n");
 }
 
 export async function dailyReminderWorker(): Promise<void> {
@@ -302,7 +302,7 @@ export async function dailyReminderWorker(): Promise<void> {
             result = await sendWhatsApp({
               to: user.whatsappNumber,
               contentSid: config.twilio.tomorrowAppointmentsReminderSid,
-              contentVariables: { "1": userName, "2": tomorrowDate, "3": payload },
+              contentVariables: { "1": userName, "2": tomorrowDate, "3": payload.replace("\n", " | ") },
             });
             break;
 
