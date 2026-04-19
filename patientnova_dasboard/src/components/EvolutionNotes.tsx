@@ -61,7 +61,7 @@ export function EvolutionNotes({
                 Fecha
                 <DateTimePicker
                   date={note.date || undefined}
-                  onChanged={(date) => updateMember(index, "fecha", date)}
+                  onChanged={(date) => updateMember(index, "date", date)}
                 />
               </label>
               <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -69,7 +69,7 @@ export function EvolutionNotes({
                 <textarea
                   className="form-input form-input--textarea"
                   value={note.text}
-                  onChange={(e) => updateMember(index, "texto", e.target.value)}
+                  onChange={(e) => updateMember(index, "text", e.target.value)}
                   placeholder="Escriba la nota de evolución después de la cita"
                 />
               </label>

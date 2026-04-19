@@ -27,6 +27,18 @@ export class PatientNotFoundError extends ApiError {
   }
 }
 
+export class MedicalRecordNotFoundError extends ApiError {
+  constructor(id: string) {
+    super(`Medical record with id "${id}" not found`, 404)
+  }
+}
+
+export class MedicalRecordAlreadyExistsError extends ApiError {
+  constructor(patientId: string) {
+    super(`A medical record for patient with id "${patientId}" already exists`, 409)
+  }
+}
+
 export class PatientEmailConflictError extends ApiError {
   constructor(email: string) {
     super(`A patient with email "${email}" already exists`, 409)

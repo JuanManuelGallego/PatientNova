@@ -2,15 +2,16 @@ import { useState, useCallback } from "react";
 import { API_BASE, ApiResponse } from "../types/API";
 import { AppointmentLocation } from "../types/Appointment";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { MedicalRecord } from "../types/MedicalRecord";
 
-export const useCreateLocation = () => {
+export const useCreateMedicalRecord = () => {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
 
-    const createLocation = useCallback(async (data: Partial<AppointmentLocation>) => {
+    const createMedicalRecord = useCallback(async (data: Partial<MedicalRecord>) => {
         setLoading(true); setError(null);
         try {
-            const res = await fetchWithAuth(`${API_BASE}/locations`, {
+            const res = await fetchWithAuth(`${API_BASE}/medical-records`, {
                 method: "POST", credentials: 'include',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
@@ -28,5 +29,5 @@ export const useCreateLocation = () => {
         }
     }, []);
 
-    return { createLocation, loading, error };
+    return { createMedicalRecord, loading, error };
 };

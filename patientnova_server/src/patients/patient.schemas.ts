@@ -8,7 +8,6 @@ export const createPatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.string().email('Must be a valid email address').nullish(),
-  dateOfBirth: z.string().datetime().nullish(),
   notes: z.string().max(500).nullish(),
   status: z.nativeEnum(PatientStatus).default(PatientStatus.ACTIVE),
 });
@@ -19,7 +18,6 @@ export const updatePatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.string().email('Must be a valid email address').nullish(),
-  dateOfBirth: z.string().datetime().nullish(),
   notes: z.string().max(500).nullish(),
   status: z.nativeEnum(PatientStatus).optional(),
 }).refine(

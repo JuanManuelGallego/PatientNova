@@ -14,7 +14,6 @@ export const patientRepository = {
           whatsappNumber: dto.whatsappNumber ?? null,
           smsNumber: dto.smsNumber ?? null,
           email: dto.email?.toLowerCase() ?? null,
-          dateOfBirth: dto.dateOfBirth ?? null,
           notes: dto.notes ?? null,
           status: dto.status,
           userId,
@@ -87,6 +86,7 @@ export const patientRepository = {
         include: {
           appointments: true,
           reminders: true,
+          medicalRecord: true,
         },
       }),
       prisma.patient.count({ where }),
@@ -113,7 +113,6 @@ export const patientRepository = {
           ...(dto.whatsappNumber !== undefined && { whatsappNumber: dto.whatsappNumber || null }),
           ...(dto.smsNumber !== undefined && { smsNumber: dto.smsNumber || null }),
           ...(dto.email !== undefined && { email: dto.email?.toLowerCase() || null }),
-          ...(dto.dateOfBirth !== undefined && { dateOfBirth: dto.dateOfBirth || null }),
           ...(dto.notes !== undefined && { notes: dto.notes || null }),
           ...(dto.status !== undefined && { status: dto.status }),
           ...({ archivedAt: dto.status === PatientStatus.ARCHIVED ? new Date() : null })

@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
@@ -8,7 +8,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Requiered";
 import { getPatientFullName } from "@/src/utils/AvatarHelper";
-import { FormValues, createEmptyMember, createEmptyNote } from "@/src/types/MedicalRecord";
+import { FormValues } from "@/src/types/MedicalRecord";
 import { GeneralDataSection } from "@/src/components/GeneralDataSection";
 import { FamilyTable } from "@/src/components/FamilyTable";
 import { AntecedentsSection } from "@/src/components/AntecedentsSection";
@@ -17,40 +17,90 @@ import { todayString } from "@/src/utils/TimeUtils";
 import { parseAsString, useQueryState } from "nuqs";
 import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 import { MedicalRecordCard } from "@/src/components/MedicalRecordCard";
+import { useFetchMedicalRecord } from "@/src/api/useFetchMedicalRecord";
+import { useCreateMedicalRecord } from "@/src/api/useCreateMedicalRecord";
+import { useUpdateMedicalRecord } from "@/src/api/useUpdateMedicalRecord";
+
+const createEmptyForm = (): FormValues => ({
+  name: "",
+  nationalId: "",
+  sex: "",
+  age: "",
+  birthDate: "",
+  birthPlace: "",
+  consultationReason: "",
+  earlyDevelopment: "",
+  schoolAndWork: "",
+  lifestyleHabits: "",
+  traumaticEvents: "",
+  emotionalConsiderations: "",
+  physicalConsiderations: "",
+  mentalHistory: "",
+  objective: "",
+  familyMembers: [],
+  evolutionNotes: [],
+});
 
 function MedicalRecordsPageContent() {
   const { patients, loading, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState("patientId", parseAsString.withDefault(""));
-  const [ form, setForm ] = useState<FormValues>({
-    name: "",
-    nationalId: "",
-    sex: "",
-    age: "",
-    birthDate: "",
-    birthPlace: "",
-    consultationReason: "",
-    earlyDevelopment: "",
-    schoolAndWork: "",
-    lifestyleHabits: "",
-    traumaticEvents: "",
-    emotionalConsiderations: "",
-    physicalConsiderations: "",
-    mentalHistory: "",
-    objective: "",
-    familyMembers: [ createEmptyMember() ],
-    evolutionNotes: [ createEmptyNote() ],
-  });
+  const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
-  const [ saving, setSaving ] = useState(false);
+  const { medicalRecord, fetchMedicalRecord, loading: loadingMedicalRecord } = useFetchMedicalRecord(selectedPatient?.medicalRecord?.id);
+  const { createMedicalRecord } = useCreateMedicalRecord();
+  const { updateMedicalRecord, loading: saving } = useUpdateMedicalRecord();
+
+  const [ form, setForm ] = useState<FormValues>(createEmptyForm());
+
+  useEffect(() => {
+    if (selectedPatient?.medicalRecord?.id) {
+      fetchMedicalRecord();
+    }
+  }, [ fetchMedicalRecord, selectedPatient?.medicalRecord?.id ]);
+
+  useEffect(() => {
+    if (medicalRecord) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm({
+        name: medicalRecord.name || "",
+        nationalId: medicalRecord.nationalId || "",
+        sex: medicalRecord.sex || "",
+        age: medicalRecord.age || "",
+        birthDate: medicalRecord.birthDate || "",
+        birthPlace: medicalRecord.birthPlace || "",
+        consultationReason: medicalRecord.consultationReason || "",
+        earlyDevelopment: medicalRecord.earlyDevelopment || "",
+        schoolAndWork: medicalRecord.schoolAndWork || "",
+        lifestyleHabits: medicalRecord.lifestyleHabits || "",
+        traumaticEvents: medicalRecord.traumaticEvents || "",
+        emotionalConsiderations: medicalRecord.emotionalConsiderations || "",
+        physicalConsiderations: medicalRecord.physicalConsiderations || "",
+        mentalHistory: medicalRecord.mentalHistory || "",
+        objective: medicalRecord.objective || "",
+        familyMembers: medicalRecord.familyMembers?.length
+          ? medicalRecord.familyMembers
+          : [],
+        evolutionNotes: medicalRecord.evolutionNotes?.length
+          ? medicalRecord.evolutionNotes
+          : [],
+      });
+    } else {
+      setForm(createEmptyForm());
+    }
+  }, [ medicalRecord ]);
 
   const updateForm = (key: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [ key ]: value }));
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    // TODO: Implement save logic
-    setTimeout(() => setSaving(false), 2000); // Mock save
+    if (!selectedPatientId || !medicalRecord) return;
+
+    try {
+      await updateMedicalRecord(medicalRecord.id, form);
+    } catch (err) {
+      console.error("Error saving medical record:", err);
+    }
   };
 
   return (
@@ -77,13 +127,35 @@ function MedicalRecordsPageContent() {
                   ? patients.map((p) => ({ value: p.id, label: getPatientFullName(p) }))
                   : [ { value: "", label: "No hay pacientes registrados" } ]
                 }
-                onChange={setSelectedPatientId}
+                // Fix 1 (cont.): just update the ID here; the useEffect above handles fetching.
+                onChange={(value) => setSelectedPatientId(value)}
               />
             )}
           </label>
         </MedicalRecordCard>
 
-        {selectedPatientId && (
+        {loadingMedicalRecord && (
+          <div style={{ textAlign: "center", padding: 24 }}>
+            <LoadingSpinner />
+            <p style={{ marginTop: 12 }}>Cargando historia clínica...</p>
+          </div>
+        )}
+
+        {selectedPatientId && !medicalRecord && !loadingMedicalRecord && (
+          <div style={{ textAlign: "center", padding: 24 }}>
+            <MedicalRecordCard title="" icon="">
+              <p className="modal-confrim-text">El paciente no tiene una historia clínica registrada.</p>
+              <button type="button" className="btn-primary" onClick={async () => {
+                await createMedicalRecord({ patientId: selectedPatientId, name: getPatientFullName(selectedPatient) });
+                await fetchPatients();
+              }}>
+                Crear historia clínica
+              </button>
+            </MedicalRecordCard>
+          </div>
+        )}
+
+        {selectedPatientId && medicalRecord && !loadingMedicalRecord && (
           <>
             <MedicalRecordCard title="Datos Generales" icon="📋">
               <GeneralDataSection form={form} onChange={updateForm} />

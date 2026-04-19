@@ -3,12 +3,12 @@ import { today } from "../utils/TimeUtils";
 export type MedicalRecord = {
     id: string;
     patientId: string;
-    nombre: string;
-    cedula: string;
-    sexo: string;
-    edad: string;
-    fechaNacimiento: string;
-    lugarNacimiento: string;
+    name: string;
+    nationalId: string;
+    sex: Sex | "";
+    age: string;
+    birthDate: string;
+    birthPlace: string;
     consultationReason: string;
     earlyDevelopment: string;
     schoolAndWork: string;

@@ -45,7 +45,6 @@ export function FamilyTable({
           >
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
               <div style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>{member.relationship ? RELATIONSHIP_CFG[ member.relationship ].label : `Miembro ${index + 1}`}</div>
-              {familyMembers.length > 1 && (
                 <button
                   type="button"
                   className="btn-secondary btn-sm"
@@ -53,7 +52,6 @@ export function FamilyTable({
                 >
                   Eliminar
                 </button>
-              )}
             </div>
             <div style={sectionGridStyle}>
               <label className="form-label">
@@ -62,7 +60,7 @@ export function FamilyTable({
                   className="form-input"
                   type="text"
                   value={member.name}
-                  onChange={(e) => updateMember(index, "nombre", e.target.value)}
+                  onChange={(e) => updateMember(index, "name", e.target.value)}
                   placeholder="Nombre"
                 />
               </label>
@@ -72,7 +70,7 @@ export function FamilyTable({
                   value={member.sex}
                   placeholder="Seleccionar sexo…"
                   options={Object.entries(SEX_CFG).map(([ value, { label } ]) => ({ value, label }))}
-                  onChange={(v) => updateMember(index, "sexo", v)}
+                  onChange={(v) => updateMember(index, "sex", v)}
                 />
               </label>
               <label className="form-label">
@@ -81,7 +79,7 @@ export function FamilyTable({
                   className="form-input"
                   type="text"
                   value={member.age}
-                  onChange={(e) => updateMember(index, "edad", e.target.value)}
+                  onChange={(e) => updateMember(index, "age", e.target.value)}
                   placeholder="Edad"
                 />
               </label>
@@ -91,7 +89,7 @@ export function FamilyTable({
                   value={member.relationship}
                   placeholder="Seleccionar parentesco…"
                   options={Object.entries(RELATIONSHIP_CFG).map(([ value, { label } ]) => ({ value, label }))}
-                  onChange={(v) => updateMember(index, "parentesco", v)}
+                  onChange={(v) => updateMember(index, "relationship", v)}
                 />
               </label>
               <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -100,7 +98,7 @@ export function FamilyTable({
                   className="form-input"
                   type="text"
                   value={member.relation}
-                  onChange={(e) => updateMember(index, "relacion", e.target.value)}
+                  onChange={(e) => updateMember(index, "relation", e.target.value)}
                   placeholder="Descripción de la relación"
                 />
               </label>

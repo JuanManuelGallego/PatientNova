@@ -1,4 +1,5 @@
 import { Appointment } from "./Appointment";
+import { MedicalRecord } from "./MedicalRecord";
 import { Reminder } from "./Reminder";
 
 export enum PatientStatus {
@@ -33,6 +34,7 @@ export interface Patient {
 
     appointments?: Appointment[];
     reminders?: Reminder[];
+    medicalRecord?: MedicalRecord
 }
 
 export interface FetchPatientsFilters {

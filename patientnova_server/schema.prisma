@@ -19,7 +19,6 @@ model Patient {
   smsNumber      String?       @db.VarChar(20)
   email          String?       @db.VarChar(255)
 
-  dateOfBirth    DateTime?
   notes          String?       @db.VarChar(500)
 
   status         PatientStatus @default(ACTIVE)
@@ -32,6 +31,7 @@ model Patient {
 
   appointments   Appointment[] @relation("PatientAppointments")
   reminders      Reminder[]    @relation("PatientReminders")
+  medicalRecord  MedicalRecord?
 
   @@unique([userId, email])
   @@index([userId])
@@ -260,4 +260,93 @@ enum AdminStatus {
   INACTIVE
   SUSPENDED
   PENDING   
+}
+
+// ─── Medical Record ───────────────────────────────────────────────────────────
+
+model MedicalRecord {
+  id         String   @id @default(uuid()) @db.Uuid
+
+  // Personal data
+  name                String?
+  nationalId          String?
+  sex                 String?
+  age                 String?
+  birthDate           DateTime?
+  birthPlace          String?
+
+  // Clinical history
+  consultationReason        String? @db.Text
+  earlyDevelopment          String? @db.Text
+  schoolAndWork             String? @db.Text
+  lifestyleHabits           String? @db.Text
+  traumaticEvents           String? @db.Text
+  emotionalConsiderations   String? @db.Text
+  physicalConsiderations    String? @db.Text
+  mentalHistory             String? @db.Text
+  objective                 String? @db.Text
+
+  // Relations
+  familyMembers   FamilyMember[]
+  evolutionNotes  EvolutionNote[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  patientId  String   @unique @db.Uuid
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("medical_records")
+}
+
+// ─── Family Member ────────────────────────────────────────────────────────────
+
+model FamilyMember {
+  id           String        @id @default(uuid()) @db.Uuid
+
+  name         String?
+  sex          Sex?
+  age          String?
+  relationship Relationship?
+  relation     String?        @db.Text
+
+  medicalRecordId String        @db.Uuid
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  @@index([medicalRecordId])
+  @@map("family_members")
+}
+
+// ─── Evolution Note ───────────────────────────────────────────────────────────
+
+model EvolutionNote {
+  id   String @id @default(uuid()) @db.Uuid
+
+  date DateTime
+  text String?  @db.Text
+
+  medicalRecordId String        @db.Uuid
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  @@index([medicalRecordId])
+  @@map("evolution_notes")
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Relationship {
+  FATHER
+  MOTHER
+  SIBLING
+  SON
+  DAUGHTER
+  SPOUSE
+  GRANDFATHER
+  GRANDMOTHER
+  OTHER
 }

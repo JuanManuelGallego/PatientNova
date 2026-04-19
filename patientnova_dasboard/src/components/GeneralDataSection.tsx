@@ -23,7 +23,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           className="form-input"
           type="text"
           value={form.name}
-          onChange={(e) => onChange("nombre", e.target.value)}
+          onChange={(e) => onChange("name", e.target.value)}
           placeholder="Nombre del paciente"
         />
       </label>
@@ -33,7 +33,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           className="form-input"
           type="text"
           value={form.nationalId}
-          onChange={(e) => onChange("cedula", e.target.value)}
+          onChange={(e) => onChange("nationalId", e.target.value)}
           placeholder="Número de identificación"
         />
       </label>
@@ -43,14 +43,14 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           value={form.sex}
           placeholder="Seleccionar sexo…"
           options={Object.entries(SEX_CFG).map(([ value, { label } ]) => ({ value, label }))}
-          onChange={(v) => onChange("sexo", v)}
+          onChange={(v) => onChange("sex", v)}
         />
       </label>
       <label className="form-label">
         Fecha de nacimiento
         <DateTimePicker
           date={form.birthDate || undefined}
-          onChanged={(date) => onChange("fechaNacimiento", date)}
+          onChanged={(date) => onChange("birthDate", date)}
         />
       </label>
       <label className="form-label">
@@ -59,7 +59,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           className="form-input"
           type="text"
           value={form.age}
-          onChange={(e) => onChange("edad", e.target.value)}
+          onChange={(e) => onChange("age", e.target.value)}
           placeholder="Edad"
         />
       </label>
@@ -69,7 +69,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           className="form-input"
           type="text"
           value={form.birthPlace}
-          onChange={(e) => onChange("lugarNacimiento", e.target.value)}
+          onChange={(e) => onChange("birthPlace", e.target.value)}
           placeholder="Ciudad, departamento"
         />
       </label>
