@@ -15,13 +15,13 @@ export const config = {
     authToken: requireEnv('TWILIO_AUTH_TOKEN'),
     whatsappFrom: requireEnv('TWILIO_WHATSAPP_FROM'),
     smsFrom: requireEnv('TWILIO_SMS_FROM'),
+    webhookBaseUrl: requireEnv('TWILIO_WEBHOOK_BASE_URL'),
     tomorrowAppointmentsReminderSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_SID'),
     tomorrowAppointmentsReminder2Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_2_APPT_SID'),
     tomorrowAppointmentsReminder3Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_3_APPT_SID'),
     tomorrowAppointmentsReminder4Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID'),
     tomorrowAppointmentsReminder5Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID'),
     tomorrowAppointmentsReminder6Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID'),
-
   },
 
   rateLimit: {

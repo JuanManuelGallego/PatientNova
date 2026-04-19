@@ -112,6 +112,38 @@ appointmentRouter.post(
 );
 
 /**
+ * POST /appointments/:id/confirm
+ * Convenience endpoint — marks the appointment as confirmed (status = "CONFIRMED").
+ */
+appointmentRouter.post(
+  '/:id/confirm',
+  validateParams(uuidParamSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const appt = await appointmentRepository.markConfirmed(req.params.id as string, req.user!.id);
+      logger.info({ appointmentId: appt.id }, 'Appointment marked as confirmed');
+      ok(res, appt);
+    } catch (err) { handleError(res, err); }
+  }
+);
+
+/**
+ * POST /appointments/:id/cancel
+ * Convenience endpoint — marks the appointment as cancelled (status = "CANCELLED").
+ */
+appointmentRouter.post(
+  '/:id/cancel',
+  validateParams(uuidParamSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const appt = await appointmentRepository.markCancelled(req.params.id as string, req.user!.id);
+      logger.info({ appointmentId: appt.id }, 'Appointment marked as cancelled');
+      ok(res, appt);
+    } catch (err) { handleError(res, err); }
+  }
+);
+
+/**
  * DELETE /appointments/:id
  * Hard-delete an appointment.
  * Consider using PATCH { status: "CANCELLED" } to preserve history.

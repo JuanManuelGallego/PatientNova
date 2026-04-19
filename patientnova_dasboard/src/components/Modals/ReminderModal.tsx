@@ -79,7 +79,7 @@ export function ReminderModal({
 
         return {
             to,
-            contentSid: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+            contentSid: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid,
             contentVariables: { "1": ` ${selectedPatient?.name ?? ""}`, "2": getUserName(user), "3": form.fecha, "4": form.hora },
             body: form.message,
             patientId: form.patientId,
@@ -265,7 +265,7 @@ function ChannelAndMessageStep({ form, setForm, selectedPatient, set, user }: {
                             "Le recordamos su próxima cita médica. Por favor confirme su asistencia respondiendo este mensaje.",
                             "Su cita está confirmada para mañana. Recuerde traer su tarjeta de seguro y llegar 10 minutos antes.",
                             "Importante: No olvide su cita de mañana. Si necesita cancelar, contáctenos con 24 horas de anticipación.",
-                            TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER.template.replace("{{1}}", ` ${selectedPatient?.name ?? ""}`).replace("{{2}}", getUserName(user)),
+                            TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.template.replace("{{1}}", ` ${selectedPatient?.name ?? ""}`).replace("{{2}}", getUserName(user)),
                         ].map((tmpl) => (
                             <button key={tmpl} onClick={() => setForm(f => ({ ...f, message: tmpl }))} className="template-btn">
                                 {tmpl}
@@ -282,7 +282,7 @@ function ChannelAndMessageStep({ form, setForm, selectedPatient, set, user }: {
                             disabled
                             className="form-input form-input--textarea"
                             style={{ minHeight: 100 }}
-                            value={TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER.template.replace("{{1}}", ` ${selectedPatient?.name ?? ""}`).replace("{{2}}", getUserName(user)).replace("{{3}}", form.fecha).replace("{{4}}", form.hora)}
+                            value={TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.template.replace("{{1}}", ` ${selectedPatient?.name ?? ""}`).replace("{{2}}", getUserName(user)).replace("{{3}}", form.fecha).replace("{{4}}", form.hora)}
                             onChange={set("message")}
                             placeholder={`Hola ${selectedPatient?.name ?? "{nombre}"}, le recordamos su cita próximamente. Por favor confirme su asistencia.`}
                         />

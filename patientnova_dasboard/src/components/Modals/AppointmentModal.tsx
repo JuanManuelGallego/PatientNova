@@ -78,14 +78,14 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
 
     return {
       to,
-      contentSid: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+      contentSid: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid,
       contentVariables: {
         "1": selectedPatient ? `${selectedPatient.name}` : "",
         "2": getUserName(user) || "su profesional de salud",
         "3": getDate(form.startAt),
         "4": formatTime(form.startAt)
       },
-      body: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER.template.replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "").replace("{{2}}", getUserName(user) || "su profesional de salud").replace("{{3}}", formatDate(form.startAt)).replace("{{4}}", formatTime(form.startAt)),
+      body: TWILLO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.template.replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "").replace("{{2}}", getUserName(user) || "su profesional de salud").replace("{{3}}", formatDate(form.startAt)).replace("{{4}}", formatTime(form.startAt)),
       patientId: form.patientId,
       channel: reminderChannel,
       sendMode: ReminderMode.SCHEDULED,

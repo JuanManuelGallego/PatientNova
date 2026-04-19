@@ -85,6 +85,28 @@ export async function scheduleWhatsApp(
   };
 }
 
+export async function sendWhatsAppFreeForm(to: string, body: string): Promise<NotificationResult> {
+  validateE164(to);
+
+  const toAddr = `whatsapp:${to}`;
+  const from = config.twilio.whatsappFrom;
+
+  logger.info({ to: toAddr, from }, 'Sending free-form WhatsApp reply');
+
+  const message = await getClient().messages.create({ from, to: toAddr, body });
+
+  logger.info({ sid: message.sid, status: message.status }, 'Free-form WhatsApp reply queued');
+
+  return {
+    success: message.status === 'queued' || message.status === 'sent',
+    messageSid: message.sid,
+    channel: Channel.WHATSAPP,
+    to,
+    sentAt: new Date().toISOString(),
+    error: message.errorMessage,
+  };
+}
+
 export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> {
   validateE164(req.to);
 

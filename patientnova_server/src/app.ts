@@ -16,6 +16,7 @@ import { locationRouter } from './locations/location.routes.js';
 import { appointmentTypeRouter } from './appointment-types/appointment-type.routes.js';
 import { medicalRecordRouter } from './medical-records/medical-record.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
+import { twilioWebhookRouter } from './twillo/twilio.webhook.routes.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
 
@@ -65,6 +66,10 @@ app.use('/auth/login', authWriteLimit);
 
 app.use('/', router);
 app.use('/auth', authRouter);
+
+// Public Twilio webhook — uses urlencoded body (not JSON) and validates Twilio signature internally
+app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
+
 app.use('/users', authenticate, requireAdmin, userRouter);
 app.use('/notify', authenticate, requireAdmin, notifyRouter);
 app.use('/patients', authenticate, requireAdminForWrites, patientRouter);

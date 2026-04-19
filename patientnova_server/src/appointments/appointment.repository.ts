@@ -184,6 +184,26 @@ export const appointmentRepository = {
     });
   },
 
+  async markConfirmed(id: string, userId: string): Promise<AppointmentWithRelations> {
+    await appointmentRepository.findById(id, userId);
+    return prisma.appointment.update({
+      where: { id },
+      data: { status: AppointmentStatus.CONFIRMED, confirmedAt: new Date() },
+      include: appointmentInclude,
+    });
+  },
+
+
+  async markCancelled(id: string, userId: string): Promise<AppointmentWithRelations> {
+    await appointmentRepository.findById(id, userId);
+    return prisma.appointment.update({
+      where: { id },
+      data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date() },
+      include: appointmentInclude,
+    });
+  },
+
+
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
     const { patientId, dateFrom, dateTo } = query;
     const where: Prisma.AppointmentWhereInput = {

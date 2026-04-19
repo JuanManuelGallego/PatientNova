@@ -1,4 +1,4 @@
-import { Appointment, AppointmentType } from "./Appointment";
+import { Appointment } from "./Appointment";
 import { Patient } from "./Patient";
 
 export interface Reminder {

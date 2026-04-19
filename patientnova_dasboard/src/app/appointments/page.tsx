@@ -66,6 +66,12 @@ function AppointmentsPageContent() {
     } finally { fetchStats(); fetchAppointments(); }
   }
 
+  async function handleConfirm(id: string) {
+    try {
+      await updateAppointment(id, { status: AppointmentStatus.CONFIRMED });
+    } finally { fetchStats(); fetchAppointments(); }
+  }
+
   return (
     <>
       <PageLayout>
@@ -147,7 +153,12 @@ function AppointmentsPageContent() {
                     : a.appointmentLocation.name}
                 </div>
               </td>
-              <td className="td" onClick={e => e.stopPropagation()}><AppointmentStatusPill status={a.status} /></td>
+              <td className="td" onClick={e => e.stopPropagation()}>
+                <AppointmentStatusPill status={a.status} />
+                {a.status === AppointmentStatus.SCHEDULED && (
+                  <button onClick={() => handleConfirm(a.id)} className="btn-pay">Confirmó</button>
+                )}
+              </td>
               <td className="td" onClick={e => e.stopPropagation()}>
                 <div className="td-actions">
                   <PayStatusPill paid={a.paid} />
