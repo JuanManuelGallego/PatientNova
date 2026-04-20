@@ -1,0 +1,24 @@
+meta {
+  name: Update Appointment Type
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/appointment-types/{{typeId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Follow-up Session",
+    "defaultDuration": 45,
+    "defaultPrice": 100,
+    "isActive": true
+  }
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Update Appointment
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/appointments/{{appointmentId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startAt": "2025-06-15T11:00:00.000Z",
+    "endAt": "2025-06-15T12:00:00.000Z",
+    "notes": "Rescheduled by patient request",
+    "price": 175
+  }
+}

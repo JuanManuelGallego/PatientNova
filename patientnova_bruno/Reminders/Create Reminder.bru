@@ -1,0 +1,32 @@
+meta {
+  name: Create Reminder
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/reminders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "channel": "WHATSAPP",
+    "to": "+15551234567",
+    "sendMode": "SCHEDULED",
+    "sendAt": "2025-06-14T09:00:00.000Z",
+    "status": "PENDING",
+    "patientId": "{{patientId}}",
+    "appointmentId": "{{appointmentId}}",
+    "contentSid": "HXabcdef1234567890abcdef1234567890",
+    "contentVariables": {
+      "1": "Maria",
+      "2": "June 15 at 10:00 AM"
+    }
+  }
+}

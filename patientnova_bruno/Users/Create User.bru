@@ -1,0 +1,33 @@
+meta {
+  name: Create User
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "newuser@patientnova.net",
+    "password": "Password123!",
+    "role": "ADMIN",
+    "status": "ACTIVE",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "displayName": "Dr. Doe",
+    "jobTitle": "Therapist",
+    "phoneNumber": "+15551234567",
+    "whatsappNumber": "+15551234567",
+    "timezone": "America/New_York",
+    "reminderActive": true,
+    "reminderChannel": "WHATSAPP"
+  }
+}

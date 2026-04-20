@@ -1,0 +1,28 @@
+meta {
+  name: Create Location
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/locations
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Main Office",
+    "address": "123 Health St, Suite 200, New York, NY 10001",
+    "color": "#2ECC71",
+    "bg": "#D5F5E3",
+    "dot": "#27AE60",
+    "icon": "building",
+    "defaultPrice": 150,
+    "isVirtual": false
+  }
+}

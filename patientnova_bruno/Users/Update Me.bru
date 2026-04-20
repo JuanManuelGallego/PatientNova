@@ -1,0 +1,29 @@
+meta {
+  name: Update Me
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/users/me
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "displayName": "Dr. Doe",
+    "jobTitle": "Therapist",
+    "phoneNumber": "+15551234567",
+    "whatsappNumber": "+15551234567",
+    "timezone": "America/New_York",
+    "reminderActive": true,
+    "reminderChannel": "WHATSAPP"
+  }
+}

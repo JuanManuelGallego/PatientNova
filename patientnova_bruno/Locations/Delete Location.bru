@@ -1,0 +1,11 @@
+meta {
+  name: Delete Location
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/locations/{{locationId}}
+  body: none
+  auth: none
+}

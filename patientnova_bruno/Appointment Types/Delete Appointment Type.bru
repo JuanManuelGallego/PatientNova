@@ -1,0 +1,11 @@
+meta {
+  name: Delete Appointment Type
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/appointment-types/{{typeId}}
+  body: none
+  auth: none
+}

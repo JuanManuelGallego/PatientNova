@@ -1,0 +1,11 @@
+meta {
+  name: Cancel Appointment
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/appointments/{{appointmentId}}/cancel
+  body: none
+  auth: none
+}

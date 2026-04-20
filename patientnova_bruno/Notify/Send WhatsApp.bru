@@ -1,0 +1,27 @@
+meta {
+  name: Send WhatsApp
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/notify/whatsapp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "to": "+15551234567",
+    "contentSid": "HXabcdef1234567890abcdef1234567890",
+    "contentVariables": {
+      "1": "Maria",
+      "2": "June 15 at 10:00 AM"
+    },
+    "patientId": "{{patientId}}"
+  }
+}

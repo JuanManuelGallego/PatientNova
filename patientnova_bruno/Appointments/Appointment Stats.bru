@@ -1,0 +1,17 @@
+meta {
+  name: Appointment Stats
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/appointments/stats
+  body: none
+  auth: none
+}
+
+query {
+  ~patientId: {{patientId}}
+  ~dateFrom: 2025-01-01T00:00:00.000Z
+  ~dateTo: 2025-12-31T23:59:59.000Z
+}

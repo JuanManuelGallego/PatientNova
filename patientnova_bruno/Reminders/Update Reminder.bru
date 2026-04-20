@@ -1,0 +1,22 @@
+meta {
+  name: Update Reminder
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/reminders/{{reminderId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sendAt": "2025-06-14T10:00:00.000Z",
+    "status": "PENDING"
+  }
+}

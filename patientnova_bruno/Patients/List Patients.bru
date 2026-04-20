@@ -1,0 +1,22 @@
+meta {
+  name: List Patients
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/patients
+  body: none
+  auth: none
+}
+
+query {
+  page: 1
+  pageSize: 20
+  orderBy: createdAt
+  order: desc
+  ~status: ACTIVE
+  ~search: John
+  ~from: 2024-01-01T00:00:00.000Z
+  ~to: 2024-12-31T23:59:59.000Z
+}

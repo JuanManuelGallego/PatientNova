@@ -1,0 +1,11 @@
+meta {
+  name: Cancel Reminder
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/reminders/{{reminderId}}/cancel
+  body: none
+  auth: none
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Get Patient by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/patients/{{patientId}}
+  body: none
+  auth: none
+}

@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "name": "PatientNova API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.015332221984863281,
+  "filesCount": 54,
+  "presets": {
+    "requestType": "http",
+    "requestUrl": ""
+  }
+}

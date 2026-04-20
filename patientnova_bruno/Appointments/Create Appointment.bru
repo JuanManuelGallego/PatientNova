@@ -1,0 +1,32 @@
+meta {
+  name: Create Appointment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/appointments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startAt": "2025-06-15T10:00:00.000Z",
+    "endAt": "2025-06-15T11:00:00.000Z",
+    "timezone": "America/New_York",
+    "price": 150,
+    "currency": "USD",
+    "paid": false,
+    "status": "SCHEDULED",
+    "patientId": "{{patientId}}",
+    "locationId": "{{locationId}}",
+    "typeId": "{{typeId}}",
+    "notes": "Initial consultation",
+    "meetingUrl": ""
+  }
+}

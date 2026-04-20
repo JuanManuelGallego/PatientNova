@@ -1,0 +1,20 @@
+meta {
+  name: List Medical Records
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/medical-records
+  body: none
+  auth: none
+}
+
+query {
+  page: 1
+  pageSize: 20
+  orderBy: createdAt
+  order: desc
+  ~patientId: {{patientId}}
+  ~search: anxiety
+}

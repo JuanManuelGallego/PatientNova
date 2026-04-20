@@ -1,0 +1,27 @@
+meta {
+  name: Create Patient
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/patients
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Maria",
+    "lastName": "García",
+    "whatsappNumber": "+15551234567",
+    "smsNumber": "+15551234567",
+    "email": "maria.garcia@example.com",
+    "notes": "Referred by Dr. Smith. Anxiety and stress management.",
+    "status": "ACTIVE"
+  }
+}

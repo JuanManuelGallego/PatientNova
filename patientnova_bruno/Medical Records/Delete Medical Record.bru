@@ -1,0 +1,11 @@
+meta {
+  name: Delete Medical Record
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/medical-records/{{medicalRecordId}}
+  body: none
+  auth: none
+}

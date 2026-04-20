@@ -1,0 +1,11 @@
+meta {
+  name: Get Medical Record by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/medical-records/{{medicalRecordId}}
+  body: none
+  auth: none
+}

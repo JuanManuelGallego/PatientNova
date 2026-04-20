@@ -1,0 +1,11 @@
+meta {
+  name: Mark Appointment Paid
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/appointments/{{appointmentId}}/pay
+  body: none
+  auth: none
+}

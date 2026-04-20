@@ -1,0 +1,26 @@
+meta {
+  name: List Appointments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/appointments
+  body: none
+  auth: none
+}
+
+query {
+  page: 1
+  pageSize: 20
+  orderBy: startAt
+  order: asc
+  ~patientId: {{patientId}}
+  ~locationId: {{locationId}}
+  ~typeId: {{typeId}}
+  ~status: SCHEDULED
+  ~dateFrom: 2025-01-01T00:00:00.000Z
+  ~dateTo: 2025-12-31T23:59:59.000Z
+  ~paid: false
+  ~search: Maria
+}

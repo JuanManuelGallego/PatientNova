@@ -1,0 +1,11 @@
+meta {
+  name: Get Reminder by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/reminders/{{reminderId}}
+  body: none
+  auth: none
+}

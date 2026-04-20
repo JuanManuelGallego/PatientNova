@@ -1,0 +1,27 @@
+meta {
+  name: Update Medical Record
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/medical-records/{{medicalRecordId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "objective": "Continued focus on cognitive behavioral techniques.",
+    "evolutionNotes": [
+      {
+        "date": "2025-04-01T10:00:00.000Z",
+        "text": "Patient reports improved sleep. Practicing breathing exercises."
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+meta {
+  name: Create Medical Record
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/medical-records
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "patientId": "{{patientId}}",
+    "name": "Maria García",
+    "nationalId": "123456789",
+    "sex": "FEMALE",
+    "age": "34",
+    "birthDate": "1990-03-15T00:00:00.000Z",
+    "birthPlace": "Mexico City, Mexico",
+    "consultationReason": "Anxiety and chronic stress management",
+    "earlyDevelopment": "No notable issues reported.",
+    "schoolAndWork": "University graduate, works as a teacher.",
+    "lifestyleHabits": "Non-smoker, occasional alcohol, exercises 3x/week.",
+    "traumaticEvents": "Lost a parent at age 12.",
+    "emotionalConsiderations": "Reports difficulty sleeping, persistent worry.",
+    "physicalConsiderations": "No chronic conditions. Mild hypertension.",
+    "mentalHistory": "No prior psychiatric treatment.",
+    "objective": "Reduce anxiety symptoms and improve coping strategies.",
+    "familyMembers": [
+      {
+        "name": "Carlos García",
+        "sex": "MALE",
+        "age": "65",
+        "relationship": "PARENT",
+        "relation": "Father"
+      }
+    ],
+    "evolutionNotes": [
+      {
+        "date": "2025-03-01T10:00:00.000Z",
+        "text": "First session. Patient expressed openness to therapy."
+      }
+    ]
+  }
+}

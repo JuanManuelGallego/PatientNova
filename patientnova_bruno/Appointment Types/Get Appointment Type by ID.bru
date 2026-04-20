@@ -1,0 +1,11 @@
+meta {
+  name: Get Appointment Type by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/appointment-types/{{typeId}}
+  body: none
+  auth: none
+}
