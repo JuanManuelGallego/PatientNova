@@ -5,6 +5,7 @@ import { useCreateLocation } from "@/src/api/useCreateLocation";
 import { useUpdateLocation } from "@/src/api/useUpdateLocation";
 import { AppointmentLocation } from "@/src/types/Appointment";
 import { RequiredField } from "@/src/components/Info/Required";
+import { LBL_CANCEL, LBL_CREATE_LOCATION, LBL_SAVE, LBL_SAVING, ERR_SAVE } from "@/src/constants/ui";
 
 type LocationForm = {
     name: string;
@@ -66,7 +67,7 @@ export function LocationModal({
             onSaved();
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al guardar");
+            setError(err instanceof Error ? err.message : ERR_SAVE);
         } finally {
             setSaving(false);
         }
@@ -151,10 +152,10 @@ export function LocationModal({
 
                     <div className="modal-footer">
                         <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
-                            Cancelar
+                            {LBL_CANCEL}
                         </button>
                         <button type="submit" className="btn-primary btn-hero" disabled={saving || !form.name.trim()}>
-                            {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear ubicación"}
+                            {saving ? LBL_SAVING : isEdit ? LBL_SAVE : LBL_CREATE_LOCATION}
                         </button>
                     </div>
                 </form>

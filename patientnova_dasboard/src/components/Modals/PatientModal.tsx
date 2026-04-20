@@ -7,6 +7,7 @@ import { RequiredField } from "../Info/Required";
 import { DateTimePicker } from "../DateTimePicker";
 import { CountryCodeInput } from "../CountryCodeInput";
 import { CustomSelect } from "../CustomSelect";
+import { LBL_CANCEL, LBL_CREATE_PATIENT, LBL_SAVE_CHANGES, LBL_SAVING, ERR_SAVE } from "@/src/constants/ui";
 
 export function PatientModal({
   onClose,
@@ -145,9 +146,9 @@ export function PatientModal({
           </label>}
         </div>
         <div className="modal-footer">
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancelar</button>
+          <button onClick={onClose} className="btn-secondary" disabled={saving}>{LBL_CANCEL}</button>
           <button onClick={handleSubmit} disabled={saving || !isValid} className="btn-primary btn-hero">
-            {saving ? "Guardando…" : isEdit ? "Guardar Cambios" : "Crear Paciente"}
+            {saving ? LBL_SAVING : isEdit ? LBL_SAVE_CHANGES : LBL_CREATE_PATIENT}
           </button>
         </div>
       </div>

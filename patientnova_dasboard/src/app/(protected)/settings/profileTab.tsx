@@ -6,6 +6,7 @@ import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import Image from "next/image";
 import { useState, useRef } from "react";
 import { useAuthContext } from "../../AuthContext";
+import { ERR_SAVE, ERR_GENERIC, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
 
 export function ProfileTab() {
     const { user, updateUser } = useAuthContext();
@@ -32,7 +33,7 @@ export function ProfileTab() {
             setAvatarPreview(await resizeToBase64(file, 256));
             setError(null);
         } catch {
-            setError("No se pudo procesar la imagen");
+            setError(ERR_GENERIC);
         }
         e.target.value = "";
     }
@@ -56,7 +57,7 @@ export function ProfileTab() {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3500);
         } catch {
-            setError(apiError ?? "Error al guardar");
+            setError(apiError ?? ERR_SAVE);
         }
     }
 
@@ -167,7 +168,7 @@ export function ProfileTab() {
                         {success && <SuccessBanner message="Cambios guardados correctamente" />}
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
                             <button type="submit" className="btn-primary" disabled={saving}>
-                                {saving ? "Guardando…" : "Guardar cambios"}
+                                {saving ? LBL_SAVING : LBL_SAVE}
                             </button>
                         </div>
                     </form>

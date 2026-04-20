@@ -1,0 +1,105 @@
+/* ================================================================
+   Page Layout
+   ================================================================ */
+.page-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--c-page-bg);
+}
+
+.page-main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 36px 40px;
+  max-width: calc(100% - var(--sidebar-w));
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 36px;
+}
+
+.page-header__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.page-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--c-gray-900);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--c-gray-400);
+}
+
+/* ================================================================
+   Sidebar
+   ================================================================ */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--c-brand);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: var(--z-sidebar);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--r-lg);
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 600;
+  border-left: 3px solid var(--c-brand-nav);
+}
+
+/* ================================================================
+   Utilities
+   ================================================================ */
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mono {
+  font-family: monospace;
+}
+
+.mono-sm {
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.text-muted {
+  font-size: 13px;
+  color: var(--c-gray-400);
+}

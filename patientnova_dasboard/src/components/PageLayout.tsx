@@ -1,5 +1,3 @@
-"use client";
-
 import Sidebar from "@/src/components/Sidebar";
 
 /** Wraps the standard page-shell (sidebar + main content area). */

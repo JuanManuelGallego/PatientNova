@@ -28,9 +28,7 @@ function LoginForm() {
         try {
             await login(email, password);
             router.push(redirectTo);
-        } catch {
-            // error is already set by AuthContext
-        }
+        } catch {}
     }
 
     if (initializing) return null;

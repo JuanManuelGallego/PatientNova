@@ -20,6 +20,7 @@ import { MedicalRecordCard } from "@/src/components/MedicalRecordCard";
 import { useFetchMedicalRecord } from "@/src/api/useFetchMedicalRecord";
 import { useCreateMedicalRecord } from "@/src/api/useCreateMedicalRecord";
 import { useUpdateMedicalRecord } from "@/src/api/useUpdateMedicalRecord";
+import { LBL_SAVED, LBL_SAVE_ERROR, LBL_LOADING } from "@/src/constants/ui";
 
 const AUTO_SAVE_DEBOUNCE_MS = 1500;
 
@@ -127,7 +128,7 @@ function MedicalRecordsPageContent() {
             {loading ? (
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
                 <LoadingSpinner />
-                <span>Cargando pacientes...</span>
+                <span>{LBL_LOADING}</span>
               </div>
             ) : (
               <CustomSelect
@@ -210,8 +211,8 @@ function MedicalRecordsPageContent() {
         pointerEvents: "none",
         transition: "opacity 0.3s ease",
       }}>
-        {saveStatus === "saved" && <>✅ Guardado</>}
-        {saveStatus === "error" && <>❌ Error al guardar</>}
+        {saveStatus === "saved" && <>{LBL_SAVED}</>}
+        {saveStatus === "error" && <>{LBL_SAVE_ERROR}</>}
       </div>
     </PageLayout>
   );

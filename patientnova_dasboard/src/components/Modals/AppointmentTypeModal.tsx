@@ -5,6 +5,7 @@ import { useCreateAppointmentType } from "@/src/api/useCreateAppointmentType";
 import { useUpdateAppointmentType } from "@/src/api/useUpdateAppointmentType";
 import { AppointmentType } from "@/src/types/Appointment";
 import { RequiredField } from "@/src/components/Info/Required";
+import { LBL_CANCEL, LBL_CREATE_APPT_TYPE, LBL_SAVE, LBL_SAVING, ERR_SAVE } from "@/src/constants/ui";
 
 type AppointmentTypeForm = {
     name: string;
@@ -66,7 +67,7 @@ export function AppointmentTypeModal({
             onSaved();
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al guardar");
+            setError(err instanceof Error ? err.message : ERR_SAVE);
         } finally {
             setSaving(false);
         }
@@ -156,10 +157,10 @@ export function AppointmentTypeModal({
 
                     <div className="modal-footer">
                         <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
-                            Cancelar
+                            {LBL_CANCEL}
                         </button>
                         <button type="submit" className="btn-primary btn-hero" disabled={saving || !form.name.trim()}>
-                            {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear tipo"}
+                            {saving ? LBL_SAVING : isEdit ? LBL_SAVE : LBL_CREATE_APPT_TYPE}
                         </button>
                     </div>
                 </form>

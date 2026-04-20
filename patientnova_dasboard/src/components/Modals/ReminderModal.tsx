@@ -13,6 +13,7 @@ import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
 import { User } from "@/src/types/User";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
+import { ERR_MSG_EMPTY, LBL_NO_PATIENTS } from "@/src/constants/ui";
 
 export function ReminderModal({
     onClose, onSaved, reminder,
@@ -54,14 +55,14 @@ export function ReminderModal({
     function validateForm() {
         if (!selectedPatient) { setError("Selecciona un paciente"); return false; }
         if (!form.channel) { setError("Selecciona un canal de notificación"); return false; }
-        if (form.channel === Channel.SMS && !form.message.trim()) { setError("El mensaje no puede estar vacío"); return false; }
+        if (form.channel === Channel.SMS && !form.message.trim()) { setError(ERR_MSG_EMPTY); return false; }
 
         if (form.channel === Channel.WHATSAPP) {
             if (!selectedPatient.whatsappNumber) { setError("El paciente no tiene número de WhatsApp"); return false; }
             if (!validatePhoneNumber(selectedPatient.whatsappNumber)) { setError("El número de WhatsApp del paciente no es válido"); return false; }
         }
         if (form.channel === Channel.SMS) {
-            if (!form.message.trim()) { setError("El mensaje no puede estar vacío"); return false; }
+            if (!form.message.trim()) { setError(ERR_MSG_EMPTY); return false; }
             if (!selectedPatient.smsNumber) { setError("El paciente no tiene número de SMS"); return false; }
             if (!validatePhoneNumber(selectedPatient.smsNumber)) { setError("El número de SMS del paciente no es válido"); return false; }
         }
@@ -187,7 +188,7 @@ function SendModeAndPatientStep({ sendMode, setMode, form, setForm, patients }: 
                 <CustomSelect
                     value={form.patientId}
                     placeholder="Seleccionar paciente…"
-                    options={patients.length > 0 ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` })) : [ { value: "", label: "No hay pacientes registrados" } ]}
+                    options={patients.length > 0 ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` })) : [ { value: "", label: LBL_NO_PATIENTS } ]}
                     onChange={(v) => setForm(f => ({ ...f, patientId: v }))}
                 />
             </label>

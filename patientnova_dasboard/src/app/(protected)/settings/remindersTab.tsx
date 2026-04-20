@@ -5,6 +5,7 @@ import { useUpdateProfile } from "@/src/api/useUpdateProfile";
 import { User } from "@/src/types/User";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
+import { ERR_SAVE, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
 
 export function RemindersTab() {
     const { user, updateUser } = useAuthContext();
@@ -41,7 +42,7 @@ export function RemindersTab() {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3500);
         } catch {
-            setError(apiError ?? "Error al guardar");
+            setError(apiError ?? ERR_SAVE);
         }
     }
 
@@ -96,7 +97,7 @@ export function RemindersTab() {
                         {success && <SuccessBanner message="Preferencias de recordatorios actualizadas." />}
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
                             <button type="submit" className="btn-primary" disabled={saving || ((reminderChannel === Channel.SMS && !validatePhoneNumber(phoneNumber)) || (reminderChannel === Channel.WHATSAPP && !validatePhoneNumber(whatsappNumber)))}>
-                                {saving ? "Guardando…" : "Guardar cambios"}
+                                {saving ? LBL_SAVING : LBL_SAVE}
                             </button>
                         </div>
                     </form>
