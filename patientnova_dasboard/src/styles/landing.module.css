@@ -346,3 +346,21 @@
         padding: 64px 0;
     }
 }
+
+@media (max-width: 480px) {
+    .landingHeroTitle {
+        font-size: 28px;
+    }
+
+    .landingHero {
+        padding: 48px 0 56px;
+    }
+
+    .landingNavInner {
+        padding: 0 16px;
+    }
+
+    .landingSectionTitle {
+        font-size: 22px;
+    }
+}

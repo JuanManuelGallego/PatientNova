@@ -261,3 +261,53 @@
     color: var(--c-gray-400);
     margin-top: 2px;
 }
+
+/* ================================================================
+   Responsive
+   ================================================================ */
+@media (max-width: 640px) {
+    .dashWelcome {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .dashWelcomeActions {
+        width: 100%;
+    }
+
+    .dashWelcomeActions :global(.btn) {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .dashGrid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .dashNavGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .dashNavCard {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .dashCardHeader {
+        padding: 16px 16px 0;
+    }
+
+    .dashCardBody {
+        padding: 12px 16px 16px;
+    }
+}
+
+@media (max-width: 400px) {
+    .dashNavGrid {
+        grid-template-columns: 1fr;
+    }
+}

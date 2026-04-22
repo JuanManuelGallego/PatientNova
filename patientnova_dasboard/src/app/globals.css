@@ -1448,6 +1448,12 @@ tr:hover td {
   min-width: 80px;
 }
 
+@media (max-width: 640px) {
+  .detail-row__label {
+    min-width: 60px;
+  }
+}
+
 .detail-row__value {
   font-size: 13px;
   color: var(--c-gray-900);
