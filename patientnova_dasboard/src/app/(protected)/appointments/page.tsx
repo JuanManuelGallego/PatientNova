@@ -103,13 +103,13 @@ function AppointmentsPageContent() {
           {dateFilter && <button onClick={() => setDateFilter("")} className="btn-secondary btn-secondary--sm">✕ Fecha</button>}
           <div className="filter-chips filter-chips--wrap">
             {([
-              { k: "ALL", l: "Todas" },
-              { k: "Upcoming", l: "Próximas" },
-              { k: AppointmentStatus.SCHEDULED, l: "Programadas" },
-              { k: AppointmentStatus.CONFIRMED, l: "Confirmadas" },
-              { k: AppointmentStatus.COMPLETED, l: "Completadas" },
-              { k: AppointmentStatus.CANCELLED, l: "Canceladas" },
-              { k: AppointmentStatus.NO_SHOW, l: "No asistió" },
+              { k: "ALL", l: `Todas (${stats?.total ?? 0})` },
+              { k: "Upcoming", l: `Próximas (${(stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0) + (stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0)})` },
+              { k: AppointmentStatus.SCHEDULED, l: `Programadas (${stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0})` },
+              { k: AppointmentStatus.CONFIRMED, l: `Confirmadas (${stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0})` },
+              { k: AppointmentStatus.COMPLETED, l: `Completadas (${stats?.byStatus[ AppointmentStatus.COMPLETED ] ?? 0})` },
+              { k: AppointmentStatus.CANCELLED, l: `Canceladas (${stats?.byStatus[ AppointmentStatus.CANCELLED ] ?? 0})` },
+              { k: AppointmentStatus.NO_SHOW, l: `No asistió (${stats?.byStatus[ AppointmentStatus.NO_SHOW ] ?? 0})` },
             ] as const).map(({ k, l }) => (
               <button key={k} onClick={() => setFilterStatus(k)} className={`filter-chip ${filterStatus === k ? "filter-chip--active" : ""}`}>{l}</button>
             ))}

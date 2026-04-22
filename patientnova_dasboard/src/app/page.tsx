@@ -137,7 +137,7 @@ export default function LandingPage() {
           <h2 className="landing-cta-banner__title">¿Listo para optimizar tu práctica clínica?</h2>
           <p className="landing-cta-banner__subtitle">Únete a los profesionales de la salud que confían en Patient Nova.</p>
           <p className="landing-cta-banner__subtitle">
-            Contacta <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? ""}`} style={{ color: "white" }}> {process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "soporte"}</a> para iniciar tu registro.
+            Contacta <a href={`mailto:juan.gallego.developer@gmail.com`} style={{ color: "white" }}> soporte</a> para iniciar tu registro.
           </p>
         </div>
       </section>

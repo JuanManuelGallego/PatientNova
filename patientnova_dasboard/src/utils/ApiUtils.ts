@@ -1,9 +1,8 @@
-import { AppointmentStatus, FetchAppointmentsFilters } from "../types/Appointment";
+import { FetchAppointmentsFilters } from "../types/Appointment";
 import { PatientStatus, FetchPatientsFilters } from "../types/Patient";
 import { FetchRemindersFilters } from "../types/Reminder";
 
 export const DEFAULT_PATIENT_STATUS = [ PatientStatus.ACTIVE, PatientStatus.INACTIVE ];
-export const DEFAULT_APPOINTMENT_STATUS = [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ];
 
 /** Generic query string builder. Arrays become repeated params; empty/null/undefined values are skipped. */
 export const buildQueryString = (params: Record<string, unknown>): string => {
@@ -37,7 +36,7 @@ export const buildPatientQueryString = (filters?: FetchPatientsFilters): string 
 export const buildAppointmentQueryString = (filters?: FetchAppointmentsFilters): string =>
     buildQueryString({
         patientId: filters?.patientId,
-        status: filters?.status ?? DEFAULT_APPOINTMENT_STATUS,
+        status: filters?.status,
         startAt: filters?.startAt,
         dateFrom: filters?.dateFrom,
         dateTo: filters?.dateTo,
