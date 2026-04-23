@@ -22,7 +22,11 @@ function makeValidator<T extends z.ZodTypeAny>(
   }
 
   // Write coerced/defaulted values back onto the request
-  (req as any)[ target ] = result.data;
+  Object.defineProperty(req, target, {
+    value: result.data,
+    writable: true,
+    configurable: true,
+  });
   next();
 }
 
