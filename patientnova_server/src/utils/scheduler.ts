@@ -404,7 +404,7 @@ export async function dailyReminderWorker(): Promise<void> {
 export function initializeSchedulers(): void {
   logger.info("Initializing reminder scheduler...");
   let sentReminders: TrackedReminder[] = [];
-  schedulerTask = cron.schedule("* * * * *", async () => {
+  schedulerTask = cron.schedule(config.scheduler.schedule, async () => {
     try {
       sentReminders = await reminderWorker(sentReminders);
       await appointmentWorker();

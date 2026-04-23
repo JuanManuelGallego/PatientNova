@@ -7,7 +7,10 @@ import { initializeSchedulers, stopScheduler } from "./utils/scheduler.js";
 async function start() {
   await prisma.$connect();
   logger.info('Database connected');
-  initializeSchedulers();
+
+  if (config.scheduler.enabled) {
+    initializeSchedulers();
+  }
 
   const server = app.listen(config.port, () => {
     logger.info(`Server running on http://localhost:${config.port}`);

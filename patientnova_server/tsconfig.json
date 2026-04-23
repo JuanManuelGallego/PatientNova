@@ -36,7 +36,6 @@
     "verbatimModuleSyntax": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-
     // — Other —
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,

@@ -55,6 +55,11 @@ export const config = {
     currency: process.env.DEFAULT_CURRENCY ?? 'COP',
   },
 
+  scheduler: {
+    enabled: process.env.ENABLE_SCHEDULER === 'true',
+    schedule: process.env.CRON_SCHEDULE ?? '* * * * *',
+  },
+
 } as const;
 
 export const APPT_SID_MAP: Record<number, string> = {
