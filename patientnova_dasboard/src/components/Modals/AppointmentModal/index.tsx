@@ -123,13 +123,13 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
                     }
                 } else if (form.reminderType !== ReminderType.NONE) {
                     const reminder = await createReminder(buildReminderPayload());
-                    form.reminderId = reminder.id;
+                    setForm(f => ({ ...f, reminderId: reminder.id }));
                 }
                 await updateAppointment(appt!.id, buildAppointmentPayload());
             } else {
                 if (form.reminderType !== ReminderType.NONE) {
                     const reminder = await createReminder(buildReminderPayload());
-                    form.reminderId = reminder.id;
+                    setForm(f => ({ ...f, reminderId: reminder.id }));
                 }
                 await createAppointment(buildAppointmentPayload());
             }

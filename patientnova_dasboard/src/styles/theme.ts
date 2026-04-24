@@ -1,3 +1,5 @@
+import { CSSProperties } from "react";
+
 /**
  * Shared Ant Design ConfigProvider theme.
  * Hex values here intentionally mirror the CSS variables in globals.css
@@ -32,4 +34,11 @@ export const antThemeConfig = {
             cellHoverBg: "#EFF6FF",
         },
     },
+};
+
+
+export const sectionGridStyle: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: 18,
 };

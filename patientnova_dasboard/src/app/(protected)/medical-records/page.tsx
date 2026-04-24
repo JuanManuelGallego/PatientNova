@@ -21,6 +21,7 @@ import { useFetchMedicalRecord } from "@/src/api/useFetchMedicalRecord";
 import { useCreateMedicalRecord } from "@/src/api/useCreateMedicalRecord";
 import { useUpdateMedicalRecord } from "@/src/api/useUpdateMedicalRecord";
 import { LBL_SAVED, LBL_SAVE_ERROR, LBL_LOADING } from "@/src/constants/ui";
+import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecordPDF";
 
 const AUTO_SAVE_DEBOUNCE_MS = 1500;
 
@@ -65,6 +66,7 @@ function MedicalRecordsPageContent() {
 
   useEffect(() => {
     if (medicalRecord) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         name: medicalRecord.name || "",
         nationalId: medicalRecord.nationalId || "",
@@ -119,7 +121,13 @@ function MedicalRecordsPageContent() {
 
   return (
     <PageLayout>
-      <PageHeader title="Historias clínicas" subtitle={todayString()} />
+      <PageHeader title="Historias clínicas" subtitle={todayString()} actions={<button
+        type="button"
+        className="btn-primary"
+        onClick={() => downloadMedicalRecordPDF(form)}
+      >
+        Descargar PDF
+      </button>} />
       {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
       <div style={{ display: "grid", gap: 24 }}>
         <MedicalRecordCard title="Seleccionar Paciente" icon="👤">

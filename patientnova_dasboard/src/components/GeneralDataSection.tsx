@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import { sectionGridStyle } from "../styles/theme";
 import { FormValues, SEX_CFG } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
 import { CustomSelect } from "./CustomSelect";
@@ -6,12 +6,6 @@ import { CustomSelect } from "./CustomSelect";
 type GeneralDataSectionProps = {
   form: FormValues;
   onChange: (key: keyof FormValues, value: string) => void;
-};
-
-const sectionGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
-  gap: 18,
 };
 
 export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) {

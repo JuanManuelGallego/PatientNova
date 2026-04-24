@@ -5,10 +5,9 @@ import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import { useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
-import { DateTimePicker } from "../DateTimePicker";
 import { CountryCodeInput } from "../CountryCodeInput";
 import { CustomSelect } from "../CustomSelect";
-import { LBL_CANCEL, LBL_CREATE_PATIENT, LBL_SAVE_CHANGES, LBL_SAVING, ERR_SAVE } from "@/src/constants/ui";
+import { LBL_CANCEL, LBL_CREATE_PATIENT, LBL_SAVE_CHANGES, LBL_SAVING } from "@/src/constants/ui";
 
 export function PatientModal({
   onClose,

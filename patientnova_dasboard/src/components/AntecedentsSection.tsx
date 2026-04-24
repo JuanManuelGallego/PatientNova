@@ -1,15 +1,9 @@
-import { CSSProperties } from "react";
 import { FormValues } from "@/src/types/MedicalRecord";
+import { sectionGridStyle } from "../styles/theme";
 
 type AntecedentsSectionProps = {
     form: FormValues;
     onChange: (key: keyof FormValues, value: string) => void;
-};
-
-const sectionGridStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: 18,
 };
 
 export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) {

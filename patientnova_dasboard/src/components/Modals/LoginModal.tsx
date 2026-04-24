@@ -1,5 +1,4 @@
 import { useAuthContext } from "@/src/app/AuthContext";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";

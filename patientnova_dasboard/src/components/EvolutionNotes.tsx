@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import { sectionGridStyle } from "../styles/theme";
 import { createEmptyNote, EvolutionNote } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
 import { fmtDate } from "../utils/TimeUtils";
@@ -6,12 +6,6 @@ import { fmtDate } from "../utils/TimeUtils";
 type EvolutionNotesProps = {
   evolutionNotes: EvolutionNote[];
   onChange: (evolutionNote: EvolutionNote[]) => void
-};
-
-const sectionGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
-  gap: 18,
 };
 
 export function EvolutionNotes({
