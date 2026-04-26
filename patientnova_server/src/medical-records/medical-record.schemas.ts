@@ -33,6 +33,7 @@ const medicalRecordBaseSchema = z.object({
   physicalConsiderations: z.string().optional(),
   mentalHistory: z.string().optional(),
   objective: z.string().optional(),
+  familyObservations: z.string().optional(),
 
   // Relations
   familyMembers: z.array(familyMemberSchema).optional(),

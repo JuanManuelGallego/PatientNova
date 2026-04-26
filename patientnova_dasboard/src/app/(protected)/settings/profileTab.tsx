@@ -287,7 +287,7 @@ export function ProfileTab() {
                             onRemove={() => setLogo(null)}
                         />
                         <LogoSlot
-                            label="Logo alternativo"
+                            label="Logo alternativo (icono)"
                             hint="Úsalo sobre fondos oscuros o de color."
                             value={altLogo}
                             onSelect={() => altLogoRef.current?.click()}

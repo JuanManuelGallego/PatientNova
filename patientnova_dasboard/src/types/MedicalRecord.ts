@@ -18,6 +18,7 @@ export type MedicalRecord = {
     physicalConsiderations: string;
     mentalHistory: string;
     objective: string;
+    familyObservations: string;
     familyMembers?: FamilyMember[];
     evolutionNotes?: EvolutionNote[];
 }
@@ -38,6 +39,7 @@ export type FormValues = {
     physicalConsiderations: string;
     mentalHistory: string;
     objective: string;
+    familyObservations: string;
     familyMembers?: FamilyMember[];
     evolutionNotes?: EvolutionNote[];
 };

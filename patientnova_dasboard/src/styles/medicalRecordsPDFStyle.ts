@@ -232,7 +232,7 @@ export const S = StyleSheet.create({
 
     // Family member card
     memberCard: {
-        padding: 10,
+        //padding: 10,
         marginBottom: 8,
     },
     memberCardLast: {
@@ -241,16 +241,15 @@ export const S = StyleSheet.create({
     memberName: {
         fontSize: 9,
         fontFamily: "Helvetica-Bold",
-        color: C.brand,                    // --c-brand
+        color: C.gray700,                    // --c-gray900
         marginBottom: 6,
     },
 
     // Evolution note
     noteCard: {
-        paddingTop: 6,
+        //paddingTop: 6,
         paddingBottom: 6,
         paddingRight: 8,
-        marginBottom: 10,
     },
     noteCardLast: {
         marginBottom: 0,

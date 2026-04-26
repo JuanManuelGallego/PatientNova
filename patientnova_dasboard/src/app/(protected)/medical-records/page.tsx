@@ -42,6 +42,7 @@ const createEmptyForm = (): FormValues => ({
   physicalConsiderations: "",
   mentalHistory: "",
   objective: "",
+  familyObservations: "",
   familyMembers: [],
   evolutionNotes: [],
 });
@@ -85,6 +86,7 @@ function MedicalRecordsPageContent() {
         physicalConsiderations: medicalRecord.physicalConsiderations || "",
         mentalHistory: medicalRecord.mentalHistory || "",
         objective: medicalRecord.objective || "",
+        familyObservations: medicalRecord.familyObservations || "",
         familyMembers: medicalRecord.familyMembers?.length ? medicalRecord.familyMembers : [],
         evolutionNotes: medicalRecord.evolutionNotes?.length ? medicalRecord.evolutionNotes : [],
       });
@@ -190,6 +192,15 @@ function MedicalRecordsPageContent() {
                 familyMembers={form.familyMembers || []}
                 onChange={(familyMembers) => setForm((current) => ({ ...current, familyMembers }))}
               />
+              <label className="form-label" style={{ gridColumn: "1 / -1", paddingTop: 16 }}>
+                Observaciones
+                <textarea
+                  className="form-input form-input--textarea"
+                  value={form.familyObservations}
+                  onChange={(e) => updateForm("familyObservations", e.target.value)}
+                  placeholder="Observaciones generales sobre la composición familiar"
+                />
+              </label>
             </MedicalRecordCard>
             <MedicalRecordCard title="Antecedentes" icon="📚">
               <AntecedentsSection form={form} onChange={updateForm} />

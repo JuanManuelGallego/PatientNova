@@ -288,6 +288,7 @@ model MedicalRecord {
   physicalConsiderations    String? @db.Text
   mentalHistory             String? @db.Text
   objective                 String? @db.Text
+  familyObservations        String? @db.Text
 
   // Relations
   familyMembers   FamilyMember[]

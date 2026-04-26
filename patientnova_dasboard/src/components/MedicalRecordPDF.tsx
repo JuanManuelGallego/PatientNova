@@ -71,10 +71,7 @@ function FamilyMembers(form: FormValues) {
       <View
         key={i}
         wrap={false}
-        style={[
-          S.memberCard,
-          i === (form.familyMembers?.length ?? 0) - 1 ? S.memberCardLast : {},
-        ]}
+        style={S.memberCard}
       >
         <Text style={S.memberName}>
           {val(member.name, `Miembro ${i + 1}`)} — {relationshipLabel(member.relationship)}
@@ -148,7 +145,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
       <PageLayout user={user}>
         <View>
           <View style={S.headerTop}>
-            <Text style={S.headerTitle}>Historia Clinica</Text>
+            <Text style={S.headerTitle}>Historia Clínica</Text>
             <Image src={user?.altLogo} style={S.headerLogo} />
           </View>
           <View style={S.row2}>
@@ -179,12 +176,14 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
           <View style={S.divider} />
           <Field isText label="Motivo de Consulta" value={form.consultationReason || "—"} last />
         </View>
+        <View style={S.divider} />
         <View>
-          <Text style={S.fieldTitle}>Composición Familiar</Text>
+          <Text style={[ S.fieldTitle, { marginTop: -20 } ]}>Composición Familiar</Text>
           {FamilyMembers(form)}
-          <View style={S.divider} />
+          <Field isText label="Observaciones" value={form.familyObservations || "—"} last />
+          <View style={[ S.divider, { marginTop: 20 } ]} />
         </View>
-        <View>
+        <View style={{ marginTop: -20 }}>
           {Antecedents(form)}
         </View>
         <View>
@@ -201,7 +200,7 @@ export async function downloadMedicalRecordPDF(user: User | null, form: FormValu
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), {
     href: url,
-    download: `historia-clinica-${form.nationalId || "paciente"}.pdf`,
+    download: `Historia Clínica — ${form.nationalId || "paciente"}.pdf`,
   });
   a.click();
   URL.revokeObjectURL(url);

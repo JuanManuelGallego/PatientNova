@@ -31,6 +31,7 @@ export const medicalRecordRepository = {
         physicalConsiderations: dto.physicalConsiderations ?? null,
         mentalHistory: dto.mentalHistory ?? null,
         objective: dto.objective ?? null,
+        familyObservations: dto.familyObservations ?? null,
         patientId: dto.patientId,
         ...(dto.familyMembers?.length && {
           familyMembers: {
@@ -167,6 +168,7 @@ export const medicalRecordRepository = {
           ...(dto.physicalConsiderations !== undefined && { physicalConsiderations: dto.physicalConsiderations }),
           ...(dto.mentalHistory !== undefined && { mentalHistory: dto.mentalHistory }),
           ...(dto.objective !== undefined && { objective: dto.objective }),
+          ...(dto.familyObservations !== undefined && { familyObservations: dto.familyObservations }),
         },
         include: {
           familyMembers: true,
