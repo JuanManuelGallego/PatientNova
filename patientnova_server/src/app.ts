@@ -20,8 +20,6 @@ import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares
 import { twilioWebhookRouter } from './twilio/twilio.webhook.routes.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
-import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './utils/swagger.js';
 
 const app: Application = express();
 
@@ -70,7 +68,6 @@ app.use('/auth/login', authWriteLimit);
 
 app.use('/', router);
 app.use('/auth', authRouter);
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Public Twilio webhook — uses urlencoded body (not JSON) and validates Twilio signature internally
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
