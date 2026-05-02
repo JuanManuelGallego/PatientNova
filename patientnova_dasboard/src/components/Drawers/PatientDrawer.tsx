@@ -1,19 +1,14 @@
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { Patient, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
-import { fmtDate, fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import { PatientStatusPill, AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
 import { useFetchLocations } from "@/src/api/useFetchLocations";
 import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
 import { useState } from "react";
 import Link from "next/link";
-
-export enum RelativeTime {
-    UPCOMING = "upcoming",
-    PAST = "past",
-    ALL = "all"
-}
+import { useFetchPatient } from "@/src/api/useFetchPatient";
 
 export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
     patient: Patient;
@@ -21,6 +16,7 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
     onEdit: () => void;
     onDelete: () => void;
 }) {
+    const { patient: patientWithRelations } = useFetchPatient(patient.id);
     const s = PATIENT_STATUS_CONFIG[ patient.status ];
     const { locations } = useFetchLocations()
     const { appointmentTypes } = useFetchAppointmentTypes()
@@ -28,7 +24,7 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
     const [ appointmentView, setAppointmentView ] = useState<RelativeTime>(RelativeTime.UPCOMING);
     const [ reminderView, setReminderView ] = useState<RelativeTime>(RelativeTime.UPCOMING);
 
-    const filteredAppointments = patient.appointments?.filter(apt => {
+    const filteredAppointments = patientWithRelations?.appointments?.filter(apt => {
         const now = new Date();
         const aptDate = new Date(apt.startAt);
         if (appointmentView === RelativeTime.UPCOMING) return aptDate >= now;
@@ -36,7 +32,7 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
         return true;
     }).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()) || [];
 
-    const filteredReminders = patient.reminders?.filter(rem => {
+    const filteredReminders = patientWithRelations?.reminders?.filter(rem => {
         const now = new Date();
         const remDate = new Date(rem.sendAt);
         if (reminderView === RelativeTime.UPCOMING) return remDate >= now;

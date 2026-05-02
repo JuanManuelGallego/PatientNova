@@ -229,6 +229,12 @@ const COMMON_TIMEZONES: { value: string; label: string }[] = [
     { value: "UTC", label: "UTC (UTC+0)" },
 ];
 
+enum RelativeTime {
+    UPCOMING = "upcoming",
+    PAST = "past",
+    ALL = "all"
+}
+
 export {
     fmtDate,
     fmtTime,
@@ -250,6 +256,7 @@ export {
     MONTH_NAMES_ES,
     DAY_NAMES_ES,
     COMMON_TIMEZONES,
+    RelativeTime,
 };
 
 export type { ColombianHoliday };

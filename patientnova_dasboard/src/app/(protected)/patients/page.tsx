@@ -27,7 +27,7 @@ const PAGE_SIZE = 10;
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
 
-  const [ filterStatus, setFilterStatus ] = useQueryState("filterStatus", parseAsStringEnum<PatientStatus | "ALL">([ "ALL", PatientStatus.ACTIVE, PatientStatus.INACTIVE, PatientStatus.ARCHIVED ]).withDefault("ALL"));
+  const [ filterStatus, setFilterStatus ] = useQueryState("filterStatus", parseAsStringEnum<PatientStatus | "All">([ "All", PatientStatus.ACTIVE, PatientStatus.INACTIVE, PatientStatus.ARCHIVED ]).withDefault("All"));
   const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
   const [ search, setSearch ] = useQueryState("search", parseAsString.withDefault(""));
   const debouncedSearch = useDebounceState(search, 250);
@@ -39,7 +39,7 @@ function PatientsPageContent() {
 
   const filters = useMemo<FetchPatientsFilters>(() => ({
     search: debouncedSearch,
-    status: filterStatus !== "ALL" ? filterStatus : undefined,
+    status: filterStatus !== "All" ? filterStatus : undefined,
     page,
     pageSize: PAGE_SIZE,
     orderBy: 'name',
@@ -73,7 +73,7 @@ function PatientsPageContent() {
         >
           <div className="filter-chips">
             {([
-              { key: "ALL", label: "Todos" },
+              { key: "All", label: "Todos" },
               { key: PatientStatus.ACTIVE, label: "Activos" },
               { key: PatientStatus.INACTIVE, label: "Inactivos" },
             ] as const).map(({ key, label }) => (
@@ -119,8 +119,8 @@ function PatientsPageContent() {
           emptyState={
             <EmptyState
               icon="🔍"
-              title={search || filterStatus !== "ALL" ? "Sin resultados" : "No hay pacientes aún"}
-              sub={search || filterStatus !== "ALL"
+              title={search || filterStatus !== "All" ? "Sin resultados" : "No hay pacientes aún"}
+              sub={search || filterStatus !== "All"
                 ? "Prueba ajustando los filtros de búsqueda."
                 : "Haz clic en \"Nuevo Paciente\" para agregar el primero."}
             />

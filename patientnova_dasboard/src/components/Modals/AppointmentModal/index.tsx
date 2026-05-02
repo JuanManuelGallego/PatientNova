@@ -8,7 +8,7 @@ import { useFetchAppointments } from "@/src/api/useFetchAppointments";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/useFetchLocations";
-import { Appointment, AppointmentForm, AppointmentStatus, AppointmentDuration, AppointmentPaidStatus } from "@/src/types/Appointment";
+import { Appointment, AppointmentForm, AppointmentStatus, AppointmentDuration, AppointmentPaidStatus, DEFAULT_APPT_STATUS } from "@/src/types/Appointment";
 import { ReminderType, Reminder, ReminderMode, ReminderStatus, Channel } from "@/src/types/Reminder";
 import { getUserName } from "@/src/utils/AvatarHelper";
 import { fmtDate, fmtTime, getDuration, getRemindersendAt, getAppointmentEndTime, getTomorrowSixAm, getReminderType, getDate } from "@/src/utils/TimeUtils";
@@ -31,7 +31,7 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     const { user } = useAuthContext();
     const { ref: trapRef, handleKeyDown: trapKeyDown } = useFocusTrap<HTMLDivElement>();
     const { patients } = useFetchPatients();
-    const { appointments } = useFetchAppointments();
+    const { appointments } = useFetchAppointments({dateFrom: getTomorrowSixAm(), status: DEFAULT_APPT_STATUS});
     const { createAppointment } = useCreateAppointment();
     const { updateAppointment } = useUpdateAppointment();
     const { createReminder } = useCreateReminder();
@@ -163,6 +163,8 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
                         form={form} setForm={setForm} patients={patients}
                         isEdit={isEdit} selectedPatient={selectedPatient}
                         appointmentTypes={appointmentTypes} bookedSlots={bookedSlots}
+                        onError={(error) => setError(error)}
+                        clearError={() => setError(null)}
                     />
                 )}
                 {step === 2 && (

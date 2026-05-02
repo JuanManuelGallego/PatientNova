@@ -1,4 +1,4 @@
-import { ConfigProvider, DatePicker, notification } from "antd";
+import { ConfigProvider, DatePicker } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import 'dayjs/locale/es';
 import esEs from 'antd/locale/es_ES';
@@ -9,10 +9,12 @@ import { antThemeConfig } from "@/src/styles/theme";
 export function AppointmentDateTimePicker({
     date,
     onChanged,
+    onError,
     bookedSlots = [],
 }: {
     date: string | undefined;
     onChanged: (date: string) => void;
+    onError: (error: string) => void;
     bookedSlots?: string[];
 }) {
     const bookedMs = bookedSlots.map(s => new Date(s).getTime());
@@ -21,7 +23,7 @@ export function AppointmentDateTimePicker({
         if (!selectedDate) return;
 
         if (bookedMs.includes(selectedDate.valueOf())) {
-            notification.warning({ message: "Este horario ya está reservado" });
+            onError("Este horario ya está reservado");
             return;
         }
 

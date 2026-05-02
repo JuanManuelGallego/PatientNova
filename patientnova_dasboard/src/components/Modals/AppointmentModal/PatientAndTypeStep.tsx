@@ -17,9 +17,11 @@ interface Props {
     selectedPatient: Patient | undefined;
     appointmentTypes: AppointmentType[];
     bookedSlots: string[];
+    onError: (error: string) => void;
+    clearError: () => void;
 }
 
-export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes, bookedSlots }: Props) {
+export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes, bookedSlots, onError, clearError }: Props) {
     return (
         <div className="form-stack">
             {!isEdit && (
@@ -52,7 +54,8 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
                 <RequiredField label="Fecha y Hora" />
                 <AppointmentDateTimePicker
                     date={form.startAt}
-                    onChanged={(date) => setForm(f => ({ ...f, startAt: date }))}
+                    onChanged={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
+                    onError={onError}
                     bookedSlots={bookedSlots}
                 />
             </label>

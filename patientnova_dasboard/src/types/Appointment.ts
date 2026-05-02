@@ -74,6 +74,8 @@ export enum AppointmentStatus {
     NO_SHOW = "NO_SHOW"
 }
 
+export const DEFAULT_APPT_STATUS = [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ];
+
 export const APPT_STATUS_CFG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
     [ AppointmentStatus.SCHEDULED ]: { label: "Programada", color: "#2563EB", bg: "#EFF6FF", dot: "#3B82F6", icon: "🗓️" },
     [ AppointmentStatus.CONFIRMED ]: { label: "Confirmada", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "✅" },

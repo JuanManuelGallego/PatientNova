@@ -12,7 +12,7 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus, DEFAULT_APPT_STATUS, FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
@@ -27,12 +27,15 @@ import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 
 const PAGE_SIZE = 10;
 
+type FilterStatus = AppointmentStatus | "All" | "Upcoming";
+
+
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
   const { updateAppointment } = useUpdateAppointment();
 
-  const [ filterStatus, setFilterStatus ] = useQueryState("filterStatus", parseAsStringEnum<AppointmentStatus | "ALL" | "Upcoming">([ "ALL", "Upcoming", AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW ]).withDefault("Upcoming"));
-  const [ filterpaid, setFilterpaid ] = useQueryState("filterpaid", parseAsStringEnum<"ALL" | "true" | "false">([ "ALL", "true", "false" ]).withDefault("ALL"));
+  const [ filterStatus, setFilterStatus ] = useQueryState("filterStatus", parseAsStringEnum<FilterStatus>([ "All", "Upcoming", ...Object.values(AppointmentStatus) ]).withDefault("Upcoming"));
+  const [ filterpaid, setFilterpaid ] = useQueryState("filterpaid", parseAsStringEnum<"All" | "true" | "false">([ "All", "true", "false" ]).withDefault("All"));
   const [ dateFilter, setDateFilter ] = useQueryState("dateFilter", parseAsString.withDefault(""));
   const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
   const [ search, setSearch ] = useQueryState("search", parseAsString.withDefault(""));
@@ -46,12 +49,12 @@ function AppointmentsPageContent() {
 
   const filters = useMemo<FetchAppointmentsFilters>(() => ({
     patientId: undefined,
-    status: filterStatus === "Upcoming" ? [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] : filterStatus !== "ALL" ? filterStatus : undefined,
+    status: filterStatus === "Upcoming" ? DEFAULT_APPT_STATUS : filterStatus !== "All" ? filterStatus : undefined,
     startAt: undefined,
     dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
     dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
     search: debouncedSearch.trim() || undefined,
-    paid: filterpaid !== "ALL" ? filterpaid === "true" : undefined,
+    paid: filterpaid !== "All" ? filterpaid === "true" : undefined,
     page: page,
     pageSize: PAGE_SIZE,
     orderBy: 'startAt',
@@ -103,7 +106,7 @@ function AppointmentsPageContent() {
           {dateFilter && <button onClick={() => setDateFilter("")} className="btn-secondary btn-secondary--sm">✕ Fecha</button>}
           <div className="filter-chips filter-chips--wrap">
             {([
-              { k: "ALL", l: `Todas (${stats?.total ?? 0})` },
+              { k: "All", l: `Todas (${stats?.total ?? 0})` },
               { k: "Upcoming", l: `Próximas (${(stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0) + (stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0)})` },
               { k: AppointmentStatus.SCHEDULED, l: `Programadas (${stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0})` },
               { k: AppointmentStatus.CONFIRMED, l: `Confirmadas (${stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0})` },
@@ -118,11 +121,11 @@ function AppointmentsPageContent() {
             value={filterpaid}
             className="form-input--auto"
             options={[
-              { value: "ALL", label: "💳 Todas" },
+              { value: "All", label: "💳 Todas" },
               { value: "true", label: "💳 Pagadas" },
               { value: "false", label: "⏳ Sin pagar" },
             ]}
-            onChange={(v) => setFilterpaid(v as "true" | "false" | "ALL")}
+            onChange={(v) => setFilterpaid(v as "true" | "false" | "All")}
           />
         </FilterBar>
         <DataTable
