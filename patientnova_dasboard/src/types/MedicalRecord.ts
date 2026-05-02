@@ -1,6 +1,6 @@
 import { today } from "../utils/TimeUtils";
 
-export type MedicalRecord = {
+export interface MedicalRecord {
     id: string;
     patientId: string;
     name: string;
@@ -24,7 +24,7 @@ export type MedicalRecord = {
     documents: MedicalDocument[];
 }
 
-export type FormValues = {
+export interface FormValues {
     name: string;
     nationalId: string;
     sex: Sex | "";
@@ -45,6 +45,15 @@ export type FormValues = {
     evolutionNotes?: EvolutionNote[];
     documents: MedicalDocument[];
 };
+
+export interface FetchMedicalRecordFilters {
+    patientId?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+    orderBy?: 'createdAt' | 'updatedAt';
+    order?: 'asc' | 'desc';
+}
 
 export type FamilyMember = {
     name: string;
@@ -95,6 +104,28 @@ export const RELATIONSHIP_CFG: Record<Relationship, { label: string }> = {
     [ Relationship.GRANDMOTHER ]: { label: "Abuela" },
     [ Relationship.OTHER ]: { label: "Otro" },
 };
+
+export const createEmptyForm = (): FormValues => ({
+    name: "",
+    nationalId: "",
+    sex: "",
+    age: "",
+    birthDate: "",
+    birthPlace: "",
+    consultationReason: "",
+    earlyDevelopment: "",
+    schoolAndWork: "",
+    lifestyleHabits: "",
+    traumaticEvents: "",
+    emotionalConsiderations: "",
+    physicalConsiderations: "",
+    mentalHistory: "",
+    objective: "",
+    familyObservations: "",
+    familyMembers: [],
+    evolutionNotes: [],
+    documents: [],
+});
 
 export const createEmptyMember = (): FamilyMember => ({
     name: "",

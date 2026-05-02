@@ -10,11 +10,11 @@ get {
   auth: none
 }
 
-query {
-  page: 1
-  pageSize: 20
-  orderBy: createdAt
-  order: desc
+params:query {
+  ~order: desc
+  ~page: 1
+  ~pageSize: 20
+  ~orderBy: createdAt
   ~status: ACTIVE
   ~search: John
   ~from: 2024-01-01T00:00:00.000Z

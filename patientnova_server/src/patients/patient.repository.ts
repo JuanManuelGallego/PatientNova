@@ -95,10 +95,6 @@ export const patientRepository = {
         skip,
         take: pageSize,
         orderBy: { [ orderBy ]: order },
-        include: {
-          appointments: true, reminders: true,
-          medicalRecord: { select: { id: true } },
-        },
       }),
       prisma.patient.count({ where }),
       page,

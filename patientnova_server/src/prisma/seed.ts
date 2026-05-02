@@ -8,6 +8,8 @@ import {
     AdminRole,
     AdminStatus,
 } from '../../generated/prisma/client.ts';
+import { config } from '../utils/config.js';
+import bcrypt from 'bcrypt';
 
 async function seed() {
     console.log('🌱 Seeding database...');
@@ -24,17 +26,21 @@ async function seed() {
         await prisma.appointment.deleteMany({});
         await prisma.patient.deleteMany({});
         // Don't delete users to preserve admin accounts
+        const email = config.admin.email;
+        const password = config.admin.password;
 
         // ─── Get or create a user ─────────────────────────────────────────────────
         let user = await prisma.user.findUnique({
-            where: { email: 'admin@example.com' },
+            where: { email: email },
         });
 
         if (!user) {
+            const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
+
             user = await prisma.user.create({
                 data: {
-                    email: 'admin@example.com',
-                    passwordHash: 'hashed_password_placeholder',
+                    email: email,
+                    passwordHash: passwordHash,
                     firstName: 'Admin',
                     lastName: 'User',
                     role: AdminRole.ADMIN,

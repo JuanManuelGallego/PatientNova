@@ -1,4 +1,5 @@
 import { FetchAppointmentsFilters } from "../types/Appointment";
+import { FetchMedicalRecordFilters } from "../types/MedicalRecord";
 import { PatientStatus, FetchPatientsFilters } from "../types/Patient";
 import { FetchRemindersFilters } from "../types/Reminder";
 
@@ -55,6 +56,16 @@ export const buildReminderQueryString = (filters?: FetchRemindersFilters): strin
         patientId: filters?.patientId,
         dateFrom: filters?.dateFrom,
         dateTo: filters?.dateTo,
+        page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
+        pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : undefined,
+        orderBy: filters?.orderBy,
+        order: filters?.order,
+    });
+
+export const buildMedicalRecordQueryString = (filters?: FetchMedicalRecordFilters): string =>
+    buildQueryString({
+        patientId: filters?.patientId,
+        search: filters?.search,
         page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
         pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : undefined,
         orderBy: filters?.orderBy,
