@@ -31,7 +31,7 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
     const { user } = useAuthContext();
     const { ref: trapRef, handleKeyDown: trapKeyDown } = useFocusTrap<HTMLDivElement>();
     const { patients } = useFetchPatients();
-    const { appointments } = useFetchAppointments({dateFrom: getTomorrowSixAm(), status: DEFAULT_APPT_STATUS});
+    const { appointments } = useFetchAppointments({ dateFrom: getTomorrowSixAm(), status: DEFAULT_APPT_STATUS });
     const { createAppointment } = useCreateAppointment();
     const { updateAppointment } = useUpdateAppointment();
     const { createReminder } = useCreateReminder();
@@ -103,9 +103,10 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
         };
     }
 
-    function buildAppointmentPayload(): Partial<Appointment> {
+    function buildAppointmentPayload(reminderId: string | null = null): Partial<Appointment> {
         return {
             ...form,
+            ...(reminderId && { reminderId }) || {},
             endAt: getAppointmentEndTime(form.startAt, form.duration as AppointmentDuration),
             paid: form.paid === AppointmentPaidStatus.PAID,
         };
@@ -127,11 +128,12 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
                 }
                 await updateAppointment(appt!.id, buildAppointmentPayload());
             } else {
+                let reminderId: string | null = null
                 if (form.reminderType !== ReminderType.NONE) {
                     const reminder = await createReminder(buildReminderPayload());
-                    setForm(f => ({ ...f, reminderId: reminder.id }));
+                    reminderId = reminder.id
                 }
-                await createAppointment(buildAppointmentPayload());
+                await createAppointment(buildAppointmentPayload(reminderId));
             }
             onSaved(); onClose();
         } catch (err) {

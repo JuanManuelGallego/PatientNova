@@ -83,7 +83,7 @@ export function ReminderModal({
         return {
             to,
             contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid,
-            contentVariables: { "1": ` ${selectedPatient?.name ?? ""}`, "2": getUserName(user), "3": form.fecha, "4": form.hora },
+            contentVariables: { "1": `${selectedPatient?.name?? ""}`, "2": getUserName(user), "3": form.fecha, "4": form.hora },
             body: form.message,
             patientId: form.patientId,
         };
@@ -289,7 +289,7 @@ function ChannelAndMessageStep({ form, setForm, selectedPatient, set, user }: {
                             onChange={set("message")}
                             placeholder={`Hola ${selectedPatient?.name ?? "{nombre}"}, le recordamos su cita próximamente. Por favor confirme su asistencia.`}
                         />
-                        <span className="form-input-hint">{form.message.length} / 1600 caracteres</span>
+                        <span className="form-input-hint">{TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.template.replace("{{1}}", ` ${selectedPatient?.name ?? ""}`).replace("{{2}}", getUserName(user)).replace("{{3}}", form.fecha).replace("{{4}}", form.hora).length} / 1600 caracteres</span>
                     </label>
                     <div className="form-grid-2">
 
