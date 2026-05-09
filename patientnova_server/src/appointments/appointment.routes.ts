@@ -53,7 +53,7 @@ appointmentRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    ok(res, await appointmentRepository.findById(req.params.id as string, req.user!.id));
+    ok(res, await appointmentRepository.findByIdWithRelations(req.params.id as string, req.user!.id));
   })
 );
 
@@ -65,7 +65,7 @@ appointmentRouter.post(
   '/',
   validateBody(createAppointmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const appt = await appointmentRepository.create(req.body, req.user!.id);
+    const appt = await appointmentService.create(req.body, req.user!.id);
     logger.info({ appointmentId: appt.id, patientId: appt.patientId }, 'Appointment created');
     ok(res, appt, 201);
   })
@@ -80,7 +80,7 @@ appointmentRouter.patch(
   validateParams(uuidParamSchema),
   validateBody(updateAppointmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const appt = await appointmentRepository.update(req.params.id as string, req.body, req.user!.id);
+    const appt = await appointmentService.update(req.params.id as string, req.body, req.user!.id);
     logger.info({ appointmentId: appt.id }, 'Appointment updated');
     ok(res, appt);
   })

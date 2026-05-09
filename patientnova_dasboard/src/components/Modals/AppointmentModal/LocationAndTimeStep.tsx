@@ -47,7 +47,7 @@ export function LocationAndTimeStep({ form, set, setForm, selectedPatient, remin
             {locations.find(l => l.id === form.locationId)?.isVirtual && (
                 <label className="form-label">
                     URL de videollamada
-                    <input type="url" className="form-input" value={form.meetingUrl} onChange={set("meetingUrl")} placeholder="https://meet.example.com/sala" />
+                    <input type="url" className="form-input" value={form.meetingUrl} onChange={set("meetingUrl")} placeholder="Al dejar este campo vacío, se creará un enlace automáticamente." />
                 </label>
             )}
 

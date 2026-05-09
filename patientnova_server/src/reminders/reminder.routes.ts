@@ -7,7 +7,6 @@ import {
   type ListRemindersQuery,
   type ReminderStatsQuery,
 } from './reminder.schemas.js';
-import { reminderRepository } from './reminder.repository.js';
 import { reminderService } from './reminder.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';

@@ -20,6 +20,7 @@ import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares
 import { twilioWebhookRouter } from './twilio/twilio.webhook.routes.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
+import { googleRouter } from './google/goole.routes.js';
 
 const app: Application = express();
 
@@ -80,6 +81,7 @@ app.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter)
 app.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 app.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 app.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
+app.use('/google', authenticate, requireAdminForWrites, googleRouter);
 
 app.use((_req: Request, res: Response) => {
     apiError(res, 'Route not found', 404);

@@ -6,42 +6,14 @@ import {
   type ListAppointmentsQuery,
   type AppointmentStatsQuery,
 } from './appointment.schemas.js';
-import { AppointmentPatientNotFoundError, AppointmentReminderNotFoundError, AppointmentNotFoundError, AppointmentConflictError } from '../utils/errors.js';
+import { AppointmentNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { config } from '../utils/config.js';
 import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from '../utils/types.js';
 import { getTodayBoundsInTz } from '../utils/timeUtils.js';
 
-const ACTIVE_STATUSES = [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ];
-
-async function checkConflict(patientId: string, startAt: string | Date, endAt: string | Date, excludeId?: string): Promise<void> {
-  const conflict = await prisma.appointment.findFirst({
-    where: {
-      patientId,
-      status: { in: ACTIVE_STATUSES },
-      ...(excludeId && { NOT: { id: excludeId } }),
-      startAt: { lt: new Date(endAt) },
-      endAt: { gt: new Date(startAt) },
-    },
-    select: { startAt: true, endAt: true },
-  });
-  if (conflict) {
-    throw new AppointmentConflictError(conflict.startAt.toISOString(), conflict.endAt.toISOString());
-  }
-}
-
 export const appointmentRepository = {
-  async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    const patient = await prisma.patient.findFirst({ where: { id: dto.patientId, userId } });
-    if (!patient) throw new AppointmentPatientNotFoundError(dto.patientId);
-
-    if (dto.reminderId) {
-      const reminder = await prisma.reminder.findUnique({ where: { id: dto.reminderId } });
-      if (!reminder) throw new AppointmentReminderNotFoundError(dto.reminderId);
-    }
-
-    await checkConflict(dto.patientId, dto.startAt, dto.endAt);
-
+  async create(dto: CreateAppointmentDto): Promise<AppointmentWithRelations> {
     return prisma.appointment.create({
       data: {
         startAt: dto.startAt,
@@ -62,7 +34,15 @@ export const appointmentRepository = {
     });
   },
 
-  async findById(id: string, userId: string): Promise<AppointmentWithRelations> {
+  async findById(id: string, userId: string): Promise<Appointment> {
+    const appt = await prisma.appointment.findFirst({
+      where: { id, patient: { userId } },
+    });
+    if (!appt) throw new AppointmentNotFoundError(id);
+    return appt;
+  },
+
+  async findByIdWithRelations(id: string, userId: string): Promise<AppointmentWithRelations> {
     const appt = await prisma.appointment.findFirst({
       where: { id, patient: { userId } },
       include: appointmentInclude,
@@ -127,20 +107,7 @@ export const appointmentRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    const existing = await appointmentRepository.findById(id, userId);
-
-    if (dto.reminderId) {
-      const reminder = await prisma.reminder.findUnique({ where: { id: dto.reminderId } });
-      if (!reminder) throw new AppointmentReminderNotFoundError(dto.reminderId);
-    }
-
-    // Check for conflicts when time changes
-    if (dto.startAt !== undefined || dto.endAt !== undefined) {
-      const newStart = dto.startAt ?? existing.startAt;
-      const newEnd = dto.endAt ?? existing.endAt;
-      await checkConflict(existing.patientId, newStart, newEnd, id);
-    }
+  async update(id: string, dto: UpdateAppointmentDto): Promise<AppointmentWithRelations> {
 
     return prisma.appointment.update({
       where: { id },
@@ -192,7 +159,6 @@ export const appointmentRepository = {
     });
   },
 
-
   async markCancelled(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
     return prisma.appointment.update({
@@ -201,7 +167,6 @@ export const appointmentRepository = {
       include: appointmentInclude,
     });
   },
-
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
     const { patientId, dateFrom, dateTo } = query;

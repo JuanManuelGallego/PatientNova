@@ -60,6 +60,12 @@ export const config = {
     schedule: process.env.CRON_SCHEDULE ?? '* * * * *',
   },
 
+  google: {
+    clientId: requireEnv('GOOGLE_CLIENT_ID'),
+    clientSecret: requireEnv('GOOGLE_CLIENT_SECRET'),
+    refreshToken: requireEnv('GOOGLE_REFRESH_TOKEN'),
+  },
+
 } as const;
 
 export const APPT_SID_MAP: Record<number, string> = {
