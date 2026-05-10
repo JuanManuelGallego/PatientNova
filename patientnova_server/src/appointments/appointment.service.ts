@@ -74,9 +74,9 @@ export const appointmentService = {
   getStats: appointmentRepository.getStats.bind(appointmentRepository),
 
   async create(dto: CreateAppointmentDto, userId: string) {
-    validateType(dto.typeId);
-    validateReminder(dto.reminderId);
-    validatePatient(dto.patientId, userId);
+    await validateType(dto.typeId);
+    await validateReminder(dto.reminderId);
+    await validatePatient(dto.patientId, userId);
 
     const location = await validateLocation(dto.locationId)
 
@@ -100,15 +100,11 @@ export const appointmentService = {
     }
 
     if (dto.locationId) {
-      validateLocation(dto.locationId);
+      await validateLocation(dto.locationId);
     }
 
     if (dto.reminderId) {
-      validateReminder(dto.reminderId)
-    }
-
-    if (dto.locationId) {
-      validateLocation(dto.locationId)
+      await validateReminder(dto.reminderId)
     }
 
     return appointmentRepository.update(id, dto);

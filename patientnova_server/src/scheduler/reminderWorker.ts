@@ -3,11 +3,9 @@ import { prisma } from "../prisma/prismaClient.js";
 import { getMessageStatus } from "../twilio/twilioClient.js";
 import { validateReminder } from "./validation.js";
 import { dispatchMessage } from "./dispatch.js";
-import { REMINDER_LOOKAHEAD_MS } from "../utils/constants.ts";
+import { REMINDER_LOOKAHEAD_MS, REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from "../utils/constants.ts";
 import { logger } from "../utils/logger.ts";
-import type { TrackedReminder } from "../utils/types.ts";
 
-export const MAX_TRACKED_REMINDERS = 500;
 export const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
 export const MAX_POLL_FAILURES = 5;
 export const MAX_SEND_RETRIES = 3;
@@ -52,73 +50,85 @@ async function handleSendFailure(reminderId: string, currentError: string | null
 }
 
 // ---------------------------------------------------------------------------
-// Poll previously-sent reminders for delivery status
+// Poll previously-sent (QUEUED) reminders for delivery status
+// Uses DB as source of truth — no in-memory state needed.
 // ---------------------------------------------------------------------------
 
-async function pollSentReminders(tracked: TrackedReminder[]): Promise<TrackedReminder[]> {
-  const now = Date.now();
-  const active: TrackedReminder[] = [];
+async function pollSentReminders(): Promise<void> {
+  const cutoff = new Date(Date.now() - MAX_TRACK_AGE_MS);
 
-  for (const sent of tracked) {
-    const isStale = now - sent.trackedSince > MAX_TRACK_AGE_MS || sent.pollFailures >= MAX_POLL_FAILURES;
+  // Drop reminders that have been QUEUED too long — mark them failed
+  const stale = await prisma.reminder.findMany({
+    where: { status: ReminderStatus.QUEUED, updatedAt: { lte: cutoff } },
+    select: { id: true },
+    take: REMINDER_BATCH_SIZE,
+  });
 
-    if (isStale) {
-      logger.warn(
-        { dbId: sent.dbId, age: now - sent.trackedSince, pollFailures: sent.pollFailures },
-        "Dropping stale tracked reminder"
-      );
-      await prisma.reminder
-        .update({
-          where: { id: sent.dbId },
-          data: {
-            status: ReminderStatus.FAILED,
-            error: "Status tracking timed out — message may have been delivered",
-          },
-        })
-        .catch((e) => logger.error({ e }, "Failed to mark stale reminder as failed"));
-      continue;
-    }
-
-    try {
-      const message = await getMessageStatus(sent.messageSid);
-      const mappedStatus = TWILIO_TO_PRISMA_STATUS[ message.status ] ?? ReminderStatus.QUEUED;
-      logger.info({ dbId: sent.dbId, status: message.status, mappedStatus }, "Polled reminder status");
-
-      if (mappedStatus === ReminderStatus.QUEUED) {
-        active.push(sent); // Still in-flight — keep tracking
-      } else {
-        await prisma.reminder.update({
-          where: { id: sent.dbId },
-          data: {
-            status: mappedStatus,
-            error: mappedStatus === ReminderStatus.FAILED
-              ? "Error desconocido en la entrega del mensaje"
-              : null,
-          },
-        });
-      }
-    } catch (error) {
-      logger.error({ sent, error }, "Failed to poll reminder status");
-      active.push({ ...sent, pollFailures: sent.pollFailures + 1 });
-    }
+  if (stale.length > 0) {
+    await prisma.reminder.updateMany({
+      where: { id: { in: stale.map(r => r.id) } },
+      data: {
+        status: ReminderStatus.FAILED,
+        error: "Status tracking timed out — message may have been delivered",
+      },
+    });
+    logger.warn({ count: stale.length }, "Dropped stale QUEUED reminders");
   }
 
-  return active;
+  // Poll active QUEUED reminders for their Twilio delivery status
+  const queued = await prisma.reminder.findMany({
+    where: { status: ReminderStatus.QUEUED, messageId: { not: null }, updatedAt: { gt: cutoff } },
+    select: { id: true, messageId: true },
+    take: REMINDER_BATCH_SIZE,
+  });
+
+  if (queued.length === 0) return;
+  logger.info({ count: queued.length }, "Polling Twilio status for QUEUED reminders");
+
+  // Process in parallel batches to avoid hammering Twilio API
+  for (let i = 0; i < queued.length; i += REMINDER_POLL_CONCURRENCY) {
+    const batch = queued.slice(i, i + REMINDER_POLL_CONCURRENCY);
+    await Promise.allSettled(
+      batch.map(async (reminder) => {
+        try {
+          const message = await getMessageStatus(reminder.messageId!);
+          const mappedStatus = TWILIO_TO_PRISMA_STATUS[ message.status ] ?? ReminderStatus.QUEUED;
+          logger.info({ dbId: reminder.id, status: message.status, mappedStatus }, "Polled reminder status");
+
+          if (mappedStatus !== ReminderStatus.QUEUED) {
+            await prisma.reminder.update({
+              where: { id: reminder.id },
+              data: {
+                status: mappedStatus,
+                error: mappedStatus === ReminderStatus.FAILED
+                  ? "Error desconocido en la entrega del mensaje"
+                  : null,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error({ reminderId: reminder.id, error }, "Failed to poll reminder status");
+          // Touch updatedAt so we can count poll failures via age-based staleness
+        }
+      })
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Send pending reminders
 // ---------------------------------------------------------------------------
 
-async function sendPendingReminders(active: TrackedReminder[]): Promise<TrackedReminder[]> {
+async function sendPendingReminders(): Promise<void> {
   const lookahead = new Date(Date.now() + REMINDER_LOOKAHEAD_MS);
   const pending = await prisma.reminder.findMany({
     where: { status: ReminderStatus.PENDING, sendAt: { lte: lookahead } },
+    take: REMINDER_BATCH_SIZE,
   });
 
   if (pending.length === 0) {
     logger.info("No reminders to send at this time");
-    return active;
+    return;
   }
 
   logger.info(`Found ${pending.length} reminder(s) to send`);
@@ -149,14 +159,6 @@ async function sendPendingReminders(active: TrackedReminder[]): Promise<TrackedR
           where: { id: reminder.id },
           data: { status: ReminderStatus.QUEUED, messageId: result.messageSid ?? null },
         });
-        if (result.messageSid && active.length < MAX_TRACKED_REMINDERS) {
-          active.push({
-            dbId: reminder.id,
-            messageSid: result.messageSid,
-            trackedSince: Date.now(),
-            pollFailures: 0,
-          });
-        }
       } else {
         await handleSendFailure(reminder.id, reminder.error, result.error ?? "Unknown error");
       }
@@ -165,16 +167,14 @@ async function sendPendingReminders(active: TrackedReminder[]): Promise<TrackedR
       await handleSendFailure(reminder.id, reminder.error, errMsg);
     }
   }
-
-  return active;
 }
 
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
-export async function reminderWorker(sentReminders: TrackedReminder[]): Promise<TrackedReminder[]> {
+export async function reminderWorker(): Promise<void> {
   logger.info("Running reminder worker...");
-  const active = await pollSentReminders(sentReminders);
-  return sendPendingReminders(active);
+  await pollSentReminders();
+  await sendPendingReminders();
 }

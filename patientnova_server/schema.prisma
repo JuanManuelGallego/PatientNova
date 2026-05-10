@@ -180,6 +180,7 @@ model User {
 
   reminderActive  Boolean  @default(true)
   reminderChannel Channel?
+  lastDailyReminderDate DateTime?
 
   timezone             String    @default("America/Bogota") @db.VarChar(50)
 

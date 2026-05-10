@@ -12,6 +12,12 @@ export const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
  */
 export const REMINDER_LOOKAHEAD_MS = 57 * ONE_SECOND_MS;
 
+/** Max reminders to process per scheduler tick (prevents runaway on large backlogs). */
+export const REMINDER_BATCH_SIZE = 100;
+
+/** Max concurrent Twilio status polls per tick. */
+export const REMINDER_POLL_CONCURRENCY = 10;
+
 /** Local hour (0–23) at which the daily appointment reminder is dispatched to users. */
 export const DAILY_REMINDER_HOUR = 18;
 
