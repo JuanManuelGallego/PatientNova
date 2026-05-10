@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 export interface SelectOption {
     value: string;
@@ -20,15 +21,50 @@ interface CustomSelectProps {
 export function CustomSelect({ value, options, onChange, placeholder, className, "aria-label": ariaLabel }: CustomSelectProps) {
     const [ open, setOpen ] = useState(false);
     const [ highlightIdx, setHighlightIdx ] = useState(-1);
+    const [ dropdownStyle, setDropdownStyle ] = useState<React.CSSProperties>({});
     const ref = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const selected = options.find(o => o.value === value);
     const displayLabel = selected?.triggerLabel ?? selected?.label ?? placeholder ?? "";
     const isPlaceholder = !selected;
 
+    const updateDropdownPosition = useCallback(() => {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownMaxHeight = 240;
+
+        if (spaceBelow >= Math.min(dropdownMaxHeight, 120) || spaceBelow >= spaceAbove) {
+            setDropdownStyle({
+                position: "fixed",
+                top: rect.bottom + 4,
+                left: rect.left,
+                width: rect.width,
+                right: "auto",
+                zIndex: 9999,
+            });
+        } else {
+            setDropdownStyle({
+                position: "fixed",
+                bottom: window.innerHeight - rect.top + 4,
+                top: "auto",
+                left: rect.left,
+                width: rect.width,
+                right: "auto",
+                zIndex: 9999,
+            });
+        }
+    }, []);
+
     useEffect(() => {
         function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+            const target = e.target as Node;
+            const insideTrigger = ref.current?.contains(target);
+            const insideDropdown = dropdownRef.current?.contains(target);
+            if (!insideTrigger && !insideDropdown) setOpen(false);
         }
         document.addEventListener("mousedown", handleClick);
         return () => document.removeEventListener("mousedown", handleClick);
@@ -38,8 +74,26 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
         if (open) {
             const idx = options.findIndex(o => o.value === value);
             setHighlightIdx(idx >= 0 ? idx : 0);
+            updateDropdownPosition();
         }
-    }, [ open, options, value ]);
+    }, [ open, options, value, updateDropdownPosition ]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        function handleScroll(e: Event) {
+            if (dropdownRef.current?.contains(e.target as Node)) return;
+            setOpen(false);
+        }
+        function handleResize() { setOpen(false); }
+
+        window.addEventListener("scroll", handleScroll, true);
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("scroll", handleScroll, true);
+            window.removeEventListener("resize", handleResize);
+        };
+    }, [ open ]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (!open) {
@@ -73,6 +127,28 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
         }
     }, [ open, highlightIdx, options, onChange ]);
 
+    const dropdown = open ? (
+        <div className="custom-select__dropdown" role="listbox" style={dropdownStyle} ref={dropdownRef}>
+            {options.map((o, i) => (
+                <div
+                    key={o.value}
+                    role="option"
+                    aria-selected={o.value === value}
+                    className={`custom-select__option${o.value === value ? " custom-select__option--selected" : ""}${o.disabled ? " custom-select__option--disabled" : ""}${i === highlightIdx ? " custom-select__option--highlighted" : ""}`}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        if (o.disabled) return;
+                        onChange(o.value);
+                        setOpen(false);
+                    }}
+                >
+                    {o.label}
+                    {o.value === value && <span className="custom-select__check">✓</span>}
+                </div>
+            ))}
+        </div>
+    ) : null;
+
     return (
         <div className={`custom-select ${className ?? ""}`} ref={ref} onKeyDown={handleKeyDown}>
             <button
@@ -81,6 +157,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={ariaLabel}
+                ref={triggerRef}
                 className={`custom-select__trigger${isPlaceholder ? " custom-select__trigger--placeholder" : ""}`}
                 onClick={(e) => {
                     e.stopPropagation();
@@ -90,27 +167,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 <span className="custom-select__label">{displayLabel}</span>
                 <svg className={`custom-select__chevron${open ? " custom-select__chevron--open" : ""}`} width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-            {open && (
-                <div className="custom-select__dropdown" role="listbox">
-                    {options.map((o, i) => (
-                        <div
-                            key={o.value}
-                            role="option"
-                            aria-selected={o.value === value}
-                            className={`custom-select__option${o.value === value ? " custom-select__option--selected" : ""}${o.disabled ? " custom-select__option--disabled" : ""}${i === highlightIdx ? " custom-select__option--highlighted" : ""}`}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (o.disabled) return;
-                                onChange(o.value);
-                                setOpen(false);
-                            }}
-                        >
-                            {o.label}
-                            {o.value === value && <span className="custom-select__check">✓</span>}
-                        </div>
-                    ))}
-                </div>
-            )}
+            {dropdown && createPortal(dropdown, document.body)}
         </div>
     );
 }

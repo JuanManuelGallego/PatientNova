@@ -464,11 +464,8 @@
 }
 
 .custom-select__dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 50;
+  position: fixed;
+  z-index: 9999;
   background: var(--c-surface);
   border: 1.5px solid var(--c-gray-200);
   border-radius: var(--r-lg);
