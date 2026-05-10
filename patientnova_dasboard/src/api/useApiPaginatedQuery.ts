@@ -1,50 +1,105 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useReducer, useRef } from "react";
 import { ApiPaginatedResponse } from "../types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 
-/**
- * Generic hook for fetching a paginated list.
- * Supports optional polling that pauses when the tab is hidden.
- */
+type State<T> = {
+    items: T[];
+    total: number;
+    totalPages: number;
+    loading: boolean;
+    error: string | null;
+};
+
+type Action<T> =
+    | { type: "FETCH_START" }
+    | { type: "FETCH_SUCCESS"; payload: { items: T[]; total: number; totalPages: number } }
+    | { type: "FETCH_ERROR"; payload: string };
+
+function reducer<T>(state: State<T>, action: Action<T>): State<T> {
+    switch (action.type) {
+        case "FETCH_START":
+            return { ...state, loading: true, error: null };
+        case "FETCH_SUCCESS":
+            return {
+                items: action.payload.items,
+                total: action.payload.total,
+                totalPages: action.payload.totalPages,
+                loading: false,
+                error: null,
+            };
+        case "FETCH_ERROR":
+            return { ...state, loading: false, error: action.payload };
+    }
+}
+
+const initialState = <T>(): State<T> => ({
+    items: [],
+    total: 0,
+    totalPages: 0,
+    loading: false,
+    error: null,
+});
+
 export function useApiPaginatedQuery<T>(
     url: string,
     options?: { pollingIntervalMs?: number; errorMessage?: string }
 ) {
-    const pollingIntervalMs = options?.pollingIntervalMs;
-    const errorMessage = options?.errorMessage ?? "Failed to load data";
+    const { pollingIntervalMs, errorMessage = "Failed to load data" } = options ?? {};
 
-    const [ items, setItems ] = useState<T[]>([]);
-    const [ total, setTotal ] = useState(0);
-    const [ totalPages, setTotalPages ] = useState(0);
-    const [ loading, setLoading ] = useState(false);
-    const [ error, setError ] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(reducer<T>, undefined, initialState<T>);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+    const urlRef = useRef(url);
+    const errorMessageRef = useRef(errorMessage);
+
+    useEffect(() => { urlRef.current = url; }, [url]);
+    useEffect(() => { errorMessageRef.current = errorMessage; }, [errorMessage]);
+
+    const fetchData = useCallback(async (signal: AbortSignal) => {
+        dispatch({ type: "FETCH_START" });
         try {
-            const res = await fetchWithAuth(url);
+            const res = await fetchWithAuth(urlRef.current, { signal });
             if (!res.ok) throw new Error(`Server error: ${res.status}`);
             const json: ApiPaginatedResponse<T> = await res.json();
             if (!json.success) throw new Error("API returned an error");
-            setItems(json.data.data);
-            setTotal(json.data.total);
-            setTotalPages(json.data.totalPages);
+            if (!signal.aborted) dispatch({
+                type: "FETCH_SUCCESS",
+                payload: {
+                    items: json.data.data,
+                    total: json.data.total,
+                    totalPages: json.data.totalPages,
+                },
+            });
         } catch (err) {
-            setError(err instanceof Error ? err.message : errorMessage);
-        } finally {
-            setLoading(false);
+            if (signal.aborted) return;
+            const message = err instanceof Error ? err.message : errorMessageRef.current;
+            dispatch({ type: "FETCH_ERROR", payload: message });
         }
-    }, [ url, errorMessage ]);
+    }, []); // stable — reads latest values via refs
+
+    const refetch = useCallback(() => {
+        const controller = new AbortController();
+        fetchData(controller.signal);
+        return () => controller.abort();
+    }, [fetchData]);
 
     useEffect(() => {
-        fetchData();
-        if (!pollingIntervalMs) return;
-        const interval = setInterval(() => {
-            if (!document.hidden) fetchData();
-        }, pollingIntervalMs);
-        return () => clearInterval(interval);
-    }, [ fetchData, pollingIntervalMs ]);
+        const controller = new AbortController();
 
-    return { items, loading, error, refetch: fetchData, total, totalPages };
+        void (async () => {
+            await fetchData(controller.signal);
+        })();
+
+        if (!pollingIntervalMs) return () => controller.abort();
+
+        const interval = setInterval(() => {
+            if (!document.hidden) void fetchData(controller.signal);
+        }, pollingIntervalMs);
+
+        return () => {
+            controller.abort();
+            clearInterval(interval);
+        };
+    }, [url, pollingIntervalMs, fetchData]);
+
+    return { ...state, refetch };
 }

@@ -1,48 +1,93 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useReducer, useRef } from "react";
 import { ApiResponse } from "../types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 
-/**
- * Generic hook for fetching a single resource.
- * Pass `url = null` to skip the fetch (e.g. when a required ID is not yet available).
- * Supports optional polling that pauses when the tab is hidden.
- */
+type State<T> = {
+    data: T | undefined;
+    loading: boolean;
+    error: string | null;
+};
+
+type Action<T> =
+    | { type: "FETCH_START" }
+    | { type: "FETCH_SUCCESS"; payload: T }
+    | { type: "FETCH_ERROR"; payload: string };
+
+function reducer<T>(state: State<T>, action: Action<T>): State<T> {
+    switch (action.type) {
+        case "FETCH_START":
+            return { ...state, loading: true, error: null };
+        case "FETCH_SUCCESS":
+            return { data: action.payload, loading: false, error: null };
+        case "FETCH_ERROR":
+            return { ...state, loading: false, error: action.payload };
+    }
+}
+
+const initialState = <T>(): State<T> => ({
+    data: undefined,
+    loading: false,
+    error: null,
+});
+
 export function useApiQuery<T>(
     url: string | null,
     options?: { pollingIntervalMs?: number; errorMessage?: string }
 ) {
-    const pollingIntervalMs = options?.pollingIntervalMs;
-    const errorMessage = options?.errorMessage ?? "Failed to load data";
+    const { pollingIntervalMs, errorMessage = "Failed to load data" } = options ?? {};
 
-    const [ data, setData ] = useState<T | undefined>();
-    const [ loading, setLoading ] = useState(false);
-    const [ error, setError ] = useState<string | null>(null);
+    const [ state, dispatch ] = useReducer(reducer<T>, undefined, initialState<T>);
 
-    const fetchData = useCallback(async () => {
-        if (!url) return;
-        setLoading(true);
-        setError(null);
+    const urlRef = useRef(url);
+    const errorMessageRef = useRef(errorMessage);
+
+    useEffect(() => { urlRef.current = url; }, [ url ]);
+    useEffect(() => { errorMessageRef.current = errorMessage; }, [ errorMessage ]);
+
+    const fetchData = useCallback(async (signal: AbortSignal) => {
+        const currentUrl = urlRef.current;
+        if (!currentUrl) return;
+
+        dispatch({ type: "FETCH_START" });
         try {
-            const res = await fetchWithAuth(url);
+            const res = await fetchWithAuth(currentUrl, { signal });
             if (!res.ok) throw new Error(`Server error: ${res.status}`);
             const json: ApiResponse<T> = await res.json();
             if (!json.success) throw new Error("API returned an error");
-            setData(json.data);
+            if (!signal.aborted) dispatch({ type: "FETCH_SUCCESS", payload: json.data });
         } catch (err) {
-            setError(err instanceof Error ? err.message : errorMessage);
-        } finally {
-            setLoading(false);
+            if (signal.aborted) return;
+            const message = err instanceof Error ? err.message : errorMessageRef.current;
+            dispatch({ type: "FETCH_ERROR", payload: message });
         }
-    }, [ url, errorMessage ]);
+    }, []);
+
+    const refetch = useCallback(() => {
+        const controller = new AbortController();
+        fetchData(controller.signal);
+        return () => controller.abort();
+    }, [ fetchData ]);
 
     useEffect(() => {
-        fetchData();
-        if (!pollingIntervalMs) return;
-        const interval = setInterval(() => {
-            if (!document.hidden) fetchData();
-        }, pollingIntervalMs);
-        return () => clearInterval(interval);
-    }, [ fetchData, pollingIntervalMs ]);
+        if (!url) return;
 
-    return { data, loading, error, refetch: fetchData };
+        const controller = new AbortController();
+
+        void (async () => {
+            await fetchData(controller.signal);
+        })();
+
+        if (!pollingIntervalMs) return () => controller.abort();
+
+        const interval = setInterval(() => {
+            if (!document.hidden) void fetchData(controller.signal);
+        }, pollingIntervalMs);
+
+        return () => {
+            controller.abort();
+            clearInterval(interval);
+        };
+    }, [ url, pollingIntervalMs, fetchData ]);
+
+    return { ...state, refetch };
 }

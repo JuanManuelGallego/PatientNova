@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 export interface SelectOption {
@@ -59,6 +59,12 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
         }
     }, []);
 
+    const openWithHighlight = useCallback(() => {
+        const idx = options.findIndex(o => o.value === value);
+        setHighlightIdx(idx >= 0 ? idx : 0);
+        setOpen(true);
+    }, [ options, value ]);
+
     useEffect(() => {
         function handleClick(e: MouseEvent) {
             const target = e.target as Node;
@@ -70,13 +76,9 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
         return () => document.removeEventListener("mousedown", handleClick);
     }, []);
 
-    useEffect(() => {
-        if (open) {
-            const idx = options.findIndex(o => o.value === value);
-            setHighlightIdx(idx >= 0 ? idx : 0);
-            updateDropdownPosition();
-        }
-    }, [ open, options, value, updateDropdownPosition ]);
+    useLayoutEffect(() => {
+        if (open) updateDropdownPosition();
+    }, [ open, updateDropdownPosition ]);
 
     useEffect(() => {
         if (!open) return;
@@ -99,7 +101,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
         if (!open) {
             if ([ "ArrowDown", "ArrowUp", "Enter", " " ].includes(e.key)) {
                 e.preventDefault();
-                setOpen(true);
+                openWithHighlight();
             }
             return;
         }
@@ -125,7 +127,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 setOpen(false);
                 break;
         }
-    }, [ open, highlightIdx, options, onChange ]);
+    }, [ open, highlightIdx, options, onChange, openWithHighlight ]);
 
     const dropdown = open ? (
         <div className="custom-select__dropdown" role="listbox" style={dropdownStyle} ref={dropdownRef}>
@@ -154,6 +156,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
             <button
                 type="button"
                 role="combobox"
+                aria-controls="custom-select__dropdown"
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={ariaLabel}
@@ -161,7 +164,8 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 className={`custom-select__trigger${isPlaceholder ? " custom-select__trigger--placeholder" : ""}`}
                 onClick={(e) => {
                     e.stopPropagation();
-                    setOpen(o => !o);
+                    if (open) setOpen(false);
+                    else openWithHighlight();
                 }}
             >
                 <span className="custom-select__label">{displayLabel}</span>

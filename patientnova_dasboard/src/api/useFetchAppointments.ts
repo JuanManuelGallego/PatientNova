@@ -7,8 +7,7 @@ import { useApiPaginatedQuery } from "./useApiPaginatedQuery";
 export const useFetchAppointments = (filters?: FetchAppointmentsFilters) => {
     const url = useMemo(
         () => `${API_BASE}/appointments${buildAppointmentQueryString(filters)}`,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [ JSON.stringify(filters) ]
+        [ filters ]
     );
     const { items: appointments, loading, error, refetch: fetchAppointments, total, totalPages } =
         useApiPaginatedQuery<Appointment>(url, { pollingIntervalMs: 300000, errorMessage: "Failed to load appointments" });

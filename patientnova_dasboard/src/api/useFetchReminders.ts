@@ -7,8 +7,7 @@ import { useApiPaginatedQuery } from "./useApiPaginatedQuery";
 export const useFetchReminders = (filters?: FetchRemindersFilters) => {
     const url = useMemo(
         () => `${API_BASE}/reminders${buildReminderQueryString(filters)}`,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [ JSON.stringify(filters) ]
+        [ filters ]
     );
     const { items: reminders, loading, error, refetch: fetchReminders, total, totalPages } =
         useApiPaginatedQuery<Reminder>(url, { pollingIntervalMs: 60000, errorMessage: "Failed to load reminders" });
