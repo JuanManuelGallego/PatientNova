@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { API_BASE, ApiResponse } from "@/src/types/API";
+import { API_BASE, ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { User } from '../types/User';
 import { fetchWithAuth } from "../api/fetchWithAuth";
 
@@ -54,8 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ email, password }),
             });
 
-            if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
+            if (!res.ok) {
+                const json: ApiErrorResponse = await res.json();
+                throw new Error(`Server Error: ${json.error}`);
+            }
             const json: ApiResponse = await res.json();
             if (!json.success) throw new Error("Login failed");
 

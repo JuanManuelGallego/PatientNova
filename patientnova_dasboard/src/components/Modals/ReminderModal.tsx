@@ -188,6 +188,7 @@ function SendModeAndPatientStep({ sendMode, setMode, form, setForm, patients }: 
             <label className="form-label">
                 <RequiredField label="Paciente" />
                 <CustomSelect
+                    disabled={patients.length === 0}
                     value={form.patientId}
                     placeholder="Seleccionar paciente…"
                     options={patients.length > 0 ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: `${p.name} ${p.lastName}` })) : [ { value: "", label: LBL_NO_PATIENTS } ]}

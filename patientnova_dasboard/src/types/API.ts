@@ -20,6 +20,12 @@ export interface ApiResponse<T = unknown> {
     timestamp: string;
 }
 
+export interface ApiErrorResponse<T = unknown> {
+    success: boolean;
+    error: T;
+    timestamp: string;
+}
+
 export interface PatientStats {
     total: number;
     byStatus: {

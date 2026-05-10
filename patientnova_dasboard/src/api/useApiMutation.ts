@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { ApiResponse } from "../types/API";
+import { ApiErrorResponse, ApiResponse } from "../types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 
 /**
@@ -26,7 +26,10 @@ export function useApiMutation<TOutput = void>(
                 headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
                 body: body !== undefined ? JSON.stringify(body) : undefined,
             });
-            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+            if (!res.ok) {
+                const json: ApiErrorResponse = await res.json();
+                throw new Error(`Server Error: ${json.error}`);
+            }
             const json: ApiResponse<TOutput> = await res.json();
             if (!json.success) throw new Error("API returned an error");
             return json.data;

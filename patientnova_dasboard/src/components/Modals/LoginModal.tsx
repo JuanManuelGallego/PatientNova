@@ -77,8 +77,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
 
                     {error && (
                         <div className="login-card__error">
-                            ⚠️{" "}
-                            {error === "Server error: 401" ? "Credenciales incorrectas" : "Error al iniciar sesión. Intenta de nuevo."}
+                            ⚠️ {error === "Server Error: Invalid credentials" ? "Credenciales incorrectas" : "Error al iniciar sesión. Intenta de nuevo."}
                         </div>
                     )}
 

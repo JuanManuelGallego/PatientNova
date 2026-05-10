@@ -15,10 +15,11 @@ interface CustomSelectProps {
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
+    disabled?: boolean;
     "aria-label"?: string;
 }
 
-export function CustomSelect({ value, options, onChange, placeholder, className, "aria-label": ariaLabel }: CustomSelectProps) {
+export function CustomSelect({ value, options, onChange, placeholder, className, disabled, "aria-label": ariaLabel }: CustomSelectProps) {
     const [ open, setOpen ] = useState(false);
     const [ highlightIdx, setHighlightIdx ] = useState(-1);
     const [ dropdownStyle, setDropdownStyle ] = useState<React.CSSProperties>({});
@@ -60,10 +61,11 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
     }, []);
 
     const openWithHighlight = useCallback(() => {
+        if (disabled) return;
         const idx = options.findIndex(o => o.value === value);
         setHighlightIdx(idx >= 0 ? idx : 0);
         setOpen(true);
-    }, [ options, value ]);
+    }, [ options, value, disabled ]);
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
@@ -98,6 +100,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
     }, [ open ]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (disabled) return;
         if (!open) {
             if ([ "ArrowDown", "ArrowUp", "Enter", " " ].includes(e.key)) {
                 e.preventDefault();
@@ -127,7 +130,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 setOpen(false);
                 break;
         }
-    }, [ open, highlightIdx, options, onChange, openWithHighlight ]);
+    }, [ open, highlightIdx, options, onChange, openWithHighlight, disabled ]);
 
     const dropdown = open ? (
         <div className="custom-select__dropdown" role="listbox" style={dropdownStyle} ref={dropdownRef}>
@@ -152,7 +155,12 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
     ) : null;
 
     return (
-        <div className={`custom-select ${className ?? ""}`} ref={ref} onKeyDown={handleKeyDown}>
+        <div
+            className={`custom-select${disabled ? " custom-select--disabled" : ""} ${className ?? ""}`}
+            ref={ref}
+            onKeyDown={handleKeyDown}
+            style={disabled ? { opacity: 0.45, userSelect: "none" } : undefined}
+        >
             <button
                 type="button"
                 role="combobox"
@@ -160,10 +168,14 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={ariaLabel}
+                aria-disabled={disabled}
+                disabled={disabled}
                 ref={triggerRef}
                 className={`custom-select__trigger${isPlaceholder ? " custom-select__trigger--placeholder" : ""}`}
+                style={disabled ? { cursor: "not-allowed", filter: "grayscale(0.3)" } : undefined}
                 onClick={(e) => {
                     e.stopPropagation();
+                    if (disabled) return;
                     if (open) setOpen(false);
                     else openWithHighlight();
                 }}

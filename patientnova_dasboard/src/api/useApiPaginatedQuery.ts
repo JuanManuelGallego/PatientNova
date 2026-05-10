@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useReducer, useRef } from "react";
-import { ApiPaginatedResponse } from "../types/API";
+import { ApiErrorResponse, ApiPaginatedResponse } from "../types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { actWrapper } from "antd/es/message";
 
 type State<T> = {
     items: T[];
@@ -46,19 +47,22 @@ export function useApiPaginatedQuery<T>(
 ) {
     const { pollingIntervalMs, errorMessage = "Failed to load data" } = options ?? {};
 
-    const [state, dispatch] = useReducer(reducer<T>, undefined, initialState<T>);
+    const [ state, dispatch ] = useReducer(reducer<T>, undefined, initialState<T>);
 
     const urlRef = useRef(url);
     const errorMessageRef = useRef(errorMessage);
 
-    useEffect(() => { urlRef.current = url; }, [url]);
-    useEffect(() => { errorMessageRef.current = errorMessage; }, [errorMessage]);
+    useEffect(() => { urlRef.current = url; }, [ url ]);
+    useEffect(() => { errorMessageRef.current = errorMessage; }, [ errorMessage ]);
 
     const fetchData = useCallback(async (signal: AbortSignal) => {
         dispatch({ type: "FETCH_START" });
         try {
             const res = await fetchWithAuth(urlRef.current, { signal });
-            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+            if (!res.ok) {
+                const json: ApiErrorResponse<T> = await res.json();
+                throw new Error(`Server Error: ${json.error}`);
+            }
             const json: ApiPaginatedResponse<T> = await res.json();
             if (!json.success) throw new Error("API returned an error");
             if (!signal.aborted) dispatch({
@@ -80,7 +84,7 @@ export function useApiPaginatedQuery<T>(
         const controller = new AbortController();
         fetchData(controller.signal);
         return () => controller.abort();
-    }, [fetchData]);
+    }, [ fetchData ]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -99,7 +103,7 @@ export function useApiPaginatedQuery<T>(
             controller.abort();
             clearInterval(interval);
         };
-    }, [url, pollingIntervalMs, fetchData]);
+    }, [ url, pollingIntervalMs, fetchData ]);
 
     return { ...state, refetch };
 }

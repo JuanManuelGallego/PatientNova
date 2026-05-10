@@ -28,7 +28,7 @@ function LoginForm() {
         try {
             await login(email, password);
             router.push(redirectTo);
-        } catch {}
+        } catch { }
     }
 
     if (initializing) return null;
@@ -71,7 +71,7 @@ function LoginForm() {
 
                     {error && (
                         <div className="login-card__error">
-                            ⚠️ {error === "Server error: 401" ? "Credenciales incorrectas" : "Error al iniciar sesión. Intenta de nuevo."}
+                            ⚠️ {error === "Server Error: Invalid credentials" ? "Credenciales incorrectas" : "Error al iniciar sesión. Intenta de nuevo."}
                         </div>
                     )}
 

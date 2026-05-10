@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useReducer, useRef } from "react";
-import { ApiResponse } from "../types/API";
+import { ApiErrorResponse, ApiResponse } from "../types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 
 type State<T> = {
@@ -51,7 +51,10 @@ export function useApiQuery<T>(
         dispatch({ type: "FETCH_START" });
         try {
             const res = await fetchWithAuth(currentUrl, { signal });
-            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+            if (!res.ok) {
+                const json: ApiErrorResponse<T> = await res.json();
+                throw new Error(`Server Error: ${json.error}`);
+            }
             const json: ApiResponse<T> = await res.json();
             if (!json.success) throw new Error("API returned an error");
             if (!signal.aborted) dispatch({ type: "FETCH_SUCCESS", payload: json.data });

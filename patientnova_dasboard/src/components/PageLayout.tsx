@@ -10,13 +10,11 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const isDesktop = useMediaQuery("(min-width: 1024px)");
 
-    // responsive: auto-close mobile sidebar when crossing to desktop
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         if (isDesktop) setSidebarOpen(false);
     }, [isDesktop]);
 
-    // responsive: lock body scroll when mobile sidebar is open (iOS-safe)
     useEffect(() => {
         if (sidebarOpen && !isDesktop) {
             const scrollY = window.scrollY;
@@ -36,7 +34,6 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
         }
     }, [sidebarOpen, isDesktop]);
 
-    // responsive: close sidebar on Escape key
     useEffect(() => {
         if (!sidebarOpen) return;
         const handleKey = (e: KeyboardEvent) => {
@@ -50,7 +47,6 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
 
     return (
         <div className="page-shell">
-            {/* responsive: mobile sidebar backdrop */}
             {sidebarOpen && !isDesktop && (
                 <div
                     className="sidebar-backdrop"
@@ -58,14 +54,11 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
                     aria-hidden="true"
                 />
             )}
-
             <Sidebar
                 isOpen={sidebarOpen}
                 onClose={closeSidebar}
             />
-
             <div className="page-content-wrapper">
-                {/* responsive: top navbar — hamburger visible below lg, hidden on lg+ */}
                 <header className="top-navbar">
                     <button
                         className="navbar-hamburger"
@@ -88,7 +81,6 @@ export default function PageLayout({ children }: { children: React.ReactNode }) 
                     </div>
                     <div className="navbar-spacer" />
                 </header>
-
                 <main className="page-main">{children}</main>
             </div>
         </div>
