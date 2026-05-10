@@ -1,3 +1,4 @@
+import type { Appointment } from "../../generated/prisma/client.ts";
 import type { Patient, Prisma, Channel } from '../../generated/prisma/client.ts';
 import z from "zod";
 
@@ -134,3 +135,22 @@ export const strongPassword = z
   .refine(p => /[a-z]/.test(p), 'At least one lowercase letter')
   .refine(p => /[0-9]/.test(p), 'At least one number')
   .refine(p => /[!@#$%^&*(),.?":{}|<>]/.test(p), 'At least one special character');
+
+
+export type TrackedReminder = {
+  dbId: string;
+  messageSid: string;
+  trackedSince: number;
+  pollFailures: number;
+};
+
+export type AppointmentWithDetails = Appointment & {
+  patient: { name: string; lastName: string };
+  appointmentLocation: { name: string } | null;
+};
+
+export type SendResult = {
+  success: boolean;
+  error?: string;
+  messageSid: string | null;
+};

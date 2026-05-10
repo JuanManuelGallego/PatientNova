@@ -2,7 +2,7 @@ import app from "./app.js";
 import { config } from "./utils/config.js";
 import { logger } from "./utils/logger.js";
 import { prisma } from "./prisma/prismaClient.js";
-import { initializeSchedulers, stopScheduler } from "./utils/scheduler.js";
+import { initializeSchedulers, stopScheduler } from "./scheduler/index.js";
 
 async function start() {
   await prisma.$connect();
@@ -25,7 +25,6 @@ async function start() {
       process.exit(0);
     });
 
-    // Force shutdown after 10 seconds
     setTimeout(() => {
       logger.error('Forced shutdown due to timeout');
       process.exit(1);
