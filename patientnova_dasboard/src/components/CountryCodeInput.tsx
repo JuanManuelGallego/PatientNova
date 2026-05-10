@@ -40,18 +40,18 @@ export function flagUrl(iso: string) {
     return `https://flagcdn.com/w40/${iso}.png`;
 }
 
-function parsePhone(value: string | undefined): { countryCode: string; local: string } {
-    if (!value) return { countryCode: "+57", local: "" };
+function parsePhone(value: string | undefined): { iso: string; local: string } {
+    if (!value) return { iso: "co", local: "" };
     for (const c of [ ...COUNTRY_CODES ].sort((a, b) => b.code.length - a.code.length)) {
         if (value.startsWith(c.code)) {
-            return { countryCode: c.code, local: value.slice(c.code.length) };
+            return { iso: c.iso, local: value.slice(c.code.length) };
         }
     }
     if (value.startsWith("+")) {
         const match = value.match(/^\+(\d{1,3})/);
-        if (match) return { countryCode: "+" + match[ 1 ], local: value.slice(match[ 0 ].length) };
+        if (match) return { iso: "co", local: value.slice(match[ 0 ].length) };
     }
-    return { countryCode: "+57", local: value };
+    return { iso: "co", local: value };
 }
 
 export function CountryCodeInput({
@@ -64,21 +64,24 @@ export function CountryCodeInput({
     placeholder?: string;
 }) {
     const parsed = useMemo(() => parsePhone(value), [ value ]);
-    const [ countryCode, setCountryCode ] = useState(parsed.countryCode);
+    const [ selectedIso, setSelectedIso ] = useState(parsed.iso);
     const local = parsed.local;
 
+    const entry = COUNTRY_CODES.find(c => c.iso === selectedIso);
+    const countryCode = entry?.code ?? "+57";
+
     function handleCodeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-        const newCode = e.target.value;
-        setCountryCode(newCode);
+        const newIso = e.target.value;
+        setSelectedIso(newIso);
+        const newCode = COUNTRY_CODES.find(c => c.iso === newIso)?.code ?? "+57";
         onChange(local ? newCode + local : "");
+        console.log(newIso, newCode)
     }
 
     function handleLocalChange(e: React.ChangeEvent<HTMLInputElement>) {
         const digits = e.target.value.replace(/[^\d]/g, "");
         onChange(digits ? countryCode + digits : "");
     }
-
-    const entry = COUNTRY_CODES.find(c => c.code === countryCode);
 
     return (
         <div className="phone-input-group">
@@ -89,17 +92,24 @@ export function CountryCodeInput({
                 width={20}
                 height={15}
             />
-            <select
-                className="phone-input-code"
-                value={countryCode}
-                onChange={handleCodeChange}
-            >
-                {COUNTRY_CODES.map(c => (
-                    <option key={c.code + c.label} value={c.code}>
-                        {c.code}
-                    </option>
-                ))}
-            </select>
+            <div className="phone-input-code-wrapper">
+                <span className="phone-input-code-display" aria-hidden>
+                    {countryCode}
+                </span>
+                <select
+                    className="phone-input-code"
+                    value={selectedIso}
+                    onChange={handleCodeChange}
+                    style={{ color: "transparent" }}
+                >
+                    {COUNTRY_CODES.map(c => (
+                        <option key={c.iso} value={c.iso} style={{ color: "initial" }}>
+                            {c.code} {c.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            
             <input
                 className="phone-input-number"
                 value={local}

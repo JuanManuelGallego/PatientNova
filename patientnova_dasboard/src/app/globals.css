@@ -385,8 +385,24 @@
   outline: none;
   flex: 1;
   min-width: 0;
-  max-width: 100px;
+  max-width: 120px;
 }
+
+.phone-input-code-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.phone-input-code-display {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 14px;
+  font-family: inherit;
+}
+
 
 /* ================================================================
    Custom Select
@@ -937,13 +953,13 @@
   gap: 8px;
 }
 
-.drawer-footer > * {
+.drawer-footer>* {
   flex: 1 1 auto;
   min-width: 0;
 }
 
 @media (min-width: 640px) {
-  .drawer-footer > * {
+  .drawer-footer>* {
     flex: 0 0 auto;
   }
 }
@@ -2208,7 +2224,7 @@ tr:hover td {
   flex: 1;
 }
 
-.dash-list-item__left > :last-child {
+.dash-list-item__left> :last-child {
   min-width: 0;
 }
 

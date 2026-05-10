@@ -35,7 +35,7 @@ function MedicalRecordsPageContent() {
   const { createMedicalRecord } = useCreateMedicalRecord();
   const { updateMedicalRecord } = useUpdateMedicalRecord();
 
-  const { medicalRecords, loading: loadingMedicalRecord } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
+  const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
   const medicalRecord = medicalRecords?.[ 0 ];
 
   useEffect(() => {
@@ -78,8 +78,8 @@ function MedicalRecordsPageContent() {
       patientId: selectedPatientId,
       name: getPatientFullName(patient),
     });
-    await fetchPatients();
-  }, [ createMedicalRecord, fetchPatients, patients, selectedPatientId ]);
+    await fetchMedicalRecords();
+  }, [ createMedicalRecord, fetchMedicalRecords, patients, selectedPatientId ]);
   
   const showRecord = selectedPatientId && medicalRecord && !loadingMedicalRecord;
   const showEmpty = selectedPatientId && !medicalRecord && !loadingMedicalRecord;

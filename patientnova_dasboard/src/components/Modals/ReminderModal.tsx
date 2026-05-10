@@ -82,8 +82,8 @@ export function ReminderModal({
 
         return {
             to,
-            contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid,
-            contentVariables: { "1": `${selectedPatient?.name?? ""}`, "2": getUserName(user), "3": form.fecha, "4": form.hora },
+            contentSid: sendMode === ReminderMode.SCHEDULED ? TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid : TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+            contentVariables: { "1": `${selectedPatient?.name ?? ""}`, "2": getUserName(user), "3": form.fecha, "4": form.hora },
             body: form.message,
             patientId: form.patientId,
         };

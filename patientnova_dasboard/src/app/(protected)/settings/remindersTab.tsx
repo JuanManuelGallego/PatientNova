@@ -6,6 +6,7 @@ import { User } from "@/src/types/User";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { ERR_SAVE, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
+import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 
 export function RemindersTab() {
     const { user, updateUser } = useAuthContext();
@@ -72,11 +73,17 @@ export function RemindersTab() {
                                     <div className="form-grid-2">
                                         <label className="form-label">
                                             Teléfono (SMS)
-                                            <input className="form-input" type="tel" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="+573001234567" />
+                                            <CountryCodeInput
+                                                value={phoneNumber || undefined}
+                                                onChange={value => setPhoneNumber(value)}
+                                            />
                                         </label>
                                         <label className="form-label">
                                             WhatsApp
-                                            <input className="form-input" type="tel" value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="+573001234567" />
+                                            <CountryCodeInput
+                                                value={whatsappNumber || undefined}
+                                                onChange={(v) => setWhatsappNumber(v)}
+                                            />
                                         </label>
                                     </div>
                                 </div>

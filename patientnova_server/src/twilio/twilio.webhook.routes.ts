@@ -56,12 +56,13 @@ twilioWebhookRouter.post(
         where: {
           to: phoneNumber,
           channel: Channel.WHATSAPP,
+          sentAt: { lte: new Date() },
           appointmentId: { not: null },
           appointment: {
             status: { in: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { sendAt: 'desc' },
         include: { appointment: true },
       });
 

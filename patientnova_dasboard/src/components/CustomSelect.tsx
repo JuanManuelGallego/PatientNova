@@ -5,6 +5,7 @@ export interface SelectOption {
     value: string;
     label: string;
     disabled?: boolean;
+    triggerLabel?: string;
 }
 
 interface CustomSelectProps {
@@ -22,7 +23,7 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
     const ref = useRef<HTMLDivElement>(null);
 
     const selected = options.find(o => o.value === value);
-    const displayLabel = selected?.label ?? placeholder ?? "";
+    const displayLabel = selected?.triggerLabel ?? selected?.label ?? placeholder ?? "";
     const isPlaceholder = !selected;
 
     useEffect(() => {
@@ -60,8 +61,8 @@ export function CustomSelect({ value, options, onChange, placeholder, className,
             case "Enter":
             case " ":
                 e.preventDefault();
-                if (highlightIdx >= 0 && !options[highlightIdx]?.disabled) {
-                    onChange(options[highlightIdx].value);
+                if (highlightIdx >= 0 && !options[ highlightIdx ]?.disabled) {
+                    onChange(options[ highlightIdx ].value);
                     setOpen(false);
                 }
                 break;
