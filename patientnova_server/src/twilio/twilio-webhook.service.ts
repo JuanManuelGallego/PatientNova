@@ -81,7 +81,7 @@ export class TwilioWebhookService {
                 sentAt: { lte: new Date() },
                 appointmentId: { not: null },
                 appointment: {
-                    status: { in: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] },
+                    status: { in: [ AppointmentStatus.SCHEDULED ] },
                 },
             },
             orderBy: { sendAt: 'desc' },

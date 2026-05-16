@@ -87,7 +87,7 @@ export function AppointmentModal({ appt, prefillDate, onClose, onSaved }: {
             contentVariables: {
                 "1": selectedPatient ? `${selectedPatient.name}` : "",
                 "2": getUserName(user) || "su profesional de salud",
-                "3": getDate(form.startAt),
+                "3": fmtDate(form.startAt),
                 "4": fmtTime(form.startAt),
             },
             body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.template

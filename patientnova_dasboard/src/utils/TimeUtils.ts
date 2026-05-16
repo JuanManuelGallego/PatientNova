@@ -29,7 +29,11 @@ function fmtDatePlusOneDay(d: string | undefined): string {
 
 function fmtTime(d: string | undefined): string {
     if (!d) return "Invalid Date"
-    return new Date(d).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    return new Date(d).toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+    });
 }
 
 function fmtDateWeekDay(d: string | undefined): string {

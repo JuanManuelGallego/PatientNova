@@ -157,7 +157,7 @@ async function sendPendingReminders(): Promise<void> {
         logger.info({ reminderId: reminder.id, messageSid: result.messageSid }, "Reminder sent");
         await prisma.reminder.update({
           where: { id: reminder.id },
-          data: { status: ReminderStatus.QUEUED, messageId: result.messageSid ?? null },
+          data: { status: ReminderStatus.QUEUED, messageId: result.messageSid ?? null, sentAt: result.sentAt },
         });
       } else {
         await handleSendFailure(reminder.id, reminder.error, result.error ?? "Unknown error");
