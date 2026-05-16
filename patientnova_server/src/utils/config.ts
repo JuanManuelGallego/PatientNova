@@ -22,6 +22,8 @@ export const config = {
     tomorrowAppointmentsReminder4Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID'),
     tomorrowAppointmentsReminder5Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID'),
     tomorrowAppointmentsReminder6Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID'),
+    appointmentStatusUpdateSid: requireEnv('TWILLO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID'),
+    appointmentMeetingLinkSid: requireEnv('TWILLO_WHATSAPP_USER_APPOINTMENT_MEETING_LINK_SID'),
   },
 
   rateLimit: {

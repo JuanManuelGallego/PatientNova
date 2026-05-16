@@ -13,7 +13,7 @@ import { appointmentInclude, type AppointmentWithRelations, type AppointmentStat
 import { getTodayBoundsInTz } from '../utils/timeUtils.js';
 
 export const appointmentRepository = {
-  async create(dto: CreateAppointmentDto): Promise<AppointmentWithRelations> {
+  async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
     return prisma.appointment.create({
       data: {
         startAt: dto.startAt,
@@ -28,6 +28,7 @@ export const appointmentRepository = {
         typeId: dto.typeId,
         status: dto.status,
         patientId: dto.patientId,
+        userId,
         ...(dto.reminderId && { reminder: { connect: { id: dto.reminderId } }, reminderId: dto.reminderId }),
       },
       include: appointmentInclude,
@@ -36,7 +37,7 @@ export const appointmentRepository = {
 
   async findById(id: string, userId: string): Promise<Appointment> {
     const appt = await prisma.appointment.findFirst({
-      where: { id, patient: { userId } },
+      where: { id, userId },
     });
     if (!appt) throw new AppointmentNotFoundError(id);
     return appt;
@@ -44,7 +45,7 @@ export const appointmentRepository = {
 
   async findByIdWithRelations(id: string, userId: string): Promise<AppointmentWithRelations> {
     const appt = await prisma.appointment.findFirst({
-      where: { id, patient: { userId } },
+      where: { id, userId },
       include: appointmentInclude,
     });
     if (!appt) throw new AppointmentNotFoundError(id);
@@ -58,7 +59,7 @@ export const appointmentRepository = {
 
 
     const where: Prisma.AppointmentWhereInput = {
-      patient: { userId },
+      userId,
       ...(patientId && { patientId }),
       ...(locationId && { locationId }),
       ...(typeId && { typeId }),
@@ -171,7 +172,7 @@ export const appointmentRepository = {
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
     const { patientId, dateFrom, dateTo } = query;
     const where: Prisma.AppointmentWhereInput = {
-      patient: { userId },
+      userId,
       ...(patientId && { patientId }),
       ...(dateFrom || dateTo
         ? {

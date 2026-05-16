@@ -159,6 +159,7 @@ async function seed() {
                     notes: 'Initial consultation',
                     status: AppointmentStatus.SCHEDULED,
                     patientId: patients[ 0 ].id,
+                    userId: user.id,
                     locationId: locations[ 0 ].id,
                     typeId: types[ 0 ].id,
                 },
@@ -174,6 +175,7 @@ async function seed() {
                     meetingUrl: 'https://meet.example.com/session-123',
                     status: AppointmentStatus.CONFIRMED,
                     patientId: patients[ 1 ].id,
+                    userId: user.id,
                     locationId: locations[ 3 ].id,
                     typeId: types[ 0 ].id,
                 },
@@ -189,6 +191,7 @@ async function seed() {
                     notes: 'Routine check-up',
                     status: AppointmentStatus.SCHEDULED,
                     patientId: patients[ 2 ].id,
+                    userId: user.id,
                     locationId: locations[ 1 ].id,
                     typeId: types[ 0 ].id,
                 },
@@ -204,6 +207,7 @@ async function seed() {
                     notes: 'Pre-surgery assessment',
                     status: AppointmentStatus.CONFIRMED,
                     patientId: patients[ 3 ].id,
+                    userId: user.id,
                     locationId: locations[ 2 ].id,
                     typeId: types[ 2 ].id,
                 },
@@ -229,6 +233,7 @@ async function seed() {
                     sendAt: reminderDate1,
                     appointmentId: appointments[ 0 ].id,
                     patientId: patients[ 0 ].id,
+                    userId: user.id,
                 },
             }),
             prisma.reminder.create({
@@ -243,6 +248,7 @@ async function seed() {
                     messageId: 'msg_12345',
                     appointmentId: appointments[ 1 ].id,
                     patientId: patients[ 1 ].id,
+                    userId: user.id,
                 },
             }),
             prisma.reminder.create({
@@ -255,6 +261,7 @@ async function seed() {
                     sendAt: reminderDate3,
                     appointmentId: appointments[ 2 ].id,
                     patientId: patients[ 2 ].id,
+                    userId: user.id,
                 },
             }),
             prisma.reminder.create({
@@ -268,6 +275,7 @@ async function seed() {
                     sendAt: reminderDate1,
                     appointmentId: appointments[ 3 ].id,
                     patientId: patients[ 3 ].id,
+                    userId: user.id,
                 },
             }),
             // Reminder without appointment (standalone reminder)
@@ -280,6 +288,7 @@ async function seed() {
                     sendMode: ReminderMode.SCHEDULED,
                     sendAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
                     patientId: patients[ 0 ].id,
+                    userId: user.id,
                 },
             }),
         ]);

@@ -51,7 +51,7 @@ export function RemindersTab() {
         <div style={{ maxWidth: 660 }}>
             <div className="dash-card">
                 <div className="dash-card__header">
-                    <span className="dash-card__title">Recordatorios de citas del proximo dia</span>
+                    <span className="dash-card__title">Recordatorios de citas del proximo dia y de actualizaciones de cita</span>
                 </div>
                 <div className="dash-card__body">
                     <form className="form-stack" onSubmit={handleSave}>

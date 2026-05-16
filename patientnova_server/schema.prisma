@@ -55,17 +55,17 @@ model Reminder {
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
-  
+
   channel           Channel
   to                String         @db.VarChar(30)
 
   contentSid        String?        @db.VarChar(100)
   contentVariables  Json?
   body              String?        @db.VarChar(500)
-  
+
   status            ReminderStatus @default(PENDING)
   error             String?
-  
+
   sendMode          ReminderMode
   sendAt            DateTime
   sentAt            DateTime?
@@ -73,14 +73,18 @@ model Reminder {
 
   appointmentId     String?        @unique @db.Uuid
   patientId         String         @db.Uuid
+  userId            String
 
   appointment       Appointment?   @relation("AppointmentReminder", fields: [appointmentId], references: [id], onDelete: Cascade)
   patient           Patient        @relation("PatientReminders", fields: [patientId], references: [id], onDelete: Cascade)
+  user              User           @relation("UserReminders", fields: [userId], references: [id])
 
   @@index([status])
   @@index([sendAt])
   @@index([patientId])
+  @@index([userId])
   @@index([status, sendAt])
+  @@index([userId, status])
   @@map("reminders")
 }
 
@@ -128,19 +132,24 @@ model Appointment {
   completedAt   DateTime?
 
   patientId     String            @db.Uuid
+  userId        String
   reminderId    String?           @db.Uuid
   locationId    String?           @db.Uuid
   typeId        String?           @db.Uuid
 
   patient             Patient              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  user                User                 @relation("UserAppointments", fields: [userId], references: [id])
   reminder            Reminder?            @relation("AppointmentReminder")
   appointmentLocation AppointmentLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   appointmentType     AppointmentType?     @relation(fields: [typeId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
+  @@index([userId])
   @@index([startAt])
   @@index([status])
   @@index([startAt, status])
+  @@index([userId, status])
+  @@index([userId, startAt])
   @@index([locationId])
   @@index([typeId])
   @@map("appointments")
@@ -162,7 +171,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   email          String      @unique
-  passwordHash   String     
+  passwordHash   String
 
   role           AdminRole   @default(VIEWER)
   status         AdminStatus @default(PENDING)
@@ -171,7 +180,7 @@ model User {
   lastName       String?
   displayName    String?
   avatarUrl      String?
-  jobTitle       String?   
+  jobTitle       String?
   logo           String?
   altLogo        String?
 
@@ -186,15 +195,17 @@ model User {
 
   lastPasswordChange   DateTime?
   failedLoginAttempts  Int       @default(0)
-  lockedUntil          DateTime? 
+  lockedUntil          DateTime?
   lastLoginAt          DateTime?
   lastLoginIp          String?
   refreshTokenVersion  Int       @default(0)
 
   deletedAt      DateTime?
-  deletedById    String?  
+  deletedById    String?
 
   patients              Patient[]
+  appointments          Appointment[] @relation("UserAppointments")
+  reminders             Reminder[]    @relation("UserReminders")
   appointmentLocations  AppointmentLocation[]
   appointmentTypes      AppointmentType[]
 
@@ -263,7 +274,7 @@ enum AdminStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
-  PENDING   
+  PENDING
 }
 
 // ─── Medical Record ───────────────────────────────────────────────────────────

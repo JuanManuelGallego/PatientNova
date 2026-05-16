@@ -25,6 +25,8 @@ const CANCELLABLE_STATUSES = new Set<AppointmentStatus>([
 const validatePatient = async (patientId: string, userId: string) => {
   const patient = await prisma.patient.findFirst({ where: { id: patientId, userId } });
   if (!patient) throw new AppointmentPatientNotFoundError(patientId);
+
+  return patient;
 }
 
 const validateLocation = async (locationId: string): Promise<AppointmentLocation> => {
@@ -76,7 +78,7 @@ export const appointmentService = {
   async create(dto: CreateAppointmentDto, userId: string) {
     await validateType(dto.typeId);
     await validateReminder(dto.reminderId);
-    await validatePatient(dto.patientId, userId);
+    const patient = await validatePatient(dto.patientId, userId);
 
     const location = await validateLocation(dto.locationId)
 
@@ -86,7 +88,7 @@ export const appointmentService = {
     }
 
     await checkConflict(dto.patientId, dto.startAt, dto.endAt);
-    return appointmentRepository.create(dto);
+    return appointmentRepository.create(dto, patient.userId);
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string) {

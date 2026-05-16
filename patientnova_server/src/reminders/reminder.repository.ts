@@ -17,6 +17,7 @@ export const reminderRepository = {
         messageId: dto.messageId || null,
         sendMode: dto.sendMode,
         patientId: dto.patientId,
+        userId,
         appointmentId: dto.appointmentId || null,
         sendAt: new Date(dto.sendAt),
         status: dto.status,
@@ -29,7 +30,7 @@ export const reminderRepository = {
 
   async findById(id: string, userId: string): Promise<Reminder> {
     const reminder = await prisma.reminder.findFirst({
-      where: { id, patient: { userId } },
+      where: { id, userId },
       include: reminderInclude,
     });
     if (!reminder) throw new ReminderNotFoundError(id);
@@ -41,7 +42,7 @@ export const reminderRepository = {
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.ReminderWhereInput = {
-      patient: { userId },
+      userId,
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
@@ -111,7 +112,7 @@ export const reminderRepository = {
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {
     const { patientId, dateFrom, dateTo } = query;
     const where: Prisma.ReminderWhereInput = {
-      patient: { userId },
+      userId,
       ...(patientId && { patientId }),
       ...(dateFrom || dateTo
         ? {
