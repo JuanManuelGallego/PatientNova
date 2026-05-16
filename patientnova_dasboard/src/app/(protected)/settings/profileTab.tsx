@@ -6,7 +6,7 @@ import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import Image from "next/image";
 import { useState, useRef } from "react";
 import { useAuthContext } from "../../AuthContext";
-import { ERR_SAVE, ERR_GENERIC, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
+import { ERR_GENERIC } from "@/src/constants/ui";
 
 // ─── Reusable logo slot ───────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ function LogoSlot({ label, hint, value, onSelect, onRemove }: LogoSlotProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProfileTab() {
-    const { user, updateUser } = useAuthContext();
+    const { user } = useAuthContext();
 
     const [ firstName, setFirstName ] = useState(user?.firstName ?? "");
     const [ lastName, setLastName ] = useState(user?.lastName ?? "");
@@ -83,8 +83,8 @@ export function ProfileTab() {
     const [ logo, setLogo ] = useState<string | null>(user?.logo ?? null);
     const [ altLogo, setAltLogo ] = useState<string | null>(user?.altLogo ?? null);
 
-    const { updateProfile, loading: saving, error: apiError } = useUpdateProfile();
-    const [ success, setSuccess ] = useState(false);
+    const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
+    const saveStatus = useUpdateProfile(userPayload);
     const [ error, setError ] = useState<string | null>(null);
 
     const fileRef = useRef<HTMLInputElement>(null);
@@ -103,6 +103,7 @@ export function ProfileTab() {
         try {
             setAvatarPreview(await resizeToBase64(file, 256));
             setError(null);
+            handleFieldChange();
         } catch {
             setError(ERR_GENERIC);
         }
@@ -120,6 +121,7 @@ export function ProfileTab() {
                 const format: ImageFormat = file.type === "image/png" ? "image/png" : "image/webp";
                 setter(await resizeToBase64(file, 800, format));
                 setError(null);
+                handleFieldChange();
             } catch {
                 setError(ERR_GENERIC);
             }
@@ -129,28 +131,19 @@ export function ProfileTab() {
 
     // ── Save ───────────────────────────────────────────────────────────────────
 
-    async function handleSave(e: React.FormEvent) {
-        e.preventDefault();
-        setSuccess(false);
+    function handleFieldChange() {
         setError(null);
-        try {
-            const payload: Partial<User> = {
-                firstName: firstName.trim() || undefined,
-                lastName: lastName.trim() || undefined,
-                displayName: displayName.trim() || undefined,
-                jobTitle: jobTitle.trim() || undefined,
-                avatarUrl: avatarPreview || undefined,
-                logo: logo || undefined,
-                altLogo: altLogo || undefined,
-                timezone,
-            };
-            const updated = await updateProfile(payload);
-            updateUser(updated as User);
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 3500);
-        } catch {
-            setError(apiError ?? ERR_SAVE);
-        }
+        const payload: Partial<User> = {
+            firstName: firstName.trim() || undefined,
+            lastName: lastName.trim() || undefined,
+            displayName: displayName.trim() || undefined,
+            jobTitle: jobTitle.trim() || undefined,
+            avatarUrl: avatarPreview || undefined,
+            logo: logo || undefined,
+            altLogo: altLogo || undefined,
+            timezone,
+        };
+        setUserPayload(payload);
     }
 
     // ── Render ─────────────────────────────────────────────────────────────────
@@ -186,7 +179,7 @@ export function ProfileTab() {
                             📷 Seleccionar imagen
                         </button>
                         {avatarPreview && (
-                            <button type="button" className="btn-secondary" style={{ width: "100%", color: "var(--c-error)" }} onClick={() => setAvatarPreview(null)}>
+                            <button type="button" className="btn-secondary" style={{ width: "100%", color: "var(--c-error)" }} onClick={() => { setAvatarPreview(null); handleFieldChange(); }}>
                                 🗑 Eliminar foto
                             </button>
                         )}
@@ -218,29 +211,29 @@ export function ProfileTab() {
                     <span className="dash-card__title">Información personal</span>
                 </div>
                 <div className="dash-card__body">
-                    <form className="form-stack" onSubmit={handleSave}>
+                    <div className="form-stack">
                         <div className="form-grid-2">
                             <label className="form-label">
                                 Nombre
-                                <input className="form-input" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan" />
+                                <input className="form-input" type="text" value={firstName} onChange={e => { setFirstName(e.target.value); handleFieldChange(); }} placeholder="Juan" />
                             </label>
                             <label className="form-label">
                                 Apellido
-                                <input className="form-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="García" />
+                                <input className="form-input" type="text" value={lastName} onChange={e => { setLastName(e.target.value); handleFieldChange(); }} placeholder="García" />
                             </label>
                         </div>
                         <label className="form-label">
                             Nombre en pantalla
-                            <input className="form-input" type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Dr. Juan García" />
+                            <input className="form-input" type="text" value={displayName} onChange={e => { setDisplayName(e.target.value); handleFieldChange(); }} placeholder="Dr. Juan García" />
                             <span className="form-input-hint">Aparece en la barra lateral y en el dashboard</span>
                         </label>
                         <label className="form-label">
                             Cargo
-                            <input className="form-input" type="text" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Médico general" />
+                            <input className="form-input" type="text" value={jobTitle} onChange={e => { setJobTitle(e.target.value); handleFieldChange(); }} placeholder="Médico general" />
                         </label>
                         <label className="form-label">
                             Zona horaria
-                            <select className="form-input" value={timezone} onChange={e => setTimezone(e.target.value)}>
+                            <select className="form-input" value={timezone} onChange={e => { setTimezone(e.target.value); handleFieldChange(); }}>
                                 {COMMON_TIMEZONES.map(tz => (
                                     <option key={tz.value} value={tz.value}>{tz.label}</option>
                                 ))}
@@ -255,13 +248,15 @@ export function ProfileTab() {
                             </label>
                         </div>
                         {error && <div className="error-inline">⚠️ {error}</div>}
-                        {success && <SuccessBanner message="Cambios guardados correctamente" />}
+                        {saveStatus === "saved" && <SuccessBanner message="Cambios guardados correctamente" />}
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                            <button type="submit" className="btn-primary" disabled={saving}>
-                                {saving ? LBL_SAVING : LBL_SAVE}
-                            </button>
+                            <span style={{ fontSize: 12, color: "var(--c-gray-400)", alignSelf: "center", marginRight: 12 }}>
+                                {saveStatus === "saved" && "✓ Guardado"}
+                                {saveStatus === "error" && "✗ Error al guardar"}
+                                {saveStatus === "idle" && ""}
+                            </span>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
             <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
@@ -278,14 +273,14 @@ export function ProfileTab() {
                             hint="Úsalo sobre fondos claros. Recomendado: fondo transparente."
                             value={logo}
                             onSelect={() => logoRef.current?.click()}
-                            onRemove={() => setLogo(null)}
+                            onRemove={() => { setLogo(null); handleFieldChange(); }}
                         />
                         <LogoSlot
                             label="Logo alternativo (icono)"
                             hint="Úsalo sobre fondos oscuros o de color."
                             value={altLogo}
                             onSelect={() => altLogoRef.current?.click()}
-                            onRemove={() => setAltLogo(null)}
+                            onRemove={() => { setAltLogo(null); handleFieldChange(); }}
                         />
                     </div>
                     <input ref={logoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={makeLogoHandler(setLogo)} />

@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         overflow: "hidden",
                     }}>
                         {user?.avatarUrl ?
-                            <Image src={user.avatarUrl} alt={user.displayName} width={36} height={36} sizes="36px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <Image onClick={() => { router.push("/settings") }} src={user.avatarUrl} alt={user.displayName} width={36} height={36} sizes="36px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             : user ? (
                                 `${user.firstName[ 0 ]}${user.lastName[ 0 ]}`.toUpperCase()
                             ) : "?"}

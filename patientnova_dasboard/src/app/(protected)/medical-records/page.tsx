@@ -67,7 +67,6 @@ function MedicalRecordsPageContent() {
     }
   }, [ medicalRecord ]);
 
-  
   const updateField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[ K ]) => {
     setForm((current) => ({ ...current, [ key ]: value }));
   }, []);
@@ -80,7 +79,7 @@ function MedicalRecordsPageContent() {
     });
     await fetchMedicalRecords();
   }, [ createMedicalRecord, fetchMedicalRecords, patients, selectedPatientId ]);
-  
+
   const showRecord = selectedPatientId && medicalRecord && !loadingMedicalRecord;
   const showEmpty = selectedPatientId && !medicalRecord && !loadingMedicalRecord;
   const saveStatus = useAutoSaveMedicalRecords(form, medicalRecord?.id, updateMedicalRecord);
