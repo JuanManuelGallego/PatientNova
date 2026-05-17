@@ -4,7 +4,7 @@ import { REMINDER_TYPE_CONFIG, ReminderType } from "../types/Reminder";
 function fmtDateTime(iso: string | undefined): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {
-        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
     });
 }
 

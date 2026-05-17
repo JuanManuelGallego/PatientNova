@@ -129,7 +129,7 @@ function AppointmentsPageContent() {
           />
         </FilterBar>
         <DataTable
-          columns={[ "Paciente", "Tipo", "Fecha", "Recordatorio", "Ubicación", "Estado", "Pago", "" ]}
+          columns={[ "Paciente", "Tipo", "Fecha y Hora", "Recordatorio", "Ubicación", "Estado", "Pago", "" ]}
           rows={appointments}
           loading={loading}
           skeletonCount={6}

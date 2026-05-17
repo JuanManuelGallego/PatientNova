@@ -260,27 +260,36 @@ export class TwilioWebhookService {
         };
     }
 
+    async sendErrorMessage(phoneNumber: string): Promise<void> {
+        await sendWhatsAppFreeForm(phoneNumber, 'Disculpa, no puedo procesar tu mensaje. Por favor, comunícate con tu profesional de la salud.');
+    }
+
     /**
      * Process a WhatsApp quick-reply webhook
      */
     async processWhatsAppReply(payload: WebhookPayload): Promise<ProcessResult> {
         // Validate payload
         const validation = this.validateWebhookPayload(payload);
+        const phoneNumber = validation.phoneNumber;
         if (!validation.isValid) {
+            if (phoneNumber) {
+                await this.sendErrorMessage(phoneNumber);
+            }
             return { success: false, message: validation.error };
         }
 
-        const { phoneNumber, buttonPayload } = validation;
-
         // Determine intent
-        const { intent } = this.determineUserIntent(buttonPayload!);
+        const { intent } = this.determineUserIntent(validation.buttonPayload!);
         if (!intent) {
+            await this.sendErrorMessage(phoneNumber!);
+
             return { success: false, message: 'Unknown intent' };
         }
 
         // Find active reminder
         const reminder = await this.findActiveReminder(phoneNumber!);
         if (!reminder) {
+            await this.sendErrorMessage(phoneNumber!);
             return { success: false, message: 'No active reminder found' };
         }
 
@@ -296,6 +305,7 @@ export class TwilioWebhookService {
             return { success: true };
         } catch (err) {
             logger.error({ err }, 'Error processing WhatsApp quick-reply');
+            await this.sendErrorMessage(phoneNumber!);
             return { success: false, message: 'Internal error' };
         }
     }
