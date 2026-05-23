@@ -1,9 +1,10 @@
-import { AppointmentStatus, type AppointmentLocation } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, type AppointmentLocation, type Reminder } from '../../generated/prisma/client.ts';
 import { appointmentRepository } from './appointment.repository.js';
 import { AppointmentConflictError, AppointmentPatientNotFoundError, AppointmentReminderNotFoundError, AppointmentStatusTransitionError, AppointmentTypeNotFoundError, LocationNotFoundError } from '../utils/errors.js';
 import type { CreateAppointmentDto, UpdateAppointmentDto } from './appointment.schemas.ts';
 import { googleMeetService } from '../google/google-meet.service.ts';
 import { prisma } from '../prisma/prismaClient.ts';
+import { logger } from '../utils/logger.ts';
 
 /** Statuses from which an appointment can be paid */
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
@@ -45,11 +46,13 @@ const validateType = async (typeId: string) => {
     throw new AppointmentTypeNotFoundError(typeId);
 }
 
-const validateReminder = async (reminderId: string | null | undefined) => {
+const validateReminder = async (reminderId: string | null | undefined): Promise<Reminder | null> => {
   if (reminderId) {
     const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
     if (!reminder) throw new AppointmentReminderNotFoundError(reminderId);
+    return reminder;
   }
+  return null;
 }
 
 export async function checkConflict(patientId: string, startAt: string | Date, endAt: string | Date, excludeId?: string): Promise<void> {
@@ -77,7 +80,7 @@ export const appointmentService = {
 
   async create(dto: CreateAppointmentDto, userId: string) {
     await validateType(dto.typeId);
-    await validateReminder(dto.reminderId);
+    const reminder = await validateReminder(dto.reminderId);
     const patient = await validatePatient(dto.patientId, userId);
 
     const location = await validateLocation(dto.locationId)
@@ -85,6 +88,21 @@ export const appointmentService = {
     if (!dto.meetingUrl && location?.isVirtual) {
       const space = await googleMeetService.createMeetingSpace();
       dto.meetingUrl = space.meetingUrl;
+      if (reminder) {
+        try {
+          await prisma.reminder.update({
+            where: { id: reminder.id },
+            data: {
+              contentVariables: {
+                ...(reminder.contentVariables as Record<string, any>),
+                "5": space.meetingUrl,
+              }
+            }
+          });
+        } catch (error) {
+          logger.error({ reminderId: reminder.id, error }, "Failed to update reminder with meeting URL");
+        }
+      }
     }
 
     await checkConflict(dto.patientId, dto.startAt, dto.endAt);

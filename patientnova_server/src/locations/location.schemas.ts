@@ -1,16 +1,35 @@
 import { z } from 'zod';
 
-export const createLocationSchema = z.object({
-  name: z.string().min(1, 'name is required').max(100),
-  address: z.string().max(255).nullable().optional(),
-  instructions: z.string().max(500).nullable().optional(),
-  color: z.string().max(20).nullable().optional(),
-  bg: z.string().max(20).nullable().optional(),
-  dot: z.string().max(20).nullable().optional(),
-  icon: z.string().max(50).nullable().optional(),
-  defaultPrice: z.number().int().min(0).nullable().optional(),
-  isVirtual: z.boolean().default(false),
-});
+export const createLocationSchema = z
+  .object({
+    name: z.string().min(1, 'name is required').max(100),
+    address: z.string().max(255).nullable().optional(),
+    instructions: z.string().max(500).nullable().optional(),
+    color: z.string().max(20).nullable().optional(),
+    bg: z.string().max(20).nullable().optional(),
+    dot: z.string().max(20).nullable().optional(),
+    icon: z.string().max(50).nullable().optional(),
+    defaultPrice: z.number().int().min(0).nullable().optional(),
+    isVirtual: z.boolean().default(false),
+  })
+  .superRefine((d, ctx) => {
+    if (!d.isVirtual) {
+      if (!d.address) {
+        ctx.addIssue({
+          code: "custom",
+          message: 'address is required for non-virtual locations',
+          path: [ 'address' ],
+        });
+      }
+      if (!d.instructions) {
+        ctx.addIssue({
+          code: "custom",
+          message: 'instructions is required for non-virtual locations',
+          path: [ 'instructions' ],
+        });
+      }
+    }
+  });
 
 export const updateLocationSchema = z
   .object({
@@ -25,10 +44,31 @@ export const updateLocationSchema = z
     isVirtual: z.boolean().optional(),
     isActive: z.boolean().optional(),
   })
-  .refine(
-    (d) => Object.keys(d).length > 0,
-    { message: 'At least one valid field must be provided for update' }
-  );
+  .superRefine((d, ctx) => {
+    if (Object.keys(d).length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: 'At least one valid field must be provided for update',
+      });
+    }
 
-export type CreateLocationDto= z.infer<typeof createLocationSchema>;
+    if (d.isVirtual === false) {
+      if (!d.address) {
+        ctx.addIssue({
+          code: "custom",
+          message: 'address is required when setting location to non-virtual',
+          path: [ 'address' ],
+        });
+      }
+      if (!d.instructions) {
+        ctx.addIssue({
+          code: "custom",
+          message: 'instructions is required when setting location to non-virtual',
+          path: [ 'instructions' ],
+        });
+      }
+    }
+  });
+
+export type CreateLocationDto = z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;

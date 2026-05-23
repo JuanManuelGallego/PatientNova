@@ -187,8 +187,8 @@ model User {
   phoneNumber    String?  @db.VarChar(20)
   whatsappNumber String?  @db.VarChar(20)
 
-  reminderActive  Boolean  @default(true)
-  reminderChannel Channel?
+  reminderActive        Boolean  @default(true)
+  reminderChannel       Channel?
   lastDailyReminderDate DateTime?
 
   timezone             String    @default("America/Bogota") @db.VarChar(50)
@@ -208,6 +208,8 @@ model User {
   reminders             Reminder[]    @relation("UserReminders")
   appointmentLocations  AppointmentLocation[]
   appointmentTypes      AppointmentType[]
+  bankAccount           BankAccount?
+  consentDocument       Document?
 
   @@index([email])
   @@index([status])
@@ -349,6 +351,40 @@ model EvolutionNote {
 
   @@index([medicalRecordId])
   @@map("evolution_notes")
+}
+
+// ─── Documents ───────────────────────────────────────────────────────────
+model Document {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User @relation(fields:[userId], references:[id], onDelete: Cascade)
+  name      String
+  content   Bytes
+  mimeType  String  @default("application/pdf")
+  sizeBytes Int?
+  checksum  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("documents")
+}
+
+// ─── BankAccount ───────────────────────────────────────
+
+model BankAccount {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bankName      String?
+  accountNumber String?
+  nationalId    String?
+  bankingKey    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bank_accounts")
 }
 
 enum Sex {

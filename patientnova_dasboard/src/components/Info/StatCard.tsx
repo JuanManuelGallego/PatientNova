@@ -1,4 +1,3 @@
-// TODO: Add click/actice support
 export function StatCard({ label, value, sub, accent }: {
     label: string; value: number | string; sub: string; accent: string;
 }) {
