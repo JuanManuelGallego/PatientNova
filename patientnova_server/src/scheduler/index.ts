@@ -20,7 +20,7 @@ export function initializeSchedulers(): void {
     }
   });
 
-  logger.info("Schedulers initialized - running every minute");
+  logger.info("Schedulers initialized => running every minute");
 }
 
 export function stopScheduler(): void {

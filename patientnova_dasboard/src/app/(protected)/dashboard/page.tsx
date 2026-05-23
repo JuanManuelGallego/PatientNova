@@ -69,10 +69,10 @@ export default function DashboardPage() {
         </div>
         <div className="dash-welcome__actions">
           <button className="btn-primary btn-hero" onClick={() => setShowApptModal(true)}>
-            <span className="btn-plus-icon">+</span> Nueva Cita 📝
+            <span className="btn-plus-icon">+</span> Nueva Cita
           </button>
           <button className="btn-primary btn-hero" onClick={() => setShowReminderModal(true)}>
-            <span className="btn-plus-icon">+</span> Nuevo Recordatorio 🔔
+            <span className="btn-plus-icon">+</span> Nuevo Recordatorio
           </button>
         </div>
       </div>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         <div className="dash-card">
           <div className="dash-card__header">
             <div>
-              <h2 className="dash-card__title">📝 Citas de Hoy</h2>
+              <h2 className="dash-card__title">Citas de Hoy</h2>
               <p className="dash-card__sub">{apptStats?.todayCount ?? 0} citas programadas</p>
             </div>
             <Link href="/appointments" className="dash-card__link">Ver todas →</Link>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
         <div className="dash-card">
           <div className="dash-card__header">
             <div>
-              <h2 className="dash-card__title">🔔 Recordatorios Activos</h2>
+              <h2 className="dash-card__title">Recordatorios Activos</h2>
               <p className="dash-card__sub">{pendingReminders} pendientes</p>
             </div>
             <Link href="/reminders" className="dash-card__link">Ver todos →</Link>

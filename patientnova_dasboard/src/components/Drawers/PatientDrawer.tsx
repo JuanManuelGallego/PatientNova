@@ -70,7 +70,6 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
                         {patient.dateOfBirth && <Row icon="📅" label="Fecha de Nacimiento" value={fmtDate(patient.dateOfBirth)} />}
                         {patient.notes && (
                             <div className="detail-row">
-                                <span className="detail-row__icon">📝</span>
                                 <div className="detail-row__content">
                                     <div className="notes-label">Notas</div>
                                     <div className="notes-text">{patient.notes}</div>
@@ -99,13 +98,13 @@ export function PatientDrawer({ patient, onClose, onEdit, onDelete }: {
                                             <div className="linked-card__header">
                                                 <div>
                                                     <div className="linked-card__title">{appointmentTypeNameById[ apt.typeId ?? "" ] || "Desconocido"}</div>
-                                                    <div className="linked-card__meta">📅 {fmtDateTime(apt.startAt.toString())}</div>
+                                                    <div className="linked-card__meta">{fmtDateTime(apt.startAt.toString())}</div>
                                                 </div>
                                                 <AppointmentStatusPill status={apt.status} />
                                             </div>
                                             <div className="linked-card__footer">
                                                 <span>📍 {locationNameById[ apt.locationId ?? "" ] || "Desconocida"}</span>
-                                                {apt.paid && <span>💰 Pagada</span>}
+                                                {apt.paid && <span>Pagada</span>}
                                             </div>
                                         </div>
                                     );

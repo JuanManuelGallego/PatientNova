@@ -141,7 +141,7 @@ function ActiveRemindersTab({ reminders, loading, page, total, totalPages, setPa
                         <div className="td-name__primary">{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</div>
                         <div className="td-name__secondary">{reminder.to}</div>
                     </td>
-                    <td className="td">{CHANNEL_CFG[ reminder.channel ].icon}</td>
+                    <td className="td td--date">{CHANNEL_CFG[ reminder.channel ].label}</td>
                     <td className="td"><ReminderStatusPill status={reminder.status} /></td>
                     <td className="td td--date">{fmtDateTime(reminder.sendAt)}</td>
                     <td className="td td--muted">
@@ -183,7 +183,7 @@ function HistoryRemindersTab({ reminders, loading, page, total, totalPages, setP
                         <div className="td-name__primary">{reminder.patient?.name ?? "—"} {reminder.patient?.lastName ?? "—"}</div>
                         <div className="td-name__secondary">{reminder.to}</div>
                     </td>
-                    <td className="td">{CHANNEL_CFG[ reminder.channel ].icon}</td>
+                    <td className="td td--date">{CHANNEL_CFG[ reminder.channel ].label}</td>
                     <td className="td"><ReminderStatusPill status={reminder.status} /></td>
                     <td className="td td--muted">{fmtDateTime(reminder.sendAt)}</td>
                     <td className="td td--muted">{fmtDateTime(reminder.updatedAt)}</td>

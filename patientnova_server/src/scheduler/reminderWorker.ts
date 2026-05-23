@@ -5,6 +5,7 @@ import { validateReminder } from "./validation.js";
 import { dispatchMessage } from "./dispatch.js";
 import { REMINDER_LOOKAHEAD_MS, REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from "../utils/constants.ts";
 import { logger } from "../utils/logger.ts";
+import { config } from "../utils/config.ts";
 
 export const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
 export const MAX_POLL_FAILURES = 5;
@@ -124,6 +125,7 @@ async function sendPendingReminders(): Promise<void> {
   const pending = await prisma.reminder.findMany({
     where: { status: ReminderStatus.PENDING, sendAt: { lte: lookahead } },
     take: REMINDER_BATCH_SIZE,
+    include: { appointment: { select: { meetingUrl: true } }, user: { select: { displayName: true } } },
   });
 
   if (pending.length === 0) {
@@ -159,6 +161,15 @@ async function sendPendingReminders(): Promise<void> {
           where: { id: reminder.id },
           data: { status: ReminderStatus.QUEUED, messageId: result.messageSid ?? null, sentAt: result.sentAt },
         });
+
+        if (reminder.appointment?.meetingUrl) {
+          dispatchMessage(reminder.channel as Channel, {
+            to: reminder.to!,
+            body: `Aquí tienes el enlace para unirte a tu videoconsulta con ${reminder.user?.displayName ?? "tu profesional de la salud"}: ${reminder.appointment.meetingUrl}`,
+            contentSid: config.twilio.appointmentMeetingLinkSid,
+            contentVariables: { "1": reminder.user?.displayName ?? "tu profesional de la salud", "2": reminder.appointment.meetingUrl },
+          })
+        }
       } else {
         await handleSendFailure(reminder.id, reminder.error, result.error ?? "Unknown error");
       }

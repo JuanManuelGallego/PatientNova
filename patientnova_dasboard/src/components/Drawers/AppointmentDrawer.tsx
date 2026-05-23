@@ -21,7 +21,7 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                 <div className="drawer-header" style={{ background: s.bg, borderBottom: `3px solid ${s.dot}` }}>
                     <div className="drawer-header__top">
                         <div>
-                            <div className="drawer-header__icon">{s.icon}</div>
+                            {/* <div className="drawer-header__icon">{s.icon}</div> */}
                             <h2 className="drawer-header__title">{appt.appointmentType.name}</h2>
                             <div className="drawer-header__status"><AppointmentStatusPill status={appt.status} /></div>
                         </div>
@@ -74,8 +74,8 @@ export function AppointmentDrawer({ appt, onClose, onEdit, onPay, onDelete }: {
                                 <div key={appt.reminder.id} className="linked-card" style={{ borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[ appt.reminder.status ].dot}` }}>
                                     <div className="linked-card__header">
                                         <div>
-                                            <div className="linked-card__title">{CHANNEL_CFG[ appt.reminder.channel ].iconAndLabel}</div>
-                                            <div className="linked-card__meta">📅 {fmtDateTime(appt.reminder.sendAt.toString())}</div>
+                                            <div className="linked-card__title">{CHANNEL_CFG[ appt.reminder.channel ].label}</div>
+                                            <div className="linked-card__meta">{fmtDateTime(appt.reminder.sendAt.toString())}</div>
                                         </div>
                                         <ReminderStatusPill status={appt.reminder.status} />
                                     </div>

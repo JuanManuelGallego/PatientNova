@@ -121,9 +121,9 @@ function AppointmentsPageContent() {
             value={filterpaid}
             className="form-input--auto"
             options={[
-              { value: "All", label: "💳 Todas" },
-              { value: "true", label: "💳 Pagadas" },
-              { value: "false", label: "⏳ Sin pagar" },
+              { value: "All", label: "Todas" },
+              { value: "true", label: "Pagadas" },
+              { value: "false", label: "Sin pagar" },
             ]}
             onChange={(v) => setFilterpaid(v as "true" | "false" | "All")}
           />

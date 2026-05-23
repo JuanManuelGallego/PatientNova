@@ -30,7 +30,7 @@ export function EditScheduledReminderModal({ reminder, onClose, onSaved }: { rem
                 <div className="summary-card" style={{ marginBottom: 20 }}>
                     <div className="summary-row">
                         <span className="summary-row__key">Canal</span>
-                        <span className="summary-row__value">{CHANNEL_CFG[ reminder.channel ].iconAndLabel}</span>
+                        <span className="summary-row__value">{CHANNEL_CFG[ reminder.channel ].label}</span>
                     </div>
                     <div className="summary-row">
                         <span className="summary-row__key">Destinatario</span>

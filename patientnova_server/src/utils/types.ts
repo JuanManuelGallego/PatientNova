@@ -39,7 +39,7 @@ export interface ScheduleResult {
 export const appointmentInclude = {
   patient: { select: { id: true, name: true, lastName: true, email: true } },
   reminder: { select: { id: true, channel: true, status: true, sendAt: true } },
-  appointmentLocation: { select: { id: true, name: true, address: true, color: true, bg: true, dot: true, icon: true, defaultPrice: true, isVirtual: true, isActive: true } },
+  appointmentLocation: { select: { id: true, name: true, address: true, instructions: true, color: true, bg: true, dot: true, icon: true, defaultPrice: true, isVirtual: true, isActive: true } },
   appointmentType: { select: { id: true, name: true, description: true, defaultDuration: true, defaultPrice: true, color: true, icon: true, isActive: true } },
 } satisfies Prisma.AppointmentInclude;
 

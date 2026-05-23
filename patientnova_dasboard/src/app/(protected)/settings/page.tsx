@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ProfileTab } from "./profileTab";
@@ -8,11 +7,12 @@ import { SecurityTab } from "./securityTab";
 import { LocationsTab } from "./locationsTab";
 import { AppointmentTypesTab } from "./appointmentTypesTab";
 import { RemindersTab } from "./remindersTab";
+import { parseAsStringEnum, useQueryState } from "nuqs";
 
-enum ActiveTab { Profile = "👤 Profile", Security = "🔒 Security", Locations = "📍 Ubicaciones", AppointmentTypes = "📅 Tipos de Cita", Notifications = "🔔 Recordatorios" }
+enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios" }
 
 export default function SettingsPage() {
-    const [ tab, setTab ] = useState<ActiveTab>(ActiveTab.Profile);
+    const [ tab, setTab ] = useQueryState("tab", parseAsStringEnum<ActiveTab>(Object.values(ActiveTab)).withDefault(ActiveTab.Profile));
 
     return (
         <PageLayout>
@@ -28,7 +28,7 @@ export default function SettingsPage() {
                         className={`filter-chip${tab === t ? " filter-chip--active" : ""}`}
                         onClick={() => setTab(t)}
                     >
-                        <span className="tab-icon">{t.split(" ")[ 0 ]}</span>{t.slice(2)}
+                       {t}
                     </button>
                 ))}
             </div>

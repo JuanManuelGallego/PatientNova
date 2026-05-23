@@ -62,8 +62,8 @@ export enum AppointmentPaidStatus {
 }
 
 export const APPT_PAID_STATUS_CFG: Record<AppointmentPaidStatus, { label: string; color: string; bg: string; dot: string; icon: string }> = {
-    [ AppointmentPaidStatus.PAID ]: { label: "Pagado", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "💳" },
-    [ AppointmentPaidStatus.UNPAID ]: { label: "Pendiente", color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444", icon: "⏳" },
+    [ AppointmentPaidStatus.PAID ]: { label: "Pagado", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "" },
+    [ AppointmentPaidStatus.UNPAID ]: { label: "Pendiente", color: "#DC2626", bg: "#FEF2F2", dot: "#EF4444", icon: "" },
 };
 
 export enum AppointmentStatus {
@@ -108,7 +108,19 @@ export interface AppointmentLocation {
     icon?: string | null;
     isVirtual: boolean;
     isActive: boolean;
+    instructions?: string | null;
 }
+
+
+export type AppointmentLocationForm = {
+    name: string;
+    address: string;
+    color: string;
+    icon: string;
+    isVirtual: boolean;
+    instructions: string;
+};
+
 
 export interface AppointmentType {
     id: string;

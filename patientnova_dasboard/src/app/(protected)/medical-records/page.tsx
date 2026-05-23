@@ -99,7 +99,7 @@ function MedicalRecordsPageContent() {
       />
       {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
       <div style={{ display: "grid", gap: 24 }}>
-        <MedicalRecordCard title="Seleccionar Paciente" icon="👤">
+        <MedicalRecordCard title="Seleccionar Paciente">
           <label className="form-label">
             <RequiredField label="Paciente" />
             {loadingPatients ? (
@@ -139,10 +139,10 @@ function MedicalRecordsPageContent() {
         )}
         {showRecord && (
           <>
-            <MedicalRecordCard title="Datos Generales" icon="📋">
+            <MedicalRecordCard title="Datos Generales">
               <GeneralDataSection form={form} onChange={updateField} />
             </MedicalRecordCard>
-            <MedicalRecordCard title="Composición Familiar" icon="👨‍👩‍👧‍👦">
+            <MedicalRecordCard title="Composición Familiar">
               <FamilyTable
                 familyMembers={form.familyMembers ?? []}
                 onChange={(familyMembers) => updateField("familyMembers", familyMembers)}
@@ -157,16 +157,16 @@ function MedicalRecordsPageContent() {
                 />
               </label>
             </MedicalRecordCard>
-            <MedicalRecordCard title="Antecedentes" icon="📚">
+            <MedicalRecordCard title="Antecedentes">
               <AntecedentsSection form={form} onChange={updateField} />
             </MedicalRecordCard>
-            <MedicalRecordCard title="Notas de Evolución" icon="📝">
+            <MedicalRecordCard title="Notas de Evolución">
               <EvolutionNotes
                 evolutionNotes={form.evolutionNotes ?? []}
                 onChange={(evolutionNotes) => updateField("evolutionNotes", evolutionNotes)}
               />
             </MedicalRecordCard>
-            <MedicalRecordCard title="Documentos relacionados" icon="📂">
+            <MedicalRecordCard title="Documentos relacionados">
               <DocumentsSection
                 documents={form.documents ?? []}
                 onChange={(documents) => updateField("documents", documents)}

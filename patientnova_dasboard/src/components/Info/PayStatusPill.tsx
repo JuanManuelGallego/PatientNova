@@ -4,7 +4,7 @@ export function PayStatusPill({ paid }: { paid: boolean }) {
             background: paid ? "var(--c-success-bg)" : "var(--c-warning-light)",
             color: paid ? "var(--c-success)" : "var(--c-warning-dark)",
         }}>
-            {paid ? "💳 Pagado" : "⏳ Pendiente"}
+            {paid ? "Pagado" : "Pendiente"}
         </span>
     );
 }

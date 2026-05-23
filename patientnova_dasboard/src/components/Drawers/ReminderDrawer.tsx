@@ -21,7 +21,7 @@ export function ReminderDrawer({ reminder, onClose, onEdit, onCancel }: {
                 <div className="drawer-header" style={{ background: s.bg, borderBottom: `3px solid ${s.dot}` }}>
                     <div className="drawer-header__top">
                         <div>
-                            <div className="drawer-header__icon">{CHANNEL_CFG[ reminder.channel ].icon}</div>
+                            {/* <div className="drawer-header__icon">{CHANNEL_CFG[ reminder.channel ].icon}</div> */}
                             <h2 className="drawer-header__title">{CHANNEL_CFG[ reminder.channel ].label}</h2>
                             <div className="drawer-header__status"><ReminderStatusPill status={reminder.status} /></div>
                         </div>
@@ -64,13 +64,13 @@ export function ReminderDrawer({ reminder, onClose, onEdit, onCancel }: {
                                     <div className="linked-card__header">
                                         <div>
                                             <div className="linked-card__title">{reminder.appointment.appointmentType.name}</div>
-                                            <div className="linked-card__meta">📅 {fmtDateTime(reminder.appointment.startAt.toString())}</div>
+                                            <div className="linked-card__meta">{fmtDateTime(reminder.appointment.startAt.toString())}</div>
                                         </div>
                                         <AppointmentStatusPill status={reminder.appointment.status} />
                                     </div>
                                     <div className="linked-card__footer">
                                         <span>📍 {reminder.appointment.appointmentLocation.name}</span>
-                                        {reminder.appointment.paid && <span>💰 Pagada</span>}
+                                        {reminder.appointment.paid && <span>Pagada</span>}
                                     </div>
                                 </div>
                             </div>
