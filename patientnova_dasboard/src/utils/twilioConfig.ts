@@ -18,5 +18,10 @@ export const TWILIO_CONFIG = {
         label: "Patient Appointment Reminder Virtual",
         contentSid: "HX4a988ec65d4afaec679c99b3ac218517",
         template: "Asunto: Recordatorio de cita\n\nBuen día {{1}}, espero que se encuentre muy bien.\n\nLe escribimos para recordarle su próxima cita virtual con {{2}}:\n\nFecha: {{3}}\n\nHora: {{4}}\n\nEnlace de la reunión: : {{5}}\n\nLe recordamos cordialmente que el pago de la consulta debe estar gestionado y confirmado antes del inicio de la sesión.\n\nQuedamos a su disposición para cualquier duda. ¡Feliz día!"
-    }
+    },
+    PATIENT_WELCOME_MESSAGE:{
+        label: "Patient Welcome Message",
+        contentSid: "HX884180c72b5a0158333da370c4e719d1",
+        template: "¡Hola {{1}}! Te damos la bienvenida a Patient Nova, la plataforma de recordatorios de citas de {{2}}. A través de este canal, podrás confirmar o cancelar tus próximas citas de forma rápida. Te recordamos que el pago de la consulta se realiza antes de asistir a tu cita. Banco: {{3}} Número de cuenta:  {{4}} A nombre de: {{5}} Cédula: {{6}} Llave: {{7}} Por favor, descarga y completa este documento de consentimiento adjunto en este mensaje antes de tu primera consulta. ¡Muchas gracias!"
+    },
 }

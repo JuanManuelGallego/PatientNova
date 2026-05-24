@@ -6,6 +6,7 @@ export interface SendWhatsAppRequest {
   to: string;
   contentSid: string;
   contentVariables?: Record<string, string>;
+  mediaUrl?: string | null;
 }
 
 export interface SendSmsRequest {

@@ -34,6 +34,7 @@ export async function sendWhatsApp(
     ...(req.contentVariables
       ? { contentVariables: JSON.stringify(req.contentVariables) }
       : {}),
+    ...(req.mediaUrl ? { mediaUrl: [req.mediaUrl] } : {}),
   }
 
   const message = await getClient().messages.create(messageParams);

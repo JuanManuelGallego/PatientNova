@@ -27,6 +27,8 @@ export interface Reminder {
 
     appointment?: Appointment | null;
     patient?: Patient;
+
+    mediaUrl?: string | null
 }
 
 export type ReminderForm = {

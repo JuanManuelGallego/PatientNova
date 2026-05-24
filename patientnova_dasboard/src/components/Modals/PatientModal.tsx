@@ -1,13 +1,19 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useCreatePatient } from "@/src/api/useCreatePatient";
 import { useUpdatePatient } from "@/src/api/useUpdatePatient";
 import { Patient, PatientStatus, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
 import { CountryCodeInput } from "../CountryCodeInput";
 import { CustomSelect } from "../CustomSelect";
 import { LBL_CANCEL, LBL_CREATE_PATIENT, LBL_SAVE_CHANGES, LBL_SAVING } from "@/src/constants/ui";
+import { Channel, ReminderMode } from "@/src/types/Reminder";
+import { useNotify } from "@/src/api/useNotify";
+import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
+import { useAuthContext } from "@/src/app/AuthContext";
+import { API_BASE } from "@/src/types/API";
 
 export function PatientModal({
   onClose,
@@ -19,11 +25,15 @@ export function PatientModal({
   patient?: Patient;
 }) {
   const isEdit = !!patient;
+  const { notify } = useNotify();
+  const { user } = useAuthContext();
   const { createPatient } = useCreatePatient();
   const { updatePatient } = useUpdatePatient();
   const { ref: trapRef, handleKeyDown: trapKeyDown } = useFocusTrap<HTMLDivElement>();
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
+  const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
+  const [ welcomeChannel, setWelcomeChannel ] = useState<Channel>(Channel.WHATSAPP);
   const [ form, setForm ] = useState({
     name: patient?.name ?? "",
     lastName: patient?.lastName ?? "",
@@ -35,6 +45,13 @@ export function PatientModal({
     status: patient?.status ?? "ACTIVE" as PatientStatus,
   });
   const isValid = !!form.name && !!form.lastName;
+  const canSendWelcome = user?.displayName && user?.bankName && user?.accountNumber && user?.nationalId && user?.bankingKey && user.consentDocument;
+
+  useEffect(() => {
+    if (form.whatsappNumber && !form.smsNumber) setWelcomeChannel(Channel.WHATSAPP);
+    if (!form.whatsappNumber && form.smsNumber) setWelcomeChannel(Channel.SMS);
+    if (!form.whatsappNumber && !form.smsNumber) setSendWelcomeMessage(false);
+  }, [ form.whatsappNumber, form.smsNumber ]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [ field ]: e.target.value }));
@@ -68,7 +85,36 @@ export function PatientModal({
       if (isEdit) {
         await updatePatient(patient!.id, form);
       } else {
-        await createPatient(form);
+        const patient = await createPatient(form);
+        if (sendWelcomeMessage && patient) {
+          if (user && canSendWelcome) {
+            notify(welcomeChannel, {
+              patientId: patient.id,
+              to: welcomeChannel === Channel.WHATSAPP ? patient.whatsappNumber! : patient.smsNumber!,
+              sendMode: ReminderMode.IMMEDIATE,
+              sendAt: new Date().toISOString(),
+              body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
+                .replace("{{1}}", patient.name)
+                .replace("{{2}}", user.displayName)
+                .replace("{{3}}", user.bankName!)
+                .replace("{{4}}", user.accountNumber!)
+                .replace("{{5}}", `${user.firstName} ${user.lastName}`)
+                .replace("{{6}}", user.nationalId!)
+                .replace("{{7}}", user.bankingKey!),
+              contentSid: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.contentSid,
+              contentVariables: {
+                "1": patient.name,
+                "2": user.displayName,
+                "3": user.bankName!,
+                "4": user.accountNumber!,
+                "5": `${user.firstName} + ${user.lastName}`,
+                "6": user.nationalId!,
+                "7": user.bankingKey!
+              },
+              mediaUrl: `${API_BASE}/consent-document/public/download/${user.id}.pdf`
+            })
+          }
+        }
       }
       onSaved(); onClose();
     } catch (err) {
@@ -106,13 +152,6 @@ export function PatientModal({
               <input autoComplete="family-name" className="form-input" value={form.lastName} onChange={set("lastName")} placeholder="ej. García" />
             </label>
           </div>
-          {/* <label className="form-label">
-            📅 Fecha de Nacimiento
-            <DateTimePicker
-              date={form.dateOfBirth || undefined}
-              onChanged={(date) => setForm(f => ({ ...f, dateOfBirth: date }))}
-            />
-          </label> */}
           <label className="form-label">
             ✉️ Correo electrónico
             <input className="form-input" type="email" value={form.email || undefined} onChange={set("email")} placeholder="paciente@ejemplo.com" />
@@ -133,7 +172,61 @@ export function PatientModal({
               />
             </label>
           </div>
-          <label className="form-label">
+          {!isEdit && canSendWelcome && (
+            <div>
+              <label style={{
+                display: "flex", alignItems: "center", gap: 8,
+                fontSize: 13,
+                paddingBottom: 4, userSelect: "none",
+                cursor: (!form.whatsappNumber && !form.smsNumber) ? "not-allowed" : "pointer",
+                opacity: (!form.whatsappNumber && !form.smsNumber) ? 0.5 : 1,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={sendWelcomeMessage}
+                  onChange={e => setSendWelcomeMessage(e.target.checked)}
+                  disabled={!form.whatsappNumber && !form.smsNumber}
+                  style={{ width: 15, height: 15 }}
+                />
+                <span>Mandar mensaje de bienvenida</span>
+              </label>
+
+              {sendWelcomeMessage && (form.whatsappNumber || form.smsNumber) && (
+                <div style={{ display: "flex", gap: 16, paddingLeft: 23, marginTop: 4 }}>
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: 6, fontSize: 13,
+                    cursor: (!form.whatsappNumber) ? "not-allowed" : "pointer",
+                    opacity: (!form.whatsappNumber) ? 0.5 : 1,
+                  }}>
+                    <input
+                      type="radio"
+                      name="welcomeChannel"
+                      value="whatsapp"
+                      checked={welcomeChannel === Channel.WHATSAPP}
+                      disabled={!form.whatsappNumber}
+                      onChange={() => setWelcomeChannel(Channel.WHATSAPP)}
+                    />
+                    💬 WhatsApp
+                  </label>
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: 6, fontSize: 13,
+                    cursor: (!form.smsNumber) ? "not-allowed" : "pointer",
+                    opacity: (!form.smsNumber) ? 0.5 : 1,
+                  }}>
+                    <input
+                      type="radio"
+                      name="welcomeChannel"
+                      value="sms"
+                      checked={welcomeChannel === Channel.SMS}
+                      disabled={!form.smsNumber}
+                      onChange={() => setWelcomeChannel(Channel.SMS)}
+                    />
+                    📱 SMS
+                  </label>
+                </div>
+              )}
+            </div>
+          )}          <label className="form-label">
             📝 Notas
             <textarea className="form-input form-input--textarea" value={form.notes || undefined} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notas adicionales sobre el paciente..." />
           </label>

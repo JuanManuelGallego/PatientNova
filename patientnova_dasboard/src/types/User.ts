@@ -21,6 +21,14 @@ export interface User {
     accountNumber?: string | null
     nationalId?: string | null
     bankingKey?: string | null
+    consentDocument?: Document | null
+}
+
+export interface Document {
+    id: string
+    name: string
+    mimeType: string
+    sizeBytes: string,
 }
 
 export interface NotificationPreferences {
