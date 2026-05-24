@@ -21,6 +21,7 @@ import { twilioWebhookRouter } from './twilio/twilio.webhook.routes.js';
 import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
 import { googleRouter } from './google/goole.routes.js';
+import { consentDocumentRouter } from './consent-document/consent-document.routes.js';
 
 const app: Application = express();
 
@@ -72,6 +73,7 @@ app.use('/auth', authRouter);
 
 // Public Twilio webhook — uses urlencoded body (not JSON) and validates Twilio signature internally
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
+app.use('/consent-document', consentDocumentRouter);
 
 app.use('/users', authenticate, requireAdmin, userRouter);
 app.use('/notify', authenticate, requireAdmin, notifyRouter);

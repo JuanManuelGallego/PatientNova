@@ -27,6 +27,10 @@ export const updateUserSchema = z.object({
         tz => !tz || isValidIANATimezone(tz),
         { message: 'Invalid IANA timezone identifier' }
     ),
+    bankName: z.string().max(120).optional(),
+    accountNumber: z.string().max(120).optional(),
+    nationalId: z.string().max(120).optional(),
+    bankingKey: z.string().max(120).optional(),
 });
 
 export const superAdminUpdateUserSchema = z.object({
@@ -48,6 +52,10 @@ export const superAdminUpdateUserSchema = z.object({
         tz => !tz || isValidIANATimezone(tz),
         { message: 'Invalid IANA timezone identifier' }
     ),
+    bankName: z.string().max(120).optional(),
+    accountNumber: z.string().max(120).optional(),
+    nationalId: z.string().max(120).optional(),
+    bankingKey: z.string().max(120).optional(),
 });
 
 export const changePasswordSchema = z.object({
@@ -75,6 +83,11 @@ export const createUserSchema = z.object({
         tz => !tz || isValidIANATimezone(tz),
         { message: 'Invalid IANA timezone identifier' }
     ),
+    bankName: z.string().max(120).optional(),
+    accountNumber: z.string().max(120).optional(),
+    nationalId: z.string().max(120).optional(),
+    bankingKey: z.string().max(120).optional(),
+
 });
 
 export type CreateUserDto = z.infer<typeof createUserSchema>;

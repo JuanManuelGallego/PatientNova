@@ -122,3 +122,27 @@ export class ReminderSendAtInPastError extends ApiError {
     super('Scheduled reminders must have a sendAt time in the future', 422)
   }
 }
+
+export class BankAccountNotFoundError extends ApiError {
+  constructor(userId: string) {
+    super(`Bank account for user with id "${userId}" not found`, 404)
+  }
+}
+
+export class BankAccountAlreadyExistsError extends ApiError {
+  constructor(userId: string) {
+    super(`A bank account for user with id "${userId}" already exists`, 409)
+  }
+}
+
+export class ConsentDocumentNotFoundError extends ApiError {
+  constructor(userId: string) {
+    super(`Consent document for user with id "${userId}" not found`, 404)
+  }
+}
+
+export class ConsentDocumentAlreadyExistsError extends ApiError {
+  constructor(userId: string) {
+    super(`A consent document for user with id "${userId}" already exists`, 409)
+  }
+}

@@ -17,6 +17,10 @@ export interface User {
     whatsappNumber?: string | null
     reminderActive: boolean
     reminderChannel?: Channel
+    bankName?: string | null
+    accountNumber?: string | null
+    nationalId?: string | null
+    bankingKey?: string | null
 }
 
 export interface NotificationPreferences {

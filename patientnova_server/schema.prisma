@@ -191,6 +191,11 @@ model User {
   reminderChannel       Channel?
   lastDailyReminderDate DateTime?
 
+  bankName      String?
+  accountNumber String?
+  nationalId    String?
+  bankingKey    String?
+
   timezone             String    @default("America/Bogota") @db.VarChar(50)
 
   lastPasswordChange   DateTime?
@@ -208,7 +213,6 @@ model User {
   reminders             Reminder[]    @relation("UserReminders")
   appointmentLocations  AppointmentLocation[]
   appointmentTypes      AppointmentType[]
-  bankAccount           BankAccount?
   consentDocument       Document?
 
   @@index([email])
@@ -356,7 +360,7 @@ model EvolutionNote {
 // ─── Documents ───────────────────────────────────────────────────────────
 model Document {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String   @unique
   user      User @relation(fields:[userId], references:[id], onDelete: Cascade)
   name      String
   content   Bytes
@@ -367,24 +371,6 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@map("documents")
-}
-
-// ─── BankAccount ───────────────────────────────────────
-
-model BankAccount {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  bankName      String?
-  accountNumber String?
-  nationalId    String?
-  bankingKey    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("bank_accounts")
 }
 
 enum Sex {

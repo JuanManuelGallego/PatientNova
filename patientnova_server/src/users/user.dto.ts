@@ -39,6 +39,11 @@ function _extractFields(user: {
   whatsappNumber: string | null;
   createdAt: Date;
   updatedAt: Date;
+  bankName: string | null;
+  accountNumber: string | null;
+  nationalId: string | null;
+  bankingKey: string | null;
+
 }): UserResponse {
   return {
     id: user.id,
@@ -60,5 +65,10 @@ function _extractFields(user: {
     whatsappNumber: user.whatsappNumber,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
+    bankName: user.bankName,
+    accountNumber: user.accountNumber,
+    nationalId: user.nationalId,
+    bankingKey: user.bankingKey,
+    consentDocument: null, // to be filled in by caller if needed
   };
 }

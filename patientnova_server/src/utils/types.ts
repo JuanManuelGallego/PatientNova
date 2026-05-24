@@ -119,6 +119,20 @@ export const userInclude = {
   whatsappNumber: true,
   createdAt: true,
   updatedAt: true,
+  bankName: true,
+  accountNumber: true,
+  nationalId: true,
+  bankingKey: true,
+  consentDocument: {
+    select: {
+      id: true,
+      name: true,
+      mimeType: true,
+      sizeBytes: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
 } as const;
 
 export const e164OrEmpty = z

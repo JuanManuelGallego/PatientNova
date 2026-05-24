@@ -11,6 +11,7 @@ import { validateBody } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { consentDocumentRouter } from '../consent-document/consent-document.routes.js';
 
 export const userRouter = Router();
 
@@ -98,6 +99,9 @@ userRouter.patch(
         ok(res, { message: 'Password changed successfully' });
     })
 );
+
+// Mount nested routers for bank account and consent document management
+userRouter.use('/me/consent-document', consentDocumentRouter);
 
 /**
  * PATCH /users/:id
