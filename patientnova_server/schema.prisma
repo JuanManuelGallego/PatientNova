@@ -19,7 +19,7 @@ model Patient {
   smsNumber      String?       @db.VarChar(20)
   email          String?       @db.VarChar(255)
 
-  notes          String?       @db.VarChar(500)
+  notes          String?       @db.Text
 
   status         PatientStatus @default(ACTIVE)
   archivedAt     DateTime?
@@ -61,7 +61,7 @@ model Reminder {
 
   contentSid        String?        @db.VarChar(100)
   contentVariables  Json?
-  body              String?        @db.VarChar(500)
+  body              String?        @db.Text
 
   status            ReminderStatus @default(PENDING)
   error             String?
@@ -124,7 +124,7 @@ model Appointment {
   paid          Boolean           @default(false)
 
   meetingUrl    String?           @db.VarChar(500)
-  notes         String?           @db.VarChar(500)
+  notes         String?           @db.Text
 
   status        AppointmentStatus @default(SCHEDULED)
   confirmedAt   DateTime?

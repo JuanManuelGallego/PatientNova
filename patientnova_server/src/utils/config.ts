@@ -68,6 +68,13 @@ export const config = {
     refreshToken: requireEnv('GOOGLE_REFRESH_TOKEN'),
   },
 
+  encryption: {
+    key:
+      process.env.NODE_ENV === "production"
+        ? requireEnv("ENCRYPTION_KEY")
+        : (process.env.ENCRYPTION_KEY ?? ""),
+  },
+
 } as const;
 
 export const APPT_SID_MAP: Record<number, string> = {
