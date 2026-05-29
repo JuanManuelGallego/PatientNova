@@ -4,7 +4,8 @@ import 'dayjs/locale/es';
 import esEs from 'antd/locale/es_ES';
 
 dayjs.locale('es');
-import { antThemeConfig } from "@/src/styles/theme";
+import { getAntThemeConfig } from "@/src/styles/theme";
+import { useTheme } from "@/src/app/ThemeContext";
 
 // responsive: popup uses full viewport width on mobile to prevent clipping
 const mobilePopupStyle: React.CSSProperties = {
@@ -22,6 +23,7 @@ export function DateTimePicker({
     showTime?: boolean;
     isFuture?: boolean;
 }) {
+    const { isDark } = useTheme();
     const handleChange = (selectedDate: Dayjs | null) => {
         if (!selectedDate) return;
         const selectedIso = selectedDate.toISOString();
@@ -29,7 +31,7 @@ export function DateTimePicker({
     };
 
     return (
-        <ConfigProvider locale={esEs} theme={antThemeConfig}>
+        <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
             <DatePicker
                 value={date ? dayjs(date) : null}
                 onChange={handleChange}

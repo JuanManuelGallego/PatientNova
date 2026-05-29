@@ -4,8 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/src/app/AuthContext";
+import { useTheme } from "@/src/app/ThemeContext";
 import { useRouter } from "next/navigation";
 import { NAV_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { Moon, Sun } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "dashboard" as const, path: "/dashboard", label: "Vista General" },
@@ -30,6 +32,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthContext();
+  const { isDark, toggleTheme } = useTheme();
   const LogoutIcon = ACTION_ICONS.logout;
 
   return (
@@ -103,6 +106,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="sidebar-user__name">{user?.displayName ?? "—"}</div>
             <div className="sidebar-user__role">{user?.jobTitle ?? ""}</div>
           </div>
+          <button
+            onClick={toggleTheme}
+            title={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+            className="sidebar-logout"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
           <button
             onClick={async () => {
               await logout();

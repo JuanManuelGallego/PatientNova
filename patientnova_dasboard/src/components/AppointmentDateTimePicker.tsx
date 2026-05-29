@@ -4,7 +4,8 @@ import 'dayjs/locale/es';
 import esEs from 'antd/locale/es_ES';
 
 dayjs.locale('es');
-import { antThemeConfig } from "@/src/styles/theme";
+import { getAntThemeConfig } from "@/src/styles/theme";
+import { useTheme } from "@/src/app/ThemeContext";
 
 export function AppointmentDateTimePicker({
     date,
@@ -17,6 +18,7 @@ export function AppointmentDateTimePicker({
     onError: (error: string) => void;
     bookedSlots?: string[];
 }) {
+    const { isDark } = useTheme();
     const bookedMs = bookedSlots.map(s => new Date(s).getTime());
 
     const handleChange = (selectedDate: Dayjs | null) => {
@@ -31,7 +33,7 @@ export function AppointmentDateTimePicker({
     };
 
     return (
-        <ConfigProvider locale={esEs} theme={antThemeConfig}>
+        <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
             <DatePicker
                 value={date ? dayjs(date) : null}
                 onChange={handleChange}

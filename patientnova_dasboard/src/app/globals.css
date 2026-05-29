@@ -143,6 +143,72 @@
 }
 
 /* ================================================================
+   Dark Theme Overrides
+   ================================================================ */
+[data-theme="dark"] {
+  /* Brand — kept vivid but slightly lighter for dark bg readability */
+  --c-brand: #a78bfa;
+  --c-brand-hover: #8b5cf6;
+  --c-brand-accent: #a78bfa;
+  --c-brand-light: #2e1a5e;
+  --c-brand-glow: rgba(167, 139, 250, 0.3);
+  --c-brand-nav: #a78bfa;
+  --c-brand-sub: #4c1d95;
+
+  /* Semantic */
+  --c-link: #a78bfa;
+  --c-success: #34d399;
+  --c-success-bg: #064e3b;
+  --c-success-light: #065f46;
+  --c-error: #f87171;
+  --c-error-bg: #450a0a;
+  --c-error-border: #7f1d1d;
+  --c-warning: #fbbf24;
+  --c-warning-dark: #fef3c7;
+  --c-warning-bg: #451a03;
+  --c-warning-light: #78350f;
+  --c-info-bg: #1e3a5f;
+  --c-info-border: #1e40af;
+  --c-required: #f87171;
+  --c-today-bg: #2e1a5e;
+  --c-today-hover-bg: #3b1f73;
+
+  /* Surfaces */
+  --c-page-bg: #0f0d14;
+  --c-surface: #1a1825;
+  --c-input-bg: #22203000;
+  --c-backdrop: rgba(0, 0, 0, 0.7);
+  --c-backdrop-light: rgba(0, 0, 0, 0.5);
+
+  /* Neutrals — inverted */
+  --c-white: #1a1825;
+  --c-gray-50: #1e1c2a;
+  --c-gray-100: #252333;
+  --c-gray-200: #312f42;
+  --c-gray-300: #3f3d54;
+  --c-gray-400: #6b6a82;
+  --c-gray-500: #9896b0;
+  --c-gray-700: #c8c6e0;
+  --c-gray-900: #f0eeff;
+
+  /* Shadows — deeper for dark bg */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-card-lg: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-btn: 0 4px 14px rgba(167, 139, 250, 0.3);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: -10px 0 40px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+  background: var(--c-page-bg);
+  color: var(--c-gray-900);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--c-gray-300);
+}
+
+/* ================================================================
    Reset & Base
    ================================================================ */
 * {
