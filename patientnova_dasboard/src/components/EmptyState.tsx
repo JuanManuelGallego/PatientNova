@@ -1,9 +1,24 @@
-export function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-    return (
-        <div>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>{icon}</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--c-gray-700)", marginBottom: 5 }}>{title}</div>
-            <div className="text-muted">{sub}</div>
-        </div>
-    );
+import { type LucideIcon } from "@/src/config/icons";
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  sub,
+  action,
+}: {
+  icon: LucideIcon;
+  title: string;
+  sub: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="empty-state">
+      <div className="empty-state__icon">
+        <Icon size={40} />
+      </div>
+      <div className="empty-state__title">{title}</div>
+      <div className="empty-state__sub">{sub}</div>
+      {action && <div>{action}</div>}
+    </div>
+  );
 }

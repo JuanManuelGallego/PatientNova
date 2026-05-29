@@ -3,31 +3,50 @@
 import Link from "next/link";
 
 import { useMemo, useState } from "react";
-import { AppointmentModal } from '@/src/components/Modals/AppointmentModal';
-import { useFetchRemindersStats } from '@/src/api/useFetchRemindersStats';
-import { useFetchAppointmentsStats } from '@/src/api/useFetchAppointmentsStats';
-import { useFetchPatientsStats } from '@/src/api/useFetchPatientsStats';
-import { useFetchAppointments } from '@/src/api/useFetchAppointments';
-import { ReminderStatus, CHANNEL_CFG } from '@/src/types/Reminder';
-import { useFetchReminders } from '@/src/api/useFetchReminders';
-import PageLayout from '@/src/components/PageLayout';
-import { PageHeader } from '@/src/components/PageHeader';
-import { StatCard } from '@/src/components/Info/StatCard';
-import { PatientStatus } from '@/src/types/Patient';
-import { getInitials, getAvatarColor } from '@/src/utils/AvatarHelper';
-import { fmtDateTime, fmtRelative, todayString } from '@/src/utils/TimeUtils';
-import { AppointmentStatusPill, ReminderStatusPill } from '@/src/components/Info/StatusPill';
+import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
+import { useFetchRemindersStats } from "@/src/api/useFetchRemindersStats";
+import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
+import { useFetchPatientsStats } from "@/src/api/useFetchPatientsStats";
+import { useFetchAppointments } from "@/src/api/useFetchAppointments";
+import { ReminderStatus, CHANNEL_CFG } from "@/src/types/Reminder";
+import { useFetchReminders } from "@/src/api/useFetchReminders";
+import PageLayout from "@/src/components/PageLayout";
+import { PageHeader } from "@/src/components/PageHeader";
+import { StatCard } from "@/src/components/Info/StatCard";
+import { PatientStatus } from "@/src/types/Patient";
+import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
+import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
+import {
+  AppointmentStatusPill,
+  ReminderStatusPill,
+} from "@/src/components/Info/StatusPill";
 import { useAuthContext } from "../../AuthContext";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
+import {
+  Users,
+  FileText,
+  CalendarDays,
+  Bell,
+  ClipboardList,
+  Settings,
+  CalendarCheck,
+  CheckCircle,
+  DollarSign,
+  AlertCircle,
+} from "lucide-react";
+import { CHANNEL_ICONS } from "@/src/config/icons";
 
 export default function DashboardPage() {
-  const { stats: patientStats, loading: loadingPatientStats } = useFetchPatientsStats();
-  const { stats: apptStats, loading: loadingApptStats } = useFetchAppointmentsStats();
-  const { stats: reminderStats, loading: loadingReminderStats } = useFetchRemindersStats();
+  const { stats: patientStats, loading: loadingPatientStats } =
+    useFetchPatientsStats();
+  const { stats: apptStats, loading: loadingApptStats } =
+    useFetchAppointmentsStats();
+  const { stats: reminderStats, loading: loadingReminderStats } =
+    useFetchRemindersStats();
   const { user } = useAuthContext();
 
-  const [ showApptModal, setShowApptModal ] = useState(false);
-  const [ showReminderModal, setShowReminderModal ] = useState(false);
+  const [showApptModal, setShowApptModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
 
   const todayFilters = useMemo(() => {
     const start = new Date();
@@ -43,54 +62,109 @@ export default function DashboardPage() {
       order: "asc" as const,
     };
   }, []);
-  const { appointments: todayAppts, loading: loadingAppts } = useFetchAppointments(todayFilters);
+  const { appointments: todayAppts, loading: loadingAppts } =
+    useFetchAppointments(todayFilters);
 
-  const reminderFilters = useMemo(() => ({
-    status: [ ReminderStatus.PENDING, ReminderStatus.QUEUED ],
-    page: 1,
-    pageSize: 5,
-    orderBy: "sendAt" as const,
-    order: "asc" as const,
-  }), []);
-  const { reminders: activeReminders, loading: loadingReminders } = useFetchReminders(reminderFilters);
+  const reminderFilters = useMemo(
+    () => ({
+      status: [ReminderStatus.PENDING, ReminderStatus.QUEUED],
+      page: 1,
+      pageSize: 5,
+      orderBy: "sendAt" as const,
+      order: "asc" as const,
+    }),
+    [],
+  );
+  const { reminders: activeReminders, loading: loadingReminders } =
+    useFetchReminders(reminderFilters);
 
-  const statsLoading = loadingPatientStats || loadingApptStats || loadingReminderStats;
-  const pendingReminders = (reminderStats?.byStatus[ ReminderStatus.PENDING ] ?? 0) + (reminderStats?.byStatus[ ReminderStatus.QUEUED ] ?? 0);
+  const statsLoading =
+    loadingPatientStats || loadingApptStats || loadingReminderStats;
+  const pendingReminders =
+    (reminderStats?.byStatus[ReminderStatus.PENDING] ?? 0) +
+    (reminderStats?.byStatus[ReminderStatus.QUEUED] ?? 0);
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Vista General"
-        subtitle={todayString()}
-      />
+      <PageHeader title="Vista General" subtitle={todayString()} />
       <div className="dash-welcome fade-in">
         <div className="dash-welcome__text">
-          <span className="dash-welcome__greeting">Buenos días, {user?.displayName} </span>
+          <span className="dash-welcome__greeting">
+            {(() => {
+              const h = new Date().getHours();
+              return h < 12
+                ? "Buenos días"
+                : h < 19
+                  ? "Buenas tardes"
+                  : "Buenas noches";
+            })()}
+            , {user?.displayName}{" "}
+          </span>
         </div>
         <div className="dash-welcome__actions">
-          <button className="btn-primary btn-hero" onClick={() => setShowApptModal(true)}>
+          <button
+            className="btn-primary btn-hero"
+            onClick={() => setShowApptModal(true)}
+          >
             <span className="btn-plus-icon">+</span> Nueva Cita
           </button>
-          <button className="btn-primary btn-hero" onClick={() => setShowReminderModal(true)}>
+          <button
+            className="btn-primary btn-hero"
+            onClick={() => setShowReminderModal(true)}
+          >
             <span className="btn-plus-icon">+</span> Nuevo Recordatorio
           </button>
         </div>
       </div>
       <div className="stats-grid stats-grid--5 fade-in">
         {statsLoading ? (
-          [1, 2, 3, 4, 5].map(i => (
+          [1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="stat-card" style={{ minHeight: 90 }}>
-              <div className="dash-skeleton-row"><div className="skeleton-bar" style={{ width: "60%" }} /></div>
-              <div className="dash-skeleton-row"><div className="skeleton-bar" style={{ width: "40%" }} /></div>
+              <div className="dash-skeleton-row">
+                <div className="skeleton-bar" style={{ width: "60%" }} />
+              </div>
+              <div className="dash-skeleton-row">
+                <div className="skeleton-bar" style={{ width: "40%" }} />
+              </div>
             </div>
           ))
         ) : (
           <>
-            <StatCard label="Citas Hoy" value={apptStats?.todayCount ?? 0} sub="programadas" accent="var(--c-brand-accent)" />
-            <StatCard label="Pacientes" value={patientStats?.total ?? 0} sub={`${patientStats?.byStatus[ PatientStatus.ACTIVE ] ?? 0} activos`} accent="var(--c-brand)" />
-            <StatCard label="Recordatorios" value={pendingReminders} sub="por enviar" accent="var(--c-link)" />
-            <StatCard label="Sin Pagar" value={apptStats?.unpaidCount ?? 0} sub={`$ ${(apptStats?.unpaidRevenue ?? 0).toLocaleString("es-ES")}`} accent="var(--c-error)" />
-            <StatCard label="Ingresos" value={`$ ${(apptStats?.paidRevenue ?? 0).toLocaleString("es-ES")}`} sub="total cobrado" accent="var(--c-success)" />
+            <StatCard
+              label="Citas Hoy"
+              value={apptStats?.todayCount ?? 0}
+              sub="programadas"
+              accent="var(--c-brand-accent)"
+              icon={CalendarCheck}
+            />
+            <StatCard
+              label="Pacientes"
+              value={patientStats?.total ?? 0}
+              sub={`${patientStats?.byStatus[PatientStatus.ACTIVE] ?? 0} activos`}
+              accent="var(--c-brand)"
+              icon={Users}
+            />
+            <StatCard
+              label="Recordatorios"
+              value={pendingReminders}
+              sub="por enviar"
+              accent="var(--c-link)"
+              icon={Bell}
+            />
+            <StatCard
+              label="Sin Pagar"
+              value={apptStats?.unpaidCount ?? 0}
+              sub={`$ ${(apptStats?.unpaidRevenue ?? 0).toLocaleString("es-ES")}`}
+              accent="var(--c-error)"
+              icon={AlertCircle}
+            />
+            <StatCard
+              label="Ingresos"
+              value={`$ ${(apptStats?.paidRevenue ?? 0).toLocaleString("es-ES")}`}
+              sub="total cobrado"
+              accent="var(--c-success)"
+              icon={DollarSign}
+            />
           </>
         )}
       </div>
@@ -99,35 +173,69 @@ export default function DashboardPage() {
           <div className="dash-card__header">
             <div>
               <h2 className="dash-card__title">Citas de Hoy</h2>
-              <p className="dash-card__sub">{apptStats?.todayCount ?? 0} citas programadas</p>
+              <p className="dash-card__sub">
+                {apptStats?.todayCount ?? 0} citas programadas
+              </p>
             </div>
-            <Link href="/appointments" className="dash-card__link">Ver todas →</Link>
+            <Link href="/appointments" className="dash-card__link">
+              Ver todas →
+            </Link>
           </div>
           <div className="dash-card__body">
             {loadingAppts ? (
               <div className="dash-skeleton-list">
-                {[ 1, 2, 3 ].map(i => <div key={i} className="dash-skeleton-row"><div className="skeleton-bar" style={{ width: "100%" }} /></div>)}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="dash-skeleton-row">
+                    <div className="skeleton-bar" style={{ width: "100%" }} />
+                  </div>
+                ))}
               </div>
             ) : todayAppts.length === 0 ? (
               <div className="dash-empty">
-                <span className="dash-empty__icon" role="img" aria-label="calendario">🗓️</span>
+                <span
+                  className="dash-empty__icon"
+                  role="img"
+                  aria-label="calendario"
+                >
+                  <CalendarCheck size={24} />
+                </span>
                 <span className="dash-empty__text">No hay citas para hoy</span>
               </div>
             ) : (
               <div className="dash-list">
-                {todayAppts.map(a => (
-                  <Link key={a.id} href="/appointments" className="dash-list-item" style={{ textDecoration: "none", color: "inherit" }}>
+                {todayAppts.map((a) => (
+                  <Link
+                    key={a.id}
+                    href="/appointments"
+                    className="dash-list-item dash-list-item-link"
+                  >
                     <div className="dash-list-item__left">
-                      <div className="avatar avatar--sm" style={{ background: getAvatarColor(a.patient.id) }}>
+                      <div
+                        className="avatar avatar--sm"
+                        style={{ background: getAvatarColor(a.patient.id) }}
+                      >
                         {getInitials(a.patient.name, a.patient.lastName)}
                       </div>
                       <div>
-                        <div className="dash-list-item__name">{a.patient.name} {a.patient.lastName}</div>
-                        <div className="dash-list-item__meta">{a.appointmentType?.name} · {fmtDateTime(a.startAt)}</div>
+                        <div className="dash-list-item__name">
+                          {a.patient.name} {a.patient.lastName}
+                        </div>
+                        <div className="dash-list-item__meta">
+                          {a.appointmentType?.name} · {fmtDateTime(a.startAt)}
+                        </div>
                       </div>
                     </div>
                     <div className="dash-list-item__right">
-                      <div className="location-badge" style={{ background: a.appointmentLocation.bg || "var(--c-gray-100)", color: a.appointmentLocation.color || "var(--c-gray-700)", fontSize: 11 }}>
+                      <div
+                        className="location-badge"
+                        style={{
+                          background:
+                            a.appointmentLocation.bg || "var(--c-gray-100)",
+                          color:
+                            a.appointmentLocation.color || "var(--c-gray-700)",
+                          fontSize: 11,
+                        }}
+                      >
                         {a.appointmentLocation.name}
                       </div>
                       <AppointmentStatusPill status={a.status} />
@@ -144,27 +252,58 @@ export default function DashboardPage() {
               <h2 className="dash-card__title">Recordatorios Activos</h2>
               <p className="dash-card__sub">{pendingReminders} pendientes</p>
             </div>
-            <Link href="/reminders" className="dash-card__link">Ver todos →</Link>
+            <Link href="/reminders" className="dash-card__link">
+              Ver todos →
+            </Link>
           </div>
           <div className="dash-card__body">
             {loadingReminders ? (
               <div className="dash-skeleton-list">
-                {[ 1, 2, 3 ].map(i => <div key={i} className="dash-skeleton-row"><div className="skeleton-bar" style={{ width: "100%" }} /></div>)}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="dash-skeleton-row">
+                    <div className="skeleton-bar" style={{ width: "100%" }} />
+                  </div>
+                ))}
               </div>
             ) : activeReminders.length === 0 ? (
               <div className="dash-empty">
-                <span className="dash-empty__icon" role="img" aria-label="completado">✅</span>
-                <span className="dash-empty__text">No hay recordatorios pendientes</span>
+                <span
+                  className="dash-empty__icon"
+                  role="img"
+                  aria-label="completado"
+                >
+                  <CheckCircle size={24} />
+                </span>
+                <span className="dash-empty__text">
+                  No hay recordatorios pendientes
+                </span>
               </div>
             ) : (
               <div className="dash-list">
-                {activeReminders.map(r => (
-                  <Link key={r.id} href="/reminders" className="dash-list-item" style={{ textDecoration: "none", color: "inherit" }}>
+                {activeReminders.map((r) => (
+                  <Link
+                    key={r.id}
+                    href="/reminders"
+                    className="dash-list-item dash-list-item-link"
+                  >
                     <div className="dash-list-item__left">
-                      <span className="dash-channel-icon" role="img" aria-label={CHANNEL_CFG[ r.channel ].icon}>{CHANNEL_CFG[ r.channel ].icon}</span>
+                      <span
+                        className="dash-channel-icon"
+                        role="img"
+                        aria-label={CHANNEL_CFG[r.channel].label}
+                      >
+                        {(() => {
+                          const CI = CHANNEL_ICONS[r.channel];
+                          return <CI size={16} />;
+                        })()}
+                      </span>
                       <div>
-                        <div className="dash-list-item__name">{r.patient?.name ?? "—"} {r.patient?.lastName ?? ""}</div>
-                        <div className="dash-list-item__meta">{r.to} · {fmtRelative(r.sendAt)}</div>
+                        <div className="dash-list-item__name">
+                          {r.patient?.name ?? "—"} {r.patient?.lastName ?? ""}
+                        </div>
+                        <div className="dash-list-item__meta">
+                          {r.to} · {fmtRelative(r.sendAt)}
+                        </div>
                       </div>
                     </div>
                     <div className="dash-list-item__right">
@@ -181,15 +320,62 @@ export default function DashboardPage() {
         <h3 className="dash-section-title">Acceso Rápido</h3>
         <div className="dash-nav-grid">
           {[
-            { href: "/patients", icon: "🪪", label: "Pacientes", desc: `${patientStats?.total ?? 0} registrados`, accent: "var(--c-brand)" },
-            { href: "/appointments", icon: "📝", label: "Citas", desc: `${apptStats?.total ?? 0} en total`, accent: "var(--c-brand-accent)" },
-            { href: "/calendar", icon: "📆", label: "Calendario", desc: "Vista mensual", accent: "var(--c-success)" },
-            { href: "/reminders", icon: "🔔", label: "Recordatorios", desc: `${reminderStats?.total ?? 0} creados`, accent: "var(--c-link)" },
-            { href: "/medical-records", icon: "📋", label: "Historia clínicas", desc: "Historial médico completo", accent: "var(--c-warning)" },
-            { href: "/settings", icon: "⚙️", label: "Configuración", desc: "Preferencias", accent: "var(--c-gray-500)" },
-          ].map(item => (
-            <Link key={item.href} href={item.href} className="dash-nav-card" style={{ textDecoration: "none", borderLeft: `4px solid ${item.accent}` }}>
-              <span className="dash-nav-card__icon" role="img" aria-label={item.label}>{item.icon}</span>
+            {
+              href: "/patients",
+              Icon: Users,
+              label: "Pacientes",
+              desc: `${patientStats?.total ?? 0} registrados`,
+              accent: "var(--c-brand)",
+            },
+            {
+              href: "/appointments",
+              Icon: FileText,
+              label: "Citas",
+              desc: `${apptStats?.total ?? 0} en total`,
+              accent: "var(--c-brand-accent)",
+            },
+            {
+              href: "/calendar",
+              Icon: CalendarDays,
+              label: "Calendario",
+              desc: "Vista mensual",
+              accent: "var(--c-success)",
+            },
+            {
+              href: "/reminders",
+              Icon: Bell,
+              label: "Recordatorios",
+              desc: `${reminderStats?.total ?? 0} creados`,
+              accent: "var(--c-link)",
+            },
+            {
+              href: "/medical-records",
+              Icon: ClipboardList,
+              label: "Historia clínicas",
+              desc: "Historial médico completo",
+              accent: "var(--c-warning)",
+            },
+            {
+              href: "/settings",
+              Icon: Settings,
+              label: "Configuración",
+              desc: "Preferencias",
+              accent: "var(--c-gray-500)",
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="dash-nav-card dash-nav-card--accented dash-list-item-link"
+              style={{ "--border-accent": item.accent } as React.CSSProperties}
+            >
+              <span
+                className="dash-nav-card__icon"
+                role="img"
+                aria-label={item.label}
+              >
+                <item.Icon size={22} />
+              </span>
               <div>
                 <div className="dash-nav-card__label">{item.label}</div>
                 <div className="dash-nav-card__desc">{item.desc}</div>

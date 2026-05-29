@@ -1,18 +1,28 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useCreatePatient } from "@/src/api/useCreatePatient";
 import { useUpdatePatient } from "@/src/api/useUpdatePatient";
-import { Patient, PatientStatus, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
+import {
+  Patient,
+  PatientStatus,
+  PATIENT_STATUS_CONFIG,
+} from "@/src/types/Patient";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
 import { CountryCodeInput } from "../CountryCodeInput";
 import { CustomSelect } from "../CustomSelect";
-import { LBL_CANCEL, LBL_CREATE_PATIENT, LBL_SAVE_CHANGES, LBL_SAVING } from "@/src/constants/ui";
+import {
+  LBL_CANCEL,
+  LBL_CREATE_PATIENT,
+  LBL_SAVE_CHANGES,
+  LBL_SAVING,
+} from "@/src/constants/ui";
 import { Channel, ReminderMode } from "@/src/types/Reminder";
 import { useNotify } from "@/src/api/useNotify";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
+import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { API_BASE } from "@/src/types/API";
 
 export function PatientModal({
@@ -29,12 +39,15 @@ export function PatientModal({
   const { user } = useAuthContext();
   const { createPatient } = useCreatePatient();
   const { updatePatient } = useUpdatePatient();
-  const { ref: trapRef, handleKeyDown: trapKeyDown } = useFocusTrap<HTMLDivElement>();
-  const [ saving, setSaving ] = useState(false);
-  const [ error, setError ] = useState<string | null>(null);
-  const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
-  const [ welcomeChannel, setWelcomeChannel ] = useState<Channel>(Channel.WHATSAPP);
-  const [ form, setForm ] = useState({
+  const { ref: trapRef, handleKeyDown: trapKeyDown } =
+    useFocusTrap<HTMLDivElement>(onClose);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sendWelcomeMessage, setSendWelcomeMessage] = useState(false);
+  const [welcomeChannel, setWelcomeChannel] = useState<Channel>(
+    Channel.WHATSAPP,
+  );
+  const [form, setForm] = useState({
     name: patient?.name ?? "",
     lastName: patient?.lastName ?? "",
     email: patient?.email,
@@ -42,19 +55,28 @@ export function PatientModal({
     smsNumber: patient?.smsNumber,
     dateOfBirth: patient?.dateOfBirth,
     notes: patient?.notes,
-    status: patient?.status ?? "ACTIVE" as PatientStatus,
+    status: patient?.status ?? ("ACTIVE" as PatientStatus),
   });
   const isValid = !!form.name && !!form.lastName;
-  const canSendWelcome = user?.displayName && user?.bankName && user?.accountNumber && user?.nationalId && user?.bankingKey && user.consentDocument;
+  const canSendWelcome =
+    user?.displayName &&
+    user?.bankName &&
+    user?.accountNumber &&
+    user?.nationalId &&
+    user?.bankingKey &&
+    user.consentDocument;
 
   useEffect(() => {
-    if (form.whatsappNumber && !form.smsNumber) setWelcomeChannel(Channel.WHATSAPP);
+    if (form.whatsappNumber && !form.smsNumber)
+      setWelcomeChannel(Channel.WHATSAPP);
     if (!form.whatsappNumber && form.smsNumber) setWelcomeChannel(Channel.SMS);
     if (!form.whatsappNumber && !form.smsNumber) setSendWelcomeMessage(false);
-  }, [ form.whatsappNumber, form.smsNumber ]);
+  }, [form.whatsappNumber, form.smsNumber]);
 
-  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [ field ]: e.target.value }));
+  const set =
+    (field: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((f) => ({ ...f, [field]: e.target.value }));
 
   function validateForm() {
     if (!form.name || !form.lastName) {
@@ -66,7 +88,9 @@ export function PatientModal({
       return false;
     }
     if (form.whatsappNumber && !validatePhoneNumber(form.whatsappNumber)) {
-      setError("Por favor, ingresa un número de WhatsApp válido (formato E.164).");
+      setError(
+        "Por favor, ingresa un número de WhatsApp válido (formato E.164).",
+      );
       return false;
     }
     if (form.smsNumber && !validatePhoneNumber(form.smsNumber)) {
@@ -90,7 +114,10 @@ export function PatientModal({
           if (user && canSendWelcome) {
             notify(welcomeChannel, {
               patientId: patient.id,
-              to: welcomeChannel === Channel.WHATSAPP ? patient.whatsappNumber! : patient.smsNumber!,
+              to:
+                welcomeChannel === Channel.WHATSAPP
+                  ? patient.whatsappNumber!
+                  : patient.smsNumber!,
               sendMode: ReminderMode.IMMEDIATE,
               sendAt: new Date().toISOString(),
               body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
@@ -109,14 +136,15 @@ export function PatientModal({
                 "4": user.accountNumber!,
                 "5": `${user.firstName} + ${user.lastName}`,
                 "6": user.nationalId!,
-                "7": user.bankingKey!
+                "7": user.bankingKey!,
               },
-              mediaUrl: `${API_BASE}/consent-document/public/download/${user.id}.pdf`
-            })
+              mediaUrl: `${API_BASE}/consent-document/public/download/${user.id}.pdf`,
+            });
           }
         }
       }
-      onSaved(); onClose();
+      onSaved();
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desconocido");
     } finally {
@@ -125,124 +153,211 @@ export function PatientModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={isEdit ? "Editar Paciente" : "Nuevo Paciente"} ref={trapRef} onKeyDown={trapKeyDown}>
-      <div className="modal-panel modal-panel--md" onClick={e => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={isEdit ? "Editar Paciente" : "Nuevo Paciente"}
+      ref={trapRef}
+      onKeyDown={trapKeyDown}
+    >
+      <div
+        className="modal-panel modal-panel--md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div>
             <h2 className="modal-title">
               {isEdit ? "Editar Paciente" : "Nuevo Paciente"}
             </h2>
             <p className="modal-subtitle">
-              {isEdit ? `Modificando: ${patient!.name} ${patient!.lastName}` : "Registrar un nuevo paciente en el sistema"}
+              {isEdit
+                ? `Modificando: ${patient!.name} ${patient!.lastName}`
+                : "Registrar un nuevo paciente en el sistema"}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">✕</button>
+          <button onClick={onClose} className="btn-close">
+            <ACTION_ICONS.close size={16} />
+          </button>
         </div>
         {error && (
-          <div className="error-inline">⚠️ {error}</div>
+          <div className="error-inline">
+            <STATUS_ICONS.warning size={14} /> {error}
+          </div>
         )}
         <div className="form-stack">
           <div className="form-grid-2">
             <label className="form-label">
               <RequiredField label="Nombre" />
-              <input className="form-input" value={form.name} onChange={set("name")} placeholder="ej. María" />
-            </label>
-            <label className="form-label">
-              <RequiredField label="Apellido" />
-              <input autoComplete="family-name" className="form-input" value={form.lastName} onChange={set("lastName")} placeholder="ej. García" />
-            </label>
-          </div>
-          <label className="form-label">
-            ✉️ Correo electrónico
-            <input className="form-input" type="email" value={form.email || undefined} onChange={set("email")} placeholder="paciente@ejemplo.com" />
-          </label>
-          <div className="form-grid-2">
-            <label className="form-label">
-              💬 WhatsApp
-              <CountryCodeInput
-                value={form.whatsappNumber || undefined}
-                onChange={(v) => setForm(f => ({ ...f, whatsappNumber: v }))}
+              <input
+                className="form-input"
+                value={form.name}
+                onChange={set("name")}
+                placeholder="ej. María"
               />
             </label>
             <label className="form-label">
-              📱 SMS
+              <RequiredField label="Apellido" />
+              <input
+                autoComplete="family-name"
+                className="form-input"
+                value={form.lastName}
+                onChange={set("lastName")}
+                placeholder="ej. García"
+              />
+            </label>
+          </div>
+          <label className="form-label">
+            Correo electrónico
+            <input
+              className="form-input"
+              type="email"
+              value={form.email || undefined}
+              onChange={set("email")}
+              placeholder="paciente@ejemplo.com"
+            />
+          </label>
+          <div className="form-grid-2">
+            <label className="form-label">
+              WhatsApp
+              <CountryCodeInput
+                value={form.whatsappNumber || undefined}
+                onChange={(v) => setForm((f) => ({ ...f, whatsappNumber: v }))}
+              />
+            </label>
+            <label className="form-label">
+              SMS
               <CountryCodeInput
                 value={form.smsNumber || undefined}
-                onChange={(v) => setForm(f => ({ ...f, smsNumber: v }))}
+                onChange={(v) => setForm((f) => ({ ...f, smsNumber: v }))}
               />
             </label>
           </div>
           {!isEdit && canSendWelcome && (
             <div>
-              <label style={{
-                display: "flex", alignItems: "center", gap: 8,
-                fontSize: 13,
-                paddingBottom: 4, userSelect: "none",
-                cursor: (!form.whatsappNumber && !form.smsNumber) ? "not-allowed" : "pointer",
-                opacity: (!form.whatsappNumber && !form.smsNumber) ? 0.5 : 1,
-              }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  paddingBottom: 4,
+                  userSelect: "none",
+                  cursor:
+                    !form.whatsappNumber && !form.smsNumber
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity: !form.whatsappNumber && !form.smsNumber ? 0.5 : 1,
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={sendWelcomeMessage}
-                  onChange={e => setSendWelcomeMessage(e.target.checked)}
+                  onChange={(e) => setSendWelcomeMessage(e.target.checked)}
                   disabled={!form.whatsappNumber && !form.smsNumber}
                   style={{ width: 15, height: 15 }}
                 />
                 <span>Mandar mensaje de bienvenida</span>
               </label>
 
-              {sendWelcomeMessage && (form.whatsappNumber || form.smsNumber) && (
-                <div style={{ display: "flex", gap: 16, paddingLeft: 23, marginTop: 4 }}>
-                  <label style={{
-                    display: "flex", alignItems: "center", gap: 6, fontSize: 13,
-                    cursor: (!form.whatsappNumber) ? "not-allowed" : "pointer",
-                    opacity: (!form.whatsappNumber) ? 0.5 : 1,
-                  }}>
-                    <input
-                      type="radio"
-                      name="welcomeChannel"
-                      value="whatsapp"
-                      checked={welcomeChannel === Channel.WHATSAPP}
-                      disabled={!form.whatsappNumber}
-                      onChange={() => setWelcomeChannel(Channel.WHATSAPP)}
-                    />
-                    💬 WhatsApp
-                  </label>
-                  <label style={{
-                    display: "flex", alignItems: "center", gap: 6, fontSize: 13,
-                    cursor: (!form.smsNumber) ? "not-allowed" : "pointer",
-                    opacity: (!form.smsNumber) ? 0.5 : 1,
-                  }}>
-                    <input
-                      type="radio"
-                      name="welcomeChannel"
-                      value="sms"
-                      checked={welcomeChannel === Channel.SMS}
-                      disabled={!form.smsNumber}
-                      onChange={() => setWelcomeChannel(Channel.SMS)}
-                    />
-                    📱 SMS
-                  </label>
-                </div>
-              )}
+              {sendWelcomeMessage &&
+                (form.whatsappNumber || form.smsNumber) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      paddingLeft: 23,
+                      marginTop: 4,
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        cursor: !form.whatsappNumber
+                          ? "not-allowed"
+                          : "pointer",
+                        opacity: !form.whatsappNumber ? 0.5 : 1,
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="welcomeChannel"
+                        value="whatsapp"
+                        checked={welcomeChannel === Channel.WHATSAPP}
+                        disabled={!form.whatsappNumber}
+                        onChange={() => setWelcomeChannel(Channel.WHATSAPP)}
+                      />
+                      WhatsApp
+                    </label>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 13,
+                        cursor: !form.smsNumber ? "not-allowed" : "pointer",
+                        opacity: !form.smsNumber ? 0.5 : 1,
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="welcomeChannel"
+                        value="sms"
+                        checked={welcomeChannel === Channel.SMS}
+                        disabled={!form.smsNumber}
+                        onChange={() => setWelcomeChannel(Channel.SMS)}
+                      />
+                      SMS
+                    </label>
+                  </div>
+                )}
             </div>
-          )}          <label className="form-label">
-            📝 Notas
-            <textarea className="form-input form-input--textarea" value={form.notes || undefined} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notas adicionales sobre el paciente..." />
-          </label>
-          {isEdit && <label className="form-label">
-            Estado
-            <CustomSelect
-              value={form.status}
-              options={Object.values(PatientStatus).map(s => ({ value: s, label: `${PATIENT_STATUS_CONFIG[ s ].icon} ${PATIENT_STATUS_CONFIG[ s ].label}` }))}
-              onChange={(v) => setForm(f => ({ ...f, status: v as PatientStatus }))}
+          )}{" "}
+          <label className="form-label">
+            Notas
+            <textarea
+              className="form-input form-input--textarea"
+              value={form.notes || undefined}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, notes: e.target.value }))
+              }
+              placeholder="Notas adicionales sobre el paciente..."
             />
-          </label>}
+          </label>
+          {isEdit && (
+            <label className="form-label">
+              Estado
+              <CustomSelect
+                value={form.status}
+                options={Object.values(PatientStatus).map((s) => ({
+                  value: s,
+                  label: PATIENT_STATUS_CONFIG[s].label,
+                }))}
+                onChange={(v) =>
+                  setForm((f) => ({ ...f, status: v as PatientStatus }))
+                }
+              />
+            </label>
+          )}
         </div>
         <div className="modal-footer">
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>{LBL_CANCEL}</button>
-          <button onClick={handleSubmit} disabled={saving || !isValid} className="btn-primary btn-hero">
-            {saving ? LBL_SAVING : isEdit ? LBL_SAVE_CHANGES : LBL_CREATE_PATIENT}
+          <button onClick={onClose} className="btn-secondary" disabled={saving}>
+            {LBL_CANCEL}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !isValid}
+            className="btn-primary"
+          >
+            {saving
+              ? LBL_SAVING
+              : isEdit
+                ? LBL_SAVE_CHANGES
+                : LBL_CREATE_PATIENT}
           </button>
         </div>
       </div>

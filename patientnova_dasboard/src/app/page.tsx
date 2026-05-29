@@ -5,9 +5,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/src/app/AuthContext";
 import { LoginModal } from "../components/Modals/LoginModal";
+import { Users, FileText, CalendarDays, Bell } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export default function LandingPage() {
-  const [ loginOpen, setLoginOpen ] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const { isAuthenticated, initializing } = useAuthContext();
   const router = useRouter();
 
@@ -18,22 +20,22 @@ export default function LandingPage() {
         "Patient Nova centraliza todas tus operaciones clínicas en una plataforma intuitiva.",
       items: [
         {
-          icon: "🪪",
+          icon: Users,
           title: "Gestión de pacientes",
           desc: "Mantén un historial completo de cada paciente. Busca, filtra y accede a perfiles en segundos.",
         },
         {
-          icon: "📝",
+          icon: FileText,
           title: "Citas",
           desc: "Agenda y gestiona citas con seguimiento de estado, registros de pagos e historial completo.",
         },
         {
-          icon: "📆",
+          icon: CalendarDays,
           title: "Calendario",
           desc: "Vista mensual para visualizar tu agenda de un vistazo con todas tus citas superpuestas.",
         },
         {
-          icon: "🔔",
+          icon: Bell,
           title: "Recordatorios",
           desc: "Envía recordatorios automáticos para reducir ausencias y mantener informados a tus pacientes.",
         },
@@ -59,20 +61,18 @@ export default function LandingPage() {
         },
       ],
     },
-  }
+  };
 
   useEffect(() => {
     if (!initializing && isAuthenticated) router.replace("/dashboard");
-  }, [ initializing, isAuthenticated, router ]);
+  }, [initializing, isAuthenticated, router]);
 
   // While checking session, render nothing to avoid flash
   if (initializing || isAuthenticated) return null;
 
   return (
     <>
-      {loginOpen && (
-        <LoginModal onClose={() => setLoginOpen(false)} />
-      )}
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
       <nav className="landing-nav">
         <div className="landing-nav__inner">
           <div className="landing-nav__brand">
@@ -94,25 +94,52 @@ export default function LandingPage() {
       </nav>
       <section className="landing-hero">
         <div className="landing-container">
-          <div className="landing-hero__badge">Gestión clínica, reinventada</div>
-          <h1 className="landing-hero__title">La plataforma moderna para profesionales de la salud</h1>
-          <p className="landing-hero__subtitle">Gestiona pacientes, citas, recordatorios y toda tu práctica clínica — todo en un solo lugar.</p>
+          <div className="landing-hero__badge">
+            Gestión clínica, reinventada
+          </div>
+          <h1 className="landing-hero__title">
+            La plataforma moderna para profesionales de la salud
+          </h1>
+          <p className="landing-hero__subtitle">
+            Gestiona pacientes, citas, recordatorios y toda tu práctica clínica
+            — todo en un solo lugar.
+          </p>
+          <button
+            className="btn-primary landing-hero__cta"
+            onClick={() => setLoginOpen(true)}
+          >
+            Comenzar ahora
+          </button>
         </div>
       </section>
       <section className="landing-section">
         <div className="landing-container">
           <div className="landing-section-header">
-            <h2 className="landing-section-title">Todo lo que necesitas para gestionar tu clínica</h2>
-            <p className="landing-section-subtitle">Patient Nova centraliza todas tus operaciones clínicas en una plataforma intuitiva.</p>
+            <h2 className="landing-section-title">
+              Todo lo que necesitas para gestionar tu clínica
+            </h2>
+            <p className="landing-section-subtitle">
+              Patient Nova centraliza todas tus operaciones clínicas en una
+              plataforma intuitiva.
+            </p>
           </div>
           <div className="landing-features-grid">
-            {content.features.items.map((f, i) => (
-              <div key={i} className="landing-feature-card">
-                <span className="landing-feature-card__icon" role="img" aria-label={f.title}>{f.icon}</span>
-                <h3 className="landing-feature-card__title">{f.title}</h3>
-                <p className="landing-feature-card__desc">{f.desc}</p>
-              </div>
-            ))}
+            {content.features.items.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <div key={i} className="landing-feature-card">
+                  <span
+                    className="landing-feature-card__icon"
+                    role="img"
+                    aria-label={f.title}
+                  >
+                    <Icon size={28} />
+                  </span>
+                  <h3 className="landing-feature-card__title">{f.title}</h3>
+                  <p className="landing-feature-card__desc">{f.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -134,10 +161,22 @@ export default function LandingPage() {
       </section>
       <section className="landing-cta-banner">
         <div className="landing-container">
-          <h2 className="landing-cta-banner__title">¿Listo para optimizar tu práctica clínica?</h2>
-          <p className="landing-cta-banner__subtitle">Únete a los profesionales de la salud que confían en Patient Nova.</p>
+          <h2 className="landing-cta-banner__title">
+            ¿Listo para optimizar tu práctica clínica?
+          </h2>
           <p className="landing-cta-banner__subtitle">
-            Contacta <a href={`mailto:juan.gallego.developer@gmail.com`} style={{ color: "white" }}> soporte</a> para iniciar tu registro.
+            Únete a los profesionales de la salud que confían en Patient Nova.
+          </p>
+          <p className="landing-cta-banner__subtitle">
+            Contacta{" "}
+            <a
+              href={`mailto:juan.gallego.developer@gmail.com`}
+              className="landing-cta-link"
+            >
+              {" "}
+              soporte
+            </a>{" "}
+            para iniciar tu registro.
           </p>
         </div>
       </section>
@@ -151,19 +190,14 @@ export default function LandingPage() {
               height={22}
               style={{ borderRadius: "var(--r-sm)" }}
             />
-            <span
-              style={{
-                fontWeight: 700,
-                fontSize: 14,
-                color: "var(--c-brand)",
-              }}
-            >
-              Patient Nova
-            </span>
+            <span className="landing-footer__brand-text">Patient Nova</span>
           </div>
-          <p className="landing-footer__tagline">Gestión clínica moderna para profesionales de la salud.</p>
+          <p className="landing-footer__tagline">
+            Gestión clínica moderna para profesionales de la salud.
+          </p>
           <p className="landing-footer__copy">
-            © {new Date().getFullYear()} Patient Nova. Todos los derechos reservados.
+            © {new Date().getFullYear()} Patient Nova. Todos los derechos
+            reservados.
           </p>
         </div>
       </footer>

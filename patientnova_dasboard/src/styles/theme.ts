@@ -1,45 +1,34 @@
 import { CSSProperties } from "react";
+import { theme } from "@/src/config/theme";
 
 /**
  * Shared Ant Design ConfigProvider theme.
- * Hex values here intentionally mirror the CSS variables in globals.css
- * (Ant Design's token system requires raw JS values, not CSS variables).
- *
- * If you update a color in globals.css, update the matching value here:
- *   colorPrimary         → --c-brand          #1E3A5F
- *   colorBorder          → --c-gray-200        #E5E7EB
- *   colorBgContainer     → --c-input-bg        #FAFAFA
- *   colorText            → --c-gray-900        #111827
- *   colorTextPlaceholder → --c-gray-400        #9CA3AF
- *   cellActiveWithRangeBg / cellHoverBg → --c-brand-light #EFF6FF
- *   borderRadius         → --r-lg              10px
+ * All values sourced from src/config/theme.ts (single source of truth).
  */
 export const antThemeConfig = {
-    token: {
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: 14,
-        colorPrimary: "#1E3A5F",
-        colorBorder: "#E5E7EB",
-        colorBgContainer: "#FAFAFA",
-        borderRadius: 10,
-        controlHeight: 40,
-        colorText: "#111827",
-        colorTextPlaceholder: "#9CA3AF",
+  token: {
+    fontFamily: theme.fontFamily,
+    fontSize: 14,
+    colorPrimary: theme.colors.primary,
+    colorBorder: theme.colors.gray200,
+    colorBgContainer: theme.colors.inputBg,
+    borderRadius: parseInt(theme.radius.lg),
+    controlHeight: 40,
+    colorText: theme.colors.textPrimary,
+    colorTextPlaceholder: theme.colors.gray400,
+  },
+  components: {
+    DatePicker: {
+      activeBorderColor: theme.colors.primary,
+      hoverBorderColor: theme.colors.primary,
+      cellActiveWithRangeBg: theme.colors.primarySubtle,
+      cellHoverBg: theme.colors.primarySubtle,
     },
-    components: {
-        DatePicker: {
-            activeBorderColor: "#1E3A5F",
-            hoverBorderColor: "#1E3A5F",
-            cellActiveWithRangeBg: "#EFF6FF",
-            cellHoverBg: "#EFF6FF",
-        },
-    },
+  },
 };
-
 
 export const sectionGridStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: 18,
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 18,
 };
-
