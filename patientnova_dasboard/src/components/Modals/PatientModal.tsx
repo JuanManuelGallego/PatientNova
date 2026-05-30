@@ -59,12 +59,12 @@ export function PatientModal({
   });
   const isValid = !!form.name && !!form.lastName;
   const canSendWelcome =
-    user?.displayName &&
-    user?.bankName &&
-    user?.accountNumber &&
-    user?.nationalId &&
-    user?.bankingKey &&
-    user.consentDocument;
+    !!user?.displayName &&
+    !!user?.bankName &&
+    !!user?.accountNumber &&
+    !!user?.nationalId &&
+    !!user?.bankingKey &&
+    !!user.consentDocument;
 
   const set =
     (field: string) =>

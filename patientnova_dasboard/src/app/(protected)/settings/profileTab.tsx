@@ -1,4 +1,4 @@
-import { useUpdateProfile } from "@/src/api/useUpdateProfile";
+import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/useUpdateProfile";
 import { useConsentDocument } from "@/src/api/useConsentDocument";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { User } from "@/src/types/User";
@@ -116,7 +116,8 @@ export function ProfileTab() {
   const [ bankingKey, setBankingKey ] = useState<string>(user?.bankingKey ?? "");
 
   const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
-  const saveStatus = useUpdateProfile(userPayload);
+  const saveStatus = useUpdateProfileWithDebounce(userPayload);
+  const { updateProfile } = useUpdateProfile();
   const [ error, setError ] = useState<string | null>(null);
 
   const {
@@ -493,7 +494,7 @@ export function ProfileTab() {
                 value={timezone}
                 onChange={(value) => {
                   setTimezone(value);
-                  handleFieldChange({ timezone: value });
+                  updateProfile({ timezone: value });
                 }}
                 options={COMMON_TIMEZONES.map((tz) => ({
                   value: tz.value,

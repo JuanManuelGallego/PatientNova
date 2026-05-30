@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import type { CreateUserDto, UpdateUserDto } from './user.schemas.js';
 import { UserNotFoundError, UserEmailConflictError, UserInvalidCredentialsError } from '../utils/errors.js';
 import { userInclude } from '../utils/types.js';
+import { Channel } from '../../generated/prisma/enums.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {
@@ -27,7 +28,7 @@ export const userRepository = {
                 phoneNumber: dto.phoneNumber ?? null,
                 whatsappNumber: dto.whatsappNumber ?? null,
                 reminderActive: dto.reminderActive ?? false,
-                reminderChannel: dto.reminderChannel ?? null,
+                reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
                 timezone: dto.timezone ?? config.defaults.timezone,
             },
             select: userInclude,

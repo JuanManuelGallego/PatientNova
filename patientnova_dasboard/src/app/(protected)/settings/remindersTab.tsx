@@ -1,7 +1,7 @@
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { useState } from "react";
 import { useAuthContext } from "../../AuthContext";
-import { useUpdateProfile } from "@/src/api/useUpdateProfile";
+import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/useUpdateProfile";
 import { User } from "@/src/types/User";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
@@ -24,7 +24,8 @@ export function RemindersTab() {
   );
 
   const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
-  const saveStatus = useUpdateProfile(userPayload);
+  const saveStatus = useUpdateProfileWithDebounce(userPayload);
+  const { updateProfile } = useUpdateProfile()
   const [ error, setError ] = useState<string | null>(null);
 
   function handleFieldChange(overrides: Partial<User> = {}) {
@@ -68,7 +69,7 @@ export function RemindersTab() {
                 onChange={(value) => {
                   const channel = value as Channel;
                   setReminderChannel(channel);
-                  handleFieldChange({ reminderChannel: channel });
+                  updateProfile({ reminderChannel: channel });
                 }}
                 options={Object.values([ Channel.WHATSAPP, Channel.SMS ]).map((ch) => ({
                   value: ch,
@@ -110,7 +111,7 @@ export function RemindersTab() {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setReminderActive(checked);
-                    handleFieldChange({ reminderActive: checked });
+                    updateProfile({ reminderActive: checked, whatsappNumber, phoneNumber });
                   }}
                 />
                 Activar recordatorios mios

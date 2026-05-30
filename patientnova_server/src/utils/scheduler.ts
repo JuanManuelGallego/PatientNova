@@ -303,7 +303,7 @@ function buildWhatsAppContent(
 
 export async function dailyReminderWorker(): Promise<void> {
   const users = await prisma.user.findMany({
-    where: { reminderActive: true, reminderChannel: { not: null } },
+    where: { reminderActive: true },
     select: { id: true, timezone: true, reminderChannel: true, email: true, whatsappNumber: true, phoneNumber: true, firstName: true, lastName: true, displayName: true },
   });
 

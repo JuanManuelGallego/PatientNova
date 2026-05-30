@@ -21,7 +21,7 @@ export const TWILIO_CONFIG = {
     },
     PATIENT_WELCOME_MESSAGE:{
         label: "Patient Welcome Message",
-        contentSid: "HX884180c72b5a0158333da370c4e719d1",
+        contentSid: "HXff54717bfb9d06d77e35910e9fd678f4",
         template: "¡Hola {{1}}! Te damos la bienvenida a Patient Nova, la plataforma de recordatorios de citas de {{2}}. A través de este canal, podrás confirmar o cancelar tus próximas citas de forma rápida. Te recordamos que el pago de la consulta se realiza antes de asistir a tu cita. Banco: {{3}} Número de cuenta:  {{4}} A nombre de: {{5}} Cédula: {{6}} Llave: {{7}} Por favor, descarga y completa este documento de consentimiento adjunto en este mensaje antes de tu primera consulta. ¡Muchas gracias!"
     },
 }
