@@ -23,6 +23,7 @@ import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { API_BASE } from "@/src/types/API";
+import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
 
 export function PatientModal({
   onClose,
@@ -38,13 +39,14 @@ export function PatientModal({
   const { user } = useAuthContext();
   const { createPatient } = useCreatePatient();
   const { updatePatient } = useUpdatePatient();
+  const { appointmentTypes } = useFetchAppointmentTypes();
   const { ref: trapRef, handleKeyDown: trapKeyDown } =
     useFocusTrap<HTMLDivElement>(onClose);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sendWelcomeMessage, setSendWelcomeMessage] = useState(false);
+  const [ saving, setSaving ] = useState(false);
+  const [ error, setError ] = useState<string | null>(null);
+  const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
 
-  const [form, setForm] = useState({
+  const [ form, setForm ] = useState({
     name: patient?.name ?? "",
     lastName: patient?.lastName ?? "",
     email: patient?.email,
@@ -53,6 +55,7 @@ export function PatientModal({
     dateOfBirth: patient?.dateOfBirth,
     notes: patient?.notes,
     status: patient?.status ?? ("ACTIVE" as PatientStatus),
+    appointmentTypeId: patient?.appointmentTypeId,
   });
   const isValid = !!form.name && !!form.lastName;
   const canSendWelcome =
@@ -65,8 +68,8 @@ export function PatientModal({
 
   const set =
     (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
+      (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+        setForm((f) => ({ ...f, [ field ]: e.target.value }));
 
   function validateForm() {
     if (!form.name || !form.lastName) {
@@ -248,10 +251,23 @@ export function PatientModal({
                   disabled={!form.whatsappNumber && !form.smsNumber}
                   style={{ width: 15, height: 15 }}
                 />
-                <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[user.reminderChannel].label}</span>
+                <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
               </label>
             </div>
           )}
+          <label className="form-label">
+            Tipo de citas
+            <CustomSelect
+              value={form.appointmentTypeId || ''}
+              options={appointmentTypes?.map((t) => ({
+                value: t.id,
+                label: t.name,
+              }))}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, appointmentTypeId: v }))
+              }
+            />
+          </label>
           <label className="form-label">
             Notas
             <textarea
@@ -270,7 +286,7 @@ export function PatientModal({
                 value={form.status}
                 options={Object.values(PatientStatus).map((s) => ({
                   value: s,
-                  label: PATIENT_STATUS_CONFIG[s].label,
+                  label: PATIENT_STATUS_CONFIG[ s ].label,
                 }))}
                 onChange={(v) =>
                   setForm((f) => ({ ...f, status: v as PatientStatus }))

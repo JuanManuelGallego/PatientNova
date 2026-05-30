@@ -22,6 +22,7 @@ export const patientRepository = {
           email: dto.email?.toLowerCase() ?? null,
           notes: dto.notes ?? null,
           status: dto.status,
+          appointmentTypeId: dto.appointmentTypeId ?? null,
           userId,
         },
       });
@@ -116,6 +117,7 @@ export const patientRepository = {
           ...(dto.email !== undefined && { email: dto.email?.toLowerCase() || null }),
           ...(dto.notes !== undefined && { notes: dto.notes || null }),
           ...(dto.status !== undefined && { status: dto.status }),
+          ...(dto.appointmentTypeId !== undefined && { appointmentTypeId: dto.appointmentTypeId || null }),
           ...({ archivedAt: dto.status === PatientStatus.ARCHIVED ? new Date() : null })
         },
       });

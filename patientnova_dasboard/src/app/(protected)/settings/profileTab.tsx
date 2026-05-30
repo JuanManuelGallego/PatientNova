@@ -97,26 +97,26 @@ function LogoSlot({ label, hint, value, onSelect, onRemove }: LogoSlotProps) {
 export function ProfileTab() {
   const { user } = useAuthContext();
 
-  const [firstName, setFirstName] = useState(user?.firstName ?? "");
-  const [lastName, setLastName] = useState(user?.lastName ?? "");
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [jobTitle, setJobTitle] = useState(user?.jobTitle ?? "");
-  const [timezone, setTimezone] = useState(user?.timezone ?? "America/Bogota");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
+  const [ firstName, setFirstName ] = useState(user?.firstName ?? "");
+  const [ lastName, setLastName ] = useState(user?.lastName ?? "");
+  const [ displayName, setDisplayName ] = useState(user?.displayName ?? "");
+  const [ jobTitle, setJobTitle ] = useState(user?.jobTitle ?? "");
+  const [ timezone, setTimezone ] = useState(user?.timezone ?? "America/Bogota");
+  const [ avatarPreview, setAvatarPreview ] = useState<string | null>(
     user?.avatarUrl ?? null,
   );
-  const [logo, setLogo] = useState<string | null>(user?.logo ?? null);
-  const [altLogo, setAltLogo] = useState<string | null>(user?.altLogo ?? null);
-  const [bankName, setBankName] = useState<string>(user?.bankName ?? "");
-  const [accountNumber, setAccountNumber] = useState<string>(
+  const [ logo, setLogo ] = useState<string | null>(user?.logo ?? null);
+  const [ altLogo, setAltLogo ] = useState<string | null>(user?.altLogo ?? null);
+  const [ bankName, setBankName ] = useState<string>(user?.bankName ?? "");
+  const [ accountNumber, setAccountNumber ] = useState<string>(
     user?.accountNumber ?? "",
   );
-  const [nationalId, setNationalId] = useState<string>(user?.nationalId ?? "");
-  const [bankingKey, setBankingKey] = useState<string>(user?.bankingKey ?? "");
+  const [ nationalId, setNationalId ] = useState<string>(user?.nationalId ?? "");
+  const [ bankingKey, setBankingKey ] = useState<string>(user?.bankingKey ?? "");
 
-  const [userPayload, setUserPayload] = useState<Partial<User> | null>(null);
+  const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
   const saveStatus = useUpdateProfile(userPayload);
-  const [error, setError] = useState<string | null>(null);
+  const [ error, setError ] = useState<string | null>(null);
 
   const {
     document,
@@ -126,7 +126,7 @@ export function ProfileTab() {
     uploadDocument,
     deleteDocument,
   } = useConsentDocument();
-  const [consentError, setConsentError] = useState<string | null>(null);
+  const [ consentError, setConsentError ] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
@@ -136,17 +136,17 @@ export function ProfileTab() {
   // Fetch consent document on mount
   useEffect(() => {
     fetchDocument();
-  }, [fetchDocument]);
+  }, [ fetchDocument ]);
 
   const initials = getInitials(
-    user?.firstName?.[0] ?? "?",
-    user?.lastName?.[0] ?? "?",
+    user?.firstName?.[ 0 ] ?? "?",
+    user?.lastName?.[ 0 ] ?? "?",
   );
 
   // ── File handlers ──────────────────────────────────────────────────────────
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[ 0 ];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       setError("La imagen debe ser menor a 5 MB");
@@ -168,7 +168,7 @@ export function ProfileTab() {
 
   function makeLogoHandler(setter: (v: string | null) => void) {
     return async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+      const file = e.target.files?.[ 0 ];
       if (!file) return;
       if (file.size > 5 * 1024 * 1024) {
         setError("El logo debe ser menor a 5 MB");
@@ -195,7 +195,7 @@ export function ProfileTab() {
   async function handleConsentFileChange(
     e: React.ChangeEvent<HTMLInputElement>,
   ) {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[ 0 ];
     if (!file) return;
     setConsentError(null);
     try {
@@ -533,6 +533,55 @@ export function ProfileTab() {
       </div>
       <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
         <div className="dash-card__header">
+          <span className="dash-card__title">Logos</span>
+        </div>
+        <div className="dash-card__body">
+          <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
+            Sube el logo principal y el alternativo (p. ej. versión oscura o
+            monocromática). Formatos admitidos: PNG, SVG, WebP · Máx. 5 MB.
+          </p>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}
+          >
+            <LogoSlot
+              label="Logo principal"
+              hint="Úsalo sobre fondos claros. Recomendado: fondo transparente."
+              value={logo}
+              onSelect={() => logoRef.current?.click()}
+              onRemove={() => {
+                setLogo(null);
+                handleFieldChange();
+              }}
+            />
+            <LogoSlot
+              label="Logo alternativo (icono)"
+              hint="Úsalo sobre fondos oscuros o de color."
+              value={altLogo}
+              onSelect={() => altLogoRef.current?.click()}
+              onRemove={() => {
+                setAltLogo(null);
+                handleFieldChange();
+              }}
+            />
+          </div>
+          <input
+            ref={logoRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={makeLogoHandler(setLogo)}
+          />
+          <input
+            ref={altLogoRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={makeLogoHandler(setAltLogo)}
+          />
+        </div>
+      </div>
+      <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
+        <div className="dash-card__header">
           <span className="dash-card__title">Informacion Bancaria</span>
         </div>
         <div className="dash-card__body">
@@ -595,55 +644,6 @@ export function ProfileTab() {
                 placeholder="@llaveBancolombia"
               />
             </label>
-          </div>
-          <input
-            ref={logoRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={makeLogoHandler(setLogo)}
-          />
-          <input
-            ref={altLogoRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={makeLogoHandler(setAltLogo)}
-          />
-        </div>
-      </div>
-      <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
-        <div className="dash-card__header">
-          <span className="dash-card__title">Logos</span>
-        </div>
-        <div className="dash-card__body">
-          <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
-            Sube el logo principal y el alternativo (p. ej. versión oscura o
-            monocromática). Formatos admitidos: PNG, SVG, WebP · Máx. 5 MB.
-          </p>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}
-          >
-            <LogoSlot
-              label="Logo principal"
-              hint="Úsalo sobre fondos claros. Recomendado: fondo transparente."
-              value={logo}
-              onSelect={() => logoRef.current?.click()}
-              onRemove={() => {
-                setLogo(null);
-                handleFieldChange();
-              }}
-            />
-            <LogoSlot
-              label="Logo alternativo (icono)"
-              hint="Úsalo sobre fondos oscuros o de color."
-              value={altLogo}
-              onSelect={() => altLogoRef.current?.click()}
-              onRemove={() => {
-                setAltLogo(null);
-                handleFieldChange();
-              }}
-            />
           </div>
           <input
             ref={logoRef}

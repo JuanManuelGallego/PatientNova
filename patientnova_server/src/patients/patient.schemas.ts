@@ -10,6 +10,7 @@ export const createPatientSchema = z.object({
   email: z.email('Must be a valid email address').nullish(),
   notes: z.string().max(500).nullish(),
   status: z.enum(PatientStatus).default(PatientStatus.ACTIVE),
+  appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
 });
 
 export const updatePatientSchema = z.object({
@@ -20,6 +21,7 @@ export const updatePatientSchema = z.object({
   email: z.email('Must be a valid email address').nullish(),
   notes: z.string().max(500).nullish(),
   status: z.enum(PatientStatus).optional(),
+  appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
 }).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'At least one field must be provided for update' }

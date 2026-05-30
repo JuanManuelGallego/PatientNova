@@ -19,7 +19,8 @@ model Patient {
   smsNumber      String?       @db.VarChar(20)
   email          String?       @db.VarChar(255)
 
-  notes          String?       @db.Text
+  notes                  String?           @db.Text
+  appointmentTypeId      String?           @db.Uuid
 
   status         PatientStatus @default(ACTIVE)
   archivedAt     DateTime?
@@ -28,6 +29,7 @@ model Patient {
 
   userId         String
   user           User          @relation(fields: [userId], references: [id])
+  appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
 
   appointments   Appointment[] @relation("PatientAppointments")
   reminders      Reminder[]    @relation("PatientReminders")
@@ -188,7 +190,7 @@ model User {
   whatsappNumber String?  @db.VarChar(20)
 
   reminderActive        Boolean  @default(true)
-  reminderChannel       Channel  @default(Channel.WHATSAPP)
+  reminderChannel       Channel  @default(WHATSAPP)
   lastDailyReminderDate DateTime?
 
   bankName      String?
@@ -265,6 +267,7 @@ model AppointmentType {
   userId          String
   user            User          @relation(fields: [userId], references: [id])
   appointments    Appointment[]
+  patients        Patient[]
 
   @@unique([userId, name])
   @@index([userId])

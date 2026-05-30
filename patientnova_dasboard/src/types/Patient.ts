@@ -1,4 +1,4 @@
-import { Appointment } from "./Appointment";
+import { Appointment, AppointmentType } from "./Appointment";
 import { MedicalRecord } from "./MedicalRecord";
 import { Reminder } from "./Reminder";
 
@@ -29,6 +29,7 @@ export interface Patient {
 
   dateOfBirth?: string | null;
   notes?: string | null;
+  appointmentTypeId?: string | null;
 
   status: PatientStatus;
   archivedAt?: string | null;
@@ -38,6 +39,7 @@ export interface Patient {
   appointments?: Appointment[];
   reminders?: Reminder[];
   medicalRecord?: MedicalRecord;
+  appointmentType?: AppointmentType;
 }
 
 export interface FetchPatientsFilters {
