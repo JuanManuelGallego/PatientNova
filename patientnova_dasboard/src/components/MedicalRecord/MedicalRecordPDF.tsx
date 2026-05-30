@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Text, View, pdf } from "@react-pdf/renderer";
-import { FormValues, RELATIONSHIP_CFG, SEX_CFG } from "@/src/types/MedicalRecord";
+import { FormValues, RELATIONSHIP_CFG, SEX_CFG, SUBSISTEMA_CFG, EstadoRelacion, SubsistemaType } from "@/src/types/MedicalRecord";
 import { fmtDate, todayString } from "@/src/utils/TimeUtils";
 import { S } from "../../styles/medicalRecordsPDFStyle";
 import { User } from "../../types/User";
@@ -133,6 +133,196 @@ function EvolutionNotes(form: FormValues) {
   )
 }
 
+function SubsystemRelationsTable(form: FormValues) {
+  const relations = form.subsystemRelations || [];
+
+  if (!relations.length) {
+    return (
+      <Text style={S.emptyText}>
+        No se han registrado relaciones entre subsistemas.
+      </Text>
+    );
+  }
+
+  const subsistemas = Object.values(SubsistemaType).filter((s) =>
+    relations.some((r) => r.subsistema === s)
+  );
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+
+      {/* ── Header row 1: group labels ── */}
+      <View style={{ flexDirection: "row", borderBottom: "1px solid #ddd" }}>
+        <Text style={{ width: "30%", fontSize: 9, paddingBottom: 4 }} />
+        <Text
+          style={{
+            width: "14%",
+            fontSize: 9,
+            fontWeight: "bold",
+            textAlign: "center",
+            paddingBottom: 4,
+          }}
+        >
+          Funcional
+        </Text>
+        <Text
+          style={{
+            width: "56%",
+            fontSize: 9,
+            fontWeight: "bold",
+            textAlign: "center",
+            paddingBottom: 4,
+            borderLeft: "1px solid #ddd",
+          }}
+        >
+          Disfuncional
+        </Text>
+      </View>
+
+      {/* ── Header row 2: sub-column labels ── */}
+      <View
+        style={{
+          flexDirection: "row",
+          borderBottom: "1px solid #ddd",
+          backgroundColor: "#fdf0eb",
+        }}
+      >
+        <Text
+          style={{
+            width: "30%",
+            fontSize: 9,
+            fontWeight: "bold",
+            paddingVertical: 4,
+            paddingRight: 8,
+          }}
+        >
+          Subsistema
+        </Text>
+        <Text
+          style={{
+            width: "14%",
+            fontSize: 9,
+            textAlign: "center",
+            paddingVertical: 4,
+          }}
+        />
+        <Text
+          style={{
+            width: "18%",
+            fontSize: 9,
+            textAlign: "center",
+            paddingVertical: 4,
+            borderLeft: "1px solid #ddd",
+          }}
+        >
+          Comunicación
+        </Text>
+        <Text
+          style={{
+            width: "19%",
+            fontSize: 9,
+            textAlign: "center",
+            paddingVertical: 4,
+            borderLeft: "1px solid #ddd",
+          }}
+        >
+          Jerarquía
+        </Text>
+        <Text
+          style={{
+            width: "19%",
+            fontSize: 9,
+            textAlign: "center",
+            paddingVertical: 4,
+            borderLeft: "1px solid #ddd",
+          }}
+        >
+          Límites
+        </Text>
+      </View>
+
+      {/* ── Body rows ── */}
+      {subsistemas.map((subsistema) => {
+        const has = (estado: EstadoRelacion) =>
+          relations.some(
+            (r) => r.subsistema === subsistema && r.estado === estado
+          );
+
+        return (
+          <View
+            key={subsistema}
+            style={{
+              flexDirection: "row",
+              borderBottom: "1px solid #eee",
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={{ width: "30%", paddingRight: 8, fontSize: 10 }}>
+              {SUBSISTEMA_CFG[ subsistema ]?.label || subsistema}
+            </Text>
+            <Text style={{ width: "14%", fontSize: 10, textAlign: "center" }}>
+              {has(EstadoRelacion.FUNCIONAL) ? "X" : ""}
+            </Text>
+            <Text
+              style={{
+                width: "18%",
+                fontSize: 10,
+                textAlign: "center",
+                borderLeft: "1px solid #eee",
+              }}
+            >
+              {has(EstadoRelacion.DISFUNCIONAL_COMUNICACION) ? "X" : ""}
+            </Text>
+            <Text
+              style={{
+                width: "19%",
+                fontSize: 10,
+                textAlign: "center",
+                borderLeft: "1px solid #eee",
+              }}
+            >
+              {has(EstadoRelacion.DISFUNCIONAL_JERARQUIA) ? "X" : ""}
+            </Text>
+            <Text
+              style={{
+                width: "19%",
+                fontSize: 10,
+                textAlign: "center",
+                borderLeft: "1px solid #eee",
+              }}
+            >
+              {has(EstadoRelacion.DISFUNCIONAL_LIMITES) ? "X" : ""}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function FamilySpecificContent(form: FormValues) {
+  return (
+    [
+      [ "Tipo de familia", form.familyType ],
+      [ "Ciclo vital", form.lifecycle ],
+      [ "Genograma", form.genogram ],
+      [ "Recursos que tiene", form.ressources ],
+      [ "Dificultades que tiene", form.difficulties ],
+      [ "Comunicación", form.communication ],
+      [ "Reglas", form.rule ],
+      [ "Límites", form.limits ],
+      [ "Contexto familiar", form.familyContext ],
+      [ "Expectativas", form.expectations ],
+      [ "Flexibilidad al cambio", form.flexibility ],
+    ] as [ string, string | undefined ][]
+  ).map(([ label, value ], i, arr) => (
+    <View key={label}>
+      <Field isText label={label} value={value} last={i === arr.length - 1} />
+      <View style={S.divider} />
+    </View>
+  ))
+}
+
 export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User | null }) {
   return (
     <Document
@@ -183,9 +373,20 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
           <Field isText label="Observaciones" value={form.familyObservations || "—"} last />
           <View style={[ S.divider, { marginTop: 20 } ]} />
         </View>
-        <View style={{ marginTop: -20 }}>
-          {Antecedents(form)}
-        </View>
+        {form.isFamily ? (
+          <View style={{ marginTop: -20 }}>
+            <Text style={S.fieldTitle}>Aspectos específicos de la familia</Text>
+            {FamilySpecificContent(form)}
+            <View style={{ marginTop: 12 }}>
+              <Text style={S.fieldTitle}>Relación entre subsistemas</Text>
+              {SubsystemRelationsTable(form)}
+            </View>
+          </View>
+        ) : (
+          <View style={{ marginTop: -20 }}>
+            {Antecedents(form)}
+          </View>
+        )}
         <View>
           <Text style={S.fieldTitle}>Notas de Evolución</Text>
           {EvolutionNotes(form)}

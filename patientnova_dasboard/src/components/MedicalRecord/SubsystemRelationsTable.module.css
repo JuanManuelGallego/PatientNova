@@ -1,0 +1,128 @@
+.container {
+    width: 100%;
+}
+
+.tableWrapper {
+    border: 1px solid var(--c-gray-100);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card-lg);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+/* ── Header row 1 ── */
+.headerCell {
+    padding: 13px 20px;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--c-gray-500);
+    border-bottom: 1px solid var(--c-gray-100);
+    text-align: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.labelCol {
+    text-align: left;
+    padding-left: 16px;
+    border-right: 1px solid var(--c-gray-100);
+}
+
+.funcHead {
+    border-right: 1px solid var(--c-gray-100);
+}
+
+.dysfuncHead {
+    background-color: var(--c-warning-bg);
+    color: var(--c-warning-dark);
+}
+
+/* ── Header row 2 ── */
+.subHeaderCell {
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--c-gray-500);
+    border-bottom: 1px solid var(--c-gray-100);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.funcSub {
+    border-right: 1px solid var(--c-gray-100);
+}
+
+/* ── Body rows ── */
+.row {
+    border-bottom: 1px solid var(--c-gray-100);
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.row:hover .cell,
+.row:hover .rowHeader {
+    background-color: var(--c-gray-50);
+    transition: background-color 0.15s ease;
+}
+
+.rowHeader {
+    padding: 14px 20px;
+    height: 48px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    border-right: 1px solid var(--c-gray-100);
+    color: var(--c-gray-900);
+}
+
+.cell {
+    height: 48px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.cellFunc:hover {
+    background-color: var(--c-success-bg) !important;
+}
+
+.cellDysfunc {
+    border-left: 1px solid var(--c-gray-100);
+}
+
+.cellDysfunc:hover {
+    background-color: var(--c-warning-bg) !important;
+}
+
+/* ── Check marks ── */
+.mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.markFunc {
+    background-color: var(--c-success-bg);
+    color: var(--c-success);
+}
+
+.markDysfunc {
+    background-color: var(--c-warning-bg);
+    color: var(--c-warning-dark);
+}

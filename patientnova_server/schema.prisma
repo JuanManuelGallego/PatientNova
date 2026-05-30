@@ -287,6 +287,23 @@ enum AdminStatus {
   PENDING
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum SubsistemaType {
+  CONYUGAL
+  PARENTAL
+  FILIAL
+  FRATERNO
+}
+
+enum EstadoRelacion {
+  FUNCIONAL
+  DISFUNCIONAL
+  DISFUNCIONAL_COMUNICACION
+  DISFUNCIONAL_JERARQUIA
+  DISFUNCIONAL_LIMITES
+}
+
 // ─── Medical Record ───────────────────────────────────────────────────────────
 
 model MedicalRecord {
@@ -312,10 +329,25 @@ model MedicalRecord {
   objective                 String? @db.Text
   familyObservations        String? @db.Text
 
+  // Family fields
+  isFamily      Boolean @default(false)
+  familyType    String? @db.Text
+  lifecycle     String? @db.Text
+  genogram      String? @db.Text
+  ressources    String? @db.Text
+  difficulties  String? @db.Text
+  communication String? @db.Text
+  rule          String? @db.Text
+  limits        String? @db.Text
+  familyContext String? @db.Text
+  expectations  String? @db.Text
+  flexibility   String? @db.Text
+
   // Relations
-  familyMembers   FamilyMember[]
-  evolutionNotes  EvolutionNote[]
-  documents       MedicalDocument[]
+  familyMembers      FamilyMember[]
+  evolutionNotes     EvolutionNote[]
+  documents          MedicalDocument[]
+  subsystemRelations SubsystemRelation[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -325,6 +357,27 @@ model MedicalRecord {
 
   @@index([patientId])
   @@map("medical_records")
+}
+
+// ─── Subsystem relations ──────────────────────────────────────────────────────
+
+model SubsystemRelation {
+  id              String         @id @default(uuid()) @db.Uuid
+
+  medicalRecordId String         @db.Uuid
+  medicalRecord   MedicalRecord  @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  subsistema      SubsistemaType
+  estado          EstadoRelacion
+  observacion     String?        @db.Text
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // One estado per subsistema per record
+  @@unique([medicalRecordId, subsistema, estado])
+  @@index([medicalRecordId])
+  @@map("subsystem_relations")
 }
 
 // ─── Family Member ────────────────────────────────────────────────────────────

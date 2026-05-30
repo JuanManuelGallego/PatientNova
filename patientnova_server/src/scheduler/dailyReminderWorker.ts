@@ -76,7 +76,7 @@ function getTomorrowLocalDate(timezone: string): string {
 export async function dailyReminderWorker(): Promise<void> {
 
   const users = await prisma.user.findMany({
-    where: { reminderActive: true, reminderChannel: { not: null } },
+    where: { reminderActive: true },
     select: {
       id: true,
       timezone: true,

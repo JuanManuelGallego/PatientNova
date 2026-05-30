@@ -25,6 +25,7 @@ import { useAuthContext } from "../../AuthContext";
 import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSection";
 import { useFetchMedicalRecords } from "@/src/api/useFetchMedicalRecords";
 import { useAutoSaveMedicalRecords } from "@/src/hooks/useAutoSaveMedicalRecords";
+import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpecificSection";
 
 function MedicalRecordsPageContent() {
   const { user } = useAuthContext();
@@ -58,9 +59,22 @@ function MedicalRecordsPageContent() {
         mentalHistory: medicalRecord.mentalHistory || "",
         objective: medicalRecord.objective || "",
         familyObservations: medicalRecord.familyObservations || "",
+        isFamily: medicalRecord.isFamily ?? false,
+        familyType: medicalRecord.familyType || "",
+        lifecycle: medicalRecord.lifecycle || "",
+        genogram: medicalRecord.genogram || "",
+        ressources: medicalRecord.ressources || "",
+        difficulties: medicalRecord.difficulties || "",
+        communication: medicalRecord.communication || "",
+        rule: medicalRecord.rule || "",
+        limits: medicalRecord.limits || "",
+        familyContext: medicalRecord.familyContext || "",
+        expectations: medicalRecord.expectations || "",
+        flexibility: medicalRecord.flexibility || "",
         familyMembers: medicalRecord.familyMembers?.length ? medicalRecord.familyMembers : [],
         evolutionNotes: medicalRecord.evolutionNotes?.length ? medicalRecord.evolutionNotes : [],
         documents: medicalRecord.documents || [],
+        subsystemRelations: medicalRecord.subsystemRelations?.length ? medicalRecord.subsystemRelations : [],
       });
     } else {
       setForm(createEmptyForm());
@@ -71,11 +85,12 @@ function MedicalRecordsPageContent() {
     setForm((current) => ({ ...current, [ key ]: value }));
   }, []);
 
-  const handleCreateRecord = useCallback(async () => {
+  const handleCreateRecord = useCallback(async (isFamily: boolean) => {
     const patient = patients.find((p) => p.id === selectedPatientId);
     await createMedicalRecord({
       patientId: selectedPatientId,
       name: getPatientFullName(patient),
+      isFamily,
     });
     await fetchMedicalRecords();
   }, [ createMedicalRecord, fetchMedicalRecords, patients, selectedPatientId ]);
@@ -131,8 +146,11 @@ function MedicalRecordsPageContent() {
           <div style={{ textAlign: "center", padding: 24 }}>
             <MedicalRecordCard title="" icon="">
               <p className="dash-empty__text" style={{ paddingBottom: 10 }}>El paciente no tiene una historia clínica registrada.</p>
-              <button type="button" className="btn-primary" onClick={handleCreateRecord}>
-                Crear historia clínica
+              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(false)} style={{ marginRight: 8 }}>
+                Crear historia clínica individual
+              </button>
+              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(true)}>
+                Crear historia clínica de familia
               </button>
             </MedicalRecordCard>
           </div>
@@ -147,7 +165,7 @@ function MedicalRecordsPageContent() {
                 familyMembers={form.familyMembers ?? []}
                 onChange={(familyMembers) => updateField("familyMembers", familyMembers)}
               />
-              <label className="form-label" style={{ gridColumn: "1 / -1", paddingTop: 16 }}>
+              {!form.isFamily && <label className="form-label" style={{ gridColumn: "1 / -1", paddingTop: 16 }}>
                 Observaciones
                 <textarea
                   className="form-input form-input--textarea"
@@ -155,11 +173,16 @@ function MedicalRecordsPageContent() {
                   onChange={(e) => updateField("familyObservations", e.target.value)}
                   placeholder="Observaciones generales sobre la composición familiar"
                 />
-              </label>
+              </label>}
             </MedicalRecordCard>
-            <MedicalRecordCard title="Antecedentes">
-              <AntecedentsSection form={form} onChange={updateField} />
-            </MedicalRecordCard>
+            {form.isFamily ?
+              <MedicalRecordCard title="Aspectos específicos de la familia">
+                <FamilySpecificSection form={form} onChange={updateField} />
+              </MedicalRecordCard>
+              : <MedicalRecordCard title="Antecedentes">
+                <AntecedentsSection form={form} onChange={updateField} />
+              </MedicalRecordCard>
+            }
             <MedicalRecordCard title="Notas de Evolución">
               <EvolutionNotes
                 evolutionNotes={form.evolutionNotes ?? []}
