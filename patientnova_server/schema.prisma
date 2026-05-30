@@ -188,7 +188,7 @@ model User {
   whatsappNumber String?  @db.VarChar(20)
 
   reminderActive        Boolean  @default(true)
-  reminderChannel       Channel?
+  reminderChannel       Channel  @default(Channel.WHATSAPP)
   lastDailyReminderDate DateTime?
 
   bankName      String?

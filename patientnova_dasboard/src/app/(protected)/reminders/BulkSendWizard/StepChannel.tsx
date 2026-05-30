@@ -1,37 +1,19 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { ReminderMode, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { StepChannelProps } from "./types";
-import { CHANNEL_ICONS } from "@/src/config/icons";
+import { CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 
 export const StepChannel = memo(function StepChannel({
-  patients,
   channel,
-  setChannel,
-  setSelected,
   sendMode,
   setMode,
   sentAt,
   setSentAt,
   onNext,
 }: StepChannelProps) {
-  const channelCounts = useMemo(() => {
-    const counts: Record<Channel, number> = {
-      [Channel.WHATSAPP]: 0,
-      [Channel.SMS]: 0,
-      [Channel.EMAIL]: 0,
-    };
-    for (const p of patients) {
-      if (p.status !== "ACTIVE") continue;
-      if (p.whatsappNumber) counts[Channel.WHATSAPP]++;
-      if (p.smsNumber) counts[Channel.SMS]++;
-      if (p.email) counts[Channel.EMAIL]++;
-    }
-    return counts;
-  }, [patients]);
-
   return (
     <div
       className="table-card"
@@ -39,45 +21,38 @@ export const StepChannel = memo(function StepChannel({
     >
       <div>
         <div className="wizard-section-title">Canal de notificación</div>
-        <div className="form-grid-2">
-          {Object.values(Channel).map((c) => (
-            <button
-              key={c}
-              onClick={() => {
-                setChannel(c);
-                setSelected(new Set());
-              }}
-              className={`selection-card${channel === c ? " selection-card--active" : ""}`}
-              style={{ padding: "16px 20px" }}
-            >
-              <span style={{ fontSize: 28 }}>
-                {(() => {
-                  const Icon = CHANNEL_ICONS[c];
-                  return Icon ? <Icon size={28} /> : null;
-                })()}
-              </span>
-              <div>
-                <div className="patient-preview__name">
-                  {CHANNEL_CFG[c].label}
-                </div>
-                <div className="patient-preview__detail">
-                  {channelCounts[c]} pacientes disponibles
-                </div>
-              </div>
-              {channel === c && (
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    color: "var(--c-brand)",
-                    fontSize: 18,
-                  }}
-                >
-                  &#10003;
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {channel ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 16px",
+              borderRadius: 8,
+              background: "var(--c-brand-50, #f0f7ff)",
+              border: "1px solid var(--c-brand-200, #bfdbfe)",
+              fontSize: 14,
+              color: "var(--c-brand)",
+            }}
+          >
+            {(() => {
+              const Icon = CHANNEL_ICONS[channel];
+              return Icon ? <Icon size={20} /> : null;
+            })()}
+            <span>
+              Los mensajes se enviarán por{" "}
+              <strong>{CHANNEL_CFG[channel].label}</strong>. Para cambiarlo, ve
+              a <strong>Configuración → Recordatorios</strong>.
+            </span>
+          </div>
+        ) : (
+          <div className="error-inline">
+            <STATUS_ICONS.warning size={14} /> No tienes un canal de
+            recordatorio configurado. Ve a{" "}
+            <strong>Configuración → Recordatorios</strong> para definirlo antes
+            de enviar recordatorios masivos.
+          </div>
+        )}
       </div>
       <div>
         <div className="wizard-section-title">Tipo de envío</div>
@@ -122,7 +97,9 @@ export const StepChannel = memo(function StepChannel({
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           onClick={onNext}
-          disabled={sendMode === ReminderMode.SCHEDULED && !sentAt}
+          disabled={
+            !channel || (sendMode === ReminderMode.SCHEDULED && !sentAt)
+          }
           className="btn-primary"
         >
           Continuar →

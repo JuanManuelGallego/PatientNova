@@ -16,7 +16,7 @@ export interface User {
     phoneNumber?: string | null
     whatsappNumber?: string | null
     reminderActive: boolean
-    reminderChannel?: Channel
+    reminderChannel: Channel
     bankName?: string | null
     accountNumber?: string | null
     nationalId?: string | null

@@ -11,20 +11,20 @@ import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 export function RemindersTab() {
   const { user } = useAuthContext();
 
-  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? "");
-  const [whatsappNumber, setWhatsappNumber] = useState(
+  const [ phoneNumber, setPhoneNumber ] = useState(user?.phoneNumber ?? "");
+  const [ whatsappNumber, setWhatsappNumber ] = useState(
     user?.whatsappNumber ?? "",
   );
-  const [reminderActive, setReminderActive] = useState(
+  const [ reminderActive, setReminderActive ] = useState(
     user?.reminderActive ?? false,
   );
-  const [reminderChannel, setReminderChannel] = useState<Channel | undefined>(
+  const [ reminderChannel, setReminderChannel ] = useState<Channel | undefined>(
     user?.reminderChannel ?? undefined,
   );
 
-  const [userPayload, setUserPayload] = useState<Partial<User> | null>(null);
+  const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
   const saveStatus = useUpdateProfile(userPayload);
-  const [error, setError] = useState<string | null>(null);
+  const [ error, setError ] = useState<string | null>(null);
 
   function handleFieldChange(overrides: Partial<User> = {}) {
     setError(null);
@@ -55,8 +55,35 @@ export function RemindersTab() {
       <div className="dash-card">
         <div className="dash-card__header">
           <span className="dash-card__title">
-            Recordatorios de citas del proximo dia y de actualizaciones de cita
+            Canal y preferencias de recordatorios
           </span>
+        </div>
+        <div className="dash-card__body">
+          <div style={{ paddingTop: 5 }}>
+            <label className="form-label">
+              Canal de recordatorios para pacientes
+              <select
+                className="form-input"
+                value={reminderChannel}
+                onChange={(e) => {
+                  const ch = e.target.value as Channel;
+                  setReminderChannel(ch);
+                  handleFieldChange({ reminderChannel: ch });
+                }}
+              >
+                {Object.values(Channel).map((ch) => (
+                  <option key={ch} value={ch} disabled={ch === Channel.EMAIL}>
+                    {CHANNEL_CFG[ ch ].label}
+                  </option>))}
+              </select>
+              <span className="form-input-hint">
+                Todos los recordatorios enviados a tus pacientes (citas,
+                notificaciones manuales y envíos masivos) usarán este
+                canal. Asegúrate de que tus pacientes tengan el dato de
+                contacto correspondiente registrado.
+              </span>
+            </label>
+          </div>
         </div>
         <div className="dash-card__body">
           <div className="form-stack">
@@ -70,8 +97,9 @@ export function RemindersTab() {
                 className="form-input-hint"
                 style={{ marginBottom: 12, display: "block" }}
               >
-                Activa o desactiva los recordatorios y elige el canal por el
-                cual deseas recibirlos.
+                Activa o desactiva los recordatorios automáticos de citas. El
+                canal que configures aquí se usará para <strong>todos</strong>{" "}
+                los recordatorios enviados a tus pacientes.
               </span>
               <label
                 className="form-label"
@@ -86,7 +114,7 @@ export function RemindersTab() {
                     handleFieldChange({ reminderActive: checked });
                   }}
                 />
-                Activar recordatorios
+                Activar recordatorios mios
               </label>
             </div>
             {reminderActive && (
@@ -101,20 +129,10 @@ export function RemindersTab() {
                     className="form-input-hint"
                     style={{ marginBottom: 12, display: "block" }}
                   >
-                    Estos datos se usan para recibir notificaciones sobre tus
-                    citas
+                    Datos de contacto del profesional. Se usan para los
+                    recordatorios diarios del sistema usando tu cannal selecionado arriba.
                   </span>
                   <div className="form-grid-2">
-                    <label className="form-label">
-                      Teléfono (SMS)
-                      <CountryCodeInput
-                        value={phoneNumber || undefined}
-                        onChange={(value) => {
-                          setPhoneNumber(value);
-                          handleFieldChange({ phoneNumber: value });
-                        }}
-                      />
-                    </label>
                     <label className="form-label">
                       WhatsApp
                       <CountryCodeInput
@@ -125,35 +143,17 @@ export function RemindersTab() {
                         }}
                       />
                     </label>
+                    <label className="form-label">
+                      Teléfono (SMS)
+                      <CountryCodeInput
+                        value={phoneNumber || undefined}
+                        onChange={(value) => {
+                          setPhoneNumber(value);
+                          handleFieldChange({ phoneNumber: value });
+                        }}
+                      />
+                    </label>
                   </div>
-                </div>
-                <div style={{ paddingTop: 5 }}>
-                  <label className="form-label">
-                    Canal de recordatorio
-                    <select
-                      className="form-input"
-                      value={reminderChannel}
-                      onChange={(e) => {
-                        const ch = e.target.value as Channel;
-                        setReminderChannel(ch);
-                        handleFieldChange({ reminderChannel: ch });
-                      }}
-                    >
-                      <option value={Channel.SMS}>
-                        {CHANNEL_CFG[Channel.SMS].iconAndLabel}
-                      </option>
-                      <option value={Channel.WHATSAPP}>
-                        {CHANNEL_CFG[Channel.WHATSAPP].iconAndLabel}
-                      </option>
-                      <option value={Channel.EMAIL}>
-                        {CHANNEL_CFG[Channel.EMAIL].iconAndLabel}
-                      </option>
-                    </select>
-                    <span className="form-input-hint">
-                      Elige el canal por el cual deseas recibir los
-                      recordatorios
-                    </span>
-                  </label>
                 </div>
               </>
             )}

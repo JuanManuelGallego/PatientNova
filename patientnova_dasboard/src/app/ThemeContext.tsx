@@ -26,14 +26,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-    const prefersDark =
-      !stored && window.matchMedia("(prefers-color-scheme: dark)").matches;
     const resolved: ThemeMode =
-      stored === "dark" || stored === "light"
-        ? stored
-        : prefersDark
-          ? "dark"
-          : "light";
+      stored === "dark" || stored === "light" ? stored : "light";
     setTheme(resolved);
     document.documentElement.setAttribute("data-theme", resolved);
   }, []);
@@ -48,7 +42,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === "dark" }}>
+    <ThemeContext.Provider
+      value={{ theme, toggleTheme, isDark: theme === "dark" }}
+    >
       {children}
     </ThemeContext.Provider>
   );

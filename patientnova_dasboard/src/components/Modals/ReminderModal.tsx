@@ -13,13 +13,12 @@ import {
   getInitials,
   getUserName,
 } from "@/src/utils/AvatarHelper";
-import { CHANNEL_ICONS } from "@/src/config/icons";
+import { CHANNEL_ICONS, ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Required";
-import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
@@ -46,13 +45,14 @@ export function ReminderModal({
   const { notify } = useNotify();
   const { patients } = useFetchPatients();
 
-  const [step, setStep] = useState(1);
-  const [sendMode, setMode] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<ReminderForm>({
+  const channel = user?.reminderChannel ?? Channel.WHATSAPP;
+  const [ step, setStep ] = useState(1);
+  const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
+  const [ saving, setSaving ] = useState(false);
+  const [ error, setError ] = useState<string | null>(null);
+  const [ form, setForm ] = useState<ReminderForm>({
     patientId: "",
-    channel: Channel.WHATSAPP,
+    channel: channel ?? Channel.WHATSAPP,
     message: "",
     sendAt: "",
     fecha: "",
@@ -62,9 +62,9 @@ export function ReminderModal({
   const isValid =
     step === 1
       ? !!form.patientId &&
-        (sendMode === ReminderMode.SCHEDULED ? !!form.sendAt : true)
+      (sendMode === ReminderMode.SCHEDULED ? !!form.sendAt : true)
       : step === 2
-        ? form.channel == Channel.WHATSAPP
+        ? channel === Channel.WHATSAPP
           ? form.fecha && form.hora
           : !!form.message.trim()
         : true;
@@ -72,25 +72,24 @@ export function ReminderModal({
   const selectedPatient = patients.find((p) => p.id === form.patientId);
 
   const set: SetField = (field) => (e) =>
-    setForm((f) => ({ ...f, [field]: e.target.value }));
+    setForm((f) => ({ ...f, [ field ]: e.target.value }));
 
   function validateForm() {
+    if (!channel) {
+      setError(
+        "No tienes un canal de recordatorio configurado. Ve a Configuración → Recordatorios para definirlo.",
+      );
+      return false;
+    }
     if (!selectedPatient) {
       setError("Selecciona un paciente");
       return false;
     }
-    if (!form.channel) {
-      setError("Selecciona un canal de notificación");
-      return false;
-    }
-    if (form.channel === Channel.SMS && !form.message.trim()) {
-      setError(ERR_MSG_EMPTY);
-      return false;
-    }
-
-    if (form.channel === Channel.WHATSAPP) {
+    if (channel === Channel.WHATSAPP) {
       if (!selectedPatient.whatsappNumber) {
-        setError("El paciente no tiene número de WhatsApp");
+        setError(
+          "El paciente no tiene número de WhatsApp registrado. Agrega el número o cambia el canal en Configuración.",
+        );
         return false;
       }
       if (!validatePhoneNumber(selectedPatient.whatsappNumber)) {
@@ -98,13 +97,15 @@ export function ReminderModal({
         return false;
       }
     }
-    if (form.channel === Channel.SMS) {
+    if (channel === Channel.SMS) {
       if (!form.message.trim()) {
         setError(ERR_MSG_EMPTY);
         return false;
       }
       if (!selectedPatient.smsNumber) {
-        setError("El paciente no tiene número de SMS");
+        setError(
+          "El paciente no tiene número de SMS registrado. Agrega el número o cambia el canal en Configuración.",
+        );
         return false;
       }
       if (!validatePhoneNumber(selectedPatient.smsNumber)) {
@@ -120,14 +121,17 @@ export function ReminderModal({
     return true;
   }
 
-  function buildPayload() {
-    const to =
-      form.channel === Channel.WHATSAPP
-        ? (selectedPatient!.whatsappNumber ?? "")
-        : (selectedPatient!.smsNumber ?? "");
+  function resolveTo(): string {
+    if (!selectedPatient || !channel) return "";
+    if (channel === Channel.WHATSAPP)
+      return selectedPatient.whatsappNumber ?? "";
+    if (channel === Channel.SMS) return selectedPatient.smsNumber ?? "";
+    return selectedPatient.email ?? "";
+  }
 
+  function buildPayload() {
     return {
-      to,
+      to: resolveTo(),
       contentSid:
         sendMode === ReminderMode.SCHEDULED
           ? TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid
@@ -146,7 +150,7 @@ export function ReminderModal({
   function buildScheduledPayload() {
     return {
       ...buildPayload(),
-      channel: form.channel,
+      channel: channel!,
       sendMode: sendMode,
       sendAt: new Date(form.sendAt).toISOString(),
     };
@@ -158,7 +162,7 @@ export function ReminderModal({
     setError(null);
     try {
       if (sendMode === ReminderMode.IMMEDIATE) {
-        await notify(form.channel, buildPayload());
+        await notify(channel!, buildPayload());
       } else {
         await createReminder(buildScheduledPayload());
       }
@@ -229,6 +233,7 @@ export function ReminderModal({
             selectedPatient={selectedPatient}
             set={set}
             user={user!}
+            channel={channel}
           />
         )}
         {step === 3 && (
@@ -236,6 +241,7 @@ export function ReminderModal({
             form={form}
             selectedPatient={selectedPatient}
             sendMode={sendMode}
+            channel={channel}
           />
         )}
         <div className="modal-footer">
@@ -352,12 +358,12 @@ function SendModeAndPatientStep({
           options={
             patients.length > 0
               ? patients
-                  .filter((p) => p.status === "ACTIVE")
-                  .map((p) => ({
-                    value: p.id,
-                    label: `${p.name} ${p.lastName}`,
-                  }))
-              : [{ value: "", label: LBL_NO_PATIENTS }]
+                .filter((p) => p.status === "ACTIVE")
+                .map((p) => ({
+                  value: p.id,
+                  label: `${p.name} ${p.lastName}`,
+                }))
+              : [ { value: "", label: LBL_NO_PATIENTS } ]
           }
           onChange={(v) => setForm((f) => ({ ...f, patientId: v }))}
         />
@@ -383,13 +389,20 @@ function ChannelAndMessageStep({
   selectedPatient,
   set,
   user,
+  channel,
 }: {
   form: ReminderForm;
   setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
   selectedPatient: Patient | undefined;
   set: SetField;
   user: User;
+  channel: Channel;
 }) {
+  const available =
+    (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
+    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
+    (channel === Channel.EMAIL && !!selectedPatient?.email);
+
   return (
     <div className="form-stack">
       {selectedPatient && (
@@ -414,49 +427,36 @@ function ChannelAndMessageStep({
         <div className="channel-section-label">
           <RequiredField label="Canal de notificación" />
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          {Object.values(Channel).map((c) => {
-            const available =
-              (c === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-              (c === Channel.SMS && !!selectedPatient?.smsNumber); //|| (c === Channel.EMAIL && !!selectedPatient?.email);
-            return (
-              <button
-                key={c}
-                onClick={() =>
-                  available && setForm((f) => ({ ...f, channel: c }))
-                }
-                className={`selection-card${form.channel === c ? " selection-card--active" : ""}${!available ? " selection-card--disabled" : ""}`}
-                style={{ flex: 1 }}
-              >
-                <span style={{ fontSize: 22 }}>
-                  {(() => {
-                    const Icon = CHANNEL_ICONS[c];
-                    return Icon ? <Icon size={22} /> : null;
-                  })()}
-                </span>
-                <div>
-                  <div className="patient-preview__name">
-                    {CHANNEL_CFG[c].label}
-                  </div>
-                  <div className="patient-preview__detail">
-                    {available
-                      ? c === Channel.WHATSAPP
-                        ? selectedPatient?.whatsappNumber
-                        : selectedPatient?.smsNumber
-                      : "No disponible"}
-                  </div>
-                </div>
-                {form.channel === c && available && (
-                  <span style={{ marginLeft: "auto", color: "var(--c-brand)" }}>
-                    <ACTION_ICONS.confirm size={16} />
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div
+          className={`selection-card selection-card--active${!available ? " selection-card--disabled" : ""}`}
+          style={{ flex: 1 }}
+        >
+          <span style={{ fontSize: 22 }}>
+            {(() => {
+              const Icon = CHANNEL_ICONS[ channel ];
+              return Icon ? <Icon size={22} /> : null;
+            })()}
+          </span>
+          <div>
+            <div className="patient-preview__name">
+              {CHANNEL_CFG[ channel ].label}
+            </div>
+            <div className="patient-preview__detail">
+              {available
+                ? channel === Channel.WHATSAPP
+                  ? selectedPatient?.whatsappNumber
+                  : selectedPatient?.smsNumber
+                : "No disponible para este paciente."}
+            </div>
+          </div>
+          {available && (
+            <span style={{ marginLeft: "auto", color: "var(--c-brand)" }}>
+              <ACTION_ICONS.confirm size={16} />
+            </span>
+          )}
         </div>
       </div>
-      {form.channel === Channel.SMS && (
+      {channel === Channel.SMS && (
         <label className="form-label">
           <RequiredField label="Mensaje" />
           <textarea
@@ -490,7 +490,7 @@ function ChannelAndMessageStep({
           </div>
         </label>
       )}
-      {form.channel === Channel.WHATSAPP && (
+      {channel === Channel.WHATSAPP && (
         <>
           <label className="form-label">
             <RequiredField label="Mensaje" />
@@ -551,11 +551,20 @@ function SummaryStep({
   form,
   selectedPatient,
   sendMode,
+  channel,
 }: {
   form: ReminderForm;
   selectedPatient: Patient | undefined;
   sendMode: ReminderMode;
+  channel: Channel | undefined;
 }) {
+  const resolvedTo =
+    channel === Channel.WHATSAPP
+      ? (selectedPatient?.whatsappNumber ?? "—")
+      : channel === Channel.SMS
+        ? (selectedPatient?.smsNumber ?? "—")
+        : (selectedPatient?.email ?? "—");
+
   return (
     <div className="form-stack">
       <div className="summary-card">
@@ -567,13 +576,10 @@ function SummaryStep({
               ? `${selectedPatient.name} ${selectedPatient.lastName}`
               : "—",
           },
-          { k: "Canal", v: CHANNEL_CFG[form.channel].iconAndLabel },
+          { k: "Canal", v: channel ? CHANNEL_CFG[ channel ].label : "—" },
           {
             k: "Enviará a",
-            v:
-              form.channel === Channel.WHATSAPP
-                ? (selectedPatient?.whatsappNumber ?? "—")
-                : (selectedPatient?.smsNumber ?? "—"),
+            v: resolvedTo,
           },
           {
             k: "Programado",

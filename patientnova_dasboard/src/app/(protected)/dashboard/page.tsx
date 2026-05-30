@@ -1,5 +1,4 @@
-"use client";
-
+"use client";;
 import Link from "next/link";
 
 import { useMemo, useState } from "react";
@@ -21,7 +20,6 @@ import {
   ReminderStatusPill,
 } from "@/src/components/Info/StatusPill";
 import { useAuthContext } from "../../AuthContext";
-import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import {
   Users,
   FileText,
@@ -35,6 +33,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { CHANNEL_ICONS } from "@/src/config/icons";
+import { PatientModal } from "@/src/components/Modals/PatientModal";
 
 export default function DashboardPage() {
   const { stats: patientStats, loading: loadingPatientStats } =
@@ -45,8 +44,8 @@ export default function DashboardPage() {
     useFetchRemindersStats();
   const { user } = useAuthContext();
 
-  const [showApptModal, setShowApptModal] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [ showApptModal, setShowApptModal ] = useState(false);
+  const [ showPatientModal, setShowPatientModal ] = useState(false);
 
   const todayFilters = useMemo(() => {
     const start = new Date();
@@ -67,7 +66,7 @@ export default function DashboardPage() {
 
   const reminderFilters = useMemo(
     () => ({
-      status: [ReminderStatus.PENDING, ReminderStatus.QUEUED],
+      status: [ ReminderStatus.PENDING, ReminderStatus.QUEUED ],
       page: 1,
       pageSize: 5,
       orderBy: "sendAt" as const,
@@ -81,8 +80,8 @@ export default function DashboardPage() {
   const statsLoading =
     loadingPatientStats || loadingApptStats || loadingReminderStats;
   const pendingReminders =
-    (reminderStats?.byStatus[ReminderStatus.PENDING] ?? 0) +
-    (reminderStats?.byStatus[ReminderStatus.QUEUED] ?? 0);
+    (reminderStats?.byStatus[ ReminderStatus.PENDING ] ?? 0) +
+    (reminderStats?.byStatus[ ReminderStatus.QUEUED ] ?? 0);
 
   return (
     <PageLayout>
@@ -110,15 +109,15 @@ export default function DashboardPage() {
           </button>
           <button
             className="btn-primary btn-hero"
-            onClick={() => setShowReminderModal(true)}
+            onClick={() => setShowPatientModal(true)}
           >
-            <span className="btn-plus-icon">+</span> Nuevo Recordatorio
+            <span className="btn-plus-icon">+</span> Nuevo Paciente
           </button>
         </div>
       </div>
       <div className="stats-grid stats-grid--5 fade-in">
         {statsLoading ? (
-          [1, 2, 3, 4, 5].map((i) => (
+          [ 1, 2, 3, 4, 5 ].map((i) => (
             <div key={i} className="stat-card" style={{ minHeight: 90 }}>
               <div className="dash-skeleton-row">
                 <div className="skeleton-bar" style={{ width: "60%" }} />
@@ -140,7 +139,7 @@ export default function DashboardPage() {
             <StatCard
               label="Pacientes"
               value={patientStats?.total ?? 0}
-              sub={`${patientStats?.byStatus[PatientStatus.ACTIVE] ?? 0} activos`}
+              sub={`${patientStats?.byStatus[ PatientStatus.ACTIVE ] ?? 0} activos`}
               accent="var(--c-brand)"
               icon={Users}
             />
@@ -184,7 +183,7 @@ export default function DashboardPage() {
           <div className="dash-card__body">
             {loadingAppts ? (
               <div className="dash-skeleton-list">
-                {[1, 2, 3].map((i) => (
+                {[ 1, 2, 3 ].map((i) => (
                   <div key={i} className="dash-skeleton-row">
                     <div className="skeleton-bar" style={{ width: "100%" }} />
                   </div>
@@ -259,7 +258,7 @@ export default function DashboardPage() {
           <div className="dash-card__body">
             {loadingReminders ? (
               <div className="dash-skeleton-list">
-                {[1, 2, 3].map((i) => (
+                {[ 1, 2, 3 ].map((i) => (
                   <div key={i} className="dash-skeleton-row">
                     <div className="skeleton-bar" style={{ width: "100%" }} />
                   </div>
@@ -290,10 +289,10 @@ export default function DashboardPage() {
                       <span
                         className="dash-channel-icon"
                         role="img"
-                        aria-label={CHANNEL_CFG[r.channel].label}
+                        aria-label={CHANNEL_CFG[ r.channel ].label}
                       >
                         {(() => {
-                          const CI = CHANNEL_ICONS[r.channel];
+                          const CI = CHANNEL_ICONS[ r.channel ];
                           return <CI size={16} />;
                         })()}
                       </span>
@@ -390,10 +389,10 @@ export default function DashboardPage() {
           onSaved={() => setShowApptModal(false)}
         />
       )}
-      {showReminderModal && (
-        <ReminderModal
-          onClose={() => setShowReminderModal(false)}
-          onSaved={() => setShowReminderModal(false)}
+      {showPatientModal && (
+        <PatientModal
+          onClose={() => setShowPatientModal(false)}
+          onSaved={() => setShowPatientModal(false)}
         />
       )}
     </PageLayout>

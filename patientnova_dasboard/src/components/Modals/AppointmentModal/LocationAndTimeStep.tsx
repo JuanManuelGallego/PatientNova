@@ -7,8 +7,7 @@ import {
 } from "@/src/types/Appointment";
 import { ReminderType, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { Patient } from "@/src/types/Patient";
-import { CHANNEL_ICONS } from "@/src/config/icons";
-import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
@@ -21,8 +20,7 @@ interface Props {
   set: SetField;
   setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
   selectedPatient: Patient | undefined;
-  reminderChannel: Channel;
-  setReminderChannel: (c: Channel) => void;
+  reminderChannel: Channel | undefined;
   locations: AppointmentLocation[];
 }
 
@@ -32,11 +30,23 @@ export function LocationAndTimeStep({
   setForm,
   selectedPatient,
   reminderChannel,
-  setReminderChannel,
   locations,
 }: Props) {
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const patientContact = selectedPatient
+    ? reminderChannel === Channel.WHATSAPP
+      ? selectedPatient.whatsappNumber
+      : reminderChannel === Channel.SMS
+        ? selectedPatient.smsNumber
+        : selectedPatient.email
+    : undefined;
+
+  const hasAnyContact =
+    !!selectedPatient?.whatsappNumber ||
+    !!selectedPatient?.email ||
+    !!selectedPatient?.smsNumber;
 
   return (
     <div className="form-stack">
@@ -75,9 +85,7 @@ export function LocationAndTimeStep({
         </label>
       )}
 
-      {selectedPatient?.whatsappNumber ||
-      selectedPatient?.email ||
-      selectedPatient?.smsNumber ? (
+      {hasAnyContact ? (
         <div>
           <label className="form-label">
             Recordatorio
@@ -115,55 +123,60 @@ export function LocationAndTimeStep({
           </label>
 
           {form.reminderType !== ReminderType.NONE && (
-            <div>
+            <div style={{ marginTop: 10 }}>
               <div className="channel-section-label">Canal de notificación</div>
-              <div style={{ display: "flex", gap: 10 }}>
-                {Object.values(Channel).map((c) => {
-                  const available =
-                    (c === Channel.WHATSAPP &&
-                      !!selectedPatient?.whatsappNumber) ||
-                    (c === Channel.SMS && !!selectedPatient?.smsNumber);
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => available && setReminderChannel(c)}
-                      className={`selection-card${reminderChannel === c ? " selection-card--active" : ""}${!available ? " selection-card--disabled" : ""}`}
-                      style={{ flex: 1 }}
-                    >
-                      <span style={{ fontSize: 22 }}>
-                        {(() => {
-                          const Icon = CHANNEL_ICONS[c];
-                          return Icon ? <Icon size={22} /> : null;
-                        })()}
+              {reminderChannel ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    background: "var(--c-brand-50, #f0f7ff)",
+                    border: "1px solid var(--c-brand-200, #bfdbfe)",
+                    fontSize: 14,
+                    color: "var(--c-brand)",
+                  }}
+                >
+                  {(() => {
+                    const Icon = CHANNEL_ICONS[reminderChannel];
+                    return Icon ? <Icon size={18} /> : null;
+                  })()}
+                  <span>
+                    Enviando por{" "}
+                    <strong>{CHANNEL_CFG[reminderChannel].label}</strong>
+                    {patientContact && (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          color: "var(--c-gray-400)",
+                          fontWeight: 400,
+                        }}
+                      >
+                        → {patientContact}
                       </span>
-                      <div style={{ textAlign: "left" }}>
-                        <div className="patient-preview__name">
-                          {CHANNEL_CFG[c].label}
-                        </div>
-                        <div className="patient-preview__detail">
-                          {available
-                            ? c === Channel.WHATSAPP
-                              ? selectedPatient?.whatsappNumber
-                              : c === Channel.SMS
-                                ? selectedPatient?.smsNumber
-                                : selectedPatient?.email
-                            : "No disponible"}
-                        </div>
-                      </div>
-                      {reminderChannel === c && available && (
-                        <span
-                          style={{
-                            marginLeft: "auto",
-                            color: "var(--c-brand)",
-                          }}
-                        >
-                          <ACTION_ICONS.confirm size={16} />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <div className="error-inline">
+                  <STATUS_ICONS.warning size={14} /> No tienes un canal de
+                  recordatorio configurado. Ve a{" "}
+                  <strong>Configuración → Recordatorios</strong> para definirlo.
+                </div>
+              )}
+              {reminderChannel && !patientContact && (
+                <div className="error-inline" style={{ marginTop: 8 }}>
+                  <STATUS_ICONS.warning size={14} /> El paciente no tiene{" "}
+                  {reminderChannel === Channel.WHATSAPP
+                    ? "número de WhatsApp"
+                    : reminderChannel === Channel.SMS
+                      ? "número de SMS"
+                      : "correo electrónico"}{" "}
+                  registrado. El recordatorio no podrá enviarse.
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -78,9 +78,7 @@ export function AppointmentModal({
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reminderChannel, setReminderChannel] = useState<Channel>(
-    Channel.WHATSAPP,
-  );
+  const reminderChannel = user?.reminderChannel;
 
   const [form, setForm] = useState<AppointmentForm>({
     patientId: appt?.patient.id ?? "",
@@ -113,12 +111,13 @@ export function AppointmentModal({
   const selectedPatient = patients.find((p) => p.id === form.patientId);
   const selectedLocation = locations.find((l) => l.id === form.locationId);
 
-  const selectedChannelAvailable =
-    reminderChannel === Channel.WHATSAPP
+  const selectedChannelAvailable = reminderChannel
+    ? reminderChannel === Channel.WHATSAPP
       ? !!selectedPatient?.whatsappNumber
       : reminderChannel === Channel.SMS
         ? !!selectedPatient?.smsNumber
-        : !!selectedPatient?.email;
+        : !!selectedPatient?.email
+    : false;
 
   const isValid =
     step === 1
@@ -131,10 +130,11 @@ export function AppointmentModal({
         : !!form.price;
 
   function buildReminderPayload(): Partial<Reminder> {
+    const channel = reminderChannel!;
     const to =
-      reminderChannel === Channel.WHATSAPP
+      channel === Channel.WHATSAPP
         ? selectedPatient?.whatsappNumber || ""
-        : reminderChannel === Channel.SMS
+        : channel === Channel.SMS
           ? selectedPatient?.smsNumber || ""
           : selectedPatient?.email || "";
 
@@ -158,7 +158,7 @@ export function AppointmentModal({
           .replace("{{4}}", fmtTime(form.startAt))
           .replace("{{5}}", form.meetingUrl || "{{5}}"),
         patientId: form.patientId,
-        channel: reminderChannel,
+        channel: channel,
         sendMode: ReminderMode.SCHEDULED,
         status: ReminderStatus.PENDING,
         sendAt: getRemindersendAt(form.startAt, form.reminderType),
@@ -193,7 +193,7 @@ export function AppointmentModal({
           selectedLocation?.instructions || "No hay instrucciones registradas",
         ),
       patientId: form.patientId,
-      channel: reminderChannel,
+      channel: channel,
       sendMode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
       sendAt: getRemindersendAt(form.startAt, form.reminderType),
@@ -314,7 +314,6 @@ export function AppointmentModal({
             setForm={setForm}
             selectedPatient={selectedPatient}
             reminderChannel={reminderChannel}
-            setReminderChannel={setReminderChannel}
             locations={locations}
           />
         )}

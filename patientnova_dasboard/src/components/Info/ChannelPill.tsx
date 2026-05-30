@@ -1,4 +1,4 @@
-import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { Channel } from "@/src/types/Reminder";
 import { CHANNEL_ICONS } from "@/src/config/icons";
 
 export function ChannelPill({

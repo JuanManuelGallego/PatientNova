@@ -61,11 +61,11 @@ export enum ReminderMode {
 
 export const CHANNEL_CFG: Record<
   Channel,
-  { label: string; icon: string; iconAndLabel: string }
+  { label: string; }
 > = {
-  [Channel.WHATSAPP]: { label: "WhatsApp", icon: "", iconAndLabel: "WhatsApp" },
-  [Channel.SMS]: { label: "SMS", icon: "", iconAndLabel: "SMS" },
-  [Channel.EMAIL]: { label: "Email", icon: "", iconAndLabel: "Email" },
+  [Channel.WHATSAPP]: { label: "WhatsApp"  },
+  [Channel.SMS]: { label: "SMS" },
+  [Channel.EMAIL]: { label: "Email" },
 };
 
 export const REMINDER_STATUS_CONFIG: Record<

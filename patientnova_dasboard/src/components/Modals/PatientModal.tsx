@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useCreatePatient } from "@/src/api/useCreatePatient";
 import { useUpdatePatient } from "@/src/api/useUpdatePatient";
 import {
@@ -7,7 +6,7 @@ import {
   PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
 import { CountryCodeInput } from "../CountryCodeInput";
@@ -18,7 +17,7 @@ import {
   LBL_SAVE_CHANGES,
   LBL_SAVING,
 } from "@/src/constants/ui";
-import { Channel, ReminderMode } from "@/src/types/Reminder";
+import { CHANNEL_CFG, ReminderMode } from "@/src/types/Reminder";
 import { useNotify } from "@/src/api/useNotify";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
@@ -44,9 +43,7 @@ export function PatientModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendWelcomeMessage, setSendWelcomeMessage] = useState(false);
-  const [welcomeChannel, setWelcomeChannel] = useState<Channel>(
-    Channel.WHATSAPP,
-  );
+
   const [form, setForm] = useState({
     name: patient?.name ?? "",
     lastName: patient?.lastName ?? "",
@@ -65,13 +62,6 @@ export function PatientModal({
     user?.nationalId &&
     user?.bankingKey &&
     user.consentDocument;
-
-  useEffect(() => {
-    if (form.whatsappNumber && !form.smsNumber)
-      setWelcomeChannel(Channel.WHATSAPP);
-    if (!form.whatsappNumber && form.smsNumber) setWelcomeChannel(Channel.SMS);
-    if (!form.whatsappNumber && !form.smsNumber) setSendWelcomeMessage(false);
-  }, [form.whatsappNumber, form.smsNumber]);
 
   const set =
     (field: string) =>
@@ -112,10 +102,10 @@ export function PatientModal({
         const patient = await createPatient(form);
         if (sendWelcomeMessage && patient) {
           if (user && canSendWelcome) {
-            notify(welcomeChannel, {
+            notify(user.reminderChannel, {
               patientId: patient.id,
               to:
-                welcomeChannel === Channel.WHATSAPP
+                user.reminderChannel
                   ? patient.whatsappNumber!
                   : patient.smsNumber!,
               sendMode: ReminderMode.IMMEDIATE,
@@ -258,65 +248,10 @@ export function PatientModal({
                   disabled={!form.whatsappNumber && !form.smsNumber}
                   style={{ width: 15, height: 15 }}
                 />
-                <span>Mandar mensaje de bienvenida</span>
+                <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[user.reminderChannel].label}</span>
               </label>
-
-              {sendWelcomeMessage &&
-                (form.whatsappNumber || form.smsNumber) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 16,
-                      paddingLeft: 23,
-                      marginTop: 4,
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 13,
-                        cursor: !form.whatsappNumber
-                          ? "not-allowed"
-                          : "pointer",
-                        opacity: !form.whatsappNumber ? 0.5 : 1,
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="welcomeChannel"
-                        value="whatsapp"
-                        checked={welcomeChannel === Channel.WHATSAPP}
-                        disabled={!form.whatsappNumber}
-                        onChange={() => setWelcomeChannel(Channel.WHATSAPP)}
-                      />
-                      WhatsApp
-                    </label>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 13,
-                        cursor: !form.smsNumber ? "not-allowed" : "pointer",
-                        opacity: !form.smsNumber ? 0.5 : 1,
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="welcomeChannel"
-                        value="sms"
-                        checked={welcomeChannel === Channel.SMS}
-                        disabled={!form.smsNumber}
-                        onChange={() => setWelcomeChannel(Channel.SMS)}
-                      />
-                      SMS
-                    </label>
-                  </div>
-                )}
             </div>
-          )}{" "}
+          )}
           <label className="form-label">
             Notas
             <textarea
