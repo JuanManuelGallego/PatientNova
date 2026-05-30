@@ -3,7 +3,7 @@
  * Only String fields — Prisma enums cannot be encrypted at the application layer.
  */
 export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
-  User: new Set(["accountNumber", "nationalId", "bankingKey", "bankName"]),
+  User: new Set([ "accountNumber", "nationalId", "bankingKey", "bankName" ]),
   MedicalRecord: new Set([
     "nationalId",
     "consultationReason",
@@ -16,10 +16,22 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
     "mentalHistory",
     "objective",
     "familyObservations",
+    "isFamily",
+    "familyType",
+    "lifecycle",
+    "genogram",
+    "ressources",
+    "difficulties",
+    "communication",
+    "rule",
+    "limits",
+    "familyContext",
+    "expectations",
+    "flexibility",
   ]),
-  FamilyMember: new Set(["name", "relation"]),
-  EvolutionNote: new Set(["text"]),
-  Patient: new Set(["notes"]),
-  Appointment: new Set(["notes"]),
-  Reminder: new Set(["body"]),
+  FamilyMember: new Set([ "name", "relation" ]),
+  EvolutionNote: new Set([ "text" ]),
+  Patient: new Set([ "notes" ]),
+  Appointment: new Set([ "notes" ]),
+  Reminder: new Set([ "body" ]),
 };

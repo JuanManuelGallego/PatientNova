@@ -7,6 +7,7 @@ import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
+import { CustomSelect } from "@/src/components/CustomSelect";
 
 export function RemindersTab() {
   const { user } = useAuthContext();
@@ -62,20 +63,18 @@ export function RemindersTab() {
           <div style={{ paddingTop: 5 }}>
             <label className="form-label">
               Canal de recordatorios para pacientes
-              <select
-                className="form-input"
-                value={reminderChannel}
-                onChange={(e) => {
-                  const ch = e.target.value as Channel;
-                  setReminderChannel(ch);
-                  handleFieldChange({ reminderChannel: ch });
+              <CustomSelect
+                value={reminderChannel ?? Channel.WHATSAPP}
+                onChange={(value) => {
+                  const channel = value as Channel;
+                  setReminderChannel(channel);
+                  handleFieldChange({ reminderChannel: channel });
                 }}
-              >
-                {Object.values(Channel).map((ch) => (
-                  <option key={ch} value={ch} disabled={ch === Channel.EMAIL}>
-                    {CHANNEL_CFG[ ch ].label}
-                  </option>))}
-              </select>
+                options={Object.values([ Channel.WHATSAPP, Channel.SMS ]).map((ch) => ({
+                  value: ch,
+                  label: CHANNEL_CFG[ ch ].label,
+                }))}
+              />
               <span className="form-input-hint">
                 Todos los recordatorios enviados a tus pacientes (citas,
                 notificaciones manuales y envíos masivos) usarán este

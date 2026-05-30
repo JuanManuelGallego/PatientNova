@@ -4,7 +4,7 @@ import { User } from "../types/User";
 import { useApiMutation } from "./useApiMutation";
 import { useAuthContext } from "../app/AuthContext";
 
-const AUTO_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SAVE_DEBOUNCE_MS = 1000;
 const SAVE_STATUS_CLEAR_MS = 3000;
 
 type SaveStatus = "idle" | "saved" | "error";

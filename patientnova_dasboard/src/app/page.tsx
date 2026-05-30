@@ -168,14 +168,13 @@ export default function LandingPage() {
             Únete a los profesionales de la salud que confían en Patient Nova.
           </p>
           <p className="landing-cta-banner__subtitle">
-            Contacta{" "}
+            Contacta
             <a
               href={`mailto:juan.gallego.developer@gmail.com`}
               className="landing-cta-link"
             >
-              {" "}
-              soporte
-            </a>{" "}
+             {" soporte "}
+            </a>
             para iniciar tu registro.
           </p>
         </div>

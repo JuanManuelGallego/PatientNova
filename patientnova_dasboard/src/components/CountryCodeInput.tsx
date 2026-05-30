@@ -109,7 +109,6 @@ export function CountryCodeInput({
                     ))}
                 </select>
             </div>
-            
             <input
                 className="phone-input-number"
                 value={local}

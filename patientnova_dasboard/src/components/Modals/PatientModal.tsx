@@ -259,10 +259,15 @@ export function PatientModal({
             Tipo de citas
             <CustomSelect
               value={form.appointmentTypeId || ''}
-              options={appointmentTypes?.map((t) => ({
-                value: t.id,
-                label: t.name,
-              }))}
+              options={
+                appointmentTypes.length > 0
+                  ? appointmentTypes?.map((t) => ({
+                    value: t.id,
+                    label: t.name,
+                  }))
+                  : [ { value: "", label: "No hay tipos de cita registrados" } ]
+
+              }
               onChange={(v) =>
                 setForm((f) => ({ ...f, appointmentTypeId: v }))
               }

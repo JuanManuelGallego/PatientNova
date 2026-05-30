@@ -13,7 +13,8 @@ import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "../../AuthContext";
-import { ERR_GENERIC } from "@/src/constants/ui";
+import { ERR_GENERIC, LBL_SAVE_ERROR, LBL_SAVED } from "@/src/constants/ui";
+import { CustomSelect } from "@/src/components/CustomSelect";
 
 // ─── Reusable logo slot ───────────────────────────────────────────────────────
 
@@ -121,7 +122,6 @@ export function ProfileTab() {
   const {
     document,
     loading: docLoading,
-    error: docError,
     fetchDocument,
     uploadDocument,
     deleteDocument,
@@ -221,21 +221,23 @@ export function ProfileTab() {
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
-  function handleFieldChange() {
+  function handleFieldChange(overrides: Partial<User> = {}) {
+    console.log(overrides)
     setError(null);
     const payload: Partial<User> = {
-      firstName: firstName.trim() || undefined,
-      lastName: lastName.trim() || undefined,
-      displayName: displayName.trim() || undefined,
-      jobTitle: jobTitle.trim() || undefined,
-      avatarUrl: avatarPreview || undefined,
-      logo: logo || undefined,
-      altLogo: altLogo || undefined,
-      timezone,
-      bankName: bankName || undefined,
-      accountNumber: accountNumber || undefined,
-      nationalId: nationalId || undefined,
-      bankingKey: bankingKey || undefined,
+      firstName: (overrides.firstName ?? firstName).trim() || undefined,
+      lastName: (overrides.lastName ?? lastName).trim() || undefined,
+      displayName: (overrides.displayName ?? displayName).trim() || undefined,
+      jobTitle: (overrides.jobTitle ?? jobTitle).trim() || undefined,
+      avatarUrl: (overrides.avatarUrl ?? avatarPreview) || undefined,
+      logo: (overrides.logo ?? logo) || undefined,
+      altLogo: (overrides.altLogo ?? altLogo) || undefined,
+      timezone: (overrides.timezone ?? timezone) || undefined,
+      bankName: (overrides.bankName ?? bankName).trim() || undefined,
+      accountNumber: (overrides.accountNumber ?? accountNumber).trim() || undefined,
+      nationalId: (overrides.nationalId ?? nationalId).trim() || undefined,
+      bankingKey: (overrides.bankingKey ?? bankingKey).trim() || undefined,
+      ...overrides,
     };
     setUserPayload(payload);
   }
@@ -437,7 +439,7 @@ export function ProfileTab() {
                   value={firstName}
                   onChange={(e) => {
                     setFirstName(e.target.value);
-                    handleFieldChange();
+                    handleFieldChange({ firstName: e.target.value });
                   }}
                   placeholder="Juan"
                 />
@@ -450,7 +452,7 @@ export function ProfileTab() {
                   value={lastName}
                   onChange={(e) => {
                     setLastName(e.target.value);
-                    handleFieldChange();
+                    handleFieldChange({ lastName: e.target.value });
                   }}
                   placeholder="García"
                 />
@@ -464,7 +466,7 @@ export function ProfileTab() {
                 value={displayName}
                 onChange={(e) => {
                   setDisplayName(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ displayName: e.target.value });
                 }}
                 placeholder="Dr. Juan García"
               />
@@ -480,27 +482,24 @@ export function ProfileTab() {
                 value={jobTitle}
                 onChange={(e) => {
                   setJobTitle(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ jobTitle: e.target.value });
                 }}
                 placeholder="Médico general"
               />
             </label>
             <label className="form-label">
               Zona horaria
-              <select
-                className="form-input"
+              <CustomSelect
                 value={timezone}
-                onChange={(e) => {
-                  setTimezone(e.target.value);
-                  handleFieldChange();
+                onChange={(value) => {
+                  setTimezone(value);
+                  handleFieldChange({ timezone: value });
                 }}
-              >
-                {COMMON_TIMEZONES.map((tz) => (
-                  <option key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </option>
-                ))}
-              </select>
+                options={COMMON_TIMEZONES.map((tz) => ({
+                  value: tz.value,
+                  label: tz.label,
+                }))}
+              />
               <span className="form-input-hint">
                 Afecta el cálculo de &quot;citas de hoy&quot; en el servidor
               </span>
@@ -600,7 +599,7 @@ export function ProfileTab() {
                 value={bankName}
                 onChange={(e) => {
                   setBankName(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ bankName: e.target.value });
                 }}
                 placeholder="Bancolombia"
               />
@@ -613,7 +612,7 @@ export function ProfileTab() {
                 value={accountNumber}
                 onChange={(e) => {
                   setAccountNumber(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ accountNumber: e.target.value });
                 }}
                 placeholder="123465789"
               />
@@ -626,7 +625,7 @@ export function ProfileTab() {
                 value={nationalId}
                 onChange={(e) => {
                   setNationalId(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ nationalId: e.target.value });
                 }}
                 placeholder="123456789"
               />
@@ -639,7 +638,7 @@ export function ProfileTab() {
                 value={bankingKey}
                 onChange={(e) => {
                   setBankingKey(e.target.value);
-                  handleFieldChange();
+                  handleFieldChange({ bankingKey: e.target.value });
                 }}
                 placeholder="@llaveBancolombia"
               />
@@ -808,6 +807,27 @@ export function ProfileTab() {
           {saveStatus === "error" && "Error al guardar"}
           {saveStatus === "idle" && ""}
         </span>
+      </div>
+      <div style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "6px 12px",
+        borderRadius: 999,
+        background: "var(--c-surface)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+        border: "1px solid var(--c-border, rgba(0,0,0,0.08))",
+        fontSize: 13,
+        color: saveStatus === "error" ? "var(--c-danger, #e53e3e)" : "var(--c-text-muted)",
+        opacity: saveStatus === "idle" ? 0 : 1,
+        pointerEvents: "none",
+        transition: "opacity 0.3s ease",
+      }}>
+        {saveStatus === "saved" && <>{LBL_SAVED}</>}
+        {saveStatus === "error" && <>{LBL_SAVE_ERROR}</>}
       </div>
     </div>
   );
