@@ -17,7 +17,7 @@ import {
   LBL_SAVE_CHANGES,
   LBL_SAVING,
 } from "@/src/constants/ui";
-import { CHANNEL_CFG, ReminderMode } from "@/src/types/Reminder";
+import { Channel, CHANNEL_CFG, ReminderMode } from "@/src/types/Reminder";
 import { useNotify } from "@/src/api/useNotify";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
@@ -107,10 +107,9 @@ export function PatientModal({
           if (user && canSendWelcome) {
             notify(user.reminderChannel, {
               patientId: patient.id,
-              to:
-                user.reminderChannel
-                  ? patient.whatsappNumber!
-                  : patient.smsNumber!,
+              to: user.reminderChannel === Channel.WHATSAPP
+                ? patient.whatsappNumber!
+                : patient.smsNumber!,
               sendMode: ReminderMode.IMMEDIATE,
               sendAt: new Date().toISOString(),
               body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
@@ -127,11 +126,11 @@ export function PatientModal({
                 "2": user.displayName,
                 "3": user.bankName!,
                 "4": user.accountNumber!,
-                "5": `${user.firstName} + ${user.lastName}`,
+                "5": `${user.firstName} ${user.lastName}`,
                 "6": user.nationalId!,
                 "7": user.bankingKey!,
+                "8": user.id,
               },
-              mediaUrl: `${API_BASE}/consent-document/public/download/${user.id}.pdf`,
             });
           }
         }

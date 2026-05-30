@@ -75,12 +75,12 @@ export function AppointmentModal({
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
 
-  const [step, setStep] = useState(1);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [ step, setStep ] = useState(1);
+  const [ saving, setSaving ] = useState(false);
+  const [ error, setError ] = useState<string | null>(null);
   const reminderChannel = user?.reminderChannel;
 
-  const [form, setForm] = useState<AppointmentForm>({
+  const [ form, setForm ] = useState<AppointmentForm>({
     patientId: appt?.patient.id ?? "",
     startAt: appt?.startAt ?? prefillDate ?? getTomorrowSixAm(),
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
@@ -101,12 +101,16 @@ export function AppointmentModal({
 
   const set =
     (field: keyof AppointmentForm) =>
-    (
-      e: React.ChangeEvent<
-        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      >,
-    ) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
+      (
+        e: React.ChangeEvent<
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+        >,
+      ) =>
+        setForm((f) => ({ ...f, [ field ]: e.target.value }));
+
+  const setPrice =
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }));
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
   const selectedLocation = locations.find((l) => l.id === form.locationId);
@@ -124,9 +128,9 @@ export function AppointmentModal({
       ? !!form.patientId && !!form.typeId && !!form.startAt
       : step === 2
         ? !!form.locationId &&
-          (form.reminderType !== ReminderType.NONE
-            ? selectedChannelAvailable
-            : true)
+        (form.reminderType !== ReminderType.NONE
+          ? selectedChannelAvailable
+          : true)
         : !!form.price;
 
   function buildReminderPayload(): Partial<Reminder> {
@@ -252,7 +256,7 @@ export function AppointmentModal({
   const bookedSlots = appointments
     .filter((a) => a.id !== appt?.id)
     .map((a) => a.startAt);
-  const steps = ["Paciente & Tipo", "Lugar & Hora", "Pago & Estado"];
+  const steps = [ "Paciente & Tipo", "Lugar & Hora", "Pago & Estado" ];
 
   return (
     <div
@@ -274,7 +278,7 @@ export function AppointmentModal({
               {isEdit ? "Editar Cita" : "Nueva Cita"}
             </h2>
             <p className="modal-subtitle">
-              {steps[step - 1]} — Paso {step} de {steps.length}
+              {steps[ step - 1 ]} — Paso {step} de {steps.length}
             </p>
           </div>
           <button onClick={onClose} className="btn-close">
@@ -321,6 +325,7 @@ export function AppointmentModal({
           <PaymentAndStatusStep
             form={form}
             set={set}
+            setPrice={setPrice}
             setForm={setForm}
             selectedPatient={selectedPatient}
             locations={locations}

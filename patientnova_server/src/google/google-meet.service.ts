@@ -3,7 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config';
 
 export interface MeetingSpaceResult {
-    meetingUrl: string; 
+    meetingUrl: string;
     spaceName: string;
 }
 
@@ -17,8 +17,8 @@ function buildUserMeetClient(): SpacesServiceClient {
         refresh_token: config.google.refreshToken,
     });
 
-    return new SpacesServiceClient({ 
-        authClient: oauth2Client 
+    return new SpacesServiceClient({
+        authClient: oauth2Client
     });
 }
 
@@ -27,26 +27,34 @@ export const googleMeetService = {
      * Creates a new Google Meet space and returns its join URL.
      */
     async createMeetingSpace(): Promise<MeetingSpaceResult> {
-        const client = buildUserMeetClient();
+        try {
 
-        const [ space ] = await client.createSpace({
-            space: {
-                config: {
-                    accessType: 'OPEN'
+
+            const client = buildUserMeetClient();
+
+            const [ space ] = await client.createSpace({
+                space: {
+                    config: {
+                        accessType: 'OPEN'
+                    }
                 }
+            });
+            const meetingUrl = space.meetingUri;
+            const spaceName = space.name;
+
+            if (!meetingUrl || !spaceName) {
+                throw new Error(
+                    'Google Meet API returned an incomplete space object. ' +
+                    'Verify the Meet API is enabled and the service account has the correct scope.',
+                );
             }
-        });
-        const meetingUrl = space.meetingUri;
-        const spaceName = space.name;
 
-        if (!meetingUrl || !spaceName) {
-            throw new Error(
-                'Google Meet API returned an incomplete space object. ' +
-                'Verify the Meet API is enabled and the service account has the correct scope.',
-            );
+            return { meetingUrl, spaceName };
         }
-
-        return { meetingUrl, spaceName };
+        catch (error) {
+            console.error('Error creating Google Meet space:', error);
+            throw new Error('Failed to create Google Meet space', error instanceof Error ? { cause: error } : undefined);
+        }
     },
 
     /**

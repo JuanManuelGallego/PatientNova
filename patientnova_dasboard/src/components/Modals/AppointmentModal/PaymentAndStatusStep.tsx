@@ -21,6 +21,7 @@ import { SetField } from "./types";
 interface Props {
   form: AppointmentForm;
   set: SetField;
+  setPrice: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
   selectedPatient: Patient | undefined;
   locations: AppointmentLocation[];
@@ -30,13 +31,14 @@ interface Props {
 export function PaymentAndStatusStep({
   form,
   set,
+  setPrice,
   setForm,
   selectedPatient,
   locations,
   appointmentTypes,
 }: Props) {
   const setField = (field: keyof AppointmentForm) => (value: string) =>
-    setForm((f) => ({ ...f, [field]: value }));
+    setForm((f) => ({ ...f, [ field ]: value }));
 
   return (
     <div className="form-stack">
@@ -47,10 +49,10 @@ export function PaymentAndStatusStep({
             <span className="input-prefix__symbol">$</span>
             <input
               type="number"
-              step="0.01"
+              step="1"
               className="form-input"
               value={form.price}
-              onChange={set("price")}
+              onChange={setPrice}
               placeholder="150.00"
             />
           </div>
@@ -63,7 +65,7 @@ export function PaymentAndStatusStep({
               Object.keys(APPT_PAID_STATUS_CFG) as AppointmentPaidStatus[]
             ).map((s) => ({
               value: s,
-              label: `${APPT_PAID_STATUS_CFG[s].icon} ${APPT_PAID_STATUS_CFG[s].label}`,
+              label: `${APPT_PAID_STATUS_CFG[ s ].icon} ${APPT_PAID_STATUS_CFG[ s ].label}`,
             }))}
             onChange={setField("paid")}
           />
@@ -73,7 +75,7 @@ export function PaymentAndStatusStep({
           <CustomSelect
             value={form.status}
             options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(
-              (s) => ({ value: s, label: APPT_STATUS_CFG[s].label }),
+              (s) => ({ value: s, label: APPT_STATUS_CFG[ s ].label }),
             )}
             onChange={setField("status")}
           />
@@ -93,20 +95,20 @@ export function PaymentAndStatusStep({
             "Tipo",
             appointmentTypes.find((t) => t.id === form.typeId)?.name || "—",
           ],
-          ["Fecha", `${fmtDate(form.startAt)} a las ${fmtTime(form.startAt)}`],
-          ["Duración", form.duration],
+          [ "Fecha", `${fmtDate(form.startAt)} a las ${fmtTime(form.startAt)}` ],
+          [ "Duración", form.duration ],
           [
             "Ubicación",
             locations.find((l) => l.id === form.locationId)?.name || "—",
           ],
-          ["Precio", `$${form.price}`],
+          [ "Precio", `$${form.price}` ],
           [
             "Recordatorio",
             form.reminderType !== ReminderType.NONE
-              ? REMINDER_TYPE_CONFIG[form.reminderType].label
+              ? REMINDER_TYPE_CONFIG[ form.reminderType ].label
               : LBL_NO_REMINDER,
           ],
-        ].map(([k, v]) => (
+        ].map(([ k, v ]) => (
           <div key={k} className="summary-row">
             <span className="summary-row__key">{k}</span>
             <span className="summary-row__value">{v}</span>
