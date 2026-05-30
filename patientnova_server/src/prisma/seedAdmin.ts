@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { prisma } from './prismaClient.js';
 import { config } from '../utils/config.js';
-import { AdminRole, AdminStatus } from '../../generated/prisma/client.ts';
+import { AdminRole, AdminStatus, Channel } from '../../generated/prisma/client.ts';
 
 async function seedAdmin() {
   const email = config.admin.email;
@@ -22,6 +22,7 @@ async function seedAdmin() {
       lastName: 'Admin',
       role: AdminRole.SUPER_ADMIN,
       status: AdminStatus.ACTIVE,
+      reminderChannel: Channel.WHATSAPP
     },
   });
 

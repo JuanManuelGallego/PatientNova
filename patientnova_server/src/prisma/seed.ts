@@ -45,6 +45,7 @@ async function seed() {
                     lastName: 'User',
                     role: AdminRole.ADMIN,
                     status: AdminStatus.ACTIVE,
+                    reminderChannel: Channel.WHATSAPP
                 },
             });
             console.log('✅ Created test admin user');
@@ -57,8 +58,8 @@ async function seed() {
                 data: {
                     name: 'Juan',
                     lastName: 'Pérez',
-                    whatsappNumber: '+1-555-0101',
-                    smsNumber: '+1-555-0101',
+                    whatsappNumber: '+15550101777',
+                    smsNumber: '+15550101777',
                     email: 'juan.perez@example.com',
                     notes: 'Regular patient, prefers WhatsApp',
                     status: PatientStatus.ACTIVE,
@@ -69,8 +70,8 @@ async function seed() {
                 data: {
                     name: 'María',
                     lastName: 'García',
-                    whatsappNumber: '+1-555-0102',
-                    smsNumber: '+1-555-0102',
+                    whatsappNumber: '+15550101777',
+                    smsNumber: '+15550101777',
                     email: 'maria.garcia@example.com',
                     notes: 'Prefers SMS notifications',
                     status: PatientStatus.ACTIVE,
@@ -81,7 +82,7 @@ async function seed() {
                 data: {
                     name: 'Carlos',
                     lastName: 'López',
-                    whatsappNumber: '+1-555-0103',
+                    whatsappNumber: '+15550101777',
                     email: 'carlos.lopez@example.com',
                     notes: 'Email and WhatsApp preferred',
                     status: PatientStatus.ACTIVE,
@@ -92,8 +93,8 @@ async function seed() {
                 data: {
                     name: 'Sofia',
                     lastName: 'Martínez',
-                    whatsappNumber: '+1-555-0104',
-                    smsNumber: '+1-555-0104',
+                    whatsappNumber: '+15550101777',
+                    smsNumber: '+15550101777',
                     email: 'sofia.martinez@example.com',
                     status: PatientStatus.ACTIVE,
                     userId: user.id,
