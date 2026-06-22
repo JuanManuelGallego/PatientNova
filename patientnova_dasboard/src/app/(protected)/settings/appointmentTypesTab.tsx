@@ -50,6 +50,7 @@ export function AppointmentTypesTab() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 20,
+          paddingTop: 5,
         }}
       >
         <div>
@@ -69,68 +70,65 @@ export function AppointmentTypesTab() {
           </div>
         </div>
         <button className="btn-primary" onClick={() => setModalType(null)}>
-          + Nuevo tipo
+          Nuevo tipo
         </button>
       </div>
 
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 48,
-            color: "var(--c-gray-400)",
-          }}
-        >
-          <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
-          Cargando tipos de cita…
-        </div>
-      ) : activeTypes.length === 0 ? (
         <div className="dash-card">
           <div
             className="dash-card__body"
-            style={{ textAlign: "center", padding: "48px 24px" }}
+            style={{ textAlign: "center", padding: "48px 24px", color: "var(--c-gray-400)" }}
           >
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                margin: "0 auto 16px",
-                background: "var(--c-gray-100)",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 32,
-              }}
-            >
-              <Brain size={32} />
-            </div>
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "var(--c-gray-700)",
-                marginBottom: 4,
-              }}
-            >
-              Sin tipos de cita configurados
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--c-gray-400)",
-                marginBottom: 20,
-              }}
-            >
-              Agrega los tipos de cita que ofreces a tus pacientes.
-            </div>
-            <button className="btn-primary" onClick={() => setModalType(null)}>
-              + Crear primer tipo
-            </button>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+            Cargando tipos de cita…
           </div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {activeTypes.length === 0 && (
+            <div className="dash-card">
+              <div
+                className="dash-card__body"
+                style={{ textAlign: "center", padding: "48px 24px" }}
+              >
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    margin: "0 auto 16px",
+                    background: "var(--c-gray-100)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Brain size={32} />
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "var(--c-gray-700)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Sin tipos de cita configurados
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--c-gray-400)",
+                    marginBottom: 20,
+                  }}
+                >
+                  Agrega los tipos de cita que ofreces a tus pacientes.
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTypes.map((t) => (
             <AppointmentTypeCard
               key={t.id}
@@ -166,7 +164,6 @@ export function AppointmentTypesTab() {
           )}
         </div>
       )}
-
       {showModal && (
         <AppointmentTypeModal
           appointmentType={modalType}

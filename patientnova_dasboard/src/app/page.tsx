@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/src/app/AuthContext";
 import { LoginModal } from "../components/Modals/LoginModal";
 import { Users, FileText, CalendarDays, Bell } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 export default function LandingPage() {
   const [loginOpen, setLoginOpen] = useState(false);

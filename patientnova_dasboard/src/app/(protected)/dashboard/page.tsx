@@ -105,13 +105,13 @@ export default function DashboardPage() {
             className="btn-primary btn-hero"
             onClick={() => setShowApptModal(true)}
           >
-            <span className="btn-plus-icon">+</span> Nueva Cita
+            Nueva Cita
           </button>
           <button
             className="btn-primary btn-hero"
             onClick={() => setShowPatientModal(true)}
           >
-            <span className="btn-plus-icon">+</span> Nuevo Paciente
+            Nuevo Paciente
           </button>
         </div>
       </div>

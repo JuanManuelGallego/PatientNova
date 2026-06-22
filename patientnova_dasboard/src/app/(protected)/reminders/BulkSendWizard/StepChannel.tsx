@@ -46,7 +46,7 @@ export const StepChannel = memo(function StepChannel({
             </span>
           </div>
         ) : (
-          <div className="error-inline">
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <STATUS_ICONS.warning size={14} /> No tienes un canal de
             recordatorio configurado. Ve a{" "}
             <strong>Configuración → Recordatorios</strong> para definirlo antes

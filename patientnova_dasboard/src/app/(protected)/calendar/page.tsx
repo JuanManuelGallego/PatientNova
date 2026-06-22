@@ -566,7 +566,7 @@ export default function CalendarPage() {
               onClick={() => setShowCreate(true)}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nueva Cita
+              Nueva Cita
             </button>
           }
         />
@@ -701,7 +701,7 @@ export default function CalendarPage() {
                   setShowCreate(true);
                 }}
               >
-                <span className="btn-plus-icon">+</span> Nueva Cita
+                Nueva Cita
               </button>
             </div>
           </div>

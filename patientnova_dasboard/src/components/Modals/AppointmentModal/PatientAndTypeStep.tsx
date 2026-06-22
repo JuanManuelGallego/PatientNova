@@ -8,6 +8,7 @@ import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_PATIENTS } from "@/src/constants/ui";
 import React from "react";
+import { STATUS_ICONS } from "@/src/config/icons";
 
 interface Props {
     form: AppointmentForm;
@@ -65,17 +66,23 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
 
             <label className="form-label">
                 <RequiredField label="Tipo de cita" />
-                <CustomSelect
-                    value={form.typeId}
-                    placeholder="Seleccionar tipo…"
-                    options={appointmentTypes.map(t => ({ value: t.id, label: t.name }))}
-                    onChange={(v) => setForm(f => ({
-                        ...f,
-                        typeId: v,
-                        price: appointmentTypes.find(t => t.id === v)?.defaultPrice ?? 0,
-                        duration: AppointmentDuration.MIN_60,
-                    }))}
-                />
+                {appointmentTypes.length > 0 ? (
+                    <CustomSelect
+                        value={form.typeId}
+                        placeholder="Seleccionar tipo…"
+                        options={appointmentTypes.map(t => ({ value: t.id, label: t.name }))}
+                        onChange={(v) => setForm(f => ({
+                            ...f,
+                            typeId: v,
+                            price: appointmentTypes.find(t => t.id === v)?.defaultPrice ?? 0,
+                            duration: AppointmentDuration.MIN_60,
+                        }))}
+                    />
+                ) : (
+                    <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <STATUS_ICONS.warning size={14} /> No hay tipos de cita disponibles.
+                    </div>
+                )}
             </label>
         </div>
     );

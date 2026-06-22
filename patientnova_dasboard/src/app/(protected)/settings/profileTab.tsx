@@ -73,7 +73,9 @@ function LogoSlot({ label, hint, value, onSelect, onRemove }: LogoSlotProps) {
           style={{ flex: 1 }}
           onClick={onSelect}
         >
-          <Upload size={14} /> Subir
+          <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center" }}>
+            <Upload size={14} /> Subir
+          </div>
         </button>
         {value && (
           <button
@@ -312,7 +314,9 @@ export function ProfileTab() {
               style={{ width: "100%" }}
               onClick={() => fileRef.current?.click()}
             >
-              <Camera size={14} /> Seleccionar imagen
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Camera size={14} /> Seleccionar imagen
+              </div>
             </button>
             {avatarPreview && (
               <button
@@ -344,85 +348,20 @@ export function ProfileTab() {
               JPG, PNG o WebP · Máx. 5 MB
             </p>
           </div>
-          <div
-            style={{
-              borderTop: "1px solid var(--c-gray-100)",
-              paddingTop: 14,
-              width: "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--c-gray-400)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 5,
-                }}
-              >
-                Rol
-              </div>
-              <span
-                style={{
-                  background:
-                    user?.role === "SUPER_ADMIN"
-                      ? "#FEF2F2"
-                      : user?.role === "ADMIN"
-                        ? "var(--c-brand-light)"
-                        : "var(--c-gray-100)",
-                  color:
-                    user?.role === "SUPER_ADMIN"
-                      ? "var(--c-error)"
-                      : user?.role === "ADMIN"
-                        ? "var(--c-brand)"
-                        : "var(--c-gray-700)",
-                  borderRadius: "var(--r-full)",
-                  padding: "3px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {user?.role}
-              </span>
+            <div
+              style={{
+                borderTop: "1px solid var(--c-gray-100)",
+                paddingTop: 16,
+                width: "100%",
+              }}
+            >
+              <label className="form-label">
+                Correo electrónico
+                <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
+                  {user?.email}
+                </p>
+              </label>
             </div>
-            <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--c-gray-400)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 5,
-                }}
-              >
-                Estado
-              </div>
-              <span
-                style={{
-                  background:
-                    user?.status === "ACTIVE"
-                      ? "var(--c-success-bg)"
-                      : "var(--c-warning-bg)",
-                  color:
-                    user?.status === "ACTIVE"
-                      ? "var(--c-success)"
-                      : "var(--c-warning)",
-                  borderRadius: "var(--r-full)",
-                  padding: "3px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                {user?.status}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
       <div className="dash-card">
@@ -505,29 +444,6 @@ export function ProfileTab() {
                 Afecta el cálculo de &quot;citas de hoy&quot; en el servidor
               </span>
             </label>
-            <div
-              style={{
-                borderTop: "1px solid var(--c-gray-100)",
-                paddingTop: 16,
-              }}
-            >
-              <label className="form-label" style={{ opacity: 0.7 }}>
-                Correo electrónico
-                <input
-                  className="form-input"
-                  type="email"
-                  value={user?.email}
-                  readOnly
-                  style={{
-                    background: "var(--c-gray-50)",
-                    cursor: "not-allowed",
-                  }}
-                />
-                <span className="form-input-hint">
-                  El correo no se puede modificar
-                </span>
-              </label>
-            </div>
           </div>
         </div>
       </div>
@@ -764,7 +680,9 @@ export function ProfileTab() {
                 onClick={() => consentRef.current?.click()}
                 disabled={docLoading}
               >
-                <Upload size={14} /> Subir PDF
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Upload size={14} /> Subir PDF
+                </div>
               </button>
             </div>
           )}
@@ -781,12 +699,12 @@ export function ProfileTab() {
         </div>
       </div>
       {error && (
-        <div className="error-inline">
+        <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <STATUS_ICONS.warning size={14} /> {error}
         </div>
       )}
       {consentError && (
-        <div className="error-inline">
+        <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <STATUS_ICONS.warning size={14} /> {consentError}
         </div>
       )}

@@ -64,12 +64,18 @@ export function LocationAndTimeStep({
 
       <label className="form-label">
         <RequiredField label="Ubicación" />
-        <CustomSelect
-          value={form.locationId}
-          placeholder="Seleccionar ubicación…"
-          options={locations.map((d) => ({ value: d.id, label: d.name }))}
-          onChange={setField("locationId")}
-        />
+        {locations.length > 0 ? (
+          <CustomSelect
+            value={form.locationId}
+            placeholder="Seleccionar ubicación…"
+            options={locations.map((d) => ({ value: d.id, label: d.name }))}
+            onChange={setField("locationId")}
+          />
+        ) : (
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <STATUS_ICONS.warning size={14} /> No hay ubicaciones disponibles.
+          </div>
+        )}
       </label>
 
       {locations.find((l) => l.id === form.locationId)?.isVirtual && (
@@ -160,14 +166,14 @@ export function LocationAndTimeStep({
                   </span>
                 </div>
               ) : (
-                <div className="error-inline">
+                <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <STATUS_ICONS.warning size={14} /> No tienes un canal de
                   recordatorio configurado. Ve a{" "}
                   <strong>Configuración → Recordatorios</strong> para definirlo.
                 </div>
               )}
               {reminderChannel && !patientContact && (
-                <div className="error-inline" style={{ marginTop: 8 }}>
+                <div className="error-inline" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
                   <STATUS_ICONS.warning size={14} /> El paciente no tiene{" "}
                   {reminderChannel === Channel.WHATSAPP
                     ? "número de WhatsApp"
@@ -183,7 +189,7 @@ export function LocationAndTimeStep({
       ) : (
         <div>
           <label className="form-label">Recordatorio</label>
-          <div className="error-inline">
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <STATUS_ICONS.warning size={14} /> El paciente no tiene forma de
             contacto registrada, por lo que no se podrán enviar recordatorios
             automáticos.

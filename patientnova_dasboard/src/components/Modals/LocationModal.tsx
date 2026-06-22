@@ -101,7 +101,7 @@ export function LocationModal({
         </div>
 
         {error && (
-          <div className="error-inline">
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <STATUS_ICONS.warning size={14} /> {error}
           </div>
         )}

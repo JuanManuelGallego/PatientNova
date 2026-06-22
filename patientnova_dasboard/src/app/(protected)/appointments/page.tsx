@@ -145,7 +145,7 @@ function AppointmentsPageContent() {
               }}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nueva Cita
+              Nueva Cita
             </button>
           }
         />
