@@ -6,6 +6,7 @@ import { ok } from '../utils/apiUtils.js';
 import { logger } from '../utils/logger.js';
 import { consentDocumentRepository } from './consent-document.repository.js';
 import { createConsentDocumentSchema, updateConsentDocumentSchema } from './consent-document.schemas.js';
+import { apiError } from '../utils/apiUtils.js';
 
 export const consentDocumentRouter = Router();
 const CUID_RE = /^c[a-z0-9]{24}$/;
@@ -125,24 +126,20 @@ consentDocumentRouter.get(
 
         // Optional: validate the extension format if you want extra security
         if (![ 'pdf', 'png', 'jpeg', 'jpg' ].includes(ext.toLowerCase())) {
-            res.status(400).json({ error: 'Invalid file extension requested' });
-            return;
+            return res.error('Invalid file extension requested', 400);
         }
 
         if (!CUID_RE.test(userId)) {
-            res.status(400).json({ error: 'Invalid userId' });
-            return;
+            return res.error('Invalid userId', 400);
         }
 
         const document = await consentDocumentRepository.getContentByUserId(userId);
         if (!document) {
-            res.status(404).json({ error: 'Document not found' });
-            return;
+            return res.error('Document not found', 404);
         }
 
         if (!ALLOWED_MIME_TYPES.has(document.mimeType)) {
-            res.status(415).json({ error: 'Unsupported document type' });
-            return;
+            return res.error('Unsupported document type', 415);
         }
 
         res.setHeader('Content-Type', document.mimeType);
