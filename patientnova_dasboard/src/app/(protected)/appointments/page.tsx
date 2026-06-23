@@ -151,13 +151,6 @@ function AppointmentsPageContent() {
         />
         <div className="stats-grid stats-grid--5">
           <StatCard
-            label="Total"
-            value={stats?.total ?? 0}
-            sub="todas las citas"
-            accent="var(--c-brand)"
-            icon={CalendarDays}
-          />
-          <StatCard
             label="Hoy"
             value={stats?.todayCount ?? 0}
             sub="citas de hoy"
@@ -179,8 +172,8 @@ function AppointmentsPageContent() {
             icon={AlertCircle}
           />
           <StatCard
-            label="Ingresos"
-            value={`$ ${stats?.paidRevenue.toLocaleString("es-ES") ?? 0}`}
+            label="Ingresos del mes"
+            value={`$ ${stats?.paidRevenueThisMonth.toLocaleString("es-ES") ?? 0}`}
             sub="total cobrado"
             accent="var(--c-success)"
             icon={DollarSign}

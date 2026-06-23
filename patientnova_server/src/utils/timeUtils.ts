@@ -56,6 +56,7 @@ export function getTodayBoundsInTz(timezone: string): { start: Date; end: Date }
 
   return { start: new Date(startMs), end: new Date(startMs + 86_400_000 - 1) };
 }
+
 export function getTomorrowUTCRange(timezone: string): { start: Date; end: Date } {
     const { year, month, day } = getLocalTimeParts(timezone);
     // Date.UTC handles day-of-month overflow (e.g. April 31 → May 1)
@@ -65,4 +66,32 @@ export function getTomorrowUTCRange(timezone: string): { start: Date; end: Date 
         start: localToUtc(ty, tm, td, 0, 0, 0, timezone),
         end: localToUtc(ty, tm, td, 23, 59, 59, timezone),
     };
+}
+
+export function getCurrentMonthBoundsInTz(timezone: string): { start: Date; end: Date } {
+  const tz = (() => { try { Intl.DateTimeFormat(undefined, { timeZone: timezone }); return timezone; } catch { return 'UTC'; } })();
+  const now = new Date();
+
+  const fmt = (zone: string) =>
+    new Intl.DateTimeFormat('sv-SE', {
+      timeZone: zone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23',
+    }).format(now).replace(' ', 'T');
+
+  const localStr = fmt(tz);
+  const utcStr = fmt('UTC');
+
+  const offsetMs = new Date(localStr + 'Z').getTime() - new Date(utcStr + 'Z').getTime();
+
+  const { year, month } = getLocalTimeParts(tz, now);
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+
+  const monthStartMs = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`).getTime() - offsetMs;
+  const monthEndMs = new Date(`${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`).getTime() - offsetMs - 1;
+
+  return { start: new Date(monthStartMs), end: new Date(monthEndMs) };
 }

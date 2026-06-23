@@ -73,6 +73,7 @@ export interface AppointmentStats {
   paidRevenue: number;
   unpaidRevenue: number;
   unpaidCount: number;
+  paidRevenueThisMonth: number;
 }
 
 export interface PaginatedPatients {
