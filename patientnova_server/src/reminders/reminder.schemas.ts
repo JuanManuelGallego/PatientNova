@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 // this will break with emails
 const e164 = z
@@ -63,13 +64,13 @@ export const listRemindersSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   orderBy: z.enum([ 'sendAt', 'createdAt', 'status', 'updatedAt' ]).default('sendAt'),
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
-});
+}).extend(includeDeletedQuery.shape);
 
 export const reminderStatsSchema = z.object({
   patientId: z.uuid().optional(),
   dateFrom: z.iso.datetime().optional(),
   dateTo: z.iso.datetime().optional(),
-});
+}).extend(includeDeletedQuery.shape);
 
 export type CreateReminderDto = z.infer<typeof createReminderSchema>;
 export type UpdateReminderDto = z.infer<typeof updateReminderSchema>;

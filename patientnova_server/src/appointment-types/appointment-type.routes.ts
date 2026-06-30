@@ -2,9 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import {
   createAppointmentTypeSchema,
   updateAppointmentTypeSchema,
+  listAppointmentTypesSchema,
+  type ListAppointmentTypesQuery,
 } from './appointment-type.schemas.js';
 import { appointmentTypeRepository } from './appointment-type.repository.js';
-import { validateBody, validateParams } from '../middlewares/validate.js';
+import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -16,9 +18,13 @@ export const appointmentTypeRouter = Router();
  * GET /appointment-types
  * List all appointment types for the authenticated user.
  */
-appointmentTypeRouter.get('/', asyncHandler(async (req: Request, res: Response) => {
-  ok(res, await appointmentTypeRepository.findMany(req.user!.id));
-}));
+appointmentTypeRouter.get<{}, any, any, ListAppointmentTypesQuery>(
+  '/',
+  validateQuery(listAppointmentTypesSchema),
+  asyncHandler(async (req: Request<{}, any, any, ListAppointmentTypesQuery>, res: Response) => {
+    ok(res, await appointmentTypeRepository.findMany(req.user!.id, req.query));
+  })
+);
 
 /**
  * GET /appointment-types/:id
@@ -70,7 +76,21 @@ appointmentTypeRouter.delete(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const type = await appointmentTypeRepository.delete(req.params.id as string, req.user!.id);
-    logger.info({ typeId: type.id }, 'Appointment type deactivated');
+    logger.info({ typeId: type.id }, 'Appointment type deleted');
     ok(res, { deactivated: true, id: type.id });
+  })
+);
+
+/**
+ * PATCH /appointment-types/:id/restore
+ * Restore a deactivated appointment type.
+ */
+appointmentTypeRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const type = await appointmentTypeRepository.restore(req.params.id as string, req.user!.id);
+    logger.info({ typeId: type.id }, 'Appointment type restored');
+    ok(res, type);
   })
 );

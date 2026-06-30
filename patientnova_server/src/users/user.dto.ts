@@ -25,7 +25,7 @@ function _extractFields(user: {
   firstName: string | null;
   lastName: string | null;
   displayName: string | null;
-  avatarUrl: string | null;
+  avatar: string | null;
   logo: string | null;
   altLogo: string | null;
   jobTitle: string | null;
@@ -51,7 +51,7 @@ function _extractFields(user: {
     firstName: user.firstName,
     lastName: user.lastName,
     displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
+    avatar: user.avatar,
     logo: user.logo,
     altLogo: user.altLogo,
     jobTitle: user.jobTitle,

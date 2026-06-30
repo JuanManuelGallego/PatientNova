@@ -1,7 +1,7 @@
 import { prisma } from '../prisma/prismaClient.js';
 import { config } from '../utils/config.js';
 import bcrypt from 'bcrypt';
-import type { CreateUserDto, UpdateUserDto } from './user.schemas.js';
+import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
 import { UserNotFoundError, UserEmailConflictError, UserInvalidCredentialsError } from '../utils/errors.js';
 import { userInclude } from '../utils/types.js';
 import { Channel } from '../../generated/prisma/enums.js';
@@ -21,7 +21,7 @@ export const userRepository = {
                 firstName: dto.firstName,
                 lastName: dto.lastName ?? null,
                 displayName: dto.displayName ?? [ dto.firstName, dto.lastName ].filter(Boolean).join(' ') ?? null,
-                avatarUrl: dto.avatarUrl ?? null,
+                avatar: dto.avatar ?? null,
                 logo: dto.logo ?? null,
                 altLogo: dto.altLogo ?? null,
                 jobTitle: dto.jobTitle ?? null,
@@ -35,8 +35,10 @@ export const userRepository = {
         });
     },
 
-    async findMany() {
+    async findMany(query?: ListUsersQuery) {
+        const includeDeleted = query?.includeDeleted ?? false;
         return prisma.user.findMany({
+            where: { ...(includeDeleted ? {} : { isDeleted: false }) },
             select: userInclude,
             orderBy: { createdAt: 'desc' },
         });
@@ -70,6 +72,28 @@ export const userRepository = {
         return prisma.user.update({
             where: { id },
             data: { passwordHash, lastPasswordChange: new Date(), refreshTokenVersion: { increment: 1 } },
+            select: userInclude,
+        });
+    },
+
+    async softDelete(id: string, deletedById?: string) {
+        const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+        if (!user) throw new UserNotFoundError(id);
+
+        return prisma.user.update({
+            where: { id },
+            data: { isDeleted: true, deletedAt: new Date(), deletedById: deletedById ?? null },
+            select: userInclude,
+        });
+    },
+
+    async restore(id: string) {
+        const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+        if (!user) throw new UserNotFoundError(id);
+
+        return prisma.user.update({
+            where: { id },
+            data: { isDeleted: false, deletedAt: null, deletedById: null },
             select: userInclude,
         });
     },

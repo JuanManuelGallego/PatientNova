@@ -1,6 +1,6 @@
 import type { AppointmentLocation } from '../../generated/prisma/client.ts';
 import { prisma } from '../prisma/prismaClient.js';
-import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
+import type { CreateLocationDto, UpdateLocationDto, ListLocationsQuery } from './location.schemas.js';
 import { LocationNotFoundError, LocationNameConflictError } from '../utils/errors.js';
 
 export const locationRepository = {
@@ -16,9 +16,6 @@ export const locationRepository = {
         address: dto.address ?? null,
         instructions: dto.instructions ?? null,
         color: dto.color ?? null,
-        bg: dto.bg ?? null,
-        dot: dto.dot ?? null,
-        icon: dto.icon ?? null,
         defaultPrice: dto.defaultPrice ?? null,
         isVirtual: dto.isVirtual ?? false,
         userId,
@@ -34,9 +31,10 @@ export const locationRepository = {
     return location;
   },
 
-  async findMany(userId: string): Promise<AppointmentLocation[]> {
+  async findMany(userId: string, query?: ListLocationsQuery): Promise<AppointmentLocation[]> {
+    const includeDeleted = query?.includeDeleted ?? false;
     return prisma.appointmentLocation.findMany({
-      where: { userId },
+      where: { userId, ...(includeDeleted ? {} : { isDeleted: false }) },
       orderBy: { name: 'asc' },
     });
   },
@@ -58,9 +56,6 @@ export const locationRepository = {
         ...(dto.address !== undefined && { address: dto.address }),
         ...(dto.instructions !== undefined && { instructions: dto.instructions }),
         ...(dto.color !== undefined && { color: dto.color }),
-        ...(dto.bg !== undefined && { bg: dto.bg }),
-        ...(dto.dot !== undefined && { dot: dto.dot }),
-        ...(dto.icon !== undefined && { icon: dto.icon }),
         ...(dto.defaultPrice !== undefined && { defaultPrice: dto.defaultPrice }),
         ...(dto.isVirtual !== undefined && { isVirtual: dto.isVirtual }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
@@ -72,7 +67,15 @@ export const locationRepository = {
     await locationRepository.findById(id, userId);
     return prisma.appointmentLocation.update({
       where: { id },
-      data: { isActive: false },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<AppointmentLocation> {
+    await locationRepository.findById(id, userId);
+    return prisma.appointmentLocation.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
     });
   },
 };

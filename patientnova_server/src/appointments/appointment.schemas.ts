@@ -1,5 +1,6 @@
 import { AppointmentStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 function isValidIANATimezone(tz: string): boolean {
   try {
@@ -68,13 +69,13 @@ export const listAppointmentsSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   orderBy: z.enum([ 'startAt', 'createdAt', 'status', 'price', 'locationId', 'typeId' ]).default('startAt'),
   order: z.enum([ 'asc', 'desc' ]).default('asc'),
-});
+}).extend(includeDeletedQuery.shape);
 
 export const appointmentStatsSchema = z.object({
   patientId: z.uuid().optional(),
   dateFrom: z.iso.datetime().optional(),
   dateTo: z.iso.datetime().optional(),
-});
+}).extend(includeDeletedQuery.shape);
 
 export type CreateAppointmentDto = z.infer<typeof createAppointmentSchema>;
 export type UpdateAppointmentDto = z.infer<typeof updateAppointmentSchema>;

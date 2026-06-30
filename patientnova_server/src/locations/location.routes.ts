@@ -2,9 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import {
   createLocationSchema,
   updateLocationSchema,
+  listLocationsSchema,
+  type ListLocationsQuery,
 } from './location.schemas.js';
 import { locationRepository } from './location.repository.js';
-import { validateBody, validateParams } from '../middlewares/validate.js';
+import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -16,9 +18,13 @@ export const locationRouter = Router();
  * GET /locations
  * List all appointment locations for the authenticated user.
  */
-locationRouter.get('/', asyncHandler(async (req: Request, res: Response) => {
-  ok(res, await locationRepository.findMany(req.user!.id));
-}));
+locationRouter.get<{}, any, any, ListLocationsQuery>(
+  '/',
+  validateQuery(listLocationsSchema),
+  asyncHandler(async (req: Request<{}, any, any, ListLocationsQuery>, res: Response) => {
+    ok(res, await locationRepository.findMany(req.user!.id, req.query));
+  })
+);
 
 /**
  * GET /locations/:id
@@ -70,7 +76,21 @@ locationRouter.delete(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const location = await locationRepository.delete(req.params.id as string, req.user!.id);
-    logger.info({ locationId: location.id }, 'Appointment location deactivated');
-    ok(res, { deactivated: true, id: location.id });
+    logger.info({ locationId: location.id }, 'Appointment location deleted');
+    ok(res, { deleted: true, id: location.id });
+  })
+);
+
+/**
+ * PATCH /locations/:id/restore
+ * Restore a deactivated appointment location.
+ */
+locationRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const location = await locationRepository.restore(req.params.id as string, req.user!.id);
+    logger.info({ locationId: location.id }, 'Appointment location restored');
+    ok(res, location);
   })
 );

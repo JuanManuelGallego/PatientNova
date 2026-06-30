@@ -145,18 +145,11 @@ function AppointmentsPageContent() {
               }}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nueva Cita
+              Nueva Cita
             </button>
           }
         />
         <div className="stats-grid stats-grid--5">
-          <StatCard
-            label="Total"
-            value={stats?.total ?? 0}
-            sub="todas las citas"
-            accent="var(--c-brand)"
-            icon={CalendarDays}
-          />
           <StatCard
             label="Hoy"
             value={stats?.todayCount ?? 0}
@@ -179,8 +172,8 @@ function AppointmentsPageContent() {
             icon={AlertCircle}
           />
           <StatCard
-            label="Ingresos"
-            value={`$ ${stats?.paidRevenue.toLocaleString("es-ES") ?? 0}`}
+            label="Ingresos del mes"
+            value={`$ ${stats?.paidRevenueThisMonth.toLocaleString("es-ES") ?? 0}`}
             sub="total cobrado"
             accent="var(--c-success)"
             icon={DollarSign}
@@ -309,7 +302,7 @@ function AppointmentsPageContent() {
                 <div
                   className="location-badge"
                   style={{
-                    background: a.appointmentLocation.bg || "var(--c-gray-100)",
+                    background: a.appointmentLocation.color + "15" || "var(--c-gray-100)",
                     color: a.appointmentLocation.color || "var(--c-gray-700)",
                   }}
                 >

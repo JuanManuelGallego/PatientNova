@@ -59,6 +59,7 @@ export async function checkConflict(patientId: string, startAt: string | Date, e
   const conflict = await prisma.appointment.findFirst({
     where: {
       patientId,
+      isDeleted: false,
       status: { in: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] },
       ...(excludeId && { NOT: { id: excludeId } }),
       startAt: { lt: new Date(endAt) },
@@ -76,6 +77,8 @@ export const appointmentService = {
   findById: appointmentRepository.findById.bind(appointmentRepository),
   findMany: appointmentRepository.findMany.bind(appointmentRepository),
   delete: appointmentRepository.delete.bind(appointmentRepository),
+  softDelete: appointmentRepository.delete.bind(appointmentRepository),
+  restore: appointmentRepository.restore.bind(appointmentRepository),
   getStats: appointmentRepository.getStats.bind(appointmentRepository),
 
   async create(dto: CreateAppointmentDto, userId: string) {

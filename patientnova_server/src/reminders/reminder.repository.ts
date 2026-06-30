@@ -38,11 +38,12 @@ export const reminderRepository = {
   },
 
   async findMany(query: ListRemindersQuery, userId: string): Promise<Paginated<ReminderWithRelations>> {
-    const { status, search, patientId, dateTo, dateFrom, page, pageSize, orderBy, order } = query;
+    const { status, search, patientId, dateTo, dateFrom, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.ReminderWhereInput = {
       userId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
@@ -106,7 +107,20 @@ export const reminderRepository = {
 
   async delete(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return prisma.reminder.delete({ where: { id }, include: reminderInclude });
+    return prisma.reminder.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+      include: reminderInclude,
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<Reminder> {
+    await reminderRepository.findById(id, userId);
+    return prisma.reminder.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
+      include: reminderInclude,
+    });
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {

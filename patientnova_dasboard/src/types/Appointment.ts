@@ -161,9 +161,6 @@ export interface AppointmentLocation {
   name: string;
   address?: string | null;
   color?: string | null;
-  bg?: string | null;
-  dot?: string | null;
-  icon?: string | null;
   isVirtual: boolean;
   isActive: boolean;
   instructions?: string | null;
@@ -173,7 +170,6 @@ export type AppointmentLocationForm = {
   name: string;
   address: string;
   color: string;
-  icon: string;
   isVirtual: boolean;
   instructions: string;
 };
@@ -185,6 +181,5 @@ export interface AppointmentType {
   defaultDuration: number;
   defaultPrice?: number | null;
   color?: string | null;
-  icon?: string | null;
   isActive: boolean;
 }

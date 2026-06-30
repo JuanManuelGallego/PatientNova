@@ -283,7 +283,7 @@ export default function CalendarPage() {
           .filter(Boolean)
           .join(" ")}
         style={{
-          background: a.appointmentLocation.bg ?? "var(--c-gray-200)",
+          background: a.appointmentLocation.color + "15" || "var(--c-gray-200)",
           color: a.appointmentLocation.color ?? "var(--c-gray-700)",
           width: compact ? undefined : "100%",
           marginBottom: compact ? 0 : 2,
@@ -566,7 +566,7 @@ export default function CalendarPage() {
               onClick={() => setShowCreate(true)}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nueva Cita
+              Nueva Cita
             </button>
           }
         />
@@ -668,7 +668,7 @@ export default function CalendarPage() {
                       className="cal-day-panel__appt-dot"
                       style={{
                         background:
-                          a.appointmentLocation.dot ?? "var(--c-gray-400)",
+                          a.appointmentLocation.color ?? "var(--c-gray-400)",
                       }}
                     />
                     <span className="cal-day-panel__appt-name">
@@ -701,7 +701,7 @@ export default function CalendarPage() {
                   setShowCreate(true);
                 }}
               >
-                <span className="btn-plus-icon">+</span> Nueva Cita
+                Nueva Cita
               </button>
             </div>
           </div>

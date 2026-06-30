@@ -23,12 +23,13 @@ model Patient {
   appointmentTypeId      String?           @db.Uuid
 
   status         PatientStatus @default(ACTIVE)
-  archivedAt     DateTime?
+  isDeleted      Boolean       @default(false)
+  deletedAt      DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User              @relation(fields: [userId], references: [id])
   appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
 
   appointments   Appointment[] @relation("PatientAppointments")
@@ -38,6 +39,7 @@ model Patient {
   @@unique([userId, email])
   @@index([userId])
   @@index([userId, status])
+  @@index([userId, isDeleted])
   @@index([name])
   @@index([lastName])
   @@index([status])
@@ -57,6 +59,8 @@ model Reminder {
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  isDeleted         Boolean        @default(false)
+  deletedAt         DateTime?
 
   channel           Channel
   to                String         @db.VarChar(30)
@@ -132,6 +136,8 @@ model Appointment {
   confirmedAt   DateTime?
   cancelledAt   DateTime?
   completedAt   DateTime?
+  isDeleted     Boolean           @default(false)
+  deletedAt     DateTime?
 
   patientId     String            @db.Uuid
   userId        String
@@ -152,6 +158,7 @@ model Appointment {
   @@index([startAt, status])
   @@index([userId, status])
   @@index([userId, startAt])
+  @@index([userId, isDeleted])
   @@index([locationId])
   @@index([typeId])
   @@map("appointments")
@@ -181,7 +188,7 @@ model User {
   firstName      String?
   lastName       String?
   displayName    String?
-  avatarUrl      String?
+  avatar         String?
   jobTitle       String?
   logo           String?
   altLogo        String?
@@ -208,7 +215,7 @@ model User {
   refreshTokenVersion  Int       @default(0)
 
   deletedAt      DateTime?
-  deletedById    String?
+  isDeleted      Boolean  @default(false)
 
   patients              Patient[]
   appointments          Appointment[] @relation("UserAppointments")
@@ -219,6 +226,7 @@ model User {
 
   @@index([email])
   @@index([status])
+  @@index([isDeleted])
   @@map("users")
 }
 
@@ -233,12 +241,11 @@ model AppointmentLocation {
   address      String?  @db.VarChar(255)
   instructions String?  @db.VarChar(500)
   color        String?  @db.VarChar(20)
-  bg           String?  @db.VarChar(20)
-  dot          String?  @db.VarChar(20)
-  icon         String?  @db.VarChar(50)
   defaultPrice Int?
   isVirtual    Boolean  @default(false)
   isActive     Boolean  @default(true)
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
 
   userId       String
   user         User          @relation(fields: [userId], references: [id])
@@ -261,8 +268,9 @@ model AppointmentType {
   defaultDuration Int      @default(60)
   defaultPrice    Int?
   color           String?  @db.VarChar(20)
-  icon            String?  @db.VarChar(50)
   isActive        Boolean  @default(true)
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
 
   userId          String
   user            User          @relation(fields: [userId], references: [id])
@@ -351,11 +359,14 @@ model MedicalRecord {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false)
+  deletedAt  DateTime?
 
   patientId  String   @unique @db.Uuid
   patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
+  @@index([isDeleted])
   @@map("medical_records")
 }
 

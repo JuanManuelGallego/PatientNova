@@ -105,13 +105,13 @@ export default function DashboardPage() {
             className="btn-primary btn-hero"
             onClick={() => setShowApptModal(true)}
           >
-            <span className="btn-plus-icon">+</span> Nueva Cita
+            Nueva Cita
           </button>
           <button
             className="btn-primary btn-hero"
             onClick={() => setShowPatientModal(true)}
           >
-            <span className="btn-plus-icon">+</span> Nuevo Paciente
+            Nuevo Paciente
           </button>
         </div>
       </div>
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                         className="location-badge"
                         style={{
                           background:
-                            a.appointmentLocation.bg || "var(--c-gray-100)",
+                            a.appointmentLocation.color + "15" || "var(--c-gray-100)",
                           color:
                             a.appointmentLocation.color || "var(--c-gray-700)",
                           fontSize: 11,
