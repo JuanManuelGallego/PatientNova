@@ -84,12 +84,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="sidebar-user">
         <div className="sidebar-user__inner">
           <div className="sidebar-user__avatar">
-            {user?.avatarUrl ? (
+            {user?.avatar ? (
               <Image
                 onClick={() => {
                   router.push("/settings");
                 }}
-                src={user.avatarUrl}
+                src={user.avatar}
                 alt={user.displayName}
                 width={36}
                 height={36}

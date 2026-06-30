@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/prismaClient.js';
-import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto } from './appointment-type.schemas.js';
+import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto, ListAppointmentTypesQuery } from './appointment-type.schemas.js';
 import { AppointmentTypeNotFoundError, AppointmentTypeNameConflictError } from '../utils/errors.js';
 import { type AppointmentType } from '../../generated/prisma/client.ts';
 
@@ -17,7 +17,6 @@ export const appointmentTypeRepository = {
         defaultDuration: dto.defaultDuration ?? 60,
         defaultPrice: dto.defaultPrice ?? null,
         color: dto.color ?? null,
-        icon: dto.icon ?? null,
         userId,
       },
     });
@@ -31,9 +30,10 @@ export const appointmentTypeRepository = {
     return type;
   },
 
-  async findMany(userId: string): Promise<AppointmentType[]> {
+  async findMany(userId: string, query?: ListAppointmentTypesQuery): Promise<AppointmentType[]> {
+    const includeDeleted = query?.includeDeleted ?? false;
     return prisma.appointmentType.findMany({
-      where: { userId },
+      where: { userId, ...(includeDeleted ? {} : { isActive: true }) },
       orderBy: { name: 'asc' },
     });
   },
@@ -56,7 +56,6 @@ export const appointmentTypeRepository = {
         ...(dto.defaultDuration !== undefined && { defaultDuration: dto.defaultDuration }),
         ...(dto.defaultPrice !== undefined && { defaultPrice: dto.defaultPrice }),
         ...(dto.color !== undefined && { color: dto.color }),
-        ...(dto.icon !== undefined && { icon: dto.icon }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
@@ -67,6 +66,14 @@ export const appointmentTypeRepository = {
     return prisma.appointmentType.update({
       where: { id },
       data: { isActive: false },
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<AppointmentType> {
+    await appointmentTypeRepository.findById(id, userId);
+    return prisma.appointmentType.update({
+      where: { id },
+      data: { isActive: true },
     });
   },
 };

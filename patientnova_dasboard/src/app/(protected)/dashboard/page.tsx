@@ -229,7 +229,7 @@ export default function DashboardPage() {
                         className="location-badge"
                         style={{
                           background:
-                            a.appointmentLocation.bg || "var(--c-gray-100)",
+                            a.appointmentLocation.color + "15" || "var(--c-gray-100)",
                           color:
                             a.appointmentLocation.color || "var(--c-gray-700)",
                           fontSize: 11,

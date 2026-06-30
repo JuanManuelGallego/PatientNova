@@ -106,7 +106,7 @@ export function ProfileTab() {
   const [ jobTitle, setJobTitle ] = useState(user?.jobTitle ?? "");
   const [ timezone, setTimezone ] = useState(user?.timezone ?? "America/Bogota");
   const [ avatarPreview, setAvatarPreview ] = useState<string | null>(
-    user?.avatarUrl ?? null,
+    user?.avatar ?? null,
   );
   const [ logo, setLogo ] = useState<string | null>(user?.logo ?? null);
   const [ altLogo, setAltLogo ] = useState<string | null>(user?.altLogo ?? null);
@@ -232,7 +232,7 @@ export function ProfileTab() {
       lastName: (overrides.lastName ?? lastName).trim() || undefined,
       displayName: (overrides.displayName ?? displayName).trim() || undefined,
       jobTitle: (overrides.jobTitle ?? jobTitle).trim() || undefined,
-      avatarUrl: (overrides.avatarUrl ?? avatarPreview) || undefined,
+      avatar: (overrides.avatar ?? avatarPreview) || undefined,
       logo: (overrides.logo ?? logo) || undefined,
       altLogo: (overrides.altLogo ?? altLogo) || undefined,
       timezone: (overrides.timezone ?? timezone) || undefined,

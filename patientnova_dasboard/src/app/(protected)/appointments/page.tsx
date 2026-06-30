@@ -302,7 +302,7 @@ function AppointmentsPageContent() {
                 <div
                   className="location-badge"
                   style={{
-                    background: a.appointmentLocation.bg || "var(--c-gray-100)",
+                    background: a.appointmentLocation.color + "15" || "var(--c-gray-100)",
                     color: a.appointmentLocation.color || "var(--c-gray-700)",
                   }}
                 >

@@ -40,8 +40,8 @@ export interface ScheduleResult {
 export const appointmentInclude = {
   patient: { select: { id: true, name: true, lastName: true, email: true } },
   reminder: { select: { id: true, channel: true, status: true, sendAt: true } },
-  appointmentLocation: { select: { id: true, name: true, address: true, instructions: true, color: true, bg: true, dot: true, icon: true, defaultPrice: true, isVirtual: true, isActive: true } },
-  appointmentType: { select: { id: true, name: true, description: true, defaultDuration: true, defaultPrice: true, color: true, icon: true, isActive: true } },
+  appointmentLocation: { select: { id: true, name: true, address: true, instructions: true, color: true, defaultPrice: true, isVirtual: true, isActive: true } },
+  appointmentType: { select: { id: true, name: true, description: true, defaultDuration: true, defaultPrice: true, color: true, isActive: true } },
 } satisfies Prisma.AppointmentInclude;
 
 export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
@@ -107,7 +107,7 @@ export const userInclude = {
   firstName: true,
   lastName: true,
   displayName: true,
-  avatarUrl: true,
+  avatar: true,
   logo: true,
   altLogo: true,
   jobTitle: true,

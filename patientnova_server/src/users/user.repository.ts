@@ -21,7 +21,7 @@ export const userRepository = {
                 firstName: dto.firstName,
                 lastName: dto.lastName ?? null,
                 displayName: dto.displayName ?? [ dto.firstName, dto.lastName ].filter(Boolean).join(' ') ?? null,
-                avatarUrl: dto.avatarUrl ?? null,
+                avatar: dto.avatar ?? null,
                 logo: dto.logo ?? null,
                 altLogo: dto.altLogo ?? null,
                 jobTitle: dto.jobTitle ?? null,

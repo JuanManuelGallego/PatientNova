@@ -6,7 +6,6 @@ export const createAppointmentTypeSchema = z.object({
   defaultDuration: z.number().int().min(1).default(60),
   defaultPrice: z.number().int().min(0).nullable().optional(),
   color: z.string().max(20).nullable().optional(),
-  icon: z.string().max(50).nullable().optional(),
 });
 
 export const updateAppointmentTypeSchema = z
@@ -16,7 +15,6 @@ export const updateAppointmentTypeSchema = z
     defaultDuration: z.number().int().min(1).optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    icon: z.string().max(50).nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine(
