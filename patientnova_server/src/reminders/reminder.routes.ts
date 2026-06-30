@@ -99,15 +99,28 @@ reminderRouter.post(
 
 /**
  * DELETE /reminders/:id
- * Hard-delete a reminder record.
- * Prefer using POST /reminders/:id/cancel for audit-friendliness.
+ * Soft-delete a reminder record (sets isActive=false).
  */
 reminderRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const reminder = await reminderService.delete(req.params.id as string, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder deleted');
+    const reminder = await reminderService.softDelete(req.params.id as string, req.user!.id);
+    logger.info({ reminderId: reminder.id }, 'Reminder soft-deleted');
     ok(res, { deleted: true, id: reminder.id });
+  })
+);
+
+/**
+ * PATCH /reminders/:id/restore
+ * Restore a soft-deleted reminder (sets isActive=true).
+ */
+reminderRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const reminder = await reminderService.restore(req.params.id as string, req.user!.id);
+    logger.info({ reminderId: reminder.id }, 'Reminder restored');
+    ok(res, reminder);
   })
 );

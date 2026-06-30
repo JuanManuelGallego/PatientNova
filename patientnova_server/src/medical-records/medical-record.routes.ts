@@ -55,3 +55,23 @@ medicalRecordRouter.delete(
     ok(res, { deleted: true, id: rec.id });
   })
 );
+
+medicalRecordRouter.patch(
+  '/:id/soft-delete',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const rec = await medicalRecordRepository.softDelete(req.params.id as string, req.user!.id);
+    logger.info({ medicalRecordId: rec.id }, 'Medical record soft-deleted');
+    ok(res, rec);
+  })
+);
+
+medicalRecordRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const rec = await medicalRecordRepository.restore(req.params.id as string, req.user!.id);
+    logger.info({ medicalRecordId: rec.id }, 'Medical record restored');
+    ok(res, rec);
+  })
+);

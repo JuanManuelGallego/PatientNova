@@ -1,6 +1,6 @@
 import type { AppointmentLocation } from '../../generated/prisma/client.ts';
 import { prisma } from '../prisma/prismaClient.js';
-import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
+import type { CreateLocationDto, UpdateLocationDto, ListLocationsQuery } from './location.schemas.js';
 import { LocationNotFoundError, LocationNameConflictError } from '../utils/errors.js';
 
 export const locationRepository = {
@@ -31,9 +31,10 @@ export const locationRepository = {
     return location;
   },
 
-  async findMany(userId: string): Promise<AppointmentLocation[]> {
+  async findMany(userId: string, query?: ListLocationsQuery): Promise<AppointmentLocation[]> {
+    const includeDeleted = query?.includeDeleted ?? false;
     return prisma.appointmentLocation.findMany({
-      where: { userId },
+      where: { userId, ...(includeDeleted ? {} : { isDeleted: false }) },
       orderBy: { name: 'asc' },
     });
   },
@@ -66,7 +67,15 @@ export const locationRepository = {
     await locationRepository.findById(id, userId);
     return prisma.appointmentLocation.update({
       where: { id },
-      data: { isActive: false },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<AppointmentLocation> {
+    await locationRepository.findById(id, userId);
+    return prisma.appointmentLocation.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
     });
   },
 };

@@ -3,7 +3,9 @@ import {
   createPatientSchema,
   updatePatientSchema,
   listPatientsSchema,
+  patientStatsSchema,
   type ListPatientsQuery,
+  type PatientStatsQuery,
 } from './patient.schemas.js';
 import {
   patientRepository,
@@ -34,10 +36,11 @@ patientRouter.get<{}, any, any, ListPatientsQuery>(
  * Get total patient count and a breakdown by status.
  * Response: { total: number, byStatus: Record<PatientStatus, number> }
  */
-patientRouter.get(
+patientRouter.get<{}, any, any, PatientStatsQuery>(
   '/stats',
-  asyncHandler(async (req: Request, res: Response) => {
-    ok(res, await patientRepository.getStats(req.user!.id));
+  validateQuery(patientStatsSchema),
+  asyncHandler(async (req: Request<{}, any, any, PatientStatsQuery>, res: Response) => {
+    ok(res, await patientRepository.getStats(req.user!.id, req.query));
   })
 );
 
@@ -94,5 +97,19 @@ patientRouter.delete(
     const patient = await patientRepository.delete(req.params.id as string, req.user!.id);
     logger.info({ patientId: patient.id }, 'Patient deleted');
     ok(res, { deleted: true, id: patient.id });
+  })
+);
+
+/**
+ * PATCH /patients/:id/restore
+ * Restore a soft-deleted patient record (sets isDeleted=false, deletedAt=null).
+ */
+patientRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const patient = await patientRepository.restore(req.params.id as string, req.user!.id);
+    logger.info({ patientId: patient.id }, 'Patient restored');
+    ok(res, patient);
   })
 );

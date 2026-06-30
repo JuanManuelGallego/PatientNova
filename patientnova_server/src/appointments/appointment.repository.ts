@@ -53,13 +53,14 @@ export const appointmentRepository = {
   },
 
   async findMany(query: ListAppointmentsQuery, userId: string, timezone = 'UTC'): Promise<Paginated<AppointmentWithRelations>> {
-    const { patientId, status, startAt, dateFrom, dateTo, paid, search, page, pageSize, orderBy, order, locationId, typeId } = query;
+    const { patientId, status, startAt, dateFrom, dateTo, paid, search, page, pageSize, orderBy, order, locationId, typeId, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
     const { start: todayStart, end: todayEnd } = getTodayBoundsInTz(timezone);
 
 
     const where: Prisma.AppointmentWhereInput = {
       userId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
       ...(patientId && { patientId }),
       ...(locationId && { locationId }),
       ...(typeId && { typeId }),
@@ -139,7 +140,18 @@ export const appointmentRepository = {
 
   async delete(id: string, userId: string): Promise<Appointment> {
     await appointmentRepository.findById(id, userId);
-    return prisma.appointment.delete({ where: { id } });
+    return prisma.appointment.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<Appointment> {
+    await appointmentRepository.findById(id, userId);
+    return prisma.appointment.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
+    });
   },
 
   async markPaid(id: string, userId: string): Promise<AppointmentWithRelations> {
@@ -170,9 +182,10 @@ export const appointmentRepository = {
   },
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
-    const { patientId, dateFrom, dateTo } = query;
+    const { patientId, dateFrom, dateTo, includeDeleted } = query;
     const where: Prisma.AppointmentWhereInput = {
       userId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
       ...(patientId && { patientId }),
       ...(dateFrom || dateTo
         ? {

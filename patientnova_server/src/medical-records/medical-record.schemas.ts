@@ -1,5 +1,6 @@
 import { Relationship, Sex, SubsistemaType, EstadoRelacion } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 const familyMemberSchema = z.object({
   name: z.string().optional(),
@@ -88,7 +89,7 @@ export const listMedicalRecordsSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   orderBy: z.enum([ 'createdAt', 'updatedAt' ]).default('createdAt'),
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
-});
+}).extend(includeDeletedQuery.shape);
 
 export type CreateMedicalRecordDto = z.infer<typeof createMedicalRecordSchema>;
 export type UpdateMedicalRecordDto = z.infer<typeof updateMedicalRecordSchema>;

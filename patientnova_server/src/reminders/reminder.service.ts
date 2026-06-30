@@ -8,6 +8,7 @@ export const reminderService = {
   findMany: reminderRepository.findMany.bind(reminderRepository),
   update: reminderRepository.update.bind(reminderRepository),
   delete: reminderRepository.delete.bind(reminderRepository),
+  restore: reminderRepository.restore.bind(reminderRepository),
   getStats: reminderRepository.getStats.bind(reminderRepository),
 
   async create(dto: CreateReminderDto, userId: string) {

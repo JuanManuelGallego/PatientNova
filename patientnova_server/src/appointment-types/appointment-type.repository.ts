@@ -33,7 +33,7 @@ export const appointmentTypeRepository = {
   async findMany(userId: string, query?: ListAppointmentTypesQuery): Promise<AppointmentType[]> {
     const includeDeleted = query?.includeDeleted ?? false;
     return prisma.appointmentType.findMany({
-      where: { userId, ...(includeDeleted ? {} : { isActive: true }) },
+      where: { userId, ...(includeDeleted ? {} : { isDeleted: false }) },
       orderBy: { name: 'asc' },
     });
   },
@@ -65,7 +65,7 @@ export const appointmentTypeRepository = {
     await appointmentTypeRepository.findById(id, userId);
     return prisma.appointmentType.update({
       where: { id },
-      data: { isActive: false },
+      data: { isDeleted: true, deletedAt: new Date() },
     });
   },
 
@@ -73,7 +73,7 @@ export const appointmentTypeRepository = {
     await appointmentTypeRepository.findById(id, userId);
     return prisma.appointmentType.update({
       where: { id },
-      data: { isActive: true },
+      data: { isDeleted: false, deletedAt: null },
     });
   },
 };

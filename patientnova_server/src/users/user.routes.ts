@@ -39,8 +39,10 @@ userRouter.get(
     '/',
     authenticate,
     requireSuperAdmin,
-    asyncHandler(async (_req: Request, res: Response) => {
-        ok(res, await userRepository.findMany());
+    asyncHandler(async (req: Request, res: Response) => {
+        const query = req.query as { includeDeleted?: string };
+        const includeDeleted = query.includeDeleted === 'true';
+        ok(res, await userRepository.findMany({ includeDeleted }));
     })
 );
 
@@ -116,6 +118,36 @@ userRouter.patch(
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userRepository.update(req.params.id as string, req.body);
         logger.info({ userId: user.id }, 'User updated by super-admin');
+        ok(res, user);
+    })
+);
+
+/**
+ * PATCH /users/:id/soft-delete
+ * Super-admin only. Soft-delete a user (sets isDeleted=true, deletedAt=now).
+ */
+userRouter.patch(
+    '/:id/soft-delete',
+    authenticate,
+    requireSuperAdmin,
+    asyncHandler(async (req: Request, res: Response) => {
+        const user = await userRepository.softDelete(req.params.id as string, req.user!.id);
+        logger.info({ userId: user.id }, 'User soft-deleted by super-admin');
+        ok(res, user);
+    })
+);
+
+/**
+ * PATCH /users/:id/restore
+ * Super-admin only. Restore a soft-deleted user (sets isDeleted=false, deletedAt=null).
+ */
+userRouter.patch(
+    '/:id/restore',
+    authenticate,
+    requireSuperAdmin,
+    asyncHandler(async (req: Request, res: Response) => {
+        const user = await userRepository.restore(req.params.id as string);
+        logger.info({ userId: user.id }, 'User restored by super-admin');
         ok(res, user);
     })
 );

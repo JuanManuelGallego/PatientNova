@@ -142,3 +142,17 @@ appointmentRouter.delete(
     ok(res, { deleted: true, id: appt.id });
   })
 );
+
+/**
+ * PATCH /appointments/:id/restore
+ * Restore a soft-deleted appointment (sets isDeleted=false, deletedAt=null).
+ */
+appointmentRouter.patch(
+  '/:id/restore',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.restore(req.params.id as string, req.user!.id);
+    logger.info({ appointmentId: appt.id }, 'Appointment restored');
+    ok(res, appt);
+  })
+);

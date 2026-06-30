@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 export const createLocationSchema = z
   .object({
@@ -66,3 +67,7 @@ export const updateLocationSchema = z
 
 export type CreateLocationDto = z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;
+
+export const listLocationsSchema = z.object({}).extend(includeDeletedQuery.shape);
+
+export type ListLocationsQuery = z.infer<typeof listLocationsSchema>;
