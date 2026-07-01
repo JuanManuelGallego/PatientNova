@@ -1,10 +1,10 @@
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { STATUS_ICONS } from "@/src/config/icons";
-import { useUpdatePatient } from "@/src/api/useUpdatePatient";
-import { Patient, PatientStatus } from "@/src/types/Patient";
+import { Patient } from "@/src/types/Patient";
 import { useState } from "react";
+import { useDeletePatient } from "@/src/api/useDeletePatient";
 
-export function ArchivePatientModal({
+export function DeletePatientModal({
   patient,
   onClose,
   onDeleted,
@@ -13,13 +13,13 @@ export function ArchivePatientModal({
   onClose: () => void;
   onDeleted: () => void;
 }) {
-  const { updatePatient, loading } = useUpdatePatient();
+  const { deletePatient, loading } = useDeletePatient();
   const [error, setError] = useState<string | null>(null);
 
-  async function handleArchive() {
+  async function handleDelete() {
     setError(null);
     try {
-      await updatePatient(patient.id, { status: PatientStatus.ARCHIVED });
+      await deletePatient(patient.id);
       onDeleted();
       onClose();
     } catch (err) {
@@ -37,7 +37,7 @@ export function ArchivePatientModal({
       loading={loading}
       error={error}
       onClose={onClose}
-      onConfirm={handleArchive}
+      onConfirm={handleDelete}
     >
       <p className="modal-confirm__text">
         ¿Estás seguro que deseas eliminar a{" "}

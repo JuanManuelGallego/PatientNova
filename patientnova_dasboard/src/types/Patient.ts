@@ -5,7 +5,6 @@ import { Reminder } from "./Reminder";
 export enum PatientStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
-  ARCHIVED = "ARCHIVED",
 }
 
 export const PATIENT_STATUS_CONFIG: Record<
@@ -14,7 +13,6 @@ export const PATIENT_STATUS_CONFIG: Record<
 > = {
   ACTIVE: { label: "Activo", color: "#16A34A", bg: "#F0FDF4", icon: "" },
   INACTIVE: { label: "Inactivo", color: "#D97706", bg: "#FFFBEB", icon: "" },
-  ARCHIVED: { label: "Archivado", color: "#df4429", bg: "#f541412f", icon: "" },
 };
 
 export interface Patient {
@@ -32,7 +30,6 @@ export interface Patient {
   appointmentTypeId?: string | null;
 
   status: PatientStatus;
-  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 

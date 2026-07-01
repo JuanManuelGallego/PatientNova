@@ -284,13 +284,6 @@ export function PatientDrawer({
               label="Actualizado"
               value={new Date(patient.updatedAt).toLocaleString("es-ES")}
             />
-            {patient.archivedAt && (
-              <Row
-                icon={DETAIL_ICONS.archive}
-                label="Archivado"
-                value={new Date(patient.archivedAt).toLocaleString("es-ES")}
-              />
-            )}
           </Section>
         </div>
         <div className="drawer-footer">

@@ -49,7 +49,6 @@ model Patient {
 enum PatientStatus {
   ACTIVE
   INACTIVE
-  ARCHIVED
 }
 
 // ─── Reminder ─────────────────────────────────────────────────────────────────
