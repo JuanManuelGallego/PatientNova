@@ -5,7 +5,7 @@ import {
     changePasswordSchema,
     superAdminUpdateUserSchema,
 } from './user.schemas.js';
-import { userRepository } from './user.repository.js';
+import { userService } from './user.service.js';
 import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
@@ -15,26 +15,18 @@ import { consentDocumentRouter } from '../consent-document/consent-document.rout
 
 export const userRouter = Router();
 
-/**
- * POST /users
- * Super-admin only. Creates a new user with a hashed password.
- */
 userRouter.post(
     '/',
     authenticate,
     requireSuperAdmin,
     validateBody(createUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userRepository.create(req.body);
+        const user = await userService.create(req.body);
         logger.info({ userId: user.id, email: user.email }, 'User created');
         ok(res, user, 201);
     })
 );
 
-/**
- * GET /users
- * Super-admin only. Lists all users.
- */
 userRouter.get(
     '/',
     authenticate,
@@ -42,111 +34,80 @@ userRouter.get(
     asyncHandler(async (req: Request, res: Response) => {
         const query = req.query as { includeDeleted?: string };
         const includeDeleted = query.includeDeleted === 'true';
-        ok(res, await userRepository.findMany({ includeDeleted }));
+        ok(res, await userService.findMany({ includeDeleted }));
     })
 );
 
-/**
- * GET /users/me
- * Returns info about the authenticated user.
- */
 userRouter.get(
     '/me',
     authenticate,
     asyncHandler(async (req: Request, res: Response) => {
-        ok(res, await userRepository.findById(req.user!.id));
+        ok(res, await userService.findById(req.user!.id));
     })
 );
 
-/**
- * GET /users/:id
- * Super-admin only. Get a user by ID.
- */
 userRouter.get(
     '/:id',
     authenticate,
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
-        ok(res, await userRepository.findById(req.params.id as string));
+        ok(res, await userService.findById(req.params.id as string));
     })
 );
 
-/**
- * PATCH /users/me
- * Updates the authenticated user's profile fields.
- */
 userRouter.patch(
     '/me',
     authenticate,
     validateBody(updateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userRepository.update(req.user!.id, req.body);
+        const user = await userService.update(req.user!.id, req.body);
         logger.info({ userId: user.id }, 'User profile updated');
         ok(res, user);
     })
 );
 
-/**
- * PATCH /users/me/change-password
- * Verifies current password then updates to the new hashed password.
- * Increments refreshTokenVersion to invalidate all existing sessions.
- */
 userRouter.patch(
     '/me/change-password',
     authenticate,
     validateBody(changePasswordSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        await userRepository.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+        await userService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
         logger.info({ userId: req.user!.id }, 'User password changed');
         ok(res, { message: 'Password changed successfully' });
     })
 );
 
-// Mount nested routers for bank account and consent document management
 userRouter.use('/me/consent-document', consentDocumentRouter);
 
-/**
- * PATCH /users/:id
- * Super-admin only. Updates another user's profile fields, role, or status.
- * Does not allow changing the password.
- */
 userRouter.patch(
     '/:id',
     authenticate,
     requireSuperAdmin,
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userRepository.update(req.params.id as string, req.body);
+        const user = await userService.update(req.params.id as string, req.body);
         logger.info({ userId: user.id }, 'User updated by super-admin');
         ok(res, user);
     })
 );
 
-/**
- * PATCH /users/:id/soft-delete
- * Super-admin only. Soft-delete a user (sets isDeleted=true, deletedAt=now).
- */
 userRouter.patch(
-    '/:id/soft-delete',
+    '/:id/delete',
     authenticate,
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userRepository.softDelete(req.params.id as string, req.user!.id);
-        logger.info({ userId: user.id }, 'User soft-deleted by super-admin');
+        const user = await userService.delete(req.params.id as string);
+        logger.info({ userId: user.id }, 'User deleted by super-admin');
         ok(res, user);
     })
 );
 
-/**
- * PATCH /users/:id/restore
- * Super-admin only. Restore a soft-deleted user (sets isDeleted=false, deletedAt=null).
- */
 userRouter.patch(
     '/:id/restore',
     authenticate,
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userRepository.restore(req.params.id as string);
+        const user = await userService.restore(req.params.id as string);
         logger.info({ userId: user.id }, 'User restored by super-admin');
         ok(res, user);
     })

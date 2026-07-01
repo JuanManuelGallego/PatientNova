@@ -7,15 +7,13 @@ import {
   type ListAppointmentsQuery,
   type AppointmentStatsQuery,
 } from './appointment.schemas.js';
-import {
-  appointmentRepository,
-} from './appointment.repository.js';
 import { appointmentService } from './appointment.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { uuidParamSchema } from '../utils/schemas.js';
+import { AppointmentStatus } from '../../generated/prisma/enums.js';
 
 export const appointmentRouter = Router();
 
@@ -28,7 +26,7 @@ appointmentRouter.get<{}, any, any, ListAppointmentsQuery>(
   '/',
   validateQuery(listAppointmentsSchema),
   asyncHandler(async (req: Request<{}, any, any, ListAppointmentsQuery>, res: Response) => {
-    ok(res, await appointmentRepository.findMany(req.query, req.user!.id, req.user!.timezone));
+    ok(res, await appointmentService.findMany(req.query, req.user!.id, req.user!.timezone));
   })
 );
 
@@ -41,7 +39,7 @@ appointmentRouter.get<{}, any, any, AppointmentStatsQuery>(
   '/stats',
   validateQuery(appointmentStatsSchema),
   asyncHandler(async (req: Request<{}, any, any, AppointmentStatsQuery>, res: Response) => {
-    ok(res, await appointmentRepository.getStats(req.query, req.user!.id, req.user!.timezone));
+    ok(res, await appointmentService.getStats(req.query, req.user!.id, req.user!.timezone));
   })
 );
 
@@ -53,7 +51,7 @@ appointmentRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    ok(res, await appointmentRepository.findByIdWithRelations(req.params.id as string, req.user!.id));
+    ok(res, await appointmentService.findById(req.params.id as string, req.user!.id));
   })
 );
 
@@ -108,7 +106,7 @@ appointmentRouter.post(
   '/:id/confirm',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const appt = await appointmentService.markConfirmed(req.params.id as string, req.user!.id);
+    const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CONFIRMED);
     logger.info({ appointmentId: appt.id }, 'Appointment marked as confirmed');
     ok(res, appt);
   })
@@ -122,7 +120,7 @@ appointmentRouter.post(
   '/:id/cancel',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const appt = await appointmentService.markCancelled(req.params.id as string, req.user!.id);
+    const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CANCELLED);
     logger.info({ appointmentId: appt.id }, 'Appointment marked as cancelled');
     ok(res, appt);
   })
@@ -137,9 +135,9 @@ appointmentRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const appt = await appointmentRepository.delete(req.params.id as string, req.user!.id);
-    logger.info({ appointmentId: appt.id }, 'Appointment deleted');
-    ok(res, { deleted: true, id: appt.id });
+    const result = await appointmentService.delete(req.params.id as string, req.user!.id);
+    logger.info({ appointmentId: result.id }, 'Appointment deleted');
+    ok(res, { deleted: true, id: result.id });
   })
 );
 

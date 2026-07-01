@@ -5,7 +5,7 @@ import {
   listLocationsSchema,
   type ListLocationsQuery,
 } from './location.schemas.js';
-import { locationRepository } from './location.repository.js';
+import { locationService } from './location.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
@@ -14,82 +14,58 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const locationRouter = Router();
 
-/**
- * GET /locations
- * List all appointment locations for the authenticated user.
- */
 locationRouter.get<{}, any, any, ListLocationsQuery>(
   '/',
   validateQuery(listLocationsSchema),
   asyncHandler(async (req: Request<{}, any, any, ListLocationsQuery>, res: Response) => {
-    ok(res, await locationRepository.findMany(req.user!.id, req.query));
+    ok(res, await locationService.findMany(req.user!.id, req.query));
   })
 );
 
-/**
- * GET /locations/:id
- * Get a single appointment location by UUID.
- */
 locationRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    ok(res, await locationRepository.findById(req.params.id as string, req.user!.id));
+    ok(res, await locationService.findById(req.params.id as string, req.user!.id));
   })
 );
 
-/**
- * POST /locations
- * Create a new appointment location.
- */
 locationRouter.post(
   '/',
   validateBody(createLocationSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const location = await locationRepository.create(req.body, req.user!.id);
+    const location = await locationService.create(req.body, req.user!.id);
     logger.info({ locationId: location.id }, 'Appointment location created');
     ok(res, location, 201);
   })
 );
 
-/**
- * PATCH /locations/:id
- * Partially update an appointment location.
- */
 locationRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
   validateBody(updateLocationSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const location = await locationRepository.update(req.params.id as string, req.body, req.user!.id);
+    const location = await locationService.update(req.params.id as string, req.body, req.user!.id);
     logger.info({ locationId: location.id }, 'Appointment location updated');
     ok(res, location);
   })
 );
 
-/**
- * DELETE /locations/:id
- * Soft-delete (deactivate) an appointment location.
- */
 locationRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const location = await locationRepository.delete(req.params.id as string, req.user!.id);
+    const location = await locationService.delete(req.params.id as string, req.user!.id);
     logger.info({ locationId: location.id }, 'Appointment location deleted');
     ok(res, { deleted: true, id: location.id });
   })
 );
 
-/**
- * PATCH /locations/:id/restore
- * Restore a deactivated appointment location.
- */
 locationRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const location = await locationRepository.restore(req.params.id as string, req.user!.id);
+    const location = await locationService.restore(req.params.id as string, req.user!.id);
     logger.info({ locationId: location.id }, 'Appointment location restored');
     ok(res, location);
   })

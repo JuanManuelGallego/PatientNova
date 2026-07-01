@@ -76,13 +76,13 @@ export const userRepository = {
         });
     },
 
-    async softDelete(id: string, deletedById?: string) {
+    async delete(id: string) {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
         return prisma.user.update({
             where: { id },
-            data: { isDeleted: true, deletedAt: new Date(), deletedById: deletedById ?? null },
+            data: { isDeleted: true, deletedAt: new Date() },
             select: userInclude,
         });
     },
@@ -93,7 +93,7 @@ export const userRepository = {
 
         return prisma.user.update({
             where: { id },
-            data: { isDeleted: false, deletedAt: null, deletedById: null },
+            data: { isDeleted: false, deletedAt: null },
             select: userInclude,
         });
     },

@@ -12,6 +12,6 @@ googleRouter.get('/meet', asyncHandler(async (_: Request, res: Response) => {
         ok(res, result);
     } catch (error) {
         console.error('Error creating Google Meet space:', error);
-        return res.error('Failed to create Google Meet space', 500);
+        res.error('Failed to create Google Meet space', 500);
     }
 }));
