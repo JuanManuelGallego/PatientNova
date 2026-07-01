@@ -109,16 +109,16 @@ async function seed() {
         await prisma.appointmentLocation.deleteMany({ where: { userId: user.id } });
         const locations = await Promise.all([
             prisma.appointmentLocation.create({
-                data: { name: 'ACTA', address: null, isVirtual: false, color: '#2563EB', icon: '🏢', userId: user.id },
+                data: { name: 'ACTA', address: null, isVirtual: false, color: '#2563EB', userId: user.id },
             }),
             prisma.appointmentLocation.create({
-                data: { name: 'Sentido y Realidad', address: null, isVirtual: false, color: '#059669', icon: '🧠', userId: user.id },
+                data: { name: 'Sentido y Realidad', address: null, isVirtual: false, color: '#059669', userId: user.id },
             }),
             prisma.appointmentLocation.create({
-                data: { name: 'Vamos a Terapia', address: null, isVirtual: false, color: '#D97706', icon: '💬', userId: user.id },
+                data: { name: 'Vamos a Terapia', address: null, isVirtual: false, color: '#D97706', userId: user.id },
             }),
             prisma.appointmentLocation.create({
-                data: { name: 'Virtual', isVirtual: true, color: '#7C3AED', icon: '💻', userId: user.id },
+                data: { name: 'Virtual', isVirtual: true, color: '#7C3AED', userId: user.id },
             }),
         ]);
         console.log(`✅ Created ${locations.length} default locations`);
@@ -127,16 +127,16 @@ async function seed() {
         await prisma.appointmentType.deleteMany({ where: { userId: user.id } });
         const types = await Promise.all([
             prisma.appointmentType.create({
-                data: { name: 'Individual', defaultDuration: 60, defaultPrice: 115000, color: '#2563EB', icon: '🧑', userId: user.id },
+                data: { name: 'Individual', defaultDuration: 60, defaultPrice: 115000, color: '#2563EB', userId: user.id },
             }),
             prisma.appointmentType.create({
-                data: { name: 'Niño', defaultDuration: 60, defaultPrice: 115000, color: '#059669', icon: '👶', userId: user.id },
+                data: { name: 'Niño', defaultDuration: 60, defaultPrice: 115000, color: '#059669', userId: user.id },
             }),
             prisma.appointmentType.create({
-                data: { name: 'Pareja', defaultDuration: 60, defaultPrice: 220000, color: '#D97706', icon: '👫', userId: user.id },
+                data: { name: 'Pareja', defaultDuration: 60, defaultPrice: 220000, color: '#D97706', userId: user.id },
             }),
             prisma.appointmentType.create({
-                data: { name: 'Familia', defaultDuration: 60, defaultPrice: 220000, color: '#7C3AED', icon: '👨‍👩‍👧‍👦', userId: user.id },
+                data: { name: 'Familia', defaultDuration: 60, defaultPrice: 220000, color: '#7C3AED', userId: user.id },
             }),
         ]);
         console.log(`✅ Created ${types.length} default appointment types`);

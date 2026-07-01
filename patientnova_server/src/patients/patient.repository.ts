@@ -1,4 +1,4 @@
-import { PatientStatus, type Patient, type Prisma } from '../../generated/prisma/client.ts';
+import { type Patient, type Prisma } from '../../generated/prisma/client.ts';
 import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';

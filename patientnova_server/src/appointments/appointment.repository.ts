@@ -146,37 +146,11 @@ export const appointmentRepository = {
     });
   },
 
-  async restore(id: string, userId: string): Promise<Appointment> {
+  async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
     return prisma.appointment.update({
       where: { id },
       data: { isDeleted: false, deletedAt: null },
-    });
-  },
-
-  async markPaid(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId);
-    return prisma.appointment.update({
-      where: { id },
-      data: { paid: true },
-      include: appointmentInclude,
-    });
-  },
-
-  async markConfirmed(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId);
-    return prisma.appointment.update({
-      where: { id },
-      data: { status: AppointmentStatus.CONFIRMED, confirmedAt: new Date() },
-      include: appointmentInclude,
-    });
-  },
-
-  async markCancelled(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId);
-    return prisma.appointment.update({
-      where: { id },
-      data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date() },
       include: appointmentInclude,
     });
   },

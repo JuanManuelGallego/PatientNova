@@ -3,7 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { ok } from '../utils/apiUtils.js';
 import { sendSms, sendWhatsApp } from '../twilio/twilioClient.js';
 import { sendSmsSchema, sendWhatsAppSchema } from '../utils/validation.js';
-import { reminderRepository } from '../reminders/reminder.repository.js';
+import { reminderService } from '../reminders/reminder.service.js';
 import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
 import { validateBody } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -24,7 +24,7 @@ notifyRouter.post(
     }
 
     // Create reminder record FIRST to ensure audit trail even if server crashes after send
-    const reminder = await reminderRepository.create({
+    const reminder = await reminderService.create({
       channel: Channel.WHATSAPP,
       contentSid: req.body.contentSid,
       contentVariables: req.body.contentVariables,
@@ -37,13 +37,13 @@ notifyRouter.post(
 
     try {
       const result = await sendWhatsApp(req.body);
-      await reminderRepository.update(reminder.id, {
+      await reminderService.update(reminder.id, {
         status: ReminderStatus.SENT,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      await reminderRepository.update(reminder.id, {
+      await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
       }, req.user!.id);
@@ -65,7 +65,7 @@ notifyRouter.post(
     }
 
     // Create reminder record FIRST to ensure audit trail even if server crashes after send
-    const reminder = await reminderRepository.create({
+    const reminder = await reminderService.create({
       channel: Channel.SMS,
       body: req.body.body,
       sendMode: ReminderMode.IMMEDIATE,
@@ -77,13 +77,13 @@ notifyRouter.post(
 
     try {
       const result = await sendSms(req.body);
-      await reminderRepository.update(reminder.id, {
+      await reminderService.update(reminder.id, {
         status: ReminderStatus.SENT,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      await reminderRepository.update(reminder.id, {
+      await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
       }, req.user!.id);
