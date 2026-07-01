@@ -146,3 +146,27 @@ export class ConsentDocumentAlreadyExistsError extends ApiError {
     super(`A consent document for user with id "${userId}" already exists`, 409)
   }
 }
+
+export class AuthInvalidCredentialsError extends ApiError {
+  constructor() {
+    super('Invalid credentials', 401)
+  }
+}
+
+export class AuthAccountLockedError extends ApiError {
+  constructor() {
+    super('Account temporarily locked. Try again later.', 423)
+  }
+}
+
+export class AuthRefreshTokenExpiredError extends ApiError {
+  constructor() {
+    super('Refresh token expired', 401)
+  }
+}
+
+export class AuthRefreshTokenRevokedError extends ApiError {
+  constructor() {
+    super('Refresh token has been revoked', 401)
+  }
+}

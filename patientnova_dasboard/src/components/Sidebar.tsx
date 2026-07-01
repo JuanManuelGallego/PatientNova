@@ -103,7 +103,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
           <div className="sidebar-user__info">
-            <div className="sidebar-user__name">{user?.displayName ?? "—"}</div>
+            <div className="sidebar-user__name">{user?.displayName ?? `${user?.firstName} ${user?.lastName}`}</div>
             <div className="sidebar-user__role">{user?.jobTitle ?? ""}</div>
           </div>
           <button

@@ -2,7 +2,7 @@ import { prisma } from '../prisma/prismaClient.js';
 import { config } from '../utils/config.js';
 import bcrypt from 'bcrypt';
 import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
-import { UserNotFoundError, UserEmailConflictError, UserInvalidCredentialsError } from '../utils/errors.js';
+import { UserNotFoundError, UserEmailConflictError } from '../utils/errors.js';
 import { userInclude } from '../utils/types.js';
 import { Channel } from '../../generated/prisma/enums.js';
 
@@ -57,21 +57,6 @@ export const userRepository = {
         return prisma.user.update({
             where: { id },
             data,
-            select: userInclude,
-        });
-    },
-
-    async changePassword(id: string, currentPassword: string, newPassword: string) {
-        const user = await prisma.user.findUnique({ where: { id }, select: { id: true, passwordHash: true } });
-        if (!user) throw new UserNotFoundError(id);
-
-        const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!valid) throw new UserInvalidCredentialsError();
-
-        const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
-        return prisma.user.update({
-            where: { id },
-            data: { passwordHash, lastPasswordChange: new Date(), refreshTokenVersion: { increment: 1 } },
             select: userInclude,
         });
     },

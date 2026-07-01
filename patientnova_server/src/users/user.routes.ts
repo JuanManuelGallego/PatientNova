@@ -2,7 +2,6 @@ import { Router, type Request, type Response } from 'express';
 import {
     createUserSchema,
     updateUserSchema,
-    changePasswordSchema,
     superAdminUpdateUserSchema,
 } from './user.schemas.js';
 import { userService } from './user.service.js';
@@ -63,17 +62,6 @@ userRouter.patch(
         const user = await userService.update(req.user!.id, req.body);
         logger.info({ userId: user.id }, 'User profile updated');
         ok(res, user);
-    })
-);
-
-userRouter.patch(
-    '/me/change-password',
-    authenticate,
-    validateBody(changePasswordSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        await userService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
-        logger.info({ userId: req.user!.id }, 'User password changed');
-        ok(res, { message: 'Password changed successfully' });
     })
 );
 

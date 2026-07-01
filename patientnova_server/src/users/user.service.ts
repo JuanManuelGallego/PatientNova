@@ -13,10 +13,6 @@ export const userService = {
     return userRepository.update(id, dto);
   },
 
-  async changePassword(id: string, currentPassword: string, newPassword: string) {
-    return userRepository.changePassword(id, currentPassword, newPassword);
-  },
-
   async delete(id: string) {
     return userRepository.delete(id);
   },

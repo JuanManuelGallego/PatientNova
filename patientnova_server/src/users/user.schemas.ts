@@ -59,11 +59,6 @@ export const superAdminUpdateUserSchema = z.object({
     bankingKey: z.string().max(120).optional(),
 });
 
-export const changePasswordSchema = z.object({
-    currentPassword: z.string().min(1),
-    newPassword: strongPassword,
-});
-
 export const createUserSchema = z.object({
     email: z.email(),
     password: strongPassword,
@@ -88,13 +83,11 @@ export const createUserSchema = z.object({
     accountNumber: z.string().max(120).optional(),
     nationalId: z.string().max(120).optional(),
     bankingKey: z.string().max(120).optional(),
-
 });
 
 export type CreateUserDto = z.infer<typeof createUserSchema>;
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;
 export type SuperAdminUpdateUserDto = z.infer<typeof superAdminUpdateUserSchema>;
-export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
 
 export const listUsersSchema = z.object({}).extend(includeDeletedQuery.shape);
 
