@@ -88,7 +88,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
           </label>
 
           {error && (
-            <div className="login-card__error">
+            <div className="login-card__error" style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <STATUS_ICONS.warning size={14} />{" "}
               {error === "Server Error: Invalid credentials"
                 ? "Credenciales incorrectas"

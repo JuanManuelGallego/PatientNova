@@ -1,6 +1,7 @@
 import { PatientStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
 import { e164OrEmpty } from '../utils/types.js';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 export const createPatientSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),
@@ -38,8 +39,11 @@ export const listPatientsSchema = z.object({
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
   from: z.iso.datetime().optional(),
   to: z.iso.datetime().optional(),
-});
+}).extend(includeDeletedQuery.shape);
+
+export const patientStatsSchema = z.object({}).extend(includeDeletedQuery.shape);
 
 export type CreatePatientDto = z.infer<typeof createPatientSchema>;
 export type UpdatePatientDto = z.infer<typeof updatePatientSchema>;
 export type ListPatientsQuery = z.infer<typeof listPatientsSchema>;
+export type PatientStatsQuery = z.infer<typeof patientStatsSchema>;

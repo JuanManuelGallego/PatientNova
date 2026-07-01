@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 export const createAppointmentTypeSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),
@@ -6,7 +7,6 @@ export const createAppointmentTypeSchema = z.object({
   defaultDuration: z.number().int().min(1).default(60),
   defaultPrice: z.number().int().min(0).nullable().optional(),
   color: z.string().max(20).nullable().optional(),
-  icon: z.string().max(50).nullable().optional(),
 });
 
 export const updateAppointmentTypeSchema = z
@@ -16,7 +16,6 @@ export const updateAppointmentTypeSchema = z
     defaultDuration: z.number().int().min(1).optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    icon: z.string().max(50).nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine(
@@ -26,3 +25,7 @@ export const updateAppointmentTypeSchema = z
 
 export type CreateAppointmentTypeDto= z.infer<typeof createAppointmentTypeSchema>;
 export type UpdateAppointmentTypeDto = z.infer<typeof updateAppointmentTypeSchema>;
+
+export const listAppointmentTypesSchema = z.object({}).extend(includeDeletedQuery.shape);
+
+export type ListAppointmentTypesQuery = z.infer<typeof listAppointmentTypesSchema>;

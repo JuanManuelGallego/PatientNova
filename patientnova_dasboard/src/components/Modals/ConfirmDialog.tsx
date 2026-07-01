@@ -56,7 +56,7 @@ export function ConfirmDialog({
           {children}
         </div>
         {error && (
-          <div className="error-inline error-inline--flex">
+          <div className="error-inline error-inline--flex" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <WarnIcon size={14} /> {error}
           </div>
         )}

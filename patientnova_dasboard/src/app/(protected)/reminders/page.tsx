@@ -95,7 +95,7 @@ function RemindersPageContent() {
               onClick={() => setShowCreate(true)}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nuevo Recordatorio
+              Nuevo Recordatorio
             </button>
           }
         />

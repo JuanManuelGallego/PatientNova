@@ -85,7 +85,7 @@ function PatientsPageContent() {
               onClick={() => setShowCreate(true)}
               className="btn-primary btn-hero"
             >
-              <span className="btn-plus-icon">+</span> Nuevo Paciente
+              Nuevo Paciente
             </button>
           }
         />

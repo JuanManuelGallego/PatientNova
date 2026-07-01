@@ -66,70 +66,64 @@ export function LocationsTab() {
           </div>
         </div>
         <button className="btn-primary" onClick={() => setModalLocation(null)}>
-          + Nueva ubicación
+          Nueva ubicación
         </button>
       </div>
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 48,
-            color: "var(--c-gray-400)",
-          }}
-        >
-          <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
-          Cargando ubicaciones…
-        </div>
-      ) : activeLocations.length === 0 ? (
         <div className="dash-card">
           <div
             className="dash-card__body"
-            style={{ textAlign: "center", padding: "48px 24px" }}
+            style={{ textAlign: "center", padding: "48px 24px", color: "var(--c-gray-400)" }}
           >
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                margin: "0 auto 16px",
-                background: "var(--c-gray-100)",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 32,
-              }}
-            >
-              <MapPin size={32} />
-            </div>
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: "var(--c-gray-700)",
-                marginBottom: 4,
-              }}
-            >
-              Sin ubicaciones configuradas
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--c-gray-400)",
-                marginBottom: 20,
-              }}
-            >
-              Agrega los lugares o salas donde atiendes a tus pacientes.
-            </div>
-            <button
-              className="btn-primary"
-              onClick={() => setModalLocation(null)}
-            >
-              + Crear primera ubicación
-            </button>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+            Cargando ubicaciones…
           </div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {activeLocations.length === 0 && (
+            <div className="dash-card">
+              <div
+                className="dash-card__body"
+                style={{ textAlign: "center", padding: "48px 24px" }}
+              >
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    margin: "0 auto 16px",
+                    background: "var(--c-gray-100)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MapPin size={32} />
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "var(--c-gray-700)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Sin ubicaciones configuradas
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--c-gray-400)",
+                    marginBottom: 20,
+                  }}
+                >
+                  Agrega los lugares o salas donde atiendes a tus pacientes.
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeLocations.map((loc) => (
             <LocationCard
               key={loc.id}

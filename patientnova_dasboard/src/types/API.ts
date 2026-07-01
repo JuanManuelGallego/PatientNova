@@ -48,7 +48,8 @@ export interface AppointmentStats {
     totalRevenue: number,
     paidRevenue: number,
     unpaidRevenue: number,
-    unpaidCount: number
+    unpaidCount: number,
+    paidRevenueThisMonth: number;
 }
 
 export interface ReminderStats {

@@ -22,6 +22,7 @@ import { apiError } from './utils/apiUtils.js';
 import cookieParser from 'cookie-parser';
 import { googleRouter } from './google/goole.routes.js';
 import { consentDocumentRouter } from './consent-document/consent-document.routes.js';
+import { responseHandler } from './middlewares/response-handler.js';
 
 const app: Application = express();
 
@@ -42,6 +43,7 @@ app.use(cors({
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser())
+app.use(responseHandler);
 
 app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();

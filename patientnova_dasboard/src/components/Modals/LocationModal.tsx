@@ -37,7 +37,6 @@ export function LocationModal({
     name: location?.name ?? "",
     address: location?.address ?? "",
     color: location?.color ?? "#2563EB",
-    icon: location?.icon ?? "📍",
     isVirtual: location?.isVirtual ?? false,
     instructions: location?.instructions ?? "",
   });
@@ -60,7 +59,6 @@ export function LocationModal({
         name: form.name.trim(),
         address: form.isVirtual ? null : form.address.trim() || null,
         color: form.color,
-        icon: form.icon,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
       };
@@ -101,7 +99,7 @@ export function LocationModal({
         </div>
 
         {error && (
-          <div className="error-inline">
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <STATUS_ICONS.warning size={14} /> {error}
           </div>
         )}

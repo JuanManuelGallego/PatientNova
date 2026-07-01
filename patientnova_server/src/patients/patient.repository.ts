@@ -3,7 +3,7 @@ import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
-import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery } from './patient.schemas.js';
+import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
@@ -34,11 +34,12 @@ export const patientRepository = {
     }
   },
 
-  async getStats(userId: string): Promise<{ total: number; byStatus: Record<string, number> }> {
+  async getStats(userId: string, query?: PatientStatsQuery): Promise<{ total: number; byStatus: Record<string, number> }> {
+    const includeDeleted = query?.includeDeleted ?? false;
     const counts = await prisma.patient.groupBy({
       by: [ 'status' ],
       _count: { _all: true },
-      where: { userId },
+      where: { userId, ...(includeDeleted ? {} : { isDeleted: false }) },
     });
 
     const byStatus: Record<string, number> = {};
@@ -71,11 +72,12 @@ export const patientRepository = {
 
   /** Lists patients. Only loads relation counts — use `findByIdWithRelations` when you need full relations. */
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
-    const { status, search, page, pageSize, orderBy, order } = query;
+    const { status, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.PatientWhereInput = {
       userId,
+      ...(includeDeleted ? {} : { isDeleted: false }),
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
@@ -131,6 +133,17 @@ export const patientRepository = {
 
   async delete(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return prisma.patient.delete({ where: { id } });
+    return prisma.patient.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+  },
+
+  async restore(id: string, userId: string): Promise<Patient> {
+    await patientRepository.findById(id, userId);
+    return prisma.patient.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
+    });
   },
 };

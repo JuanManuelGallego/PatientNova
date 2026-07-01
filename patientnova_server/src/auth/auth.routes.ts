@@ -138,7 +138,7 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
     ok(res, { message: 'Logged out' });
   } catch (err) {
     logger.error({ err }, 'Logout failed');
-    return res.status(500).json({ error: 'Logout failed' });
+    return res.error('Logout failed', 500);
   }
 });
 

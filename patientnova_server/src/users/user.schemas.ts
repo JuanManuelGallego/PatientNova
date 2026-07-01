@@ -1,6 +1,7 @@
 import { AdminRole, AdminStatus, Channel } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
 import { e164OrEmpty, strongPassword } from '../utils/types.js';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 function isValidIANATimezone(tz: string): boolean {
     try {
@@ -16,7 +17,7 @@ export const updateUserSchema = z.object({
     lastName: z.string().min(1).max(100).optional(),
     displayName: z.string().min(1).max(100).optional(),
     jobTitle: z.string().max(120).optional(),
-    avatarUrl: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
+    avatar: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     logo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     altLogo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     phoneNumber: e164OrEmpty,
@@ -40,7 +41,7 @@ export const superAdminUpdateUserSchema = z.object({
     firstName: z.string().min(1).max(100).optional(),
     lastName: z.string().min(1).max(100).optional(),
     displayName: z.string().min(1).max(100).optional(),
-    avatarUrl: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
+    avatar: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     logo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     altLogo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     jobTitle: z.string().max(120).optional(),
@@ -71,7 +72,7 @@ export const createUserSchema = z.object({
     firstName: z.string().min(1).max(100),
     lastName: z.string().min(1).max(100),
     displayName: z.string().min(1).max(100).optional(),
-    avatarUrl: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
+    avatar: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     logo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     altLogo: z.string().max(500_000).nullable().optional(), // base64 data URL ≤ ~375 KB raw
     jobTitle: z.string().max(120).optional(),
@@ -94,3 +95,7 @@ export type CreateUserDto = z.infer<typeof createUserSchema>;
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;
 export type SuperAdminUpdateUserDto = z.infer<typeof superAdminUpdateUserSchema>;
 export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
+
+export const listUsersSchema = z.object({}).extend(includeDeletedQuery.shape);
+
+export type ListUsersQuery = z.infer<typeof listUsersSchema>;

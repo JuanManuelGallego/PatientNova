@@ -128,10 +128,10 @@ export const medicalRecordRepository = {
   },
 
   async findMany(query: ListMedicalRecordsQuery, userId: string) {
-    const { patientId, search, page, pageSize, orderBy, order } = query;
+    const { patientId, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.MedicalRecordWhereInput = { patient: { userId } };
+    const where: Prisma.MedicalRecordWhereInput = { patient: { userId }, ...(includeDeleted ? {} : { isDeleted: false }) };
     if (patientId) where.patientId = patientId;
     if (search) {
       where.OR = [
@@ -252,6 +252,22 @@ export const medicalRecordRepository = {
         },
         include: defaultInclude,
       });
+    });
+  },
+
+  async softDelete(id: string, userId: string) {
+    await medicalRecordRepository.findById(id, userId);
+    return prisma.medicalRecord.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+  },
+
+  async restore(id: string, userId: string) {
+    await medicalRecordRepository.findById(id, userId);
+    return prisma.medicalRecord.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
     });
   },
 

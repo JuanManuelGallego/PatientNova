@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { includeDeletedQuery } from '../utils/schemas.js';
 
 export const createLocationSchema = z
   .object({
@@ -6,9 +7,6 @@ export const createLocationSchema = z
     address: z.string().max(255).nullable().optional(),
     instructions: z.string().max(500).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    bg: z.string().max(20).nullable().optional(),
-    dot: z.string().max(20).nullable().optional(),
-    icon: z.string().max(50).nullable().optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().default(false),
   })
@@ -37,9 +35,6 @@ export const updateLocationSchema = z
     address: z.string().max(255).nullable().optional(),
     instructions: z.string().max(500).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    bg: z.string().max(20).nullable().optional(),
-    dot: z.string().max(20).nullable().optional(),
-    icon: z.string().max(50).nullable().optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().optional(),
     isActive: z.boolean().optional(),
@@ -72,3 +67,7 @@ export const updateLocationSchema = z
 
 export type CreateLocationDto = z.infer<typeof createLocationSchema>;
 export type UpdateLocationDto = z.infer<typeof updateLocationSchema>;
+
+export const listLocationsSchema = z.object({}).extend(includeDeletedQuery.shape);
+
+export type ListLocationsQuery = z.infer<typeof listLocationsSchema>;

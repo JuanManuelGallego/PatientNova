@@ -6,7 +6,7 @@ export interface User {
     firstName: string;
     lastName: string;
     displayName: string
-    avatarUrl: string
+    avatar: string
     logo: string
     altLogo: string
     jobTitle: string
