@@ -3,10 +3,23 @@ import { prisma } from "../prisma/prismaClient.js";
 import { logger } from "../utils/logger.ts";
 
 export async function appointmentWorker(): Promise<void> {
-  logger.info("Running appointment worker...");
+  logger.debug("Running appointment worker...");
   const now = new Date();
 
-  const { count } = await prisma.appointment.updateMany({
+  const pending = await prisma.appointment.findMany({
+    where: {
+      status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] },
+      endAt: { lte: now },
+    },
+    select: { id: true, patientId: true, status: true },
+  });
+
+  if (pending.length === 0) {
+    logger.debug("No appointments to complete at this time");
+    return;
+  }
+
+  await prisma.appointment.updateMany({
     where: {
       status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] },
       endAt: { lte: now },
@@ -14,9 +27,5 @@ export async function appointmentWorker(): Promise<void> {
     data: { status: AppointmentStatus.COMPLETED, completedAt: now },
   });
 
-  if (count === 0) {
-    logger.info("No appointments to complete at this time");
-  } else {
-    logger.info({ count }, "Appointments marked as completed");
-  }
+  logger.info({ count: pending.length, appointmentIds: pending.map(a => a.id) }, "Appointments marked as completed");
 }

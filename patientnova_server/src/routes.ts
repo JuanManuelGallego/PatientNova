@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { getMessageStatus } from './twilio/twilioClient.js';
 import { prisma } from './prisma/prismaClient.js';
 import { apiError, ok } from './utils/apiUtils.js';
+import { logger } from './utils/logger.js';
 
 export const router = Router();
 
@@ -28,6 +29,7 @@ router.get('/health', async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
+    logger.error({ err }, 'Health check failed: database connection error');
     apiError(res, 'Service unhealthy: Database connection failed', 503);
   }
 });
@@ -47,6 +49,7 @@ router.get('/messages/:messageSid', messageStatusLimit, async (req: Request, res
     const status = await getMessageStatus(messageSid);
     ok(res, status);
   } catch (err) {
+    logger.error({ err, messageSid }, 'Failed to fetch message status from Twilio');
     apiError(res, 'Failed to fetch message status', 500);
   }
 });

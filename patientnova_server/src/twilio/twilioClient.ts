@@ -11,7 +11,7 @@ let _client: Twilio | null = null;
 function getClient(): Twilio {
   if (!_client) {
     _client = twilio(config.twilio.accountSid, config.twilio.authToken);
-    logger.info('Twilio client initialised');
+    logger.debug('Twilio client initialised');
   }
   return _client;
 }
@@ -24,7 +24,7 @@ export async function sendWhatsApp(
   const to = `whatsapp:${req.to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.info({ to, from }, 'Sending WhatsApp message');
+  logger.debug({ to, from }, 'Sending WhatsApp message');
 
   const messageParams: Parameters<Twilio[ 'messages' ][ 'create' ]>[ 0 ] =
   {
@@ -39,7 +39,7 @@ export async function sendWhatsApp(
 
   const message = await getClient().messages.create(messageParams);
 
-  logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
+  logger.debug({ sid: message.sid, status: message.status }, 'WhatsApp message successfully queued');
 
   return {
     success: message.status === 'queued' || message.status === 'sent',
@@ -60,7 +60,7 @@ export async function scheduleWhatsApp(
   const to = `whatsapp:${req.payload.to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.info({ to, from }, 'Sending WhatsApp message');
+  logger.debug({ to, from }, 'Sending scheduled WhatsApp message');
 
   const messageParams: Parameters<Twilio[ 'messages' ][ 'create' ]>[ 0 ] =
   {
@@ -75,7 +75,7 @@ export async function scheduleWhatsApp(
 
   const message = await getClient().messages.create(messageParams);
 
-  logger.info({ sid: message.sid, status: message.status }, 'WhatsApp message successfuly queued');
+  logger.debug({ sid: message.sid, status: message.status }, 'Scheduled WhatsApp message successfully queued');
 
   return {
     success: message.status === 'queued' || message.status === 'sent',
@@ -93,11 +93,11 @@ export async function sendWhatsAppFreeForm(to: string, body: string): Promise<No
   const toAddr = `whatsapp:${to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.info({ to: toAddr, from }, 'Sending free-form WhatsApp reply');
+  logger.debug({ to: toAddr, from }, 'Sending free-form WhatsApp reply');
 
   const message = await getClient().messages.create({ from, to: toAddr, body });
 
-  logger.info({ sid: message.sid, status: message.status }, 'Free-form WhatsApp reply queued');
+  logger.debug({ sid: message.sid, status: message.status }, 'Free-form WhatsApp reply queued');
 
   return {
     success: message.status === 'queued' || message.status === 'sent',
@@ -116,7 +116,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
     throw new Error('"body" is required and cannot be empty');
   }
 
-  logger.info({ to: req.to }, 'Sending SMS');
+  logger.debug({ to: req.to }, 'Sending SMS');
 
   const message = await getClient().messages.create({
     from: config.twilio.smsFrom,
@@ -124,7 +124,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
     body: req.body,
   });
 
-  logger.info({ sid: message.sid, status: message.status }, 'SMS queued');
+  logger.debug({ sid: message.sid, status: message.status }, 'SMS queued');
 
   return {
     success: message.status === 'queued' || message.status === 'sent',

@@ -208,6 +208,7 @@ export const appointmentService = {
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {
     const appt = await appointmentRepository.findById(id, userId);
     validateStatusTransition(appt.status, status);
+    logger.info({ appointmentId: id, userId, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
     return appointmentRepository.update(id, { status });
   },
 
@@ -217,17 +218,20 @@ export const appointmentService = {
       throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
     }
 
+    logger.info({ appointmentId: id, userId, status: appt.status }, 'Appointment marked as paid');
     return await appointmentRepository.update(id, { paid: true });
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
     await appointmentRepository.findById(id, userId);
     await appointmentRepository.delete(id, userId);
+    logger.info({ appointmentId: id, userId }, 'Appointment deleted');
     return { id };
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
+    logger.info({ appointmentId: id, userId }, 'Appointment restored');
     return appointmentRepository.restore(id, userId);
   },
 };

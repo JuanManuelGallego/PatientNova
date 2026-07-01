@@ -3,6 +3,7 @@ import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
+import { logger } from '../utils/logger.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
@@ -28,6 +29,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err) && dto.email) {
+        logger.warn({ email: dto.email, operation: 'create' }, 'Patient email conflict');
         throw new PatientEmailConflictError(dto.email);
       }
       throw err;
@@ -124,6 +126,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
+        logger.warn({ email: dto.email, operation: 'update', patientId: id }, 'Patient email conflict');
         throw new PatientEmailConflictError(dto.email!);
       }
       throw err;

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { twilioWebhookAuth } from '../middlewares/twilioWebhookAuth.js';
 import { twilioWebhookService } from './twilio-webhook.service.js';
+import { logger } from '../utils/logger.js';
 
 export const twilioWebhookRouter = Router();
 
@@ -21,14 +22,17 @@ twilioWebhookRouter.post(
   '/',
   twilioWebhookAuth,
   async (req: Request, res: Response) => {
-    // Always respond with an empty TwiML response so Twilio doesn't retry
     res.set('Content-Type', 'text/xml');
 
-    await twilioWebhookService.processWhatsAppReply({
-      from: req.body.From,
-      buttonPayload: req.body.ButtonPayload,
-      body: req.body.Body,
-    });
+    try {
+      await twilioWebhookService.processWhatsAppReply({
+        from: req.body.From,
+        buttonPayload: req.body.ButtonPayload,
+        body: req.body.Body,
+      });
+    } catch (err) {
+      logger.error({ err, from: req.body.From, buttonPayload: req.body.ButtonPayload }, 'Twilio webhook processing failed');
+    }
 
     res.status(200).send(TWIML_EMPTY_RESPONSE);
   },

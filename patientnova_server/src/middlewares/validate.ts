@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { apiError } from '../utils/apiUtils.js';
+import { logger } from '../utils/logger.js';
 
 type Target = 'body' | 'query' | 'params';
 
@@ -17,6 +18,7 @@ function makeValidator<T extends z.ZodTypeAny>(
     const errors = result.error.issues.map(
       (e) => `${e.path.join('.') || target}: ${e.message}`
     );
+    logger.debug({ ip: req.ip, url: req.originalUrl, method: req.method, target, errors: errors.join('; ') }, 'Validation failed');
     apiError(res, errors.join('; '), 400);
     return;
   }

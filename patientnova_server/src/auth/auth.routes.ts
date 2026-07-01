@@ -97,6 +97,7 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
     if (err instanceof AuthRefreshTokenRevokedError) {
       return apiError(res, err.message, err.errorCode);
     }
+    logger.error({ err }, 'Token refresh failed');
     return apiError(res, 'Invalid refresh token', 401);
   }
 });

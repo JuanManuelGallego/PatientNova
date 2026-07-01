@@ -18,14 +18,24 @@ function createPrismaClient() {
     max: 10, // pg default is also 10, but explicit is better
   });
 
-  return new PrismaClient({
+  const baseClient = new PrismaClient({
     adapter,
     log: [
       { emit: "event", level: "query" },
       { emit: "event", level: "error" },
       { emit: "event", level: "warn" },
     ],
-  }).$extends(encryptionExtension);
+  });
+
+  baseClient.$on("error", (e) => {
+    logger.error({ message: e.message, target: e.target }, "Prisma error event");
+  });
+
+  baseClient.$on("warn", (e) => {
+    logger.warn({ message: e.message, target: e.target }, "Prisma warn event");
+  });
+
+  return baseClient.$extends(encryptionExtension);
 }
 
 export const prisma = global.__prisma ?? createPrismaClient();

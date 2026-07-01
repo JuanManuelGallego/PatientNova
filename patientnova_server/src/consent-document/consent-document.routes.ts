@@ -94,28 +94,36 @@ consentDocumentRouter.get(
     asyncHandler(async (req: Request, res: Response) => {
         const userId = req.params.userId as string;
         const ext = req.params.ext as string;
+        const ip = req.ip ?? 'unknown';
+
+        logger.info({ ip, userId, ext }, 'Public consent document download requested');
 
         if (![ 'pdf', 'png', 'jpeg', 'jpg' ].includes(ext.toLowerCase())) {
+            logger.warn({ ip, userId, ext }, 'Public download rejected: invalid file extension');
             res.error('Invalid file extension requested', 400);
             return;
         }
 
         if (!CUID_RE.test(userId)) {
+            logger.warn({ ip, userId }, 'Public download rejected: invalid userId format');
             res.error('Invalid userId', 400);
             return;
         }
 
         const document = await consentDocumentService.getContentByUserId(userId);
         if (!document) {
+            logger.warn({ ip, userId }, 'Public download rejected: document not found');
             res.error('Document not found', 404);
             return;
         }
 
         if (!ALLOWED_MIME_TYPES.has(document.mimeType)) {
+            logger.warn({ ip, userId, mimeType: document.mimeType }, 'Public download rejected: unsupported MIME type');
             res.error('Unsupported document type', 415);
             return;
         }
 
+        logger.info({ ip, userId, mimeType: document.mimeType, sizeBytes: document.sizeBytes }, 'Public consent document served');
         res.setHeader('Content-Type', document.mimeType);
 
         const encoded = encodeURIComponent(document.name);

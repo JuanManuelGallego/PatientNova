@@ -95,7 +95,7 @@ export async function dailyReminderWorker(): Promise<void> {
       const { hour, minute } = getLocalTimeParts(user.timezone);
       // Only trigger at exactly 6:00 PM in the user's timezone
       if (hour !== DAILY_REMINDER_HOUR || minute !== 0) continue;
-      logger.info("Running daily reminder worker...");
+      logger.debug("Running daily reminder worker...");
 
       // Idempotency guard: skip if already sent today for this user
       const todayLocal = getTodayLocalDate(user.timezone);

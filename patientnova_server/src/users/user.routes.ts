@@ -74,7 +74,7 @@ userRouter.patch(
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.update(req.params.id as string, req.body);
-        logger.info({ userId: user.id }, 'User updated by super-admin');
+        logger.info({ targetUserId: user.id, adminUserId: req.user!.id, fields: Object.keys(req.body) }, 'User updated by super-admin');
         ok(res, user);
     })
 );
@@ -85,7 +85,7 @@ userRouter.patch(
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.delete(req.params.id as string);
-        logger.info({ userId: user.id }, 'User deleted by super-admin');
+        logger.info({ targetUserId: user.id, adminUserId: req.user!.id }, 'User deleted by super-admin');
         ok(res, user);
     })
 );
@@ -96,7 +96,7 @@ userRouter.patch(
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.restore(req.params.id as string);
-        logger.info({ userId: user.id }, 'User restored by super-admin');
+        logger.info({ targetUserId: user.id, adminUserId: req.user!.id }, 'User restored by super-admin');
         ok(res, user);
     })
 );

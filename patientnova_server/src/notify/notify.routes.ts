@@ -8,6 +8,7 @@ import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/cl
 import { validateBody } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { patientService } from '../patients/patient.service.js';
+import { logger } from '../utils/logger.js';
 
 export const notifyRouter = Router();
 
@@ -37,12 +38,14 @@ notifyRouter.post(
 
     try {
       const result = await sendWhatsApp(req.body);
+      logger.info({ reminderId: reminder.id, messageSid: result.messageSid, channel: 'WHATSAPP', to: req.body.to }, 'WhatsApp message sent successfully');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.SENT,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
+      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', to: req.body.to, error: err instanceof Error ? err.message : err }, 'WhatsApp message send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
@@ -77,12 +80,14 @@ notifyRouter.post(
 
     try {
       const result = await sendSms(req.body);
+      logger.info({ reminderId: reminder.id, messageSid: result.messageSid, channel: 'SMS', to: req.body.to }, 'SMS message sent successfully');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.SENT,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
+      logger.error({ reminderId: reminder.id, channel: 'SMS', to: req.body.to, error: err instanceof Error ? err.message : err }, 'SMS message send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
