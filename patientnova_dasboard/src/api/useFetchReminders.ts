@@ -10,6 +10,6 @@ export const useFetchReminders = (filters?: FetchRemindersFilters) => {
         [ filters ]
     );
     const { items: reminders, loading, error, refetch: fetchReminders, total, totalPages } =
-        useApiPaginatedQuery<Reminder>(url, { pollingIntervalMs: 60000, errorMessage: "Failed to load reminders" });
+        useApiPaginatedQuery<Reminder>(url, "Failed to load reminders");
     return { reminders, loading, error, fetchReminders, total, totalPages };
 };

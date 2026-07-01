@@ -9,7 +9,7 @@ export const useFetchPatient = (patientId: string) => {
         [ patientId ]
     );
     const { data: patient, loading, error, refetch: fetchPatient } =
-        useApiQuery<Patient>(url, { errorMessage: "Failed to load patient" });
+        useApiQuery<Patient>(url, "Failed to load patient" );
 
     return { patient, loading, error, fetchPatient };
 }

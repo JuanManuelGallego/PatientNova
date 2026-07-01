@@ -10,6 +10,6 @@ export const useFetchAppointments = (filters?: FetchAppointmentsFilters) => {
         [ filters ]
     );
     const { items: appointments, loading, error, refetch: fetchAppointments, total, totalPages } =
-        useApiPaginatedQuery<Appointment>(url, { pollingIntervalMs: 300000, errorMessage: "Failed to load appointments" });
+        useApiPaginatedQuery<Appointment>(url, "Failed to load appointments");
     return { appointments, loading, error, fetchAppointments, total, totalPages };
 };

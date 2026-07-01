@@ -328,7 +328,9 @@ export function ProfileTab() {
                   handleFieldChange();
                 }}
               >
-                <ACTION_ICONS.delete size={14} /> Eliminar foto
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <ACTION_ICONS.delete size={14} /> Eliminar foto
+                </div>
               </button>
             )}
             <input
@@ -638,7 +640,9 @@ export function ProfileTab() {
                   style={{ flex: 1 }}
                   onClick={() => consentRef.current?.click()}
                 >
-                  <Upload size={14} /> Reemplazar
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Upload size={14} /> Reemplazar
+                  </div>
                 </button>
                 <button
                   type="button"
@@ -647,7 +651,9 @@ export function ProfileTab() {
                   onClick={handleConsentDelete}
                   disabled={docLoading}
                 >
-                  <ACTION_ICONS.delete size={14} /> Eliminar
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <ACTION_ICONS.delete size={14} /> Eliminar
+                  </div>
                 </button>
               </div>
             </div>
