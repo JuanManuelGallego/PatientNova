@@ -87,8 +87,7 @@ patientRouter.patch(
 
 /**
  * DELETE /patients/:id
- * Permanently delete a patient record.
- * Consider using PATCH /patients/:id { status: "ARCHIVED" } for soft deletes.
+ * Soft-delete a patient record.
  */
 patientRouter.delete(
   '/:id',

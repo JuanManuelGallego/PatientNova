@@ -45,7 +45,7 @@ export const patientRepository = {
     const byStatus: Record<string, number> = {};
     let total = 0;
     for (const row of counts) {
-      if (!row.status || row.status === PatientStatus.ARCHIVED) continue;
+      if (!row.status) continue;
       byStatus[ row.status ] = row._count._all;
       total += row._count._all;
     }
@@ -120,7 +120,6 @@ export const patientRepository = {
           ...(dto.notes !== undefined && { notes: dto.notes || null }),
           ...(dto.status !== undefined && { status: dto.status }),
           ...(dto.appointmentTypeId !== undefined && { appointmentTypeId: dto.appointmentTypeId || null }),
-          ...({ archivedAt: dto.status === PatientStatus.ARCHIVED ? new Date() : null })
         },
       });
     } catch (err) {

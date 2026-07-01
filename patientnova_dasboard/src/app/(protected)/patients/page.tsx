@@ -20,7 +20,7 @@ import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
-import { ArchivePatientModal } from "@/src/components/Modals/ArchivedPatientModal";
+import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
@@ -44,7 +44,6 @@ function PatientsPageContent() {
       "All",
       PatientStatus.ACTIVE,
       PatientStatus.INACTIVE,
-      PatientStatus.ARCHIVED,
     ]).withDefault("All"),
   );
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -276,7 +275,7 @@ function PatientsPageContent() {
         />
       )}
       {deletePatient && (
-        <ArchivePatientModal
+        <DeletePatientModal
           patient={deletePatient}
           onClose={() => setDeletePatient(null)}
           onDeleted={() => {

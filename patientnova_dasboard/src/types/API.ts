@@ -31,7 +31,6 @@ export interface PatientStats {
     byStatus: {
         [ PatientStatus.ACTIVE ]: number;
         [ PatientStatus.INACTIVE ]: number;
-        [ PatientStatus.ARCHIVED ]: number;
     };
 }
 
