@@ -10,7 +10,7 @@ export const useFetchPatients = (filters?: FetchPatientsFilters) => {
         [ filters ]
     );
     const { items: patients, loading, error, refetch: fetchPatients, total, totalPages } =
-        useApiPaginatedQuery<Patient>(url, { errorMessage: "Failed to load patients" });
+        useApiPaginatedQuery<Patient>(url,"Failed to load patients");
 
     return { patients, loading, error, fetchPatients, total, totalPages };
 }

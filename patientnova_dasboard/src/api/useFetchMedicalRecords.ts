@@ -11,7 +11,7 @@ export const useFetchMedicalRecords = (filters?: FetchMedicalRecordFilters) => {
     );
 
     const { items: medicalRecords, loading, error, refetch: fetchMedicalRecords, total, totalPages } =
-        useApiPaginatedQuery<MedicalRecord>(url, { errorMessage: "Failed to load medical record" });
+        useApiPaginatedQuery<MedicalRecord>(url, "Failed to load medical record");
 
     return { medicalRecords, loading, error, fetchMedicalRecords, total, totalPages };
 };

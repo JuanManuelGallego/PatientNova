@@ -5,7 +5,7 @@ import { useApiQuery } from "./useApiQuery";
 
 export const useFetchLocations = (includeInactive = false) => {
     const { data, loading, error, refetch: fetchLocations } =
-        useApiQuery<AppointmentLocation[]>(`${API_BASE}/locations`, { errorMessage: "Failed to load locations" });
+        useApiQuery<AppointmentLocation[]>(`${API_BASE}/locations`, "Failed to load locations");
     const locations = useMemo(
         () => (data ?? []).filter(l => includeInactive || l.isActive),
         [ data, includeInactive ]
