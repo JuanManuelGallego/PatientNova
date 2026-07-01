@@ -32,9 +32,9 @@ const initialState = <T>(): State<T> => ({
 
 export function useApiQuery<T>(
     url: string | null,
-    options?: { pollingIntervalMs?: number; errorMessage?: string }
+    errorMessage?: string
 ) {
-    const { pollingIntervalMs, errorMessage = "Failed to load data" } = options ?? {};
+    errorMessage ??= "Failed to load data";
 
     const [ state, dispatch ] = useReducer(reducer<T>, undefined, initialState<T>);
 
@@ -80,17 +80,8 @@ export function useApiQuery<T>(
             await fetchData(controller.signal);
         })();
 
-        if (!pollingIntervalMs) return () => controller.abort();
-
-        const interval = setInterval(() => {
-            if (!document.hidden) void fetchData(controller.signal);
-        }, pollingIntervalMs);
-
-        return () => {
-            controller.abort();
-            clearInterval(interval);
-        };
-    }, [ url, pollingIntervalMs, fetchData ]);
+        return () => controller.abort();
+    }, [ url, fetchData ]);
 
     return { ...state, refetch };
 }

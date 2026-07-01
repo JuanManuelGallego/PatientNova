@@ -195,6 +195,7 @@ export const appointmentRepository = {
           },
         }
         : {}),
+        ...({ isDeleted: false })
     };
 
     const { start: todayStart, end: todayEnd } = getTodayBoundsInTz(timezone);
@@ -215,7 +216,7 @@ export const appointmentRepository = {
       prisma.appointment.aggregate({
         _sum: { price: true },
         _count: { _all: true },
-        where: { ...where, paid: false },
+        where: { ...where, paid: false, status: { not: AppointmentStatus.CANCELLED } },
       }),
       prisma.appointment.count({
         where: { ...where, startAt: { gte: todayStart, lte: todayEnd } },
