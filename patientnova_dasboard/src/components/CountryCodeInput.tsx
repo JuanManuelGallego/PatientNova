@@ -75,7 +75,6 @@ export function CountryCodeInput({
         setSelectedIso(newIso);
         const newCode = COUNTRY_CODES.find(c => c.iso === newIso)?.code ?? "+57";
         onChange(local ? newCode + local : "");
-        console.log(newIso, newCode)
     }
 
     function handleLocalChange(e: React.ChangeEvent<HTMLInputElement>) {

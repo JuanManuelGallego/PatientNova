@@ -225,7 +225,6 @@ export function ProfileTab() {
   // ── Save ───────────────────────────────────────────────────────────────────
 
   function handleFieldChange(overrides: Partial<User> = {}) {
-    console.log(overrides)
     setError(null);
     const payload: Partial<User> = {
       firstName: (overrides.firstName ?? firstName).trim() || undefined,

@@ -111,7 +111,6 @@ export default function CalendarPage() {
       };
     }
     if (viewMode === "day") {
-      console.log("Calculating day range for:", dayDate);
       return toUtcRangeFromLocalDay(dayDate);
     }
     const d = new Date(dayDate);
@@ -494,9 +493,7 @@ export default function CalendarPage() {
     const dayAppts = apptByDate[dayDate] ?? [];
     const holiday = holidayMap[dayDate];
     const isToday = dayDate === TODAY_STR;
-    console.log(dayDate);
-    console.log(apptByDate);
-    console.log(dayAppts);
+
     return (
       <div style={{ overflowX: "hidden" }}>
         {holiday && (
