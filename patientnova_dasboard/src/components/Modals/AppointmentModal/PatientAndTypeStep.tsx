@@ -35,8 +35,9 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
                             ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: getPatientFullName(p) }))
                             : [ { value: "", label: LBL_NO_PATIENTS } ]}
                         onChange={(v) => {
-                            const typeId = patients.find(p => p.id === v)?.appointmentTypeId ?? '';
-                            setForm(f => ({ ...f, patientId: v, typeId }))
+                            const selectedPatient = patients.find(p => p.id === v);
+                            const type = appointmentTypes.find(t => t.id === selectedPatient?.appointmentTypeId);
+                            setForm(f => ({ ...f, patientId: v, typeId: type?.id ?? '', price: type?.defaultPrice ?? 0 }));
                         }}
                     />
                 </label>
