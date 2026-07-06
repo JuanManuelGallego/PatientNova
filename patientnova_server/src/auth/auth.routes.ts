@@ -1,50 +1,21 @@
 import { Router, type Request, type Response } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { prisma } from '../prisma/prismaClient.js';
+import { z } from 'zod';
+import { authService } from './auth.service.js';
+import { loginSchema, changePasswordSchema } from './auth.schemas.js';
 import { apiError, ok } from '../utils/apiUtils.js';
-import { config } from '../utils/config.js';
 import { FIFTEEN_MINUTES_MS, SEVEN_DAYS_MS } from '../utils/constants.js';
 import { authenticate } from '../middlewares/authenticate.js';
+import { validateBody } from '../middlewares/validate.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { logger } from '../utils/logger.js';
-import { toUserResponse } from '../users/user.dto.js';
-
-interface RefreshTokenPayload {
-  type: string;
-  id: string;
-  version: number;
-}
-
-function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload {
-  return (
-    typeof payload === 'object' &&
-    payload !== null &&
-    'type' in payload &&
-    'id' in payload &&
-    'version' in payload &&
-    (payload as RefreshTokenPayload).type === 'refresh'
-  );
-}
+import {
+  AuthInvalidCredentialsError,
+  AuthAccountLockedError,
+  AuthRefreshTokenExpiredError,
+  AuthRefreshTokenRevokedError,
+} from '../utils/errors.js';
 
 export const authRouter = Router();
-
-// Precomputed dummy hash used to ensure constant-time response on login
-// regardless of whether the email exists, preventing user enumeration via timing.
-let _dummyHash: string | undefined;
-async function getDummyHash(): Promise<string> {
-  if (!_dummyHash) _dummyHash = await bcrypt.hash('__dummy_timing_sink__', config.auth.bcryptRounds);
-  return _dummyHash;
-}
-
-function getCookieDefaults() {
-  const isProduction = config.env === 'production';
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: (isProduction ? 'lax' : 'strict') as 'lax' | 'strict',
-    ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
-  };
-}
 
 /**
  * POST /auth/login
@@ -53,70 +24,33 @@ function getCookieDefaults() {
  */
 authRouter.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return apiError(res, 'Email and password required', 400);
+    const dto = loginSchema.parse(req.body);
+    const result = await authService.login(dto.email, dto.password, req.ip ?? '');
+    const cookieDefaults = authService.getCookieDefaults();
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || user.status !== 'ACTIVE') {
-      await bcrypt.compare(password, await getDummyHash()); // constant-time sink to prevent email enumeration
-      return apiError(res, 'Invalid credentials', 401);
-    }
-
-    // Check account lockout
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      return apiError(res, 'Account temporarily locked. Try again later.', 423);
-    }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      // Increment failed attempts and lock if threshold reached
-      const failedAttempts = user.failedLoginAttempts + 1;
-      const lockData: { failedLoginAttempts: number; lockedUntil?: Date } = { failedLoginAttempts: failedAttempts };
-      if (failedAttempts >= config.lockout.maxFailedAttempts) {
-        lockData.lockedUntil = new Date(Date.now() + config.lockout.lockoutDurationMs);
-      }
-      await prisma.user.update({ where: { id: user.id }, data: lockData });
-      return apiError(res, 'Invalid credentials', 401);
-    }
-
-    // Reset failed attempts on successful login and capture updated user for response
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-        lastLoginIp: req.ip?.replace('::ffff:', '') ?? null,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
-
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' }
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user.id, type: 'refresh', version: user.refreshTokenVersion },
-      config.auth.jwtSecret,
-      { expiresIn: '7d' }
-    );
-
-    const cookieDefaults = getCookieDefaults();
-
-    res.cookie('token', accessToken, {
+    res.cookie('token', result.accessToken, {
       ...cookieDefaults,
       maxAge: FIFTEEN_MINUTES_MS,
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken', result.refreshToken, {
       ...cookieDefaults,
       path: '/auth/refresh',
       maxAge: SEVEN_DAYS_MS,
     });
 
-    ok(res, toUserResponse(updatedUser));
-  } catch {
+    ok(res, result.user);
+  } catch (err) {
+    if (err instanceof AuthInvalidCredentialsError) {
+      return apiError(res, err.message, err.errorCode);
+    }
+    if (err instanceof AuthAccountLockedError) {
+      return apiError(res, err.message, err.errorCode);
+    }
+    if (err instanceof z.ZodError) {
+      return apiError(res, 'Invalid input', 400);
+    }
+    logger.error({ err }, 'Login failed');
     apiError(res, 'Login failed', 500);
   }
 });
@@ -127,17 +61,13 @@ authRouter.post('/login', async (req: Request, res: Response) => {
  */
 authRouter.post('/logout', authenticate, async (req: Request, res: Response) => {
   try {
-    // Invalidate all outstanding refresh tokens for this user by bumping the version
-    await prisma.user.update({
-      where: { id: req.user!.id },
-      data: { refreshTokenVersion: { increment: 1 } },
-    });
-    const cookieDefaults = getCookieDefaults();
+    await authService.logout(req.user!.id);
+    const cookieDefaults = authService.getCookieDefaults();
     res.clearCookie('token', cookieDefaults);
     res.clearCookie('refreshToken', { ...cookieDefaults, path: '/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
-    logger.error({ err }, 'Logout failed');
+    logger.error({ err, userId: req.user!.id }, 'Logout failed');
     return res.error('Logout failed', 500);
   }
 });
@@ -151,37 +81,37 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
     const token = req.cookies?.refreshToken;
     if (!token) return apiError(res, 'No refresh token', 401);
 
-    const payload = jwt.verify(token, config.auth.jwtSecret);
-    if (!isRefreshTokenPayload(payload)) {
-      return apiError(res, 'Invalid refresh token', 401);
-    }
+    const result = await authService.refreshToken(token);
+    const cookieDefaults = authService.getCookieDefaults();
 
-    const user = await prisma.user.findUnique({ where: { id: payload.id } });
-    if (!user || user.status !== 'ACTIVE') return apiError(res, 'Invalid refresh token', 401);
-
-    // Reject if the token version no longer matches (user has logged out)
-    if (payload.version !== user.refreshTokenVersion) {
-      return apiError(res, 'Refresh token has been revoked', 401);
-    }
-
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' }
-    );
-
-    res.cookie('token', accessToken, {
-      ...getCookieDefaults(),
+    res.cookie('token', result.accessToken, {
+      ...cookieDefaults,
       maxAge: FIFTEEN_MINUTES_MS,
     });
 
     ok(res, { message: 'Token refreshed' });
   } catch (err) {
-    if (err instanceof jwt.TokenExpiredError) {
-      return apiError(res, 'Refresh token expired', 401);
+    if (err instanceof AuthRefreshTokenExpiredError) {
+      return apiError(res, err.message, err.errorCode);
     }
+    if (err instanceof AuthRefreshTokenRevokedError) {
+      return apiError(res, err.message, err.errorCode);
+    }
+    logger.error({ err }, 'Token refresh failed');
     return apiError(res, 'Invalid refresh token', 401);
   }
 });
 
-
+/**
+ * PATCH /auth/change-password
+ * Requires authentication. Changes the user's password.
+ */
+authRouter.patch(
+  '/change-password',
+  authenticate,
+  validateBody(changePasswordSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    await authService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+    ok(res, { message: 'Password changed successfully' });
+  })
+);

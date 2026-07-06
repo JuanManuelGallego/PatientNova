@@ -3,6 +3,7 @@ import { prisma } from '../prisma/prismaClient.js';
 import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
+import { logger } from '../utils/logger.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
@@ -28,6 +29,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err) && dto.email) {
+        logger.warn({ email: dto.email, operation: 'create' }, 'Patient email conflict');
         throw new PatientEmailConflictError(dto.email);
       }
       throw err;
@@ -53,14 +55,12 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
-  /** Fetches a patient without relations. Throws if not found. */
   async findById(id: string, userId: string): Promise<Patient> {
     const patient = await prisma.patient.findFirst({ where: { id, userId } });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;
   },
 
-  /** Fetches a patient including appointments and reminders. Throws if not found. */
   async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
     const patient = await prisma.patient.findFirst({
       where: { id, userId },
@@ -70,7 +70,6 @@ export const patientRepository = {
     return patient;
   },
 
-  /** Lists patients. Only loads relation counts — use `findByIdWithRelations` when you need full relations. */
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
     const { status, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
@@ -124,6 +123,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
+        logger.warn({ email: dto.email, operation: 'update', patientId: id }, 'Patient email conflict');
         throw new PatientEmailConflictError(dto.email!);
       }
       throw err;

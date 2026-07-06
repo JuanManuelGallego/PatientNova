@@ -2,19 +2,21 @@ import { Router, type Request, type Response } from 'express';
 import {
     createUserSchema,
     updateUserSchema,
-    changePasswordSchema,
     superAdminUpdateUserSchema,
 } from './user.schemas.js';
 import { userService } from './user.service.js';
 import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
-import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { consentDocumentRouter } from '../consent-document/consent-document.routes.js';
 
 export const userRouter = Router();
 
+/**
+ * POST /users
+ * Create a new user (super admin only).
+ */
 userRouter.post(
     '/',
     authenticate,
@@ -22,11 +24,14 @@ userRouter.post(
     validateBody(createUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.create(req.body);
-        logger.info({ userId: user.id, email: user.email }, 'User created');
         ok(res, user, 201);
     })
 );
 
+/**
+ * GET /users
+ * List all users (super admin only). Optionally includes soft-deleted users.
+ */
 userRouter.get(
     '/',
     authenticate,
@@ -38,6 +43,10 @@ userRouter.get(
     })
 );
 
+/**
+ * GET /users/me
+ * Get the current authenticated user's profile.
+ */
 userRouter.get(
     '/me',
     authenticate,
@@ -46,6 +55,10 @@ userRouter.get(
     })
 );
 
+/**
+ * GET /users/:id
+ * Get a user by UUID (super admin only).
+ */
 userRouter.get(
     '/:id',
     authenticate,
@@ -55,30 +68,26 @@ userRouter.get(
     })
 );
 
+/**
+ * PATCH /users/me
+ * Update the current authenticated user's profile.
+ */
 userRouter.patch(
     '/me',
     authenticate,
     validateBody(updateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.update(req.user!.id, req.body);
-        logger.info({ userId: user.id }, 'User profile updated');
         ok(res, user);
-    })
-);
-
-userRouter.patch(
-    '/me/change-password',
-    authenticate,
-    validateBody(changePasswordSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        await userService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
-        logger.info({ userId: req.user!.id }, 'User password changed');
-        ok(res, { message: 'Password changed successfully' });
     })
 );
 
 userRouter.use('/me/consent-document', consentDocumentRouter);
 
+/**
+ * PATCH /users/:id
+ * Update a user (super admin only).
+ */
 userRouter.patch(
     '/:id',
     authenticate,
@@ -86,29 +95,34 @@ userRouter.patch(
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.update(req.params.id as string, req.body);
-        logger.info({ userId: user.id }, 'User updated by super-admin');
         ok(res, user);
     })
 );
 
+/**
+ * PATCH /users/:id/delete
+ * Soft-delete a user (super admin only, sets isDeleted=true).
+ */
 userRouter.patch(
     '/:id/delete',
     authenticate,
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.delete(req.params.id as string);
-        logger.info({ userId: user.id }, 'User deleted by super-admin');
         ok(res, user);
     })
 );
 
+/**
+ * PATCH /users/:id/restore
+ * Restore a soft-deleted user (super admin only, sets isDeleted=false).
+ */
 userRouter.patch(
     '/:id/restore',
     authenticate,
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.restore(req.params.id as string);
-        logger.info({ userId: user.id }, 'User restored by super-admin');
         ok(res, user);
     })
 );

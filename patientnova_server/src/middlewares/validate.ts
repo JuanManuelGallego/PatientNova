@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { apiError } from '../utils/apiUtils.js';
+import { logger } from '../utils/logger.js';
 
 type Target = 'body' | 'query' | 'params';
 
@@ -17,9 +18,12 @@ function makeValidator<T extends z.ZodTypeAny>(
     const errors = result.error.issues.map(
       (e) => `${e.path.join('.') || target}: ${e.message}`
     );
+    logger.debug({ method: req.method, url: req.originalUrl, target, errors: errors.join('; ') }, 'VALIDATION FAILED');
     apiError(res, errors.join('; '), 400);
     return;
   }
+
+  logger.debug({ method: req.method, url: req.originalUrl, target }, 'VALIDATION OK');
 
   // Write coerced/defaulted values back onto the request
   Object.defineProperty(req, target, {

@@ -17,7 +17,6 @@ export const consentDocumentRepository = {
                 name: dto.name,
                 content: Buffer.from(dto.content, 'base64'),
                 mimeType: dto.mimeType,
-                // sizeBytes will be calculated from content length
                 sizeBytes: Buffer.byteLength(dto.content, 'base64'),
             },
         });
@@ -105,7 +104,7 @@ export const consentDocumentRepository = {
             id: document.id,
             name: document.name,
             mimeType: document.mimeType,
-            content: document.content, // Return raw Buffer for binary download
+            content: document.content,
             sizeBytes: document.sizeBytes,
             createdAt: document.createdAt,
             updatedAt: document.updatedAt,

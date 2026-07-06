@@ -8,7 +8,6 @@ import {
   type PatientStatsQuery,
 } from './patient.schemas.js';
 import { patientService } from './patient.service.js';
-import { logger } from '../utils/logger.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -16,6 +15,10 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const patientRouter = Router();
 
+/**
+ * GET /patients
+ * List patients with optional filters and pagination.
+ */
 patientRouter.get<{}, any, any, ListPatientsQuery>(
   '/',
   validateQuery(listPatientsSchema),
@@ -24,6 +27,11 @@ patientRouter.get<{}, any, any, ListPatientsQuery>(
   })
 );
 
+/**
+ * GET /patients/stats
+ * Aggregate statistics: totals by status.
+ * Optional filters: dateFrom, dateTo.
+ */
 patientRouter.get<{}, any, any, PatientStatsQuery>(
   '/stats',
   validateQuery(patientStatsSchema),
@@ -32,6 +40,10 @@ patientRouter.get<{}, any, any, PatientStatsQuery>(
   })
 );
 
+/**
+ * GET /patients/:id
+ * Get a single patient by UUID (includes appointments and reminders).
+ */
 patientRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -40,43 +52,55 @@ patientRouter.get(
   })
 );
 
+/**
+ * POST /patients
+ * Create a new patient.
+ */
 patientRouter.post(
   '/',
   validateBody(createPatientSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.create(req.body, req.user!.id);
-    logger.info({ patientId: patient.id }, 'Patient created');
     ok(res, patient, 201);
   })
 );
 
+/**
+ * PATCH /patients/:id
+ * Partially update a patient.
+ */
 patientRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
   validateBody(updatePatientSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.update(req.params.id as string, req.body, req.user!.id);
-    logger.info({ patientId: patient.id }, 'Patient updated');
     ok(res, patient);
   })
 );
 
+/**
+ * DELETE /patients/:id
+ * Soft-delete a patient (sets isDeleted=true).
+ */
 patientRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.delete(req.params.id as string, req.user!.id);
-    logger.info({ patientId: patient.id }, 'Patient deleted');
     ok(res, { deleted: true, id: patient.id });
   })
 );
 
+/**
+ * PATCH /patients/:id/restore
+ * Restore a soft-deleted patient (sets isDeleted=false).
+ */
 patientRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.restore(req.params.id as string, req.user!.id);
-    logger.info({ patientId: patient.id }, 'Patient restored');
     ok(res, patient);
   })
 );

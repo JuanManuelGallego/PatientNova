@@ -22,7 +22,6 @@ import { useNotify } from "@/src/api/useNotify";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/app/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { API_BASE } from "@/src/types/API";
 import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
 
 export function PatientModal({

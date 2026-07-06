@@ -117,6 +117,7 @@ export const appointmentService = {
     if (!dto.meetingUrl && location?.isVirtual) {
       const space = await googleMeetService.createMeetingSpace();
       dto.meetingUrl = space.meetingUrl;
+      logger.info({ appointmentId: dto.patientId, meetingUrl: space.meetingUrl }, 'Generated meeting URL for virtual appointment');
 
       if (reminder) {
         try {
@@ -135,7 +136,9 @@ export const appointmentService = {
       }
     }
     
-    return await appointmentRepository.create(dto, patient.userId);
+    const created = await appointmentRepository.create(dto, patient.userId);
+    logger.info({ appointmentId: created.id, patientId: dto.patientId, userId, startAt: dto.startAt }, 'Appointment created');
+    return created;
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
@@ -165,9 +168,9 @@ export const appointmentService = {
     const targetReminder = reminder ?? existing.reminder;
 
     if (effectiveIsVirtual && !dto.meetingUrl && !existing.meetingUrl) {
-      // Switched to (or stayed) virtual with no link yet — create one.
       const space = await googleMeetService.createMeetingSpace();
       dto.meetingUrl = space.meetingUrl;
+      logger.info({ appointmentId: id, meetingUrl: space.meetingUrl }, 'Generated meeting URL for virtual appointment');
 
       if (targetReminder) {
         try {
@@ -185,8 +188,8 @@ export const appointmentService = {
         }
       }
     } else if (location && !location.isVirtual && existing.meetingUrl) {
-      // Explicitly switched to in-person — clear the stale link.
       dto.meetingUrl = undefined;
+      logger.info({ appointmentId: id }, 'Cleared meeting URL (switched to in-person)');
 
       if (targetReminder) {
         const vars = { ...(targetReminder.contentVariables as Record<string, any>) };
@@ -208,6 +211,7 @@ export const appointmentService = {
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {
     const appt = await appointmentRepository.findById(id, userId);
     validateStatusTransition(appt.status, status);
+    logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
     return appointmentRepository.update(id, { status });
   },
 
@@ -223,11 +227,14 @@ export const appointmentService = {
   async delete(id: string, userId: string): Promise<{ id: string }> {
     await appointmentRepository.findById(id, userId);
     await appointmentRepository.delete(id, userId);
+    logger.info({ appointmentId: id, userId }, 'Appointment deleted');
     return { id };
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
-    return appointmentRepository.restore(id, userId);
+    const restored = await appointmentRepository.restore(id, userId);
+    logger.info({ appointmentId: id, userId }, 'Appointment restored');
+    return restored;
   },
 };

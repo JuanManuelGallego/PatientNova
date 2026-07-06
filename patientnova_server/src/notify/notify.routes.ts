@@ -8,6 +8,7 @@ import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/cl
 import { validateBody } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { patientService } from '../patients/patient.service.js';
+import { logger } from '../utils/logger.js';
 
 export const notifyRouter = Router();
 
@@ -23,7 +24,6 @@ notifyRouter.post(
       await patientService.verifyOwnership(req.body.patientId, req.user!.id);
     }
 
-    // Create reminder record FIRST to ensure audit trail even if server crashes after send
     const reminder = await reminderService.create({
       channel: Channel.WHATSAPP,
       contentSid: req.body.contentSid,
@@ -43,6 +43,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
+      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', to: req.body.to, error: err instanceof Error ? err.message : err }, 'WhatsApp send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
@@ -64,7 +65,6 @@ notifyRouter.post(
       await patientService.verifyOwnership(req.body.patientId, req.user!.id);
     }
 
-    // Create reminder record FIRST to ensure audit trail even if server crashes after send
     const reminder = await reminderService.create({
       channel: Channel.SMS,
       body: req.body.body,
@@ -83,6 +83,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
+      logger.error({ reminderId: reminder.id, channel: 'SMS', to: req.body.to, error: err instanceof Error ? err.message : err }, 'SMS send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',

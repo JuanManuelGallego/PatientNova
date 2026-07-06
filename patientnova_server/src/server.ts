@@ -10,6 +10,8 @@ async function start() {
 
   if (config.scheduler.enabled) {
     initializeSchedulers();
+  } else {
+    logger.info('Schedulers disabled via config');
   }
 
   const server = app.listen(config.port, () => {

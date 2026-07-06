@@ -1,4 +1,5 @@
 import { consentDocumentRepository } from './consent-document.repository.js';
+import { logger } from '../utils/logger.js';
 import type { CreateConsentDocumentDto, UpdateConsentDocumentDto } from './consent-document.schemas.js';
 
 export const consentDocumentService = {
@@ -7,15 +8,21 @@ export const consentDocumentService = {
   },
 
   async create(dto: CreateConsentDocumentDto, userId: string) {
-    return consentDocumentRepository.create(dto, userId);
+    const doc = await consentDocumentRepository.create(dto, userId);
+    logger.info({ userId }, 'Consent document created');
+    return doc;
   },
 
   async update(userId: string, dto: UpdateConsentDocumentDto) {
-    return consentDocumentRepository.update(userId, dto);
+    const doc = await consentDocumentRepository.update(userId, dto);
+    logger.info({ userId, fields: Object.keys(dto) }, 'Consent document updated');
+    return doc;
   },
 
   async delete(userId: string) {
-    return consentDocumentRepository.delete(userId);
+    const doc = await consentDocumentRepository.delete(userId);
+    logger.info({ userId }, 'Consent document deleted');
+    return doc;
   },
 
   async getContent(userId: string) {

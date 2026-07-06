@@ -1,4 +1,5 @@
 import { userRepository } from './user.repository.js';
+import { logger } from '../utils/logger.js';
 import type { CreateUserDto, UpdateUserDto } from './user.schemas.js';
 
 export const userService = {
@@ -6,22 +7,26 @@ export const userService = {
   findMany: userRepository.findMany.bind(userRepository),
 
   async create(dto: CreateUserDto) {
-    return userRepository.create(dto);
+    const user = await userRepository.create(dto);
+    logger.info({ userId: user.id, email: user.email }, 'User created');
+    return user;
   },
 
   async update(id: string, dto: UpdateUserDto) {
-    return userRepository.update(id, dto);
-  },
-
-  async changePassword(id: string, currentPassword: string, newPassword: string) {
-    return userRepository.changePassword(id, currentPassword, newPassword);
+    const user = await userRepository.update(id, dto);
+    logger.info({ userId: id, fields: Object.keys(dto) }, 'User updated');
+    return user;
   },
 
   async delete(id: string) {
-    return userRepository.delete(id);
+    const user = await userRepository.delete(id);
+    logger.info({ userId: id }, 'User deleted');
+    return user;
   },
 
   async restore(id: string) {
-    return userRepository.restore(id);
+    const user = await userRepository.restore(id);
+    logger.info({ userId: id }, 'User restored');
+    return user;
   },
 };

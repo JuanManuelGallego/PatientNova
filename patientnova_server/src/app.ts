@@ -23,6 +23,7 @@ import cookieParser from 'cookie-parser';
 import { googleRouter } from './google/goole.routes.js';
 import { consentDocumentRouter } from './consent-document/consent-document.routes.js';
 import { responseHandler } from './middlewares/response-handler.js';
+import { httpLogger } from './middlewares/httpLogger.js';
 
 const app: Application = express();
 
@@ -35,6 +36,7 @@ app.use(cors({
         if (!origin || config.allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            logger.warn({ origin }, 'CORS rejection');
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -44,16 +46,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser())
 app.use(responseHandler);
-
-app.use((req: Request, res: Response, next: NextFunction) => {
-    const start = Date.now();
-    logger.info(`INCOMING  ${req.method} ${req.originalUrl} ${req?.ip?.replace('::ffff:', '')}`);
-
-    res.on('finish', () => {
-        logger.info(`COMPLETED ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
-    });
-    next();
-});
+app.use(httpLogger);
 
 app.use(
     rateLimit({
@@ -61,7 +54,8 @@ app.use(
         max: config.rateLimit.maxRequests,
         standardHeaders: true,
         legacyHeaders: false,
-        handler: (_req, res) => {
+        handler: (req, res) => {
+            logger.warn({ ip: req.ip, url: req.originalUrl, method: req.method }, 'Rate limit exceeded');
             apiError(res, 'Too many requests — please slow down.', 429);
         }
     }));

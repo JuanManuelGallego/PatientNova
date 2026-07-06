@@ -9,7 +9,6 @@ import {
 } from './appointment.schemas.js';
 import { appointmentService } from './appointment.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { uuidParamSchema } from '../utils/schemas.js';
@@ -64,7 +63,6 @@ appointmentRouter.post(
   validateBody(createAppointmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.create(req.body, req.user!.id);
-    logger.info({ appointmentId: appt.id, patientId: appt.patientId }, 'Appointment created');
     ok(res, appt, 201);
   })
 );
@@ -79,7 +77,6 @@ appointmentRouter.patch(
   validateBody(updateAppointmentSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.update(req.params.id as string, req.body, req.user!.id);
-    logger.info({ appointmentId: appt.id }, 'Appointment updated');
     ok(res, appt);
   })
 );
@@ -93,7 +90,6 @@ appointmentRouter.post(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.markPaid(req.params.id as string, req.user!.id);
-    logger.info({ appointmentId: appt.id }, 'Appointment marked as paid');
     ok(res, appt);
   })
 );
@@ -107,7 +103,6 @@ appointmentRouter.post(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CONFIRMED);
-    logger.info({ appointmentId: appt.id }, 'Appointment marked as confirmed');
     ok(res, appt);
   })
 );
@@ -121,7 +116,6 @@ appointmentRouter.post(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CANCELLED);
-    logger.info({ appointmentId: appt.id }, 'Appointment marked as cancelled');
     ok(res, appt);
   })
 );
@@ -136,7 +130,6 @@ appointmentRouter.delete(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const result = await appointmentService.delete(req.params.id as string, req.user!.id);
-    logger.info({ appointmentId: result.id }, 'Appointment deleted');
     ok(res, { deleted: true, id: result.id });
   })
 );
@@ -150,7 +143,6 @@ appointmentRouter.patch(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.restore(req.params.id as string, req.user!.id);
-    logger.info({ appointmentId: appt.id }, 'Appointment restored');
     ok(res, appt);
   })
 );

@@ -115,7 +115,11 @@ export class TwilioWebhookService {
             'Appointment confirmed via WhatsApp quick-reply',
         );
 
-        await sendWhatsAppFreeForm(phoneNumber, '✅ ¡Tu cita ha sido confirmada! Te esperamos.');
+        try {
+            await sendWhatsAppFreeForm(phoneNumber, '✅ ¡Tu cita ha sido confirmada! Te esperamos.');
+        } catch (err) {
+            logger.error({ err, appointmentId: reminder.appointmentId, phoneNumber }, 'Failed to send confirmation reply to patient');
+        }
     }
 
     /**
@@ -138,10 +142,14 @@ export class TwilioWebhookService {
             'Appointment cancelled via WhatsApp quick-reply',
         );
 
-        await sendWhatsAppFreeForm(
-            phoneNumber,
-            '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate tu profesional de la salud.',
-        );
+        try {
+            await sendWhatsAppFreeForm(
+                phoneNumber,
+                '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate tu profesional de la salud.',
+            );
+        } catch (err) {
+            logger.error({ err, appointmentId: reminder.appointmentId, phoneNumber }, 'Failed to send cancellation reply to patient');
+        }
     }
     /**
      * Notify user of appointment status update (confirmation or cancellation)
@@ -261,7 +269,11 @@ export class TwilioWebhookService {
     }
 
     async sendErrorMessage(phoneNumber: string): Promise<void> {
-        await sendWhatsAppFreeForm(phoneNumber, 'Disculpa, no puedo procesar tu mensaje. Por favor, comunícate con tu profesional de la salud.');
+        try {
+            await sendWhatsAppFreeForm(phoneNumber, 'Disculpa, no puedo procesar tu mensaje. Por favor, comunícate con tu profesional de la salud.');
+        } catch (err) {
+            logger.error({ err, phoneNumber }, 'Failed to send error reply to patient');
+        }
     }
 
     /**

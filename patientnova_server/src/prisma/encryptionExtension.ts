@@ -49,7 +49,7 @@ function encryptField(value: unknown, model: string, field: string): unknown {
 
   const key = getKey();
   if (!key) {
-    logger.warn({ model, field }, "Encryption key not set — storing plaintext");
+    logger.error({ model, field }, "Encryption key not set — storing plaintext");
     return value;
   }
 
@@ -69,7 +69,7 @@ function decryptField(
 
   const key = getKey();
   if (!key) {
-    logger.warn(
+    logger.error(
       { model, field },
       "Encryption key not set — returning raw ciphertext",
     );

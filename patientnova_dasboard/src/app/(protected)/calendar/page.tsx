@@ -22,8 +22,13 @@ import {
 import Image from "next/image";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { calendarStyles } from "./styles";
+import { useQueryState, parseAsStringEnum } from "nuqs";
 
-type ViewMode = "month" | "week" | "day";
+enum ViewMode {
+  Month = "month",
+  Week = "week",
+  Day = "day",
+}
 
 const TODAY_STR = todayFormatedString();
 
@@ -55,7 +60,10 @@ function apptHour(a: Appointment): number {
 export default function CalendarPage() {
   const { updateAppointment } = useUpdateAppointment();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useQueryState<ViewMode>(
+    "view",
+    parseAsStringEnum<ViewMode>(Object.values(ViewMode)).withDefault(ViewMode.Week),
+  );
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [weekStart, setWeekStart] = useState<Date>(() =>
@@ -97,21 +105,20 @@ export default function CalendarPage() {
   };
 
   const calendarFilters = useMemo(() => {
-    if (viewMode === "month") {
+    if (viewMode === ViewMode.Month) {
       return {
         dateFrom: toStartOfDayISO(new Date(calYear, calMonth, 1)),
         dateTo: toEndOfDayISO(new Date(calYear, calMonth + 1, 0)),
       };
     }
 
-    if (viewMode === "week") {
+    if (viewMode === ViewMode.Week) {
       return {
         dateFrom: toStartOfDayISO(weekStart),
         dateTo: toEndOfDayISO(addDays(weekStart, 6)),
       };
     }
-    if (viewMode === "day") {
-      console.log("Calculating day range for:", dayDate);
+    if (viewMode === ViewMode.Day) {
       return toUtcRangeFromLocalDay(dayDate);
     }
     const d = new Date(dayDate);
@@ -206,21 +213,21 @@ export default function CalendarPage() {
   }, []);
 
   const navPrev = useCallback(() => {
-    if (viewMode === "month") prevMonth();
-    else if (viewMode === "week") prevWeek();
+    if (viewMode === ViewMode.Month) prevMonth();
+    else if (viewMode === ViewMode.Week) prevWeek();
     else prevDay();
   }, [viewMode, prevMonth, prevWeek, prevDay]);
 
   const navNext = useCallback(() => {
-    if (viewMode === "month") nextMonth();
-    else if (viewMode === "week") nextWeek();
+    if (viewMode === ViewMode.Month) nextMonth();
+    else if (viewMode === ViewMode.Week) nextWeek();
     else nextDay();
   }, [viewMode, nextMonth, nextWeek, nextDay]);
 
   function drillToDay(dateStr: string) {
     console.log("Drilling to day:", dateStr);
     setDayDate(dateStr);
-    setViewMode("day");
+    setViewMode(ViewMode.Day);
   }
 
   useEffect(() => {
@@ -232,14 +239,14 @@ export default function CalendarPage() {
         return;
       if (e.key === "ArrowLeft") navPrev();
       if (e.key === "ArrowRight") navNext();
-      if (e.key === "m" || e.key === "M") setViewMode("month");
-      if (e.key === "w" || e.key === "W") setViewMode("week");
-      if (e.key === "d" || e.key === "D") setViewMode("day");
+      if (e.key === "m" || e.key === "M") setViewMode(ViewMode.Month);
+      if (e.key === "w" || e.key === "W") setViewMode(ViewMode.Week);
+      if (e.key === "d" || e.key === "D") setViewMode(ViewMode.Day);
       if (e.key === "t" || e.key === "T") goToday();
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [navPrev, navNext, goToday]);
+  }, [navPrev, navNext, goToday, setViewMode]);
 
   async function handlePay(id: string) {
     try {
@@ -252,9 +259,9 @@ export default function CalendarPage() {
   const selectedDayAppts = selectedDay ? (apptByDate[selectedDay] ?? []) : [];
 
   const navLabel =
-    viewMode === "month"
+    viewMode === ViewMode.Month
       ? `${MONTH_NAMES_ES[calMonth]} ${calYear}`
-      : viewMode === "week"
+      : viewMode === ViewMode.Week
         ? weekLabel
         : fmtDatePlusOneDay(dayDate);
 
@@ -494,9 +501,7 @@ export default function CalendarPage() {
     const dayAppts = apptByDate[dayDate] ?? [];
     const holiday = holidayMap[dayDate];
     const isToday = dayDate === TODAY_STR;
-    console.log(dayDate);
-    console.log(apptByDate);
-    console.log(dayAppts);
+
     return (
       <div style={{ overflowX: "hidden" }}>
         {holiday && (
@@ -595,7 +600,7 @@ export default function CalendarPage() {
                 Hoy
               </button>
               <div style={calendarStyles.viewToggle}>
-                {(["month", "week", "day"] as ViewMode[]).map((v) => (
+                {Object.values(ViewMode).map((v) => (
                   <button
                     key={v}
                     onClick={() => setViewMode(v)}
@@ -606,14 +611,14 @@ export default function CalendarPage() {
                         : {}),
                     }}
                     title={
-                      v === "month"
+                      v === ViewMode.Month
                         ? "Vista mensual (M)"
-                        : v === "week"
+                        : v === ViewMode.Week
                           ? "Vista semanal (W)"
                           : "Vista diaria (D)"
                     }
                   >
-                    {v === "month" ? "Mes" : v === "week" ? "Semana" : "Día"}
+                    {v === ViewMode.Month ? "Mes" : v === ViewMode.Week ? "Semana" : "Día"}
                   </button>
                 ))}
               </div>
@@ -626,13 +631,13 @@ export default function CalendarPage() {
               &#8250;
             </button>
           </div>
-          {viewMode === "month" && renderMonthView()}
-          {viewMode === "week" && renderWeekView()}
-          {viewMode === "day" && renderDayView()}
+          {viewMode === ViewMode.Month && renderMonthView()}
+          {viewMode === ViewMode.Week && renderWeekView()}
+          {viewMode === ViewMode.Day && renderDayView()}
         </div>
       </PageLayout>
 
-      {selectedDay && viewMode === "month" && (
+      {selectedDay && viewMode === ViewMode.Month && (
         <div
           className="cal-day-panel-overlay"
           onClick={() => setSelectedDay(null)}

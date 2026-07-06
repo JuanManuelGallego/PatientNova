@@ -72,7 +72,7 @@ async function pollSentReminders(): Promise<void> {
         error: "Status tracking timed out — message may have been delivered",
       },
     });
-    logger.warn({ count: stale.length }, "Dropped stale QUEUED reminders");
+    logger.warn({ count: stale.length, reminderIds: stale.map(r => r.id) }, "Dropped stale QUEUED reminders");
   }
 
   // Poll active QUEUED reminders for their Twilio delivery status
@@ -128,16 +128,16 @@ async function sendPendingReminders(): Promise<void> {
   });
 
   if (pending.length === 0) {
-    logger.info("No reminders to send at this time");
+    logger.debug("No reminders to send at this time");
     return;
   }
 
-  logger.info(`Found ${pending.length} reminder(s) to send`);
+  logger.debug(`Found ${pending.length} reminder(s) to send`);
 
   for (const reminder of pending) {
     const validation = validateReminder(reminder);
     if (!validation.isValid) {
-      logger.warn({ reminderId: reminder.id, error: validation.error }, "Reminder validation failed");
+      logger.warn({ reminderId: reminder.id, channel: reminder.channel, to: reminder.to, appointmentId: reminder.appointmentId, error: validation.error }, "Reminder validation failed");
       await prisma.reminder.update({
         where: { id: reminder.id },
         data: { status: ReminderStatus.FAILED, error: validation.error ?? null },
@@ -184,7 +184,7 @@ async function sendPendingReminders(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function reminderWorker(): Promise<void> {
-  logger.info("Running reminder worker...");
+  logger.debug("Running reminder worker...");
   await pollSentReminders();
   await sendPendingReminders();
 }

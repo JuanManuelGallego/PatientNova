@@ -1,6 +1,7 @@
 import { SpacesServiceClient } from '@google-apps/meet';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config';
+import { logger } from '../utils/logger.js';
 
 export interface MeetingSpaceResult {
     meetingUrl: string;
@@ -52,7 +53,7 @@ export const googleMeetService = {
             return { meetingUrl, spaceName };
         }
         catch (error) {
-            console.error('Error creating Google Meet space:', error);
+            logger.error({ err: error }, 'Error creating Google Meet space');
             throw new Error('Failed to create Google Meet space', error instanceof Error ? { cause: error } : undefined);
         }
     },
@@ -64,8 +65,15 @@ export const googleMeetService = {
      * Call this on appointment cancellation if you want to boot active participants.
      */
     async endActiveConference(meetingUrl: string): Promise<void> {
-        const meetingCode = meetingUrl.split('/').pop();
-        const client = buildUserMeetClient();
-        await client.endActiveConference({ name: `spaces/${meetingCode}` });
+        try {
+            const meetingCode = meetingUrl.split('/').pop();
+            logger.debug({ meetingUrl, meetingCode }, 'Ending active Google Meet conference');
+            const client = buildUserMeetClient();
+            await client.endActiveConference({ name: `spaces/${meetingCode}` });
+            logger.debug({ meetingUrl }, 'Google Meet conference ended');
+        } catch (error) {
+            logger.error({ err: error, meetingUrl }, 'Failed to end Google Meet conference');
+            throw error;
+        }
     }
 };

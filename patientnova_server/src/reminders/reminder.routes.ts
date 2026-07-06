@@ -9,7 +9,6 @@ import {
 } from './reminder.schemas.js';
 import { reminderService } from './reminder.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { uuidParamSchema } from '../utils/schemas.js';
@@ -62,7 +61,6 @@ reminderRouter.post(
   validateBody(createReminderSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.create(req.body, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder created');
     ok(res, reminder, 201);
   })
 );
@@ -77,14 +75,13 @@ reminderRouter.patch(
   validateBody(updateReminderSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.update(req.params.id as string, req.body, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder updated');
     ok(res, reminder);
   })
 );
 
 /**
  * POST /reminders/:id/cancel
- * Cancel a pending reminder (sets status → CANCELLED).
+ * Cancel a pending reminder (sets status -> CANCELLED).
  * Returns 409 if reminder is not in PENDING status.
  */
 reminderRouter.post(
@@ -92,7 +89,6 @@ reminderRouter.post(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.cancel(req.params.id as string, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder cancelled');
     ok(res, reminder);
   })
 );
@@ -106,7 +102,6 @@ reminderRouter.delete(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.softDelete(req.params.id as string, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder soft-deleted');
     ok(res, { deleted: true, id: reminder.id });
   })
 );
@@ -120,7 +115,6 @@ reminderRouter.patch(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.restore(req.params.id as string, req.user!.id);
-    logger.info({ reminderId: reminder.id }, 'Reminder restored');
     ok(res, reminder);
   })
 );
