@@ -2291,12 +2291,16 @@ tr:hover td {
   background: var(--c-white);
   cursor: pointer;
   transition: background 0.1s;
+  min-width: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {
   .cal-cell {
     min-height: 140px;
     padding: 8px 10px;
+    min-width: 0;
+    overflow: hidden;
   }
 }
 
@@ -2382,6 +2386,7 @@ tr:hover td {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .cal-chip {

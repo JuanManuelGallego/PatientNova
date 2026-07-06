@@ -246,7 +246,7 @@ export default function CalendarPage() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [navPrev, navNext, goToday]);
+  }, [navPrev, navNext, goToday, setViewMode]);
 
   async function handlePay(id: string) {
     try {
