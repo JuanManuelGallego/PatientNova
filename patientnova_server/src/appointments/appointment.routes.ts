@@ -16,6 +16,11 @@ import { AppointmentStatus } from '../../generated/prisma/enums.js';
 
 export const appointmentRouter = Router();
 
+/**
+ * GET /appointments
+ * List appointments with optional filters and pagination.
+ * Response includes joined patient and reminder objects.
+ */
 appointmentRouter.get<{}, any, any, ListAppointmentsQuery>(
   '/',
   validateQuery(listAppointmentsSchema),
@@ -24,6 +29,11 @@ appointmentRouter.get<{}, any, any, ListAppointmentsQuery>(
   })
 );
 
+/**
+ * GET /appointments/stats
+ * Aggregate statistics: totals by status, revenue (paid vs unpaid).
+ * Optional filters: patientId, dateFrom, dateTo.
+ */
 appointmentRouter.get<{}, any, any, AppointmentStatsQuery>(
   '/stats',
   validateQuery(appointmentStatsSchema),
@@ -32,6 +42,10 @@ appointmentRouter.get<{}, any, any, AppointmentStatsQuery>(
   })
 );
 
+/**
+ * GET /appointments/:id
+ * Get a single appointment by UUID (includes patient and reminder details).
+ */
 appointmentRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -40,6 +54,10 @@ appointmentRouter.get(
   })
 );
 
+/**
+ * POST /appointments
+ * Create a new appointment.
+ */
 appointmentRouter.post(
   '/',
   validateBody(createAppointmentSchema),
@@ -49,6 +67,10 @@ appointmentRouter.post(
   })
 );
 
+/**
+ * PATCH /appointments/:id
+ * Partially update an appointment — only send the fields you want to change.
+ */
 appointmentRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
@@ -59,6 +81,10 @@ appointmentRouter.patch(
   })
 );
 
+/**
+ * POST /appointments/:id/pay
+ * Convenience endpoint — marks the appointment as paid (paid = true).
+ */
 appointmentRouter.post(
   '/:id/pay',
   validateParams(uuidParamSchema),
@@ -68,6 +94,10 @@ appointmentRouter.post(
   })
 );
 
+/**
+ * POST /appointments/:id/confirm
+ * Convenience endpoint — marks the appointment as confirmed (status = "CONFIRMED").
+ */
 appointmentRouter.post(
   '/:id/confirm',
   validateParams(uuidParamSchema),
@@ -77,6 +107,10 @@ appointmentRouter.post(
   })
 );
 
+/**
+ * POST /appointments/:id/cancel
+ * Convenience endpoint — marks the appointment as cancelled (status = "CANCELLED").
+ */
 appointmentRouter.post(
   '/:id/cancel',
   validateParams(uuidParamSchema),
@@ -86,6 +120,11 @@ appointmentRouter.post(
   })
 );
 
+/**
+ * DELETE /appointments/:id
+ * Hard-delete an appointment.
+ * Consider using PATCH { status: "CANCELLED" } to preserve history.
+ */
 appointmentRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
@@ -95,6 +134,10 @@ appointmentRouter.delete(
   })
 );
 
+/**
+ * PATCH /appointments/:id/restore
+ * Restore a soft-deleted appointment (sets isDeleted=false, deletedAt=null).
+ */
 appointmentRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),

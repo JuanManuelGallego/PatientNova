@@ -13,6 +13,10 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const locationRouter = Router();
 
+/**
+ * GET /locations
+ * List appointment locations with optional filters and pagination.
+ */
 locationRouter.get<{}, any, any, ListLocationsQuery>(
   '/',
   validateQuery(listLocationsSchema),
@@ -21,6 +25,10 @@ locationRouter.get<{}, any, any, ListLocationsQuery>(
   })
 );
 
+/**
+ * GET /locations/:id
+ * Get a single location by UUID.
+ */
 locationRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -29,6 +37,10 @@ locationRouter.get(
   })
 );
 
+/**
+ * POST /locations
+ * Create a new appointment location.
+ */
 locationRouter.post(
   '/',
   validateBody(createLocationSchema),
@@ -38,6 +50,10 @@ locationRouter.post(
   })
 );
 
+/**
+ * PATCH /locations/:id
+ * Partially update an appointment location.
+ */
 locationRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
@@ -48,6 +64,10 @@ locationRouter.patch(
   })
 );
 
+/**
+ * DELETE /locations/:id
+ * Soft-delete an appointment location (sets isActive=false).
+ */
 locationRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
@@ -57,6 +77,10 @@ locationRouter.delete(
   })
 );
 
+/**
+ * PATCH /locations/:id/restore
+ * Restore a soft-deleted appointment location (sets isActive=true).
+ */
 locationRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),

@@ -12,6 +12,10 @@ import { logger } from '../utils/logger.js';
 
 export const notifyRouter = Router();
 
+/**
+ * POST /notify/whatsapp
+ * Send an immediate WhatsApp message.
+ */
 notifyRouter.post(
   '/whatsapp',
   validateBody(sendWhatsAppSchema),
@@ -49,6 +53,10 @@ notifyRouter.post(
   })
 );
 
+/**
+ * POST /notify/sms
+ * Send an immediate SMS.
+ */
 notifyRouter.post(
   '/sms',
   validateBody(sendSmsSchema),

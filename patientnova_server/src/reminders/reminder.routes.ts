@@ -15,6 +15,10 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const reminderRouter = Router();
 
+/**
+ * GET /reminders
+ * List reminders with optional filters and pagination.
+ */
 reminderRouter.get<{}, any, any, ListRemindersQuery>(
   '/',
   validateQuery(listRemindersSchema),
@@ -23,6 +27,11 @@ reminderRouter.get<{}, any, any, ListRemindersQuery>(
   })
 );
 
+/**
+ * GET /reminders/stats
+ * Aggregate statistics: totals by status and channel.
+ * Optional filters: patientId, dateFrom, dateTo.
+ */
 reminderRouter.get<{}, any, any, ReminderStatsQuery>(
   '/stats',
   validateQuery(reminderStatsSchema),
@@ -31,6 +40,10 @@ reminderRouter.get<{}, any, any, ReminderStatsQuery>(
   })
 );
 
+/**
+ * GET /reminders/:id
+ * Get a single reminder by UUID (includes linked appointments).
+ */
 reminderRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -39,6 +52,10 @@ reminderRouter.get(
   })
 );
 
+/**
+ * POST /reminders
+ * Create a new reminder record.
+ */
 reminderRouter.post(
   '/',
   validateBody(createReminderSchema),
@@ -48,6 +65,10 @@ reminderRouter.post(
   })
 );
 
+/**
+ * PATCH /reminders/:id
+ * Partially update a reminder (reschedule, update status, log errors, etc.).
+ */
 reminderRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
@@ -58,6 +79,11 @@ reminderRouter.patch(
   })
 );
 
+/**
+ * POST /reminders/:id/cancel
+ * Cancel a pending reminder (sets status -> CANCELLED).
+ * Returns 409 if reminder is not in PENDING status.
+ */
 reminderRouter.post(
   '/:id/cancel',
   validateParams(uuidParamSchema),
@@ -67,6 +93,10 @@ reminderRouter.post(
   })
 );
 
+/**
+ * DELETE /reminders/:id
+ * Soft-delete a reminder record (sets isActive=false).
+ */
 reminderRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
@@ -76,6 +106,10 @@ reminderRouter.delete(
   })
 );
 
+/**
+ * PATCH /reminders/:id/restore
+ * Restore a soft-deleted reminder (sets isActive=true).
+ */
 reminderRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),

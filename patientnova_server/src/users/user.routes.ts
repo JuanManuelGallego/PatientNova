@@ -13,6 +13,10 @@ import { consentDocumentRouter } from '../consent-document/consent-document.rout
 
 export const userRouter = Router();
 
+/**
+ * POST /users
+ * Create a new user (super admin only).
+ */
 userRouter.post(
     '/',
     authenticate,
@@ -24,6 +28,10 @@ userRouter.post(
     })
 );
 
+/**
+ * GET /users
+ * List all users (super admin only). Optionally includes soft-deleted users.
+ */
 userRouter.get(
     '/',
     authenticate,
@@ -35,6 +43,10 @@ userRouter.get(
     })
 );
 
+/**
+ * GET /users/me
+ * Get the current authenticated user's profile.
+ */
 userRouter.get(
     '/me',
     authenticate,
@@ -43,6 +55,10 @@ userRouter.get(
     })
 );
 
+/**
+ * GET /users/:id
+ * Get a user by UUID (super admin only).
+ */
 userRouter.get(
     '/:id',
     authenticate,
@@ -52,6 +68,10 @@ userRouter.get(
     })
 );
 
+/**
+ * PATCH /users/me
+ * Update the current authenticated user's profile.
+ */
 userRouter.patch(
     '/me',
     authenticate,
@@ -64,6 +84,10 @@ userRouter.patch(
 
 userRouter.use('/me/consent-document', consentDocumentRouter);
 
+/**
+ * PATCH /users/:id
+ * Update a user (super admin only).
+ */
 userRouter.patch(
     '/:id',
     authenticate,
@@ -75,6 +99,10 @@ userRouter.patch(
     })
 );
 
+/**
+ * PATCH /users/:id/delete
+ * Soft-delete a user (super admin only, sets isDeleted=true).
+ */
 userRouter.patch(
     '/:id/delete',
     authenticate,
@@ -85,6 +113,10 @@ userRouter.patch(
     })
 );
 
+/**
+ * PATCH /users/:id/restore
+ * Restore a soft-deleted user (super admin only, sets isDeleted=false).
+ */
 userRouter.patch(
     '/:id/restore',
     authenticate,

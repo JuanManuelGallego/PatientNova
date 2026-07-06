@@ -11,6 +11,10 @@ export const consentDocumentRouter = Router();
 const CUID_RE = /^c[a-z0-9]{24}$/;
 const ALLOWED_MIME_TYPES = new Set([ 'application/pdf', 'image/jpeg', 'image/png' ]);
 
+/**
+ * POST /consent-document
+ * Create or replace the user's consent document.
+ */
 consentDocumentRouter.post(
     '/',
     authenticate,
@@ -28,6 +32,10 @@ consentDocumentRouter.post(
     })
 );
 
+/**
+ * GET /consent-document
+ * Get the current user's consent document metadata (or null).
+ */
 consentDocumentRouter.get(
     '/',
     authenticate,
@@ -49,6 +57,10 @@ consentDocumentRouter.get(
     })
 );
 
+/**
+ * GET /consent-document/download
+ * Download the current user's consent document content (binary).
+ */
 consentDocumentRouter.get(
     '/download',
     authenticate,
@@ -58,6 +70,10 @@ consentDocumentRouter.get(
     })
 );
 
+/**
+ * PATCH /consent-document
+ * Update the current user's consent document.
+ */
 consentDocumentRouter.patch(
     '/',
     authenticate,
@@ -75,6 +91,10 @@ consentDocumentRouter.patch(
     })
 );
 
+/**
+ * DELETE /consent-document
+ * Delete the current user's consent document.
+ */
 consentDocumentRouter.delete(
     '/',
     authenticate,
@@ -84,6 +104,11 @@ consentDocumentRouter.delete(
     })
 );
 
+/**
+ * GET /consent-document/public/download/:userId.:ext
+ * Public endpoint — download a consent document by user ID and file extension.
+ * No authentication required. Validates extension, userId format, and MIME type.
+ */
 consentDocumentRouter.get(
     '/public/download/:userId.:ext',
     asyncHandler(async (req: Request, res: Response) => {

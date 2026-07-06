@@ -13,6 +13,10 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const appointmentTypeRouter = Router();
 
+/**
+ * GET /appointment-types
+ * List appointment types with optional filters and pagination.
+ */
 appointmentTypeRouter.get<{}, any, any, ListAppointmentTypesQuery>(
   '/',
   validateQuery(listAppointmentTypesSchema),
@@ -21,6 +25,10 @@ appointmentTypeRouter.get<{}, any, any, ListAppointmentTypesQuery>(
   })
 );
 
+/**
+ * GET /appointment-types/:id
+ * Get a single appointment type by UUID.
+ */
 appointmentTypeRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -29,6 +37,10 @@ appointmentTypeRouter.get(
   })
 );
 
+/**
+ * POST /appointment-types
+ * Create a new appointment type.
+ */
 appointmentTypeRouter.post(
   '/',
   validateBody(createAppointmentTypeSchema),
@@ -38,6 +50,10 @@ appointmentTypeRouter.post(
   })
 );
 
+/**
+ * PATCH /appointment-types/:id
+ * Partially update an appointment type.
+ */
 appointmentTypeRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
@@ -48,6 +64,10 @@ appointmentTypeRouter.patch(
   })
 );
 
+/**
+ * DELETE /appointment-types/:id
+ * Soft-delete an appointment type (sets isActive=false).
+ */
 appointmentTypeRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
@@ -57,6 +77,10 @@ appointmentTypeRouter.delete(
   })
 );
 
+/**
+ * PATCH /appointment-types/:id/restore
+ * Restore a soft-deleted appointment type (sets isActive=true).
+ */
 appointmentTypeRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),

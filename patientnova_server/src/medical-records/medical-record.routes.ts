@@ -8,6 +8,10 @@ import { uuidParamSchema } from '../utils/schemas.js';
 
 export const medicalRecordRouter = Router();
 
+/**
+ * GET /medical-records
+ * List medical records with optional filters and pagination.
+ */
 medicalRecordRouter.get<{}, any, any, ListMedicalRecordsQuery>(
   '/',
   validateQuery(listMedicalRecordsSchema),
@@ -16,6 +20,10 @@ medicalRecordRouter.get<{}, any, any, ListMedicalRecordsQuery>(
   })
 );
 
+/**
+ * GET /medical-records/:id
+ * Get a single medical record by UUID (includes subsystem relations).
+ */
 medicalRecordRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
@@ -24,6 +32,10 @@ medicalRecordRouter.get(
   })
 );
 
+/**
+ * POST /medical-records
+ * Create a new medical record for a patient.
+ */
 medicalRecordRouter.post(
   '/',
   validateBody(createMedicalRecordSchema),
@@ -33,6 +45,10 @@ medicalRecordRouter.post(
   })
 );
 
+/**
+ * PATCH /medical-records/:id
+ * Partially update a medical record.
+ */
 medicalRecordRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
@@ -43,6 +59,10 @@ medicalRecordRouter.patch(
   })
 );
 
+/**
+ * DELETE /medical-records/:id
+ * Hard-delete a medical record.
+ */
 medicalRecordRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
@@ -52,6 +72,10 @@ medicalRecordRouter.delete(
   })
 );
 
+/**
+ * PATCH /medical-records/:id/soft-delete
+ * Soft-delete a medical record (sets isDeleted=true).
+ */
 medicalRecordRouter.patch(
   '/:id/soft-delete',
   validateParams(uuidParamSchema),
@@ -61,6 +85,10 @@ medicalRecordRouter.patch(
   })
 );
 
+/**
+ * PATCH /medical-records/:id/restore
+ * Restore a soft-deleted medical record (sets isDeleted=false).
+ */
 medicalRecordRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),
