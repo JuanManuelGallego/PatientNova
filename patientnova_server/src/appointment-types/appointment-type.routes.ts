@@ -7,7 +7,6 @@ import {
 } from './appointment-type.schemas.js';
 import { appointmentTypeService } from './appointment-type.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { uuidParamSchema } from '../utils/schemas.js';
@@ -35,7 +34,6 @@ appointmentTypeRouter.post(
   validateBody(createAppointmentTypeSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const type = await appointmentTypeService.create(req.body, req.user!.id);
-    logger.info({ typeId: type.id }, 'Appointment type created');
     ok(res, type, 201);
   })
 );
@@ -46,7 +44,6 @@ appointmentTypeRouter.patch(
   validateBody(updateAppointmentTypeSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const type = await appointmentTypeService.update(req.params.id as string, req.body, req.user!.id);
-    logger.info({ typeId: type.id }, 'Appointment type updated');
     ok(res, type);
   })
 );
@@ -56,7 +53,6 @@ appointmentTypeRouter.delete(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const type = await appointmentTypeService.delete(req.params.id as string, req.user!.id);
-    logger.info({ typeId: type.id }, 'Appointment type deleted');
     ok(res, { deactivated: true, id: type.id });
   })
 );
@@ -66,7 +62,6 @@ appointmentTypeRouter.patch(
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const type = await appointmentTypeService.restore(req.params.id as string, req.user!.id);
-    logger.info({ typeId: type.id }, 'Appointment type restored');
     ok(res, type);
   })
 );

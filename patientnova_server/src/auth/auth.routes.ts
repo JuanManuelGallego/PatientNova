@@ -67,7 +67,7 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
     res.clearCookie('refreshToken', { ...cookieDefaults, path: '/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
-    logger.error({ err }, 'Logout failed');
+    logger.error({ err, userId: req.user!.id }, 'Logout failed');
     return res.error('Logout failed', 500);
   }
 });
@@ -112,7 +112,6 @@ authRouter.patch(
   validateBody(changePasswordSchema),
   asyncHandler(async (req: Request, res: Response) => {
     await authService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
-    logger.info({ userId: req.user!.id }, 'User password changed');
     ok(res, { message: 'Password changed successfully' });
   })
 );

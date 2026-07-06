@@ -7,7 +7,6 @@ import {
 import { userService } from './user.service.js';
 import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
-import { logger } from '../utils/logger.js';
 import { ok } from '../utils/apiUtils.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { consentDocumentRouter } from '../consent-document/consent-document.routes.js';
@@ -21,7 +20,6 @@ userRouter.post(
     validateBody(createUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.create(req.body);
-        logger.info({ userId: user.id, email: user.email }, 'User created');
         ok(res, user, 201);
     })
 );
@@ -60,7 +58,6 @@ userRouter.patch(
     validateBody(updateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.update(req.user!.id, req.body);
-        logger.info({ userId: user.id }, 'User profile updated');
         ok(res, user);
     })
 );
@@ -74,7 +71,6 @@ userRouter.patch(
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.update(req.params.id as string, req.body);
-        logger.info({ targetUserId: user.id, adminUserId: req.user!.id, fields: Object.keys(req.body) }, 'User updated by super-admin');
         ok(res, user);
     })
 );
@@ -85,7 +81,6 @@ userRouter.patch(
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.delete(req.params.id as string);
-        logger.info({ targetUserId: user.id, adminUserId: req.user!.id }, 'User deleted by super-admin');
         ok(res, user);
     })
 );
@@ -96,7 +91,6 @@ userRouter.patch(
     requireSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.restore(req.params.id as string);
-        logger.info({ targetUserId: user.id, adminUserId: req.user!.id }, 'User restored by super-admin');
         ok(res, user);
     })
 );

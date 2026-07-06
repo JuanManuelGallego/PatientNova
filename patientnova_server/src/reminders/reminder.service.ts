@@ -1,6 +1,7 @@
 import { ReminderMode } from '../../generated/prisma/client.ts';
 import { reminderRepository } from './reminder.repository.js';
 import { ReminderNotCancellableError, ReminderSendAtInPastError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.ts';
 import type { Paginated } from '../utils/pagination.ts';
 import type { ReminderWithRelations, ReminderStats } from '../utils/types.ts';
@@ -21,11 +22,15 @@ export const reminderService = {
     if (dto.sendMode === ReminderMode.SCHEDULED && dto.sendAt && new Date(dto.sendAt) <= new Date()) {
       throw new ReminderSendAtInPastError();
     }
-    return reminderRepository.create(dto, userId);
+    const reminder = await reminderRepository.create(dto, userId);
+    logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode }, 'Reminder created');
+    return reminder;
   },
 
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
-    return reminderRepository.update(id, dto, userId);
+    const reminder = await reminderRepository.update(id, dto, userId);
+    logger.info({ reminderId: id, userId, fields: Object.keys(dto) }, 'Reminder updated');
+    return reminder;
   },
 
   async cancel(id: string, userId: string): Promise<Reminder> {
@@ -33,14 +38,20 @@ export const reminderService = {
     if (reminder.status !== 'PENDING') {
       throw new ReminderNotCancellableError(reminder.status);
     }
-    return reminderRepository.cancel(id, userId);
+    const cancelled = await reminderRepository.cancel(id, userId);
+    logger.info({ reminderId: id, userId }, 'Reminder cancelled');
+    return cancelled;
   },
 
   async softDelete(id: string, userId: string): Promise<Reminder> {
-    return reminderRepository.delete(id, userId);
+    const reminder = await reminderRepository.delete(id, userId);
+    logger.info({ reminderId: id, userId }, 'Reminder deleted');
+    return reminder;
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
-    return reminderRepository.restore(id, userId);
+    const reminder = await reminderRepository.restore(id, userId);
+    logger.info({ reminderId: id, userId }, 'Reminder restored');
+    return reminder;
   },
 };

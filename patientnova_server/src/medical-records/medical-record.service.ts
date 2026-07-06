@@ -15,7 +15,6 @@ export const medicalRecordService = {
       include: { medicalRecord: true },
     });
     if (!patient) throw new PatientNotFoundError(dto.patientId);
-
     if (patient.medicalRecord) throw new MedicalRecordAlreadyExistsError(dto.patientId);
 
     const record = await medicalRecordRepository.create(dto, userId);
@@ -25,13 +24,13 @@ export const medicalRecordService = {
 
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
     const record = await medicalRecordRepository.update(id, dto, userId);
-    logger.info({ medicalRecordId: id, userId }, 'Medical record updated');
+    logger.info({ medicalRecordId: id, userId, fields: Object.keys(dto) }, 'Medical record updated');
     return record;
   },
 
   async softDelete(id: string, userId: string) {
     const record = await medicalRecordRepository.softDelete(id, userId);
-    logger.info({ medicalRecordId: id, userId }, 'Medical record soft-deleted');
+    logger.info({ medicalRecordId: id, userId }, 'Medical record deleted');
     return record;
   },
 

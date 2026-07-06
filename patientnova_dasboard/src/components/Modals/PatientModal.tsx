@@ -64,7 +64,7 @@ export function PatientModal({
     !!user?.nationalId &&
     !!user?.bankingKey &&
     !!user.consentDocument;
-
+console.log("canSendWelcome", canSendWelcome, user?.displayName, user?.bankName, user?.accountNumber, user?.nationalId, user?.bankingKey, isEdit);
   const set =
     (field: string) =>
       (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

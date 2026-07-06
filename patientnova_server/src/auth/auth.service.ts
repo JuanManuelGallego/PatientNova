@@ -49,12 +49,12 @@ export const authService = {
 
     if (!user || user.status !== 'ACTIVE') {
       await bcrypt.compare(password, await getDummyHash());
-      logger.warn({ email: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive account');
+      logger.info({ email: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
       throw new AuthInvalidCredentialsError();
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      logger.warn({ email: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
+      logger.info({ email: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
       throw new AuthAccountLockedError();
     }
 
@@ -67,7 +67,7 @@ export const authService = {
         lockUntil = new Date(Date.now() + config.lockout.lockoutDurationMs);
       }
       await authRepository.incrementFailedAttempts(user.id, failedAttempts, lockUntil);
-      logger.warn({ userId: user.id, email: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
+      logger.info({ userId: user.id, email: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
       throw new AuthInvalidCredentialsError();
     }
 
@@ -95,6 +95,7 @@ export const authService = {
 
   async logout(userId: string): Promise<void> {
     await authRepository.incrementRefreshTokenVersion(userId);
+    logger.info({ userId }, 'User logged out');
   },
 
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
@@ -103,10 +104,10 @@ export const authService = {
       payload = jwt.verify(refreshToken, config.auth.jwtSecret);
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
-        logger.warn('Token refresh failed: refresh token expired');
+        logger.info('Token refresh failed: refresh token expired');
         throw new AuthRefreshTokenExpiredError();
       }
-      logger.warn('Token refresh failed: refresh token invalid or revoked');
+      logger.info('Token refresh failed: refresh token invalid or revoked');
       throw new AuthRefreshTokenRevokedError();
     }
 
@@ -117,16 +118,16 @@ export const authService = {
 
     const user = await authRepository.findByIdForAuth(payload.id);
     if (!user || user.status !== 'ACTIVE') {
-      logger.warn({ userId: payload.id }, 'Token refresh failed: user not found or inactive');
+      logger.info({ userId: payload.id }, 'Token refresh failed: user not found or inactive');
       throw new AuthRefreshTokenRevokedError();
     }
 
     if (payload.version !== user.refreshTokenVersion) {
-      logger.warn({ userId: user.id, tokenVersion: payload.version, currentVersion: user.refreshTokenVersion }, 'Token refresh failed: version mismatch (possible token reuse)');
+      logger.info({ userId: user.id, tokenVersion: payload.version, currentVersion: user.refreshTokenVersion }, 'Token refresh failed: version mismatch');
       throw new AuthRefreshTokenRevokedError();
     }
 
-    logger.info({ userId: user.id }, 'Token refreshed successfully');
+    logger.info({ userId: user.id }, 'Token refreshed');
 
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
@@ -145,13 +146,13 @@ export const authService = {
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) {
-      logger.warn({ userId }, 'Password change failed: incorrect current password');
+      logger.info({ userId }, 'Password change failed: incorrect current password');
       throw new UserInvalidCredentialsError();
     }
 
     const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
     await authRepository.updatePassword(userId, passwordHash);
-    logger.info({ userId }, 'Password changed successfully');
+    logger.info({ userId }, 'Password changed');
   },
 
   getCookieDefaults() {

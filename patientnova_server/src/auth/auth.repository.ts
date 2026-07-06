@@ -30,14 +30,14 @@ export const authRepository = {
     return prisma.user.findUnique({
       where: { email },
       select: authSelect,
-    }) as Promise<UserForAuth | null>;
+    }) as unknown as UserForAuth | null;
   },
 
   async findByIdForAuth(id: string): Promise<UserForAuth | null> {
     return prisma.user.findUnique({
       where: { id },
       select: authSelect,
-    }) as Promise<UserForAuth | null>;
+    }) as unknown as UserForAuth | null;
   },
 
   async recordSuccessfulLogin(id: string, ip: string) {

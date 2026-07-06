@@ -18,10 +18,12 @@ function makeValidator<T extends z.ZodTypeAny>(
     const errors = result.error.issues.map(
       (e) => `${e.path.join('.') || target}: ${e.message}`
     );
-    logger.debug({ ip: req.ip, url: req.originalUrl, method: req.method, target, errors: errors.join('; ') }, 'Validation failed');
+    logger.debug({ method: req.method, url: req.originalUrl, target, errors: errors.join('; ') }, 'VALIDATION FAILED');
     apiError(res, errors.join('; '), 400);
     return;
   }
+
+  logger.debug({ method: req.method, url: req.originalUrl, target }, 'VALIDATION OK');
 
   // Write coerced/defaulted values back onto the request
   Object.defineProperty(req, target, {

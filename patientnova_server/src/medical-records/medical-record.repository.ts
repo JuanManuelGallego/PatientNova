@@ -1,11 +1,8 @@
 import { prisma } from '../prisma/prismaClient.js';
 import { type Prisma } from '../../generated/prisma/client.ts';
 import { PatientNotFoundError, MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from '../utils/errors.js';
-import { logger } from '../utils/logger.js';
 import { paginate } from '../utils/pagination.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const subsystemRelationData = (medicalRecordId: string, relations: NonNullable<CreateMedicalRecordDto[ 'subsystemRelations' ]>) =>
   relations.map(({ subsistema, estado, observacion }) => ({
@@ -22,8 +19,6 @@ const defaultInclude = {
   subsystemRelations: { orderBy: { subsistema: 'asc' } },
 } satisfies Prisma.MedicalRecordInclude;
 
-// ─── Repository ───────────────────────────────────────────────────────────────
-
 export const medicalRecordRepository = {
   async create(dto: CreateMedicalRecordDto, userId: string) {
     const patient = await prisma.patient.findFirst({
@@ -35,15 +30,12 @@ export const medicalRecordRepository = {
 
     return prisma.medicalRecord.create({
       data: {
-        // Personal data
         name: dto.name ?? null,
         nationalId: dto.nationalId ?? null,
         sex: dto.sex ?? null,
         age: dto.age ?? null,
         birthDate: dto.birthDate ?? null,
         birthPlace: dto.birthPlace ?? null,
-
-        // Clinical history
         consultationReason: dto.consultationReason ?? null,
         earlyDevelopment: dto.earlyDevelopment ?? null,
         schoolAndWork: dto.schoolAndWork ?? null,
@@ -54,8 +46,6 @@ export const medicalRecordRepository = {
         mentalHistory: dto.mentalHistory ?? null,
         objective: dto.objective ?? null,
         familyObservations: dto.familyObservations ?? null,
-
-        // Family fields
         isFamily: dto.isFamily ?? false,
         familyType: dto.familyType ?? null,
         lifecycle: dto.lifecycle ?? null,
@@ -68,9 +58,7 @@ export const medicalRecordRepository = {
         familyContext: dto.familyContext ?? null,
         expectations: dto.expectations ?? null,
         flexibility: dto.flexibility ?? null,
-
         patientId: dto.patientId,
-
         ...(dto.familyMembers?.length && {
           familyMembers: {
             create: dto.familyMembers.map(({ name, sex, age, relationship, relation }) => ({
@@ -158,8 +146,6 @@ export const medicalRecordRepository = {
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
     await medicalRecordRepository.findById(id, userId);
 
-    logger.info({ id, fields: Object.keys(dto) }, 'Updating medical record');
-
     return prisma.$transaction(async (tx) => {
       if (dto.familyMembers !== undefined) {
         await tx.familyMember.deleteMany({ where: { medicalRecordId: id } });
@@ -216,15 +202,12 @@ export const medicalRecordRepository = {
       return tx.medicalRecord.update({
         where: { id },
         data: {
-          // Personal data
           ...(dto.name !== undefined && { name: dto.name }),
           ...(dto.nationalId !== undefined && { nationalId: dto.nationalId }),
           ...(dto.sex !== undefined && { sex: dto.sex }),
           ...(dto.age !== undefined && { age: dto.age }),
           ...(dto.birthDate !== undefined && { birthDate: dto.birthDate }),
           ...(dto.birthPlace !== undefined && { birthPlace: dto.birthPlace }),
-
-          // Clinical history
           ...(dto.consultationReason !== undefined && { consultationReason: dto.consultationReason }),
           ...(dto.earlyDevelopment !== undefined && { earlyDevelopment: dto.earlyDevelopment }),
           ...(dto.schoolAndWork !== undefined && { schoolAndWork: dto.schoolAndWork }),
@@ -235,8 +218,6 @@ export const medicalRecordRepository = {
           ...(dto.mentalHistory !== undefined && { mentalHistory: dto.mentalHistory }),
           ...(dto.objective !== undefined && { objective: dto.objective }),
           ...(dto.familyObservations !== undefined && { familyObservations: dto.familyObservations }),
-
-          // Family fields
           ...(dto.isFamily !== undefined && { isFamily: dto.isFamily }),
           ...(dto.familyType !== undefined && { familyType: dto.familyType }),
           ...(dto.lifecycle !== undefined && { lifecycle: dto.lifecycle }),

@@ -6,13 +6,12 @@ import { logger } from '../utils/logger.js';
 
 export const googleRouter = Router();
 
-
-googleRouter.get('/meet', asyncHandler(async (_: Request, res: Response) => {
+googleRouter.get('/meet', asyncHandler(async (_req: Request, res: Response) => {
     try {
         const result = await googleMeetService.createMeetingSpace();
         ok(res, result);
     } catch (error) {
-        logger.error({ err: error }, 'Error creating Google Meet space');
+        logger.error({ err: error }, 'Google Meet creation failed');
         res.error('Failed to create Google Meet space', 500);
     }
 }));

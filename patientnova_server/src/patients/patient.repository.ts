@@ -55,14 +55,12 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
-  /** Fetches a patient without relations. Throws if not found. */
   async findById(id: string, userId: string): Promise<Patient> {
     const patient = await prisma.patient.findFirst({ where: { id, userId } });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;
   },
 
-  /** Fetches a patient including appointments and reminders. Throws if not found. */
   async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
     const patient = await prisma.patient.findFirst({
       where: { id, userId },
@@ -72,7 +70,6 @@ export const patientRepository = {
     return patient;
   },
 
-  /** Lists patients. Only loads relation counts — use `findByIdWithRelations` when you need full relations. */
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
     const { status, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;

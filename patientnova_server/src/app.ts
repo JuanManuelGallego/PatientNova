@@ -23,6 +23,7 @@ import cookieParser from 'cookie-parser';
 import { googleRouter } from './google/goole.routes.js';
 import { consentDocumentRouter } from './consent-document/consent-document.routes.js';
 import { responseHandler } from './middlewares/response-handler.js';
+import { httpLogger } from './middlewares/httpLogger.js';
 
 const app: Application = express();
 
@@ -45,17 +46,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser())
 app.use(responseHandler);
-
-app.use((req: Request, res: Response, next: NextFunction) => {
-    const start = Date.now();
-    const logLevel = process.env.NODE_ENV === 'production' ? 'info' : 'debug';
-    logger[logLevel](`INCOMING  ${req.method} ${req.originalUrl} ${req?.ip?.replace('::ffff:', '')}`);
-
-    res.on('finish', () => {
-        logger[logLevel](`COMPLETED ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
-    });
-    next();
-});
+app.use(httpLogger);
 
 app.use(
     rateLimit({

@@ -110,7 +110,6 @@ export const appointmentRepository = {
   },
 
   async update(id: string, dto: UpdateAppointmentDto): Promise<AppointmentWithRelations> {
-
     return prisma.appointment.update({
       where: { id },
       data: {
@@ -228,4 +227,3 @@ export const appointmentRepository = {
     };
   },
 };
-
