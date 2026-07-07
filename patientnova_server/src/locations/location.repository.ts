@@ -2,13 +2,19 @@ import type { AppointmentLocation } from '../../generated/prisma/client.ts';
 import { prisma } from '../prisma/prismaClient.js';
 import type { CreateLocationDto, UpdateLocationDto, ListLocationsQuery } from './location.schemas.js';
 import { LocationNotFoundError, LocationNameConflictError } from '../utils/errors.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/softDelete.js';
+import { assertUnique } from '../utils/assertUnique.js';
 
 export const locationRepository = {
   async create(dto: CreateLocationDto, userId: string): Promise<AppointmentLocation> {
-    const existing = await prisma.appointmentLocation.findUnique({
-      where: { userId_name: { userId, name: dto.name } },
-    });
-    if (existing) throw new LocationNameConflictError(dto.name);
+    await assertUnique(
+      () => prisma.appointmentLocation.findUnique({
+        where: { userId_name: { userId, name: dto.name } },
+      }),
+      LocationNameConflictError,
+      dto.name,
+    );
 
     return prisma.appointmentLocation.create({
       data: {
@@ -43,39 +49,34 @@ export const locationRepository = {
     await locationRepository.findById(id, userId);
 
     if (dto.name) {
-      const conflict = await prisma.appointmentLocation.findFirst({
-        where: { userId, name: dto.name, NOT: { id } },
-      });
-      if (conflict) throw new LocationNameConflictError(dto.name);
+      const name = dto.name;
+      await assertUnique(
+        () => prisma.appointmentLocation.findFirst({
+          where: { userId, name, NOT: { id } },
+        }),
+        LocationNameConflictError,
+        name,
+      );
     }
+
+    const data = buildUpdateData(
+      dto,
+      [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual', 'isActive' ],
+    );
 
     return prisma.appointmentLocation.update({
       where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.instructions !== undefined && { instructions: dto.instructions }),
-        ...(dto.color !== undefined && { color: dto.color }),
-        ...(dto.defaultPrice !== undefined && { defaultPrice: dto.defaultPrice }),
-        ...(dto.isVirtual !== undefined && { isVirtual: dto.isVirtual }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-      },
+      data,
     });
   },
 
   async delete(id: string, userId: string): Promise<AppointmentLocation> {
     await locationRepository.findById(id, userId);
-    return prisma.appointmentLocation.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    return softDelete(prisma.appointmentLocation, id);
   },
 
   async restore(id: string, userId: string): Promise<AppointmentLocation> {
     await locationRepository.findById(id, userId);
-    return prisma.appointmentLocation.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-    });
+    return restore(prisma.appointmentLocation, id);
   },
 };

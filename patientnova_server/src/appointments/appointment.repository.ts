@@ -11,6 +11,8 @@ import { paginate, type Paginated } from '../utils/pagination.js';
 import { config } from '../utils/config.js';
 import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from '../utils/types.js';
 import { getCurrentMonthBoundsInTz, getTodayBoundsInTz } from '../utils/timeUtils.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/softDelete.js';
 
 export const appointmentRepository = {
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
@@ -110,48 +112,42 @@ export const appointmentRepository = {
   },
 
   async update(id: string, dto: UpdateAppointmentDto): Promise<AppointmentWithRelations> {
+    const data = buildUpdateData(
+      dto,
+      [ 'startAt', 'endAt', 'timezone', 'price', 'currency', 'paid', 'locationId', 'meetingUrl', 'notes', 'typeId', 'status' ],
+    );
+
+    // Handle status-based timestamp fields
+    if (dto.status === AppointmentStatus.CONFIRMED) {
+      (data as any).confirmedAt = new Date();
+    } else if (dto.status === AppointmentStatus.CANCELLED) {
+      (data as any).cancelledAt = new Date();
+    } else if (dto.status === AppointmentStatus.COMPLETED) {
+      (data as any).completedAt = new Date();
+    }
+
+    // Handle reminder connection
+    if (dto.reminderId !== undefined) {
+      (data as any).reminder = dto.reminderId
+        ? { connect: { id: dto.reminderId } }
+        : { disconnect: true };
+    }
+
     return prisma.appointment.update({
       where: { id },
-      data: {
-        ...(dto.startAt !== undefined && { startAt: dto.startAt }),
-        ...(dto.endAt !== undefined && { endAt: dto.endAt }),
-        ...(dto.timezone !== undefined && { timezone: dto.timezone }),
-        ...(dto.price !== undefined && { price: dto.price }),
-        ...(dto.currency !== undefined && { currency: dto.currency }),
-        ...(dto.paid !== undefined && { paid: dto.paid }),
-        ...(dto.locationId !== undefined && { locationId: dto.locationId }),
-        ...(dto.meetingUrl !== undefined && { meetingUrl: dto.meetingUrl }),
-        ...(dto.notes !== undefined && { notes: dto.notes }),
-        ...(dto.typeId !== undefined && { typeId: dto.typeId }),
-        ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.status === AppointmentStatus.CONFIRMED && { confirmedAt: new Date() }),
-        ...(dto.status === AppointmentStatus.CANCELLED && { cancelledAt: new Date() }),
-        ...(dto.status === AppointmentStatus.COMPLETED && { completedAt: new Date() }),
-        ...(dto.reminderId !== undefined && {
-          reminder: dto.reminderId
-            ? { connect: { id: dto.reminderId } }
-            : { disconnect: true },
-        }),
-      },
+      data,
       include: appointmentInclude,
     });
   },
 
   async delete(id: string, userId: string): Promise<Appointment> {
     await appointmentRepository.findById(id, userId);
-    return prisma.appointment.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    return softDelete(prisma.appointment, id);
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
-    return prisma.appointment.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-      include: appointmentInclude,
-    });
+    return restore(prisma.appointment, id, appointmentInclude);
   },
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
