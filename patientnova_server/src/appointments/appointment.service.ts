@@ -15,27 +15,12 @@ import { logger } from '../utils/logger.ts';
 import type { AppointmentWithRelations, AppointmentStats } from '../utils/types.ts';
 import type { Paginated } from '../utils/pagination.ts';
 
-const VALID_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
-  [AppointmentStatus.SCHEDULED]: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
-  [AppointmentStatus.CONFIRMED]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
-  [AppointmentStatus.COMPLETED]: [],
-  [AppointmentStatus.CANCELLED]: [],
-  [AppointmentStatus.NO_SHOW]: [AppointmentStatus.CANCELLED],
-};
-
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
   AppointmentStatus.CONFIRMED,
   AppointmentStatus.COMPLETED,
   AppointmentStatus.NO_SHOW,
 ]);
-
-function validateStatusTransition(current: AppointmentStatus, next: AppointmentStatus): void {
-  const allowed = VALID_STATUS_TRANSITIONS[current];
-  if (!allowed || !allowed.includes(next)) {
-    throw new AppointmentStatusTransitionError(current, `change status to "${next}"`);
-  }
-}
 
 async function validatePatient(patientId: string, userId: string) {
   const patient = await prisma.patient.findFirst({ where: { id: patientId, userId } });
@@ -144,10 +129,6 @@ export const appointmentService = {
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
     const existing = await appointmentRepository.findByIdWithRelations(id, userId);
 
-    if (dto.status !== undefined && dto.status !== existing.status) {
-      validateStatusTransition(existing.status, dto.status);
-    }
-
     if (dto.startAt !== undefined || dto.endAt !== undefined) {
       const newStart = dto.startAt ?? existing.startAt;
       const newEnd = dto.endAt ?? existing.endAt;
@@ -210,7 +191,6 @@ export const appointmentService = {
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {
     const appt = await appointmentRepository.findById(id, userId);
-    validateStatusTransition(appt.status, status);
     logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
     return appointmentRepository.update(id, { status });
   },
