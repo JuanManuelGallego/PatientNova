@@ -45,6 +45,8 @@ const calendarStyles = {
     gap: 2,
     borderLeft: "1px solid var(--c-gray-100, #f3f4f6)",
     userSelect: "none" as const,
+    minWidth: 0,
+    overflow: "hidden",
   } as React.CSSProperties,
 
   weekDayName: {
@@ -106,6 +108,8 @@ const calendarStyles = {
     flexDirection: "column" as const,
     gap: 2,
     transition: "background 0.1s",
+    minWidth: 0,
+    overflow: "hidden",
   } as React.CSSProperties,
 
 
