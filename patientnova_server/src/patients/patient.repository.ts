@@ -4,6 +4,8 @@ import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
 import { logger } from '../utils/logger.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/softDelete.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
@@ -108,18 +110,21 @@ export const patientRepository = {
     await patientRepository.findById(id, userId);
 
     try {
+      const data = buildUpdateData(
+        dto,
+        [ 'name', 'lastName', 'whatsappNumber', 'smsNumber', 'email', 'notes', 'status', 'appointmentTypeId' ],
+        {
+          whatsappNumber: (v: string | null) => v || null,
+          smsNumber: (v: string | null) => v || null,
+          email: (v: string | null) => v?.toLowerCase() || null,
+          notes: (v: string | null) => v || null,
+          appointmentTypeId: (v: string | null) => v || null,
+        },
+      );
+
       return await prisma.patient.update({
         where: { id },
-        data: {
-          ...(dto.name !== undefined && { name: dto.name }),
-          ...(dto.lastName !== undefined && { lastName: dto.lastName }),
-          ...(dto.whatsappNumber !== undefined && { whatsappNumber: dto.whatsappNumber || null }),
-          ...(dto.smsNumber !== undefined && { smsNumber: dto.smsNumber || null }),
-          ...(dto.email !== undefined && { email: dto.email?.toLowerCase() || null }),
-          ...(dto.notes !== undefined && { notes: dto.notes || null }),
-          ...(dto.status !== undefined && { status: dto.status }),
-          ...(dto.appointmentTypeId !== undefined && { appointmentTypeId: dto.appointmentTypeId || null }),
-        },
+        data,
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
@@ -132,17 +137,11 @@ export const patientRepository = {
 
   async delete(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return prisma.patient.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    return softDelete(prisma.patient, id);
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return prisma.patient.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-    });
+    return restore(prisma.patient, id);
   },
 };

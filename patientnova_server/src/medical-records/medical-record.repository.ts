@@ -2,6 +2,8 @@ import { prisma } from '../prisma/prismaClient.js';
 import { type Prisma } from '../../generated/prisma/client.ts';
 import { PatientNotFoundError, MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from '../utils/errors.js';
 import { paginate } from '../utils/pagination.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/softDelete.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 
 const subsystemRelationData = (medicalRecordId: string, relations: NonNullable<CreateMedicalRecordDto[ 'subsystemRelations' ]>) =>
@@ -199,38 +201,21 @@ export const medicalRecordRepository = {
         }
       }
 
+      const data = buildUpdateData(
+        dto,
+        [
+          'name', 'nationalId', 'sex', 'age', 'birthDate', 'birthPlace',
+          'consultationReason', 'earlyDevelopment', 'schoolAndWork', 'lifestyleHabits',
+          'traumaticEvents', 'emotionalConsiderations', 'physicalConsiderations',
+          'mentalHistory', 'objective', 'familyObservations', 'isFamily', 'familyType',
+          'lifecycle', 'genogram', 'ressources', 'difficulties', 'communication',
+          'rule', 'limits', 'familyContext', 'expectations', 'flexibility',
+        ],
+      );
+
       return tx.medicalRecord.update({
         where: { id },
-        data: {
-          ...(dto.name !== undefined && { name: dto.name }),
-          ...(dto.nationalId !== undefined && { nationalId: dto.nationalId }),
-          ...(dto.sex !== undefined && { sex: dto.sex }),
-          ...(dto.age !== undefined && { age: dto.age }),
-          ...(dto.birthDate !== undefined && { birthDate: dto.birthDate }),
-          ...(dto.birthPlace !== undefined && { birthPlace: dto.birthPlace }),
-          ...(dto.consultationReason !== undefined && { consultationReason: dto.consultationReason }),
-          ...(dto.earlyDevelopment !== undefined && { earlyDevelopment: dto.earlyDevelopment }),
-          ...(dto.schoolAndWork !== undefined && { schoolAndWork: dto.schoolAndWork }),
-          ...(dto.lifestyleHabits !== undefined && { lifestyleHabits: dto.lifestyleHabits }),
-          ...(dto.traumaticEvents !== undefined && { traumaticEvents: dto.traumaticEvents }),
-          ...(dto.emotionalConsiderations !== undefined && { emotionalConsiderations: dto.emotionalConsiderations }),
-          ...(dto.physicalConsiderations !== undefined && { physicalConsiderations: dto.physicalConsiderations }),
-          ...(dto.mentalHistory !== undefined && { mentalHistory: dto.mentalHistory }),
-          ...(dto.objective !== undefined && { objective: dto.objective }),
-          ...(dto.familyObservations !== undefined && { familyObservations: dto.familyObservations }),
-          ...(dto.isFamily !== undefined && { isFamily: dto.isFamily }),
-          ...(dto.familyType !== undefined && { familyType: dto.familyType }),
-          ...(dto.lifecycle !== undefined && { lifecycle: dto.lifecycle }),
-          ...(dto.genogram !== undefined && { genogram: dto.genogram }),
-          ...(dto.ressources !== undefined && { ressources: dto.ressources }),
-          ...(dto.difficulties !== undefined && { difficulties: dto.difficulties }),
-          ...(dto.communication !== undefined && { communication: dto.communication }),
-          ...(dto.rule !== undefined && { rule: dto.rule }),
-          ...(dto.limits !== undefined && { limits: dto.limits }),
-          ...(dto.familyContext !== undefined && { familyContext: dto.familyContext }),
-          ...(dto.expectations !== undefined && { expectations: dto.expectations }),
-          ...(dto.flexibility !== undefined && { flexibility: dto.flexibility }),
-        },
+        data,
         include: defaultInclude,
       });
     });
@@ -238,18 +223,12 @@ export const medicalRecordRepository = {
 
   async softDelete(id: string, userId: string) {
     await medicalRecordRepository.findById(id, userId);
-    return prisma.medicalRecord.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
+    return softDelete(prisma.medicalRecord, id);
   },
 
   async restore(id: string, userId: string) {
     await medicalRecordRepository.findById(id, userId);
-    return prisma.medicalRecord.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-    });
+    return restore(prisma.medicalRecord, id);
   },
 
   async delete(id: string, userId: string) {

@@ -5,11 +5,17 @@ import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schema
 import { UserNotFoundError, UserEmailConflictError } from '../utils/errors.js';
 import { userInclude } from '../utils/types.js';
 import { Channel } from '../../generated/prisma/enums.js';
+import { softDelete, restore } from '../utils/softDelete.js';
+import { assertUnique } from '../utils/assertUnique.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {
-        const existing = await prisma.user.findUnique({ where: { email: dto.email.toLowerCase() }, select: { id: true } });
-        if (existing) throw new UserEmailConflictError(dto.email);
+        await assertUnique(
+            () => prisma.user.findUnique({ where: { email: dto.email.toLowerCase() }, select: { id: true } }),
+            UserEmailConflictError,
+            dto.email,
+        );
 
         const passwordHash = await bcrypt.hash(dto.password, config.auth.bcryptRounds);
         return prisma.user.create({
@@ -51,8 +57,9 @@ export const userRepository = {
     },
 
     async update(id: string, dto: UpdateUserDto) {
-        const data = Object.fromEntries(
-            Object.entries(dto).filter(([ , v ]) => v !== undefined)
+        const data = buildUpdateData(
+            dto,
+            [ 'firstName', 'lastName', 'displayName', 'jobTitle', 'avatar', 'logo', 'altLogo', 'phoneNumber', 'whatsappNumber', 'reminderActive', 'reminderChannel', 'timezone', 'bankName', 'accountNumber', 'nationalId', 'bankingKey' ],
         );
         return prisma.user.update({
             where: { id },
@@ -65,21 +72,13 @@ export const userRepository = {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        return prisma.user.update({
-            where: { id },
-            data: { isDeleted: true, deletedAt: new Date() },
-            select: userInclude,
-        });
+        return softDelete(prisma.user, id);
     },
 
     async restore(id: string) {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        return prisma.user.update({
-            where: { id },
-            data: { isDeleted: false, deletedAt: null },
-            select: userInclude,
-        });
+        return restore(prisma.user, id);
     },
 };

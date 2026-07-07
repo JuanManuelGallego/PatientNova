@@ -4,6 +4,8 @@ import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, Reminder
 import { PatientNotFoundError, ReminderNotFoundError } from '../utils/errors.js';
 import { paginate, type Paginated } from '../utils/pagination.js';
 import { reminderInclude, type ReminderWithRelations, type ReminderStats } from '../utils/types.js';
+import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/softDelete.js';
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
@@ -82,20 +84,20 @@ export const reminderRepository = {
 
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
+
+    const data = buildUpdateData(
+      dto,
+      [ 'channel', 'contentSid', 'contentVariables', 'error', 'messageId', 'sendMode', 'sendAt', 'status', 'body' ],
+    );
+
+    // Handle status-based timestamp field
+    if (dto.status === ReminderStatus.SENT) {
+      (data as any).sentAt = new Date();
+    }
+
     return prisma.reminder.update({
       where: { id },
-      data: {
-        ...(dto.channel !== undefined && { channel: dto.channel }),
-        ...(dto.contentSid !== undefined && { contentSid: dto.contentSid }),
-        ...(dto.contentVariables !== undefined && { contentVariables: dto.contentVariables }),
-        ...(dto.error !== undefined && { error: dto.error }),
-        ...(dto.messageId !== undefined && { messageId: dto.messageId }),
-        ...(dto.sendMode !== undefined && { sendMode: dto.sendMode }),
-        ...(dto.sendAt !== undefined && { sendAt: dto.sendAt }),
-        ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.status === ReminderStatus.SENT && { sentAt: new Date() }),
-        ...(dto.body !== undefined && { body: dto.body })
-      },
+      data,
       include: reminderInclude,
     });
   },
@@ -107,20 +109,12 @@ export const reminderRepository = {
 
   async delete(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return prisma.reminder.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-      include: reminderInclude,
-    });
+    return softDelete(prisma.reminder, id, reminderInclude);
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return prisma.reminder.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-      include: reminderInclude,
-    });
+    return restore(prisma.reminder, id, reminderInclude);
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {
