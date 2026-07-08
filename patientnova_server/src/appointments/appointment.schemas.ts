@@ -1,4 +1,4 @@
-import { AppointmentStatus } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
 import { includeDeletedQuery } from '../utils/schemas.js';
 
@@ -16,6 +16,20 @@ const timezoneSchema = z.string().max(50).optional().refine(
   { message: 'Invalid IANA timezone identifier' }
 );
 
+const reminderInlineSchema = z.object({
+  channel: z.enum(Channel),
+  to: z.string().min(1),
+  sendMode: z.enum(ReminderMode),
+  contentSid: z.string().optional(),
+  contentVariables: z.record(z.string(), z.string()).optional(),
+  sendAt: z.iso.datetime().optional(),
+  status: z.enum(ReminderStatus).optional().default(ReminderStatus.PENDING),
+  body: z.string().max(500).optional(),
+}).refine(
+  (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
+  { message: 'sendAt is required when sendMode is SCHEDULED', path: ['sendAt'] }
+);
+
 export const createAppointmentSchema = z.object({
   startAt: z.iso.datetime(),
   endAt: z.iso.datetime(),
@@ -30,7 +44,11 @@ export const createAppointmentSchema = z.object({
   reminderId: z.uuid('reminderId must be a valid UUID').nullable().optional(),
   locationId: z.uuid('locationId must be a valid UUID'),
   typeId: z.uuid('typeId must be a valid UUID'),
-});
+  reminder: reminderInlineSchema.nullable().optional(),
+}).refine(
+  (d) => !(d.reminderId && d.reminder),
+  { message: 'Cannot provide both reminderId and reminder', path: ['reminder'] }
+);
 
 export const updateAppointmentSchema = z
   .object({
@@ -46,10 +64,15 @@ export const updateAppointmentSchema = z
     status: z.enum(AppointmentStatus).default(AppointmentStatus.SCHEDULED).optional(),
     reminderId: z.uuid('reminderId must be a valid UUID').nullable().optional(),
     locationId: z.uuid('locationId must be a valid UUID').optional(),
+    reminder: reminderInlineSchema.nullable().optional(),
   })
   .refine(
     (d) => Object.keys(d).length > 0,
     { message: 'At least one valid field must be provided for update' }
+  )
+  .refine(
+    (d) => !(d.reminderId && d.reminder),
+    { message: 'Cannot provide both reminderId and reminder', path: ['reminder'] }
   );
 
 export const listAppointmentsSchema = z.object({

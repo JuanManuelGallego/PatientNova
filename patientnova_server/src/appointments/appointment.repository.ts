@@ -14,9 +14,12 @@ import { getCurrentMonthBoundsInTz, getTodayBoundsInTz } from '../utils/timeUtil
 import { buildUpdateData } from '../utils/buildUpdateData.js';
 import { softDelete, restore } from '../utils/softDelete.js';
 
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export const appointmentRepository = {
-  async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    return prisma.appointment.create({
+  async create(dto: CreateAppointmentDto, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    const client = tx ?? prisma;
+    return client.appointment.create({
       data: {
         startAt: dto.startAt,
         endAt: dto.endAt,
@@ -111,7 +114,8 @@ export const appointmentRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateAppointmentDto): Promise<AppointmentWithRelations> {
+  async update(id: string, dto: UpdateAppointmentDto, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    const client = tx ?? prisma;
     const data = buildUpdateData(
       dto,
       [ 'startAt', 'endAt', 'timezone', 'price', 'currency', 'paid', 'locationId', 'meetingUrl', 'notes', 'typeId', 'status' ],
@@ -133,7 +137,7 @@ export const appointmentRepository = {
         : { disconnect: true };
     }
 
-    return prisma.appointment.update({
+    return client.appointment.update({
       where: { id },
       data,
       include: appointmentInclude,

@@ -1,9 +1,7 @@
 "use client";
 
 import { useCreateAppointment } from "@/src/api/useCreateAppointment";
-import { useCreateReminder } from "@/src/api/useCreateReminder";
 import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
-import { useUpdateReminder } from "@/src/api/useUpdateReminder";
 import { useFetchAppointments } from "@/src/api/useFetchAppointments";
 import { useFetchPatients } from "@/src/api/useFetchPatients";
 import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
@@ -18,10 +16,10 @@ import {
 } from "@/src/types/Appointment";
 import {
   ReminderType,
-  Reminder,
   ReminderMode,
   ReminderStatus,
   Channel,
+  type ReminderInlineData,
 } from "@/src/types/Reminder";
 import { getUserName } from "@/src/utils/AvatarHelper";
 import {
@@ -70,8 +68,6 @@ export function AppointmentModal({
   });
   const { createAppointment } = useCreateAppointment();
   const { updateAppointment } = useUpdateAppointment();
-  const { createReminder } = useCreateReminder();
-  const { updateReminder } = useUpdateReminder();
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
 
@@ -133,7 +129,7 @@ export function AppointmentModal({
           : true)
         : !!form.price;
 
-  function buildReminderPayload(): Partial<Reminder> {
+  function buildReminderPayload(): ReminderInlineData {
     const channel = reminderChannel!;
     const to =
       channel === Channel.WHATSAPP
@@ -161,7 +157,6 @@ export function AppointmentModal({
           .replace("{{3}}", fmtDate(form.startAt))
           .replace("{{4}}", fmtTime(form.startAt))
           .replace("{{5}}", form.meetingUrl || "{{5}}"),
-        patientId: form.patientId,
         channel: channel,
         sendMode: ReminderMode.SCHEDULED,
         status: ReminderStatus.PENDING,
@@ -196,7 +191,6 @@ export function AppointmentModal({
           "{{6}}",
           selectedLocation?.instructions || "No hay instrucciones registradas",
         ),
-      patientId: form.patientId,
       channel: channel,
       sendMode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
@@ -204,12 +198,9 @@ export function AppointmentModal({
     };
   }
 
-  function buildAppointmentPayload(
-    reminderId: string | null = null,
-  ): Partial<Appointment> {
+  function buildAppointmentPayload(): Omit<Partial<Appointment>, 'reminder'> {
     return {
       ...form,
-      ...((reminderId && { reminderId }) || {}),
       endAt: getAppointmentEndTime(
         form.startAt,
         form.duration as AppointmentDuration,
@@ -223,26 +214,28 @@ export function AppointmentModal({
     setError(null);
     try {
       if (isEdit) {
+        let reminderData: ReminderInlineData | null | undefined = undefined;
         if (appt!.reminder) {
           if (form.reminderType === ReminderType.NONE) {
-            await updateReminder(appt!.reminder.id, {
-              status: ReminderStatus.CANCELLED,
-            });
+            reminderData = null;
           } else {
-            await updateReminder(appt!.reminder.id, buildReminderPayload());
+            reminderData = buildReminderPayload();
           }
         } else if (form.reminderType !== ReminderType.NONE) {
-          const reminder = await createReminder(buildReminderPayload());
-          setForm((f) => ({ ...f, reminderId: reminder.id }));
+          reminderData = buildReminderPayload();
         }
-        await updateAppointment(appt!.id, buildAppointmentPayload());
+        await updateAppointment(appt!.id, {
+          ...buildAppointmentPayload(),
+          ...(reminderData !== undefined && { reminder: reminderData }),
+        });
       } else {
-        let reminderId: string | null = null;
-        if (form.reminderType !== ReminderType.NONE) {
-          const reminder = await createReminder(buildReminderPayload());
-          reminderId = reminder.id;
-        }
-        await createAppointment(buildAppointmentPayload(reminderId));
+        const reminderData = form.reminderType !== ReminderType.NONE
+          ? buildReminderPayload()
+          : undefined;
+        await createAppointment({
+          ...buildAppointmentPayload(),
+          reminder: reminderData,
+        });
       }
       onSaved();
       onClose();

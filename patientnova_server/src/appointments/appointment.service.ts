@@ -1,4 +1,4 @@
-import { AppointmentStatus, type AppointmentLocation, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, ReminderStatus, type AppointmentLocation, type Reminder } from '../../generated/prisma/client.ts';
 import { appointmentRepository } from './appointment.repository.js';
 import {
   AppointmentConflictError,
@@ -7,6 +7,7 @@ import {
   AppointmentStatusTransitionError,
   AppointmentTypeNotFoundError,
   LocationNotFoundError,
+  ReminderNotCancellableError,
 } from '../utils/errors.js';
 import type { CreateAppointmentDto, UpdateAppointmentDto, ListAppointmentsQuery, AppointmentStatsQuery } from './appointment.schemas.ts';
 import { googleMeetService } from '../google/google-meet.service.ts';
@@ -92,38 +93,73 @@ export const appointmentService = {
   },
 
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    await validateType(dto.typeId);
-    await checkConflict(dto.patientId, dto.startAt, dto.endAt); 
+    return prisma.$transaction(async (tx) => {
+      await validateType(dto.typeId);
+      await checkConflict(dto.patientId, dto.startAt, dto.endAt);
 
-    const reminder = await validateReminder(dto.reminderId);
-    const patient = await validatePatient(dto.patientId, userId);
-    const location = await validateLocation(dto.locationId);
-    
-    if (!dto.meetingUrl && location?.isVirtual) {
-      const space = await googleMeetService.createMeetingSpace();
-      dto.meetingUrl = space.meetingUrl;
-      logger.info({ appointmentId: dto.patientId, meetingUrl: space.meetingUrl }, 'Generated meeting URL for virtual appointment');
+      const existingReminder = dto.reminderId
+        ? await validateReminder(dto.reminderId)
+        : null;
+      const patient = await validatePatient(dto.patientId, userId);
+      const location = await validateLocation(dto.locationId);
 
-      if (reminder) {
-        try {
-          await prisma.reminder.update({
-            where: { id: reminder.id },
+      let createdReminder: Reminder | null = null;
+
+      if (dto.reminder) {
+        createdReminder = await tx.reminder.create({
+          data: {
+            channel: dto.reminder.channel,
+            to: dto.reminder.to,
+            sendMode: dto.reminder.sendMode,
+            contentSid: dto.reminder.contentSid || null,
+            ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
+            sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
+            status: dto.reminder.status ?? ReminderStatus.PENDING,
+            body: dto.reminder.body || null,
+            patientId: dto.patientId,
+            userId,
+          },
+        });
+        logger.info({ reminderId: createdReminder.id, userId, mode: dto.reminder.sendMode }, 'Reminder created (atomic with appointment)');
+      }
+
+      if (!dto.meetingUrl && location?.isVirtual) {
+        const space = await googleMeetService.createMeetingSpace();
+        dto.meetingUrl = space.meetingUrl;
+        logger.info({ appointmentId: dto.patientId, meetingUrl: space.meetingUrl }, 'Generated meeting URL for virtual appointment');
+
+        const targetReminder = createdReminder ?? existingReminder;
+        if (targetReminder) {
+          await tx.reminder.update({
+            where: { id: targetReminder.id },
             data: {
               contentVariables: {
-                ...(reminder.contentVariables as Record<string, any>),
+                ...(targetReminder.contentVariables as Record<string, any>),
                 '5': space.meetingUrl,
               },
             },
           });
-        } catch (error) {
-          logger.error({ reminderId: reminder.id, error }, 'Failed to update reminder with meeting URL');
         }
       }
-    }
-    
-    const created = await appointmentRepository.create(dto, patient.userId);
-    logger.info({ appointmentId: created.id, patientId: dto.patientId, userId, startAt: dto.startAt }, 'Appointment created');
-    return created;
+
+      const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
+
+      const created = await appointmentRepository.create(
+        { ...dto, reminderId: reminderId ?? undefined },
+        patient.userId,
+        tx,
+      );
+
+      if (createdReminder) {
+        await tx.reminder.update({
+          where: { id: createdReminder.id },
+          data: { appointmentId: created.id },
+        });
+      }
+
+      logger.info({ appointmentId: created.id, patientId: dto.patientId, userId, startAt: dto.startAt }, 'Appointment created');
+      return created;
+    }, { timeout: 10000 });
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
@@ -147,6 +183,90 @@ export const appointmentService = {
 
     const effectiveIsVirtual = location?.isVirtual ?? existing.appointmentLocation?.isVirtual;
     const targetReminder = reminder ?? existing.reminder;
+
+    const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
+
+    if (hasReminderChange) {
+      return prisma.$transaction(async (tx) => {
+        if (dto.reminder === null && existing.reminder) {
+          if (existing.reminder.status !== ReminderStatus.PENDING) {
+            throw new ReminderNotCancellableError(existing.reminder.status);
+          }
+          await tx.reminder.update({
+            where: { id: existing.reminder.id },
+            data: { status: ReminderStatus.CANCELLED },
+          });
+          dto.reminderId = null;
+          logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled (atomic with appointment update)');
+        } else if (dto.reminder && !existing.reminder) {
+          const createdReminder = await tx.reminder.create({
+            data: {
+              channel: dto.reminder.channel,
+              to: dto.reminder.to,
+              sendMode: dto.reminder.sendMode,
+              contentSid: dto.reminder.contentSid || null,
+              ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
+              sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
+              status: dto.reminder.status ?? ReminderStatus.PENDING,
+              body: dto.reminder.body || null,
+              patientId: existing.patientId,
+              userId,
+            },
+          });
+          dto.reminderId = createdReminder.id;
+          logger.info({ reminderId: createdReminder.id }, 'Reminder created (atomic with appointment update)');
+        } else if (dto.reminder && existing.reminder) {
+          await tx.reminder.update({
+            where: { id: existing.reminder.id },
+            data: {
+              ...(dto.reminder.channel && { channel: dto.reminder.channel }),
+              ...(dto.reminder.to && { to: dto.reminder.to }),
+              ...(dto.reminder.sendMode && { sendMode: dto.reminder.sendMode }),
+              ...(dto.reminder.contentSid !== undefined && { contentSid: dto.reminder.contentSid }),
+              ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
+              ...(dto.reminder.sendAt && { sendAt: new Date(dto.reminder.sendAt) }),
+              ...(dto.reminder.status && { status: dto.reminder.status }),
+              ...(dto.reminder.body !== undefined && { body: dto.reminder.body }),
+            },
+          });
+          logger.info({ reminderId: existing.reminder.id }, 'Reminder updated (atomic with appointment update)');
+        }
+
+        if (effectiveIsVirtual && !dto.meetingUrl && !existing.meetingUrl) {
+          const space = await googleMeetService.createMeetingSpace();
+          dto.meetingUrl = space.meetingUrl;
+          logger.info({ appointmentId: id, meetingUrl: space.meetingUrl }, 'Generated meeting URL for virtual appointment');
+
+          const reminderForUpdate = existing.reminder;
+          if (reminderForUpdate) {
+            await tx.reminder.update({
+              where: { id: reminderForUpdate.id },
+              data: {
+                contentVariables: {
+                  ...(reminderForUpdate.contentVariables as Record<string, any>),
+                  '5': space.meetingUrl,
+                },
+              },
+            });
+          }
+        } else if (location && !location.isVirtual && existing.meetingUrl) {
+          dto.meetingUrl = undefined;
+          logger.info({ appointmentId: id }, 'Cleared meeting URL (switched to in-person)');
+
+          const reminderForUpdate = existing.reminder;
+          if (reminderForUpdate) {
+            const vars = { ...(reminderForUpdate.contentVariables as Record<string, any>) };
+            delete vars['5'];
+            await tx.reminder.update({
+              where: { id: reminderForUpdate.id },
+              data: { contentVariables: vars },
+            });
+          }
+        }
+
+        return appointmentRepository.update(id, dto, tx);
+      }, { timeout: 10000 });
+    }
 
     if (effectiveIsVirtual && !dto.meetingUrl && !existing.meetingUrl) {
       const space = await googleMeetService.createMeetingSpace();
