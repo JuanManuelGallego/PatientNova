@@ -31,6 +31,17 @@ export interface Reminder {
   mediaUrl?: string | null;
 }
 
+export type ReminderInlineData = {
+  channel: Channel;
+  to: string;
+  sendMode: ReminderMode;
+  contentSid?: string;
+  contentVariables?: Record<string, string>;
+  sendAt: string;
+  status?: ReminderStatus;
+  body?: string;
+};
+
 export type ReminderForm = {
   patientId: string;
   channel: Channel;
