@@ -51,5 +51,7 @@ jobs:
           cache-dependency-path: patientnova_server/package-lock.json
       - run: npm ci
       - run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/dummy
       - run: npm run typecheck
       - run: npm test
