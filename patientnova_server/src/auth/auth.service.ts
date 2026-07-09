@@ -66,7 +66,11 @@ export const authService = {
       if (willLock) {
         lockUntil = new Date(Date.now() + config.lockout.lockoutDurationMs);
       }
-      await authRepository.incrementFailedAttempts(user.id, failedAttempts, lockUntil);
+      try {
+        await authRepository.incrementFailedAttempts(user.id, failedAttempts, lockUntil);
+      } catch (err) {
+        logger.error({ err, userId: user.id }, 'Failed to record failed login attempt');
+      }
       logger.info({ userId: user.id, email: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
       throw new AuthInvalidCredentialsError();
     }

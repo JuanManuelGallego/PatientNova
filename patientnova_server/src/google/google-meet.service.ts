@@ -66,7 +66,11 @@ export const googleMeetService = {
      */
     async endActiveConference(meetingUrl: string): Promise<void> {
         try {
-            const meetingCode = meetingUrl.split('/').pop();
+            const parts = meetingUrl.split('/');
+            const meetingCode = parts.pop();
+            if (!meetingCode || parts.length < 3) {
+                throw new Error(`Invalid Google Meet URL: ${meetingUrl}`);
+            }
             logger.debug({ meetingUrl, meetingCode }, 'Ending active Google Meet conference');
             const client = buildUserMeetClient();
             await client.endActiveConference({ name: `spaces/${meetingCode}` });

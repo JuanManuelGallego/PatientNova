@@ -309,17 +309,25 @@ export class TwilioWebhookService {
         try {
             if (intent === 'confirm') {
                 await this.confirmAppointment(reminder, phoneNumber!);
-                await this.notifyUserOfStatusUpdate(reminder.appointmentId!, AppointmentStatus.CONFIRMED);
             } else {
                 await this.cancelAppointment(reminder, phoneNumber!);
-                await this.notifyUserOfStatusUpdate(reminder.appointmentId!, AppointmentStatus.CANCELLED);
             }
-            return { success: true };
         } catch (err) {
             logger.error({ err }, 'Error processing WhatsApp quick-reply');
             await this.sendErrorMessage(phoneNumber!);
             return { success: false, message: 'Internal error' };
         }
+
+        // Notify user of status update — failure here should not error-message the patient
+        // since the appointment action already succeeded
+        try {
+            const status = intent === 'confirm' ? AppointmentStatus.CONFIRMED : AppointmentStatus.CANCELLED;
+            await this.notifyUserOfStatusUpdate(reminder.appointmentId!, status);
+        } catch (err) {
+            logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to notify user of appointment status update');
+        }
+
+        return { success: true };
     }
 }
 

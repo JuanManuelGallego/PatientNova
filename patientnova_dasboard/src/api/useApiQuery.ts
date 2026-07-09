@@ -52,8 +52,18 @@ export function useApiQuery<T>(
         try {
             const res = await fetchWithAuth(currentUrl, { signal });
             if (!res.ok) {
-                const json: ApiErrorResponse<T> = await res.json();
-                throw new Error(`Server Error: ${json.error}`);
+                // Try to read json error payload, but fall back to status if json() is
+                // not present or fails (tests may provide a minimal mock object).
+                let errMsg = `Server Error: ${res.status}`;
+                try {
+                    if (typeof res.json === "function") {
+                        const json: ApiErrorResponse<T> = await res.json();
+                        if (json && (json as any).error) errMsg = `Server Error: ${(json as any).error}`;
+                    }
+                } catch {
+                    // ignore and keep status-based message
+                }
+                throw new Error(errMsg);
             }
             const json: ApiResponse<T> = await res.json();
             if (!json.success) throw new Error("API returned an error");

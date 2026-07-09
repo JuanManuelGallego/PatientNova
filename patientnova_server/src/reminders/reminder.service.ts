@@ -19,8 +19,10 @@ export const reminderService = {
   },
 
   async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
-    if (dto.sendMode === ReminderMode.SCHEDULED && dto.sendAt && new Date(dto.sendAt) <= new Date()) {
-      throw new ReminderSendAtInPastError();
+    if (dto.sendMode === ReminderMode.SCHEDULED) {
+      if (!dto.sendAt || new Date(dto.sendAt) <= new Date()) {
+        throw new ReminderSendAtInPastError();
+      }
     }
     const reminder = await reminderRepository.create(dto, userId);
     logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode }, 'Reminder created');
