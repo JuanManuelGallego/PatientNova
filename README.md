@@ -1,6 +1,6 @@
 # PatientNova
 
-A full-stack medical practice management platform that allows healthcare providers to manage patients, appointments, medical records, and automated notifications via WhatsApp and SMS.
+A full-stack medical practice management platform for healthcare providers to manage patients, appointments, medical records, and automated notifications via WhatsApp, SMS, and email.
 
 ---
 
@@ -36,9 +36,9 @@ The system supports both **immediate dispatch** (send now) and **scheduled deliv
 ## Features
 
 ### Patients
-- Create, update, archive, and delete patient records
+- Create, update, and delete patient records
 - Track contact info: WhatsApp number, SMS number, email, date of birth, notes
-- Patient statuses: `ACTIVE`, `INACTIVE`, `ARCHIVED`
+- Patient statuses: `ACTIVE`, `INACTIVE`
 - Searchable and filterable list with pagination and status stats
 
 ### Medical Records
@@ -56,6 +56,7 @@ The system supports both **immediate dispatch** (send now) and **scheduled deliv
 - Mark appointments as paid with a single action
 - Calendar view (monthly) and list view with filtering
 - Revenue stats and status breakdowns
+- Google Meet link generation for virtual appointments
 
 ### Reminders & Notifications
 - Create reminders linked to patients and/or appointments
@@ -67,39 +68,41 @@ The system supports both **immediate dispatch** (send now) and **scheduled deliv
 - Stats by channel and status, auto-refreshed every 60 seconds
 
 ### Settings
-- User profile management with avatar upload
+- User profile management with avatar and logo upload
 - Appointment type and location configuration (soft-delete support)
-- Multi-user support with role-based access (`SUPER_ADMIN`, `ADMIN`)
+- Multi-user support with role-based access (`SUPER_ADMIN`, `ADMIN`, `VIEWER`)
+- Banking info configuration for payment notifications
 
 ---
 
 ## Tech Stack
 
-### Frontend — `patientnova_dasboard`
+### Frontend — `Portal/`
 
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) |
-| Language | TypeScript 5 |
+| Language | TypeScript 6 |
 | UI Library | React 19 |
 | Component Libraries | Ant Design 6 |
 | Styling | Tailwind CSS v4, CSS Modules |
-| Date Handling | dayjs, flatpickr |
+| Date Handling | dayjs |
 | State | nuqs (URL query state) |
 | Testing | Vitest, React Testing Library |
 
-### Backend — `patientnova_server`
+### Backend — `Server/`
 
 | Layer | Technology |
 |---|---|
 | Runtime | Node.js (ESM) |
-| Framework | Express 4 |
-| Language | TypeScript 5 |
-| ORM | Prisma 5 |
+| Framework | Express 5 |
+| Language | TypeScript 6 |
+| ORM | Prisma 7 |
 | Database | PostgreSQL |
-| Validation | Zod 3 |
+| Validation | Zod 4 |
 | Scheduler | node-cron 4 |
-| Notifications | Twilio SDK 5 (WhatsApp + SMS) |
+| Notifications | Twilio SDK 6 (WhatsApp + SMS) |
+| Video Conferencing | Google Meet API |
 | Security | Helmet, express-rate-limit, CORS, bcrypt |
 | Auth | JWT (httpOnly cookies) with account lockout |
 | Logging | Pino |
@@ -127,6 +130,7 @@ Key architectural patterns:
 - **Background workers** — Cron-based scheduler for reminder dispatch and appointment auto-completion
 - **Error boundaries** — React ErrorBoundary at root level catches render failures gracefully
 - **Retry with backoff** — Frontend data-fetching hooks retry failed requests with exponential backoff
+- **Entity mutation factories** — CRUD hooks generated via `useEntityMutation` factories to eliminate boilerplate
 
 ---
 
@@ -134,52 +138,55 @@ Key architectural patterns:
 
 ```
 PatientNova/
-├── patientnova_dasboard/          # Next.js 16 frontend
-│   ├── .env.example               # Environment variable template
+├── Portal/                       # Next.js 16 frontend
 │   └── src/
-│       ├── api/                   # Data-fetching hooks (useApiQuery, useApiMutation, per-resource hooks)
-│       ├── app/                   # Next.js App Router
-│       │   ├── AuthContext.tsx     # Auth provider (session management, login/logout)
-│       │   ├── providers.tsx      # Root providers (auth, error boundary, URL state)
-│       │   ├── page.tsx           # Public landing page
-│       │   └── (protected)/       # Auth-guarded routes
-│       │       ├── dashboard/     # Overview with stats, today's appointments, active reminders
-│       │       ├── patients/      # Patient CRUD with search and filtering
-│       │       ├── appointments/  # Appointment management with conflict detection
-│       │       ├── calendar/      # Monthly calendar view
-│       │       ├── reminders/     # Reminder management and bulk send
+│       ├── api/                  # Data-fetching hooks (useApiQuery, useApiMutation, entity factories)
+│       ├── app/                  # Next.js App Router
+│       │   ├── AuthContext.tsx   # Auth provider (session management, login/logout)
+│       │   ├── providers.tsx     # Root providers (auth, error boundary, URL state)
+│       │   ├── page.tsx          # Public landing page
+│       │   ├── login/            # Login page
+│       │   └── (protected)/      # Auth-guarded routes
+│       │       ├── dashboard/    # Overview with stats, today's appointments, active reminders
+│       │       ├── patients/     # Patient CRUD with search and filtering
+│       │       ├── appointments/ # Appointment management with conflict detection
+│       │       ├── calendar/     # Monthly calendar view
+│       │       ├── reminders/    # Reminder management and bulk send wizard
 │       │       ├── medical-records/ # Clinical history per patient
-│       │       └── settings/      # Profile, locations, appointment types
-│       ├── components/            # Shared UI components
-│       │   ├── Drawers/           # Create/edit side panels
-│       │   ├── Info/              # Stat cards, status pills, badges
-│       │   ├── Modals/            # Confirmation dialogs, appointment/reminder modals
-│       │   ├── Navigation/        # Sidebar navigation
-│       │   ├── CustomSelect.tsx   # Accessible dropdown with keyboard navigation
-│       │   └── ErrorBoundary.tsx  # React error boundary with retry
-│       ├── types/                 # TypeScript interfaces and enums
-│       ├── utils/                 # Helpers (formatting, time, avatar, debounce)
-│       └── test/                  # Vitest test suites
+│       │       └── settings/     # Profile, locations, appointment types, security
+│       ├── components/           # Shared UI components
+│       │   ├── Drawers/          # Create/edit side panels
+│       │   ├── Info/             # Stat cards, status pills, badges
+│       │   ├── Modals/           # Confirmation dialogs, appointment/reminder modals
+│       │   └── MedicalRecord/    # Medical record PDF and document components
+│       ├── config/               # Theme, icons, and app configuration
+│       ├── hooks/                # Custom React hooks
+│       ├── styles/               # Global CSS, Ant Design theme, PDF styles
+│       ├── types/                # TypeScript interfaces and enums
+│       ├── utils/                # Helpers (formatting, time, avatar, debounce)
+│       └── test/                 # Vitest test suites
 │
-├── patientnova_server/            # Express backend
-│   ├── .env.example               # Environment variable template
-│   ├── schema.prisma              # Prisma schema (models, indexes, enums)
+├── Server/                       # Express 5 backend
+│   ├── schema.prisma             # Prisma schema (models, indexes, enums)
 │   └── src/
-│       ├── auth/                  # Login, logout, session refresh, account lockout
-│       ├── users/                 # User CRUD, password change, role management
-│       ├── patients/              # Patient CRUD with search, stats, ownership checks
-│       ├── appointments/          # Appointment CRUD, conflict detection, stats, auto-complete
-│       ├── appointment-types/     # Configurable types (soft-delete)
-│       ├── locations/             # Configurable locations (soft-delete)
-│       ├── reminders/             # Reminder CRUD, stats, status management
-│       ├── medical-records/       # Clinical records with family members, evolution notes
-│       ├── notify/                # Immediate WhatsApp/SMS dispatch
-│       ├── twilio/                # Twilio client wrapper, webhook handler, signature validation
-│       ├── middlewares/           # Auth (JWT), Zod validation, async error handler
-│       ├── prisma/                # Prisma client, seed scripts
-│       └── utils/                 # Config, logger, scheduler, errors, pagination, time helpers
+│       ├── auth/                 # Login, logout, session refresh, account lockout
+│       ├── users/                # User CRUD, password change, role management
+│       ├── patients/             # Patient CRUD with search, stats, ownership checks
+│       ├── appointments/         # Appointment CRUD, conflict detection, stats, auto-complete
+│       ├── appointment-types/    # Configurable types (soft-delete)
+│       ├── locations/            # Configurable locations (soft-delete)
+│       ├── reminders/            # Reminder CRUD, stats, status management
+│       ├── medical-records/      # Clinical records with family members, evolution notes
+│       ├── consent-document/     # Consent document management and public download
+│       ├── notify/               # Immediate WhatsApp/SMS dispatch
+│       ├── twilio/               # Twilio client wrapper, webhook handler, signature validation
+│       ├── google/               # Google Meet integration
+│       ├── scheduler/            # Cron workers (reminders, appointment auto-complete, daily summary)
+│       ├── middlewares/          # Auth (JWT), Zod validation, async error handler
+│       ├── prisma/               # Prisma client, seed scripts
+│       └── utils/                # Config, logger, errors, pagination, time helpers, encryption
 │
-└── patientnova_bruno/             # Bruno API collection (manual testing)
+└── Bruno Collection/             # Bruno API collection (manual testing)
 ```
 
 ---
@@ -188,7 +195,7 @@ PatientNova/
 
 ### Prerequisites
 
-- **Node.js 20+**
+- **Node.js 22+**
 - **PostgreSQL** database
 - A [Twilio](https://www.twilio.com) account with:
   - A WhatsApp-enabled sender (Sandbox or approved number)
@@ -197,44 +204,43 @@ PatientNova/
 
 ### Environment Variables
 
-**Backend** — copy `patientnova_server/.env.example` to `patientnova_server/.env`:
+**Backend** — copy `Server/.env.example` to `Server/.env`:
 
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | JWT signing secret (generate with `openssl rand -hex 64`) |
+| `ENCRYPTION_KEY` | AES-256-GCM key for field encryption (generate with `openssl rand -hex 32`) |
 | `TWILIO_ACCOUNT_SID` | Twilio account SID |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |
 | `TWILIO_WHATSAPP_FROM` | WhatsApp sender (e.g. `whatsapp:+14155238886`) |
 | `TWILIO_SMS_FROM` | SMS sender phone number |
 | `TWILIO_WEBHOOK_BASE_URL` | Public URL for Twilio webhooks |
-| `TWILIO_WHATSAPP_USER_REMINDER_*_SID` | Content Template SIDs (1–6 appointments) |
+| `TWILIO_WHATSAPP_*_SID` | Content Template SIDs for various appointment scenarios |
 | `ALLOWED_ORIGINS` | JSON array of allowed CORS origins |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account credentials |
 | `BCRYPT_ROUNDS` | Password hashing rounds (default: `12`) |
-| `DEFAULT_TIMEZONE` | Default IANA timezone (default: `America/Bogota`) |
-| `DEFAULT_CURRENCY` | Default currency code (default: `COP`) |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Google service account for Meet integration |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Google service account private key |
+| `GOOGLE_MEET_ORGANIZER_EMAIL` | Email to organizer Google Meet links |
 
-**Frontend** — copy `patientnova_dasboard/.env.example` to `patientnova_dasboard/.env.local`:
+**Frontend** — copy `Portal/.env.example` to `Portal/.env.local`:
 
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | Backend API URL (default: `http://localhost:3001`) |
-| `NEXT_PUBLIC_TWILIO_REMINDER_SID` | Twilio Content Template SID for reminders |
-| `NEXT_PUBLIC_TWILIO_REMINDER_CONFIRM_SID` | Twilio Content Template SID for confirmations |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | Contact email shown on landing page |
 
 ### Installation
 
 ```bash
 # Backend
-cd patientnova_server
+cd Server
 npm install
 npx prisma migrate deploy
 npm run db:seed-admin        # Creates the initial admin user
 
 # Frontend
-cd patientnova_dasboard
+cd Portal
 npm install
 ```
 
@@ -243,12 +249,12 @@ npm install
 **Development:**
 ```bash
 # Terminal 1 — Backend (hot reload)
-cd patientnova_server
+cd Server
 npm run dev
 # → http://localhost:3001
 
 # Terminal 2 — Frontend (hot reload)
-cd patientnova_dasboard
+cd Portal
 npm run dev
 # → http://localhost:3000
 ```
@@ -256,12 +262,12 @@ npm run dev
 **Production:**
 ```bash
 # Backend
-cd patientnova_server
+cd Server
 npm run build
 npm start          # Runs migrations, seeds admin, starts server
 
 # Frontend
-cd patientnova_dasboard
+cd Portal
 npm run build
 npm start          # Starts Next.js production server
 ```
@@ -395,8 +401,8 @@ The database uses PostgreSQL with Prisma ORM. Key models:
 
 | Model | Purpose | Key Fields |
 |---|---|---|
-| `User` | Admin users | email, role (`SUPER_ADMIN`/`ADMIN`), status, timezone |
-| `Patient` | Patient records | name, contact info, status (`ACTIVE`/`INACTIVE`/`ARCHIVED`) |
+| `User` | Admin users | email, role (`SUPER_ADMIN`/`ADMIN`/`VIEWER`), status, timezone, banking info |
+| `Patient` | Patient records | name, contact info, status (`ACTIVE`/`INACTIVE`) |
 | `Appointment` | Scheduled visits | startAt, endAt, timezone, price, currency, status, paid |
 | `Reminder` | Notifications | channel, to, status, sendMode, sendAt, messageId |
 | `MedicalRecord` | Clinical history | consultation reason, development, lifestyle, trauma, mental history |
@@ -416,7 +422,7 @@ The database uses PostgreSQL with Prisma ORM. Key models:
 ### Indexes
 
 Composite indexes are defined for common query patterns:
-- `Patient`: `[userId, status]`, `[userId, email]` (unique)
+- `Patient`: `[userId, status]`, `[userId, email]` (unique), `[name]`, `[lastName]`
 - `Appointment`: `[startAt, status]`, `[patientId]`, `[locationId]`, `[typeId]`
 - `Reminder`: `[status, sendAt]`, `[patientId]`
 
@@ -469,6 +475,7 @@ All workers:
 - **Authentication** — JWT tokens stored in httpOnly, secure cookies with configurable sameSite policy
 - **Account lockout** — Configurable max failed attempts and lockout duration
 - **Timing-safe login** — Dummy bcrypt comparison on unknown emails to prevent user enumeration
+- **Field encryption** — Sensitive fields (banking info, medical data) encrypted at rest with AES-256-GCM
 - **Input validation** — All request bodies and query parameters validated via Zod schemas
 - **IANA timezone validation** — Timezone strings validated against the Intl API
 - **Rate limiting** — Global rate limiter + dedicated limit on message status endpoint
@@ -483,18 +490,18 @@ All workers:
 ## Testing
 
 ```bash
-# Server tests (23 tests across 4 suites)
-cd patientnova_server
+# Server tests (168 tests across 12 suites)
+cd Server
 npm test                 # Run once
 npm run test:watch       # Watch mode
 npm run test:coverage    # With coverage report
 
-# Dashboard tests (30 tests across 3 suites)
-cd patientnova_dasboard
+# Dashboard tests (41 tests across 4 suites)
+cd Portal
 npm test                 # Run once
 npm run test:watch       # Watch mode
 ```
 
 Test suites cover:
-- **Server**: Error handling, Prisma error mapping, pagination utilities, time utilities
-- **Dashboard**: API query hook (loading, error, retry, refetch), component rendering, time formatting
+- **Server**: Service logic (patients, appointments, reminders, medical records, auth, users, locations, appointment types, consent documents, Google Meet), error handling, Prisma error mapping, pagination utilities, time utilities, encryption
+- **Dashboard**: API query/mutation hooks (loading, error, retry, refetch), time formatting, query string building

@@ -1,0 +1,11 @@
+meta {
+  name: Soft Delete Medical Record
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/medical-records/{{medicalRecordId}}/soft-delete
+  body: none
+  auth: none
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Restore Medical Record
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/medical-records/{{medicalRecordId}}/restore
+  body: none
+  auth: none
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Restore Reminder
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/reminders/{{reminderId}}/restore
+  body: none
+  auth: none
+}
