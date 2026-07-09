@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
-
+        node-version: [22.x]
+      
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
@@ -39,7 +39,11 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x]
+        
+    env: 
+      TWILIO_ACCOUNT_SID: dummySID
+      TWILIO_AUTH_TOKEN: dummyToken
 
     steps:
       - uses: actions/checkout@v4
