@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: patientnova_dasboard
+        working-directory: Portal
 
     strategy:
       matrix:
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-          cache-dependency-path: patientnova_dasboard/package-lock.json
+          cache-dependency-path: Portal/package-lock.json
       - run: npm ci
       - run: npm run build
       - run: npm test
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: patientnova_server
+        working-directory: Server
 
     strategy:
       matrix:
@@ -68,8 +68,8 @@ jobs:
       TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID: dummyReminder4Sid
       TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID: dummyReminder5Sid
       TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID: dummyReminder6Sid
-      TWILLO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID: dummyStatusSid
-      TWILLO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
+      TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID: dummyStatusSid
+      TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
       AUTH_SECRET: dummy-auth-secret
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: admin@example.com
@@ -84,7 +84,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-          cache-dependency-path: patientnova_server/package-lock.json
+          cache-dependency-path: Server/package-lock.json
       - run: npm ci
       - run: npx prisma generate
         env:
