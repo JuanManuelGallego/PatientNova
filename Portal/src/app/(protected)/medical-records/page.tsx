@@ -19,7 +19,8 @@ import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 import { MedicalRecordCard } from "@/src/components/MedicalRecord/MedicalRecordCard";
 import { useCreateMedicalRecord } from "@/src/api/useCreateMedicalRecord";
 import { useUpdateMedicalRecord } from "@/src/api/useUpdateMedicalRecord";
-import { LBL_SAVED, LBL_SAVE_ERROR, LBL_LOADING } from "@/src/constants/ui";
+import { LBL_LOADING } from "@/src/constants/ui";
+import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecord/MedicalRecordPDF";
 import { useAuthContext } from "../../AuthContext";
 import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSection";
@@ -197,27 +198,7 @@ function MedicalRecordsPageContent() {
           </>
         )}
       </div>
-      <div style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "6px 12px",
-        borderRadius: 999,
-        background: "var(--c-surface)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-        border: "1px solid var(--c-border, rgba(0,0,0,0.08))",
-        fontSize: 13,
-        color: saveStatus === "error" ? "var(--c-danger, #e53e3e)" : "var(--c-text-muted)",
-        opacity: saveStatus === "idle" ? 0 : 1,
-        pointerEvents: "none",
-        transition: "opacity 0.3s ease",
-      }}>
-        {saveStatus === "saved" && <>{LBL_SAVED}</>}
-        {saveStatus === "error" && <>{LBL_SAVE_ERROR}</>}
-      </div>
+      <SaveStatusIndicator status={saveStatus} showText={false} />
     </PageLayout>
   );
 }

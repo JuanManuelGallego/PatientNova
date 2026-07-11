@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { API_BASE } from "../types/API";
 import { User } from "../types/User";
 import { useApiMutation } from "./useApiMutation";
@@ -11,17 +11,11 @@ type SaveStatus = "idle" | "saved" | "error";
 
 export const useUpdateProfileWithDebounce = (userData: Partial<User> | null): SaveStatus => {
     const [ saveStatus, setSaveStatus ] = useState<SaveStatus>("idle");
-    const isPopulated = useRef(false);
     const { mutate } = useApiMutation<User>("PATCH", "Error al guardar");
     const { user, updateUser } = useAuthContext();
 
     useEffect(() => {
         if (!userData) return;
-
-        if (!isPopulated.current) {
-            isPopulated.current = true;
-            return;
-        }
 
         // Optimistic update fires immediately, before the debounce
         updateUser({ ...user, ...userData } as User);
