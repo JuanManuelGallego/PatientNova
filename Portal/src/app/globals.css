@@ -2880,6 +2880,35 @@ tr:hover td {
   flex: 1;
 }
 
+/* Autosave status pill (floating) */
+.save-status-pill {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--c-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--c-border, rgba(0, 0, 0, 0.08));
+  font-size: 13px;
+  color: var(--c-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.save-status-pill[data-status="saved"],
+.save-status-pill[data-status="error"] {
+  opacity: 1;
+}
+
+.save-status-pill[data-status="error"] {
+  color: var(--c-danger, #e53e3e);
+}
+
 /* List inside card */
 .dash-list {
   display: flex;

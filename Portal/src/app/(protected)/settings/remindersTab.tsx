@@ -1,4 +1,5 @@
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
+import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { useState } from "react";
 import { useAuthContext } from "../../AuthContext";
 import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/useUpdateProfile";
@@ -165,25 +166,7 @@ export function RemindersTab() {
             {saveStatus === "saved" && (
               <SuccessBanner message="Preferencias de recordatorios actualizadas." />
             )}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 12,
-                  color: "var(--c-gray-400)",
-                  alignSelf: "center",
-                }}
-              >
-                {saveStatus === "saved" && "Guardado"}
-                {saveStatus === "error" && "Error al guardar"}
-                {saveStatus === "idle" && ""}
-              </span>
-            </div>
+            <SaveStatusIndicator status={saveStatus} showPill={false} />
           </div>
         </div>
       </div>
