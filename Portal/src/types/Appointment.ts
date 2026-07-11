@@ -65,14 +65,14 @@ export const APPT_PAID_STATUS_CFG: Record<
   AppointmentPaidStatus,
   { label: string; color: string; bg: string; dot: string; icon: string }
 > = {
-  [AppointmentPaidStatus.PAID]: {
+  [ AppointmentPaidStatus.PAID ]: {
     label: "Pagado",
     color: "#16A34A",
     bg: "#F0FDF4",
     dot: "#22C55E",
     icon: "",
   },
-  [AppointmentPaidStatus.UNPAID]: {
+  [ AppointmentPaidStatus.UNPAID ]: {
     label: "Pendiente",
     color: "#DC2626",
     bg: "#FEF2F2",
@@ -96,42 +96,37 @@ export const DEFAULT_APPT_STATUS = [
 
 export const APPT_STATUS_CFG: Record<
   AppointmentStatus,
-  { label: string; color: string; bg: string; dot: string; icon: string }
+  { label: string; color: string; bg: string; dot: string; }
 > = {
-  [AppointmentStatus.SCHEDULED]: {
+  [ AppointmentStatus.SCHEDULED ]: {
     label: "Programada",
     color: "#2563EB",
     bg: "#EFF6FF",
     dot: "#3B82F6",
-    icon: "",
   },
-  [AppointmentStatus.CONFIRMED]: {
+  [ AppointmentStatus.CONFIRMED ]: {
     label: "Confirmada",
     color: "#16A34A",
     bg: "#F0FDF4",
     dot: "#22C55E",
-    icon: "",
   },
-  [AppointmentStatus.COMPLETED]: {
+  [ AppointmentStatus.COMPLETED ]: {
     label: "Completada",
     color: "#7C3AED",
     bg: "#F5F3FF",
     dot: "#8B5CF6",
-    icon: "",
   },
-  [AppointmentStatus.CANCELLED]: {
+  [ AppointmentStatus.CANCELLED ]: {
     label: "Cancelada",
     color: "#6B7280",
     bg: "#F3F4F6",
     dot: "#9CA3AF",
-    icon: "",
   },
-  [AppointmentStatus.NO_SHOW]: {
+  [ AppointmentStatus.NO_SHOW ]: {
     label: "No asistió",
     color: "#DC2626",
     bg: "#FEF2F2",
     dot: "#EF4444",
-    icon: "",
   },
 };
 
