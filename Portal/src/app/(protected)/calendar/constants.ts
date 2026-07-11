@@ -2,13 +2,10 @@ import { addDays, todayFormattedString, DAY_NAMES_ES } from "@/src/utils/TimeUti
 
 export { DAY_NAMES_ES };
 
-/** Default hours shown in week/day views (7 AM – 8 PM) */
 export const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
-/** Height in px of a single hour row in the time grid */
 export const HOUR_HEIGHT = 48;
 
-/** Minimum chip height in px so very short appointments stay tappable */
 export const MIN_CHIP_PX = 20;
 
 export const DEFAULT_FIRST_HOUR = 7;
@@ -66,44 +63,20 @@ export interface HourRange {
   hours: number[];
 }
 
-/**
- * Computes the visible hour range for the time grid. When appointments exist,
- * the range is expanded to fit the earliest start and latest end (padded by 1h
- * and clamped to 0–23). Falls back to 7 AM – 8 PM when there are no appointments.
- */
 export function computeHourRange(
   appointments: import("@/src/types/Appointment").Appointment[],
 ): HourRange {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
-  let found = false;
 
   for (const a of appointments) {
     const s = new Date(a.startAt);
     const e = new Date(a.endAt);
     const sh = s.getHours();
     const eh = e.getHours() + (e.getMinutes() > 0 ? 1 : 0);
-    if (!found) {
-      first = sh;
-      last = eh;
-      found = true;
-    } else {
-      if (sh < first) first = sh;
-      if (eh > last) last = eh;
-    }
+    if (sh < first) first = Math.max(0, sh - 1);
+    if (eh > last) last = Math.min(23, eh + 1);
   }
-
-  if (!found) {
-    return {
-      firstHour: DEFAULT_FIRST_HOUR,
-      lastHour: DEFAULT_LAST_HOUR,
-      hours: HOURS,
-    };
-  }
-
-  first = Math.max(0, first - 1);
-  last = Math.min(23, last + 1);
-  if (last <= first) last = Math.min(23, first + 1);
 
   return {
     firstHour: first,
@@ -120,11 +93,6 @@ export interface PositionedAppt {
   width: number;
 }
 
-/**
- * Lays out a day's appointments by their real start/end time so chip height
- * reflects appointment length. Overlapping appointments are placed in side-by-side
- * columns so heights stay accurate without visual overlap.
- */
 export function layoutDayAppointments(
   appts: import("@/src/types/Appointment").Appointment[],
   firstHour: number,
@@ -145,7 +113,7 @@ export function layoutDayAppointments(
     const endMin = e.getHours() * 60 + e.getMinutes();
 
     let col = 0;
-    // Find the first column whose last appointment ends before this one starts.
+
     for (;;) {
       const occupant = placed.find((p) => p.col === col && p.endMin > startMin);
       if (!occupant) break;
