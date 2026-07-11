@@ -15,6 +15,7 @@ import { ViewMode } from "./types";
 import { useCalendarNavigation } from "./useCalendarNavigation";
 import { useCalendarData } from "./useCalendarData";
 import { CalendarToolbar } from "./components/CalendarToolbar";
+import { CalendarLegend } from "./components/CalendarLegend";
 import { MonthView } from "./components/MonthView";
 import { WeekView } from "./components/WeekView";
 import { DayView } from "./components/DayView";
@@ -141,6 +142,7 @@ function CalendarContent() {
               }}
             />
           )}
+          <CalendarLegend />
         </div>
       </PageLayout>
 

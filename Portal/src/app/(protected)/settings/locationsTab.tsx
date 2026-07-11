@@ -7,10 +7,12 @@ import { MapPin } from "lucide-react";
 import { LocationModal } from "@/src/components/Modals/LocationModal";
 import { AppointmentLocation } from "@/src/types/Appointment";
 import { useState } from "react";
+import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 
 export function LocationsTab() {
-  const { locations, loading, fetchLocations } = useFetchLocations(true);
+  const { locations, loading, data, fetchLocations } = useFetchLocations(true);
   const { updateLocation } = useUpdateLocation();
+  const showSpinner = useDelayedLoading(loading);
 
   const [modalLocation, setModalLocation] = useState<
     AppointmentLocation | null | undefined
@@ -69,7 +71,7 @@ export function LocationsTab() {
           Nueva ubicación
         </button>
       </div>
-      {loading ? (
+      {showSpinner ? (
         <div className="dash-card">
           <div
             className="dash-card__body"
@@ -79,7 +81,7 @@ export function LocationsTab() {
             Cargando ubicaciones…
           </div>
         </div>
-      ) : (
+      ) : data ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {activeLocations.length === 0 && (
             <div className="dash-card">
@@ -158,7 +160,7 @@ export function LocationsTab() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
       {showModal && (
         <LocationModal
           location={modalLocation}

@@ -10,5 +10,5 @@ export const useFetchLocations = (includeInactive = false) => {
         () => (data ?? []).filter(l => includeInactive || l.isActive),
         [ data, includeInactive ]
     );
-    return { locations, loading, error, fetchLocations };
+    return { data, locations, loading, error, fetchLocations };
 };

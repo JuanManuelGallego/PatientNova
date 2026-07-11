@@ -7,11 +7,13 @@ import { Brain } from "lucide-react";
 import { DeleteAppointmentTypeModal } from "@/src/components/Modals/DeleteAppointmentTypeModal";
 import { AppointmentType } from "@/src/types/Appointment";
 import { useState } from "react";
+import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 
 export function AppointmentTypesTab() {
-  const { appointmentTypes, loading, fetchAppointmentTypes } =
+  const { appointmentTypes, loading, data, fetchAppointmentTypes } =
     useFetchAppointmentTypes();
   const { updateAppointmentType } = useUpdateAppointmentType();
+  const showSpinner = useDelayedLoading(loading);
 
   const [modalType, setModalType] = useState<
     AppointmentType | null | undefined
@@ -74,7 +76,7 @@ export function AppointmentTypesTab() {
         </button>
       </div>
 
-      {loading ? (
+      {showSpinner ? (
         <div className="dash-card">
           <div
             className="dash-card__body"
@@ -84,7 +86,7 @@ export function AppointmentTypesTab() {
             Cargando tipos de cita…
           </div>
         </div>
-      ) : (
+      ) : data ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {activeTypes.length === 0 && (
             <div className="dash-card">
@@ -163,7 +165,7 @@ export function AppointmentTypesTab() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
       {showModal && (
         <AppointmentTypeModal
           appointmentType={modalType}

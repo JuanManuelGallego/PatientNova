@@ -5,5 +5,5 @@ import { useApiQuery } from "./useApiQuery";
 export const useFetchAppointmentTypes = () => {
     const { data, loading, error, refetch: fetchAppointmentTypes } =
         useApiQuery<AppointmentType[]>(`${API_BASE}/appointment-types`, "Failed to load appointment types");
-    return { appointmentTypes: data ?? [], loading, error, fetchAppointmentTypes };
+    return { data, appointmentTypes: data ?? [], loading, error, fetchAppointmentTypes };
 };
