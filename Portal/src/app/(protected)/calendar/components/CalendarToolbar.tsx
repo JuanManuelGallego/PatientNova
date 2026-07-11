@@ -37,7 +37,7 @@ export function CalendarToolbar({
               onClick={() => onChangeView(v)}
               style={{
                 ...calendarStyles.viewToggleBtn,
-                ...(viewMode === v ? calendarStyles.viewToggleBtnActive : {}),
+                ...(viewMode === v ? calendarStyles.viewToggleBtnActive : calendarStyles.viewToggleBtnDisabled),
               }}
               title={
                 v === ViewMode.Month
