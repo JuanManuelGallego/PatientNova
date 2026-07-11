@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import {
   MONTH_NAMES_ES,
-  fmtDatePlusOneDay,
+  fmtDate,
   getColombianHolidays,
   addDays,
 } from "@/src/utils/TimeUtils";
 import { Appointment } from "@/src/types/Appointment";
 import { ViewMode } from "./types";
+import { computeHourRange, toDateStr } from "./constants";
 
 interface UseCalendarDataArgs {
   calYear: number;
@@ -77,7 +78,18 @@ export function useCalendarData({
       ? `${MONTH_NAMES_ES[ calMonth ]} ${calYear}`
       : viewMode === ViewMode.Week
         ? weekLabel
-        : fmtDatePlusOneDay(dayDate);
+        : fmtDate(dayDate);
+
+  const hourRange = useMemo(() => {
+    if (viewMode === ViewMode.Week) {
+      const weekAppts = weekDays.flatMap((d) => apptByDate[ toDateStr(d) ] ?? []);
+      return computeHourRange(weekAppts);
+    }
+    if (viewMode === ViewMode.Day) {
+      return computeHourRange(apptByDate[ dayDate ] ?? []);
+    }
+    return computeHourRange([]);
+  }, [ viewMode, weekDays, apptByDate, dayDate ]);
 
   return {
     daysInMonth,
@@ -89,5 +101,6 @@ export function useCalendarData({
     holidayMap,
     cellDate,
     navLabel,
+    hourRange,
   };
 }

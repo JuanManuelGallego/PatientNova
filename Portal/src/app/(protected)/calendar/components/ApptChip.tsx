@@ -2,7 +2,7 @@ import { AppointmentStatus } from "@/src/types/Appointment";
 import { fmtTime } from "@/src/utils/TimeUtils";
 import { ApptChipProps } from "../types";
 
-export function ApptChip({ a, compact = false, onViewAppt }: ApptChipProps) {
+export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProps) {
   const isCancelled = a.status === AppointmentStatus.CANCELLED;
   const isNoShow = a.status === AppointmentStatus.NO_SHOW;
   const isCompleted = a.status === AppointmentStatus.COMPLETED;
@@ -29,6 +29,7 @@ export function ApptChip({ a, compact = false, onViewAppt }: ApptChipProps) {
         whiteSpace: "nowrap",
         overflow: "hidden",
         textOverflow: "ellipsis",
+        ...style,
       }}
       title={`${a.patient.name} ${a.patient.lastName} — ${a.appointmentLocation.name} — ${a.status}`}
     >

@@ -42,7 +42,7 @@ function CalendarContent() {
   const { appointments, loading, fetchAppointments } =
     useFetchAppointments(calendarFilters);
 
-  const { rows, weekDays, apptByDate, holidayMap, cellDate, navLabel } =
+  const { rows, weekDays, apptByDate, holidayMap, cellDate, navLabel, hourRange } =
     useCalendarData({
       calYear,
       calMonth,
@@ -118,6 +118,7 @@ function CalendarContent() {
               apptByDate={apptByDate}
               holidayMap={holidayMap}
               loading={loading}
+              hourRange={hourRange}
               onDrillToDay={drillToDay}
               onViewAppt={setViewAppt}
               onCreateAt={(date) => {
@@ -132,6 +133,7 @@ function CalendarContent() {
               apptByDate={apptByDate}
               holidayMap={holidayMap}
               loading={loading}
+              hourRange={hourRange}
               onViewAppt={setViewAppt}
               onCreateAt={(date) => {
                 setPrefillDate(date);

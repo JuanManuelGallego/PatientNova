@@ -8,6 +8,7 @@ export interface ApptChipProps {
   a: import("@/src/types/Appointment").Appointment;
   compact?: boolean;
   onViewAppt: (a: import("@/src/types/Appointment").Appointment) => void;
+  style?: React.CSSProperties;
 }
 
 export interface CalendarToolbarProps {
@@ -35,6 +36,7 @@ export interface WeekViewProps {
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
   holidayMap: Record<string, string>;
   loading: boolean;
+  hourRange: import("./constants").HourRange;
   onDrillToDay: (date: string) => void;
   onViewAppt: (a: import("@/src/types/Appointment").Appointment) => void;
   onCreateAt: (date: string) => void;
@@ -45,6 +47,7 @@ export interface DayViewProps {
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
   holidayMap: Record<string, string>;
   loading: boolean;
+  hourRange: import("./constants").HourRange;
   onViewAppt: (a: import("@/src/types/Appointment").Appointment) => void;
   onCreateAt: (date: string) => void;
 }
