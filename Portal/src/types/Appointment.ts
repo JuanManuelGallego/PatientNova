@@ -141,13 +141,13 @@ export interface FetchAppointmentsFilters {
   page?: number;
   pageSize?: number;
   orderBy?:
-  | "startAt"
-  | "createdAt"
-  | "status"
-  | "price"
-  | "location"
-  | "type"
-  | "patientName";
+    | "startAt"
+    | "createdAt"
+    | "status"
+    | "price"
+    | "location"
+    | "type"
+    | "patientName";
   order?: "asc" | "desc";
 }
 

@@ -89,6 +89,21 @@
     color: var(--c-gray-400);
 }
 
+.calLoadingOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(1px);
+    font-size: 14px;
+    color: var(--c-gray-500);
+    border-radius: var(--r-xl, 16px);
+    pointer-events: none;
+}
+
 .calDayNumber {
     font-size: 13px;
     font-weight: 500;

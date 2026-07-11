@@ -15,7 +15,7 @@ export function MonthView({
   onViewAppt,
 }: MonthViewProps) {
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" style={{ position: "relative" }}>
       <div className="cal-day-headers">
         {DAY_NAMES_ES.map((d) => (
           <div key={d} className="cal-day-header">
@@ -23,9 +23,13 @@ export function MonthView({
           </div>
         ))}
       </div>
-      {loading ? (
-        <div className="cal-loading">Cargando citas…</div>
-      ) : (
+      <div
+        style={{
+          opacity: loading ? 0.5 : 1,
+          transition: "opacity 0.15s",
+          pointerEvents: loading ? "none" : "auto",
+        }}
+      >
         <div className="cal-grid">
           {Array.from({ length: rows * 7 }).map((_, i) => {
             const date = cellDate(i);
@@ -81,7 +85,7 @@ export function MonthView({
                     )}
                     <div className="cal-chips">
                       {appts.slice(0, 3).map((a) => (
-                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} compact />
+                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} />
                       ))}
                       {appts.length > 3 && (
                         <button
@@ -101,7 +105,8 @@ export function MonthView({
             );
           })}
         </div>
-      )}
+      </div>
+      {loading && <div className="cal-loading-overlay">Cargando citas…</div>}
     </div>
   );
 }
