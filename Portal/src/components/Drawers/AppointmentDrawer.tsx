@@ -25,7 +25,7 @@ export function AppointmentDrawer({
   onPay: () => void;
   onDelete: () => void;
 }) {
-  const s = APPT_STATUS_CFG[appt.status];
+  const s = APPT_STATUS_CFG[ appt.status ];
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
@@ -140,13 +140,13 @@ export function AppointmentDrawer({
                   key={appt.reminder.id}
                   className="linked-card"
                   style={{
-                    borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[appt.reminder.status].dot}`,
+                    borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[ appt.reminder.status ].dot}`,
                   }}
                 >
                   <div className="linked-card__header">
                     <div>
                       <div className="linked-card__title">
-                        {CHANNEL_CFG[appt.reminder.channel].label}
+                        {CHANNEL_CFG[ appt.reminder.channel ].label}
                       </div>
                       <div className="linked-card__meta">
                         {fmtDateTime(appt.reminder.sendAt.toString())}
