@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/prisma/seedAdmin.ts",
+    "db:migrate-reminders": "tsx src/scripts/migratePendingReminders.ts",
     "db:format": "npx prisma db push",
     "db:wipe": "npx prisma migrate reset --force --skip-seed"
   },

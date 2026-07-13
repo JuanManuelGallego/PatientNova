@@ -24,16 +24,17 @@ export async function initializePgBoss(): Promise<void> {
   // Create queues (idempotent across reboots).
   // Workers and schedules are registered in later migration phases so that
   // node-cron remains the sole actor during Phase 1 (no behavior change).
+  // The dead-letter queue must be created BEFORE the queue that references it.
+  await boss.createQueue('send-reminder-dlq', {
+    deleteAfterSeconds: 30 * 24 * 60 * 60,
+  });
+
   await boss.createQueue('send-reminder', {
     retryLimit: 3,
     retryDelay: 60,
     retryBackoff: true,
     retryDelayMax: 900,
     deadLetter: 'send-reminder-dlq',
-  });
-
-  await boss.createQueue('send-reminder-dlq', {
-    deleteAfterSeconds: 30 * 24 * 60 * 60,
   });
 
   await boss.createQueue('track-delivery');
