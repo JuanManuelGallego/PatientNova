@@ -3,6 +3,7 @@ import { config } from "./utils/config.js";
 import { logger } from "./utils/logger.js";
 import { prisma } from "./prisma/prismaClient.js";
 import { initializeSchedulers, stopScheduler } from "./scheduler/index.js";
+import { initializePgBoss, stopPgBoss } from "./scheduler/pgBoss.js";
 
 async function start() {
   await prisma.$connect();
@@ -10,6 +11,7 @@ async function start() {
 
   if (config.scheduler.enabled) {
     initializeSchedulers();
+    await initializePgBoss();
   } else {
     logger.info('Schedulers disabled via config');
   }
@@ -22,6 +24,13 @@ async function start() {
   async function gracefulShutdown() {
     logger.info('Shutting down gracefully...');
     stopScheduler();
+
+    // Give pg-boss time to finish active jobs before closing.
+    await Promise.race([
+      stopPgBoss(),
+      new Promise(resolve => setTimeout(resolve, 8000)),
+    ]);
+
     server.close(async () => {
       await prisma.$disconnect();
       process.exit(0);

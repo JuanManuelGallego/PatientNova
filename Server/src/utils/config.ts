@@ -10,6 +10,8 @@ function requireEnv(key: string): string {
 export const config = {
   port: parseInt(process.env.PORT ?? '3001', 10),
 
+  databaseUrl: requireEnv('DATABASE_URL'),
+
   twilio: {
     accountSid: requireEnv('TWILIO_ACCOUNT_SID'),
     authToken: requireEnv('TWILIO_AUTH_TOKEN'),
