@@ -1,11 +1,21 @@
-import { ReminderMode } from '../../generated/prisma/client.ts';
+import { ReminderMode, ReminderStatus, type Reminder } from '../../generated/prisma/client.ts';
+import { fromPrisma } from 'pg-boss';
+import { prisma } from '../prisma/prismaClient.js';
 import { reminderRepository } from './reminder.repository.js';
-import { ReminderNotCancellableError, ReminderSendAtInPastError } from '../utils/errors.js';
+import {
+  ReminderNotCancellableError,
+  ReminderSendAtInPastError,
+  PatientNotFoundError,
+} from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
-import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.ts';
-import type { Paginated } from '../utils/pagination.ts';
-import type { ReminderWithRelations, ReminderStats } from '../utils/types.ts';
-import type { Reminder } from '../../generated/prisma/client.ts';
+import { reminderInclude } from '../utils/types.js';
+import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
+import type { Paginated } from '../utils/pagination.js';
+import type { ReminderWithRelations, ReminderStats } from '../utils/types.js';
+import { getBoss } from '../scheduler/pgBoss.js';
+import { reminderJobManager } from '../scheduler/reminderJobManager.js';
+
+const QUEUE = 'send-reminder';
 
 export const reminderService = {
   findById: reminderRepository.findById.bind(reminderRepository),
@@ -24,36 +34,105 @@ export const reminderService = {
         throw new ReminderSendAtInPastError();
       }
     }
-    const reminder = await reminderRepository.create(dto, userId);
+
+    const boss = getBoss();
+
+    // Create the reminder and enqueue the pg-boss job in a single transaction so
+    // the audit row and the queued job are never out of sync.
+    const reminder = await prisma.$transaction(async (tx) => {
+      const patient = await tx.patient.findFirst({ where: { id: dto.patientId, userId } });
+      if (!patient) throw new PatientNotFoundError(dto.patientId);
+
+      const created = await tx.reminder.create({
+        data: {
+          channel: dto.channel,
+          contentSid: dto.contentSid || null,
+          ...(dto.contentVariables && { contentVariables: dto.contentVariables }),
+          messageId: dto.messageId || null,
+          sendMode: dto.sendMode,
+          patientId: dto.patientId,
+          userId,
+          appointmentId: dto.appointmentId || null,
+          sendAt: new Date(dto.sendAt),
+          status: dto.status ?? ReminderStatus.PENDING,
+          to: dto.to,
+          body: dto.body || null,
+        },
+        include: reminderInclude,
+      });
+
+      const db = fromPrisma(tx);
+      if (dto.sendMode === ReminderMode.IMMEDIATE) {
+        await boss.send(QUEUE, { reminderId: created.id }, { db });
+      } else {
+        await boss.send(QUEUE, { reminderId: created.id }, { startAfter: new Date(dto.sendAt), db });
+      }
+
+      return created;
+    });
+
     logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode }, 'Reminder created');
     return reminder;
   },
 
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
-    const reminder = await reminderRepository.update(id, dto, userId);
+    const reminder = await reminderRepository.findById(id, userId);
+
+    // Handle sendAt change on a still-pending reminder.
+    if (dto.sendAt && reminder.status === ReminderStatus.PENDING) {
+      await reminderJobManager.reschedule(id, new Date(dto.sendAt));
+    }
+
+    // Handle switch to IMMEDIATE on a scheduled, pending reminder.
+    if (dto.sendMode === ReminderMode.IMMEDIATE && reminder.sendMode === ReminderMode.SCHEDULED) {
+      if (reminder.status === ReminderStatus.PENDING) {
+        await reminderJobManager.cancel(id);
+        await reminderJobManager.enqueueImmediate(id);
+      }
+    }
+
+    // Handle transition to a terminal (non-PENDING) status.
+    if (dto.status && dto.status !== ReminderStatus.PENDING) {
+      await reminderJobManager.cancel(id);
+    }
+
+    const updated = await reminderRepository.update(id, dto, userId);
     logger.info({ reminderId: id, userId, fields: Object.keys(dto) }, 'Reminder updated');
-    return reminder;
+    return updated;
   },
 
   async cancel(id: string, userId: string): Promise<Reminder> {
     const reminder = await reminderRepository.findById(id, userId);
-    if (reminder.status !== 'PENDING') {
+    if (reminder.status !== ReminderStatus.PENDING) {
       throw new ReminderNotCancellableError(reminder.status);
     }
+    await reminderJobManager.cancel(id);
     const cancelled = await reminderRepository.cancel(id, userId);
     logger.info({ reminderId: id, userId }, 'Reminder cancelled');
     return cancelled;
   },
 
   async softDelete(id: string, userId: string): Promise<Reminder> {
-    const reminder = await reminderRepository.delete(id, userId);
+    const reminder = await reminderRepository.findById(id, userId);
+    if (reminder.status === ReminderStatus.PENDING) {
+      await reminderJobManager.cancel(id);
+    }
+    const deleted = await reminderRepository.delete(id, userId);
     logger.info({ reminderId: id, userId }, 'Reminder deleted');
-    return reminder;
+    return deleted;
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
-    const reminder = await reminderRepository.restore(id, userId);
+    const restored = await reminderRepository.restore(id, userId);
+
+    if (restored.status === ReminderStatus.PENDING && new Date(restored.sendAt) > new Date()) {
+      const hasJob = await reminderJobManager.hasQueuedJob(restored.id);
+      if (!hasJob) {
+        await reminderJobManager.enqueue(restored.id, new Date(restored.sendAt));
+      }
+    }
+
     logger.info({ reminderId: id, userId }, 'Reminder restored');
-    return reminder;
+    return restored;
   },
 };

@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import { config } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
+import { sendReminderWorker } from './workers/sendReminder.js';
 
 let boss: PgBoss | null = null;
 
@@ -40,6 +41,11 @@ export async function initializePgBoss(): Promise<void> {
   await boss.createQueue('track-delivery');
   await boss.createQueue('daily-reminder', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('complete-appointments', { retryLimit: 2, retryDelay: 30 });
+
+  // --- Register workers (Phase 3+) ---
+  // Phase 3: send-reminder worker. track-delivery / daily / complete workers
+  // are registered in later migration phases.
+  boss.work('send-reminder', sendReminderWorker);
 
   logger.info('pg-boss initialized (queues created)');
 }
