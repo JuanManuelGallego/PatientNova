@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js';
 import { sendReminderWorker } from './workers/sendReminder.js';
 import { trackDeliveryWorker } from './workers/trackDelivery.js';
 import { dailyReminderWorker } from './workers/dailyReminder.js';
+import { completeAppointmentsWorker } from './workers/completeAppointments.js';
 
 let boss: PgBoss | null = null;
 
@@ -25,8 +26,6 @@ export async function initializePgBoss(): Promise<void> {
   await boss.start();
 
   // Create queues (idempotent across reboots).
-  // Workers and schedules are registered in later migration phases so that
-  // node-cron remains the sole actor during Phase 1 (no behavior change).
   // The dead-letter queue must be created BEFORE the queue that references it.
   await boss.createQueue('send-reminder-dlq', {
     deleteAfterSeconds: 30 * 24 * 60 * 60,
@@ -51,14 +50,12 @@ export async function initializePgBoss(): Promise<void> {
   boss.work('send-reminder', sendReminderWorker);
   boss.work('track-delivery', { batchSize: 100 }, trackDeliveryWorker);
   boss.work('daily-reminder', dailyReminderWorker);
+  boss.work('complete-appointments', completeAppointmentsWorker);
 
   // --- Register schedules (use key to prevent duplicate rows on re-boot) ---
-  // Phase 4: track-delivery, every 5 minutes.
-  // Phase 5: daily-reminder, hourly (Decision A).
-  // complete-appointments (every 15 min) schedule is registered in Phase 6;
-  // node-cron still owns it until then.
   await boss.schedule('track-delivery', '*/5 * * * *', null, { key: 'every-5min' });
   await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
+  await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' }); // Phase 6
 
   logger.info('pg-boss initialized (queues created)');
 }

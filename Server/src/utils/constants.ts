@@ -6,12 +6,6 @@ export const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 export const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 export const SEVEN_DAYS_MS = 7 * ONE_DAY_MS;
 
-/**
- * How far ahead the scheduler looks when picking up reminders to send.
- * 57 seconds — slightly under 1 minute to account for cron scheduling jitter.
- */
-export const REMINDER_LOOKAHEAD_MS = 57 * ONE_SECOND_MS;
-
 /** Max reminders to process per scheduler tick (prevents runaway on large backlogs). */
 export const REMINDER_BATCH_SIZE = 100;
 
