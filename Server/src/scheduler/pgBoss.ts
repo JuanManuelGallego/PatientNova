@@ -3,6 +3,7 @@ import { config } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
 import { sendReminderWorker } from './workers/sendReminder.js';
 import { trackDeliveryWorker } from './workers/trackDelivery.js';
+import { dailyReminderWorker } from './workers/dailyReminder.js';
 
 let boss: PgBoss | null = null;
 
@@ -49,12 +50,15 @@ export async function initializePgBoss(): Promise<void> {
   // daily-reminder / complete-appointments workers are registered in later phases.
   boss.work('send-reminder', sendReminderWorker);
   boss.work('track-delivery', { batchSize: 100 }, trackDeliveryWorker);
+  boss.work('daily-reminder', dailyReminderWorker);
 
   // --- Register schedules (use key to prevent duplicate rows on re-boot) ---
   // Phase 4: track-delivery, every 5 minutes.
-  // daily-reminder (hourly) and complete-appointments (every 15 min) schedules
-  // are registered in later phases; node-cron still owns those until then.
+  // Phase 5: daily-reminder, hourly (Decision A).
+  // complete-appointments (every 15 min) schedule is registered in Phase 6;
+  // node-cron still owns it until then.
   await boss.schedule('track-delivery', '*/5 * * * *', null, { key: 'every-5min' });
+  await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
 
   logger.info('pg-boss initialized (queues created)');
 }

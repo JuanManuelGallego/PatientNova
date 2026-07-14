@@ -1,12 +1,12 @@
-import { Channel, AppointmentStatus } from "../../generated/prisma/client.ts";
-import { prisma } from "../prisma/prismaClient.js";
-import { APPT_SID_MAP } from "../utils/config.ts";
-import { DEFAULT_LOCALE, DAILY_REMINDER_HOUR } from "../utils/constants.ts";
-import { logger } from "../utils/logger.ts";
-import { getLocalTimeParts, getTomorrowUTCRange } from "../utils/timeUtils.ts";
-import { dispatchMessage, type DispatchOpts } from "./dispatch.js";
-import { config } from "../utils/config";
-import type { AppointmentWithDetails } from "../utils/types.ts";
+import { Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
+import { prisma } from "../../prisma/prismaClient.js";
+import { APPT_SID_MAP } from "../../utils/config.ts";
+import { DEFAULT_LOCALE, DAILY_REMINDER_HOUR } from "../../utils/constants.ts";
+import { logger } from "../../utils/logger.ts";
+import { getLocalTimeParts, getTomorrowUTCRange } from "../../utils/timeUtils.ts";
+import { dispatchMessage, type DispatchOpts } from "../dispatch.js";
+import { config } from "../../utils/config";
+import type { AppointmentWithDetails } from "../../utils/types.ts";
 
 function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezone: string): string[] {
   const fmt = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
@@ -92,9 +92,9 @@ export async function dailyReminderWorker(): Promise<void> {
 
   for (const user of users) {
     try {
-      const { hour, minute } = getLocalTimeParts(user.timezone);
-      // Only trigger at exactly 6:00 PM in the user's timezone
-      if (hour !== DAILY_REMINDER_HOUR || minute !== 0) continue;
+      const { hour } = getLocalTimeParts(user.timezone);
+      // Decision A (Hourly): only trigger at 18:00 local time, ignore the minute.
+      if (hour !== DAILY_REMINDER_HOUR) continue;
       logger.debug("Running daily reminder worker...");
 
       // Idempotency guard: skip if already sent today for this user

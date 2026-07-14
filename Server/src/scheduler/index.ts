@@ -1,7 +1,6 @@
 import cron, { type ScheduledTask } from "node-cron";
 import { logger } from "../utils/logger";
 import { appointmentWorker } from "./appointmentWorker";
-import { dailyReminderWorker } from "./dailyReminderWorker";
 import { config } from "../utils/config";
 
 let schedulerTask: ScheduledTask | null = null;
@@ -12,8 +11,9 @@ export function initializeSchedulers(): void {
   schedulerTask = cron.schedule(config.scheduler.schedule, async () => {
     const results: { worker: string; success: boolean; error?: unknown }[] = [];
 
-    // NOTE: reminderWorker (sendPendingReminders) was disabled in Phase 3 — the
-    // send-reminder queue is now handled by pg-boss's sendReminderWorker.
+    // NOTE: reminderWorker (sendPendingReminders) was disabled in Phase 3 and
+    // dailyReminderWorker in Phase 5 — both are now handled by pg-boss.
+    // appointmentWorker remains on node-cron until Phase 6.
 
     try {
       await appointmentWorker();
@@ -21,14 +21,6 @@ export function initializeSchedulers(): void {
     } catch (err) {
       logger.error({ err }, 'appointmentWorker failed');
       results.push({ worker: 'appointmentWorker', success: false, error: err });
-    }
-
-    try {
-      await dailyReminderWorker();
-      results.push({ worker: 'dailyReminderWorker', success: true });
-    } catch (err) {
-      logger.error({ err }, 'dailyReminderWorker failed');
-      results.push({ worker: 'dailyReminderWorker', success: false, error: err });
     }
 
     const failed = results.filter(r => !r.success);
