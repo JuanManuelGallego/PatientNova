@@ -1,11 +1,10 @@
 import { Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
 import { prisma } from "../../prisma/prismaClient.js";
-import { APPT_SID_MAP } from "../../utils/config.ts";
+import { APPT_SID_MAP, config } from "../../utils/config.ts";
 import { DEFAULT_LOCALE, DAILY_REMINDER_HOUR } from "../../utils/constants.ts";
 import { logger } from "../../utils/logger.ts";
 import { getLocalTimeParts, getTomorrowUTCRange } from "../../utils/timeUtils.ts";
 import { dispatchMessage, type DispatchOpts } from "../dispatch.js";
-import { config } from "../../utils/config";
 import type { AppointmentWithDetails } from "../../utils/types.ts";
 
 function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezone: string): string[] {
