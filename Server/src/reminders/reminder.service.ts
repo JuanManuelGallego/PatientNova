@@ -28,17 +28,17 @@ export const reminderService = {
     return reminderRepository.getStats(query, userId);
   },
 
-  async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
+  async create(dto: CreateReminderDto, userId: string, enqueue = true): Promise<Reminder> {
     if (dto.sendMode === ReminderMode.SCHEDULED) {
       if (!dto.sendAt || new Date(dto.sendAt) <= new Date()) {
         throw new ReminderSendAtInPastError();
       }
     }
 
-    const boss = getBoss();
-
-    // Create the reminder and enqueue the pg-boss job in a single transaction so
-    // the audit row and the queued job are never out of sync.
+    // Create the reminder and (optionally) enqueue the pg-boss job in a single
+    // transaction so the audit row and the queued job are never out of sync.
+    // `enqueue: false` is for callers that dispatch the message themselves
+    // (e.g. the /notify routes) to avoid a duplicate send.
     const reminder = await prisma.$transaction(async (tx) => {
       const patient = await tx.patient.findFirst({ where: { id: dto.patientId, userId } });
       if (!patient) throw new PatientNotFoundError(dto.patientId);
@@ -61,17 +61,20 @@ export const reminderService = {
         include: reminderInclude,
       });
 
-      const db = fromPrisma(tx);
-      if (dto.sendMode === ReminderMode.IMMEDIATE) {
-        await boss.send(QUEUE, { reminderId: created.id }, { db });
-      } else {
-        await boss.send(QUEUE, { reminderId: created.id }, { startAfter: new Date(dto.sendAt), db });
+      if (enqueue) {
+        const boss = getBoss();
+        const db = fromPrisma(tx);
+        if (dto.sendMode === ReminderMode.IMMEDIATE) {
+          await boss.send(QUEUE, { reminderId: created.id }, { db });
+        } else {
+          await boss.send(QUEUE, { reminderId: created.id }, { startAfter: new Date(dto.sendAt), db });
+        }
       }
 
       return created;
     });
 
-    logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode }, 'Reminder created');
+    logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode, enqueued: enqueue }, 'Reminder created');
     return reminder;
   },
 

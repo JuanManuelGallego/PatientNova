@@ -143,6 +143,19 @@ describe('reminderService.create', () => {
     await expect(reminderService.create(dto, 'user-1')).rejects.toThrow();
     expect(tx.reminder.create).not.toHaveBeenCalled();
   });
+
+  it('enqueue:false creates the reminder but does NOT enqueue a pg-boss job (no duplicate send)', async () => {
+    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'patient-1', status: 'PENDING', sendAt: new Date().toISOString() };
+    const tx = txStub();
+    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const boss = bossStub();
+
+    await reminderService.create(dto, 'user-1', false);
+
+    expect(tx.reminder.create).toHaveBeenCalled();
+    expect(mocks.fromPrisma).not.toHaveBeenCalled();
+    expect(boss.send).not.toHaveBeenCalled();
+  });
 });
 
 describe('reminderService.update', () => {
