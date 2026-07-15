@@ -67,7 +67,6 @@ function getTodayLocalDate(timezone: string): string {
 /** Returns the local calendar date string (YYYY-MM-DD) for tomorrow in a given timezone. */
 function getTomorrowLocalDate(timezone: string): string {
   const { year, month, day } = getLocalTimeParts(timezone);
-  // Use Date.UTC to safely handle month/day overflow (e.g. Dec 31 + 1 day → Jan 1)
   const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "UTC" }).format(tomorrow);
 }
@@ -92,11 +91,9 @@ export async function dailyReminderWorker(): Promise<void> {
   for (const user of users) {
     try {
       const { hour } = getLocalTimeParts(user.timezone);
-      // Decision A (Hourly): only trigger at 18:00 local time, ignore the minute.
       if (hour !== DAILY_REMINDER_HOUR) continue;
       logger.debug("Running daily reminder worker...");
 
-      // Idempotency guard: skip if already sent today for this user
       const todayLocal = getTodayLocalDate(user.timezone);
       if (user.lastDailyReminderDate) {
         const lastSentDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "UTC" })

@@ -26,9 +26,6 @@ export const reminderJobManager = {
   },
 
   async reschedule(reminderId: string, newSendAt: Date): Promise<void> {
-    // Simpler + more robust than boss.update(): cancel all queued jobs then
-    // re-enqueue with the new sendAt. Avoids boss.update()'s created/retry-state
-    // restriction and the non-idiomatic (name, data, options) overload.
     await reminderJobManager.cancel(reminderId);
     await reminderJobManager.enqueue(reminderId, newSendAt);
   },

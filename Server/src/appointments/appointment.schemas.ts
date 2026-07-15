@@ -43,6 +43,9 @@ export const createAppointmentSchema = z.object({
 ).refine(
   (d) => new Date(d.endAt) > new Date(d.startAt),
   { message: 'endAt must be after startAt', path: ['endAt'] }
+).refine(
+  (d) => new Date(d.startAt) >= new Date(),
+  { message: 'startAt cannot be in the past', path: ['startAt'] }
 );
 
 export const updateAppointmentSchema = z
@@ -72,6 +75,10 @@ export const updateAppointmentSchema = z
   .refine(
     (d) => !d.startAt || !d.endAt || new Date(d.endAt) > new Date(d.startAt),
     { message: 'endAt must be after startAt', path: ['endAt'] }
+  )
+  .refine(
+    (d) => !d.startAt || new Date(d.startAt) >= new Date(),
+    { message: 'startAt cannot be in the past', path: ['startAt'] }
   );
 
 export const listAppointmentsSchema = z.object({

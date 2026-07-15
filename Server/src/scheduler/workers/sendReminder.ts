@@ -2,11 +2,9 @@ import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../prisma/prismaClient.js';
 import { validateReminder } from '../validation.js';
 import { dispatchMessage } from '../dispatch.js';
+import { REMINDER_SEND_RETRY_LIMIT } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
 
-const RETRY_LIMIT = 3;
-
-// pg-boss work() handlers receive an array of jobs.
 export async function sendReminderWorker([job]: Array<{
   data: { reminderId: string };
   retryCount?: number;
@@ -52,15 +50,14 @@ export async function sendReminderWorker([job]: Array<{
       },
     });
   } else {
-    // On final retry, mark the reminder FAILED before throwing so pg-boss dead-letters it.
-    if ((job.retryCount ?? 0) >= RETRY_LIMIT - 1) {
+    if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
       await prisma.reminder.update({
         where: { id: reminderId },
         data: { status: ReminderStatus.FAILED, error: result.error ?? 'Dispatch failed' },
       });
       logger.error({ reminderId, error: result.error }, 'Reminder permanently failed after max retries');
     }
-    // Throw to let pg-boss handle retry or dead-letter.
+
     throw new Error(result.error ?? 'Dispatch failed');
   }
 }
