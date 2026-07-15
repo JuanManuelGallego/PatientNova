@@ -14,15 +14,9 @@ const TWILIO_TO_PRISMA_STATUS: Partial<Record<string, ReminderStatus>> = {
   undelivered: ReminderStatus.FAILED,
 };
 
-/**
- * Polls Twilio for the delivery status of QUEUED reminders. Runs on the
- * `track-delivery` pg-boss schedule (every 5 minutes). Ignores the schedule
- * job payload and queries the DB directly (idempotent across overlapping runs).
- */
 export async function trackDeliveryWorker(): Promise<void> {
   const cutoff = new Date(Date.now() - MAX_TRACK_AGE_MS);
 
-  // Drop reminders that have been QUEUED too long — mark them failed.
   const stale = await prisma.reminder.findMany({
     where: { status: ReminderStatus.QUEUED, updatedAt: { lte: cutoff }, isDeleted: false },
     select: { id: true },
@@ -40,7 +34,6 @@ export async function trackDeliveryWorker(): Promise<void> {
     logger.warn({ count: stale.length }, 'Dropped stale QUEUED reminders');
   }
 
-  // Poll active QUEUED reminders for their Twilio delivery status.
   const queued = await prisma.reminder.findMany({
     where: {
       status: ReminderStatus.QUEUED,

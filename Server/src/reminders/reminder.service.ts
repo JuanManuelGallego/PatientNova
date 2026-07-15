@@ -35,10 +35,6 @@ export const reminderService = {
       }
     }
 
-    // Create the reminder and (optionally) enqueue the pg-boss job in a single
-    // transaction so the audit row and the queued job are never out of sync.
-    // `enqueue: false` is for callers that dispatch the message themselves
-    // (e.g. the /notify routes) to avoid a duplicate send.
     const reminder = await prisma.$transaction(async (tx) => {
       const patient = await tx.patient.findFirst({ where: { id: dto.patientId, userId } });
       if (!patient) throw new PatientNotFoundError(dto.patientId);
@@ -81,12 +77,10 @@ export const reminderService = {
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
     const reminder = await reminderRepository.findById(id, userId);
 
-    // Handle sendAt change on a still-pending reminder.
     if (dto.sendAt && reminder.status === ReminderStatus.PENDING) {
       await reminderJobManager.reschedule(id, new Date(dto.sendAt));
     }
 
-    // Handle switch to IMMEDIATE on a scheduled, pending reminder.
     if (dto.sendMode === ReminderMode.IMMEDIATE && reminder.sendMode === ReminderMode.SCHEDULED) {
       if (reminder.status === ReminderStatus.PENDING) {
         await reminderJobManager.cancel(id);
@@ -94,7 +88,6 @@ export const reminderService = {
       }
     }
 
-    // Handle transition to a terminal (non-PENDING) status.
     if (dto.status && dto.status !== ReminderStatus.PENDING) {
       await reminderJobManager.cancel(id);
     }
