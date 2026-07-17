@@ -141,22 +141,24 @@ export function AppointmentModal({
     if (selectedLocation?.isVirtual) {
       return {
         to,
-        contentSid:
-          TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL
-            .contentSid,
-        contentVariables: {
-          "1": selectedPatient ? `${selectedPatient.name}` : "",
-          "2": getUserName(user) || "su profesional de salud",
-          "3": fmtDate(form.startAt),
-          "4": fmtTime(form.startAt),
-          "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
-        },
-        body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.template
-          .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
-          .replace("{{2}}", getUserName(user) || "su profesional de salud")
-          .replace("{{3}}", fmtDate(form.startAt))
-          .replace("{{4}}", fmtTime(form.startAt))
-          .replace("{{5}}", form.meetingUrl || "{{5}}"),
+        ...(channel === Channel.WHATSAPP && {
+          contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.contentSid,
+          contentVariables: {
+            "1": selectedPatient ? `${selectedPatient.name}` : "",
+            "2": getUserName(user) || "su profesional de salud",
+            "3": fmtDate(form.startAt),
+            "4": fmtTime(form.startAt),
+            "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
+          }
+        }),
+        ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+          body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.template
+            .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
+            .replace("{{2}}", getUserName(user) || "su profesional de salud")
+            .replace("{{3}}", fmtDate(form.startAt))
+            .replace("{{4}}", fmtTime(form.startAt))
+            .replace("{{5}}", form.meetingUrl || "{{5}}"),
+        }),
         channel: channel,
         sendMode: ReminderMode.SCHEDULED,
         status: ReminderStatus.PENDING,
@@ -166,31 +168,26 @@ export function AppointmentModal({
 
     return {
       to,
-      contentSid:
-        TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL
-          .contentSid,
-      contentVariables: {
-        "1": selectedPatient ? `${selectedPatient.name}` : "",
-        "2": getUserName(user) || "su profesional de salud",
-        "3": fmtDate(form.startAt),
-        "4": fmtTime(form.startAt),
-        "5": selectedLocation?.address || "No hay dirección registrada",
-        "6":
-          selectedLocation?.instructions || "No hay instrucciones registradas",
-      },
-      body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
-        .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
-        .replace("{{2}}", getUserName(user) || "su profesional de salud")
-        .replace("{{3}}", fmtDate(form.startAt))
-        .replace("{{4}}", fmtTime(form.startAt))
-        .replace(
-          "{{5}}",
-          selectedLocation?.address || "No hay dirección registrada",
-        )
-        .replace(
-          "{{6}}",
-          selectedLocation?.instructions || "No hay instrucciones registradas",
-        ),
+      ...(channel === Channel.WHATSAPP && {
+        contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.contentSid,
+        contentVariables: {
+          "1": selectedPatient ? `${selectedPatient.name}` : "",
+          "2": getUserName(user) || "su profesional de salud",
+          "3": fmtDate(form.startAt),
+          "4": fmtTime(form.startAt),
+          "5": selectedLocation?.address || "No hay dirección registrada",
+          "6": selectedLocation?.instructions || "No hay instrucciones registradas",
+        }
+      }),
+      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+        body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
+          .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
+          .replace("{{2}}", getUserName(user) || "su profesional de salud")
+          .replace("{{3}}", fmtDate(form.startAt))
+          .replace("{{4}}", fmtTime(form.startAt))
+          .replace("{{5}}", selectedLocation?.address || "No hay dirección registrada",)
+          .replace("{{6}}", selectedLocation?.instructions || "No hay instrucciones registradas",),
+      }),
       channel: channel,
       sendMode: ReminderMode.SCHEDULED,
       status: ReminderStatus.PENDING,
