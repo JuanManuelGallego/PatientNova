@@ -132,17 +132,21 @@ export function ReminderModal({
   function buildPayload() {
     return {
       to: resolveTo(),
-      contentSid:
-        sendMode === ReminderMode.SCHEDULED
-          ? TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid
-          : TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
-      contentVariables: {
-        "1": `${selectedPatient?.name ?? ""}`,
-        "2": getUserName(user),
-        "3": form.fecha,
-        "4": form.hora,
-      },
-      body: form.message,
+      ...(channel === Channel.WHATSAPP && {
+        contentSid:
+          sendMode === ReminderMode.SCHEDULED
+            ? TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid
+            : TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+        contentVariables: {
+          "1": `${selectedPatient?.name ?? ""}`,
+          "2": getUserName(user),
+          "3": form.fecha,
+          "4": form.hora,
+        }
+      }),
+      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+        body: form.message,
+      }),
       patientId: form.patientId,
     };
   }
