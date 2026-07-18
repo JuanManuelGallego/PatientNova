@@ -10,7 +10,6 @@ export interface DispatchOpts {
   contentVariables?: Record<string, string> | undefined
 };
 
-/** Send a message via the appropriate channel. Does not touch the DB. */
 export async function dispatchMessage(channel: Channel, opts: DispatchOpts): Promise<NotificationResult> {
   switch (channel) {
     case Channel.WHATSAPP:

@@ -1,8 +1,8 @@
-import { AppointmentStatus } from "../../generated/prisma/client.ts";
-import { prisma } from "../prisma/prismaClient.js";
-import { logger } from "../utils/logger.ts";
+import { AppointmentStatus } from "../../../generated/prisma/client.ts";
+import { prisma } from "../../prisma/prismaClient.js";
+import { logger } from "../../utils/logger.js";
 
-export async function appointmentWorker(): Promise<void> {
+export async function completeAppointmentsWorker(): Promise<void> {
   logger.debug("Running appointment worker...");
   const now = new Date();
 

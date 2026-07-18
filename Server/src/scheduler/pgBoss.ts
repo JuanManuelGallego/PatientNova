@@ -1,6 +1,11 @@
 import { PgBoss } from 'pg-boss';
 import { config } from '../utils/config.js';
+import { REMINDER_SEND_RETRY_LIMIT } from '../utils/constants.js';
 import { logger } from '../utils/logger.js';
+import { sendReminderWorker } from './workers/sendReminder.js';
+import { trackDeliveryWorker } from './workers/trackDelivery.js';
+import { dailyReminderWorker } from './workers/dailyReminder.js';
+import { completeAppointmentsWorker } from './workers/completeAppointments.js';
 
 let boss: PgBoss | null = null;
 
@@ -21,16 +26,12 @@ export async function initializePgBoss(): Promise<void> {
 
   await boss.start();
 
-  // Create queues (idempotent across reboots).
-  // Workers and schedules are registered in later migration phases so that
-  // node-cron remains the sole actor during Phase 1 (no behavior change).
-  // The dead-letter queue must be created BEFORE the queue that references it.
   await boss.createQueue('send-reminder-dlq', {
     deleteAfterSeconds: 30 * 24 * 60 * 60,
   });
 
   await boss.createQueue('send-reminder', {
-    retryLimit: 3,
+    retryLimit: REMINDER_SEND_RETRY_LIMIT,
     retryDelay: 60,
     retryBackoff: true,
     retryDelayMax: 900,
@@ -40,6 +41,15 @@ export async function initializePgBoss(): Promise<void> {
   await boss.createQueue('track-delivery');
   await boss.createQueue('daily-reminder', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('complete-appointments', { retryLimit: 2, retryDelay: 30 });
+
+  boss.work('send-reminder', sendReminderWorker);
+  boss.work('track-delivery', { batchSize: 100 }, trackDeliveryWorker);
+  boss.work('daily-reminder', dailyReminderWorker);
+  boss.work('complete-appointments', completeAppointmentsWorker);
+
+  await boss.schedule('track-delivery', '*/5 * * * *', null, { key: 'every-5min' });
+  await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
+  await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' }); // Phase 6
 
   logger.info('pg-boss initialized (queues created)');
 }

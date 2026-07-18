@@ -59,10 +59,13 @@ export function DateTimePicker({
                 return {
                   disabledHours: () =>
                     Array.from({ length: now.hour() }, (_, i) => i),
-                  disabledMinutes: (hour: number) =>
-                    hour === now.hour()
-                      ? Array.from({ length: now.minute() }, (_, i) => i)
-                      : [],
+                  disabledMinutes: (hour: number) => {
+                    if (hour !== now.hour()) return [];
+                    const minutes = [];
+                    for (let i = 0; i < now.minute(); i += 5) minutes.push(i);
+                    return minutes;
+                  },
+                  disabledSeconds: () => [],
                 };
               }
             : undefined

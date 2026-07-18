@@ -29,7 +29,7 @@ A full-stack medical practice management platform for healthcare providers to ma
 
 PatientNova is a private admin dashboard built for a medical practice. It centralizes patient records, medical histories, appointment scheduling, and outbound notification delivery — sending appointment reminders to patients through **WhatsApp**, **SMS**, or **Email** via Twilio.
 
-The system supports both **immediate dispatch** (send now) and **scheduled delivery** (cron-driven background worker). All notification history is persisted for audit and tracking.
+The system supports both **immediate dispatch** (send now) and **scheduled delivery** (pg-boss background worker). All notification history is persisted for audit and tracking.
 
 ---
 
@@ -100,7 +100,7 @@ The system supports both **immediate dispatch** (send now) and **scheduled deliv
 | ORM | Prisma 7 |
 | Database | PostgreSQL |
 | Validation | Zod 4 |
-| Scheduler | node-cron 4 |
+| Scheduler | pg-boss 12 |
 | Notifications | Twilio SDK 6 (WhatsApp + SMS) |
 | Video Conferencing | Google Meet API |
 | Security | Helmet, express-rate-limit, CORS, bcrypt |
@@ -127,7 +127,7 @@ Key architectural patterns:
 - **Multi-tenant by user** — All data is scoped to the authenticated user via `userId` foreign keys
 - **Soft deletes** — Locations and appointment types use `isActive` flags rather than hard deletes
 - **Optimistic audit trail** — Notifications create a `PENDING` record before dispatch, then update status (ensures audit trail even if the server crashes mid-send)
-- **Background workers** — Cron-based scheduler for reminder dispatch and appointment auto-completion
+- **Background workers** — pg-boss queues/schedules for reminder dispatch, delivery tracking, and appointment auto-completion
 - **Error boundaries** — React ErrorBoundary at root level catches render failures gracefully
 - **Retry with backoff** — Frontend data-fetching hooks retry failed requests with exponential backoff
 - **Entity mutation factories** — CRUD hooks generated via `useEntityMutation` factories to eliminate boilerplate
@@ -181,7 +181,7 @@ PatientNova/
 │       ├── notify/               # Immediate WhatsApp/SMS dispatch
 │       ├── twilio/               # Twilio client wrapper, webhook handler, signature validation
 │       ├── google/               # Google Meet integration
-│       ├── scheduler/            # Cron workers (reminders, appointment auto-complete, daily summary)
+│       ├── scheduler/            # pg-boss workers (reminders, delivery tracking, appointment auto-complete, daily summary)
 │       ├── middlewares/          # Auth (JWT), Zod validation, async error handler
 │       ├── prisma/               # Prisma client, seed scripts
 │       └── utils/                # Config, logger, errors, pagination, time helpers, encryption
@@ -454,19 +454,19 @@ WhatsApp messages require a Twilio **Content Template SID** (`contentSid`) and o
 
 ## Background Workers
 
-Three workers run on a shared **1-minute cron schedule** via `node-cron`:
+Background work is orchestrated by **pg-boss** (Postgres-backed job queue) with four queues/schedules:
 
-| Worker | Purpose |
-|---|---|
-| `reminderWorker` | Dispatches `PENDING` reminders whose `sendAt` time has passed. Tracks sent messages to poll Twilio for delivery status updates. |
-| `appointmentWorker` | Auto-transitions `SCHEDULED`/`CONFIRMED` appointments to `COMPLETED` when more than 1 hour past `endAt` |
-| `dailyReminderWorker` | Sends daily "tomorrow's appointments" summary via WhatsApp to users with reminders enabled |
+| Queue / Schedule | Worker | Purpose |
+|---|---|---|
+| `send-reminder` (per-reminder jobs) | `sendReminderWorker` | Dispatches `PENDING` reminders whose `sendAt` time has passed. On send, enqueues a `track-delivery` job to poll Twilio for status updates. Failed jobs retry with backoff and dead-letter. |
+| `track-delivery` (every 5 min) | `trackDeliveryWorker` | Polls Twilio for stale `SENT` messages (>30 min with no confirmation) and marks them `FAILED`. |
+| `complete-appointments` (every 15 min) | `completeAppointmentsWorker` | Auto-transitions `SCHEDULED`/`CONFIRMED` appointments to `COMPLETED` when more than 1 hour past `endAt`. |
+| `daily-reminder` (hourly) | `dailyReminderWorker` | Sends a daily "tomorrow's appointments" summary via WhatsApp to users with reminders enabled. |
 
 All workers:
-- Start automatically on server boot via `initializeSchedulers()`
-- Shut down cleanly on `SIGTERM`/`SIGINT`
-- Are wrapped in error handling — a failure in one cycle logs the error and retries next minute
-- Include safeguards against memory leaks (max tracked reminders, max-age pruning, poll failure limits)
+- Start automatically on server boot via `initializePgBoss()` (requires `ENABLE_SCHEDULER=true`)
+- Shut down cleanly on `SIGTERM`/`SIGINT` via `stopPgBoss({ graceful: true })`
+- Are wrapped in error handling — a failure in one cycle logs the error and lets pg-boss retry
 
 ---
 

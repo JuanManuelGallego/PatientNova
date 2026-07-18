@@ -199,6 +199,19 @@ describe('createAppointmentSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('rejects startAt in the past', () => {
+    const result = createAppointmentSchema.safeParse({
+      ...baseCreate,
+      startAt: new Date(Date.now() - 86400000).toISOString(),
+      endAt: new Date(Date.now() + 86400000).toISOString(),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const error = result.error.issues.find(i => i.path.includes('startAt'));
+      expect(error).toBeDefined();
+    }
+  });
 });
 
 describe('updateAppointmentSchema', () => {
@@ -269,6 +282,22 @@ describe('updateAppointmentSchema', () => {
         sendMode: 'IMMEDIATE',
       },
     });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects startAt in the past on update', () => {
+    const result = updateAppointmentSchema.safeParse({
+      startAt: new Date(Date.now() - 86400000).toISOString(),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const error = result.error.issues.find(i => i.path.includes('startAt'));
+      expect(error).toBeDefined();
+    }
+  });
+
+  it('accepts update without startAt (no past check)', () => {
+    const result = updateAppointmentSchema.safeParse({ price: 200 });
     expect(result.success).toBe(true);
   });
 });

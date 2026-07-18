@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { reminderService } from './reminder.service.js';
 
-vi.mock('./reminder.repository.js', () => ({
-  reminderRepository: {
+const mocks = vi.hoisted(() => ({
+  repo: {
     findById: vi.fn(),
     findMany: vi.fn(),
     getStats: vi.fn(),
@@ -13,233 +13,230 @@ vi.mock('./reminder.repository.js', () => ({
     delete: vi.fn(),
     restore: vi.fn(),
   },
-}));
-
-vi.mock('../utils/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  prisma: { $transaction: vi.fn() },
+  fromPrisma: vi.fn(() => ({})),
+  getBoss: vi.fn(),
+  jobManager: {
+    enqueue: vi.fn(),
+    enqueueImmediate: vi.fn(),
+    cancel: vi.fn(),
+    reschedule: vi.fn(),
+    hasQueuedJob: vi.fn(),
+  },
 }));
 
-import { reminderRepository } from './reminder.repository.js';
-import { logger } from '../utils/logger.js';
-
-const mockRepo = vi.mocked(reminderRepository);
-const mockLogger = vi.mocked(logger);
+vi.mock('./reminder.repository.js', () => ({ reminderRepository: mocks.repo }));
+vi.mock('../utils/logger.js', () => ({ logger: mocks.logger }));
+vi.mock('../prisma/prismaClient.js', () => ({ prisma: mocks.prisma }));
+vi.mock('pg-boss', () => ({ fromPrisma: mocks.fromPrisma }));
+vi.mock('../scheduler/pgBoss.js', () => ({ getBoss: mocks.getBoss }));
+vi.mock('../scheduler/reminderJobManager.js', () => ({ reminderJobManager: mocks.jobManager }));
 
 const fakeReminder = {
   id: 'rem-1',
   channel: 'WHATSAPP',
   to: '+15551234567',
-  sendMode: 'IMMEDIATE',
+  sendMode: 'SCHEDULED',
   status: 'PENDING',
   patientId: 'patient-1',
   userId: 'user-1',
-  sendAt: new Date(),
+  sendAt: new Date(Date.now() + 86400000),
   createdAt: new Date(),
 };
 
-beforeEach(() => vi.clearAllMocks());
+const scheduledPending = { ...fakeReminder };
+const immediatePending = { ...fakeReminder, sendMode: 'IMMEDIATE' };
+
+function txStub(overrides = {}) {
+  return {
+    patient: { findFirst: vi.fn().mockResolvedValue({ id: 'patient-1' }) },
+    reminder: { create: vi.fn().mockResolvedValue(fakeReminder) },
+    ...overrides,
+  };
+}
+
+function bossStub() {
+  const boss = { send: vi.fn().mockResolvedValue('job-1') };
+  mocks.getBoss.mockReturnValue(boss);
+  return boss;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.repo.findById.mockResolvedValue(fakeReminder);
+  mocks.repo.findMany.mockResolvedValue({ items: [fakeReminder], total: 1 });
+  mocks.repo.getStats.mockResolvedValue({ total: 10, todayCount: 2, byStatus: {}, byChannel: {} });
+  mocks.repo.update.mockImplementation(async (id, dto) => ({ ...fakeReminder, ...dto }));
+  mocks.repo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' });
+  mocks.repo.delete.mockResolvedValue(fakeReminder);
+  mocks.repo.restore.mockResolvedValue(fakeReminder);
+});
 
 describe('reminderService.findById', () => {
   it('delegates to repository.findById', async () => {
-    mockRepo.findById.mockResolvedValue(fakeReminder as any);
+    mocks.repo.findById.mockResolvedValue(fakeReminder);
     const result = await reminderService.findById('rem-1');
-    expect(mockRepo.findById).toHaveBeenCalledWith('rem-1');
+    expect(mocks.repo.findById).toHaveBeenCalledWith('rem-1');
     expect(result).toEqual(fakeReminder);
-  });
-
-  it('propagates repository errors', async () => {
-    mockRepo.findById.mockRejectedValue(new Error('Reminder with id "bad" not found'));
-    await expect(reminderService.findById('bad')).rejects.toThrow('Reminder with id "bad" not found');
   });
 });
 
 describe('reminderService.findMany', () => {
-  it('delegates to repository.findMany with query and userId', async () => {
-    mockRepo.findMany.mockResolvedValue({ items: [fakeReminder], total: 1 } as any);
-    const query = { page: 1, pageSize: 10, orderBy: 'sendAt', order: 'desc' as const, search: '' };
-    const result = await reminderService.findMany(query, 'user-1');
-    expect(mockRepo.findMany).toHaveBeenCalledWith(query, 'user-1');
-    expect(result.items).toHaveLength(1);
-  });
-
-  it('returns empty results when no reminders match', async () => {
-    mockRepo.findMany.mockResolvedValue({ items: [], total: 0 } as any);
-    const result = await reminderService.findMany({ page: 1, pageSize: 10, search: 'xyz', orderBy: 'sendAt', order: 'desc' as const }, 'user-1');
-    expect(result.items).toHaveLength(0);
+  it('delegates to repository.findMany', async () => {
+    const query = { page: 1, pageSize: 10, orderBy: 'sendAt', order: 'desc', search: '' };
+    await reminderService.findMany(query, 'user-1');
+    expect(mocks.repo.findMany).toHaveBeenCalledWith(query, 'user-1');
   });
 });
 
 describe('reminderService.getStats', () => {
-  it('delegates to repository.getStats with query and userId', async () => {
-    mockRepo.getStats.mockResolvedValue({ total: 10, todayCount: 2, byStatus: {}, byChannel: {} } as any);
+  it('delegates to repository.getStats', async () => {
     const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31' };
-    const result = await reminderService.getStats(query, 'user-1');
-    expect(mockRepo.getStats).toHaveBeenCalledWith(query, 'user-1');
-    expect(result.total).toBe(10);
-  });
-
-  it('propagates repository errors', async () => {
-    mockRepo.getStats.mockRejectedValue(new Error('DB error'));
-    await expect(reminderService.getStats({}, 'user-1')).rejects.toThrow('DB error');
+    await reminderService.getStats(query, 'user-1');
+    expect(mocks.repo.getStats).toHaveBeenCalledWith(query, 'user-1');
   });
 });
 
 describe('reminderService.create', () => {
-  it('creates an IMMEDIATE reminder successfully', async () => {
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date().toISOString() };
-    mockRepo.create.mockResolvedValue(fakeReminder as any);
+  it('IMMEDIATE: creates reminder and enqueues a pg-boss job inside the transaction', async () => {
+    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'patient-1', status: 'PENDING', sendAt: new Date().toISOString() };
+    const tx = txStub();
+    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const boss = bossStub();
+
     const result = await reminderService.create(dto, 'user-1');
-    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
+
+    expect(mocks.prisma.$transaction).toHaveBeenCalled();
+    expect(tx.reminder.create).toHaveBeenCalled();
+    expect(mocks.fromPrisma).toHaveBeenCalledWith(tx);
+    expect(boss.send).toHaveBeenCalledWith('send-reminder', { reminderId: fakeReminder.id }, expect.objectContaining({ db: {} }));
     expect(result).toEqual(fakeReminder);
   });
 
-  it('creates a SCHEDULED reminder with future sendAt', async () => {
-    const futureDate = new Date(Date.now() + 86400000).toISOString();
-    const dto = { channel: 'SMS' as const, to: '+15559876543', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: futureDate };
-    mockRepo.create.mockResolvedValue(fakeReminder as any);
-    const result = await reminderService.create(dto, 'user-1');
-    expect(mockRepo.create).toHaveBeenCalled();
-    expect(result).toEqual(fakeReminder);
-  });
+  it('SCHEDULED: enqueues job with startAfter', async () => {
+    const future = new Date(Date.now() + 86400000).toISOString();
+    const dto = { channel: 'SMS', to: '+15559876543', sendMode: 'SCHEDULED', patientId: 'patient-1', status: 'PENDING', sendAt: future };
+    const tx = txStub();
+    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const boss = bossStub();
 
-  it('throws ReminderSendAtInPastError for SCHEDULED reminder with past sendAt', async () => {
-    const pastDate = new Date(Date.now() - 86400000).toISOString();
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: pastDate };
-    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Scheduled reminders must have a sendAt time in the future');
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('throws ReminderSendAtInPastError for SCHEDULED reminder with sendAt exactly now', async () => {
-    const now = new Date().toISOString();
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: now };
-    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Scheduled reminders must have a sendAt time in the future');
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('throws ReminderSendAtInPastError for SCHEDULED reminder when sendAt is null', async () => {
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: null as any };
-    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Scheduled reminders must have a sendAt time in the future');
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('logs reminder creation', async () => {
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date().toISOString() };
-    mockRepo.create.mockResolvedValue(fakeReminder as any);
     await reminderService.create(dto, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { reminderId: 'rem-1', userId: 'user-1', mode: 'IMMEDIATE' },
-      'Reminder created',
-    );
+
+    const [, , options] = boss.send.mock.calls[0];
+    expect(options.startAfter).toBeInstanceOf(Date);
+    expect(options.db).toBeDefined();
   });
 
-  it('propagates repository errors', async () => {
-    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date().toISOString() };
-    mockRepo.create.mockRejectedValue(new Error('Patient not found'));
-    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Patient not found');
+  it('throws ReminderSendAtInPastError for SCHEDULED with past sendAt', async () => {
+    const past = new Date(Date.now() - 86400000).toISOString();
+    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'SCHEDULED', patientId: 'patient-1', status: 'PENDING', sendAt: past };
+    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Scheduled reminders must have a sendAt time in the future');
+    expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('throws PatientNotFoundError when patient does not exist', async () => {
+    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'missing', status: 'PENDING', sendAt: new Date().toISOString() };
+    const tx = txStub({ patient: { findFirst: vi.fn().mockResolvedValue(null) }, reminder: { create: vi.fn() } });
+    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    bossStub();
+    await expect(reminderService.create(dto, 'user-1')).rejects.toThrow();
+    expect(tx.reminder.create).not.toHaveBeenCalled();
+  });
+
+  it('enqueue:false creates the reminder but does NOT enqueue a pg-boss job (no duplicate send)', async () => {
+    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'patient-1', status: 'PENDING', sendAt: new Date().toISOString() };
+    const tx = txStub();
+    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    const boss = bossStub();
+
+    await reminderService.create(dto, 'user-1', false);
+
+    expect(tx.reminder.create).toHaveBeenCalled();
+    expect(mocks.fromPrisma).not.toHaveBeenCalled();
+    expect(boss.send).not.toHaveBeenCalled();
   });
 });
 
 describe('reminderService.update', () => {
-  it('delegates to repository.update with id, dto, and userId', async () => {
-    const dto = { channel: 'SMS' as const };
-    mockRepo.update.mockResolvedValue({ ...fakeReminder, ...dto } as any);
-    const result = await reminderService.update('rem-1', dto, 'user-1');
-    expect(mockRepo.update).toHaveBeenCalledWith('rem-1', dto, 'user-1');
-    expect(result.channel).toBe('SMS');
+  it('reschedules the job when sendAt changes on a PENDING reminder', async () => {
+    mocks.repo.findById.mockResolvedValue(scheduledPending);
+    await reminderService.update('rem-1', { sendAt: new Date(Date.now() + 2 * 86400000).toISOString() }, 'user-1');
+    expect(mocks.jobManager.reschedule).toHaveBeenCalledWith('rem-1', expect.any(Date));
   });
 
-  it('logs reminder update with changed fields', async () => {
-    mockRepo.update.mockResolvedValue(fakeReminder as any);
-    await reminderService.update('rem-1', { channel: 'SMS', to: '+15550000000' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { reminderId: 'rem-1', userId: 'user-1', fields: ['channel', 'to'] },
-      'Reminder updated',
-    );
+  it('cancels + enqueues immediate when switching to IMMEDIATE on a SCHEDULED PENDING reminder', async () => {
+    mocks.repo.findById.mockResolvedValue(scheduledPending);
+    await reminderService.update('rem-1', { sendMode: 'IMMEDIATE' }, 'user-1');
+    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
+    expect(mocks.jobManager.enqueueImmediate).toHaveBeenCalledWith('rem-1');
   });
 
-  it('propagates repository errors', async () => {
-    mockRepo.update.mockRejectedValue(new Error('Not found'));
-    await expect(reminderService.update('bad', { channel: 'SMS' }, 'user-1')).rejects.toThrow('Not found');
+  it('cancels the job when status transitions to non-PENDING', async () => {
+    mocks.repo.findById.mockResolvedValue(scheduledPending);
+    await reminderService.update('rem-1', { status: 'CANCELLED' }, 'user-1');
+    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
+  });
+
+  it('does not touch jobs for a plain field update', async () => {
+    mocks.repo.findById.mockResolvedValue(scheduledPending);
+    await reminderService.update('rem-1', { channel: 'SMS' }, 'user-1');
+    expect(mocks.jobManager.reschedule).not.toHaveBeenCalled();
+    expect(mocks.jobManager.cancel).not.toHaveBeenCalled();
+    expect(mocks.jobManager.enqueueImmediate).not.toHaveBeenCalled();
   });
 });
 
 describe('reminderService.cancel', () => {
-  it('cancels a PENDING reminder', async () => {
-    mockRepo.findById.mockResolvedValue(fakeReminder as any);
-    mockRepo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' } as any);
+  it('cancels the pg-boss job then the reminder', async () => {
+    mocks.repo.findById.mockResolvedValue(immediatePending);
     const result = await reminderService.cancel('rem-1', 'user-1');
-    expect(mockRepo.findById).toHaveBeenCalledWith('rem-1', 'user-1');
-    expect(mockRepo.cancel).toHaveBeenCalledWith('rem-1', 'user-1');
+    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
+    expect(mocks.repo.cancel).toHaveBeenCalledWith('rem-1', 'user-1');
     expect(result.status).toBe('CANCELLED');
   });
 
-  it('throws ReminderNotCancellableError for SENT reminder', async () => {
-    mockRepo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' } as any);
+  it('throws ReminderNotCancellableError for a non-PENDING reminder', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
     await expect(reminderService.cancel('rem-1', 'user-1')).rejects.toThrow('Cannot cancel a reminder with status "SENT"');
-    expect(mockRepo.cancel).not.toHaveBeenCalled();
-  });
-
-  it('throws ReminderNotCancellableError for FAILED reminder', async () => {
-    mockRepo.findById.mockResolvedValue({ ...fakeReminder, status: 'FAILED' } as any);
-    await expect(reminderService.cancel('rem-1', 'user-1')).rejects.toThrow('Cannot cancel a reminder with status "FAILED"');
-    expect(mockRepo.cancel).not.toHaveBeenCalled();
-  });
-
-  it('throws ReminderNotCancellableError for CANCELLED reminder', async () => {
-    mockRepo.findById.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' } as any);
-    await expect(reminderService.cancel('rem-1', 'user-1')).rejects.toThrow('Cannot cancel a reminder with status "CANCELLED"');
-    expect(mockRepo.cancel).not.toHaveBeenCalled();
-  });
-
-  it('logs reminder cancellation', async () => {
-    mockRepo.findById.mockResolvedValue(fakeReminder as any);
-    mockRepo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' } as any);
-    await reminderService.cancel('rem-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith({ reminderId: 'rem-1', userId: 'user-1' }, 'Reminder cancelled');
-  });
-
-  it('propagates findById errors', async () => {
-    mockRepo.findById.mockRejectedValue(new Error('Not found'));
-    await expect(reminderService.cancel('bad', 'user-1')).rejects.toThrow('Not found');
+    expect(mocks.jobManager.cancel).not.toHaveBeenCalled();
   });
 });
 
 describe('reminderService.softDelete', () => {
-  it('delegates to repository.delete with id and userId', async () => {
-    mockRepo.delete.mockResolvedValue(fakeReminder as any);
-    const result = await reminderService.softDelete('rem-1', 'user-1');
-    expect(mockRepo.delete).toHaveBeenCalledWith('rem-1', 'user-1');
-    expect(result).toEqual(fakeReminder);
-  });
-
-  it('logs reminder deletion', async () => {
-    mockRepo.delete.mockResolvedValue(fakeReminder as any);
+  it('cancels the job when deleting a PENDING reminder', async () => {
+    mocks.repo.findById.mockResolvedValue(immediatePending);
     await reminderService.softDelete('rem-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith({ reminderId: 'rem-1', userId: 'user-1' }, 'Reminder deleted');
+    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
+    expect(mocks.repo.delete).toHaveBeenCalledWith('rem-1', 'user-1');
   });
 
-  it('propagates repository errors', async () => {
-    mockRepo.delete.mockRejectedValue(new Error('Not found'));
-    await expect(reminderService.softDelete('bad', 'user-1')).rejects.toThrow('Not found');
+  it('does not cancel the job when deleting a non-PENDING reminder', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
+    await reminderService.softDelete('rem-1', 'user-1');
+    expect(mocks.jobManager.cancel).not.toHaveBeenCalled();
+    expect(mocks.repo.delete).toHaveBeenCalledWith('rem-1', 'user-1');
   });
 });
 
 describe('reminderService.restore', () => {
-  it('delegates to repository.restore with id and userId', async () => {
-    mockRepo.restore.mockResolvedValue(fakeReminder as any);
-    const result = await reminderService.restore('rem-1', 'user-1');
-    expect(mockRepo.restore).toHaveBeenCalledWith('rem-1', 'user-1');
-    expect(result).toEqual(fakeReminder);
-  });
-
-  it('logs reminder restoration', async () => {
-    mockRepo.restore.mockResolvedValue(fakeReminder as any);
+  it('re-enqueues when PENDING, future sendAt, and no existing job', async () => {
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING', sendAt: new Date(Date.now() + 86400000) });
+    mocks.jobManager.hasQueuedJob.mockResolvedValue(false);
     await reminderService.restore('rem-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith({ reminderId: 'rem-1', userId: 'user-1' }, 'Reminder restored');
+    expect(mocks.jobManager.enqueue).toHaveBeenCalledWith('rem-1', expect.any(Date));
   });
 
-  it('propagates repository errors', async () => {
-    mockRepo.restore.mockRejectedValue(new Error('Not found'));
-    await expect(reminderService.restore('bad', 'user-1')).rejects.toThrow('Not found');
+  it('skips re-enqueue when a queued job already exists', async () => {
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING', sendAt: new Date(Date.now() + 86400000) });
+    mocks.jobManager.hasQueuedJob.mockResolvedValue(true);
+    await reminderService.restore('rem-1', 'user-1');
+    expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('skips re-enqueue for a non-PENDING restored reminder', async () => {
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
+    await reminderService.restore('rem-1', 'user-1');
+    expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
   });
 });

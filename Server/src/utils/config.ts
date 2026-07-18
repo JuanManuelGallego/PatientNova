@@ -61,7 +61,6 @@ export const config = {
 
   scheduler: {
     enabled: process.env.ENABLE_SCHEDULER === 'true',
-    schedule: process.env.CRON_SCHEDULE ?? '* * * * *',
   },
 
   google: {

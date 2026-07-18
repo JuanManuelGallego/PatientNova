@@ -33,7 +33,7 @@ notifyRouter.post(
       sendAt: new Date(),
       status: ReminderStatus.PENDING,
       to: req.body.to,
-    }, req.user!.id);
+    }, req.user!.id, false);
 
     try {
       const result = await sendWhatsApp(req.body);
@@ -73,7 +73,7 @@ notifyRouter.post(
       sendAt: new Date(),
       status: ReminderStatus.PENDING,
       to: req.body.to,
-    }, req.user!.id);
+    }, req.user!.id, false);
 
     try {
       const result = await sendSms(req.body);

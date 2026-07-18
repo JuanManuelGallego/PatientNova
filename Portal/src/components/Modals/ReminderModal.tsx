@@ -133,10 +133,7 @@ export function ReminderModal({
     return {
       to: resolveTo(),
       ...(channel === Channel.WHATSAPP && {
-        contentSid:
-          sendMode === ReminderMode.SCHEDULED
-            ? TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION.contentSid
-            : TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+        contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
         contentVariables: {
           "1": `${selectedPatient?.name ?? ""}`,
           "2": getUserName(user),
