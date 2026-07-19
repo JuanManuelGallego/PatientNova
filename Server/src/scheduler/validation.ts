@@ -13,7 +13,7 @@ export function validateReminder(reminder: Reminder): ValidationResult {
     }
   }
 
-  if (reminder.channel === Channel.SMS || reminder.channel === Channel.EMAIL) {
+  if (reminder.channel === Channel.SMS) {
     if (!reminder.body) return { isValid: false, error: `Missing body for ${reminder.channel} message` };
   }
 

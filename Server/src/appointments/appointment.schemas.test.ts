@@ -192,10 +192,10 @@ describe('createAppointmentSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects body exceeding 500 chars', () => {
+  it('rejects body exceeding 1000 chars', () => {
     const result = createAppointmentSchema.safeParse({
       ...baseCreate,
-      reminder: { ...validReminder, body: 'a'.repeat(501) },
+      reminder: { ...validReminder, body: 'a'.repeat(1001) },
     });
     expect(result.success).toBe(false);
   });

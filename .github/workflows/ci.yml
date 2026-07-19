@@ -41,10 +41,25 @@ jobs:
       matrix:
         node-version: [22.x]
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: patientnova_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d patientnova_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
       PORT: "3001"
-      DATABASE_URL: postgresql://user:password@localhost:5432/dummy
+      DATABASE_URL: postgresql://test:test@localhost:5432/patientnova_test
       ENCRYPTION_KEY: dummy-encryption-key-123456
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: "60000"
@@ -56,6 +71,7 @@ jobs:
       DEFAULT_TIMEZONE: America/Bogota
       DEFAULT_CURRENCY: COP
       ENABLE_SCHEDULER: "false"
+      DAILY_REMINDER_HOUR: "18"
       CRON_SCHEDULE: "* * * * *"
       TWILIO_ACCOUNT_SID: dummySID
       TWILIO_AUTH_TOKEN: dummyToken
@@ -87,7 +103,7 @@ jobs:
           cache-dependency-path: Server/package-lock.json
       - run: npm ci
       - run: npx prisma generate
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/dummy
+      - run: npx prisma migrate deploy
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:integration

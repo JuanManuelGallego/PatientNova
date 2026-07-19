@@ -51,7 +51,7 @@ export const reminderRepository = {
       }),
       ...(search && {
         OR: [
-          ...((Object.values({ WHATSAPP: 'WHATSAPP', SMS: 'SMS', EMAIL: 'EMAIL' }) as Channel[])
+          ...((Object.values({ WHATSAPP: 'WHATSAPP', SMS: 'SMS' }) as Channel[])
             .filter(c => c.toLowerCase().includes(search.toLowerCase()))
             .map(c => ({ channel: c }))),
           { to: { contains: search, mode: 'insensitive' } },
@@ -162,7 +162,7 @@ export const reminderRepository = {
       byStatus[ group.status ] = (group._count as { id: number }).id;
     }
 
-    const byChannel: Record<string, number> = { WHATSAPP: 0, SMS: 0, EMAIL: 0 };
+    const byChannel: Record<string, number> = { WHATSAPP: 0, SMS: 0 };
     for (const group of channelGroups) {
       byChannel[ group.channel ] = (group._count as { id: number }).id;
     }

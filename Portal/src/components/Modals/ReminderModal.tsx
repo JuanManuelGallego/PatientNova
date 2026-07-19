@@ -141,7 +141,7 @@ export function ReminderModal({
           "4": form.hora,
         }
       }),
-      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+      ...((channel === Channel.SMS) && {
         body: form.message,
       }),
       patientId: form.patientId,
@@ -401,8 +401,7 @@ function ChannelAndMessageStep({
 }) {
   const available =
     (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
-    (channel === Channel.EMAIL && !!selectedPatient?.email);
+    (channel === Channel.SMS && !!selectedPatient?.smsNumber);
 
   return (
     <div className="form-stack">

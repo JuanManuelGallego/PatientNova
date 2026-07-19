@@ -78,13 +78,6 @@ export function ReminderDrawer({
                     value={<span className="mono">{reminder.to}</span>}
                   />
                 )}
-              {reminder.channel === Channel.EMAIL && (
-                <Row
-                  icon={DETAIL_ICONS.mail}
-                  label="Correo"
-                  value={<a href={`mailto:${reminder.to}`}>{reminder.to}</a>}
-                />
-              )}
             </Section>
           )}
           <Section title="Programación">
@@ -182,7 +175,7 @@ export function ReminderDrawer({
               <ACTION_ICONS.edit size={14} /> Reprogramar
             </button>
             <button onClick={onCancel} className="btn-drawer-delete">
-              <ACTION_ICONS.delete size={14} /> Cancelar
+              <ACTION_ICONS.delete size={14} />
             </button>
           </div>
         )}

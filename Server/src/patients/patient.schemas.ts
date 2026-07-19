@@ -9,7 +9,7 @@ export const createPatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.email('Must be a valid email address').nullish(),
-  notes: z.string().max(500).nullish(),
+  notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).default(PatientStatus.ACTIVE),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
 });
@@ -20,7 +20,7 @@ export const updatePatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.email('Must be a valid email address').nullish(),
-  notes: z.string().max(500).nullish(),
+  notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).optional(),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
 }).refine(
