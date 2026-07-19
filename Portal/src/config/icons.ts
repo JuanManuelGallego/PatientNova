@@ -53,9 +53,7 @@ import {
   Image,
   FileSpreadsheet,
   Paperclip,
-  File,
   Send,
-  Link2,
   Flag,
   CircleDot,
   Loader2,
@@ -108,11 +106,10 @@ export const STATUS_ICONS = {
   archive: Archive,
 } as const satisfies Record<string, LucideIcon>;
 
-/* ── Channel Icons (WhatsApp, SMS, Email) ────────────────────────────────── */
+/* ── Channel Icons (WhatsApp, SMS) ───────────────────────────────────────── */
 export const CHANNEL_ICONS = {
   WHATSAPP: MessageCircle,
   SMS: Smartphone,
-  EMAIL: Mail,
 } as const satisfies Record<string, LucideIcon>;
 
 /* ── Detail Row Icons (Drawers) ──────────────────────────────────────────── */

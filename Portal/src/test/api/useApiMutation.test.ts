@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useApiMutation } from "../../api/useApiMutation";
 
 vi.mock("../../api/fetchWithAuth", () => ({

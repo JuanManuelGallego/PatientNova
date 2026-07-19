@@ -4,48 +4,56 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]
 
 jobs:
-  dashboard:
-    name: Dashboard (Node ${{ matrix.node-version }})
+  portal:
+    name: Portal (Node 22.x)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Portal
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-      
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: "npm"
           cache-dependency-path: Portal/package-lock.json
       - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
       - run: npm run build
       - run: npm test
 
   server:
-    name: Server (Node ${{ matrix.node-version }})
+    name: Server (Node 22.x)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Server
 
-    strategy:
-      matrix:
-        node-version: [22.x]
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: patientnova_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d patientnova_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       NODE_ENV: test
       PORT: "3001"
-      DATABASE_URL: postgresql://user:password@localhost:5432/dummy
-      ENCRYPTION_KEY: dummy-encryption-key-123456
+      DATABASE_URL: postgresql://test:test@localhost:5432/patientnova_test
+      ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY || '' }}
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "30"
@@ -56,6 +64,7 @@ jobs:
       DEFAULT_TIMEZONE: America/Bogota
       DEFAULT_CURRENCY: COP
       ENABLE_SCHEDULER: "false"
+      DAILY_REMINDER_HOUR: "18"
       CRON_SCHEDULE: "* * * * *"
       TWILIO_ACCOUNT_SID: dummySID
       TWILIO_AUTH_TOKEN: dummyToken
@@ -79,15 +88,27 @@ jobs:
       GOOGLE_REFRESH_TOKEN: dummy-google-refresh-token
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: "npm"
           cache-dependency-path: Server/package-lock.json
+      - name: Generate encryption key
+        run: echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U test -d patientnova_test; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Postgres did not become ready in time" >&2
+          exit 1
       - run: npm ci
       - run: npx prisma generate
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/dummy
+      - run: npx prisma migrate deploy
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:integration

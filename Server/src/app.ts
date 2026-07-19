@@ -60,24 +60,30 @@ app.use(
 
 // Strict rate limit scoped to login only — not /me or /refresh
 const authWriteLimit = rateLimit({ windowMs: FIFTEEN_MINUTES_MS, max: 50, standardHeaders: true, legacyHeaders: false });
-app.use('/auth/login', authWriteLimit);
+app.use('/v1/auth/login', authWriteLimit);
 
+// Unversioned infra/external routes: health check (root router) and the public Twilio webhook.
 app.use('/', router);
-app.use('/auth', authRouter);
-
-// Public Twilio webhook — uses urlencoded body (not JSON) and validates Twilio signature internally
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
-app.use('/consent-document', consentDocumentRouter);
 
-app.use('/users', authenticate, requireAdmin, userRouter);
-app.use('/notify', authenticate, requireAdmin, notifyRouter);
-app.use('/patients', authenticate, requireAdminForWrites, patientRouter);
-app.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
-app.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);
-app.use('/locations', authenticate, requireAdminForWrites, locationRouter);
-app.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
-app.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
-app.use('/google', authenticate, requireAdminForWrites, googleRouter);
+// Versioned API — all application endpoints live under /v1.
+const v1 = express.Router();
+
+v1.use('/', router);
+v1.use('/auth', authRouter);
+v1.use('/consent-document', consentDocumentRouter);
+
+v1.use('/users', authenticate, requireAdmin, userRouter);
+v1.use('/notify', authenticate, requireAdmin, notifyRouter);
+v1.use('/patients', authenticate, requireAdminForWrites, patientRouter);
+v1.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
+v1.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);
+v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
+v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
+v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
+v1.use('/google', authenticate, requireAdminForWrites, googleRouter);
+
+app.use('/v1', v1);
 
 app.use((_req: Request, res: Response) => {
     apiError(res, 'Route not found', 404);

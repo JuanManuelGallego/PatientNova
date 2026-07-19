@@ -9,7 +9,6 @@ import { FilterBar } from "@/src/components/FilterBar";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import {
   ExternalLink,
-  CalendarDays,
   CalendarCheck,
   Clock,
   AlertCircle,

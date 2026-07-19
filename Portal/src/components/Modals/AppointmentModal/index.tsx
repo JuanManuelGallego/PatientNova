@@ -151,7 +151,7 @@ export function AppointmentModal({
             "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
           }
         }),
-        ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+        ...((channel === Channel.SMS) && {
           body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.template
             .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
             .replace("{{2}}", getUserName(user) || "su profesional de salud")
@@ -179,7 +179,7 @@ export function AppointmentModal({
           "6": selectedLocation?.instructions || "No hay instrucciones registradas",
         }
       }),
-      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
+      ...((channel === Channel.SMS) && {
         body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
           .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
           .replace("{{2}}", getUserName(user) || "su profesional de salud")

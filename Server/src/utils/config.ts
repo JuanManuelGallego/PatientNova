@@ -61,6 +61,7 @@ export const config = {
 
   scheduler: {
     enabled: process.env.ENABLE_SCHEDULER === 'true',
+    dailyReminderHour: parseInt(process.env.DAILY_REMINDER_HOUR ?? '18', 10),  // local hour (0–23)
   },
 
   google: {

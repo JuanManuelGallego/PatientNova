@@ -96,7 +96,6 @@ model Reminder {
 enum Channel {
   WHATSAPP
   SMS
-  EMAIL
 }
 
 enum ReminderStatus {
@@ -122,7 +121,7 @@ model Appointment {
 
   startAt  DateTime
   endAt    DateTime
-  timezone String   @default("CST") @db.VarChar(50)
+  timezone String   @default("America/Bogota") @db.VarChar(50)
 
   price    Int
   currency String  @default("COP") @db.Char(3)

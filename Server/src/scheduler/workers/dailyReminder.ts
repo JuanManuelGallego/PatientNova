@@ -1,7 +1,7 @@
 import { Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
 import { prisma } from "../../prisma/prismaClient.js";
 import { APPT_SID_MAP, config } from "../../utils/config.ts";
-import { DEFAULT_LOCALE, DAILY_REMINDER_HOUR } from "../../utils/constants.ts";
+import { DEFAULT_LOCALE } from "../../utils/constants.ts";
 import { logger } from "../../utils/logger.ts";
 import { getLocalTimeParts, getTomorrowUTCRange } from "../../utils/timeUtils.ts";
 import { dispatchMessage, type DispatchOpts } from "../dispatch.js";
@@ -91,7 +91,7 @@ export async function dailyReminderWorker(): Promise<void> {
   for (const user of users) {
     try {
       const { hour } = getLocalTimeParts(user.timezone);
-      if (hour !== DAILY_REMINDER_HOUR) continue;
+      if (hour !== config.scheduler.dailyReminderHour) continue;
       logger.debug("Running daily reminder worker...");
 
       const todayLocal = getTodayLocalDate(user.timezone);

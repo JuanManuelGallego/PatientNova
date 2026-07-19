@@ -16,7 +16,7 @@ const reminderInlineSchema = z.object({
   contentVariables: z.record(z.string(), z.string()).optional(),
   sendAt: z.iso.datetime().optional(),
   status: z.enum(ReminderStatus).optional().default(ReminderStatus.PENDING),
-  body: z.string().max(500).optional(),
+  body: z.string().max(1000).optional(),
 }).refine(
   (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
   { message: 'sendAt is required when sendMode is SCHEDULED', path: ['sendAt'] }
@@ -30,7 +30,7 @@ export const createAppointmentSchema = z.object({
   currency: z.string().optional(),
   paid: z.boolean().default(false),
   meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
-  notes: z.string().max(500).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
   status: z.enum(AppointmentStatus).default(AppointmentStatus.SCHEDULED),
   patientId: z.uuid('patientId must be a valid UUID'),
   reminderId: z.uuid('reminderId must be a valid UUID').nullable().optional(),
@@ -57,7 +57,7 @@ export const updateAppointmentSchema = z
     currency: z.string().optional(),
     paid: z.boolean().optional(),
     meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).optional().or(z.literal('')),
-    notes: z.string().max(500).optional(),
+    notes: z.string().max(1000).optional(),
     typeId: z.uuid('typeId must be a valid UUID').optional(),
     status: z.enum(AppointmentStatus).optional(),
     reminderId: z.uuid('reminderId must be a valid UUID').nullable().optional(),

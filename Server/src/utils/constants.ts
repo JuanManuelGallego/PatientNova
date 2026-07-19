@@ -12,9 +12,6 @@ export const REMINDER_BATCH_SIZE = 100;
 /** Max concurrent Twilio status polls per tick. */
 export const REMINDER_POLL_CONCURRENCY = 10;
 
-/** Local hour (0–23) at which the daily appointment reminder is dispatched to users. */
-export const DAILY_REMINDER_HOUR = 18;
-
 /**
  * Max delivery attempts for a `send-reminder` job.
  * Kept in sync with the `send-reminder` queue `retryLimit` in pgBoss.ts: the
