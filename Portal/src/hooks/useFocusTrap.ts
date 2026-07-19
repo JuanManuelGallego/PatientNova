@@ -59,7 +59,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
         first.focus();
       }
     }
-  }, []);
+  }, [onEscape]);
 
   return { ref, handleKeyDown };
 }

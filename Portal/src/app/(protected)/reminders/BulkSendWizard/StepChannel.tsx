@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { ReminderMode, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { ReminderMode, CHANNEL_CFG } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { StepChannelProps } from "./types";
 import { CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";

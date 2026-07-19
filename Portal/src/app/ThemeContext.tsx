@@ -28,6 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
     const resolved: ThemeMode =
       stored === "dark" || stored === "light" ? stored : "light";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(resolved);
     document.documentElement.setAttribute("data-theme", resolved);
   }, []);
