@@ -1,5 +1,17 @@
 import { execSync } from 'node:child_process';
 import { beforeAll, beforeEach, afterAll } from 'vitest';
+import { config as loadEnv } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// Load the integration test environment FIRST, before any module that reads
+// process.env (prismaClient -> config requireEnv). We do NOT override existing
+// vars: CI (.github/workflows/ci.yml) supplies its own DATABASE_URL/port and
+// does not load this file, so overriding would clobber CI's values (e.g. the
+// Postgres service host/port). Locally, .env.test fills the otherwise-empty env.
+// The "test" DATABASE_URL guard below still protects against a real/dev URL.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: resolve(__dirname, '../../.env.test'), override: false });
 
 // Guard: integration tests must run against a disposable test database.
 // This prevents accidentally wiping a real/dev database.

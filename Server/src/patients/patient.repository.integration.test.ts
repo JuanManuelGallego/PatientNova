@@ -73,4 +73,42 @@ describe('patientRepository (integration)', () => {
       PatientNotFoundError,
     );
   });
+
+  it('getStats aggregates patient counts by status', async () => {
+    await patientRepository.create({ name: 'One', lastName: 'A', status: 'ACTIVE' }, userId);
+    await patientRepository.create({ name: 'Two', lastName: 'B', status: 'INACTIVE' }, userId);
+    await patientRepository.create({ name: 'Three', lastName: 'C', status: 'ACTIVE' }, userId);
+
+    const stats = await patientRepository.getStats(userId);
+    expect(stats.total).toBe(3);
+    expect(stats.byStatus['ACTIVE']).toBe(2);
+    expect(stats.byStatus['INACTIVE']).toBe(1);
+  });
+
+  it('findByIdWithRelations includes appointments, reminders and medical record', async () => {
+    const patient = await patientRepository.create(
+      { name: 'Rel', lastName: 'Patient', status: 'ACTIVE' },
+      userId,
+    );
+
+    await prisma.appointment.create({
+      data: {
+        startAt: new Date(Date.now() + 60_000),
+        endAt: new Date(Date.now() + 90_000),
+        timezone: 'America/Bogota',
+        price: 0,
+        paid: false,
+        status: 'SCHEDULED',
+        patientId: patient.id,
+        userId,
+        locationId: (await prisma.appointmentLocation.create({ data: { name: 'Loc', userId } })).id,
+        typeId: (await prisma.appointmentType.create({ data: { name: 'Type', defaultDuration: 60, userId } })).id,
+      },
+    });
+
+    const found = await patientRepository.findByIdWithRelations(patient.id, userId);
+    expect(found.appointments).toHaveLength(1);
+    expect(found.reminders).toBeDefined();
+    expect(found.medicalRecord).toBeNull();
+  });
 });
