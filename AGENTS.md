@@ -48,16 +48,18 @@ They use the `integration` vitest project (`src/**/*.integration.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `15` files, `100` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `18` files, `128` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
 | Appointments | `src/appointments/appointment.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
+| Appointments (routes) | `src/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
 | Auth | `src/auth/auth.integration.test.ts` | login, JWT, lockout |
 | Users | `src/users/user.integration.test.ts` | CRUD, scoping |
 | Medical records | `src/medical-records/medical-record.integration.test.ts` | create/read/delete |
 | Reminders (repo) | `src/reminders/reminder.repository.integration.test.ts` | create/findById/update/cancel/findMany/getStats/softDelete+restore |
 | Reminders (svc) | `src/reminders/reminder.service.integration.test.ts` | create(=false), cancel/softDelete/restore, sendAt reschedule (pg-boss mocked) |
+| Reminders (routes) | `src/reminders/reminder.routes.integration.test.ts` | POST/GET/PATCH/cancel/delete/restore/stats; validation 400, ownership 404 (`getBoss` + jobManager mocked) |
 | Locations | `src/locations/location.integration.test.ts` | CRUD, scoping |
 | Appointment types | `src/appointment-types/appointment-type.integration.test.ts` | CRUD, scoping |
 | Consent doc | `src/consent/consent-document.integration.test.ts` | upload/read/byUserId |
@@ -66,6 +68,7 @@ Suite: `15` files, `100` tests, all against real Postgres, `tsc --noEmit` clean.
 | Scheduler | `src/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
 | Scheduler workers | `src/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |
 | Notify routes | `src/notify/notify.integration.test.ts` | POST /whatsapp & /sms → create+send+SENT; ownership 404; Twilio-failure → FAILED (jobManager + twilio mocked) |
+| Patients (routes) | `src/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; validation 400, ownership 404 |
 | Patient seed | `src/patients/patient.integration.test.ts` | seed/ownership baseline |
 
 ### Known product bugs found & fixed during test build
@@ -83,7 +86,12 @@ Suite: `15` files, `100` tests, all against real Postgres, `tsc --noEmit` clean.
 - Unit tests (`src/**/*.test.ts`) mock Prisma/DB and run fast.
 - `test/integration/helpers.ts` provides `createTestUser`, `createTestPatient`,
   `createTestLocation`, `createTestAppointmentType`, `appointmentTimeRange`, `futureDate`,
-  and `unique` (sequence-suffixed unique strings for emails etc.).
+  `unique` (sequence-suffixed unique strings for emails etc.), and the route-layer
+  doubles `makeRes`/`invokeRoute(router, method, path, req)` used by the `*.routes.*`
+  integration tests. `invokeRoute` chains the full Express middleware stack
+  (validateBody/Query/Params + asyncHandler), replicating short-circuiting
+  (e.g. a 400 from `validateBody` stops the chain) and polling until `asyncHandler`
+  settles the response.
 
 ## Playwright e2e handoff (future work — Portal)
 The repository-level integration tests validate the DB layer that the future Playwright

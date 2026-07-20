@@ -85,3 +85,100 @@ export function appointmentTimeRange(offsetMinutes = 60, durationMinutes = 30) {
 }
 
 export { unique };
+
+// ---------------------------------------------------------------------------
+// Minimal Express request/response doubles + route runner for route-layer
+// integration tests. These exercise the full middleware stack (validateBody /
+// validateQuery / validateParams + asyncHandler) against a real database.
+// asyncHandler swallows thrown errors and writes them to `res` via handleError,
+// so the runner polls microtasks until the response is settled (asyncHandler
+// does not surface its promise).
+// ---------------------------------------------------------------------------
+
+export interface RouteReq {
+  user?: { id: string; timezone?: string; [k: string]: unknown };
+  body?: Record<string, unknown>;
+  params?: Record<string, unknown>;
+  query?: Record<string, unknown>;
+  ip?: string;
+  originalUrl?: string;
+  [k: string]: unknown;
+}
+
+export function makeRes() {
+  const res: any = {
+    statusCode: 0,
+    body: undefined as unknown,
+    status(code: number) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload: unknown) {
+      this.body = payload;
+      return this;
+    },
+    setHeader() {
+      return this;
+    },
+    send() {
+      return this;
+    },
+  };
+  return res;
+}
+
+export async function invokeRoute(
+  router: { stack: any[] },
+  method: string,
+  path: string,
+  req: RouteReq,
+) {
+  const segments = path.split('/').filter(Boolean);
+  const layer: any = router.stack.find((l: any) => {
+    const route = l.route;
+    if (!route || !route.methods[method]) return false;
+    const routeSegments = String(route.path).split('/').filter(Boolean);
+    if (routeSegments.length !== segments.length) return false;
+    return routeSegments.every(
+      (seg: string, i: number) => seg.startsWith(':') || seg === segments[i],
+    );
+  });
+  if (!layer) throw new Error(`No handler for ${method.toUpperCase()} ${path}`);
+
+  const fullReq: any = {
+    originalUrl: path,
+    ...req,
+    body: req.body ?? {},
+    params: req.params ?? {},
+    query: req.query ?? {},
+  };
+  const res = makeRes();
+  const handlers = layer.route.stack as { handle: (req: any, res: any, next: any) => unknown }[];
+
+  // Chain handlers like Express: a middleware calls next() to continue. If a
+  // middleware responds (sets a status) and returns without calling next, the
+  // chain stops — mimicking real short-circuiting (e.g. validation 400). Handlers
+  // may return a promise (asyncHandler), so each is awaited before proceeding.
+  await new Promise<void>((resolve) => {
+    let i = 0;
+    const next = async () => {
+      if (res.statusCode !== 0) return resolve();
+      if (i >= handlers.length) return resolve();
+      const h = handlers[i++]!;
+      try {
+        await h.handle(fullReq, res, next);
+      } catch {
+        // asyncHandler swallows thrown errors itself; ignore any that surface.
+      }
+      if (res.statusCode !== 0) return resolve();
+      if (i >= handlers.length) return resolve();
+    };
+    void next();
+  });
+
+  for (let i = 0; i < 50; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+    if (res.statusCode !== 0) break;
+  }
+  return res;
+}
