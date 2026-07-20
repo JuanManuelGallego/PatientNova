@@ -1,5 +1,14 @@
 import { execSync } from 'node:child_process';
 import { beforeAll, beforeEach, afterAll } from 'vitest';
+import { config as loadEnv } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// Load the integration test environment FIRST, before any module that reads
+// process.env (prismaClient -> config requireEnv). override:true guarantees the
+// test DATABASE_URL (which must contain "test") wins over a real .env if present.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: resolve(__dirname, '../../.env.test'), override: true });
 
 // Guard: integration tests must run against a disposable test database.
 // This prevents accidentally wiping a real/dev database.

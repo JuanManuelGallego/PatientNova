@@ -28,6 +28,7 @@ export const sendWhatsAppSchema = z
 export const sendSmsSchema = z.object({
   to: e164,
   body: z.string().min(1, 'body cannot be empty'),
+  patientId: z.uuid().optional(),
 });
 
 export const scheduleSchema = z.object({
