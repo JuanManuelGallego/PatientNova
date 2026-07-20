@@ -48,7 +48,7 @@ They use the `integration` vitest project (`src/**/*.integration.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `18` files, `128` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `19` files, `133` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -63,7 +63,8 @@ Suite: `18` files, `128` tests, all against real Postgres, `tsc --noEmit` clean.
 | Locations | `src/locations/location.integration.test.ts` | CRUD, scoping |
 | Appointment types | `src/appointment-types/appointment-type.integration.test.ts` | CRUD, scoping |
 | Consent doc | `src/consent/consent-document.integration.test.ts` | upload/read/byUserId |
-| Twilio webhook | `src/twilio/twilio-webhook.integration.test.ts` | status callback handling |
+| Twilio webhook (svc) | `src/twilio/twilio-webhook.integration.test.ts` | status callback handling (confirm/cancel/unknown intent) |
+| Twilio webhook (route) | `src/twilio/twilio.webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
 | Twilio client | `src/twilio/twilio-client.integration.test.ts` | send wrappers (mocked SDK) |
 | Scheduler | `src/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
 | Scheduler workers | `src/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |

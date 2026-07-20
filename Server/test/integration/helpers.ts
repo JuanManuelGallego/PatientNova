@@ -108,6 +108,7 @@ export interface RouteReq {
 export function makeRes() {
   const res: any = {
     statusCode: 0,
+    headers: {} as Record<string, unknown>,
     body: undefined as unknown,
     status(code: number) {
       this.statusCode = code;
@@ -117,10 +118,15 @@ export function makeRes() {
       this.body = payload;
       return this;
     },
+    set(field: string, value: unknown) {
+      this.headers[field] = value;
+      return this;
+    },
     setHeader() {
       return this;
     },
-    send() {
+    send(payload?: unknown) {
+      if (payload !== undefined) this.body = payload;
       return this;
     },
   };
