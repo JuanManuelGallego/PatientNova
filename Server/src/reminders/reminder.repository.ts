@@ -109,12 +109,12 @@ export const reminderRepository = {
 
   async delete(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return softDelete(prisma.reminder, id, reminderInclude);
+    return softDelete(prisma.reminder, id, userId, reminderInclude);
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return restore(prisma.reminder, id, reminderInclude);
+    return restore(prisma.reminder, id, userId, reminderInclude);
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {

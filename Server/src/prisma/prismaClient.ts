@@ -1,8 +1,8 @@
-import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client"; // adjust path to your output
 import { logger } from "../utils/logger.js";
 import { encryptionExtension } from "./encryptionExtension.js";
+import { config } from "../utils/config.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -12,11 +12,13 @@ declare global {
 
 function createPrismaClient() {
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-    // Match v6 default behavior — pg has no timeout by default
-    connectionTimeoutMillis: 5000,
-    max: 10, // pg default is also 10, but explicit is better
-  });
+      connectionString: config.databaseUrl,
+      connectionTimeoutMillis: config.database.connectionTimeout,
+      max: config.database.poolSize,
+      min: config.database.poolMin,
+      idleTimeoutMillis: config.database.idleTimeout,
+    });
+
 
   const baseClient = new PrismaClient({
     adapter,

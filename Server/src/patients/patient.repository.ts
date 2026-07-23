@@ -137,11 +137,11 @@ export const patientRepository = {
 
   async delete(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return softDelete(prisma.patient, id);
+    return softDelete(prisma.patient, id, userId);
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return restore(prisma.patient, id);
+    return restore(prisma.patient, id, userId);
   },
 };

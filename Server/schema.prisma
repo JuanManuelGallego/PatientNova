@@ -36,7 +36,6 @@ model Patient {
   reminders     Reminder[]     @relation("PatientReminders")
   medicalRecord MedicalRecord?
 
-  @@unique([userId, email])
   @@index([userId])
   @@index([userId, status])
   @@index([userId, isDeleted])
@@ -382,7 +381,6 @@ model SubsystemRelation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // One status per subsystem per record
   @@unique([medicalRecordId, subsystem, status])
   @@index([medicalRecordId])
   @@map("subsystem_relations")

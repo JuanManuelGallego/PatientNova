@@ -149,12 +149,12 @@ export const appointmentRepository = {
 
   async delete(id: string, userId: string): Promise<Appointment> {
     await appointmentRepository.findById(id, userId);
-    return softDelete(prisma.appointment, id);
+    return softDelete(prisma.appointment, id, userId);
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId, true);
-    return restore(prisma.appointment, id, appointmentInclude);
+    return restore(prisma.appointment, id, userId, appointmentInclude);
   },
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {

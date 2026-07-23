@@ -12,6 +12,13 @@ export const config = {
 
   databaseUrl: requireEnv('DATABASE_URL'),
 
+  database: {
+    poolSize: parseInt(process.env.DATABASE_POOL_SIZE ?? '20', 10),
+    poolMin: parseInt(process.env.DATABASE_POOL_MIN ?? '5', 10),
+    connectionTimeout: parseInt(process.env.DATABASE_CONNECTION_TIMEOUT ?? '10000', 10),
+    idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT ?? '30000', 10),
+  },
+
   twilio: {
     accountSid: requireEnv('TWILIO_ACCOUNT_SID'),
     authToken: requireEnv('TWILIO_AUTH_TOKEN'),
