@@ -72,7 +72,7 @@ export const locationRepository = {
 
   async delete(id: string, userId: string): Promise<AppointmentLocation> {
     await locationRepository.findById(id, userId);
-    return softDelete(prisma.appointmentLocation, id);
+    return softDelete(prisma.appointmentLocation, id, userId);
   },
 
   async restore(id: string, userId: string): Promise<AppointmentLocation> {

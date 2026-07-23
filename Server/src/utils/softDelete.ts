@@ -5,10 +5,11 @@ interface SoftDeletableModel {
 export async function softDelete<M extends SoftDeletableModel>(
   model: M,
   id: string,
+  userId: string,
   include?: any,
 ): Promise<any> {
   return model.update({
-    where: { id },
+    where: { id, userId },
     data: { isDeleted: true, deletedAt: new Date() },
     ...(include && { include }),
   });

@@ -72,7 +72,7 @@ export const userRepository = {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        return softDelete(prisma.user, id);
+        return prisma.user.delete({ where: { id } });
     },
 
     async restore(id: string) {
