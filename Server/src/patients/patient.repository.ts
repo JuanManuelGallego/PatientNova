@@ -142,6 +142,6 @@ export const patientRepository = {
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return restore(prisma.patient, id);
+    return restore(prisma.patient, id, userId);
   },
 };

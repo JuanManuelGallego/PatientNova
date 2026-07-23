@@ -220,7 +220,7 @@ export const medicalRecordRepository = {
 
   async softDelete(id: string, userId: string) {
     await medicalRecordRepository.findById(id, userId);
-    return softDelete(prisma.medicalRecord, id, userId);
+    return softDelete(prisma.medicalRecord, id);
   },
 
   async restore(id: string, userId: string) {

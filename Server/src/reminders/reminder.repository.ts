@@ -114,7 +114,7 @@ export const reminderRepository = {
 
   async restore(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return restore(prisma.reminder, id, reminderInclude);
+    return restore(prisma.reminder, id, userId, reminderInclude);
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {

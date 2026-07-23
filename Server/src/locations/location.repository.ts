@@ -77,6 +77,6 @@ export const locationRepository = {
 
   async restore(id: string, userId: string): Promise<AppointmentLocation> {
     await locationRepository.findById(id, userId);
-    return restore(prisma.appointmentLocation, id);
+    return restore(prisma.appointmentLocation, id, userId);
   },
 };
