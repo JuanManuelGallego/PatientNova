@@ -83,7 +83,7 @@ async function invoke(method: 'post', path: string, req: any, res: any) {
 }
 
 describe('notify routes (integration, mocked Twilio)', () => {
-  it('POST /whatsapp creates a reminder, sends, and marks it SENT', async () => {
+  it('POST /whatsapp creates a reminder, sends, and marks it QUEUED', async () => {
     const req = {
       user: { id: userId },
       body: { to: '+57300123456', contentSid: 'HXdummy', contentVariables: { '1': 'Maria' }, patientId },
@@ -99,11 +99,11 @@ describe('notify routes (integration, mocked Twilio)', () => {
 
     const reminder = await prisma.reminder.findFirst({ where: { userId, channel: Channel.WHATSAPP } });
     expect(reminder).toBeTruthy();
-    expect(reminder!.status).toBe(ReminderStatus.SENT);
+    expect(reminder!.status).toBe(ReminderStatus.QUEUED);
     expect(reminder!.messageId).toBe('SMwhatsapp');
   });
 
-  it('POST /sms creates a reminder, sends, and marks it SENT', async () => {
+  it('POST /sms creates a reminder, sends, and marks it QUEUED', async () => {
     const req = {
       user: { id: userId },
       body: { to: '+57300123456', body: 'Hello', patientId },
@@ -119,7 +119,7 @@ describe('notify routes (integration, mocked Twilio)', () => {
 
     const reminder = await prisma.reminder.findFirst({ where: { userId, channel: Channel.SMS } });
     expect(reminder).toBeTruthy();
-    expect(reminder!.status).toBe(ReminderStatus.SENT);
+    expect(reminder!.status).toBe(ReminderStatus.QUEUED);
   });
 
   it('rejects when the linked patient is not owned by the user', async () => {
