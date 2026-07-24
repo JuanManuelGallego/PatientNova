@@ -27,8 +27,8 @@ import {
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
-import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
-import { fmtDateTime, todayString } from "@/src/utils/timeUtils";
+import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
+import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
 import { useState, useMemo, Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import {

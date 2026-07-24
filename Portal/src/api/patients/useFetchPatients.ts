@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { API_BASE } from "@/src/config/api";
 import { FetchPatientsFilters, Patient } from "@/src/types/Patient";
-import { buildPatientQueryString } from "@/src/utils/apiUtils";
+import { buildPatientQueryString } from "@/src/utils/ApiUtils";
 import { useApiPaginatedQuery } from "@/src/api/base/useApiPaginatedQuery";
 
 export const useFetchPatients = (filters?: FetchPatientsFilters) => {

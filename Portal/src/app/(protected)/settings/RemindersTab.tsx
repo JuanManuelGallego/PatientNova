@@ -6,7 +6,7 @@ import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/users/
 import { User } from "@/src/types/User";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
-import { validatePhoneNumber } from "@/src/utils/dataValidator";
+import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 

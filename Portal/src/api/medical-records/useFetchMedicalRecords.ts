@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { API_BASE } from "@/src/config/api";
 import { MedicalRecord, FetchMedicalRecordFilters } from "@/src/types/MedicalRecord";
 import { useApiPaginatedQuery } from "@/src/api/base/useApiPaginatedQuery";
-import { buildMedicalRecordQueryString } from "@/src/utils/apiUtils";
+import { buildMedicalRecordQueryString } from "@/src/utils/ApiUtils";
 
 export const useFetchMedicalRecords = (filters?: FetchMedicalRecordFilters) => {
     const url = useMemo(

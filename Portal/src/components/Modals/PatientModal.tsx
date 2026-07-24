@@ -5,7 +5,7 @@ import {
   PatientStatus,
   PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
-import { validateEmail, validatePhoneNumber } from "@/src/utils/dataValidator";
+import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import { useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";

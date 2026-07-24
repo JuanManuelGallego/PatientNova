@@ -21,7 +21,7 @@ import {
   Channel,
   type ReminderInlineData,
 } from "@/src/types/Reminder";
-import { getUserName } from "@/src/utils/avatarHelper";
+import { getUserName } from "@/src/utils/AvatarHelper";
 import {
   fmtDate,
   fmtTime,
@@ -30,7 +30,7 @@ import {
   getAppointmentEndTime,
   getTomorrowSixAm,
   getReminderType,
-} from "@/src/utils/timeUtils";
+} from "@/src/utils/TimeUtils";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useAuthContext } from "@/src/providers/AuthContext";

@@ -1,7 +1,7 @@
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { Patient, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { Channel, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
-import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/timeUtils";
+import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,
   AppointmentStatusPill,

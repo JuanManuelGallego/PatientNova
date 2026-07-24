@@ -12,9 +12,9 @@ import {
   getAvatarColor,
   getInitials,
   getUserName,
-} from "@/src/utils/avatarHelper";
+} from "@/src/utils/AvatarHelper";
 import { CHANNEL_ICONS, ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { fmtDateTime } from "@/src/utils/timeUtils";
+import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
@@ -25,7 +25,7 @@ import { useAuthContext } from "@/src/providers/AuthContext";
 import { User } from "@/src/types/User";
 import { ERR_MSG_EMPTY, LBL_NO_PATIENTS } from "@/src/constants/ui";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
-import { validatePhoneNumber } from "@/src/utils/dataValidator";
+import { validatePhoneNumber } from "@/src/utils/DataValidator";
 
 export function ReminderModal({
   onClose,

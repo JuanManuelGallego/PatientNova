@@ -2,7 +2,7 @@ import { sectionGridStyle } from "@/src/config/antTheme";
 import { FormValues, SEX_CFG } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
-import { getAge } from "@/src/utils/timeUtils";
+import { getAge } from "@/src/utils/TimeUtils";
 
 type GeneralDataSectionProps = {
   form: FormValues;

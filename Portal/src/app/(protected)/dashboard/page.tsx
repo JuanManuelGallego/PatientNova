@@ -12,8 +12,8 @@ import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { PatientStatus } from "@/src/types/Patient";
-import { getInitials, getAvatarColor } from "@/src/utils/avatarHelper";
-import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/timeUtils";
+import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
+import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import {
   AppointmentStatusPill,
   ReminderStatusPill,

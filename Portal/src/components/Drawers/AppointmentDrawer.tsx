@@ -1,12 +1,12 @@
 import { Appointment, APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { CHANNEL_CFG, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
-import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import {
   fmtDate,
   fmtDateTime,
   fmtTime,
   getDuration,
-} from "@/src/utils/timeUtils";
+} from "@/src/utils/TimeUtils";
 import { Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";

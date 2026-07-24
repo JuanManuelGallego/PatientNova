@@ -6,7 +6,7 @@ import {
   Reminder,
   ReminderStatus,
 } from "@/src/types/Reminder";
-import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/timeUtils";
+import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";

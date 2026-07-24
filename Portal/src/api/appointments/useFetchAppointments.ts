@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { API_BASE } from "@/src/config/api";
 import { Appointment, FetchAppointmentsFilters } from "@/src/types/Appointment";
-import { buildAppointmentQueryString } from "@/src/utils/apiUtils";
+import { buildAppointmentQueryString } from "@/src/utils/ApiUtils";
 import { useApiPaginatedQuery } from "@/src/api/base/useApiPaginatedQuery";
 
 export const useFetchAppointments = (filters?: FetchAppointmentsFilters) => {

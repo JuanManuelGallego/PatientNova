@@ -4,7 +4,7 @@ import {
   fmtDate,
   getColombianHolidays,
   addDays,
-} from "@/src/utils/timeUtils";
+} from "@/src/utils/TimeUtils";
 import { Appointment } from "@/src/types/Appointment";
 import { ViewMode } from "./types";
 import { computeHourRange, toDateStr } from "./constants";

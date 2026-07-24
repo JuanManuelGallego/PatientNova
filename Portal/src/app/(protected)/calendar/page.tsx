@@ -10,7 +10,7 @@ import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment } from "@/src/types/Appointment";
-import { todayString } from "@/src/utils/timeUtils";
+import { todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "./types";
 import { useCalendarNavigation } from "./useCalendarNavigation";
 import { useCalendarData } from "./useCalendarData";

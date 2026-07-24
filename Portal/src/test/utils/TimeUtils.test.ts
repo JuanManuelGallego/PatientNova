@@ -10,7 +10,7 @@ import {
     getTomorrowSixAm,
     getColombianHolidays,
     isoToLocal,
-} from "@/src/utils/timeUtils";
+} from "@/src/utils/TimeUtils";
 import { AppointmentDuration } from "@/src/types/Appointment";
 
 describe("fmtDate / fmtTime / fmtDateTime", () => {

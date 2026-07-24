@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
-import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { StepPatientsProps } from "./types";
 

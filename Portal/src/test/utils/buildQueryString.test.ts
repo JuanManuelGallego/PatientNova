@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildQueryString } from "@/src/utils/apiUtils";
+import { buildQueryString } from "@/src/utils/ApiUtils";
 
 describe("buildQueryString", () => {
     it("returns empty string for no params", () => {

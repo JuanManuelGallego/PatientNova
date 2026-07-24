@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Text, View, pdf } from "@react-pdf/renderer";
 import { FormValues, RELATIONSHIP_CFG, SEX_CFG, SUBSYSTEM_CFG, RelationshipStatus, SubsystemType } from "@/src/types/MedicalRecord";
-import { fmtDate, getAge, todayString } from "@/src/utils/timeUtils";
+import { fmtDate, getAge, todayString } from "@/src/utils/TimeUtils";
 import { S } from "@/src/styles/medicalRecordsPDFStyle";
 import { User } from "@/src/types/User";
 

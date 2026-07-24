@@ -14,7 +14,7 @@ import {
   Patient,
   PatientStatus,
 } from "@/src/types/Patient";
-import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
@@ -31,7 +31,7 @@ import { EmptyState } from "@/src/components/EmptyState";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
-import { todayString } from "@/src/utils/timeUtils";
+import { todayString } from "@/src/utils/TimeUtils";
 
 const PAGE_SIZE = 10;
 

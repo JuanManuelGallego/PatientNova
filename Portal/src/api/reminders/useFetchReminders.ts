@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { API_BASE } from "@/src/config/api";
 import { useApiPaginatedQuery } from "@/src/api/base/useApiPaginatedQuery";
 import { FetchRemindersFilters, Reminder } from "@/src/types/Reminder";
-import { buildReminderQueryString } from "@/src/utils/apiUtils";
+import { buildReminderQueryString } from "@/src/utils/ApiUtils";
 
 export const useFetchReminders = (filters?: FetchRemindersFilters) => {
     const url = useMemo(
