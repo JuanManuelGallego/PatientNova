@@ -1,6 +1,6 @@
 import { AppointmentStatus, APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { fmtTime } from "@/src/utils/TimeUtils";
-import { ApptChipProps } from "../types";
+import { ApptChipProps } from "./types";
 
 export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProps) {
   const isCancelled = a.status === AppointmentStatus.CANCELLED;

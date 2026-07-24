@@ -1,6 +1,6 @@
 import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
-import { DayPanelProps } from "../types";
+import { DayPanelProps } from "./types";
 
 export function DayPanel({
   selectedDay,

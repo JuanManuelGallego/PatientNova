@@ -2,11 +2,11 @@
 
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
-import { ProfileTab } from "@/src/app/(protected)/settings/ProfileTab";
-import { SecurityTab } from "@/src/app/(protected)/settings/SecurityTab";
-import { LocationsTab } from "@/src/app/(protected)/settings/LocationsTab";
-import { RemindersTab } from "@/src/app/(protected)/settings/RemindersTab";
-import { AppointmentTypesTab } from "@/src/app/(protected)/settings/AppointmentTypesTab";
+import { ProfileTab } from "@/src/components/Settings/ProfileTab";
+import { SecurityTab } from "@/src/components/Settings/SecurityTab";
+import { LocationsTab } from "@/src/components/Settings/LocationsTab";
+import { RemindersTab } from "@/src/components/Settings/RemindersTab";
+import { AppointmentTypesTab } from "@/src/components/Settings/AppointmentTypesTab";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
 enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios" }

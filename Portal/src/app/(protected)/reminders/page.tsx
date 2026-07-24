@@ -11,7 +11,7 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";
 import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
-import { BulkSendWizard } from "@/src/app/(protected)/reminders/BulkSendWizard";
+import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";

@@ -1,5 +1,5 @@
-import { calendarStyles } from "../styles";
-import { CalendarToolbarProps, ViewMode } from "../types";
+import { calendarStyles } from "./styles";
+import { CalendarToolbarProps, ViewMode } from "./types";
 
 export function CalendarToolbar({
   navLabel,

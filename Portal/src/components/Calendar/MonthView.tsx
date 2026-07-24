@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
-import { DAY_NAMES_ES, TODAY_STR } from "../constants";
-import { MonthViewProps } from "../types";
+import { DAY_NAMES_ES, TODAY_STR } from "./constants";
+import { MonthViewProps } from "./types";
 
 export function MonthView({
   rows,

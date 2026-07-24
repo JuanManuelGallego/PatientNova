@@ -11,15 +11,15 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment } from "@/src/types/Appointment";
 import { todayString } from "@/src/utils/TimeUtils";
-import { ViewMode } from "./types";
-import { useCalendarNavigation } from "./useCalendarNavigation";
-import { useCalendarData } from "./useCalendarData";
-import { CalendarToolbar } from "./components/CalendarToolbar";
-import { CalendarLegend } from "./components/CalendarLegend";
-import { MonthView } from "./components/MonthView";
-import { WeekView } from "./components/WeekView";
-import { DayView } from "./components/DayView";
-import { DayPanel } from "./components/DayPanel";
+import { ViewMode } from "@/src/components/Calendar/types";
+import { useCalendarNavigation } from "@/src/components/Calendar/useCalendarNavigation";
+import { useCalendarData } from "@/src/components/Calendar/useCalendarData";
+import { CalendarToolbar } from "@/src/components/Calendar/CalendarToolbar";
+import { CalendarLegend } from "@/src/components/Calendar/CalendarLegend";
+import { MonthView } from "@/src/components/Calendar/MonthView";
+import { WeekView } from "@/src/components/Calendar/WeekView";
+import { DayView } from "@/src/components/Calendar/DayView";
+import { DayPanel } from "@/src/components/Calendar/DayPanel";
 
 function CalendarContent() {
   const { updateAppointment } = useUpdateAppointment();
