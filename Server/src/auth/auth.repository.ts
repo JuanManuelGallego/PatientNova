@@ -1,5 +1,5 @@
-import { prisma } from '../prisma/prismaClient.js';
-import { userInclude } from '../utils/types.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
+import { userInclude } from '../users/user.types.js';
 
 export interface UserForAuth {
   id: string;

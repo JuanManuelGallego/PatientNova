@@ -7,9 +7,9 @@ import {
 import { userService } from './user.service.js';
 import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { consentDocumentRouter } from '../consent-document/consent-document.routes.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { consentDocumentRouter } from '../consent-documents/consent-document.routes.js';
 
 export const userRouter = Router();
 

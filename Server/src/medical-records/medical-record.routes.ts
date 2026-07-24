@@ -2,9 +2,9 @@ import { Router, type Request, type Response } from 'express';
 import { validateBody, validateParams, validateQuery } from '../middlewares/validate.js';
 import { createMedicalRecordSchema, updateMedicalRecordSchema, listMedicalRecordsSchema, type ListMedicalRecordsQuery } from './medical-record.schemas.js';
 import { medicalRecordService } from './medical-record.service.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const medicalRecordRouter = Router();
 

@@ -1,19 +1,16 @@
 import { ReminderMode, ReminderStatus, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import { reminderRepository } from './reminder.repository.js';
-import {
-  ReminderNotCancellableError,
-  ReminderSendAtInPastError,
-  PatientNotFoundError,
-} from '../utils/errors.js';
-import { logger } from '../utils/logger.js';
-import { reminderInclude } from '../utils/types.js';
+import { ReminderNotCancellableError, PatientNotFoundError } from '../utils/errors/errors.js';
+import { ReminderSendAtInPastError } from './reminder.errors.js';
+import { logger } from '../utils/api/logger.js';
+import { reminderInclude } from './reminder.types.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
-import type { Paginated } from '../utils/pagination.js';
-import type { ReminderWithRelations, ReminderStats } from '../utils/types.js';
-import { getBoss } from '../scheduler/pgBoss.js';
-import { reminderJobManager } from '../scheduler/reminderJobManager.js';
+import type { Paginated } from '../utils/api/pagination.js';
+import type { ReminderWithRelations, ReminderStats } from './reminder.types.js';
+import { getBoss } from '../scheduler/pg-boss.js';
+import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 
 const QUEUE = 'send-reminder';
 

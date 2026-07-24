@@ -9,9 +9,9 @@ import {
 } from './reminder.schemas.js';
 import { reminderService } from './reminder.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const reminderRouter = Router();
 

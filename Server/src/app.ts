@@ -3,26 +3,27 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
-import { logger } from './utils/logger.js';
-import { config } from './utils/config.js';
-import { FIFTEEN_MINUTES_MS } from './utils/constants.js';
-import { router } from './routes.js';
+import { logger } from './utils/api/logger.js';
+import { config } from './utils/config/config.js';
+import { FIFTEEN_MINUTES_MS } from './utils/config/constants.js';
+import { router } from './health.routes.js';
+import { messageStatusRouter } from './twilio/message-status.routes.js';
 import { patientRouter } from './patients/patient.routes.js';
 import { appointmentRouter } from './appointments/appointment.routes.js';
 import { reminderRouter } from './reminders/reminder.routes.js';
-import { notifyRouter } from './notify/notify.routes.js';
+import { notifyRouter } from './twilio/notify-sender.routes.js';
 import { authRouter } from './auth/auth.routes.js';
 import { userRouter } from './users/user.routes.js';
 import { locationRouter } from './locations/location.routes.js';
 import { appointmentTypeRouter } from './appointment-types/appointment-type.routes.js';
 import { medicalRecordRouter } from './medical-records/medical-record.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
-import { twilioWebhookRouter } from './twilio/twilio.webhook.routes.js';
-import { apiError } from './utils/apiUtils.js';
+import { twilioWebhookRouter } from './twilio/webhook.routes.js';
+import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
-import { googleRouter } from './google/google.routes.js';
-import { consentDocumentRouter } from './consent-document/consent-document.routes.js';
-import { httpLogger } from './middlewares/httpLogger.js';
+import { googleRouter } from './google-meet/google-meet.routes.js';
+import { consentDocumentRouter } from './consent-documents/consent-document.routes.js';
+import { httpLogger } from './middlewares/http-logger.js';
 
 const app: Application = express();
 
@@ -62,19 +63,26 @@ app.use(
 const authWriteLimit = rateLimit({ windowMs: FIFTEEN_MINUTES_MS, max: 50, standardHeaders: true, legacyHeaders: false });
 app.use('/v1/auth/login', authWriteLimit);
 
-// Unversioned infra/external routes: health check (root router) and the public Twilio webhook.
+// Unversioned infra/external routes: health check (root router), message status, and the public Twilio webhook.
 app.use('/', router);
+app.use('/', messageStatusRouter);
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
 
 // Versioned API — all application endpoints live under /v1.
 const v1 = express.Router();
 
 v1.use('/', router);
+v1.use('/', messageStatusRouter);
+
+// Public (no auth)
 v1.use('/auth', authRouter);
 v1.use('/consent-document', consentDocumentRouter);
 
+// Admin-only (read)
 v1.use('/users', authenticate, requireAdmin, userRouter);
 v1.use('/notify', authenticate, requireAdmin, notifyRouter);
+
+// Admin (read + write)
 v1.use('/patients', authenticate, requireAdminForWrites, patientRouter);
 v1.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
 v1.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);

@@ -5,16 +5,15 @@ import {
   AppointmentPatientNotFoundError,
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
-  AppointmentTypeNotFoundError,
-  LocationNotFoundError,
-  ReminderNotCancellableError,
-} from '../utils/errors.js';
+} from './appointment.errors.js';
+import { LocationNotFoundError, ReminderNotCancellableError } from '../utils/errors/errors.js';
+import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-type.errors.js';
 import type { CreateAppointmentDto, UpdateAppointmentDto, ListAppointmentsQuery, AppointmentStatsQuery } from './appointment.schemas.ts';
 import { appointmentMeetingService } from './appointment-meeting.service.ts';
-import { prisma, type TransactionClient } from '../prisma/prismaClient.ts';
-import { logger } from '../utils/logger.ts';
-import type { AppointmentWithRelations, AppointmentStats } from '../utils/types.ts';
-import type { Paginated } from '../utils/pagination.ts';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.ts';
+import { logger } from '../utils/api/logger.ts';
+import type { AppointmentWithRelations, AppointmentStats } from './appointment.types.ts';
+import type { Paginated } from '../utils/api/pagination.ts';
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,

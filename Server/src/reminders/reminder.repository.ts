@@ -1,11 +1,12 @@
 import { Prisma, ReminderStatus, type Reminder, type Channel } from '../../generated/prisma/client.ts';
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
-import { PatientNotFoundError, ReminderNotFoundError } from '../utils/errors.js';
-import { paginate, type Paginated } from '../utils/pagination.js';
-import { reminderInclude, type ReminderWithRelations, type ReminderStats } from '../utils/types.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
+import { PatientNotFoundError } from '../utils/errors/errors.js';
+import { ReminderNotFoundError } from './reminder.errors.js';
+import { paginate, type Paginated } from '../utils/api/pagination.js';
+import { reminderInclude, type ReminderWithRelations, type ReminderStats } from './reminder.types.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {

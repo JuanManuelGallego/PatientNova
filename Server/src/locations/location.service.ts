@@ -1,5 +1,5 @@
 import { locationRepository } from './location.repository.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/api/logger.js';
 import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
 import type { AppointmentLocation } from '../../generated/prisma/client.ts';
 

@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../utils/config.js';
-import { apiError } from '../utils/apiUtils.js';
-import { logger } from '../utils/logger.js';
+import { config } from '../utils/config/config.js';
+import { apiError } from '../utils/api/api-utils.js';
+import { logger } from '../utils/api/logger.js';
 
 export interface AuthPayload {
   id: string;

@@ -1,10 +1,11 @@
 import type { AppointmentLocation } from '../../generated/prisma/client.ts';
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import type { CreateLocationDto, UpdateLocationDto, ListLocationsQuery } from './location.schemas.js';
-import { LocationNotFoundError, LocationNameConflictError } from '../utils/errors.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
-import { assertUnique } from '../utils/assertUnique.js';
+import { LocationNotFoundError } from '../utils/errors/errors.js';
+import { LocationNameConflictError } from './location.errors.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { assertUnique } from '../utils/validation/assertUnique.js';
 
 export const locationRepository = {
   async create(dto: CreateLocationDto, userId: string): Promise<AppointmentLocation> {

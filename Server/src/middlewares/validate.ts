@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
-import { apiError } from '../utils/apiUtils.js';
-import { logger } from '../utils/logger.js';
+import { apiError } from '../utils/api/api-utils.js';
+import { logger } from '../utils/api/logger.js';
 
 type Target = 'body' | 'query' | 'params';
 

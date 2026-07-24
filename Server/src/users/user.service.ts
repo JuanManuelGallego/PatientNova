@@ -1,5 +1,5 @@
 import { userRepository } from './user.repository.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/api/logger.js';
 import type { CreateUserDto, UpdateUserDto } from './user.schemas.js';
 
 export const userService = {

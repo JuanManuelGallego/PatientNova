@@ -1,7 +1,7 @@
 import { Channel } from "../../generated/prisma/client.ts";
-import { sendSms, sendWhatsApp } from "../twilio/twilioClient.js";
-import type { NotificationResult } from "../utils/types.ts";
-import { logger } from "../utils/logger.ts";
+import { sendSms, sendWhatsApp } from "../twilio/client.js";
+import type { NotificationResult } from "../twilio/types.ts";
+import { logger } from "../utils/api/logger.ts";
 
 export interface DispatchOpts {
   to: string;

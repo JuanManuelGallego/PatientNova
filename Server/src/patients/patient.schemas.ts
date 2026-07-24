@@ -1,7 +1,7 @@
 import { PatientStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
-import { e164OrEmpty } from '../utils/types.js';
-import { includeDeletedQuery } from '../utils/schemas.js';
+import { e164OrEmpty } from '../utils/validation/middleware.js';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
 export const createPatientSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),

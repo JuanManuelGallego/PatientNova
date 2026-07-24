@@ -40,7 +40,7 @@ beforeAll(() => {
 });
 
 // Import after the guard so a misconfigured URL fails before any DB connection.
-const { prisma } = await import('../../src/prisma/prismaClient.js');
+const { prisma } = await import('../../src/utils/prisma/prisma-client.js');
 
 // Truncate all application tables between tests for isolation.
 // Excludes Prisma's own migration table and the pg-boss schema.

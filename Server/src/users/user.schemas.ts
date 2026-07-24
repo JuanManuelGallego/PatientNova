@@ -1,8 +1,8 @@
 import { AdminRole, AdminStatus, Channel } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
-import { e164OrEmpty, strongPassword } from '../utils/types.js';
-import { includeDeletedQuery } from '../utils/schemas.js';
-import { isValidIANATimezone } from '../utils/timeUtils.ts';
+import { e164OrEmpty, strongPassword } from '../utils/validation/middleware.js';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
+import { isValidIANATimezone } from '../utils/time/time-utils.ts';
 
 export const updateUserSchema = z.object({
     firstName: z.string().min(1).max(100).optional(),

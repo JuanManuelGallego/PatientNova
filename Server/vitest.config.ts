@@ -9,8 +9,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['src/**/*.test.ts'],
-          exclude: ['src/**/*.integration.test.ts'],
+          include: ['test/unit/**/*.test.ts'],
         },
       },
       {
@@ -19,7 +18,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
-          include: ['src/**/*.integration.test.ts'],
+          include: ['test/integration/**/*.test.ts'],
           setupFiles: ['test/integration/setup.ts'],
           // A single DB is shared, so avoid parallel file execution clobbering data.
           fileParallelism: false,

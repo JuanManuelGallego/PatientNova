@@ -1,5 +1,5 @@
 import { appointmentTypeRepository } from './appointment-type.repository.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/api/logger.js';
 import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto } from './appointment-type.schemas.js';
 import type { AppointmentType } from '../../generated/prisma/client.ts';
 

@@ -1,9 +1,10 @@
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import { type Prisma } from '../../generated/prisma/client.ts';
-import { PatientNotFoundError, MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from '../utils/errors.js';
-import { paginate } from '../utils/pagination.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
+import { PatientNotFoundError } from '../utils/errors/errors.js';
+import { MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
+import { paginate } from '../utils/api/pagination.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 
 const subsystemRelationData = (medicalRecordId: string, relations: NonNullable<CreateMedicalRecordDto[ 'subsystemRelations' ]>) =>

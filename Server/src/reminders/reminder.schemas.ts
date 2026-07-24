@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
-import { includeDeletedQuery } from '../utils/schemas.js';
-import { e164Regex } from '../utils/validation.ts';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
+import { e164Regex } from '../utils/validation/middleware.ts';
 
 // this will break with emails
 const e164 = z
