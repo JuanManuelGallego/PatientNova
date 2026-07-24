@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { patientService } from '../../../src/patients/patient.service.js';
 
@@ -37,6 +36,7 @@ const fakePatientWithRelations = {
   ...fakePatient,
   appointments: [{ id: 'appt-1' }],
   reminders: [{ id: 'rem-1' }],
+  medicalRecord: null,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -44,14 +44,14 @@ beforeEach(() => vi.clearAllMocks());
 describe('patientService.findById', () => {
   it('delegates to repository.findById', async () => {
     mockRepo.findById.mockResolvedValue(fakePatient as any);
-    const result = await patientService.findById('patient-1');
-    expect(mockRepo.findById).toHaveBeenCalledWith('patient-1');
+    const result = await patientService.findById('patient-1', 'user-1');
+    expect(mockRepo.findById).toHaveBeenCalledWith('patient-1', 'user-1');
     expect(result).toEqual(fakePatient);
   });
 
   it('propagates repository errors', async () => {
     mockRepo.findById.mockRejectedValue(new Error('Not found'));
-    await expect(patientService.findById('bad')).rejects.toThrow('Not found');
+    await expect(patientService.findById('bad', 'user-1')).rejects.toThrow('Not found');
   });
 });
 
@@ -71,32 +71,32 @@ describe('patientService.findByIdWithRelations', () => {
 
 describe('patientService.findMany', () => {
   it('delegates to repository.findMany with query and userId', async () => {
-    const query = { page: 1, pageSize: 10, search: '', orderBy: 'createdAt', order: 'desc' as const };
-    mockRepo.findMany.mockResolvedValue({ items: [fakePatient], total: 1 } as any);
+    const query = { page: 1, pageSize: 10, search: '', orderBy: 'createdAt' as const, order: 'desc' as const, includeDeleted: false };
+    mockRepo.findMany.mockResolvedValue({ data: [fakePatient], total: 1, page: 1, pageSize: 20 } as any);
     const result = await patientService.findMany(query, 'user-1');
     expect(mockRepo.findMany).toHaveBeenCalledWith(query, 'user-1');
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it('returns empty results when no patients match', async () => {
-    mockRepo.findMany.mockResolvedValue({ items: [], total: 0 } as any);
-    const result = await patientService.findMany({ page: 1, pageSize: 10, search: 'xyz', orderBy: 'createdAt', order: 'desc' as const }, 'user-1');
-    expect(result.items).toHaveLength(0);
+    mockRepo.findMany.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 } as any);
+    const result = await patientService.findMany({ page: 1, pageSize: 10, search: 'xyz', orderBy: 'createdAt' as const, order: 'desc' as const, includeDeleted: false }, 'user-1');
+    expect(result.data).toHaveLength(0);
     expect(result.total).toBe(0);
   });
 });
 
 describe('patientService.getStats', () => {
   it('delegates to repository.getStats with userId and optional query', async () => {
-    mockRepo.getStats.mockResolvedValue({ total: 5, thisMonth: 2 } as any);
+    mockRepo.getStats.mockResolvedValue({ total: 5, byStatus: {} } as any);
     const result = await patientService.getStats('user-1');
     expect(mockRepo.getStats).toHaveBeenCalledWith('user-1', undefined);
     expect(result.total).toBe(5);
   });
 
   it('passes query to repository when provided', async () => {
-    const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31' };
-    mockRepo.getStats.mockResolvedValue({ total: 3 } as any);
+    const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31', includeDeleted: false };
+    mockRepo.getStats.mockResolvedValue({ total: 3, byStatus: {} } as any);
     await patientService.getStats('user-1', query);
     expect(mockRepo.getStats).toHaveBeenCalledWith('user-1', query);
   });
@@ -109,7 +109,7 @@ describe('patientService.getStats', () => {
 
 describe('patientService.create', () => {
   it('delegates to repository.create with dto and userId', async () => {
-    const dto = { name: 'John', lastName: 'Doe', email: 'john@test.com' };
+    const dto = { name: 'John', lastName: 'Doe', email: 'john@test.com', status: 'ACTIVE' as const };
     mockRepo.create.mockResolvedValue(fakePatient as any);
     const result = await patientService.create(dto, 'user-1');
     expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
@@ -118,7 +118,7 @@ describe('patientService.create', () => {
 
   it('logs patient creation', async () => {
     mockRepo.create.mockResolvedValue(fakePatient as any);
-    await patientService.create({ name: 'John', email: 'j@t.com' }, 'user-1');
+    await patientService.create({ name: 'John', lastName: 'Doe', email: 'j@t.com', status: 'ACTIVE' as const }, 'user-1');
     expect(mockLogger.info).toHaveBeenCalledWith(
       { patientId: 'patient-1', userId: 'user-1' },
       'Patient created',
@@ -127,7 +127,7 @@ describe('patientService.create', () => {
 
   it('propagates repository errors without logging', async () => {
     mockRepo.create.mockRejectedValue(new Error('Email conflict'));
-    await expect(patientService.create({ name: 'X', email: 'dup' }, 'user-1')).rejects.toThrow('Email conflict');
+    await expect(patientService.create({ name: 'X', lastName: 'Y', email: 'dup', status: 'ACTIVE' as const }, 'user-1')).rejects.toThrow('Email conflict');
     expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });

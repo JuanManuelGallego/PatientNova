@@ -46,7 +46,7 @@ export const consentDocumentRepository = {
             throw new ConsentDocumentNotFoundError(userId);
         }
 
-        const data: any = {};
+        const data: Record<string, unknown> = {};
         if (dto.name !== undefined) data.name = dto.name;
         if (dto.mimeType !== undefined) data.mimeType = dto.mimeType;
         if (dto.content !== undefined) {

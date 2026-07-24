@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { authService } from '../../../src/auth/auth.service.js';
 
@@ -46,7 +45,7 @@ vi.mock('bcrypt', () => ({
 
 vi.mock('jsonwebtoken', () => {
   class TokenExpiredError extends Error {
-    constructor(message: string, expiredAt: Date) {
+    constructor(message: string, _expiredAt: Date) {
       super(message);
       this.name = 'TokenExpiredError';
     }

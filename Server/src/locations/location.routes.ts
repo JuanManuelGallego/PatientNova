@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createLocationSchema,
   updateLocationSchema,
@@ -17,10 +19,10 @@ export const locationRouter = Router();
  * GET /locations
  * List appointment locations with optional filters and pagination.
  */
-locationRouter.get<{}, any, any, ListLocationsQuery>(
+locationRouter.get<ParamsDictionary, unknown, unknown, ListLocationsQuery & ParsedQs>(
   '/',
   validateQuery(listLocationsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListLocationsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListLocationsQuery & ParsedQs>, res: Response) => {
     ok(res, await locationService.findMany(req.user!.id, req.query));
   })
 );

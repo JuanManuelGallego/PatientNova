@@ -1,13 +1,13 @@
 interface SoftDeletableModel {
-  update: (args: { where: { id: string; userId?: string }; data: Record<string, unknown>; include?: any }) => Promise<any>;
+  update: (args: { where: { id: string; userId?: string }; data: Record<string, unknown>; include?: Record<string, unknown> }) => Promise<unknown>;
 }
 
 export async function softDelete<M extends SoftDeletableModel>(
   model: M,
   id: string,
   userId?: string,
-  include?: any,
-): Promise<any> {
+  include?: Record<string, unknown>,
+): Promise<unknown> {
   return model.update({
     where: userId !== undefined ? { id, userId } : { id },
     data: { isDeleted: true, deletedAt: new Date() },
@@ -19,10 +19,10 @@ export async function restore<M extends SoftDeletableModel>(
   model: M,
   id: string,
   userId?: string,
-  include?: any,
-): Promise<any> {
+  include?: Record<string, unknown>,
+): Promise<unknown> {
   return model.update({
-    where: { id, userId },
+    where: userId !== undefined ? { id, userId } : { id },
     data: { isDeleted: false, deletedAt: null },
     ...(include && { include }),
   });

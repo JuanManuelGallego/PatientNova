@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { patientRepository } from '../../../src/patients/patient.repository.js';
@@ -50,7 +49,7 @@ describe('patientRepository (integration)', () => {
     await patientRepository.delete(created.id, userId);
 
     const page = await patientRepository.findMany(
-      { page: 1, pageSize: 20, orderBy: 'createdAt', order: 'desc', includeDeleted: false },
+      { page: 1, pageSize: 20, orderBy: 'createdAt', order: 'desc', includeDeleted: false, search: undefined },
       userId,
     );
     expect(page.data).toHaveLength(0);

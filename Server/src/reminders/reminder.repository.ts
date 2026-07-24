@@ -93,7 +93,7 @@ export const reminderRepository = {
 
     // Handle status-based timestamp field
     if (dto.status === ReminderStatus.SENT) {
-      (data as any).sentAt = new Date();
+      (data as Record<string, unknown>).sentAt = new Date();
     }
 
     return prisma.reminder.update({
@@ -110,12 +110,12 @@ export const reminderRepository = {
 
   async delete(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return softDelete(prisma.reminder, id, userId, reminderInclude);
+    return softDelete(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return restore(prisma.reminder, id, userId, reminderInclude);
+    return restore(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {

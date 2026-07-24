@@ -12,6 +12,7 @@ import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStat
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
   reminders: { id: string }[];
+  medicalRecord: { id: string } | null;
 };
 
 export const patientRepository = {
@@ -138,11 +139,11 @@ export const patientRepository = {
 
   async delete(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return softDelete(prisma.patient, id, userId);
+    return softDelete(prisma.patient, id, userId) as Promise<Patient>;
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return restore(prisma.patient, id, userId);
+    return restore(prisma.patient, id, userId) as Promise<Patient>;
   },
 };

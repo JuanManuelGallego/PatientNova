@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createPatientSchema,
   updatePatientSchema,
@@ -19,10 +21,10 @@ export const patientRouter = Router();
  * GET /patients
  * List patients with optional filters and pagination.
  */
-patientRouter.get<{}, any, any, ListPatientsQuery>(
+patientRouter.get<ParamsDictionary, unknown, unknown, ListPatientsQuery & ParsedQs>(
   '/',
   validateQuery(listPatientsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListPatientsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListPatientsQuery & ParsedQs>, res: Response) => {
     ok(res, await patientService.findMany(req.query, req.user!.id));
   })
 );
@@ -32,10 +34,10 @@ patientRouter.get<{}, any, any, ListPatientsQuery>(
  * Aggregate statistics: totals by status.
  * Optional filters: dateFrom, dateTo.
  */
-patientRouter.get<{}, any, any, PatientStatsQuery>(
+patientRouter.get<ParamsDictionary, unknown, unknown, PatientStatsQuery & ParsedQs>(
   '/stats',
   validateQuery(patientStatsSchema),
-  asyncHandler(async (req: Request<{}, any, any, PatientStatsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, PatientStatsQuery & ParsedQs>, res: Response) => {
     ok(res, await patientService.getStats(req.user!.id, req.query));
   })
 );

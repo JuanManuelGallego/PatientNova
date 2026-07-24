@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { locationService } from '../../../src/locations/location.service.js';
 
@@ -29,6 +28,14 @@ const fakeLocation = {
   address: '123 Medical Blvd',
   isVirtual: false,
   userId: 'user-1',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  isDeleted: false,
+  deletedAt: null,
+  defaultPrice: null,
+  color: null,
+  isActive: true,
+  instructions: null,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -36,22 +43,22 @@ beforeEach(() => vi.clearAllMocks());
 describe('locationService.findById', () => {
   it('delegates to repository.findById', async () => {
     mockRepo.findById.mockResolvedValue(fakeLocation as any);
-    const result = await locationService.findById('loc-1');
-    expect(mockRepo.findById).toHaveBeenCalledWith('loc-1');
+    const result = await locationService.findById('loc-1', 'user-1');
+    expect(mockRepo.findById).toHaveBeenCalledWith('loc-1', 'user-1');
     expect(result).toEqual(fakeLocation);
   });
 
   it('propagates repository errors', async () => {
     mockRepo.findById.mockRejectedValue(new Error('Not found'));
-    await expect(locationService.findById('bad')).rejects.toThrow('Not found');
+    await expect(locationService.findById('bad', 'user-1')).rejects.toThrow('Not found');
   });
 });
 
 describe('locationService.findMany', () => {
   it('delegates to repository.findMany', async () => {
     mockRepo.findMany.mockResolvedValue([fakeLocation] as any);
-    const result = await locationService.findMany({ includeDeleted: false });
-    expect(mockRepo.findMany).toHaveBeenCalledWith({ includeDeleted: false });
+    const result = await locationService.findMany('user-1', { includeDeleted: false });
+    expect(mockRepo.findMany).toHaveBeenCalledWith('user-1', { includeDeleted: false });
     expect(result).toEqual([fakeLocation]);
   });
 });
@@ -67,7 +74,7 @@ describe('locationService.create', () => {
 
   it('logs location creation', async () => {
     mockRepo.create.mockResolvedValue(fakeLocation as any);
-    await locationService.create({ name: 'Main Office', isVirtual: false }, 'user-1');
+    await locationService.create({ name: 'Main Office', isVirtual: false, address: '123 Medical Blvd', instructions: 'Enter through main door' }, 'user-1');
     expect(mockLogger.info).toHaveBeenCalledWith(
       { locationId: 'loc-1', userId: 'user-1', name: 'Main Office' },
       'Location created',
@@ -76,7 +83,7 @@ describe('locationService.create', () => {
 
   it('propagates repository errors', async () => {
     mockRepo.create.mockRejectedValue(new Error('Name already exists'));
-    await expect(locationService.create({ name: 'Dup' }, 'user-1')).rejects.toThrow('Name already exists');
+    await expect(locationService.create({ name: 'Dup', isVirtual: true }, 'user-1')).rejects.toThrow('Name already exists');
     expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });

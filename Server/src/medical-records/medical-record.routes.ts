@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import { validateBody, validateParams, validateQuery } from '../middlewares/validate.js';
 import { createMedicalRecordSchema, updateMedicalRecordSchema, listMedicalRecordsSchema, type ListMedicalRecordsQuery } from './medical-record.schemas.js';
 import { medicalRecordService } from './medical-record.service.js';
@@ -12,10 +14,10 @@ export const medicalRecordRouter = Router();
  * GET /medical-records
  * List medical records with optional filters and pagination.
  */
-medicalRecordRouter.get<{}, any, any, ListMedicalRecordsQuery>(
+medicalRecordRouter.get<ParamsDictionary, unknown, unknown, ListMedicalRecordsQuery & ParsedQs>(
   '/',
   validateQuery(listMedicalRecordsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListMedicalRecordsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListMedicalRecordsQuery & ParsedQs>, res: Response) => {
     ok(res, await medicalRecordService.findMany(req.query, req.user!.id));
   })
 );

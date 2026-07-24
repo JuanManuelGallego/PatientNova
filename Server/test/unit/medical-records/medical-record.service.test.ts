@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { medicalRecordService } from '../../../src/medical-records/medical-record.service.js';
 
@@ -29,7 +28,7 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { medicalRecordRepository } from '../../../src/medical-records/medical-record.repository.js';
 import { logger } from '../../../src/utils/api/logger.js';
 
-const mockPrisma = vi.mocked(prisma);
+const mockPrisma = vi.mocked(prisma) as any;
 const mockRepo = vi.mocked(medicalRecordRepository);
 const mockLogger = vi.mocked(logger);
 
@@ -72,17 +71,17 @@ describe('medicalRecordService.findByPatientId', () => {
 
 describe('medicalRecordService.findMany', () => {
   it('delegates to repository.findMany', async () => {
-    mockRepo.findMany.mockResolvedValue({ items: [fakeRecord], total: 1 } as any);
-    const query = { page: 1, pageSize: 10, search: '', orderBy: 'createdAt', order: 'desc' as const };
+    mockRepo.findMany.mockResolvedValue({ data: [fakeRecord], total: 1, page: 1, pageSize: 10 } as any);
+    const query = { page: 1, pageSize: 10, search: '', orderBy: 'createdAt' as const, order: 'desc' as const, includeDeleted: false };
     const result = await medicalRecordService.findMany(query, 'user-1');
     expect(mockRepo.findMany).toHaveBeenCalledWith(query, 'user-1');
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it('returns empty results when no records match', async () => {
-    mockRepo.findMany.mockResolvedValue({ items: [], total: 0 } as any);
-    const result = await medicalRecordService.findMany({ page: 1, pageSize: 10, search: 'xyz', orderBy: 'createdAt', order: 'desc' as const }, 'user-1');
-    expect(result.items).toHaveLength(0);
+    mockRepo.findMany.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 10 } as any);
+    const result = await medicalRecordService.findMany({ page: 1, pageSize: 10, search: 'xyz', orderBy: 'createdAt' as const, order: 'desc' as const, includeDeleted: false }, 'user-1');
+    expect(result.data).toHaveLength(0);
   });
 });
 

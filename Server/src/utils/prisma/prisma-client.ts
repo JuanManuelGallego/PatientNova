@@ -5,7 +5,6 @@ import { encryptionExtension } from "./encryption-extension.js";
 import { config } from "../config/config.js";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __prisma: ReturnType<typeof createPrismaClient> | undefined;
   var __prismaDisconnected: boolean | undefined;
 }

@@ -1,4 +1,4 @@
-import express, { type Application, type Request, type Response, type NextFunction } from 'express';
+import express, { type Application, type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -97,7 +97,7 @@ app.use((_req: Request, res: Response) => {
     apiError(res, 'Route not found', 404);
 });
 
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response) => {
     logger.error(
         {
             err,

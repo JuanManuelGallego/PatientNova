@@ -25,7 +25,7 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
   }
 
   const originalEnd = res.end;
-  res.end = function (this: Response, ...args: any[]) {
+  res.end = function (this: Response, ...args: unknown[]) {
     const duration = Date.now() - start;
 
     const responseLog: Record<string, unknown> = {
@@ -42,8 +42,8 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
       logger.info(responseLog, 'RESPONSE');
     }
 
-    return originalEnd.apply(this, args as any);
-  } as any;
+    return originalEnd.apply(this, args as Parameters<typeof originalEnd>);
+  } as typeof res.end;
 
   next();
 }

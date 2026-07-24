@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { appointmentTypeService } from '../../../src/appointment-types/appointment-type.service.js';
 
@@ -26,9 +25,16 @@ const mockLogger = vi.mocked(logger);
 const fakeType = {
   id: 'type-1',
   name: 'Consultation',
-  duration: 30,
-  price: 100,
+  defaultDuration: 30,
+  defaultPrice: 100,
   userId: 'user-1',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  isDeleted: false,
+  deletedAt: null,
+  description: null,
+  color: null,
+  isActive: true,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -36,29 +42,29 @@ beforeEach(() => vi.clearAllMocks());
 describe('appointmentTypeService.findById', () => {
   it('delegates to repository.findById', async () => {
     mockRepo.findById.mockResolvedValue(fakeType as any);
-    const result = await appointmentTypeService.findById('type-1');
-    expect(mockRepo.findById).toHaveBeenCalledWith('type-1');
+    const result = await appointmentTypeService.findById('type-1', 'user-1');
+    expect(mockRepo.findById).toHaveBeenCalledWith('type-1', 'user-1');
     expect(result).toEqual(fakeType);
   });
 
   it('propagates repository errors', async () => {
     mockRepo.findById.mockRejectedValue(new Error('Not found'));
-    await expect(appointmentTypeService.findById('bad')).rejects.toThrow('Not found');
+    await expect(appointmentTypeService.findById('bad', 'user-1')).rejects.toThrow('Not found');
   });
 });
 
 describe('appointmentTypeService.findMany', () => {
   it('delegates to repository.findMany', async () => {
     mockRepo.findMany.mockResolvedValue([fakeType] as any);
-    const result = await appointmentTypeService.findMany({ includeDeleted: false });
-    expect(mockRepo.findMany).toHaveBeenCalledWith({ includeDeleted: false });
+    const result = await appointmentTypeService.findMany('user-1', { includeDeleted: false });
+    expect(mockRepo.findMany).toHaveBeenCalledWith('user-1', { includeDeleted: false });
     expect(result).toEqual([fakeType]);
   });
 });
 
 describe('appointmentTypeService.create', () => {
   it('delegates to repository.create with dto and userId', async () => {
-    const dto = { name: 'Follow-up', duration: 15 };
+    const dto = { name: 'Follow-up', defaultDuration: 15 };
     mockRepo.create.mockResolvedValue(fakeType as any);
     const result = await appointmentTypeService.create(dto, 'user-1');
     expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
@@ -67,7 +73,7 @@ describe('appointmentTypeService.create', () => {
 
   it('logs appointment type creation', async () => {
     mockRepo.create.mockResolvedValue(fakeType as any);
-    await appointmentTypeService.create({ name: 'Consultation', duration: 30 }, 'user-1');
+    await appointmentTypeService.create({ name: 'Consultation', defaultDuration: 30 }, 'user-1');
     expect(mockLogger.info).toHaveBeenCalledWith(
       { appointmentTypeId: 'type-1', userId: 'user-1', name: 'Consultation' },
       'Appointment type created',
@@ -76,7 +82,7 @@ describe('appointmentTypeService.create', () => {
 
   it('propagates repository errors', async () => {
     mockRepo.create.mockRejectedValue(new Error('Name already exists'));
-    await expect(appointmentTypeService.create({ name: 'Dup', duration: 15 }, 'user-1')).rejects.toThrow('Name already exists');
+    await expect(appointmentTypeService.create({ name: 'Dup', defaultDuration: 15 }, 'user-1')).rejects.toThrow('Name already exists');
     expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });

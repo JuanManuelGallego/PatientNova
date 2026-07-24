@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect } from 'vitest';
 import { createAppointmentSchema, updateAppointmentSchema } from '../../../src/appointments/appointment.schemas.js';
 
@@ -21,6 +20,7 @@ const validReminder = {
   contentSid: 'HX1234567890abcdef',
   contentVariables: { '1': 'John' },
   body: 'Hello {{1}}',
+  status: 'PENDING' as const,
 };
 
 describe('createAppointmentSchema', () => {

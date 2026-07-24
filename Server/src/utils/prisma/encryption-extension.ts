@@ -78,7 +78,7 @@ function decryptField(
 
   try {
     return decrypt(value, key);
-  } catch (err) {
+  } catch {
     throw new EncryptionError(`Failed to decrypt ${model}.${field}`, {
       model,
       field,

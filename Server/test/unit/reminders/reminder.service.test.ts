@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { reminderService } from '../../../src/reminders/reminder.service.js';
 
@@ -35,10 +34,10 @@ vi.mock('../../../src/scheduler/reminder-job-manager.js', () => ({ reminderJobMa
 
 const fakeReminder = {
   id: 'rem-1',
-  channel: 'WHATSAPP',
+  channel: 'WHATSAPP' as const,
   to: '+15551234567',
-  sendMode: 'SCHEDULED',
-  status: 'PENDING',
+  sendMode: 'SCHEDULED' as const,
+  status: 'PENDING' as const,
   patientId: 'patient-1',
   userId: 'user-1',
   sendAt: new Date(Date.now() + 86400000),
@@ -46,7 +45,7 @@ const fakeReminder = {
 };
 
 const scheduledPending = { ...fakeReminder };
-const immediatePending = { ...fakeReminder, sendMode: 'IMMEDIATE' };
+const immediatePending = { ...fakeReminder, sendMode: 'IMMEDIATE' as const };
 
 function txStub(overrides = {}) {
   return {
@@ -65,9 +64,9 @@ function bossStub() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.repo.findById.mockResolvedValue(fakeReminder);
-  mocks.repo.findMany.mockResolvedValue({ items: [fakeReminder], total: 1 });
+  mocks.repo.findMany.mockResolvedValue({ data: [fakeReminder], total: 1, page: 1, pageSize: 20 });
   mocks.repo.getStats.mockResolvedValue({ total: 10, todayCount: 2, byStatus: {}, byChannel: {} });
-  mocks.repo.update.mockImplementation(async (id, dto) => ({ ...fakeReminder, ...dto }));
+  mocks.repo.update.mockImplementation(async (_id: string, dto: Record<string, unknown>) => ({ ...fakeReminder, ...dto }));
   mocks.repo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' });
   mocks.repo.delete.mockResolvedValue(fakeReminder);
   mocks.repo.restore.mockResolvedValue(fakeReminder);
@@ -76,15 +75,15 @@ beforeEach(() => {
 describe('reminderService.findById', () => {
   it('delegates to repository.findById', async () => {
     mocks.repo.findById.mockResolvedValue(fakeReminder);
-    const result = await reminderService.findById('rem-1');
-    expect(mocks.repo.findById).toHaveBeenCalledWith('rem-1');
+    const result = await reminderService.findById('rem-1', 'user-1');
+    expect(mocks.repo.findById).toHaveBeenCalledWith('rem-1', 'user-1');
     expect(result).toEqual(fakeReminder);
   });
 });
 
 describe('reminderService.findMany', () => {
   it('delegates to repository.findMany', async () => {
-    const query = { page: 1, pageSize: 10, orderBy: 'sendAt', order: 'desc', search: '' };
+    const query = { page: 1, pageSize: 10, orderBy: 'sendAt' as const, order: 'desc' as const, includeDeleted: false };
     await reminderService.findMany(query, 'user-1');
     expect(mocks.repo.findMany).toHaveBeenCalledWith(query, 'user-1');
   });
@@ -92,7 +91,7 @@ describe('reminderService.findMany', () => {
 
 describe('reminderService.getStats', () => {
   it('delegates to repository.getStats', async () => {
-    const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31' };
+    const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31', includeDeleted: false };
     await reminderService.getStats(query, 'user-1');
     expect(mocks.repo.getStats).toHaveBeenCalledWith(query, 'user-1');
   });
@@ -100,9 +99,9 @@ describe('reminderService.getStats', () => {
 
 describe('reminderService.create', () => {
   it('IMMEDIATE: creates reminder and enqueues a pg-boss job inside the transaction', async () => {
-    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'patient-1', status: 'PENDING', sendAt: new Date().toISOString() };
+    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date() };
     const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
     const boss = bossStub();
 
     const result = await reminderService.create(dto, 'user-1');
@@ -115,39 +114,39 @@ describe('reminderService.create', () => {
   });
 
   it('SCHEDULED: enqueues job with startAfter', async () => {
-    const future = new Date(Date.now() + 86400000).toISOString();
-    const dto = { channel: 'SMS', to: '+15559876543', sendMode: 'SCHEDULED', patientId: 'patient-1', status: 'PENDING', sendAt: future };
+    const future = new Date(Date.now() + 86400000);
+    const dto = { channel: 'SMS' as const, to: '+15559876543', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: future };
     const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
     const boss = bossStub();
 
     await reminderService.create(dto, 'user-1');
 
-    const [, , options] = boss.send.mock.calls[0];
+    const [, , options] = boss.send.mock.calls[0] as [string, unknown, { startAfter: Date; db: unknown }];
     expect(options.startAfter).toBeInstanceOf(Date);
     expect(options.db).toBeDefined();
   });
 
   it('throws ReminderSendAtInPastError for SCHEDULED with past sendAt', async () => {
-    const past = new Date(Date.now() - 86400000).toISOString();
-    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'SCHEDULED', patientId: 'patient-1', status: 'PENDING', sendAt: past };
+    const past = new Date(Date.now() - 86400000);
+    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: past };
     await expect(reminderService.create(dto, 'user-1')).rejects.toThrow('Scheduled reminders must have a sendAt time in the future');
     expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('throws PatientNotFoundError when patient does not exist', async () => {
-    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'missing', status: 'PENDING', sendAt: new Date().toISOString() };
+    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'missing', status: 'PENDING' as const, sendAt: new Date() };
     const tx = txStub({ patient: { findFirst: vi.fn().mockResolvedValue(null) }, reminder: { create: vi.fn() } });
-    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
     bossStub();
     await expect(reminderService.create(dto, 'user-1')).rejects.toThrow();
     expect(tx.reminder.create).not.toHaveBeenCalled();
   });
 
   it('enqueue:false creates the reminder but does NOT enqueue a pg-boss job (no duplicate send)', async () => {
-    const dto = { channel: 'WHATSAPP', to: '+15551234567', sendMode: 'IMMEDIATE', patientId: 'patient-1', status: 'PENDING', sendAt: new Date().toISOString() };
+    const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date() };
     const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
     const boss = bossStub();
 
     await reminderService.create(dto, 'user-1', false);
@@ -161,7 +160,7 @@ describe('reminderService.create', () => {
 describe('reminderService.update', () => {
   it('reschedules the job when sendAt changes on a PENDING reminder', async () => {
     mocks.repo.findById.mockResolvedValue(scheduledPending);
-    await reminderService.update('rem-1', { sendAt: new Date(Date.now() + 2 * 86400000).toISOString() }, 'user-1');
+    await reminderService.update('rem-1', { sendAt: new Date(Date.now() + 2 * 86400000) }, 'user-1');
     expect(mocks.jobManager.reschedule).toHaveBeenCalledWith('rem-1', expect.any(Date));
   });
 
@@ -197,7 +196,7 @@ describe('reminderService.cancel', () => {
   });
 
   it('throws ReminderNotCancellableError for a non-PENDING reminder', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await expect(reminderService.cancel('rem-1', 'user-1')).rejects.toThrow('Cannot cancel a reminder with status "SENT"');
     expect(mocks.jobManager.cancel).not.toHaveBeenCalled();
   });
@@ -212,7 +211,7 @@ describe('reminderService.softDelete', () => {
   });
 
   it('does not cancel the job when deleting a non-PENDING reminder', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await reminderService.softDelete('rem-1', 'user-1');
     expect(mocks.jobManager.cancel).not.toHaveBeenCalled();
     expect(mocks.repo.delete).toHaveBeenCalledWith('rem-1', 'user-1');
@@ -221,21 +220,21 @@ describe('reminderService.softDelete', () => {
 
 describe('reminderService.restore', () => {
   it('re-enqueues when PENDING, future sendAt, and no existing job', async () => {
-    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING', sendAt: new Date(Date.now() + 86400000) });
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const, sendAt: new Date(Date.now() + 86400000) });
     mocks.jobManager.hasQueuedJob.mockResolvedValue(false);
     await reminderService.restore('rem-1', 'user-1');
     expect(mocks.jobManager.enqueue).toHaveBeenCalledWith('rem-1', expect.any(Date));
   });
 
   it('skips re-enqueue when a queued job already exists', async () => {
-    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING', sendAt: new Date(Date.now() + 86400000) });
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const, sendAt: new Date(Date.now() + 86400000) });
     mocks.jobManager.hasQueuedJob.mockResolvedValue(true);
     await reminderService.restore('rem-1', 'user-1');
     expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
   });
 
   it('skips re-enqueue for a non-PENDING restored reminder', async () => {
-    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'SENT' });
+    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await reminderService.restore('rem-1', 'user-1');
     expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
   });

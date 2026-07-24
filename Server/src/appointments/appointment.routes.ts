@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createAppointmentSchema,
   updateAppointmentSchema,
@@ -16,18 +18,18 @@ import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const appointmentRouter = Router();
 
-appointmentRouter.get<{}, any, any, ListAppointmentsQuery>(
+appointmentRouter.get<ParamsDictionary, unknown, unknown, ListAppointmentsQuery & ParsedQs>(
   '/',
   validateQuery(listAppointmentsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListAppointmentsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListAppointmentsQuery & ParsedQs>, res: Response) => {
     ok(res, await appointmentService.findMany(req.query, req.user!.id, req.user!.timezone));
   }),
 );
 
-appointmentRouter.get<{}, any, any, AppointmentStatsQuery>(
+appointmentRouter.get<ParamsDictionary, unknown, unknown, AppointmentStatsQuery & ParsedQs>(
   '/stats',
   validateQuery(appointmentStatsSchema),
-  asyncHandler(async (req: Request<{}, any, any, AppointmentStatsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, AppointmentStatsQuery & ParsedQs>, res: Response) => {
     ok(res, await appointmentService.getStats(req.query, req.user!.id, req.user!.timezone));
   }),
 );

@@ -10,15 +10,15 @@ import { logger } from './logger.js';
  */
 export function asyncHandler<
   P = ParamsDictionary,
-  ResBody = any,
-  ReqBody = any,
+  ResBody = unknown,
+  ReqBody = unknown,
   ReqQuery = ParsedQs,
 >(
   fn: (req: Request<P, ResBody, ReqBody, ReqQuery>, res: Response<ResBody>, next: NextFunction) => Promise<void>
 ): RequestHandler<P, ResBody, ReqBody, ReqQuery> {
   return (req, res, next) => {
     fn(req as Request<P, ResBody, ReqBody, ReqQuery>, res as Response<ResBody>, next).catch((err: unknown) => {
-      logger.error({ err, method: req.method, url: req.originalUrl, userId: (req as any).user?.id }, 'Unhandled route error');
+      logger.error({ err, method: req.method, url: req.originalUrl, userId: (req as Request & { user?: { id?: string } }).user?.id }, 'Unhandled route error');
       handleError(res, err);
     });
   };

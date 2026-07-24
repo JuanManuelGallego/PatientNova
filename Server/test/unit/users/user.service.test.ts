@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { userService } from '../../../src/users/user.service.js';
 
@@ -28,8 +27,8 @@ const fakeUser = {
   email: 'test@example.com',
   firstName: 'John',
   lastName: 'Doe',
-  role: 'USER',
-  status: 'ACTIVE',
+  role: 'ADMIN' as const,
+  status: 'ACTIVE' as const,
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -59,7 +58,7 @@ describe('userService.findMany', () => {
 
 describe('userService.create', () => {
   it('delegates to repository.create and returns user', async () => {
-    const dto = { email: 'new@example.com', firstName: 'Jane', password: 'pass123', role: 'USER' as const };
+    const dto = { email: 'new@example.com', firstName: 'Jane', password: 'pass123', role: 'ADMIN' as const, status: 'ACTIVE' as const, lastName: 'Doe' };
     mockRepo.create.mockResolvedValue(fakeUser as any);
     const result = await userService.create(dto);
     expect(mockRepo.create).toHaveBeenCalledWith(dto);
@@ -67,7 +66,7 @@ describe('userService.create', () => {
   });
 
   it('logs user creation', async () => {
-    const dto = { email: 'new@example.com', firstName: 'Jane', password: 'pass123', role: 'USER' as const };
+    const dto = { email: 'new@example.com', firstName: 'Jane', password: 'pass123', role: 'ADMIN' as const, status: 'ACTIVE' as const, lastName: 'Doe' };
     mockRepo.create.mockResolvedValue(fakeUser as any);
     await userService.create(dto);
     expect(mockLogger.info).toHaveBeenCalledWith(
@@ -78,7 +77,7 @@ describe('userService.create', () => {
 
   it('propagates repository errors', async () => {
     mockRepo.create.mockRejectedValue(new Error('Email already exists'));
-    await expect(userService.create({ email: 'dup@test.com', firstName: 'X', password: 'p', role: 'USER' })).rejects.toThrow('Email already exists');
+    await expect(userService.create({ email: 'dup@test.com', firstName: 'X', password: 'p', role: 'ADMIN', status: 'ACTIVE', lastName: 'Y' })).rejects.toThrow('Email already exists');
     expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });
