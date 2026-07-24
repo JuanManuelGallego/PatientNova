@@ -263,7 +263,7 @@ function ActiveRemindersTab({
         "Canal",
         "Estado",
         "Programado para",
-        "En",
+        "Dentro de",
         "Creado el",
         "",
       ]}
