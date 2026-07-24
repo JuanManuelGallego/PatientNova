@@ -9,7 +9,7 @@ import {
     toSubsystemMap,
     toggleSubsystemRelation,
 } from "@/src/types/MedicalRecord";
-import styles from "./SubsystemRelationsTable.module.css";
+import styles from "./subsystem-relations-table.module.css";
 
 type SubsystemRelationsTableProps = {
     relations: SubsystemRelation[];

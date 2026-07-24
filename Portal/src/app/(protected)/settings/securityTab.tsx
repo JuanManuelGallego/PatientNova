@@ -1,4 +1,4 @@
-import { useChangePassword } from "@/src/api/useChangePassword";
+import { useChangePassword } from "@/src/api/auth/useChangePassword";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { useState } from "react";

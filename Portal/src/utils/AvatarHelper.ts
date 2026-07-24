@@ -1,5 +1,5 @@
-import { Patient } from "../types/Patient";
-import { User } from "../types/User";
+import { Patient } from "@/src/types/Patient";
+import { User } from "@/src/types/User";
 
 function getInitials(name: string, lastName: string) {
     return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();

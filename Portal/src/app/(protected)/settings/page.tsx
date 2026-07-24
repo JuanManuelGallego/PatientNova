@@ -2,11 +2,11 @@
 
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
-import { ProfileTab } from "./profileTab";
-import { SecurityTab } from "./securityTab";
-import { LocationsTab } from "./locationsTab";
-import { AppointmentTypesTab } from "./appointmentTypesTab";
-import { RemindersTab } from "./remindersTab";
+import { ProfileTab } from "./ProfileTab";
+import { SecurityTab } from "./SecurityTab";
+import { LocationsTab } from "./LocationsTab";
+import { AppointmentTypesTab } from "./AppointmentTypesTab";
+import { RemindersTab } from "./RemindersTab";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
 enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios" }

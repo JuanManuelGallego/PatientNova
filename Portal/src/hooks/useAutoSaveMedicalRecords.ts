@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FormValues } from "../types/MedicalRecord";
+import { FormValues } from "@/src/types/MedicalRecord";
 import { MedicalRecord } from '@/src/types/MedicalRecord';
 
 const AUTO_SAVE_DEBOUNCE_MS = 1500;

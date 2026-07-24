@@ -1,7 +1,7 @@
-import { HOUR_HEIGHT, TODAY_STR, toDateStr, DAY_NAMES_ES, layoutDayAppointments } from "../constants";
+import { HOUR_HEIGHT, toDateStr, TODAY_STR, DAY_NAMES_ES, layoutDayAppointments } from "../constants";
 import { calendarStyles } from "../styles";
-import { ApptChip } from "./ApptChip";
 import { WeekViewProps } from "../types";
+import { ApptChip } from "./ApptChip";
 
 export function WeekView({
   weekDays,

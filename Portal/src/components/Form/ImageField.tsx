@@ -1,5 +1,5 @@
 import { ACTION_ICONS } from "@/src/config/icons";
-import { ImageFormat } from "@/src/utils/AvatarHelper";
+import { ImageFormat } from "@/src/utils/avatarHelper";
 import { readAndResizeImage } from "@/src/utils/imageUpload";
 import Image from "next/image";
 import { useRef } from "react";

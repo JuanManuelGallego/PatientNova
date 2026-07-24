@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import { useApiQuery } from "../../api/useApiQuery";
+import { useApiQuery } from "@/src/api/base/useApiQuery";
 
 // Mock fetchWithAuth
-vi.mock("../../api/fetchWithAuth", () => ({
+vi.mock("@/src/api/base/fetchWithAuth", () => ({
     fetchWithAuth: vi.fn(),
 }));
 
-import { fetchWithAuth } from "../../api/fetchWithAuth";
+import { fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 const mockFetch = vi.mocked(fetchWithAuth);
 
 afterEach(() => vi.resetAllMocks());

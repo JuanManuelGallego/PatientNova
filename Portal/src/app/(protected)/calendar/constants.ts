@@ -1,4 +1,4 @@
-import { addDays, todayFormattedString, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { addDays, todayFormattedString, DAY_NAMES_ES } from "@/src/utils/timeUtils";
 
 export { DAY_NAMES_ES };
 

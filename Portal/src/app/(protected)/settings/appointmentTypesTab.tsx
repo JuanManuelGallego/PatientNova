@@ -1,5 +1,5 @@
-import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
-import { useUpdateAppointmentType } from "@/src/api/useUpdateAppointmentType";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
+import { useUpdateAppointmentType } from "@/src/api/appointment-types/useUpdateAppointmentType";
 import { AppointmentTypeCard } from "@/src/components/AppointmentTypeCard";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { AppointmentTypeModal } from "@/src/components/Modals/AppointmentTypeModal";

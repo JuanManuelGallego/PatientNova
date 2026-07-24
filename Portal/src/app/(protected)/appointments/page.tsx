@@ -27,18 +27,18 @@ import {
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
-import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
+import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
+import { fmtDateTime, todayString } from "@/src/utils/timeUtils";
 import { useState, useMemo, Suspense } from "react";
-import { useFetchAppointments } from "@/src/api/useFetchAppointments";
+import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import {
   ReminderStatusPill,
   EmptyStatusPill,
   AppointmentStatusPill,
 } from "@/src/components/Info/StatusPill";
-import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
-import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
-import { useDebounceState } from "@/src/utils/useDebounceState";
+import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppointmentsStats";
+import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
+import { useDebounceState } from "@/src/hooks/useDebounceState";
 import {
   useQueryState,
   parseAsInteger,

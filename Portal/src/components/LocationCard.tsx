@@ -1,4 +1,4 @@
-import { AppointmentLocation } from "../types/Appointment";
+import { AppointmentLocation } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 
 export function LocationCard({

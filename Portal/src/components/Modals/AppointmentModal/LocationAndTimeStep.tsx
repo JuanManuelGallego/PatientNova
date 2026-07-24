@@ -8,7 +8,7 @@ import {
 import { ReminderType, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { Patient } from "@/src/types/Patient";
 import { CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { isReminderTypeFeasible } from "@/src/utils/TimeUtils";
+import { isReminderTypeFeasible } from "@/src/utils/timeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";

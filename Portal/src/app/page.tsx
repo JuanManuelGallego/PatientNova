@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuthContext } from "@/src/app/AuthContext";
-import { LoginModal } from "../components/Modals/LoginModal";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { LoginModal } from "@/src/components/Modals/LoginModal";
 import { Users, FileText, CalendarDays, Bell } from "lucide-react";
 
 export default function LandingPage() {

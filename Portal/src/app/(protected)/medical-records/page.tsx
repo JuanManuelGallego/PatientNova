@@ -2,29 +2,29 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { useFetchPatients } from "@/src/api/useFetchPatients";
+import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
-import { getPatientFullName } from "@/src/utils/AvatarHelper";
+import { getPatientFullName } from "@/src/utils/avatarHelper";
 import { createEmptyForm, FormValues } from "@/src/types/MedicalRecord";
 import { GeneralDataSection } from "@/src/components/MedicalRecord/GeneralDataSection";
 import { FamilyTable } from "@/src/components/FamilyTable";
 import { AntecedentsSection } from "@/src/components/MedicalRecord/AntecedentsSection";
 import { EvolutionNotes } from "@/src/components/EvolutionNotes";
-import { todayString } from "@/src/utils/TimeUtils";
+import { todayString } from "@/src/utils/timeUtils";
 import { parseAsString, useQueryState } from "nuqs";
 import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 import { MedicalRecordCard } from "@/src/components/MedicalRecord/MedicalRecordCard";
-import { useCreateMedicalRecord } from "@/src/api/useCreateMedicalRecord";
-import { useUpdateMedicalRecord } from "@/src/api/useUpdateMedicalRecord";
+import { useCreateMedicalRecord } from "@/src/api/medical-records/useCreateMedicalRecord";
+import { useUpdateMedicalRecord } from "@/src/api/medical-records/useUpdateMedicalRecord";
 import { LBL_LOADING } from "@/src/constants/ui";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecord/MedicalRecordPDF";
-import { useAuthContext } from "../../AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSection";
-import { useFetchMedicalRecords } from "@/src/api/useFetchMedicalRecords";
+import { useFetchMedicalRecords } from "@/src/api/medical-records/useFetchMedicalRecords";
 import { useAutoSaveMedicalRecords } from "@/src/hooks/useAutoSaveMedicalRecords";
 import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpecificSection";
 

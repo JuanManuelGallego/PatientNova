@@ -4,8 +4,8 @@ import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
 
-import { getAntThemeConfig } from "@/src/styles/theme";
-import { useTheme } from "@/src/app/ThemeContext";
+import { getAntThemeConfig } from "@/src/config/antTheme";
+import { useTheme } from "@/src/providers/ThemeContext";
 
 dayjs.locale("es");
 

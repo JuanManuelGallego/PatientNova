@@ -1,11 +1,11 @@
 "use client";
 
-import { useCreateAppointment } from "@/src/api/useCreateAppointment";
-import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
-import { useFetchAppointments } from "@/src/api/useFetchAppointments";
-import { useFetchPatients } from "@/src/api/useFetchPatients";
-import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
-import { useFetchLocations } from "@/src/api/useFetchLocations";
+import { useCreateAppointment } from "@/src/api/appointments/useCreateAppointment";
+import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
+import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
+import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import {
   Appointment,
   AppointmentForm,
@@ -21,7 +21,7 @@ import {
   Channel,
   type ReminderInlineData,
 } from "@/src/types/Reminder";
-import { getUserName } from "@/src/utils/AvatarHelper";
+import { getUserName } from "@/src/utils/avatarHelper";
 import {
   fmtDate,
   fmtTime,
@@ -30,10 +30,10 @@ import {
   getAppointmentEndTime,
   getTomorrowSixAm,
   getReminderType,
-} from "@/src/utils/TimeUtils";
+} from "@/src/utils/timeUtils";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import {
   LBL_SAVE_CHANGES,
   LBL_CREATE_APPOINTMENT,

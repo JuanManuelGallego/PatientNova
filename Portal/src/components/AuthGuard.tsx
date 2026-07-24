@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {

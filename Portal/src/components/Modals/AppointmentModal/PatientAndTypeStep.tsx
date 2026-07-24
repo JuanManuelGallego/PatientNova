@@ -2,7 +2,7 @@
 
 import { AppointmentForm, AppointmentDuration, AppointmentType } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
-import { getAvatarColor, getInitials, getPatientFullName } from "@/src/utils/AvatarHelper";
+import { getAvatarColor, getInitials, getPatientFullName } from "@/src/utils/avatarHelper";
 import { AppointmentDateTimePicker } from "@/src/components/AppointmentDateTimePicker";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";

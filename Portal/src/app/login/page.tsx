@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";

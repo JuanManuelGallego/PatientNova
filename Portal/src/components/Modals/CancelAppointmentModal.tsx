@@ -1,10 +1,10 @@
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { STATUS_ICONS } from "@/src/config/icons";
-import { useUpdateAppointment } from "@/src/api/useUpdateAppointment";
-import { useUpdateReminder } from "@/src/api/useUpdateReminder";
+import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
+import { useUpdateReminder } from "@/src/api/reminders/useUpdateReminder";
 import { Appointment, AppointmentStatus } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
-import { fmtDate } from "@/src/utils/TimeUtils";
+import { fmtDate } from "@/src/utils/timeUtils";
 import { useState } from "react";
 
 export function CancelAppointmentModal({

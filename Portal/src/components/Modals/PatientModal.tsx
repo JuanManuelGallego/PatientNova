@@ -1,11 +1,11 @@
-import { useCreatePatient } from "@/src/api/useCreatePatient";
-import { useUpdatePatient } from "@/src/api/useUpdatePatient";
+import { useCreatePatient } from "@/src/api/patients/useCreatePatient";
+import { useUpdatePatient } from "@/src/api/patients/useUpdatePatient";
 import {
   Patient,
   PatientStatus,
   PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
-import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
+import { validateEmail, validatePhoneNumber } from "@/src/utils/dataValidator";
 import { useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
@@ -18,11 +18,11 @@ import {
   LBL_SAVING,
 } from "@/src/constants/ui";
 import { Channel, CHANNEL_CFG, ReminderMode } from "@/src/types/Reminder";
-import { useNotify } from "@/src/api/useNotify";
+import { useNotify } from "@/src/api/notify/useNotify";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 
 export function PatientModal({
   onClose,

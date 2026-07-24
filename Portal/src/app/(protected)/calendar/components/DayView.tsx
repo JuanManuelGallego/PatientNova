@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
-import { HOUR_HEIGHT, TODAY_STR, layoutDayAppointments } from "../constants";
-import { calendarStyles } from "../styles";
 import { ApptChip } from "./ApptChip";
+import { TODAY_STR, HOUR_HEIGHT, layoutDayAppointments } from "../constants";
+import { calendarStyles } from "../styles";
 import { DayViewProps } from "../types";
 
 export function DayView({

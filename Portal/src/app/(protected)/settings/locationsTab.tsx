@@ -1,5 +1,5 @@
-import { useFetchLocations } from "@/src/api/useFetchLocations";
-import { useUpdateLocation } from "@/src/api/useUpdateLocation";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
+import { useUpdateLocation } from "@/src/api/locations/useUpdateLocation";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { LocationCard } from "@/src/components/LocationCard";
 import { DeleteLocationModal } from "@/src/components/Modals/DeleteLocationModal";

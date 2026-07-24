@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useCreateReminder } from "@/src/api/useCreateReminder";
-import { useNotify } from "@/src/api/useNotify";
+import { useCreateReminder } from "@/src/api/reminders/useCreateReminder";
+import { useNotify } from "@/src/api/notify/useNotify";
 import { Patient } from "@/src/types/Patient";
 import { ReminderMode, Channel } from "@/src/types/Reminder";
-import { getUserName } from "@/src/utils/AvatarHelper";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { getUserName } from "@/src/utils/avatarHelper";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { ERR_PATIENT_NOT_FOUND } from "@/src/constants/ui";
 import { BulkRemindersResult } from "@/src/types/Reminder";

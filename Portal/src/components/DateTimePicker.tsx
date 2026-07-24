@@ -4,8 +4,8 @@ import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
 
 dayjs.locale("es");
-import { getAntThemeConfig } from "@/src/styles/theme";
-import { useTheme } from "@/src/app/ThemeContext";
+import { getAntThemeConfig } from "@/src/config/antTheme";
+import { useTheme } from "@/src/providers/ThemeContext";
 
 // responsive: popup uses full viewport width on mobile to prevent clipping
 const mobilePopupStyle: React.CSSProperties = {

@@ -11,7 +11,7 @@ import {
 } from "@/src/types/Appointment";
 import { ReminderType, REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import { Patient } from "@/src/types/Patient";
-import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtTime } from "@/src/utils/timeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";

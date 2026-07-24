@@ -1,7 +1,7 @@
-import { sectionGridStyle } from "../styles/theme";
+import { sectionGridStyle } from "@/src/config/antTheme";
 import { createEmptyNote, EvolutionNote } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
-import { fmtDate } from "../utils/TimeUtils";
+import { fmtDate } from "@/src/utils/timeUtils";
 
 type EvolutionNotesProps = {
   evolutionNotes: EvolutionNote[];

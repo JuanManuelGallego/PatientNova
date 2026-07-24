@@ -1,18 +1,18 @@
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { Patient, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
 import { Channel, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
-import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/timeUtils";
 import {
   PatientStatusPill,
   AppointmentStatusPill,
   ReminderStatusPill,
 } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
-import { useFetchLocations } from "@/src/api/useFetchLocations";
-import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useState } from "react";
 import Link from "next/link";
-import { useFetchPatient } from "@/src/api/useFetchPatient";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { ACTION_ICONS, DETAIL_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
 
 export function PatientDrawer({

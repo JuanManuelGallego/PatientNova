@@ -6,10 +6,10 @@ import {
   Channel,
   CHANNEL_CFG,
 } from "@/src/types/Reminder";
-import { fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtDateTime } from "@/src/utils/timeUtils";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
-import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 

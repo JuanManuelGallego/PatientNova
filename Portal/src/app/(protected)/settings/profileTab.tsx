@@ -1,16 +1,16 @@
-import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/useUpdateProfile";
-import { useConsentDocument } from "@/src/api/useConsentDocument";
+import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/users/useUpdateProfile";
+import { useConsentDocument } from "@/src/api/consent/useConsentDocument";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { TextField } from "@/src/components/Form/TextField";
 import { ImageField } from "@/src/components/Form/ImageField";
 import { User } from "@/src/types/User";
-import { getInitials } from "@/src/utils/AvatarHelper";
+import { getInitials } from "@/src/utils/avatarHelper";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Upload, FileText, ClipboardList } from "lucide-react";
-import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
+import { COMMON_TIMEZONES } from "@/src/utils/timeUtils";
 import { useState, useEffect, useRef } from "react";
-import { useAuthContext } from "../../AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
 
 // ─── Editable text fields ──────────────────────────────────────────────────

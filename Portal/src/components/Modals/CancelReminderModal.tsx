@@ -1,6 +1,6 @@
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { STATUS_ICONS } from "@/src/config/icons";
-import { useUpdateReminder } from "@/src/api/useUpdateReminder";
+import { useUpdateReminder } from "@/src/api/reminders/useUpdateReminder";
 import { Reminder, ReminderStatus } from "@/src/types/Reminder";
 import { useState } from "react";
 

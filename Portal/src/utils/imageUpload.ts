@@ -1,4 +1,4 @@
-import { resizeToBase64, ImageFormat } from "@/src/utils/AvatarHelper";
+import { resizeToBase64, ImageFormat } from "@/src/utils/avatarHelper";
 
 export interface ImageUploadOptions {
   /** Maximum file size in bytes. Defaults to 5 MB. */

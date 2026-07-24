@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useApiMutation } from "../../api/useApiMutation";
+import { useApiMutation } from "@/src/api/base/useApiMutation";
 
-vi.mock("../../api/fetchWithAuth", () => ({
+vi.mock("@/src/api/base/fetchWithAuth", () => ({
     fetchWithAuth: vi.fn(),
 }));
 
-import { fetchWithAuth } from "../../api/fetchWithAuth";
+import { fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 const mockFetch = vi.mocked(fetchWithAuth);
 
 afterEach(() => vi.resetAllMocks());

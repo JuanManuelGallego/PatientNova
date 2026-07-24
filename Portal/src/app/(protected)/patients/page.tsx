@@ -14,7 +14,7 @@ import {
   Patient,
   PatientStatus,
 } from "@/src/types/Patient";
-import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/avatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
@@ -22,16 +22,16 @@ import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
 import { Channel } from "@/src/types/Reminder";
-import { useFetchPatients } from "@/src/api/useFetchPatients";
+import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
 import { PatientStatusPill } from "@/src/components/Info/StatusPill";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
-import { useDebounceState } from "@/src/utils/useDebounceState";
-import { useFetchPatientsStats } from "@/src/api/useFetchPatientsStats";
+import { useDebounceState } from "@/src/hooks/useDebounceState";
+import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
-import { todayString } from "@/src/utils/TimeUtils";
+import { todayString } from "@/src/utils/timeUtils";
 
 const PAGE_SIZE = 10;
 

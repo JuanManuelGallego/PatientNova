@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
-import { Providers } from "./providers";
+import { Providers } from "@/src/providers/Providers";
 import "./globals.css";
 
 const dmSans = DM_Sans({
