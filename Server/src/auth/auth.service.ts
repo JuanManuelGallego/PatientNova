@@ -160,11 +160,10 @@ export const authService = {
   },
 
   getCookieDefaults() {
-    const isProduction = config.env === 'production';
     return {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: (isProduction ? 'lax' : 'strict') as 'lax' | 'strict',
+      secure: true,
+      sameSite: 'none' as const,
       ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
     };
   },

@@ -35,7 +35,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     res.cookie('refreshToken', result.refreshToken, {
       ...cookieDefaults,
-      path: '/auth/refresh',
+      path: '/v1/auth/refresh',
       maxAge: SEVEN_DAYS_MS,
     });
 
@@ -64,7 +64,7 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
     await authService.logout(req.user!.id);
     const cookieDefaults = authService.getCookieDefaults();
     res.clearCookie('token', cookieDefaults);
-    res.clearCookie('refreshToken', { ...cookieDefaults, path: '/auth/refresh' });
+    res.clearCookie('refreshToken', { ...cookieDefaults, path: '/v1/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
     logger.error({ err, userId: req.user!.id }, 'Logout failed');
