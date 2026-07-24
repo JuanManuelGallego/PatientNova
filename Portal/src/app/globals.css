@@ -1842,15 +1842,6 @@ tr:hover td {
   align-items: center;
 }
 
-.badge-time {
-  background: var(--c-brand-light);
-  color: var(--c-link);
-  padding: 3px 9px;
-  border-radius: var(--r-full);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .td-error__text {
   background: var(--c-error-bg);
   padding: 3px 8px;
