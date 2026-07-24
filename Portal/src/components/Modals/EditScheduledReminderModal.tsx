@@ -2,7 +2,7 @@ import { DateTimePicker } from "../DateTimePicker";
 import { Reminder, ReminderStatus, CHANNEL_CFG } from "@/src/types/Reminder";
 import { useState } from "react";
 import { RequiredField } from "../Info/Required";
-import { useUpdateReminder } from "@/src/api/useUpdateReminder";
+import { useUpdateReminder } from "@/src/api/reminders/useUpdateReminder";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 
 export function EditScheduledReminderModal({

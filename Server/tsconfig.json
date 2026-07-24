@@ -41,7 +41,8 @@
     // removed: jsx — this is a backend, no JSX
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "test/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -1,14 +1,17 @@
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
-import { apiError } from '../utils/apiUtils.js';
-import { logger } from '../utils/logger.js';
+import { apiError } from '../utils/api/api-utils.js';
+import { logger } from '../utils/api/logger.js';
+
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 
 type Target = 'body' | 'query' | 'params';
 
 function makeValidator<T extends z.ZodTypeAny>(
   schema: T,
   target: Target,
-  req: Request<any, any, any, any>,
+  req: Request<ParamsDictionary, unknown, unknown, ParsedQs>,
   res: Response,
   next: NextFunction
 ) {
@@ -35,13 +38,13 @@ function makeValidator<T extends z.ZodTypeAny>(
 }
 
 export const validateBody = <T extends z.ZodTypeAny>(schema: T) =>
-  (req: Request<any, any, z.infer<T>, any>, res: Response, next: NextFunction): void =>
+  (req: Request<ParamsDictionary, unknown, z.infer<T>, ParsedQs>, res: Response, next: NextFunction): void =>
     makeValidator(schema, 'body', req, res, next);
 
 export const validateQuery = <T extends z.ZodTypeAny>(schema: T) =>
-  (req: Request<any, any, any, z.infer<T>>, res: Response, next: NextFunction): void =>
+  (req: Request<ParamsDictionary, unknown, unknown, z.infer<T> & ParsedQs>, res: Response, next: NextFunction): void =>
     makeValidator(schema, 'query', req, res, next);
 
 export const validateParams = <T extends z.ZodTypeAny>(schema: T) =>
-  (req: Request<z.infer<T>, any, any, any>, res: Response, next: NextFunction): void =>
+  (req: Request<z.infer<T> & ParamsDictionary, unknown, unknown, ParsedQs>, res: Response, next: NextFunction): void =>
     makeValidator(schema, 'params', req, res, next);

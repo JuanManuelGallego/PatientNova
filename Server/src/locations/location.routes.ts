@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createLocationSchema,
   updateLocationSchema,
@@ -7,9 +9,9 @@ import {
 } from './location.schemas.js';
 import { locationService } from './location.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const locationRouter = Router();
 
@@ -17,10 +19,10 @@ export const locationRouter = Router();
  * GET /locations
  * List appointment locations with optional filters and pagination.
  */
-locationRouter.get<{}, any, any, ListLocationsQuery>(
+locationRouter.get<ParamsDictionary, unknown, unknown, ListLocationsQuery & ParsedQs>(
   '/',
   validateQuery(listLocationsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListLocationsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListLocationsQuery & ParsedQs>, res: Response) => {
     ok(res, await locationService.findMany(req.user!.id, req.query));
   })
 );

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useAuthContext } from "@/src/app/AuthContext";
-import { useTheme } from "@/src/app/ThemeContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { useTheme } from "@/src/providers/ThemeContext";
 import { useRouter } from "next/navigation";
 import { NAV_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { Moon, Sun } from "lucide-react";

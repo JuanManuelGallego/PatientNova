@@ -10,8 +10,8 @@ import {
     getTomorrowSixAm,
     getColombianHolidays,
     isoToLocal,
-} from "../../utils/TimeUtils";
-import { AppointmentDuration } from "../../types/Appointment";
+} from "@/src/utils/TimeUtils";
+import { AppointmentDuration } from "@/src/types/Appointment";
 
 describe("fmtDate / fmtTime / fmtDateTime", () => {
     it("returns 'Invalid Date' for undefined input", () => {

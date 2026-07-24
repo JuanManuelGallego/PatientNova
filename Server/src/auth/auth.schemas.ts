@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { strongPassword } from '../utils/types.js';
+import { strongPassword } from '../utils/validation/middleware.js';
 
 export const loginSchema = z.object({
   email: z.string().email(),

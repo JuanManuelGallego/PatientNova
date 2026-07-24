@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createAppointmentTypeSchema,
   updateAppointmentTypeSchema,
@@ -7,9 +9,9 @@ import {
 } from './appointment-type.schemas.js';
 import { appointmentTypeService } from './appointment-type.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const appointmentTypeRouter = Router();
 
@@ -17,10 +19,10 @@ export const appointmentTypeRouter = Router();
  * GET /appointment-types
  * List appointment types with optional filters and pagination.
  */
-appointmentTypeRouter.get<{}, any, any, ListAppointmentTypesQuery>(
+appointmentTypeRouter.get<ParamsDictionary, unknown, unknown, ListAppointmentTypesQuery & ParsedQs>(
   '/',
   validateQuery(listAppointmentTypesSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListAppointmentTypesQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListAppointmentTypesQuery & ParsedQs>, res: Response) => {
     ok(res, await appointmentTypeService.findMany(req.user!.id, req.query));
   })
 );

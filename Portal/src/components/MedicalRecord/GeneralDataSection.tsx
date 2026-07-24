@@ -1,4 +1,4 @@
-import { sectionGridStyle } from "../../styles/theme";
+import { sectionGridStyle } from "@/src/config/antTheme";
 import { FormValues, SEX_CFG } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";

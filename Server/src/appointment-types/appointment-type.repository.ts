@@ -1,10 +1,10 @@
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto, ListAppointmentTypesQuery } from './appointment-type.schemas.js';
-import { AppointmentTypeNotFoundError, AppointmentTypeNameConflictError } from '../utils/errors.js';
+import { AppointmentTypeNotFoundError, AppointmentTypeNameConflictError } from './appointment-type.errors.js';
 import { type AppointmentType } from '../../generated/prisma/client.ts';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
-import { assertUnique } from '../utils/assertUnique.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { assertUnique } from '../utils/validation/assertUnique.js';
 
 export const appointmentTypeRepository = {
   async create(dto: CreateAppointmentTypeDto, userId: string): Promise<AppointmentType> {
@@ -71,11 +71,11 @@ export const appointmentTypeRepository = {
 
   async delete(id: string, userId: string): Promise<AppointmentType> {
     await appointmentTypeRepository.findById(id, userId);
-    return softDelete(prisma.appointmentType, id, userId);
+    return softDelete(prisma.appointmentType, id, userId) as Promise<AppointmentType>;
   },
 
   async restore(id: string, userId: string): Promise<AppointmentType> {
     await appointmentTypeRepository.findById(id, userId);
-    return restore(prisma.appointmentType, id, userId);
+    return restore(prisma.appointmentType, id, userId) as Promise<AppointmentType>;
   },
 };

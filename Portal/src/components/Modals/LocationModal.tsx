@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useCreateLocation } from "@/src/api/useCreateLocation";
-import { useUpdateLocation } from "@/src/api/useUpdateLocation";
+import { useCreateLocation } from "@/src/api/locations/useCreateLocation";
+import { useUpdateLocation } from "@/src/api/locations/useUpdateLocation";
 import {
   AppointmentLocation,
   AppointmentLocationForm,

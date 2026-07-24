@@ -7,10 +7,10 @@ import {
   fmtTime,
   getDuration,
 } from "@/src/utils/TimeUtils";
-import { PayStatusPill } from "../Info/PayStatusPill";
-import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { PayStatusPill } from "../Info/PayStatusPill";
+import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 
 export function AppointmentDrawer({
   appt,

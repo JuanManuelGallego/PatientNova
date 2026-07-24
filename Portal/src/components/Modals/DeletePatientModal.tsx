@@ -2,7 +2,7 @@ import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Patient } from "@/src/types/Patient";
 import { useState } from "react";
-import { useDeletePatient } from "@/src/api/useDeletePatient";
+import { useDeletePatient } from "@/src/api/patients/useDeletePatient";
 
 export function DeletePatientModal({
   patient,

@@ -1,17 +1,17 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
-import { config } from '../utils/config.js';
+import { config } from '../utils/config/config.js';
 import { toUserResponse } from '../users/user.dto.js';
-import { logger, maskEmail } from '../utils/logger.js';
+import { logger, maskEmail } from '../utils/api/logger.js';
 import {
   AuthInvalidCredentialsError,
   AuthAccountLockedError,
   AuthRefreshTokenExpiredError,
   AuthRefreshTokenRevokedError,
   UserInvalidCredentialsError,
-  UserNotFoundError,
-} from '../utils/errors.js';
+} from './auth.errors.js';
+import { UserNotFoundError } from '../utils/errors/errors.js';
 import type { UserResponse } from '../users/user.dto.js';
 
 interface RefreshTokenPayload {

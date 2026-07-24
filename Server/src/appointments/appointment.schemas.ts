@@ -1,7 +1,7 @@
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
-import { includeDeletedQuery } from '../utils/schemas.js';
-import { isValidIANATimezone } from '../utils/timeUtils.ts';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
+import { isValidIANATimezone } from '../utils/time/time-utils.ts';
 
 const timezoneSchema = z.string().max(50).optional().refine(
   tz => !tz || isValidIANATimezone(tz),

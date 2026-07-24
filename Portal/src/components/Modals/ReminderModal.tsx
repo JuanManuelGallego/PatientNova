@@ -1,5 +1,5 @@
-import { useCreateReminder } from "@/src/api/useCreateReminder";
-import { useNotify } from "@/src/api/useNotify";
+import { useCreateReminder } from "@/src/api/reminders/useCreateReminder";
+import { useNotify } from "@/src/api/notify/useNotify";
 import { Patient } from "@/src/types/Patient";
 import {
   Reminder,
@@ -19,13 +19,13 @@ import { useState } from "react";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
 import { RequiredField } from "../Info/Required";
-import { useFetchPatients } from "@/src/api/useFetchPatients";
+import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
-import { useAuthContext } from "@/src/app/AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { User } from "@/src/types/User";
-import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { ERR_MSG_EMPTY, LBL_NO_PATIENTS } from "@/src/constants/ui";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
+import { validatePhoneNumber } from "@/src/utils/DataValidator";
 
 export function ReminderModal({
   onClose,

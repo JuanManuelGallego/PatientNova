@@ -1,7 +1,7 @@
-import { FetchAppointmentsFilters } from "../types/Appointment";
-import { FetchMedicalRecordFilters } from "../types/MedicalRecord";
-import { PatientStatus, FetchPatientsFilters } from "../types/Patient";
-import { FetchRemindersFilters } from "../types/Reminder";
+import { FetchAppointmentsFilters } from "@/src/types/Appointment";
+import { FetchMedicalRecordFilters } from "@/src/types/MedicalRecord";
+import { PatientStatus, FetchPatientsFilters } from "@/src/types/Patient";
+import { FetchRemindersFilters } from "@/src/types/Reminder";
 
 export const DEFAULT_PATIENT_STATUS = [ PatientStatus.ACTIVE, PatientStatus.INACTIVE ];
 

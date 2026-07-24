@@ -1,5 +1,5 @@
 import type { Prisma } from '../../generated/prisma/client.ts';
-import { userInclude } from '../utils/types.js';
+import { userInclude } from './user.types.js';
 
 /**
  * The public user shape returned in all API responses.

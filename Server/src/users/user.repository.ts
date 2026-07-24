@@ -1,13 +1,14 @@
-import { prisma } from '../prisma/prismaClient.js';
-import { config } from '../utils/config.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
+import { config } from '../utils/config/config.js';
 import bcrypt from 'bcrypt';
 import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
-import { UserNotFoundError, UserEmailConflictError } from '../utils/errors.js';
-import { userInclude } from '../utils/types.js';
+import { UserNotFoundError } from '../utils/errors/errors.js';
+import { UserEmailConflictError } from './user.errors.js';
+import { userInclude } from './user.types.js';
 import { Channel } from '../../generated/prisma/enums.js';
-import { softDelete, restore } from '../utils/softDelete.js';
-import { assertUnique } from '../utils/assertUnique.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { assertUnique } from '../utils/validation/assertUnique.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {

@@ -1,18 +1,18 @@
 import { AppointmentStatus, Prisma, type Appointment } from '../../generated/prisma/client.ts';
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import {
   type CreateAppointmentDto,
   type UpdateAppointmentDto,
   type ListAppointmentsQuery,
   type AppointmentStatsQuery,
 } from './appointment.schemas.js';
-import { AppointmentNotFoundError } from '../utils/errors.js';
-import { paginate, type Paginated } from '../utils/pagination.js';
-import { config } from '../utils/config.js';
-import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from '../utils/types.js';
-import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, localToUtc } from '../utils/timeUtils.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
+import { AppointmentNotFoundError } from './appointment.errors.js';
+import { paginate, type Paginated } from '../utils/api/pagination.js';
+import { config } from '../utils/config/config.js';
+import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from './appointment.types.js';
+import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, localToUtc } from '../utils/time/time-utils.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -149,12 +149,12 @@ export const appointmentRepository = {
 
   async delete(id: string, userId: string): Promise<Appointment> {
     await appointmentRepository.findById(id, userId);
-    return softDelete(prisma.appointment, id, userId);
+    return softDelete(prisma.appointment, id, userId) as Promise<Appointment>;
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId, true);
-    return restore(prisma.appointment, id, userId, appointmentInclude);
+    return restore(prisma.appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
   },
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {

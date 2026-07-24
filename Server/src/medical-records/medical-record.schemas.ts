@@ -1,6 +1,6 @@
 import { Relationship, Sex, SubsystemType, RelationshipStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
-import { includeDeletedQuery } from '../utils/schemas.js';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
 const familyMemberSchema = z.object({
   name: z.string().optional(),

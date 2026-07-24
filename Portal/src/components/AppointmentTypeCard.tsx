@@ -1,4 +1,4 @@
-import { AppointmentType } from "../types/Appointment";
+import { AppointmentType } from "@/src/types/Appointment";
 
 import { ACTION_ICONS } from "@/src/config/icons";
 

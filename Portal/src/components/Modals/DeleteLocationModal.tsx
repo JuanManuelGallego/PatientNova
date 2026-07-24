@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDeleteLocation } from "@/src/api/useDeleteLocation";
+import { useDeleteLocation } from "@/src/api/locations/useDeleteLocation";
 import { AppointmentLocation } from "@/src/types/Appointment";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { STATUS_ICONS } from "@/src/config/icons";

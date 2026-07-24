@@ -1,7 +1,8 @@
-import { prisma } from '../prisma/prismaClient.js';
-import { PatientNotFoundError, MedicalRecordAlreadyExistsError } from '../utils/errors.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
+import { PatientNotFoundError } from '../utils/errors/errors.js';
+import { MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
 import { medicalRecordRepository } from './medical-record.repository.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/api/logger.js';
 import type { CreateMedicalRecordDto, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 
 export const medicalRecordService = {

@@ -8,11 +8,11 @@ import {
   ReminderStatusPill,
 } from "../Info/StatusPill";
 import { Section, Row } from "./DrawerUtils";
-import { useFetchLocations } from "@/src/api/useFetchLocations";
-import { useFetchAppointmentTypes } from "@/src/api/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useState } from "react";
 import Link from "next/link";
-import { useFetchPatient } from "@/src/api/useFetchPatient";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { ACTION_ICONS, DETAIL_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
 
 export function PatientDrawer({

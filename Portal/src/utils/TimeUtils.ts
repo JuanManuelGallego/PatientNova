@@ -1,5 +1,5 @@
-import { AppointmentDuration } from "../types/Appointment";
-import { REMINDER_TYPE_CONFIG, ReminderType } from "../types/Reminder";
+import { AppointmentDuration } from "@/src/types/Appointment";
+import { REMINDER_TYPE_CONFIG, ReminderType } from "@/src/types/Reminder";
 
 function fmtDateTime(iso: string | undefined): string {
     if (!iso) return "Invalid Date"

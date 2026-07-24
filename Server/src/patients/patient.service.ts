@@ -1,8 +1,8 @@
 import { patientRepository } from './patient.repository.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/api/logger.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
-import type { Paginated } from '../utils/pagination.ts';
+import type { Paginated } from '../utils/api/pagination.ts';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];

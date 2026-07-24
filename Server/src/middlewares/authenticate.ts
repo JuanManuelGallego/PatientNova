@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../utils/config.js';
-import { apiError } from '../utils/apiUtils.js';
-import { logger } from '../utils/logger.js';
+import { config } from '../utils/config/config.js';
+import { apiError } from '../utils/api/api-utils.js';
+import { logger } from '../utils/api/logger.js';
 
 export interface AuthPayload {
   id: string;
@@ -13,6 +13,7 @@ export interface AuthPayload {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: AuthPayload;
@@ -24,9 +25,9 @@ function isAuthPayload(payload: unknown): payload is AuthPayload {
   return (
     typeof payload === 'object' &&
     payload !== null &&
-    typeof (payload as any).id === 'string' &&
-    typeof (payload as any).email === 'string' &&
-    typeof (payload as any).role === 'string'
+    typeof (payload as Record<string, unknown>).id === 'string' &&
+    typeof (payload as Record<string, unknown>).email === 'string' &&
+    typeof (payload as Record<string, unknown>).role === 'string'
   );
 }
 
@@ -65,7 +66,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       id:       payload.id,
       email:    payload.email,
       role:     payload.role,
-      timezone: typeof (payload as any).timezone === 'string' ? (payload as any).timezone : 'UTC',
+      timezone: typeof (payload as unknown as Record<string, unknown>).timezone === 'string' ? (payload as unknown as Record<string, unknown>).timezone as string : 'UTC',
     };
     next();
   } catch (err) {

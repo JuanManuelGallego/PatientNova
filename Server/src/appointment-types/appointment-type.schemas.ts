@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { includeDeletedQuery } from '../utils/schemas.js';
+import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
 export const createAppointmentTypeSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),

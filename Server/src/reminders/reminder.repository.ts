@@ -1,11 +1,12 @@
 import { Prisma, ReminderStatus, type Reminder, type Channel } from '../../generated/prisma/client.ts';
-import { prisma } from '../prisma/prismaClient.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
-import { PatientNotFoundError, ReminderNotFoundError } from '../utils/errors.js';
-import { paginate, type Paginated } from '../utils/pagination.js';
-import { reminderInclude, type ReminderWithRelations, type ReminderStats } from '../utils/types.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
+import { PatientNotFoundError } from '../utils/errors/errors.js';
+import { ReminderNotFoundError } from './reminder.errors.js';
+import { paginate, type Paginated } from '../utils/api/pagination.js';
+import { reminderInclude, type ReminderWithRelations, type ReminderStats } from './reminder.types.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
@@ -92,7 +93,7 @@ export const reminderRepository = {
 
     // Handle status-based timestamp field
     if (dto.status === ReminderStatus.SENT) {
-      (data as any).sentAt = new Date();
+      (data as Record<string, unknown>).sentAt = new Date();
     }
 
     return prisma.reminder.update({
@@ -109,12 +110,12 @@ export const reminderRepository = {
 
   async delete(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return softDelete(prisma.reminder, id, userId, reminderInclude);
+    return softDelete(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
   },
 
   async restore(id: string, userId: string): Promise<Reminder> {
     await reminderRepository.findById(id, userId);
-    return restore(prisma.reminder, id, userId, reminderInclude);
+    return restore(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
   },
 
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {

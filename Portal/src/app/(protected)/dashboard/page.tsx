@@ -3,12 +3,11 @@ import Link from "next/link";
 
 import { useMemo, useState } from "react";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
-import { useFetchRemindersStats } from "@/src/api/useFetchRemindersStats";
-import { useFetchAppointmentsStats } from "@/src/api/useFetchAppointmentsStats";
-import { useFetchPatientsStats } from "@/src/api/useFetchPatientsStats";
-import { useFetchAppointments } from "@/src/api/useFetchAppointments";
-import { ReminderStatus, CHANNEL_CFG } from "@/src/types/Reminder";
-import { useFetchReminders } from "@/src/api/useFetchReminders";
+import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppointmentsStats";
+import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
+import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
+import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
+import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
@@ -19,7 +18,7 @@ import {
   AppointmentStatusPill,
   ReminderStatusPill,
 } from "@/src/components/Info/StatusPill";
-import { useAuthContext } from "../../AuthContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import {
   Users,
   FileText,
@@ -34,6 +33,7 @@ import {
 } from "lucide-react";
 import { CHANNEL_ICONS } from "@/src/config/icons";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
+import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
 
 export default function DashboardPage() {
   const { stats: patientStats, loading: loadingPatientStats } =

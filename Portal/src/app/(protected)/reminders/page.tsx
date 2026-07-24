@@ -11,21 +11,21 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";
 import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
-import { BulkSendWizard } from "@/src/app/(protected)/reminders/BulkSendWizard";
+import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
-import { useFetchReminders } from "@/src/api/useFetchReminders";
-import { useFetchPatients } from "@/src/api/useFetchPatients";
+import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
+import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
-import { useFetchRemindersStats } from "@/src/api/useFetchRemindersStats";
+import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, XCircle, AlertTriangle } from "lucide-react";
-import { useDebounceState } from "@/src/utils/useDebounceState";
+import { useDebounceState } from "@/src/hooks/useDebounceState";
 import {
   useQueryState,
   parseAsInteger,

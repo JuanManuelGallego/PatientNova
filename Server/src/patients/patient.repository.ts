@@ -1,16 +1,18 @@
 import { type Patient, type Prisma } from '../../generated/prisma/client.ts';
-import { prisma } from '../prisma/prismaClient.js';
-import { PatientEmailConflictError, PatientNotFoundError } from '../utils/errors.js';
-import { paginate, type Paginated } from '../utils/pagination.js';
-import { isPrismaUniqueConstraintError } from '../utils/prismaErrors.js';
-import { logger } from '../utils/logger.js';
-import { buildUpdateData } from '../utils/buildUpdateData.js';
-import { softDelete, restore } from '../utils/softDelete.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
+import { PatientNotFoundError } from '../utils/errors/errors.js';
+import { PatientEmailConflictError } from './patient.errors.js';
+import { paginate, type Paginated } from '../utils/api/pagination.js';
+import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js';
+import { logger } from '../utils/api/logger.js';
+import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
   reminders: { id: string }[];
+  medicalRecord: { id: string } | null;
 };
 
 export const patientRepository = {
@@ -137,11 +139,11 @@ export const patientRepository = {
 
   async delete(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return softDelete(prisma.patient, id, userId);
+    return softDelete(prisma.patient, id, userId) as Promise<Patient>;
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return restore(prisma.patient, id, userId);
+    return restore(prisma.patient, id, userId) as Promise<Patient>;
   },
 };

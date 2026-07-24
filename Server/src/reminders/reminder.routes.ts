@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createReminderSchema,
   updateReminderSchema,
@@ -9,9 +11,9 @@ import {
 } from './reminder.schemas.js';
 import { reminderService } from './reminder.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { ok } from '../utils/apiUtils.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { ok } from '../utils/api/api-utils.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const reminderRouter = Router();
 
@@ -19,10 +21,10 @@ export const reminderRouter = Router();
  * GET /reminders
  * List reminders with optional filters and pagination.
  */
-reminderRouter.get<{}, any, any, ListRemindersQuery>(
+reminderRouter.get<ParamsDictionary, unknown, unknown, ListRemindersQuery & ParsedQs>(
   '/',
   validateQuery(listRemindersSchema),
-  asyncHandler(async (req: Request<{}, any, any, ListRemindersQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListRemindersQuery & ParsedQs>, res: Response) => {
     ok(res, await reminderService.findMany(req.query, req.user!.id));
   })
 );
@@ -32,10 +34,10 @@ reminderRouter.get<{}, any, any, ListRemindersQuery>(
  * Aggregate statistics: totals by status and channel.
  * Optional filters: patientId, dateFrom, dateTo.
  */
-reminderRouter.get<{}, any, any, ReminderStatsQuery>(
+reminderRouter.get<ParamsDictionary, unknown, unknown, ReminderStatsQuery & ParsedQs>(
   '/stats',
   validateQuery(reminderStatsSchema),
-  asyncHandler(async (req: Request<{}, any, any, ReminderStatsQuery>, res: Response) => {
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ReminderStatsQuery & ParsedQs>, res: Response) => {
     ok(res, await reminderService.getStats(req.query, req.user!.id));
   })
 );

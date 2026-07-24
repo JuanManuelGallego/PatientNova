@@ -1,6 +1,6 @@
-import { prisma } from '../../src/prisma/prismaClient.js';
+import { prisma } from '../../src/utils/prisma/prisma-client.js';
 import bcrypt from 'bcrypt';
-import { config } from '../../src/utils/config.js';
+import { config } from '../../src/utils/config/config.js';
 import {
   Channel,
   PatientStatus,

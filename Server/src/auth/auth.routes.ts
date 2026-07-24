@@ -2,18 +2,18 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { authService } from './auth.service.js';
 import { loginSchema, changePasswordSchema } from './auth.schemas.js';
-import { apiError, ok } from '../utils/apiUtils.js';
-import { FIFTEEN_MINUTES_MS, SEVEN_DAYS_MS } from '../utils/constants.js';
+import { apiError, ok } from '../utils/api/api-utils.js';
+import { FIFTEEN_MINUTES_MS, SEVEN_DAYS_MS } from '../utils/config/constants.js';
 import { authenticate } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { logger } from '../utils/logger.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { logger } from '../utils/api/logger.js';
 import {
   AuthInvalidCredentialsError,
   AuthAccountLockedError,
   AuthRefreshTokenExpiredError,
   AuthRefreshTokenRevokedError,
-} from '../utils/errors.js';
+} from './auth.errors.js';
 
 export const authRouter = Router();
 

@@ -1,7 +1,7 @@
 import { Prisma } from '../../generated/prisma/client.ts';
-import { googleMeetService } from '../google/google-meet.service.ts';
-import { logger } from '../utils/logger.ts';
-import type { TransactionClient } from '../prisma/prismaClient.ts';
+import { googleMeetService } from '../google-meet/google-meet.service.ts';
+import { logger } from '../utils/api/logger.ts';
+import type { TransactionClient } from '../utils/prisma/prisma-client.ts';
 
 const MEETING_URL_VAR_KEY = '5';
 

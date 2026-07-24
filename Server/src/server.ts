@@ -1,8 +1,8 @@
 import app from "./app.js";
-import { config } from "./utils/config.js";
-import { logger } from "./utils/logger.js";
-import { prisma } from "./prisma/prismaClient.js";
-import { initializePgBoss, stopPgBoss } from "./scheduler/pgBoss.js";
+import { config } from "./utils/config/config.js";
+import { logger } from "./utils/api/logger.js";
+import { prisma } from "./utils/prisma/prisma-client.js";
+import { initializePgBoss, stopPgBoss } from "./scheduler/pg-boss.js";
 
 async function start() {
   await prisma.$connect();

@@ -1,4 +1,6 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import {
   createAppointmentSchema,
   updateAppointmentSchema,
@@ -7,70 +9,99 @@ import {
   type ListAppointmentsQuery,
   type AppointmentStatsQuery,
 } from './appointment.schemas.js';
-import { appointmentController as controller } from './appointment.controller.js';
+import { appointmentService } from './appointment.service.js';
+import { AppointmentStatus } from '../../generated/prisma/client.ts';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { uuidParamSchema } from '../utils/schemas.js';
+import { asyncHandler } from '../utils/api/async-handler.js';
+import { ok } from '../utils/api/api-utils.js';
+import { uuidParamSchema } from '../utils/validation/schemas.js';
 
 export const appointmentRouter = Router();
 
-appointmentRouter.get<{}, any, any, ListAppointmentsQuery>(
+appointmentRouter.get<ParamsDictionary, unknown, unknown, ListAppointmentsQuery & ParsedQs>(
   '/',
   validateQuery(listAppointmentsSchema),
-  asyncHandler(controller.list),
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ListAppointmentsQuery & ParsedQs>, res: Response) => {
+    ok(res, await appointmentService.findMany(req.query, req.user!.id, req.user!.timezone));
+  }),
 );
 
-appointmentRouter.get<{}, any, any, AppointmentStatsQuery>(
+appointmentRouter.get<ParamsDictionary, unknown, unknown, AppointmentStatsQuery & ParsedQs>(
   '/stats',
   validateQuery(appointmentStatsSchema),
-  asyncHandler(controller.stats),
+  asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, AppointmentStatsQuery & ParsedQs>, res: Response) => {
+    ok(res, await appointmentService.getStats(req.query, req.user!.id, req.user!.timezone));
+  }),
 );
 
 appointmentRouter.get(
   '/:id',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.get),
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await appointmentService.findById(req.params.id as string, req.user!.id));
+  }),
 );
 
 appointmentRouter.post(
   '/',
   validateBody(createAppointmentSchema),
-  asyncHandler(controller.create),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.create(req.body, req.user!.id);
+    ok(res, appt, 201);
+  }),
 );
 
 appointmentRouter.patch(
   '/:id',
   validateParams(uuidParamSchema),
   validateBody(updateAppointmentSchema),
-  asyncHandler(controller.update),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.update(req.params.id as string, req.body, req.user!.id);
+    ok(res, appt);
+  }),
 );
 
 appointmentRouter.post(
   '/:id/pay',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.markPaid),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.markPaid(req.params.id as string, req.user!.id);
+    ok(res, appt);
+  }),
 );
 
 appointmentRouter.post(
   '/:id/confirm',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.confirm),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CONFIRMED);
+    ok(res, appt);
+  }),
 );
 
 appointmentRouter.post(
   '/:id/cancel',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.cancel),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.setStatus(req.params.id as string, req.user!.id, AppointmentStatus.CANCELLED);
+    ok(res, appt);
+  }),
 );
 
 appointmentRouter.delete(
   '/:id',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.remove),
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await appointmentService.delete(req.params.id as string, req.user!.id);
+    ok(res, { deleted: true, id: result.id });
+  }),
 );
 
 appointmentRouter.patch(
   '/:id/restore',
   validateParams(uuidParamSchema),
-  asyncHandler(controller.restore),
+  asyncHandler(async (req: Request, res: Response) => {
+    const appt = await appointmentService.restore(req.params.id as string, req.user!.id);
+    ok(res, appt);
+  }),
 );
