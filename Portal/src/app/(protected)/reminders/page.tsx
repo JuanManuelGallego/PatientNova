@@ -263,7 +263,7 @@ function ActiveRemindersTab({
         "Canal",
         "Estado",
         "Programado para",
-        "En",
+        "Dentro de",
         "Creado el",
         "",
       ]}
@@ -288,9 +288,7 @@ function ActiveRemindersTab({
             <ReminderStatusPill status={reminder.status} />
           </td>
           <td className="td td--date">{fmtDateTime(reminder.sendAt)}</td>
-          <td className="td td--muted">
-            <span className="badge-time">{fmtRelative(reminder.sendAt)}</span>
-          </td>
+          <td className="td td--date">{fmtRelative(reminder.sendAt)}</td>
           <td className="td td--subtle">{fmtDateTime(reminder.sendAt)}</td>
           <td className="td" onClick={(e) => e.stopPropagation()}>
             <div className="td-actions">

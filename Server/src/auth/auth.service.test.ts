@@ -284,9 +284,9 @@ describe('authService.changePassword', () => {
 });
 
 describe('authService.getCookieDefaults', () => {
-  it('returns non-secure cookies in non-production', () => {
+  it('returns cross-origin safe cookie defaults', () => {
     expect(authService.getCookieDefaults()).toEqual(
-      expect.objectContaining({ httpOnly: true, secure: false, sameSite: 'strict' })
+      expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'none' })
     );
   });
 });

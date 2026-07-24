@@ -18,10 +18,11 @@ function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezo
   return appointments
     .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
     .map((appt) => {
+      const icon = appt.status === AppointmentStatus.CONFIRMED ? "✅" : "⏳";
       const time = fmt.format(appt.startAt);
       const name = `${appt.patient.name} ${appt.patient.lastName}`;
       const location = appt.appointmentLocation?.name ?? "No location specified";
-      return `• ${name} — ${time} — ${location}`;
+      return `${icon} • ${name} — ${time} — ${location}`;
     });
 }
 
@@ -92,7 +93,7 @@ export async function dailyReminderWorker(): Promise<void> {
     try {
       const { hour } = getLocalTimeParts(user.timezone);
       if (hour !== config.scheduler.dailyReminderHour) continue;
-      logger.debug("Running daily reminder worker...");
+      logger.info("Running daily reminder worker...");
 
       const todayLocal = getTodayLocalDate(user.timezone);
       if (user.lastDailyReminderDate) {
@@ -111,7 +112,7 @@ export async function dailyReminderWorker(): Promise<void> {
         where: {
           patient: { userId: user.id },
           startAt: { gte: tomorrowStart, lte: tomorrowEnd },
-          status: { in: [ AppointmentStatus.CONFIRMED ] },
+          status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] },
         },
         include: { patient: true, appointmentLocation: true },
       });

@@ -38,7 +38,7 @@ notifyRouter.post(
     try {
       const result = await sendWhatsApp(req.body);
       await reminderService.update(reminder.id, {
-        status: ReminderStatus.SENT,
+        status: ReminderStatus.QUEUED,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);
@@ -78,7 +78,7 @@ notifyRouter.post(
     try {
       const result = await sendSms(req.body);
       await reminderService.update(reminder.id, {
-        status: ReminderStatus.SENT,
+        status: ReminderStatus.QUEUED,
         messageId: result.messageSid ?? undefined,
       }, req.user!.id);
       ok(res, result, 201);

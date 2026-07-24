@@ -1703,6 +1703,8 @@ tr:hover td {
 
 .td {
   padding: 14px 20px;
+  width: 0;
+  white-space: nowrap;
 }
 
 /* responsive: table footer wraps on mobile */
@@ -1840,15 +1842,6 @@ tr:hover td {
   align-items: center;
 }
 
-.badge-time {
-  background: var(--c-brand-light);
-  color: var(--c-link);
-  padding: 3px 9px;
-  border-radius: var(--r-full);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .td-error__text {
   background: var(--c-error-bg);
   padding: 3px 8px;
@@ -1982,6 +1975,7 @@ tr:hover td {
   border-radius: var(--r-full);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .pill__dot {
