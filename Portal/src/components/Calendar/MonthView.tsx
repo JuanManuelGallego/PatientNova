@@ -4,6 +4,7 @@ import { ApptChip } from "./ApptChip";
 import { BlockedTimeChip } from "./BlockedTimeChip";
 import { DAY_NAMES_ES, TODAY_STR } from "./constants";
 import { MonthViewProps } from "./types";
+import { Appointment } from "@/src/types/Appointment";
 
 export function MonthView({
   rows,
@@ -95,7 +96,7 @@ export function MonthView({
                           onSelectBlockedTime={onSelectBlockedTime}
                         />
                       ))}
-                      {appts.slice(0, 3).map((a) => (
+                      {appts.slice(0, 3).map((a: Appointment) => (
                         <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} compact/>
                       ))}
                       {(appts.length > 3 || blocked.length > 2) && (

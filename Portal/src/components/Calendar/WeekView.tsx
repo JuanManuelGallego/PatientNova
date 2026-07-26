@@ -131,7 +131,14 @@ export function WeekView({
                   ))}
                   <div
                     style={{ position: "absolute", inset: 0, cursor: "pointer" }}
-                    onClick={() => onCreateAt(ds)}
+                    onClick={(e) => {
+                      const y = e.nativeEvent.offsetY;
+                      const totalMinutes = Math.round(((y / HOUR_HEIGHT) * 60) / 5) * 5;
+                      const hour = firstHour + Math.floor(totalMinutes / 60);
+                      const minute = totalMinutes % 60;
+                      const d = new Date(ds + "T" + String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0") + ":00");
+                      onCreateAt(d.toISOString());
+                    }}
                     title="Nueva cita"
                   />
                   {positioned.map((p) => (
