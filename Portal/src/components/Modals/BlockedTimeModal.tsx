@@ -188,7 +188,17 @@ export function BlockedTimeModal({
               isFuture
               showTime
               date={form.startTimeUtc}
-              onChanged={(v) => setForm((f) => ({ ...f, startTimeUtc: v }))}
+              onChanged={(v) =>
+                setForm((f) => {
+                  const newStart = new Date(v);
+                  const currentEnd = new Date(f.endTimeUtc);
+                  if (newStart >= currentEnd) {
+                    newStart.setHours(newStart.getHours() + 1);
+                    return { ...f, startTimeUtc: v, endTimeUtc: toLocalISOString(newStart) };
+                  }
+                  return { ...f, startTimeUtc: v };
+                })
+              }
             />
           </label>
           <label className="form-label">
@@ -197,7 +207,17 @@ export function BlockedTimeModal({
               isFuture
               showTime
               date={form.endTimeUtc}
-              onChanged={(v) => setForm((f) => ({ ...f, endTimeUtc: v }))}
+              onChanged={(v) =>
+                setForm((f) => {
+                  const newEnd = new Date(v);
+                  const currentStart = new Date(f.startTimeUtc);
+                  if (newEnd <= currentStart) {
+                    newEnd.setHours(newEnd.getHours() - 1);
+                    return { ...f, endTimeUtc: v, startTimeUtc: toLocalISOString(newEnd) };
+                  }
+                  return { ...f, endTimeUtc: v };
+                })
+              }
             />
           </label>
 

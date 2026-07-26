@@ -96,7 +96,7 @@ export function MonthView({
                         />
                       ))}
                       {appts.slice(0, 3).map((a) => (
-                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} />
+                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} compact/>
                       ))}
                       {(appts.length > 3 || blocked.length > 2) && (
                         <button
