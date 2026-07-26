@@ -1,0 +1,11 @@
+meta {
+  name: Restore Blocked Time
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/blocked-time/{{blockedTimeId}}/restore
+  body: none
+  auth: none
+}

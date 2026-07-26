@@ -1,0 +1,23 @@
+meta {
+  name: Update Blocked Time
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/blocked-time/{{blockedTimeId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "description": "Extended lunch break",
+    "startTimeUtc": "2026-07-27T12:00:00.000Z",
+    "endTimeUtc": "2026-07-27T13:30:00.000Z"
+  }
+}
