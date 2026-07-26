@@ -18,7 +18,7 @@ export const updateBlockedTimeSchema = z.object({
 
 export const listBlockedTimeSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(250).default(20),
   orderBy: z.enum(['startTimeUtc', 'endTimeUtc', 'createdAt', 'updatedAt']).default('createdAt'),
   order: z.enum(['asc', 'desc']).default('desc'),
   from: z.iso.datetime().optional(),

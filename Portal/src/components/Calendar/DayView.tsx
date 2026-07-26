@@ -1,18 +1,21 @@
 import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
-import { TODAY_STR, HOUR_HEIGHT, layoutDayAppointments } from "./constants";
+import { BlockedTimeBlock } from "./BlockedTimeBlock";
+import { TODAY_STR, HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
 import { calendarStyles } from "./styles";
 import { DayViewProps } from "./types";
 
 export function DayView({
   dayDate,
   apptByDate,
+  blockedByDate,
   holidayMap,
   loading,
   hourRange,
   onViewAppt,
   onCreateAt,
+  onSelectBlockedTime,
 }: DayViewProps) {
   const dayAppts = apptByDate[ dayDate ] ?? [];
   const holiday = holidayMap[ dayDate ];
@@ -102,6 +105,19 @@ export function DayView({
                 left: `${p.left}%`,
                 width: `calc(${p.width}% - 6px)`,
                 zIndex: 1,
+              }}
+            />
+          ))}
+          {layoutBlockedTimes(blockedByDate[ dayDate ] ?? [], firstHour).map((p) => (
+            <BlockedTimeBlock
+              key={p.bt.id}
+              bt={p.bt}
+              onSelectBlockedTime={onSelectBlockedTime}
+              style={{
+                top: p.top,
+                height: p.height,
+                left: 0,
+                right: 0,
               }}
             />
           ))}

@@ -23,6 +23,22 @@ export function CalendarLegend() {
           </span>
         </div>
       ))}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span
+          style={{
+            display: "inline-block",
+            width: 14,
+            height: 14,
+            background:
+              "repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 2px, #e5e7eb 2px, #e5e7eb 4px)",
+            border: "1px solid var(--c-gray-300)",
+            borderRadius: 2,
+          }}
+        />
+        <span style={{ fontSize: 12, color: "var(--c-gray-600)" }}>
+          Horario Bloqueado
+        </span>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   addDays,
 } from "@/src/utils/TimeUtils";
 import { Appointment } from "@/src/types/Appointment";
+import { BlockedTime } from "@/src/types/BlockedTime";
 import { ViewMode } from "./types";
 import { computeHourRange, toDateStr } from "./constants";
 
@@ -16,6 +17,7 @@ interface UseCalendarDataArgs {
   dayDate: string;
   viewMode: ViewMode;
   appointments: Appointment[];
+  blockedTimes: BlockedTime[];
 }
 
 export function useCalendarData({
@@ -25,6 +27,7 @@ export function useCalendarData({
   dayDate,
   viewMode,
   appointments,
+  blockedTimes,
 }: UseCalendarDataArgs) {
   const { daysInMonth, startOffset, rows } = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1);
@@ -59,6 +62,17 @@ export function useCalendarData({
     }
     return map;
   }, [ appointments ]);
+
+  const blockedByDate = useMemo(() => {
+    const map: Record<string, BlockedTime[]> = {};
+    for (const bt of blockedTimes) {
+      const local = new Date(bt.startTimeUtc);
+      const date = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(local.getDate()).padStart(2, "0")}`;
+      if (!map[ date ]) map[ date ] = [];
+      map[ date ].push(bt);
+    }
+    return map;
+  }, [ blockedTimes ]);
 
   const holidayMap = useMemo(() => {
     const holidays = getColombianHolidays(calYear);
@@ -98,6 +112,7 @@ export function useCalendarData({
     weekDays,
     weekLabel,
     apptByDate,
+    blockedByDate,
     holidayMap,
     cellDate,
     navLabel,
