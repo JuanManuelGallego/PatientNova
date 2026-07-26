@@ -23,6 +23,7 @@ import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
 import { googleRouter } from './google-meet/google-meet.routes.js';
 import { consentDocumentRouter } from './consent-documents/consent-document.routes.js';
+import { blockedTimeRouter } from './blocked-time/blocked-time.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
 
 const app: Application = express();
@@ -89,6 +90,7 @@ v1.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);
 v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
+v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
 v1.use('/google', authenticate, requireAdminForWrites, googleRouter);
 
 app.use('/v1', v1);
