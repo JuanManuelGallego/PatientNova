@@ -69,8 +69,9 @@ export function AppointmentDateTimePicker({
       return;
     }
 
+    const apptEnd = ts + 60 * 60 * 1000;
     for (const range of blockedRanges) {
-      if (ts >= range.start && ts < range.end) {
+      if (ts < range.end && apptEnd > range.start) {
         onError("Este horario está bloqueado");
         return;
       }
