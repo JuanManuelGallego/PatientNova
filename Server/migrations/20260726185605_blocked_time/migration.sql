@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "blocked_time" (
     "id" UUID NOT NULL,
-    "userId" UUID NOT NULL,
+    "userId" TEXT NOT NULL,
     "description" TEXT,
     "startTimeUtc" TIMESTAMP(3) NOT NULL,
     "endTimeUtc" TIMESTAMP(3) NOT NULL,
@@ -15,3 +15,6 @@ CREATE TABLE "blocked_time" (
 
 -- CreateIndex
 CREATE INDEX "blocked_time_userId_idx" ON "blocked_time"("userId");
+
+-- CreateIndex
+CREATE INDEX "blocked_time_userId_isDeleted_startTimeUtc_endTimeUtc_idx" ON "blocked_time"("userId", "isDeleted", "startTimeUtc", "endTimeUtc");

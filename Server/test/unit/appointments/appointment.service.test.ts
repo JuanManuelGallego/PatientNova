@@ -18,11 +18,19 @@ vi.mock('../../../src/google-meet/google-meet.service.js', () => ({
   },
 }));
 
+vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
+  blockedTimeRepository: {
+    hasBlockedTimeOverlap: vi.fn(),
+  },
+}));
+
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { googleMeetService } from '../../../src/google-meet/google-meet.service.js';
+import { blockedTimeRepository } from '../../../src/blocked-time/blocked-time.repository.js';
 
 const mockPrisma = vi.mocked(prisma) as any;
 const mockGoogleMeet = vi.mocked(googleMeetService);
+const mockBlockedTimeRepo = vi.mocked(blockedTimeRepository);
 
 function mockTx() {
   const tx = {
@@ -80,6 +88,7 @@ beforeEach(() => {
   mockPrisma.appointment.findFirst.mockResolvedValue(null);
   mockPrisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', userId: 'user-1' });
   mockPrisma.appointmentLocation.findUnique.mockResolvedValue({ id: 'loc-1', isVirtual: false });
+  mockBlockedTimeRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
 });
 
 describe('appointmentService.create', () => {
@@ -237,6 +246,28 @@ describe('appointmentService.create', () => {
       appointmentService.create(validDto, 'user-1')
     ).rejects.toThrow();
   });
+
+  it('throws on blocked time overlap', async () => {
+    mockBlockedTimeRepo.hasBlockedTimeOverlap.mockResolvedValue({
+      id: 'bt-1',
+      description: 'Lunch break',
+      startTimeUtc: new Date('2026-07-27T12:00:00Z'),
+      endTimeUtc: new Date('2026-07-27T13:00:00Z'),
+    } as any);
+
+    await expect(
+      appointmentService.create(validDto, 'user-1')
+    ).rejects.toThrow('overlaps with blocked time');
+  });
+
+  it('does not throw when no blocked time overlap', async () => {
+    mockBlockedTimeRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
+    const tx = mockTx();
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+
+    const result = await appointmentService.create(validDto, 'user-1');
+    expect(result.id).toBe('appt-1');
+  });
 });
 
 describe('appointmentService.update', () => {
@@ -351,5 +382,35 @@ describe('appointmentService.update', () => {
       where: { id: 'reminder-1' },
       data: expect.objectContaining({ channel: 'SMS', to: '+15559876543' }),
     }));
+  });
+
+  it('throws on blocked time overlap when updating time', async () => {
+    mockBlockedTimeRepo.hasBlockedTimeOverlap.mockResolvedValue({
+      id: 'bt-1',
+      description: 'Lunch break',
+      startTimeUtc: new Date('2026-07-27T12:00:00Z'),
+      endTimeUtc: new Date('2026-07-27T13:00:00Z'),
+    } as any);
+
+    const newStart = new Date(Date.now() + 86400000).toISOString();
+    const newEnd = new Date(Date.now() + 2 * 86400000).toISOString();
+
+    // First call: findByIdWithRelations returns existingAppt
+    // Second call: checkConflict returns null (no appointment conflict)
+    mockPrisma.appointment.findFirst
+      .mockResolvedValueOnce(existingAppt)
+      .mockResolvedValueOnce(null);
+
+    await expect(
+      appointmentService.update('appt-1', { startAt: newStart, endAt: newEnd }, 'user-1')
+    ).rejects.toThrow('overlaps with blocked time');
+  });
+
+  it('does not check blocked time when time is not changing', async () => {
+    const tx = mockTx();
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+
+    await appointmentService.update('appt-1', { price: 200 }, 'user-1');
+    expect(mockBlockedTimeRepo.hasBlockedTimeOverlap).not.toHaveBeenCalled();
   });
 });

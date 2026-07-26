@@ -474,7 +474,7 @@ model MedicalDocument {
 
 model BlockedTime {
   id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @db.Uuid
+  userId        String
   description   String?
   startTimeUtc  DateTime
   endTimeUtc    DateTime
@@ -485,5 +485,6 @@ model BlockedTime {
   updatedAt     DateTime  @updatedAt
 
   @@index([userId])
+  @@index([userId, isDeleted, startTimeUtc, endTimeUtc])
   @@map("blocked_time")
 }

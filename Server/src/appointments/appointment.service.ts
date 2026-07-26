@@ -5,6 +5,7 @@ import {
   AppointmentPatientNotFoundError,
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
+  AppointmentBlockedTimeConflictError,
 } from './appointment.errors.js';
 import { LocationNotFoundError, ReminderNotCancellableError } from '../utils/errors/errors.js';
 import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-type.errors.js';
@@ -14,6 +15,7 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.ts
 import { logger } from '../utils/api/logger.ts';
 import type { AppointmentWithRelations, AppointmentStats } from './appointment.types.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
+import { blockedTimeRepository } from '../blocked-time/blocked-time.repository.ts';
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
@@ -151,6 +153,17 @@ async function checkConflict(
   }
 }
 
+async function checkBlockedTimeConflict(
+  userId: string,
+  startAt: string | Date,
+  endAt: string | Date,
+): Promise<void> {
+  const overlap = await blockedTimeRepository.hasBlockedTimeOverlap(userId, new Date(startAt), new Date(endAt));
+  if (overlap) {
+    throw new AppointmentBlockedTimeConflictError(overlap.description, overlap.startTimeUtc, overlap.endTimeUtc);
+  }
+}
+
 export const appointmentService = {
   async findById(id: string, userId: string): Promise<AppointmentWithRelations> {
     return appointmentRepository.findByIdWithRelations(id, userId);
@@ -183,6 +196,7 @@ export const appointmentService = {
       await Promise.all([
         validateType(dto.typeId),
         checkConflict(dto.patientId, dto.startAt, dto.endAt),
+        checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
       ]);
 
       let createdReminder: Reminder | null = null;
@@ -241,7 +255,10 @@ export const appointmentService = {
     if (dto.startAt !== undefined || dto.endAt !== undefined) {
       const newStart = dto.startAt ?? existing.startAt;
       const newEnd = dto.endAt ?? existing.endAt;
-      await checkConflict(existing.patientId, newStart, newEnd, id);
+      await Promise.all([
+        checkConflict(existing.patientId, newStart, newEnd, id),
+        checkBlockedTimeConflict(userId, newStart, newEnd),
+      ]);
     }
 
     let location: AppointmentLocation | undefined;
