@@ -6,6 +6,7 @@ import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointment
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
+import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
 import {
   Appointment,
   AppointmentForm,
@@ -70,6 +71,7 @@ export function AppointmentModal({
   const { updateAppointment } = useUpdateAppointment();
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
+  const { blockedTimes } = useFetchBlockedTimes({ dateFrom: getTomorrowSixAm() });
 
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
@@ -253,6 +255,7 @@ export function AppointmentModal({
   const bookedSlots = appointments
     .filter((a) => a.id !== appt?.id)
     .map((a) => a.startAt);
+  const blockedSlots = blockedTimes.map((bt) => ({ start: bt.startTimeUtc, end: bt.endTimeUtc }));
   const steps = [ "Paciente & Tipo", "Lugar & Hora", "Pago & Estado" ];
 
   return (
@@ -304,6 +307,7 @@ export function AppointmentModal({
             selectedPatient={selectedPatient}
             appointmentTypes={appointmentTypes}
             bookedSlots={bookedSlots}
+            blockedSlots={blockedSlots}
             onError={(error) => setError(error)}
             clearError={() => setError(null)}
           />

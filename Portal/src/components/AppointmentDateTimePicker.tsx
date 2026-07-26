@@ -20,11 +20,17 @@ const OUT_OF_HOURS: number[] = [
   ),
 ];
 
+interface BlockedSlot {
+  start: string;
+  end: string;
+}
+
 interface AppointmentDateTimePickerProps {
   date: string | undefined;
   onChanged: (date: string) => void;
   onError: (error: string) => void;
   bookedSlots?: string[];
+  blockedSlots?: BlockedSlot[];
 }
 
 export function AppointmentDateTimePicker({
@@ -32,6 +38,7 @@ export function AppointmentDateTimePicker({
   onChanged,
   onError,
   bookedSlots = [],
+  blockedSlots = [],
 }: AppointmentDateTimePickerProps) {
   const { isDark } = useTheme();
   const bookedSet = useMemo(
@@ -42,14 +49,31 @@ export function AppointmentDateTimePicker({
     [bookedSlots]
   );
 
+  const blockedRanges = useMemo(
+    () =>
+      blockedSlots.map((s) => ({
+        start: dayjs(s.start).valueOf(),
+        end: dayjs(s.end).valueOf(),
+      })),
+    [blockedSlots]
+  );
+
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
 
     const normalized = selectedDate.second(0).millisecond(0);
+    const ts = normalized.valueOf();
 
-    if (bookedSet.has(normalized.valueOf())) {
+    if (bookedSet.has(ts)) {
       onError("Este horario ya está reservado");
       return;
+    }
+
+    for (const range of blockedRanges) {
+      if (ts >= range.start && ts < range.end) {
+        onError("Este horario está bloqueado");
+        return;
+      }
     }
 
     onChanged(normalized.toISOString());

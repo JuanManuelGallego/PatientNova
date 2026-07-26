@@ -18,11 +18,12 @@ interface Props {
     selectedPatient: Patient | undefined;
     appointmentTypes: AppointmentType[];
     bookedSlots: string[];
+    blockedSlots: { start: string; end: string }[];
     onError: (error: string) => void;
     clearError: () => void;
 }
 
-export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes, bookedSlots, onError, clearError }: Props) {
+export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes, bookedSlots, blockedSlots, onError, clearError }: Props) {
     return (
         <div className="form-stack">
             {!isEdit && (
@@ -62,6 +63,7 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
                     onChanged={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
                     onError={onError}
                     bookedSlots={bookedSlots}
+                    blockedSlots={blockedSlots}
                 />
             </label>
 
