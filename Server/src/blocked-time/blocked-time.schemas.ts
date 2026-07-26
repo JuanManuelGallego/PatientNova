@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
 export const createBlockedTimeSchema = z.object({
-  description: z.string().min(1).max(255),
+  description: z.string().min(1).max(255).optional(),
   startTimeUtc: z.iso.datetime(),
   endTimeUtc: z.iso.datetime(),
 });

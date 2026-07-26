@@ -12,6 +12,8 @@ import {
   LBL_SAVE,
   ERR_SAVE,
 } from "@/src/constants/ui";
+import { RequiredField } from "../Info/Required";
+import { DateTimePicker } from "../DateTimePicker";
 
 function toLocalISOString(date: Date): string {
   const y = date.getFullYear();
@@ -181,23 +183,21 @@ export function BlockedTimeModal({
             />
           </label>
           <label className="form-label">
-            Fecha y hora de inicio
-            <input
-              className="form-input"
-              type="datetime-local"
-              value={form.startTimeUtc}
-              onChange={setField("startTimeUtc")}
-              required
+            <RequiredField label={"Fecha y hora de inicio"}/>
+            <DateTimePicker
+              isFuture
+              showTime
+              date={form.startTimeUtc}
+              onChanged={(v) => setForm((f) => ({ ...f, startTimeUtc: v }))}
             />
           </label>
           <label className="form-label">
-            Fecha y hora de fin
-            <input
-              className="form-input"
-              type="datetime-local"
-              value={form.endTimeUtc}
-              onChange={setField("endTimeUtc")}
-              required
+            <RequiredField label={"Fecha y hora de fin"}/>
+            <DateTimePicker
+              isFuture
+              showTime
+              date={form.endTimeUtc}
+              onChanged={(v) => setForm((f) => ({ ...f, endTimeUtc: v }))}
             />
           </label>
 

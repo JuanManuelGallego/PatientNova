@@ -11,7 +11,7 @@ export const blockedTimeRepository = {
     return prisma.blockedTime.create({
       data: {
         userId,
-        description: dto.description,
+        description: dto.description ?? null,
         startTimeUtc: dto.startTimeUtc,
         endTimeUtc: dto.endTimeUtc,
       },

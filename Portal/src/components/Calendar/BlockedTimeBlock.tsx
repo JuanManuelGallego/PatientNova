@@ -5,13 +5,13 @@ export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTime
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onSelectBlockedTime(bt); }}
-      className="cal-blocked-block"
       style={{
         position: "absolute",
         background: "var(--c-gray-100)",
         borderLeft: "3px solid var(--c-gray-400)",
         cursor: "pointer",
         zIndex: 0,
+        borderRadius: "0 4px 4px 0",
         ...style,
       }}
       title={bt.description || "Horario bloqueado"}

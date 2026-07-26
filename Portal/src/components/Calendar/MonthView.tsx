@@ -106,7 +106,7 @@ export function MonthView({
                             onSelectDay(date);
                           }}
                         >
-                          +{appts.length - 3 + blocked.length - 2} más
+                              +{Math.max(0, appts.length - 3) + Math.max(0, blocked.length - 2)} más
                         </button>
                       )}
                     </div>

@@ -488,3 +488,4 @@ model BlockedTime {
   @@index([userId, isDeleted, startTimeUtc, endTimeUtc])
   @@map("blocked_time")
 }
+
