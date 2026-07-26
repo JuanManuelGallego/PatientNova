@@ -8,7 +8,7 @@ export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTime
       className="cal-blocked-block"
       style={{
         position: "absolute",
-        background: "repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 4px, #e5e7eb 4px, #e5e7eb 8px)",
+        background: "var(--c-gray-100)",
         borderLeft: "3px solid var(--c-gray-400)",
         cursor: "pointer",
         zIndex: 0,
@@ -16,7 +16,7 @@ export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTime
       }}
       title={bt.description || "Horario bloqueado"}
     >
-      <span style={{ fontSize: 10, color: "var(--c-gray-600)", padding: "2px 4px" }}>
+      <span style={{ fontSize: 10, color: "var(--c-gray-600)", padding: "2px 4px", fontWeight: 500 }}>
         {fmtTime(bt.startTimeUtc)} - {fmtTime(bt.endTimeUtc)}
         {bt.description && ` ${bt.description}`}
       </span>

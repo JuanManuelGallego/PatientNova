@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
-import { ACTION_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useCreateBlockedTime } from "@/src/api/blocked-time/useCreateBlockedTime";
 import { useUpdateBlockedTime } from "@/src/api/blocked-time/useUpdateBlockedTime";
 import { BlockedTime, BlockedTimeForm } from "@/src/types/BlockedTime";
+import {
+  LBL_CANCEL,
+  LBL_SAVING,
+  LBL_SAVE,
+  ERR_SAVE,
+} from "@/src/constants/ui";
 
 function toLocalISOString(date: Date): string {
   const y = date.getFullYear();
@@ -52,8 +58,11 @@ export function BlockedTimeModal({
   const isEdit = !!blockedTime;
   const { ref: trapRef, handleKeyDown: trapKeyDown } =
     useFocusTrap<HTMLDivElement>(onClose);
-  const { createBlockedTime, loading: creating } = useCreateBlockedTime();
-  const { updateBlockedTime, loading: updating } = useUpdateBlockedTime();
+  const { createBlockedTime } = useCreateBlockedTime();
+  const { updateBlockedTime } = useUpdateBlockedTime();
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<BlockedTimeForm>({
     description: blockedTime?.description || "",
@@ -65,19 +74,30 @@ export function BlockedTimeModal({
       : getDefaultEndTime(prefillDate),
   });
 
-  const [error, setError] = useState<string | null>(null);
-  const loading = creating || updating;
+  useEffect(() => {
+    setTimeout(() => firstInputRef.current?.focus(), 50);
+  }, []);
 
-  function updateField<K extends keyof BlockedTimeForm>(key: K, value: BlockedTimeForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const setField =
+    (field: keyof BlockedTimeForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  function validate(): boolean {
+    if (!form.startTimeUtc || !form.endTimeUtc) return false;
+    const start = new Date(form.startTimeUtc);
+    const end = new Date(form.endTimeUtc);
+    return end > start;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
     setError(null);
 
     if (!form.startTimeUtc || !form.endTimeUtc) {
       setError("Debe ingresar fecha y hora de inicio y fin");
+      setSaving(false);
       return;
     }
 
@@ -86,12 +106,13 @@ export function BlockedTimeModal({
 
     if (end <= start) {
       setError("La fecha de fin debe ser posterior a la fecha de inicio");
+      setSaving(false);
       return;
     }
 
     try {
       const payload = {
-        description: form.description || null,
+        description: form.description.trim() || null,
         startTimeUtc: start.toISOString(),
         endTimeUtc: end.toISOString(),
       };
@@ -104,7 +125,9 @@ export function BlockedTimeModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar");
+      setError(err instanceof Error ? err.message : ERR_SAVE);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -118,106 +141,81 @@ export function BlockedTimeModal({
       aria-modal="true"
       aria-label={isEdit ? "Editar horario bloqueado" : "Bloquear horario"}
     >
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-panel modal-panel--sm slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
-          <h2 className="modal-title">
-            {isEdit ? "Editar Horario Bloqueado" : "Bloquear Horario"}
-          </h2>
-          <button className="btn-close" onClick={onClose}>
+          <div>
+            <h2 className="modal-title">
+              {isEdit ? "Editar Horario Bloqueado" : "Bloquear Horario"}
+            </h2>
+            <p className="modal-subtitle">
+              {isEdit
+                ? `Modificando: ${blockedTime.description || "Horario bloqueado"}`
+                : "Selecciona las fechas y horas que deseas bloquear"}
+            </p>
+          </div>
+          <button onClick={onClose} className="btn-close">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} style={{ padding: "0 24px 24px" }}>
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="blocked-description"
-              style={{
-                display: "block",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--c-gray-700)",
-                marginBottom: 4,
-              }}
-            >
-              Descripción (opcional)
-            </label>
+
+        {error && (
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <STATUS_ICONS.warning size={14} /> {error}
+          </div>
+        )}
+
+        <form className="form-stack" onSubmit={handleSubmit}>
+          <label className="form-label">
+            Descripción (opcional)
             <input
-              id="blocked-description"
+              ref={firstInputRef}
+              className="form-input"
               type="text"
               value={form.description}
-              onChange={(e) => updateField("description", e.target.value)}
+              onChange={setField("description")}
               placeholder="Ej: Almuerzo, Reunión, etc."
               maxLength={255}
-              className="form-input"
             />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label
-              htmlFor="blocked-start"
-              style={{
-                display: "block",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--c-gray-700)",
-                marginBottom: 4,
-              }}
-            >
-              Fecha y hora de inicio
-            </label>
+          </label>
+          <label className="form-label">
+            Fecha y hora de inicio
             <input
-              id="blocked-start"
+              className="form-input"
               type="datetime-local"
               value={form.startTimeUtc}
-              onChange={(e) => updateField("startTimeUtc", e.target.value)}
+              onChange={setField("startTimeUtc")}
               required
-              className="form-input"
             />
-          </div>
-          <div style={{ marginBottom: 24 }}>
-            <label
-              htmlFor="blocked-end"
-              style={{
-                display: "block",
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--c-gray-700)",
-                marginBottom: 4,
-              }}
-            >
-              Fecha y hora de fin
-            </label>
+          </label>
+          <label className="form-label">
+            Fecha y hora de fin
             <input
-              id="blocked-end"
+              className="form-input"
               type="datetime-local"
               value={form.endTimeUtc}
-              onChange={(e) => updateField("endTimeUtc", e.target.value)}
+              onChange={setField("endTimeUtc")}
               required
-              className="form-input"
             />
-          </div>
-          {error && (
-            <div
-              className="error-inline"
-              style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <ACTION_ICONS.cancel size={14} /> {error}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 8 }}>
+          </label>
+
+          <div className="modal-footer">
             <button
               type="button"
+              className="btn-secondary"
               onClick={onClose}
-              className="btn-secondary btn-block"
-              disabled={loading}
+              disabled={saving}
             >
-              Cancelar
+              {LBL_CANCEL}
             </button>
             <button
               type="submit"
-              className="btn-primary btn-hero btn-block"
-              disabled={loading}
+              className="btn-primary btn-hero"
+              disabled={saving || !validate()}
             >
-              {loading ? "Guardando…" : isEdit ? "Guardar Cambios" : "Bloquear"}
+              {saving ? LBL_SAVING : isEdit ? LBL_SAVE : "Bloquear"}
             </button>
           </div>
         </form>

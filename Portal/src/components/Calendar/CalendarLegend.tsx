@@ -29,8 +29,7 @@ export function CalendarLegend() {
             display: "inline-block",
             width: 14,
             height: 14,
-            background:
-              "repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 2px, #e5e7eb 2px, #e5e7eb 4px)",
+            background: "var(--c-gray-100)",
             border: "1px solid var(--c-gray-300)",
             borderRadius: 2,
           }}

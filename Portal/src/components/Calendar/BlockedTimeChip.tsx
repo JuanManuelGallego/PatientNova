@@ -7,16 +7,29 @@ export function BlockedTimeChip({ bt, onSelectBlockedTime, style }: BlockedTimeC
       onClick={(e) => { e.stopPropagation(); onSelectBlockedTime(bt); }}
       className="cal-chip cal-chip--blocked"
       style={{
-        background: "repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 4px, #e5e7eb 4px, #e5e7eb 8px)",
+        background: "var(--c-gray-100)",
         color: "var(--c-gray-600)",
         width: "100%",
         marginBottom: 2,
         cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
         ...style,
       }}
       title={bt.description || "Horario bloqueado"}
     >
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 2,
+          background: "var(--c-gray-400)",
+          flexShrink: 0,
+        }}
+        title="Horario bloqueado"
+      />
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
         {fmtTime(bt.startTimeUtc)} {bt.description || "Bloqueado"}
       </span>
     </div>
