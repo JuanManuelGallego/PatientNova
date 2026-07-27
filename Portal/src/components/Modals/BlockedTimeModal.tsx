@@ -95,8 +95,7 @@ export function BlockedTimeModal({
     return end > start;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setSaving(true);
     setError(null);
 
@@ -187,18 +186,6 @@ export function BlockedTimeModal({
 
         <form className="form-stack" onSubmit={handleSubmit}>
           <label className="form-label">
-            Descripción (opcional)
-            <input
-              ref={firstInputRef}
-              className="form-input"
-              type="text"
-              value={form.description}
-              onChange={setField("description")}
-              placeholder="Ej: Almuerzo, Reunión, etc."
-              maxLength={255}
-            />
-          </label>
-          <label className="form-label">
             <RequiredField label={"Fecha y hora de inicio"} />
             <DateTimePicker
               isFuture
@@ -236,18 +223,30 @@ export function BlockedTimeModal({
               }
             />
           </label>
+          <label className="form-label">
+            Descripción
+            <input
+              ref={firstInputRef}
+              className="form-input"
+              type="text"
+              value={form.description}
+              onChange={setField("description")}
+              placeholder="Ej: Almuerzo, Reunión, etc."
+              maxLength={255}
+            />
+          </label>
 
           <div className="modal-footer">
             {isEdit && (
               <button
                 onClick={handleDelete}
                 className="btn-action-delete"
+                disabled={saving}
               >
-                <ACTION_ICONS.close size={14} />
+                <ACTION_ICONS.delete size={14} />
               </button>)
             }
             <button
-              type="button"
               className="btn-secondary"
               onClick={onClose}
               disabled={saving}
@@ -255,8 +254,8 @@ export function BlockedTimeModal({
               {LBL_CANCEL}
             </button>
             <button
-              type="submit"
-              className="btn-primary btn-hero"
+              onClick={handleSubmit}
+              className="btn-primary"
               disabled={saving || !validate()}
             >
               {saving ? LBL_SAVING : isEdit ? LBL_SAVE : "Bloquear"}

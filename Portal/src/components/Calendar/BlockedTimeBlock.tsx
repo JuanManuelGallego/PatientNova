@@ -12,13 +12,15 @@ export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTime
         cursor: "pointer",
         zIndex: 0,
         borderRadius: "0 4px 4px 0",
+        display: "flex",
+        alignItems: "center",
         ...style,
       }}
       title={bt.description || "Horario bloqueado"}
     >
       <span style={{ fontSize: 10, color: "var(--c-gray-600)", padding: "2px 4px", fontWeight: 500 }}>
-        {fmtTime(bt.startTimeUtc)} - {fmtTime(bt.endTimeUtc)}
-        {bt.description && ` ${bt.description}`}
+        {fmtTime(bt.startTimeUtc)}
+        {bt.description ? ` ${bt.description}` : " Bloqueado"}
       </span>
     </div>
   );
