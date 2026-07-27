@@ -142,6 +142,7 @@ export function BlockedTimeModal({
       if (isEdit && blockedTime) {
         await deleteBlockedTime(blockedTime.id);
       }
+      onSaved();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");

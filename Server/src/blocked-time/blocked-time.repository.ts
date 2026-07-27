@@ -78,13 +78,14 @@ export const blockedTimeRepository = {
     return restore(prisma.blockedTime, id, userId) as Promise<BlockedTime>;
   },
 
-  async hasBlockedTimeOverlap(userId: string, startAt: Date, endAt: Date): Promise<{ id: string; description: string | null; startTimeUtc: Date; endTimeUtc: Date } | null> {
+  async hasBlockedTimeOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string): Promise<{ id: string; description: string | null; startTimeUtc: Date; endTimeUtc: Date } | null> {
     return prisma.blockedTime.findFirst({
       where: {
         userId,
         isDeleted: false,
         startTimeUtc: { lt: endAt },
         endTimeUtc: { gt: startAt },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
       },
       select: { id: true, description: true, startTimeUtc: true, endTimeUtc: true },
     });

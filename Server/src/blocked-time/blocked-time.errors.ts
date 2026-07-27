@@ -5,3 +5,9 @@ export class BlockedTimeNotFoundError extends ApiError {
     super(`Blocked time with id "${id}" not found`, 404)
   }
 }
+
+export class BlockedTimeOverlapError extends ApiError {
+  constructor(startAt: Date, endAt: Date) {
+    super(`Blocked time overlaps with an existing blocked slot (${startAt.toISOString()} – ${endAt.toISOString()})`, 409)
+  }
+}

@@ -142,7 +142,11 @@ describe('blocked-time routes (integration)', () => {
 
   it('GET / supports pagination', async () => {
     for (let i = 0; i < 3; i++) {
-      await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body: createBody({ description: `Slot ${i}` }) }));
+      const base = new Date(Date.now() + (i + 1) * 240 * 60_000);
+      const start = new Date(base);
+      start.setMinutes(0, 0, 0);
+      const end = new Date(start.getTime() + 60 * 60_000);
+      await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body: createBody({ description: `Slot ${i}`, startTimeUtc: start.toISOString(), endTimeUtc: end.toISOString() }) }));
     }
 
     const res = await invokeRoute(blockedTimeRouter, 'get', '/', baseReq({ query: { page: 1, pageSize: 2 } }));
