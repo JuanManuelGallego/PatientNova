@@ -66,6 +66,24 @@ describe('createBlockedTimeSchema', () => {
     const result = createBlockedTimeSchema.safeParse({});
     expect(result.success).toBe(false);
   });
+
+  it('rejects endTimeUtc before startTimeUtc', () => {
+    const result = createBlockedTimeSchema.safeParse({
+      description: 'Bad times',
+      startTimeUtc: '2026-07-27T14:00:00.000Z',
+      endTimeUtc: '2026-07-27T12:00:00.000Z',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects endTimeUtc equal to startTimeUtc', () => {
+    const result = createBlockedTimeSchema.safeParse({
+      description: 'Same times',
+      startTimeUtc: '2026-07-27T12:00:00.000Z',
+      endTimeUtc: '2026-07-27T12:00:00.000Z',
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('updateBlockedTimeSchema', () => {
@@ -102,6 +120,19 @@ describe('updateBlockedTimeSchema', () => {
   it('rejects invalid datetime for endTimeUtc', () => {
     const result = updateBlockedTimeSchema.safeParse({ endTimeUtc: 'bad' });
     expect(result.success).toBe(false);
+  });
+
+  it('rejects endTimeUtc before startTimeUtc when both provided', () => {
+    const result = updateBlockedTimeSchema.safeParse({
+      startTimeUtc: '2026-07-27T14:00:00.000Z',
+      endTimeUtc: '2026-07-27T12:00:00.000Z',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('allows update with only description (no time validation)', () => {
+    const result = updateBlockedTimeSchema.safeParse({ description: 'Just text' });
+    expect(result.success).toBe(true);
   });
 });
 

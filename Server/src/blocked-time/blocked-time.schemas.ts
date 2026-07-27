@@ -5,7 +5,10 @@ export const createBlockedTimeSchema = z.object({
   description: z.string().min(1).max(255).nullish(),
   startTimeUtc: z.iso.datetime(),
   endTimeUtc: z.iso.datetime(),
-});
+}).refine(
+  (d) => new Date(d.endTimeUtc) > new Date(d.startTimeUtc),
+  { message: 'endTimeUtc must be after startTimeUtc', path: ['endTimeUtc'] },
+);
 
 export const updateBlockedTimeSchema = z.object({
   description: z.string().min(1).max(255).nullish(),
@@ -13,7 +16,15 @@ export const updateBlockedTimeSchema = z.object({
   endTimeUtc: z.iso.datetime().optional(),
 }).refine(
   (data) => Object.keys(data).length > 0,
-  { message: 'At least one field must be provided for update' }
+  { message: 'At least one field must be provided for update' },
+).refine(
+  (d) => {
+    if (d.startTimeUtc !== undefined && d.endTimeUtc !== undefined) {
+      return new Date(d.endTimeUtc) > new Date(d.startTimeUtc);
+    }
+    return true;
+  },
+  { message: 'endTimeUtc must be after startTimeUtc', path: ['endTimeUtc'] },
 );
 
 export const listBlockedTimeSchema = z.object({
