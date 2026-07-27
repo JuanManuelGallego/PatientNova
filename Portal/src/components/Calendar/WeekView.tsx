@@ -1,17 +1,20 @@
-import { HOUR_HEIGHT, toDateStr, TODAY_STR, DAY_NAMES_ES, layoutDayAppointments } from "./constants";
+import { HOUR_HEIGHT, toDateStr, TODAY_STR, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
 import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
+import { BlockedTimeBlock } from "./BlockedTimeBlock";
 
 export function WeekView({
   weekDays,
   apptByDate,
+  blockedByDate,
   holidayMap,
   loading,
   hourRange,
   onDrillToDay,
   onViewAppt,
   onCreateAt,
+  onSelectBlockedTime,
 }: WeekViewProps) {
   const { hours, firstHour, lastHour } = hourRange;
 
@@ -128,7 +131,12 @@ export function WeekView({
                   ))}
                   <div
                     style={{ position: "absolute", inset: 0, cursor: "pointer" }}
-                    onClick={() => onCreateAt(ds)}
+                    onClick={(e) => {
+                      const y = e.nativeEvent.offsetY;
+                      const hour = firstHour + Math.floor(y / HOUR_HEIGHT);
+                      const d = new Date(ds + "T" + String(hour).padStart(2, "0") + ":00:00");
+                      onCreateAt(d.toISOString());
+                    }}
                     title="Nueva cita"
                   />
                   {positioned.map((p) => (
@@ -144,6 +152,19 @@ export function WeekView({
                         left: `${p.left}%`,
                         width: `calc(${p.width}% - 4px)`,
                         zIndex: 1,
+                      }}
+                    />
+                  ))}
+                  {layoutBlockedTimes(blockedByDate[ ds ] ?? [], firstHour).map((p) => (
+                    <BlockedTimeBlock
+                      key={p.bt.id}
+                      bt={p.bt}
+                      onSelectBlockedTime={onSelectBlockedTime}
+                      style={{
+                        top: p.top,
+                        height: p.height,
+                        left: 0,
+                        right: 0,
                       }}
                     />
                   ))}

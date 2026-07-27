@@ -469,3 +469,23 @@ model MedicalDocument {
   @@index([medicalRecordId])
   @@map("medical_documents")
 }
+
+// ─── Blocked Time ───────────────────────────────────────────────────────────
+
+model BlockedTime {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String
+  description   String?
+  startTimeUtc  DateTime
+  endTimeUtc    DateTime
+
+  isDeleted     Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDeleted, startTimeUtc, endTimeUtc])
+  @@map("blocked_time")
+}
+

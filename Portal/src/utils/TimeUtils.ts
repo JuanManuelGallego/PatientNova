@@ -69,7 +69,8 @@ function fmtRelative(d: string | undefined): string {
     if (abs < 60_000) return "Ahora mismo";
     if (abs < 3_600_000) return `${Math.round(abs / 60_000)} min`;
     if (abs < 86_400_000) return `${Math.round(abs / 3_600_000)} h`;
-    return `${Math.round(abs / 86_400_000)} días`;
+    const days = Math.round(abs / 86_400_000);
+    return days === 1 ? "1 día" : `${days} días`;
 }
 
 function today(): string {

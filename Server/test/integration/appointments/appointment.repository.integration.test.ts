@@ -5,6 +5,7 @@ import { appointmentService } from '../../../src/appointments/appointment.servic
 import { AppointmentNotFoundError, AppointmentConflictError } from '../../../src/appointments/appointment.errors.js';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType, appointmentTimeRange } from '../helpers.js';
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
+import { AppointmentBlockedTimeConflictError } from '../../../src/appointments/appointment.errors.js';
 
 let userId: string;
 let patientId: string;
@@ -172,6 +173,129 @@ describe('appointmentService (integration)', () => {
     const newEnd = new Date(end.getTime() + 15 * 60_000).toISOString();
     const updated = await appointmentService.update(created.id, { endAt: newEnd }, userId);
     expect(updated.id).toBe(created.id);
+  });
+
+  it('rejects appointment creation that overlaps a blocked time slot', async () => {
+    const { start, end } = appointmentTimeRange(120, 30);
+
+    await prisma.blockedTime.create({
+      data: {
+        userId,
+        description: 'Lunch break',
+        startTimeUtc: start,
+        endTimeUtc: end,
+      },
+    });
+
+    await expect(
+      appointmentService.create(baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }), userId),
+    ).rejects.toThrow(AppointmentBlockedTimeConflictError);
+  });
+
+  it('rejects appointment creation when blocked time is partially contained', async () => {
+    const blockStart = new Date(Date.now() + 120 * 60_000);
+    const blockEnd = new Date(blockStart.getTime() + 60 * 60_000);
+
+    await prisma.blockedTime.create({
+      data: { userId, description: 'Meeting', startTimeUtc: blockStart, endTimeUtc: blockEnd },
+    });
+
+    // Appointment starts 30 min before the block and ends 30 min into it
+    const apptStart = new Date(blockStart.getTime() - 30 * 60_000);
+    const apptEnd = new Date(blockStart.getTime() + 30 * 60_000);
+
+    await expect(
+      appointmentService.create(baseCreateDto({ startAt: apptStart.toISOString(), endAt: apptEnd.toISOString() }), userId),
+    ).rejects.toThrow(AppointmentBlockedTimeConflictError);
+  });
+
+  it('allows appointment creation when blocked time does not overlap', async () => {
+    const blockStart = new Date(Date.now() + 120 * 60_000);
+    const blockEnd = new Date(blockStart.getTime() + 30 * 60_000);
+
+    await prisma.blockedTime.create({
+      data: { userId, description: 'Lunch', startTimeUtc: blockStart, endTimeUtc: blockEnd },
+    });
+
+    // Appointment starts after the block ends
+    const apptStart = new Date(blockEnd.getTime() + 10 * 60_000);
+    const apptEnd = new Date(apptStart.getTime() + 30 * 60_000);
+
+    const created = await appointmentService.create(
+      baseCreateDto({ startAt: apptStart.toISOString(), endAt: apptEnd.toISOString() }),
+      userId,
+    );
+    expect(created.id).toBeTruthy();
+  });
+
+  it('ignores deleted blocked time slots for overlap check', async () => {
+    const { start, end } = appointmentTimeRange(120, 30);
+
+    await prisma.blockedTime.create({
+      data: {
+        userId,
+        description: 'Old break',
+        startTimeUtc: start,
+        endTimeUtc: end,
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    const created = await appointmentService.create(
+      baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }),
+      userId,
+    );
+    expect(created.id).toBeTruthy();
+  });
+
+  it('rejects appointment update that moves into a blocked time slot', async () => {
+    const { start, end } = appointmentTimeRange(120, 30);
+    const created = await appointmentService.create(baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }), userId);
+
+    // Create a blocked time slot in the future
+    const blockStart = new Date(Date.now() + 300 * 60_000);
+    const blockEnd = new Date(blockStart.getTime() + 60 * 60_000);
+    await prisma.blockedTime.create({
+      data: { userId, description: 'Vacation', startTimeUtc: blockStart, endTimeUtc: blockEnd },
+    });
+
+    await expect(
+      appointmentService.update(created.id, { startAt: blockStart.toISOString(), endAt: blockEnd.toISOString() }, userId),
+    ).rejects.toThrow(AppointmentBlockedTimeConflictError);
+  });
+
+  it('allows appointment update when time change does not overlap blocked time', async () => {
+    const { start, end } = appointmentTimeRange(120, 30);
+    const created = await appointmentService.create(baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }), userId);
+
+    // Blocked time far in the future — no overlap with the appointment
+    const blockStart = new Date(Date.now() + 600 * 60_000);
+    const blockEnd = new Date(blockStart.getTime() + 30 * 60_000);
+    await prisma.blockedTime.create({
+      data: { userId, description: 'Workshop', startTimeUtc: blockStart, endTimeUtc: blockEnd },
+    });
+
+    // Update only the price (no time change) — should not trigger blocked time check
+    const updated = await appointmentService.update(created.id, { price: 999 }, userId);
+    expect(updated.price).toBe(999);
+  });
+
+  it('ignores other users blocked time slots', async () => {
+    const otherUser = await createTestUser();
+    const { start, end } = appointmentTimeRange(120, 30);
+
+    // Create blocked time for a different user
+    await prisma.blockedTime.create({
+      data: { userId: otherUser.id, description: 'Other break', startTimeUtc: start, endTimeUtc: end },
+    });
+
+    // Current user should be able to create an overlapping appointment
+    const created = await appointmentService.create(
+      baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }),
+      userId,
+    );
+    expect(created.id).toBeTruthy();
   });
 });
 

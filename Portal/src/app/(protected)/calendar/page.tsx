@@ -3,13 +3,16 @@ import { useState } from "react";
 import { Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
+import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
 import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
+import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment } from "@/src/types/Appointment";
+import { BlockedTime } from "@/src/types/BlockedTime";
 import { todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "@/src/components/Calendar/types";
 import { useCalendarNavigation } from "@/src/components/Calendar/useCalendarNavigation";
@@ -43,7 +46,10 @@ function CalendarContent() {
   const { appointments, loading, fetchAppointments } =
     useFetchAppointments(calendarFilters);
 
-  const { rows, weekDays, apptByDate, holidayMap, cellDate, navLabel, hourRange } =
+  const { blockedTimes, loading: loadingBlocked, fetchBlockedTimes } =
+    useFetchBlockedTimes(calendarFilters);
+
+  const { rows, weekDays, apptByDate, blockedByDate, holidayMap, cellDate, navLabel, hourRange } =
     useCalendarData({
       calYear,
       calMonth,
@@ -51,6 +57,7 @@ function CalendarContent() {
       dayDate,
       viewMode,
       appointments,
+      blockedTimes,
     });
 
   const [ showCreate, setShowCreate ] = useState(false);
@@ -58,6 +65,10 @@ function CalendarContent() {
   const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
   const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
+
+  const [ showCreateBlockedTime, setShowCreateBlockedTime ] = useState(false);
+  const [ editBlockedTime, setEditBlockedTime ] = useState<BlockedTime | null>(null);
+  const [ prefillBlockedDate, setPrefillBlockedDate ] = useState<string | null>(null);
 
   const [ actionError, setActionError ] = useState<string | null>(null);
 
@@ -73,6 +84,7 @@ function CalendarContent() {
   }
 
   const selectedDayAppts = selectedDay ? (apptByDate[ selectedDay ] ?? []) : [];
+  const selectedDayBlocked = selectedDay ? (blockedByDate[ selectedDay ] ?? []) : [];
 
   return (
     <>
@@ -81,12 +93,20 @@ function CalendarContent() {
           title="Agenda"
           subtitle={todayString()}
           actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary btn-hero"
-            >
-              Nueva Cita
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setShowCreateBlockedTime(true)}
+                className="btn-secondary"
+              >
+                Bloquear Horario
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary btn-hero"
+              >
+                Nueva Cita
+              </button>
+            </div>
           }
         />
         {actionError && (
@@ -106,19 +126,22 @@ function CalendarContent() {
               rows={rows}
               cellDate={cellDate}
               apptByDate={apptByDate}
+              blockedByDate={blockedByDate}
               holidayMap={holidayMap}
-              loading={loading}
+              loading={loading || loadingBlocked}
               onSelectDay={setSelectedDay}
               onDrillToDay={drillToDay}
               onViewAppt={setViewAppt}
+              onSelectBlockedTime={setEditBlockedTime}
             />
           )}
           {viewMode === ViewMode.Week && (
             <WeekView
               weekDays={weekDays}
               apptByDate={apptByDate}
+              blockedByDate={blockedByDate}
               holidayMap={holidayMap}
-              loading={loading}
+              loading={loading || loadingBlocked}
               hourRange={hourRange}
               onDrillToDay={drillToDay}
               onViewAppt={setViewAppt}
@@ -126,20 +149,23 @@ function CalendarContent() {
                 setPrefillDate(date);
                 setShowCreate(true);
               }}
+              onSelectBlockedTime={setEditBlockedTime}
             />
           )}
           {viewMode === ViewMode.Day && (
             <DayView
               dayDate={dayDate}
               apptByDate={apptByDate}
+              blockedByDate={blockedByDate}
               holidayMap={holidayMap}
-              loading={loading}
+              loading={loading || loadingBlocked}
               hourRange={hourRange}
               onViewAppt={setViewAppt}
               onCreateAt={(date) => {
                 setPrefillDate(date);
                 setShowCreate(true);
               }}
+              onSelectBlockedTime={setEditBlockedTime}
             />
           )}
           <CalendarLegend />
@@ -150,12 +176,18 @@ function CalendarContent() {
         <DayPanel
           selectedDay={selectedDay}
           appts={selectedDayAppts}
+          blockedTimes={selectedDayBlocked}
           onClose={() => setSelectedDay(null)}
           onViewAppt={setViewAppt}
           onDrillToDay={drillToDay}
           onCreateAt={(date) => {
             setPrefillDate(date);
             setShowCreate(true);
+          }}
+          onSelectBlockedTime={setEditBlockedTime}
+          onCreateBlockedTime={(date) => {
+            setPrefillBlockedDate(date);
+            setShowCreateBlockedTime(true);
           }}
         />
       )}
@@ -200,6 +232,29 @@ function CalendarContent() {
           appt={deleteAppt}
           onClose={() => setDeleteAppt(null)}
           onCanceled={fetchAppointments}
+        />
+      )}
+      {showCreateBlockedTime && (
+        <BlockedTimeModal
+          prefillDate={prefillBlockedDate}
+          onClose={() => {
+            setShowCreateBlockedTime(false);
+            setPrefillBlockedDate(null);
+          }}
+          onSaved={() => {
+            fetchBlockedTimes();
+            fetchAppointments();
+          }}
+        />
+      )}
+      {editBlockedTime && (
+        <BlockedTimeModal
+          blockedTime={editBlockedTime}
+          onClose={() => setEditBlockedTime(null)}
+          onSaved={() => {
+            fetchBlockedTimes();
+            fetchAppointments();
+          }}
         />
       )}
     </>

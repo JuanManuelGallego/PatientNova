@@ -1,18 +1,22 @@
 import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
+import { BlockedTimeChip } from "./BlockedTimeChip";
 import { DAY_NAMES_ES, TODAY_STR } from "./constants";
 import { MonthViewProps } from "./types";
+import { Appointment } from "@/src/types/Appointment";
 
 export function MonthView({
   rows,
   cellDate,
   apptByDate,
+  blockedByDate,
   holidayMap,
   loading,
   onSelectDay,
   onDrillToDay,
   onViewAppt,
+  onSelectBlockedTime,
 }: MonthViewProps) {
   return (
     <div className="table-scroll" style={{ position: "relative" }}>
@@ -36,6 +40,7 @@ export function MonthView({
             const isToday = date === TODAY_STR;
             const isPast = date !== null && date < TODAY_STR;
             const appts = date ? (apptByDate[ date ] ?? []) : [];
+            const blocked = date ? (blockedByDate[ date ] ?? []) : [];
             const holiday = date ? holidayMap[ date ] : undefined;
             const noRightBorder = (i + 1) % 7 === 0;
             const noBottomBorder = i >= rows * 7 - 7;
@@ -84,10 +89,17 @@ export function MonthView({
                       </div>
                     )}
                     <div className="cal-chips">
-                      {appts.slice(0, 3).map((a) => (
-                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} />
+                      {blocked.slice(0, 2).map((bt) => (
+                        <BlockedTimeChip
+                          key={bt.id}
+                          bt={bt}
+                          onSelectBlockedTime={onSelectBlockedTime}
+                        />
                       ))}
-                      {appts.length > 3 && (
+                      {appts.slice(0, 3).map((a: Appointment) => (
+                        <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} compact/>
+                      ))}
+                      {(appts.length > 3 || blocked.length > 2) && (
                         <button
                           className="cal-overflow-btn"
                           onClick={(e) => {
@@ -95,7 +107,7 @@ export function MonthView({
                             onSelectDay(date);
                           }}
                         >
-                          +{appts.length - 3} más
+                              +{Math.max(0, appts.length - 3) + Math.max(0, blocked.length - 2)} más
                         </button>
                       )}
                     </div>

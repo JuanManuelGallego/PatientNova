@@ -65,6 +65,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             <input
               className="form-input"
               type="email"
+              name="email"
               placeholder="correo@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -79,6 +80,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             <input
               className="form-input"
               type="password"
+              name="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

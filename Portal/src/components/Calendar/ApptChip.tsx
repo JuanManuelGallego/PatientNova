@@ -32,7 +32,7 @@ export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProp
       title={`${a.patient.name} ${a.patient.lastName} — ${a.appointmentLocation.name} — ${cfg.label}`}
     >
       {compact ? (
-        <span style={{ color: cfg.dot, flexShrink: 0 }} title={cfg.label} aria-label={cfg.label}>●</span>
+        <span style={{ color: cfg.dot, flexShrink: 0 }} aria-label={cfg.label}>●</span>
       ) : (
         <span style={{
           background: cfg.bg, color: cfg.color, fontSize: 11,

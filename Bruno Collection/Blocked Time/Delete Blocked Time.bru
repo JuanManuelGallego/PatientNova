@@ -1,0 +1,11 @@
+meta {
+  name: Delete Blocked Time
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/blocked-time/{{blockedTimeId}}
+  body: none
+  auth: none
+}

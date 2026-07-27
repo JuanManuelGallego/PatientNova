@@ -1,0 +1,23 @@
+meta {
+  name: Create Blocked Time
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/blocked-time
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "description": "Lunch break",
+    "startTimeUtc": "2026-07-27T12:00:00.000Z",
+    "endTimeUtc": "2026-07-27T13:00:00.000Z"
+  }
+}

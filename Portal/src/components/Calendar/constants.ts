@@ -1,4 +1,5 @@
 import { addDays, todayFormattedString, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { BlockedTime } from "@/src/types/BlockedTime";
 
 export { DAY_NAMES_ES };
 
@@ -22,7 +23,10 @@ export function getWeekStart(date: Date): Date {
 }
 
 export function toDateStr(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function apptHour(a: import("@/src/types/Appointment").Appointment): number {
@@ -131,6 +135,29 @@ export function layoutDayAppointments(
     left: (col * 100) / maxCol,
     width: 100 / maxCol,
   }));
+}
+
+export interface PositionedBlockedTime {
+  bt: BlockedTime;
+  top: number;
+  height: number;
+}
+
+export function layoutBlockedTimes(
+  blockedTimes: BlockedTime[],
+  firstHour: number,
+): PositionedBlockedTime[] {
+  return blockedTimes.map((bt) => {
+    const s = new Date(bt.startTimeUtc);
+    const e = new Date(bt.endTimeUtc);
+    const startMin = s.getHours() * 60 + s.getMinutes();
+    const endMin = e.getHours() * 60 + e.getMinutes();
+    return {
+      bt,
+      top: ((startMin - firstHour * 60) / 60) * HOUR_HEIGHT,
+      height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, MIN_CHIP_PX),
+    };
+  });
 }
 
 export { addDays };

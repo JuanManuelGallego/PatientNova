@@ -29,3 +29,10 @@ export class AppointmentConflictError extends ApiError {
     super(`Appointment conflicts with an existing appointment between ${startAt} and ${endAt}`, 409)
   }
 }
+
+export class AppointmentBlockedTimeConflictError extends ApiError {
+  constructor(description: string | null, startAt: Date, endAt: Date) {
+    const label = description ? `"${description}"` : 'unnamed blocked slot';
+    super(`Appointment overlaps with blocked time ${label} (${startAt.toISOString()} – ${endAt.toISOString()})`, 409)
+  }
+}

@@ -294,6 +294,80 @@
     margin-bottom: 20px;
 }
 
+/* Blocked time styles in DayPanel */
+.calDayPanelSectionTitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 16px 0 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--c-gray-100);
+}
+
+.calDayPanelBlockedList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.calDayPanelBlockedItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--r-lg);
+    background: var(--c-gray-50);
+    cursor: pointer;
+    transition: background 0.1s;
+    border: 1px solid var(--c-gray-100);
+}
+
+.calDayPanelBlockedItem:hover {
+    background: var(--c-brand-light);
+    border-color: var(--c-brand);
+}
+
+.calDayPanelBlockedDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--c-gray-400);
+    flex-shrink: 0;
+}
+
+.calDayPanelBlockedTime {
+    font-size: 12px;
+    color: var(--c-gray-400);
+    white-space: nowrap;
+}
+
+.calDayPanelBlockedDesc {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-gray-900);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Blocked time block in week/day views */
+.calBlockedBlock {
+    position: absolute;
+    background: var(--c-gray-100);
+    border-left: 3px solid var(--c-gray-400);
+    cursor: pointer;
+    z-index: 0;
+    border-radius: 0 4px 4px 0;
+}
+
+.calBlockedBlock:hover {
+    background: var(--c-gray-200);
+}
+
 /* ================================================================
    Responsive
    ================================================================ */
