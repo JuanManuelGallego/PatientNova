@@ -91,7 +91,7 @@ export const authService = {
     );
 
     return {
-      user: toUserResponse(updatedUser),
+      user: toUserResponse(updatedUser, updatedUser.consentDocument ?? null),
       accessToken,
       refreshToken,
     };

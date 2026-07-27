@@ -15,6 +15,7 @@ interface AuthContextValue {
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     updateUser: (user: User) => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -89,8 +90,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(updated);
     }, []);
 
+    const refreshUser = useCallback(async () => {
+        try {
+            const res = await fetchWithAuth(`${API_BASE}/users/me`, { credentials: "include" });
+            if (res.ok) {
+                const json: ApiResponse = await res.json();
+                if (json.success) setUser(json.data as User);
+            }
+        } catch {
+            // Silently ignore — user data stays as-is
+        }
+    }, []);
+
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: user !== null, initializing, loading, error, login, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, isAuthenticated: user !== null, initializing, loading, error, login, logout, updateUser, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

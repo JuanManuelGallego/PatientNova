@@ -6,7 +6,7 @@ import {
   PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { RequiredField } from "../Info/Required";
 import { CountryCodeInput } from "../CountryCodeInput";
@@ -35,7 +35,7 @@ export function PatientModal({
 }) {
   const isEdit = !!patient;
   const { notify } = useNotify();
-  const { user } = useAuthContext();
+  const { user, refreshUser } = useAuthContext();
   const { createPatient } = useCreatePatient();
   const { updatePatient } = useUpdatePatient();
   const { appointmentTypes } = useFetchAppointmentTypes();
@@ -44,6 +44,11 @@ export function PatientModal({
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
   const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
+  const [ refreshing, setRefreshing ] = useState(false);
+
+  useEffect(() => {
+    refreshUser();
+  }, [ refreshUser ]);
 
   const [ form, setForm ] = useState({
     name: patient?.name ?? "",
@@ -225,33 +230,65 @@ export function PatientModal({
               />
             </label>
           </div>
-          {!isEdit && canSendWelcome && (
-            <div>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  paddingBottom: 4,
-                  userSelect: "none",
-                  cursor:
-                    !form.whatsappNumber && !form.smsNumber
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: !form.whatsappNumber && !form.smsNumber ? 0.5 : 1,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={sendWelcomeMessage}
-                  onChange={(e) => setSendWelcomeMessage(e.target.checked)}
-                  disabled={!form.whatsappNumber && !form.smsNumber}
-                  style={{ width: 15, height: 15 }}
-                />
-                <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
-              </label>
-            </div>
+          {!isEdit && (
+            canSendWelcome ? (
+              <div>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 13,
+                    paddingBottom: 4,
+                    userSelect: "none",
+                    cursor:
+                      !form.whatsappNumber && !form.smsNumber
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity: !form.whatsappNumber && !form.smsNumber ? 0.5 : 1,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={sendWelcomeMessage}
+                    onChange={(e) => setSendWelcomeMessage(e.target.checked)}
+                    disabled={!form.whatsappNumber && !form.smsNumber}
+                    style={{ width: 15, height: 15 }}
+                  />
+                  <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
+                </label>
+              </div>
+            ) : (
+              <div className="info-banner" style={{ fontSize: 13 }}>
+                <STATUS_ICONS.info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>
+                  Completa tu perfil (datos bancarios, identificación y consentimiento)
+                  en Configuración para poder enviar mensajes de bienvenida.
+                </span>
+                <button
+                  type="button"
+                  disabled={refreshing}
+                  onClick={async () => {
+                    setRefreshing(true);
+                    try { await refreshUser(); } finally { setRefreshing(false); }
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 4,
+                    cursor: refreshing ? "wait" : "pointer",
+                    color: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    flexShrink: 0,
+                    opacity: refreshing ? 0.5 : 1,
+                  }}
+                  title="Recargar perfil"
+                >
+                  <ACTION_ICONS.retry size={14} className={refreshing ? "animate-spin" : ""} />
+                </button>
+              </div>
+            )
           )}
           <label className="form-label">
             Tipo de citas
