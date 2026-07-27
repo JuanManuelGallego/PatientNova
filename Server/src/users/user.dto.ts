@@ -15,36 +15,41 @@ export type UserResponse = Prisma.UserGetPayload<{ select: typeof userInclude }>
  * Useful in auth handlers that already hold the full user record in memory and want to
  * avoid a second `SELECT` with a `select` clause.
  */
-export function toUserResponse(user: Parameters<typeof _extractFields>[ 0 ]): UserResponse {
-  return _extractFields(user);
+export function toUserResponse(
+  user: Parameters<typeof _extractFields>[ 0 ],
+  consentDocument: UserResponse[ 'consentDocument' ] = null,
+): UserResponse {
+  return _extractFields(user, consentDocument);
 }
 
-function _extractFields(user: {
-  id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  avatar: string | null;
-  logo: string | null;
-  altLogo: string | null;
-  jobTitle: string | null;
-  role: string;
-  status: string;
-  timezone: string;
-  lastLoginAt: Date | null;
-  reminderActive: boolean;
-  reminderChannel: string | null;
-  phoneNumber: string | null;
-  whatsappNumber: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  bankName: string | null;
-  accountNumber: string | null;
-  nationalId: string | null;
-  bankingKey: string | null;
-
-}): UserResponse {
+function _extractFields(
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string | null;
+    avatar: string | null;
+    logo: string | null;
+    altLogo: string | null;
+    jobTitle: string | null;
+    role: string;
+    status: string;
+    timezone: string;
+    lastLoginAt: Date | null;
+    reminderActive: boolean;
+    reminderChannel: string | null;
+    phoneNumber: string | null;
+    whatsappNumber: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    bankName: string | null;
+    accountNumber: string | null;
+    nationalId: string | null;
+    bankingKey: string | null;
+  },
+  consentDocument: UserResponse[ 'consentDocument' ] = null,
+): UserResponse {
   return {
     id: user.id,
     email: user.email,
@@ -69,6 +74,6 @@ function _extractFields(user: {
     accountNumber: user.accountNumber,
     nationalId: user.nationalId,
     bankingKey: user.bankingKey,
-    consentDocument: null, // to be filled in by caller if needed
+    consentDocument,
   };
 }
