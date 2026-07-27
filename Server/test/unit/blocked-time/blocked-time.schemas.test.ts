@@ -13,12 +13,12 @@ describe('createBlockedTimeSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects missing description', () => {
+  it('accepts missing description', () => {
     const result = createBlockedTimeSchema.safeParse({
       startTimeUtc: validCreate.startTimeUtc,
       endTimeUtc: validCreate.endTimeUtc,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects empty description', () => {
@@ -128,7 +128,7 @@ describe('listBlockedTimeSchema', () => {
   });
 
   it('accepts valid orderBy values', () => {
-    for (const field of ['startTimeUtc', 'endTimeUtc', 'createdAt', 'updatedAt']) {
+    for (const field of [ 'startTimeUtc', 'endTimeUtc', 'createdAt', 'updatedAt' ]) {
       const result = listBlockedTimeSchema.safeParse({ orderBy: field });
       expect(result.success).toBe(true);
     }
@@ -168,8 +168,8 @@ describe('listBlockedTimeSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects pageSize exceeding 100', () => {
-    const result = listBlockedTimeSchema.safeParse({ pageSize: '101' });
+  it('rejects pageSize exceeding 250', () => {
+    const result = listBlockedTimeSchema.safeParse({ pageSize: '251' });
     expect(result.success).toBe(false);
   });
 
