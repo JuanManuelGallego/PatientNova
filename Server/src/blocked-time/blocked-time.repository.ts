@@ -46,7 +46,7 @@ export const blockedTimeRepository = {
         where,
         skip,
         take: pageSize,
-        orderBy: { [orderBy]: order },
+        orderBy: { [ orderBy ]: order },
       }),
       prisma.blockedTime.count({ where }),
       page,
@@ -59,7 +59,7 @@ export const blockedTimeRepository = {
 
     const data = buildUpdateData(
       dto,
-      ['description', 'startTimeUtc', 'endTimeUtc'],
+      [ 'description', 'startTimeUtc', 'endTimeUtc' ],
     );
 
     return prisma.blockedTime.update({

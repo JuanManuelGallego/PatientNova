@@ -26,7 +26,7 @@ export function BlockedTimeChip({ bt, onSelectBlockedTime, style }: BlockedTimeC
         title="Horario bloqueado"
       />
       {" "}
-      {fmtTime(bt.startTimeUtc)} {bt.description || "Bloqueado"}
+      {fmtTime(bt.startTimeUtc)} {bt.description?.trim() || "Bloqueado"}
     </div>
   );
 }

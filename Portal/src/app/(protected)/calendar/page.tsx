@@ -8,7 +8,6 @@ import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
-import { DeleteBlockedTimeModal } from "@/src/components/Modals/DeleteBlockedTimeModal";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
@@ -69,7 +68,6 @@ function CalendarContent() {
 
   const [ showCreateBlockedTime, setShowCreateBlockedTime ] = useState(false);
   const [ editBlockedTime, setEditBlockedTime ] = useState<BlockedTime | null>(null);
-  const [ deleteBlockedTime, setDeleteBlockedTime ] = useState<BlockedTime | null>(null);
   const [ prefillBlockedDate, setPrefillBlockedDate ] = useState<string | null>(null);
 
   const [ actionError, setActionError ] = useState<string | null>(null);
@@ -254,16 +252,6 @@ function CalendarContent() {
           blockedTime={editBlockedTime}
           onClose={() => setEditBlockedTime(null)}
           onSaved={() => {
-            fetchBlockedTimes();
-            fetchAppointments();
-          }}
-        />
-      )}
-      {deleteBlockedTime && (
-        <DeleteBlockedTimeModal
-          blockedTime={deleteBlockedTime}
-          onClose={() => setDeleteBlockedTime(null)}
-          onDeleted={() => {
             fetchBlockedTimes();
             fetchAppointments();
           }}

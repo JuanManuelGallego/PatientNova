@@ -14,7 +14,7 @@ export function DeleteAppointmentTypeModal({
   onDeactivated: () => void;
 }) {
   const { deleteAppointmentType, loading } = useDeleteAppointmentType();
-  const [error, setError] = useState<string | null>(null);
+  const [ error, setError ] = useState<string | null>(null);
 
   async function handleConfirm() {
     setError(null);

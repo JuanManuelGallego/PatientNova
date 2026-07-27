@@ -14,6 +14,7 @@ import {
 } from "@/src/constants/ui";
 import { RequiredField } from "../Info/Required";
 import { DateTimePicker } from "../DateTimePicker";
+import { useDeleteBlockedTime } from "@/src/api/blocked-time";
 
 function toLocalISOString(date: Date): string {
   const y = date.getFullYear();
@@ -62,11 +63,13 @@ export function BlockedTimeModal({
     useFocusTrap<HTMLDivElement>(onClose);
   const { createBlockedTime } = useCreateBlockedTime();
   const { updateBlockedTime } = useUpdateBlockedTime();
-  const firstInputRef = useRef<HTMLInputElement>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { deleteBlockedTime } = useDeleteBlockedTime();
 
-  const [form, setForm] = useState<BlockedTimeForm>({
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const [ saving, setSaving ] = useState(false);
+  const [ error, setError ] = useState<string | null>(null);
+
+  const [ form, setForm ] = useState<BlockedTimeForm>({
     description: blockedTime?.description || "",
     startTimeUtc: blockedTime
       ? toLocalISOString(new Date(blockedTime.startTimeUtc))
@@ -82,8 +85,8 @@ export function BlockedTimeModal({
 
   const setField =
     (field: keyof BlockedTimeForm) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
+      (e: React.ChangeEvent<HTMLInputElement>) =>
+        setForm((f) => ({ ...f, [ field ]: e.target.value }));
 
   function validate(): boolean {
     if (!form.startTimeUtc || !form.endTimeUtc) return false;
@@ -130,6 +133,18 @@ export function BlockedTimeModal({
       setError(err instanceof Error ? err.message : ERR_SAVE);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setError(null);
+    try {
+      if (isEdit && blockedTime) {
+        await deleteBlockedTime(blockedTime.id);
+      }
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
     }
   }
 
@@ -183,7 +198,7 @@ export function BlockedTimeModal({
             />
           </label>
           <label className="form-label">
-            <RequiredField label={"Fecha y hora de inicio"}/>
+            <RequiredField label={"Fecha y hora de inicio"} />
             <DateTimePicker
               isFuture
               showTime
@@ -202,7 +217,7 @@ export function BlockedTimeModal({
             />
           </label>
           <label className="form-label">
-            <RequiredField label={"Fecha y hora de fin"}/>
+            <RequiredField label={"Fecha y hora de fin"} />
             <DateTimePicker
               isFuture
               showTime
@@ -222,6 +237,14 @@ export function BlockedTimeModal({
           </label>
 
           <div className="modal-footer">
+            {isEdit && (
+              <button
+                onClick={handleDelete}
+                className="btn-action-delete"
+              >
+                <ACTION_ICONS.close size={14} />
+              </button>)
+            }
             <button
               type="button"
               className="btn-secondary"
