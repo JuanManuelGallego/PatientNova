@@ -74,7 +74,7 @@ export const blockedTimeRepository = {
   },
 
   async restore(id: string, userId: string): Promise<BlockedTime> {
-    await blockedTimeRepository.findById(id, userId);
+    await blockedTimeRepository.findById(id, userId, true);
     return restore(prisma.blockedTime, id, userId) as Promise<BlockedTime>;
   },
 
