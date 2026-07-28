@@ -5,8 +5,12 @@ import { useEffect, useRef, useCallback } from "react";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+let openCount = 0;
+let savedScrollY = 0;
+
 /**
  * Traps focus within a container and restores focus on unmount.
+ * Also locks body scrolling while any modal is open.
  * Attach the returned ref to the modal/drawer panel element.
  */
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
@@ -24,7 +28,27 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const first = el.querySelector<HTMLElement>(FOCUSABLE);
     first?.focus();
 
+    if (openCount === 0) {
+      savedScrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+    }
+    openCount++;
+
     return () => {
+      openCount--;
+      if (openCount === 0) {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.overflow = "";
+        window.scrollTo(0, savedScrollY);
+      }
+
       if (previousFocus.current instanceof HTMLElement) {
         previousFocus.current.focus();
       }

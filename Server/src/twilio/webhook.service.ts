@@ -80,9 +80,6 @@ export class TwilioWebhookService {
                 channel: Channel.WHATSAPP,
                 sentAt: { lte: new Date() },
                 appointmentId: { not: null },
-                appointment: {
-                    status: { in: [ AppointmentStatus.SCHEDULED ] },
-                },
             },
             orderBy: { sendAt: 'desc' },
             include: { appointment: true },
@@ -159,22 +156,16 @@ export class TwilioWebhookService {
             // Fetch appointment with related patient and user in a single query
             const appointment = await prisma.appointment.findUnique({
                 where: { id: appointmentId },
-                include: {
-                    patient: {
-                        include: {
-                            user: true,
-                        },
-                    },
-                },
+                include: {patient: true, user: true}
             });
 
             // Validate data exists and has required fields
-            if (!appointment?.patient?.user) {
+            if (!appointment) {
                 logger.warn({ appointmentId }, 'Could not find appointment with related patient and user');
                 return;
             }
 
-            const { patient, patient: { user } } = appointment;
+            const { patient, user } = appointment;
 
             if (!user.reminderActive) {
                 logger.info({ userId: user.id }, 'User does not have a notifications enabled');

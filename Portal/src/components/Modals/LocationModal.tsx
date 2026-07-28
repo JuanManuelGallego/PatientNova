@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { useCreateLocation } from "@/src/api/locations/useCreateLocation";
 import { useUpdateLocation } from "@/src/api/locations/useUpdateLocation";
 import {
@@ -31,7 +32,7 @@ export function LocationModal({
   const { updateLocation } = useUpdateLocation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const firstInputRef = useRef<HTMLInputElement>(null);
+  const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(onClose);
 
   const [form, setForm] = useState<AppointmentLocationForm>({
     name: location?.name ?? "",
@@ -40,10 +41,6 @@ export function LocationModal({
     isVirtual: location?.isVirtual ?? false,
     instructions: location?.instructions ?? "",
   });
-
-  useEffect(() => {
-    setTimeout(() => firstInputRef.current?.focus(), 50);
-  }, []);
 
   const setField =
     (field: keyof AppointmentLocationForm) =>
@@ -77,8 +74,9 @@ export function LocationModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
       <div
+        ref={ref}
         className="modal-panel modal-panel--sm"
         onClick={(e) => e.stopPropagation()}
       >
@@ -108,7 +106,6 @@ export function LocationModal({
           <label className="form-label">
             <RequiredField label="Nombre" />
             <input
-              ref={firstInputRef}
               className="form-input"
               value={form.name}
               onChange={setField("name")}
