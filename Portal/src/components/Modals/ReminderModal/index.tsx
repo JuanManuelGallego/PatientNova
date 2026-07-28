@@ -11,6 +11,7 @@ import { getUserName } from "@/src/utils/AvatarHelper";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useState, useMemo } from "react";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -65,6 +66,7 @@ export function ReminderModal({
   });
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
+  const { patient: fullPatient } = useFetchPatient(form.patientId);
   const selectedTemplate = TWILIO_CONFIG[form.selectedTemplate];
 
   const { appointments: patientAppointments } = useFetchAppointments(
@@ -112,6 +114,7 @@ export function ReminderModal({
       getUserName(user),
       undefined,
       user,
+      patient?.appointmentType,
     );
     setForm((f) => ({
       ...f,
@@ -129,6 +132,7 @@ export function ReminderModal({
       getUserName(user),
       selectedAppointment,
       user,
+      selectedAppointment?.appointmentType ?? fullPatient?.appointmentType,
     );
     setForm((f) => ({
       ...f,
@@ -150,6 +154,7 @@ export function ReminderModal({
       getUserName(user),
       appt,
       user,
+      appt.appointmentType ?? fullPatient?.appointmentType,
     );
     setForm((f) => ({
       ...f,

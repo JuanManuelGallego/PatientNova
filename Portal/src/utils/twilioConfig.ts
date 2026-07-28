@@ -10,7 +10,9 @@ export type TemplateVariableAutoFill =
   | "appointmentTime"
   | "meetingUrl"
   | "locationAddress"
-  | "locationInstructions";
+  | "locationInstructions"
+  | "price"
+  | "userId";
 
 export type TemplateVariable = {
   key: string;
@@ -53,7 +55,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
     },
     PATIENT_WELCOME_MESSAGE: {
         label: "Mensaje de bienvenida",
-        contentSid: "HXa6667901ee5cee0fb1671e4e8f7f6f46",
+        contentSid: "HX5e1bff9b1e1afccb0602456fca397773",
         template: "¡Hola {{1}}! Te damos la bienvenida a Patient Nova, la plataforma de recordatorios de citas de {{2}}. A través de este canal, podrás confirmar o cancelar tus próximas citas de forma rápida. Te recordamos que el pago de la consulta se realiza antes de asistir a tu cita. Banco: {{3}} Número de cuenta: {{4}} A nombre de: {{5}} Cédula: {{6}} Llave: {{7}} Por favor, descarga y completa este documento de consentimiento adjunto en este mensaje antes de tu primera consulta. ¡Muchas gracias!",
         variables: [
             { key: "1", label: "Nombre del paciente", autoFill: "patientName" },
@@ -63,7 +65,32 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "5", label: "A nombre de", autoFill: "accountHolder" },
             { key: "6", label: "Cédula", autoFill: "nationalId" },
             { key: "7", label: "Llave", autoFill: "bankingKey" },
+            { key: "8", label: "UserId", autoFill: "userId" },
         ],
+    },
+    PATIENT_CONSENT_DOCUMENT:{
+        label: "Documento de consentimiento",
+        contentSid: "HX6950531b8abc3a822cedd8d9578e5383",
+        template: "¡Hola {{1}}! Por favor, descarga y completa este documento de consentimiento adjunto en este mensaje antes de tu proxima consulta con {{2}}. ¡Muchas gracias!",
+        variables: [
+            { key: "1", label: "Nombre del paciente", autoFill: "patientName" },
+            { key: "2", label: "Doctor", autoFill: "doctorName" },
+            { key: "3", label: "UserId", autoFill: "userId" },
+        ]
+    },
+    PATIENT_PAYMENT_REMINDER:{
+        label: "Recordatorio de pago",
+        contentSid: "HX27fd3f66ca6dfef0e59c19f16d381032",
+        template: "¡Hola {{1}}! Te recordamos que tienes un pago pendiente de ${{2}}. Puedes cancelar con los datos siguientes: Banco: {{3}} Número de cuenta:  {{4}} A nombre de: {{5}} Cédula: {{6}} Llave: {{7}} ¡Muchas gracias!",
+        variables: [
+            { key: "1", label: "Nombre del paciente", autoFill: "patientName" },
+            { key: "2", label: "Precio", autoFill: "price" },
+            { key: "3", label: "Banco", autoFill: "bankName" },
+            { key: "4", label: "Número de cuenta", autoFill: "accountNumber" },
+            { key: "5", label: "A nombre de", autoFill: "accountHolder" },
+            { key: "6", label: "Cédula", autoFill: "nationalId" },
+            { key: "7", label: "Llave", autoFill: "bankingKey" },
+        ]
     },
 };
 

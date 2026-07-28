@@ -1,4 +1,4 @@
-import { Appointment } from "@/src/types/Appointment";
+import { Appointment, AppointmentType } from "@/src/types/Appointment";
 import { User } from "@/src/types/User";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import {
@@ -12,10 +12,11 @@ export function computeAutoFilledVariables(
   doctorName: string,
   appointment?: Appointment | null,
   user?: User | null,
+  appointmentType?: AppointmentType | null,
 ): Record<string, string> {
   const vars: Record<string, string> = {};
   for (const v of template.variables) {
-    vars[v.key] = resolveAutoFill(v.autoFill, patientName, doctorName, appointment, user);
+    vars[v.key] = resolveAutoFill(v.autoFill, patientName, doctorName, appointment, user, appointmentType);
   }
   return vars;
 }
@@ -26,6 +27,7 @@ function resolveAutoFill(
   doctorName: string,
   appointment?: Appointment | null,
   user?: User | null,
+  appointmentType?: AppointmentType | null,
 ): string {
   switch (autoFill) {
     case "patientName":
@@ -52,6 +54,13 @@ function resolveAutoFill(
       return user?.nationalId ?? "";
     case "bankingKey":
       return user?.bankingKey ?? "";
+    case "price": {
+      console.log("price", appointment?.price, appointmentType?.defaultPrice)
+      const price = appointment?.price ?? appointmentType?.defaultPrice;
+      return price != null ? String(price) : "";
+    }
+    case "userId":
+      return user?.id ?? "";
     default:
       return "";
   }

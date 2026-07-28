@@ -13,6 +13,7 @@ type PatientWithRelations = Patient & {
   appointments: { id: string }[];
   reminders: { id: string }[];
   medicalRecord: { id: string } | null;
+  appointmentType: { id: string; name: string; defaultPrice: number | null } | null;
 };
 
 export const patientRepository = {
@@ -68,7 +69,12 @@ export const patientRepository = {
   async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
     const patient = await prisma.patient.findFirst({
       where: { id, userId },
-      include: { appointments: true, reminders: true, medicalRecord: true },
+      include: {
+        appointments: true,
+        reminders: true,
+        medicalRecord: true,
+        appointmentType: { select: { id: true, name: true, defaultPrice: true } },
+      },
     });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;

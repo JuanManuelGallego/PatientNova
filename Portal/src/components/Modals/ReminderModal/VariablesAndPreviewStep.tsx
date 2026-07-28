@@ -48,13 +48,15 @@ export function VariablesAndPreviewStep({
           </span>
         </label>
       )}
-      {selectedTemplate.variables.length > 0 && (
+      {selectedTemplate.variables.filter((v) => v.autoFill !== "userId").length > 0 && (
         <div>
           <div className="channel-section-label">
             Variables de la plantilla
           </div>
           <div className="form-grid-2">
-            {selectedTemplate.variables.map((v) => (
+            {selectedTemplate.variables
+              .filter((v) => v.autoFill !== "userId")
+              .map((v) => (
               <label key={v.key} className="form-label">
                 {v.label}
                 <input
