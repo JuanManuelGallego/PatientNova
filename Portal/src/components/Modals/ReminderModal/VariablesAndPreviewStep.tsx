@@ -18,6 +18,10 @@ export function VariablesAndPreviewStep({
   selectedTemplate: TwilioTemplate;
   preview: string;
 }) {
+  const userEditableVariables = selectedTemplate.variables.filter(
+    (v) => v.autoFill !== "userId",
+  );
+
   return (
     <div className="form-stack">
       <label className="form-label">
@@ -48,15 +52,13 @@ export function VariablesAndPreviewStep({
           </span>
         </label>
       )}
-      {selectedTemplate.variables.filter((v) => v.autoFill !== "userId").length > 0 && (
+      {userEditableVariables.length > 0 && (
         <div>
           <div className="channel-section-label">
             Variables de la plantilla
           </div>
           <div className="form-grid-2">
-            {selectedTemplate.variables
-              .filter((v) => v.autoFill !== "userId")
-              .map((v) => (
+            {userEditableVariables.map((v) => (
               <label key={v.key} className="form-label">
                 {v.label}
                 <input
@@ -68,7 +70,7 @@ export function VariablesAndPreviewStep({
                       ...f,
                       contentVariables: {
                         ...f.contentVariables,
-                        [ v.key ]: e.target.value,
+                        [v.key]: e.target.value,
                       },
                     }))
                   }

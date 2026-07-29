@@ -49,7 +49,7 @@ export type ReminderForm = {
   sendAt: string;
   selectedTemplate: string;
   contentVariables: Record<string, string>;
-  appointmentId?: string;
+  appointmentId: string;
 };
 
 export enum ReminderStatus {

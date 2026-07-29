@@ -55,7 +55,6 @@ function resolveAutoFill(
     case "bankingKey":
       return user?.bankingKey ?? "";
     case "price": {
-      console.log("price", appointment?.price, appointmentType?.defaultPrice)
       const price = appointment?.price ?? appointmentType?.defaultPrice;
       return price != null ? String(price) : "";
     }
@@ -82,4 +81,22 @@ export function selectTemplateForAppointment(appointment: Appointment): string {
     return "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL";
   }
   return "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL";
+}
+
+export function buildAutoFilledFormVariables(
+  template: TwilioTemplate,
+  patientName: string,
+  doctorName: string,
+  appointment?: Appointment | null,
+  user?: User | null,
+  appointmentType?: AppointmentType | null,
+): Record<string, string> {
+  return computeAutoFilledVariables(template, patientName, doctorName, appointment, user, appointmentType);
+}
+
+export function mergeContentVariables(
+  current: Record<string, string>,
+  autoFilled: Record<string, string>,
+): Record<string, string> {
+  return { ...current, ...autoFilled };
 }

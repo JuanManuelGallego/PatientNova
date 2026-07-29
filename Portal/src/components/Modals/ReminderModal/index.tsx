@@ -6,7 +6,7 @@ import {
   Channel,
   ReminderForm,
 } from "@/src/types/Reminder";
-import { DEFAULT_APPT_STATUS } from "@/src/types/Appointment";
+import { DEFAULT_APPT_STATUS, Appointment, AppointmentType } from "@/src/types/Appointment";
 import { getUserName } from "@/src/utils/AvatarHelper";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useState, useMemo } from "react";
@@ -55,14 +55,14 @@ export function ReminderModal({
 
   const defaultTemplate = "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL";
 
-  const [ form, setForm ] = useState<ReminderForm>({
+const [ form, setForm ] = useState<ReminderForm>({
     patientId: "",
     channel: channel ?? Channel.WHATSAPP,
     message: "",
     sendAt: "",
     selectedTemplate: defaultTemplate,
     contentVariables: {},
-    appointmentId: undefined,
+    appointmentId: "",
   });
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
@@ -105,33 +105,37 @@ export function ReminderModal({
   const set: SetField = (field) => (e) =>
     setForm((f) => ({ ...f, [ field ]: e.target.value }));
 
+  function computeAutoFill(
+    templateKey: string,
+    appointment?: Appointment | null,
+    appointmentType?: AppointmentType | null,
+  ) {
+    const tmpl = TWILIO_CONFIG[templateKey];
+    return computeAutoFilledVariables(
+      tmpl,
+      selectedPatient?.name ?? "",
+      getUserName(user),
+      appointment,
+      user,
+      appointmentType,
+    );
+  }
+
   function handlePatientChange(patientId: string) {
     const patient = patients.find((p) => p.id === patientId);
-    const tmpl = TWILIO_CONFIG[form.selectedTemplate];
-    const autoFilled = computeAutoFilledVariables(
-      tmpl,
-      patient?.name ?? "",
-      getUserName(user),
-      undefined,
-      user,
-      patient?.appointmentType,
-    );
+    const autoFilled = computeAutoFill(form.selectedTemplate, undefined, patient?.appointmentType);
     setForm((f) => ({
       ...f,
       patientId,
-      appointmentId: undefined,
+      appointmentId: "",
       contentVariables: autoFilled,
     }));
   }
 
   function handleTemplateChange(templateKey: string) {
-    const tmpl = TWILIO_CONFIG[templateKey];
-    const autoFilled = computeAutoFilledVariables(
-      tmpl,
-      selectedPatient?.name ?? "",
-      getUserName(user),
+    const autoFilled = computeAutoFill(
+      templateKey,
       selectedAppointment,
-      user,
       selectedAppointment?.appointmentType ?? fullPatient?.appointmentType,
     );
     setForm((f) => ({
@@ -147,13 +151,9 @@ export function ReminderModal({
     if (!appt) return;
 
     const newTemplateKey = selectTemplateForAppointment(appt);
-    const tmpl = TWILIO_CONFIG[newTemplateKey];
-    const autoFilled = computeAutoFilledVariables(
-      tmpl,
-      selectedPatient?.name ?? "",
-      getUserName(user),
+    const autoFilled = computeAutoFill(
+      newTemplateKey,
       appt,
-      user,
       appt.appointmentType ?? fullPatient?.appointmentType,
     );
     setForm((f) => ({
