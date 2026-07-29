@@ -33,7 +33,7 @@ export function FocusTrapProvider({ children }: { children: ReactNode }) {
     return id;
   }, []);
 
-  const unregister = useCallback((_id: number) => {
+  const unregister = useCallback(() => {
     setOpenCount((c) => {
       const next = c - 1;
       if (next === 0) {
