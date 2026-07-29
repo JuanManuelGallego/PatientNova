@@ -13,7 +13,7 @@ interface FocusTrapContextValue {
 const FocusTrapContext = createContext<FocusTrapContextValue | null>(null);
 
 export function FocusTrapProvider({ children }: { children: ReactNode }) {
-  const [openCount, setOpenCount] = useState(0);
+  const [, setOpenCount] = useState(0);
   const savedScrollYRef = useRef(0);
   const idCounter = useRef(0);
 
@@ -33,7 +33,7 @@ export function FocusTrapProvider({ children }: { children: ReactNode }) {
     return id;
   }, []);
 
-  const unregister = useCallback((id: number) => {
+  const unregister = useCallback((_id: number) => {
     setOpenCount((c) => {
       const next = c - 1;
       if (next === 0) {

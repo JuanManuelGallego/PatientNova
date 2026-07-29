@@ -4,9 +4,11 @@ import {
   buildPreview,
   selectTemplateForAppointment,
 } from "@/src/components/Modals/ReminderModal/utils";
-import { TwilioTemplate } from "@/src/utils/twilioConfig";
-import { Appointment, AppointmentType } from "@/src/types/Appointment";
-import { User } from "@/src/types/User";
+import { TwilioTemplate, TemplateVariableAutoFill } from "@/src/utils/twilioConfig";
+import { Appointment, AppointmentType, AppointmentLocation, AppointmentStatus } from "@/src/types/Appointment";
+import { AdminRole, AdminStatus, User } from "@/src/types/User";
+import { Patient } from "@/src/types/Patient";
+import { Channel } from "@/src/types/Reminder";
 
 function makeTemplate(variables: TwilioTemplate["variables"]): TwilioTemplate {
   return {
@@ -28,11 +30,11 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
     price: 100000,
     currency: "COP",
     paid: false,
-    status: "SCHEDULED",
+    status: AppointmentStatus.SCHEDULED,
     patientId: "patient-1",
-    patient: {} as any,
-    appointmentLocation: {} as any,
-    appointmentType: {} as any,
+    patient: {} as Patient,
+    appointmentLocation: {} as AppointmentLocation,
+    appointmentType: {} as AppointmentType,
     ...overrides,
   };
 }
@@ -48,11 +50,11 @@ function makeUser(overrides: Partial<User> = {}): User {
     logo: "",
     altLogo: "",
     jobTitle: "",
-    role: "ADMIN",
-    status: "ACTIVE",
+    role: AdminRole.ADMIN,
+    status: AdminStatus.ACTIVE,
     timezone: "America/Bogota",
     reminderActive: true,
-    reminderChannel: "WHATSAPP",
+    reminderChannel: Channel.WHATSAPP,
     ...overrides,
   };
 }
@@ -124,7 +126,7 @@ describe("computeAutoFilledVariables", () => {
       { key: "1", label: "Address", autoFill: "locationAddress" },
     ]);
     const appt = makeAppointment({
-      appointmentLocation: { address: "Calle 123" } as any,
+      appointmentLocation: { id: "loc-1", name: "Office", address: "Calle 123", isVirtual: false, isActive: true },
     });
     const result = computeAutoFilledVariables(tmpl, "", "", appt);
     expect(result["1"]).toBe("Calle 123");
@@ -135,7 +137,7 @@ describe("computeAutoFilledVariables", () => {
       { key: "1", label: "Instructions", autoFill: "locationInstructions" },
     ]);
     const appt = makeAppointment({
-      appointmentLocation: { instructions: "Piso 3" } as any,
+      appointmentLocation: { id: "loc-1", name: "Office", instructions: "Piso 3", isVirtual: false, isActive: true },
     });
     const result = computeAutoFilledVariables(tmpl, "", "", appt);
     expect(result["1"]).toBe("Piso 3");
@@ -199,7 +201,7 @@ describe("computeAutoFilledVariables", () => {
     const tmpl = makeTemplate([
       { key: "1", label: "Price", autoFill: "price" },
     ]);
-    const appt = makeAppointment({ price: undefined as any });
+    const appt = { ...makeAppointment(), price: undefined as unknown as number };
     const apptType = { defaultPrice: 200000 } as AppointmentType;
     const result = computeAutoFilledVariables(tmpl, "", "", appt, null, apptType);
     expect(result["1"]).toBe("200000");
@@ -232,7 +234,7 @@ describe("computeAutoFilledVariables", () => {
 
   it("returns empty string for unknown autoFill type", () => {
     const tmpl = makeTemplate([
-      { key: "1", label: "Unknown", autoFill: "nonexistent" as any },
+      { key: "1", label: "Unknown", autoFill: "nonexistent" as unknown as TemplateVariableAutoFill },
     ]);
     const result = computeAutoFilledVariables(tmpl, "", "");
     expect(result["1"]).toBe("");
@@ -305,7 +307,7 @@ describe("buildPreview", () => {
 describe("selectTemplateForAppointment", () => {
   it("returns VIRTUAL template for virtual location", () => {
     const appt = makeAppointment({
-      appointmentLocation: { isVirtual: true } as any,
+      appointmentLocation: { id: "loc-1", name: "Virtual", isVirtual: true, isActive: true },
     });
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL",
@@ -314,7 +316,7 @@ describe("selectTemplateForAppointment", () => {
 
   it("returns PRESENTIAL template for presential location", () => {
     const appt = makeAppointment({
-      appointmentLocation: { isVirtual: false } as any,
+      appointmentLocation: { id: "loc-1", name: "Office", isVirtual: false, isActive: true },
     });
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL",
@@ -323,7 +325,7 @@ describe("selectTemplateForAppointment", () => {
 
   it("returns PRESENTIAL template when location is undefined", () => {
     const appt = makeAppointment({
-      appointmentLocation: undefined as any,
+      appointmentLocation: undefined as unknown as AppointmentLocation,
     });
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL",

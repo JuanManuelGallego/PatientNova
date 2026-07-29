@@ -94,7 +94,7 @@ describe("FocusTrapProvider + useFocusTrap", () => {
     container.appendChild(btn2);
     document.body.appendChild(container);
 
-    (result.current as any).ref.current = container;
+    (result.current.ref as React.RefObject<HTMLDivElement>).current = container;
 
     // Mock activeElement to be the last button
     const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "activeElement");
@@ -126,7 +126,7 @@ describe("FocusTrapProvider + useFocusTrap", () => {
     container.appendChild(btn2);
     document.body.appendChild(container);
 
-    (result.current as any).ref.current = container;
+    (result.current.ref as React.RefObject<HTMLDivElement>).current = container;
 
     const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "activeElement");
     Object.defineProperty(Document.prototype, "activeElement", {
@@ -159,7 +159,7 @@ describe("FocusTrapProvider + useFocusTrap", () => {
     container.appendChild(btn3);
     document.body.appendChild(container);
 
-    (result.current as any).ref.current = container;
+    (result.current.ref as React.RefObject<HTMLDivElement>).current = container;
 
     const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, "activeElement");
     Object.defineProperty(Document.prototype, "activeElement", {
@@ -185,7 +185,7 @@ describe("FocusTrapProvider + useFocusTrap", () => {
 
     const container = document.createElement("div");
     document.body.appendChild(container);
-    (result.current as any).ref.current = container;
+    (result.current.ref as React.RefObject<HTMLDivElement>).current = container;
 
     const event = makeKeyboardEvent("Tab");
     act(() => {
