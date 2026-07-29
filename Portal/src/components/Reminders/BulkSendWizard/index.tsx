@@ -96,7 +96,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
             await notify(channel, {
               to,
               patientId: pid,
-              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.contentSid,
               contentVariables: {
                 "1": p.name,
                 "2": getUserName(user) || "su profesional de salud",
@@ -105,7 +105,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
               },
               body:
                 message ||
-                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.template
+                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
                   .replace("{{1}}", p.name)
                   .replace(
                     "{{2}}",
@@ -115,7 +115,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
           } else {
             await createReminder({
               patientId: pid,
-              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.contentSid,
+              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.contentSid,
               contentVariables: {
                 "1": p.name,
                 "2": getUserName(user) || "su profesional de salud",
@@ -128,7 +128,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
               sendAt,
               body:
                 message ||
-                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER.template
+                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
                   .replace("{{1}}", p.name)
                   .replace(
                     "{{2}}",

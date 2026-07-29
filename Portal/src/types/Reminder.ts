@@ -47,8 +47,9 @@ export type ReminderForm = {
   channel: Channel;
   message: string;
   sendAt: string;
-  fecha: string;
-  hora: string;
+  selectedTemplate: string;
+  contentVariables: Record<string, string>;
+  appointmentId: string;
 };
 
 export enum ReminderStatus {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { RequiredField } from "../Info/Required";
 import { useUpdateReminder } from "@/src/api/reminders/useUpdateReminder";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 
 export function EditScheduledReminderModal({
   reminder,
@@ -18,6 +19,7 @@ export function EditScheduledReminderModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { updateReminder } = useUpdateReminder();
+  const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(onClose);
 
   async function handleSave() {
     setSaving(true);
@@ -37,8 +39,9 @@ export function EditScheduledReminderModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
       <div
+        ref={ref}
         className="modal-panel modal-panel--sm"
         onClick={(e) => e.stopPropagation()}
       >

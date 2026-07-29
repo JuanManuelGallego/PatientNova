@@ -3,9 +3,9 @@ import { API_BASE } from "@/src/config/api";
 import { Patient } from "@/src/types/Patient";
 import { useApiQuery } from "@/src/api/base/useApiQuery";
 
-export const useFetchPatient = (patientId: string) => {
+export const useFetchPatient = (patientId: string | undefined | null) => {
     const url = useMemo(
-        () => `${API_BASE}/patients/${patientId}`,
+        () => patientId ? `${API_BASE}/patients/${patientId}` : null,
         [ patientId ]
     );
     const { data: patient, loading, error, refetch: fetchPatient } =

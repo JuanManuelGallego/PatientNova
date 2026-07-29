@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { useCreateAppointmentType } from "@/src/api/appointment-types/useCreateAppointmentType";
 import { useUpdateAppointmentType } from "@/src/api/appointment-types/useUpdateAppointmentType";
 import { AppointmentType } from "@/src/types/Appointment";
@@ -36,7 +37,7 @@ export function AppointmentTypeModal({
   const { updateAppointmentType } = useUpdateAppointmentType();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const firstInputRef = useRef<HTMLInputElement>(null);
+  const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(onClose);
 
   const [form, setForm] = useState<AppointmentTypeForm>({
     name: appointmentType?.name ?? "",
@@ -45,10 +46,6 @@ export function AppointmentTypeModal({
     defaultPrice: appointmentType?.defaultPrice ?? 0,
     color: appointmentType?.color ?? "#7C3AED",
   });
-
-  useEffect(() => {
-    setTimeout(() => firstInputRef.current?.focus(), 50);
-  }, []);
 
   const setField =
     (field: keyof AppointmentTypeForm) =>
@@ -82,8 +79,9 @@ export function AppointmentTypeModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
       <div
+        ref={ref}
         className="modal-panel modal-panel--sm"
         onClick={(e) => e.stopPropagation()}
       >
@@ -114,7 +112,6 @@ export function AppointmentTypeModal({
             <label className="form-label">
               <RequiredField label="Nombre" />
               <input
-                ref={firstInputRef}
                 className="form-input"
                 value={form.name}
                 onChange={setField("name")}

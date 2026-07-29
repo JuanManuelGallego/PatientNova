@@ -201,14 +201,14 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
     patient: {
       name: 'John',
       lastName: 'Doe',
-      user: {
-        id: 'user-1',
-        displayName: 'Dr. Smith',
-        reminderActive: true,
-        reminderChannel: 'WHATSAPP',
-        whatsappNumber: '+15559876543',
-        phoneNumber: '+15551112222',
-      },
+    },
+    user: {
+      id: 'user-1',
+      displayName: 'Dr. Smith',
+      reminderActive: true,
+      reminderChannel: 'WHATSAPP',
+      whatsappNumber: '+15559876543',
+      phoneNumber: '+15551112222',
     },
   };
 
@@ -227,7 +227,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   it('sends SMS notification when user has SMS channel', async () => {
     const smsAppointment = {
       ...fakeAppointment,
-      patient: { ...fakeAppointment.patient, user: { ...fakeAppointment.patient.user, reminderChannel: 'SMS' } },
+      user: { ...fakeAppointment.user, reminderChannel: 'SMS' },
     };
     mockPrisma.appointment.findUnique.mockResolvedValue(smsAppointment);
     mockSendSms.mockResolvedValue({} as never);
@@ -240,7 +240,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   it('skips notification when user has reminderActive=false', async () => {
     const inactiveAppointment = {
       ...fakeAppointment,
-      patient: { ...fakeAppointment.patient, user: { ...fakeAppointment.patient.user, reminderActive: false } },
+      user: { ...fakeAppointment.user, reminderActive: false },
     };
     mockPrisma.appointment.findUnique.mockResolvedValue(inactiveAppointment);
 
@@ -253,7 +253,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   it('skips WhatsApp when user has no whatsappNumber', async () => {
     const noNumberAppointment = {
       ...fakeAppointment,
-      patient: { ...fakeAppointment.patient, user: { ...fakeAppointment.patient.user, whatsappNumber: null } },
+      user: { ...fakeAppointment.user, whatsappNumber: null },
     };
     mockPrisma.appointment.findUnique.mockResolvedValue(noNumberAppointment);
 
@@ -274,7 +274,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   it('skips SMS when user has no phoneNumber', async () => {
     const noPhoneAppointment = {
       ...fakeAppointment,
-      patient: { ...fakeAppointment.patient, user: { ...fakeAppointment.patient.user, reminderChannel: 'SMS', phoneNumber: null } },
+      user: { ...fakeAppointment.user, reminderChannel: 'SMS', phoneNumber: null },
     };
     mockPrisma.appointment.findUnique.mockResolvedValue(noPhoneAppointment);
 
@@ -295,7 +295,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   });
 
   it('returns early when appointment has no patient relation', async () => {
-    mockPrisma.appointment.findUnique.mockResolvedValue({ id: 'appt-1', patient: null });
+    mockPrisma.appointment.findUnique.mockResolvedValue({ id: 'appt-1', patient: null, user: fakeAppointment.user });
 
     await service.notifyUserOfStatusUpdate('appt-1', 'CONFIRMED');
 
@@ -304,7 +304,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
   });
 
   it('returns early when appointment has patient but no user relation', async () => {
-    mockPrisma.appointment.findUnique.mockResolvedValue({ id: 'appt-1', patient: { name: 'J' } });
+    mockPrisma.appointment.findUnique.mockResolvedValue({ id: 'appt-1', patient: { name: 'J' }, user: null });
 
     await service.notifyUserOfStatusUpdate('appt-1', 'CONFIRMED');
 
