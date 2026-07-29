@@ -119,4 +119,46 @@ describe('reminderService (integration, pg-boss mocked)', () => {
     const raw = await prisma.reminder.findUnique({ where: { id: created.id } });
     expect(raw!.sendAt.getTime()).toBe(newSendAt.getTime());
   });
+
+  it('retries a FAILED reminder and enqueues it', async () => {
+    const created = await reminderService.create(pendingDto(), userId, false);
+    await prisma.reminder.update({
+      where: { id: created.id },
+      data: { status: ReminderStatus.FAILED, error: 'Test error' },
+    });
+
+    const retried = await reminderService.retry(created.id, userId);
+
+    expect(retried.status).toBe(ReminderStatus.PENDING);
+    expect(retried.retryCount).toBe(1);
+    expect(retried.error).toBeNull();
+    expect(jobMock.enqueueImmediate).toHaveBeenCalledWith(created.id);
+
+    const raw = await prisma.reminder.findUnique({ where: { id: created.id } });
+    expect(raw!.status).toBe(ReminderStatus.PENDING);
+    expect(raw!.retryCount).toBe(1);
+  });
+
+  it('rejects retry of a PENDING reminder', async () => {
+    const created = await reminderService.create(pendingDto(), userId, false);
+    await expect(reminderService.retry(created.id, userId)).rejects.toThrow('cannot be retried');
+  });
+
+  it('rejects retry when already retried once', async () => {
+    const created = await reminderService.create(pendingDto(), userId, false);
+    await prisma.reminder.update({
+      where: { id: created.id },
+      data: { status: ReminderStatus.FAILED, retryCount: 1 },
+    });
+    await expect(reminderService.retry(created.id, userId)).rejects.toThrow('max retries exceeded');
+  });
+
+  it('rejects retry of soft-deleted reminder', async () => {
+    const created = await reminderService.create(pendingDto(), userId, false);
+    await prisma.reminder.update({
+      where: { id: created.id },
+      data: { status: ReminderStatus.FAILED, isDeleted: true },
+    });
+    await expect(reminderService.retry(created.id, userId)).rejects.toThrow('reminder is deleted');
+  });
 });

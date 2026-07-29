@@ -399,10 +399,7 @@ function HistoryRemindersTab({
           </td>
           <td className="td td--error-cell">
             {reminder.error ? (
-              <span title={reminder.error} className="td-error__text">
-                {reminder.error.slice(0, 40)}
-                {reminder.error.length > 40 ? "…" : ""}
-              </span>
+              <span className="td-error__text">{reminder.error}</span>
             ) : (
               <span className="td-error__empty">—</span>
             )}

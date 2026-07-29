@@ -11,9 +11,10 @@ const mocks = vi.hoisted(() => ({
     cancel: vi.fn(),
     delete: vi.fn(),
     restore: vi.fn(),
+    retry: vi.fn(),
   },
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-  prisma: { $transaction: vi.fn() },
+  prisma: { $transaction: vi.fn(), appointment: { findUnique: vi.fn() } },
   fromPrisma: vi.fn(() => ({})),
   getBoss: vi.fn(),
   jobManager: {
@@ -70,6 +71,16 @@ beforeEach(() => {
   mocks.repo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' });
   mocks.repo.delete.mockResolvedValue(fakeReminder);
   mocks.repo.restore.mockResolvedValue(fakeReminder);
+  mocks.repo.retry.mockImplementation(async (_id: string, _userId: string, sendAt: Date) => ({
+    ...fakeReminder,
+    status: 'PENDING',
+    error: null,
+    retryCount: 1,
+    messageId: null,
+    sentAt: null,
+    sendAt,
+  }));
+  mocks.prisma.appointment.findUnique.mockResolvedValue(null);
 });
 
 describe('reminderService.findById', () => {
@@ -237,5 +248,89 @@ describe('reminderService.restore', () => {
     mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await reminderService.restore('rem-1', 'user-1');
     expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
+  });
+});
+
+describe('reminderService.retry', () => {
+  const failedReminder = { ...fakeReminder, status: 'FAILED' as const, retryCount: 0, isDeleted: false, appointmentId: null };
+
+  it('retries a FAILED reminder and enqueues immediate', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, sendAt: new Date(Date.now() - 86400000) });
+    const result = await reminderService.retry('rem-1', 'user-1');
+    expect(result.status).toBe('PENDING');
+    expect(result.retryCount).toBe(1);
+    expect(mocks.repo.retry).toHaveBeenCalledWith('rem-1', 'user-1', expect.any(Date));
+    expect(mocks.jobManager.enqueueImmediate).toHaveBeenCalledWith('rem-1');
+  });
+
+  it('throws ReminderNotRetryableError for non-FAILED status', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
+    expect(mocks.repo.retry).not.toHaveBeenCalled();
+  });
+
+  it('throws ReminderNotRetryableError for SENT status', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
+  });
+
+  it('throws ReminderNotRetryableError for CANCELLED status', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' as const });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
+  });
+
+  it('throws ReminderNotRetryableError for QUEUED status', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'QUEUED' as const });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
+  });
+
+  it('throws ReminderNotRetryableError when already retried once', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, retryCount: 1 });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('max retries exceeded');
+    expect(mocks.repo.retry).not.toHaveBeenCalled();
+  });
+
+  it('throws ReminderNotRetryableError for soft-deleted reminder', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, isDeleted: true });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('reminder is deleted');
+    expect(mocks.repo.retry).not.toHaveBeenCalled();
+  });
+
+  it('throws ReminderNotRetryableError when linked appointment is in the past', async () => {
+    const pastAppt = { startAt: new Date(Date.now() - 86400000) };
+    mocks.prisma.appointment.findUnique.mockResolvedValue(pastAppt);
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, appointmentId: 'appt-1' });
+    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('linked appointment already passed');
+    expect(mocks.repo.retry).not.toHaveBeenCalled();
+  });
+
+  it('enqueues with startAfter when sendAt is in the future', async () => {
+    const futureSendAt = new Date(Date.now() + 86400000);
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, sendAt: futureSendAt });
+    await reminderService.retry('rem-1', 'user-1');
+    expect(mocks.jobManager.enqueue).toHaveBeenCalledWith('rem-1', futureSendAt);
+    expect(mocks.jobManager.enqueueImmediate).not.toHaveBeenCalled();
+  });
+
+  it('enqueues immediate when sendAt is in the past', async () => {
+    const pastSendAt = new Date(Date.now() - 86400000);
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, sendAt: pastSendAt });
+    await reminderService.retry('rem-1', 'user-1');
+    expect(mocks.jobManager.enqueueImmediate).toHaveBeenCalledWith('rem-1');
+    expect(mocks.jobManager.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('does not query appointment when appointmentId is null', async () => {
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, appointmentId: null });
+    await reminderService.retry('rem-1', 'user-1');
+    expect(mocks.prisma.appointment.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('allows retry when linked appointment is in the future', async () => {
+    const futureAppt = { startAt: new Date(Date.now() + 86400000) };
+    mocks.prisma.appointment.findUnique.mockResolvedValue(futureAppt);
+    mocks.repo.findById.mockResolvedValue({ ...failedReminder, appointmentId: 'appt-1' });
+    const result = await reminderService.retry('rem-1', 'user-1');
+    expect(result.status).toBe('PENDING');
   });
 });

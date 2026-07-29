@@ -118,6 +118,22 @@ export const reminderRepository = {
     return restore(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
   },
 
+  async retry(id: string, userId: string, sendAt: Date): Promise<Reminder> {
+    await reminderRepository.findById(id, userId);
+    return prisma.reminder.update({
+      where: { id },
+      data: {
+        status: ReminderStatus.PENDING,
+        error: null,
+        retryCount: { increment: 1 },
+        messageId: null,
+        sentAt: null,
+        sendAt,
+      },
+      include: reminderInclude,
+    });
+  },
+
   async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {
     const { patientId, dateFrom, dateTo } = query;
     const where: Prisma.ReminderWhereInput = {

@@ -11,3 +11,9 @@ export class ReminderSendAtInPastError extends ApiError {
     super('Scheduled reminders must have a sendAt time in the future', 422)
   }
 }
+
+export class ReminderNotRetryableError extends ApiError {
+  constructor(id: string, reason: string) {
+    super(`Reminder "${id}" cannot be retried: ${reason}`, 409)
+  }
+}

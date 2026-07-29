@@ -34,6 +34,12 @@ describe('resolveTwilioError', () => {
     expect(resolveTwilioError(60245)).toBe('Se excedieron los límites de mensajería.');
   });
 
+  it('returns Spanish message for known WhatsApp API error code 63024', () => {
+    expect(resolveTwilioError(63024)).toBe(
+      'El destinatario no tiene WhatsApp o no aceptó los términos del servicio.',
+    );
+  });
+
   it('returns fallback for unknown error code', () => {
     expect(resolveTwilioError(99999, 'Fallback msg')).toBe('Fallback msg');
   });
@@ -71,6 +77,8 @@ describe('resolveTwilioError', () => {
       // Verify API (60xxx)
       60001, 60002, 60003, 60004, 60005, 60006, 60007, 60008, 60203, 60205,
       60207, 60212, 60223, 60238, 60245, 60247, 60300, 60306,
+      // WhatsApp API (63xxx)
+      63010, 63012, 63018, 63020, 63021, 63022, 63024, 63025, 63032, 63038,
     ];
     for (const code of codes) {
       const msg = resolveTwilioError(code);

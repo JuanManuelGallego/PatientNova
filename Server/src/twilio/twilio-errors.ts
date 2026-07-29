@@ -86,6 +86,18 @@ const TWILIO_ERROR_MESSAGES: Record<number, string> = {
   60247: 'La longitud del mensaje fue excedida.',
   60300: 'Parámetro inválido.',
   60306: 'Solicitud inválida.',
+
+  // ── WhatsApp API errors (63xxx) ─────────────────────────────────
+  63010: 'Error interno de Twilio al procesar el mensaje de WhatsApp.',
+  63012: 'Error interno del proveedor de canal (WhatsApp).',
+  63018: 'Límite de velocidad excedido para el canal de WhatsApp.',
+  63020: 'La cuenta de Business Manager de Meta no está configurada correctamente.',
+  63021: 'El contenido del mensaje no es válido para el canal de WhatsApp.',
+  63022: 'El certificado de nombre verificado no es válido.',
+  63024: 'El destinatario no tiene WhatsApp o no aceptó los términos del servicio.',
+  63025: 'El contenido multimedia ya existe — conflicto al subir el archivo.',
+  63032: 'No se puede enviar el mensaje a este usuario por una limitación de WhatsApp.',
+  63038: 'La cuenta excedió el límite diario de mensajes.',
 };
 
 const DEFAULT_ERROR = 'Error de entrega no especificado';
