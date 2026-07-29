@@ -1125,6 +1125,156 @@ body {
   font-size: 13px;
 }
 
+/* ================================================================
+   Patient Autocomplete
+   ================================================================ */
+.patient-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.patient-autocomplete__trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--c-gray-200);
+  border-radius: var(--r-lg);
+  font-size: 14px;
+  color: var(--c-gray-900);
+  background: var(--c-input-bg);
+  font-family: inherit;
+  cursor: text;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.patient-autocomplete__trigger:hover {
+  border-color: var(--c-gray-300);
+}
+
+.patient-autocomplete__trigger:focus-within {
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 3px var(--c-brand-glow);
+}
+
+.patient-autocomplete__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--c-gray-900);
+  outline: none;
+  padding: 0;
+  width: 100%;
+}
+
+.patient-autocomplete__input::placeholder {
+  color: var(--c-gray-400);
+  font-weight: 400;
+}
+
+.patient-autocomplete__clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: var(--c-gray-200);
+  border-radius: 50%;
+  color: var(--c-gray-500);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 6px;
+  transition: background 0.1s;
+}
+
+.patient-autocomplete__clear:hover {
+  background: var(--c-gray-300);
+  color: var(--c-gray-700);
+}
+
+.patient-autocomplete__spinner {
+  display: flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--c-gray-400);
+}
+
+.patient-autocomplete__spinner-icon {
+  animation: patientAutocompleteSpin 0.8s linear infinite;
+}
+
+@keyframes patientAutocompleteSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.patient-autocomplete--disabled {
+  opacity: 0.45;
+  user-select: none;
+}
+
+.patient-autocomplete__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  color: var(--c-gray-900);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.patient-autocomplete__option:hover {
+  background: var(--c-brand-light);
+}
+
+.patient-autocomplete__option--selected {
+  background: var(--c-brand-light);
+  color: var(--c-brand);
+}
+
+.patient-autocomplete__option--highlighted {
+  background: var(--c-brand-light);
+}
+
+.patient-autocomplete__option--selected.patient-autocomplete__option--highlighted {
+  background: var(--c-brand-light);
+}
+
+.patient-autocomplete__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.patient-autocomplete__option--selected .patient-autocomplete__name {
+  color: var(--c-brand);
+}
+
+.patient-autocomplete__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--c-gray-400);
+  justify-content: center;
+}
+
 /* responsive: form grid stacks on mobile, 2 cols on md+ */
 .form-grid-2 {
   display: grid;

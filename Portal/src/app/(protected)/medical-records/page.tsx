@@ -5,7 +5,7 @@ import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
-import { CustomSelect } from "@/src/components/CustomSelect";
+import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { RequiredField } from "@/src/components/Info/Required";
 import { getPatientFullName } from "@/src/utils/AvatarHelper";
 import { createEmptyForm, FormValues } from "@/src/types/MedicalRecord";
@@ -123,14 +123,9 @@ function MedicalRecordsPageContent() {
                 <span>{LBL_LOADING}</span>
               </div>
             ) : (
-              <CustomSelect
+              <PatientAutocomplete
                 value={selectedPatientId}
                 placeholder="Seleccionar paciente…"
-                options={
-                  patients.length > 0
-                    ? patients.map((p) => ({ value: p.id, label: getPatientFullName(p) }))
-                    : [ { value: "", label: "No hay pacientes registrados" } ]
-                }
                 onChange={setSelectedPatientId}
               />
             )}
