@@ -24,7 +24,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { Megaphone, Send, XCircle, AlertTriangle } from "lucide-react";
+import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import {
   useQueryState,
@@ -91,12 +91,23 @@ function RemindersPageContent() {
           title="Recordatorios"
           subtitle={todayString()}
           actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary btn-hero"
-            >
-              Nuevo Recordatorio
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  fetchReminders();
+                  fetchStats();
+                }}
+                className="btn-secondary"
+              >
+                <RefreshCw size={16} />
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary btn-hero"
+              >
+                Nuevo Recordatorio
+              </button>
+            </>
           }
         />
         <div className="stats-grid">
