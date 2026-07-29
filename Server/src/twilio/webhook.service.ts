@@ -167,6 +167,11 @@ export class TwilioWebhookService {
 
             const { patient, user } = appointment;
 
+            if (!patient || !user) {
+                logger.warn({ appointmentId }, 'Appointment missing required patient or user relation');
+                return;
+            }
+
             if (!user.reminderActive) {
                 logger.info({ userId: user.id }, 'User does not have a notifications enabled');
                 return;
