@@ -97,7 +97,7 @@ describe("PatientAutocomplete", () => {
     await user.click(screen.getByRole("combobox"));
     await user.click(screen.getByText("María López"));
 
-    expect(onChange).toHaveBeenCalledWith("p-2");
+    expect(onChange).toHaveBeenCalledWith("p-2", allPatients[1]);
   });
 
   it("closes dropdown after selecting an option", async () => {
@@ -150,7 +150,7 @@ describe("PatientAutocomplete", () => {
     await user.click(screen.getByRole("combobox"));
     await user.keyboard("{ArrowDown}{Enter}");
 
-    expect(onChange).toHaveBeenCalledWith("p-2");
+    expect(onChange).toHaveBeenCalledWith("p-2", allPatients[1]);
   });
 
   it("closes dropdown on Escape", async () => {

@@ -22,6 +22,7 @@ import {
   Channel,
   type ReminderInlineData,
 } from "@/src/types/Reminder";
+import { Patient } from "@/src/types/Patient";
 import { getUserName } from "@/src/utils/AvatarHelper";
 import {
   fmtDate,
@@ -76,6 +77,9 @@ export function AppointmentModal({
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
+  const [ selectedPatientData, setSelectedPatientData ] = useState<Patient | undefined>(
+    appt?.patient,
+  );
   const reminderChannel = user?.reminderChannel;
 
   const [ form, setForm ] = useState<AppointmentForm>({
@@ -110,7 +114,7 @@ export function AppointmentModal({
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }));
 
-  const selectedPatient = patients.find((p) => p.id === form.patientId);
+  const selectedPatient = selectedPatientData ?? patients.find((p) => p.id === form.patientId);
   const selectedLocation = locations.find((l) => l.id === form.locationId);
 
   const selectedChannelAvailable = reminderChannel
@@ -302,7 +306,6 @@ export function AppointmentModal({
           <PatientAndTypeStep
             form={form}
             setForm={setForm}
-            patients={patients}
             isEdit={isEdit}
             selectedPatient={selectedPatient}
             appointmentTypes={appointmentTypes}
@@ -310,6 +313,7 @@ export function AppointmentModal({
             blockedSlots={blockedSlots}
             onError={(error) => setError(error)}
             clearError={() => setError(null)}
+            onPatientSelect={(patient) => setSelectedPatientData(patient)}
           />
         )}
         {step === 2 && (

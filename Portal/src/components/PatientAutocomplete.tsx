@@ -13,10 +13,11 @@ import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { getPatientFullName } from "@/src/utils/AvatarHelper";
 import { SELECT_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { Patient } from "@/src/types/Patient";
 
 interface PatientAutocompleteProps {
   value: string;
-  onChange: (patientId: string) => void;
+  onChange: (patientId: string, patient?: Patient) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -160,13 +161,14 @@ export function PatientAutocomplete({
 
   const handleOptionClick = useCallback(
     (patientId: string) => {
-      onChange(patientId);
+      const patient = patients.find((p) => p.id === patientId);
+      onChange(patientId, patient);
       setSearchText("");
       setIsSearching(false);
       setOpen(false);
       inputRef.current?.blur();
     },
-    [onChange],
+    [onChange, patients],
   );
 
   const handleKeyDown = useCallback(
