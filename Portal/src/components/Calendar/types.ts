@@ -3,6 +3,7 @@ import { BlockedTime } from "@/src/types/BlockedTime";
 export enum ViewMode {
   Month = "month",
   Week = "week",
+  Day = "day",
 }
 
 export interface ApptChipProps {
