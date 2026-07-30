@@ -3,6 +3,8 @@ import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeBlock } from "./BlockedTimeBlock";
+import Image from "next/image";
+import { flagUrl } from "../CountryCodeInput";
 
 export function WeekView({
   weekDays,
@@ -67,9 +69,15 @@ export function WeekView({
                   {day.getDate()}
                 </span>
                 {holiday && (
-                  <span title={holiday} style={{ fontSize: 11, opacity: 0.7 }}>
-                    🇨🇴
-                  </span>
+                  <div className="cal-holiday-label">
+                    <Image
+                      className="phone-input-flag"
+                      src={flagUrl("co")}
+                      alt="Colombia"
+                      width={20}
+                      height={15}
+                    /> {holiday}
+                  </div>
                 )}
                 {dayAppts.length > 0 && (
                   <span style={calendarStyles.weekDayCount}>
@@ -102,6 +110,7 @@ export function WeekView({
             {weekDays.map((day, di) => {
               const ds = toDateStr(day);
               const isToday = ds === TODAY_STR;
+              const holiday = holidayMap[ ds ];
               const positioned = layoutDayAppointments(
                 apptByDate[ ds ] ?? [],
                 firstHour,
@@ -109,6 +118,7 @@ export function WeekView({
               return (
                 <div
                   key={di}
+                  className={holiday ? "cal-cell--holiday" : undefined}
                   style={{
                     flex: 1,
                     position: "relative",
@@ -116,7 +126,9 @@ export function WeekView({
                     minWidth: 0,
                     background: isToday
                       ? "var(--c-primary-50, #eff6ff)"
-                      : "var(--c-surface, #fff)",
+                      : holiday
+                        ? "rgba(255, 215, 0, 0.07)"
+                        : "var(--c-surface, #fff)",
                   }}
                 >
                   {hours.map((hour) => (
