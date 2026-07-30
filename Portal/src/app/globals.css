@@ -1914,7 +1914,7 @@ tr:hover td {
 .td--error-cell {
   font-size: 12px;
   color: var(--c-error);
-  max-width: 200px;
+  white-space: nowrap;
 }
 
 .td--nowrap {

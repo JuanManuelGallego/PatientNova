@@ -384,6 +384,7 @@ function HistoryRemindersTab({
         "Última actualización",
         "ID Mensaje",
         "Error",
+        "",
       ]}
       rows={reminders}
       loading={loading}
@@ -415,23 +416,23 @@ function HistoryRemindersTab({
             )}
           </td>
           <td className="td td--error-cell">
-            <div style={{ display: "flex", gap: 16 }}>
-              {reminder.status === ReminderStatus.FAILED && (reminder.retryCount ?? 0) <= MAX_RETRIES && (
-                <div className="td-actions" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => onRetry(reminder.id)}
-                    className="btn-action-edit"
-                  >
-                    <ACTION_ICONS.retry size={14} />
-                  </button>
-                </div>
-              )}
-              {reminder.error ? (
-                <span className="td-error__text">{reminder.error}</span>
-              ) : (
-                <span className="td-error__empty">—</span>
-              )}
-            </div>
+            {reminder.error ? (
+              <span className="td-error__text">{reminder.error}</span>
+            ) : (
+              <span className="td-error__empty">—</span>
+            )}
+          </td>
+          <td className="td" onClick={(e) => e.stopPropagation()}>
+            {reminder.status === ReminderStatus.FAILED && (reminder.retryCount ?? 0) <= MAX_RETRIES && (
+              <div className="td-actions">
+                <button
+                  onClick={() => onRetry(reminder.id)}
+                  className="btn-action-edit"
+                >
+                  <ACTION_ICONS.retry size={14} />
+                </button>
+              </div>
+            )}
           </td>
         </tr>
       )}
