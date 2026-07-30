@@ -3,7 +3,7 @@ import { fromPrisma } from 'pg-boss';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { reminderRepository } from './reminder.repository.js';
 import { ReminderNotCancellableError, PatientNotFoundError } from '../utils/errors/errors.js';
-import { ReminderSendAtInPastError } from './reminder.errors.js';
+import { ReminderSendAtInPastError, ReminderNotRetryableError } from './reminder.errors.js';
 import { logger } from '../utils/api/logger.js';
 import { reminderInclude } from './reminder.types.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
@@ -13,6 +13,7 @@ import { getBoss } from '../scheduler/pg-boss.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 
 const QUEUE = 'send-reminder';
+const MAX_RETRIES = 1;
 
 export const reminderService = {
   findById: reminderRepository.findById.bind(reminderRepository),
@@ -127,5 +128,45 @@ export const reminderService = {
 
     logger.info({ reminderId: id, userId }, 'Reminder restored');
     return restored;
+  },
+
+  async retry(id: string, userId: string): Promise<Reminder> {
+    const reminder = await reminderRepository.findById(id, userId);
+
+    if (reminder.status !== ReminderStatus.FAILED) {
+      throw new ReminderNotRetryableError(id, `status is "${reminder.status}", must be FAILED`);
+    }
+
+    if (reminder.isDeleted) {
+      throw new ReminderNotRetryableError(id, 'reminder is deleted');
+    }
+
+    if (reminder.retryCount >= MAX_RETRIES) {
+      throw new ReminderNotRetryableError(id, 'max retries exceeded');
+    }
+
+    if (reminder.appointmentId) {
+      const appointment = await prisma.appointment.findUnique({
+        where: { id: reminder.appointmentId },
+        select: { startAt: true },
+      });
+      if (appointment && new Date(appointment.startAt) <= new Date()) {
+        throw new ReminderNotRetryableError(id, 'linked appointment already passed');
+      }
+    }
+
+    const now = new Date();
+    const sendAt = new Date(reminder.sendAt) > now ? new Date(reminder.sendAt) : now;
+
+    const retried = await reminderRepository.retry(id, sendAt);
+
+    if (sendAt > now) {
+      await reminderJobManager.enqueue(id, sendAt);
+    } else {
+      await reminderJobManager.enqueueImmediate(id);
+    }
+
+    logger.info({ reminderId: id, userId, retryCount: retried.retryCount }, 'Reminder retried');
+    return retried;
   },
 };

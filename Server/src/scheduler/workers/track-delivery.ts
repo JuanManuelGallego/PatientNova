@@ -1,6 +1,7 @@
 import { ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { getMessageStatus } from '../../twilio/client.js';
+import { resolveTwilioError } from '../../twilio/twilio-errors.js';
 import { REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
 
@@ -62,7 +63,7 @@ export async function trackDeliveryWorker(): Promise<void> {
               data: {
                 status: mappedStatus,
                 error: mappedStatus === ReminderStatus.FAILED
-                  ? 'Error desconocido en la entrega del mensaje'
+                  ? resolveTwilioError(message.errorCode, message.errorMessage)
                   : null,
               },
             });

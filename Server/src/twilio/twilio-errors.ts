@@ -1,0 +1,200 @@
+/**
+ * Maps Twilio numeric error codes to user-friendly Spanish messages.
+ *
+ * Reference: https://www.twilio.com/docs/api/errors
+ */
+
+const TWILIO_ERROR_MESSAGES: Record<number, string> = {
+  // ── 1. General API, Auth & Account Errors (1xxxx & 20xxx) ────────
+  10001: 'La cuenta de Twilio no está activa.',
+  10002: 'Las cuentas de prueba (Trial) no admiten esta función.',
+  10003: 'Llamada entrante o solicitud rechazada debido a cuenta inactiva.',
+  10004: 'Se excedió el límite de llamadas concurrentes de la cuenta.',
+  10005: 'Las llamadas de voz están deshabilitadas para esta cuenta.',
+  20001: 'El AccountSid proporcionado no es válido.',
+  20003: 'Error de autenticación o credenciales inválidas (Account SID / Auth Token).',
+  20005: 'Saldo insuficiente. La cuenta no tiene fondos para completar la operación.',
+  20008: 'Acceso denegado a este recurso o función.',
+  20404: 'El recurso solicitado (SID, número, mensaje) no fue encontrado.',
+  20429: 'Demasiadas solicitudes. Límite de velocidad (rate limit) alcanzado.',
+  20500: 'Error interno en los servidores de Twilio.',
+
+  // ── 2. Webhook, Network & TwiML Errors (11xxx & 12xxx) ───────────
+  11100: 'El formato de la URL proporcionada no es válido.',
+  11200: 'Error de respuesta del servidor HTTP/Webhook (código 4xx/5xx).',
+  11201: 'Tiempo de espera agotado en la conexión TCP con la URL de webhook.',
+  11202: 'Conexión TCP rechazada por el servidor de destino.',
+  11203: 'Tiempo de espera total de la comunicación HTTP agotado.',
+  11205: 'Error de conexión HTTP hacia el servidor configurado.',
+  11206: 'Violación del protocolo HTTP en la respuesta del webhook.',
+  11210: 'No se pudo resolver el nombre de host (DNS) de la URL.',
+  11215: 'Demasiadas redirecciones HTTP en el webhook.',
+  11216: 'Redirección HTTP no válida.',
+  11220: 'Error en el intercambio de llaves SSL/TLS (Handshake error).',
+  11235: 'Certificado SSL inválido: el dominio no coincide.',
+  11236: 'Certificado SSL expirado.',
+  11237: 'Certificado SSL no válido o ruta de certificación no encontrada.',
+  11300: 'La URL de la plantilla TwiML no es válida.',
+  11310: 'Token de plantilla TwiML no válido.',
+  11320: 'Sintaxis de plantilla no válida (llaves sin cerrar).',
+  11321: 'Advertencia: Webhook de mensajería mal configurado.',
+  11322: 'Método HTTP del webhook no válido.',
+  11750: 'El cuerpo de la respuesta TwiML excede el tamaño máximo permitido.',
+  11751: 'El archivo multimedia excede el límite de tamaño del operador.',
+  11770: 'El servidor de webhook devolvió un cuerpo de respuesta vacío.',
+  12100: 'Error al procesar el documento XML/TwiML (mal formado).',
+  12101: 'Versión de XML/TwiML no compatible.',
+  12102: 'El elemento raíz del XML debe ser <Response>.',
+  12200: 'Advertencia de validación de esquema TwiML.',
+  12300: 'Encabezado Content-Type no válido en la respuesta del webhook.',
+  12400: 'Error de sintaxis en las instrucciones TwiML.',
+
+  // ── 3. Voice & Voice SDK Errors (13xxx, 212xx, 31xxx) ────────────
+  13223: 'Intento de llamada a un número de teléfono con formato no válido.',
+  13224: 'Intento de llamada a un número bloqueado o restringido.',
+  21201: 'El número de teléfono no está disponible actualmente.',
+  21210: 'El número "From" debe estar verificado para enviar desde cuentas de prueba.',
+  21215: 'Geobloqueo de llamadas: El destino no está habilitado en los permisos de voz.',
+  21217: 'El número de origen ("From") es obligatorio.',
+  21220: 'Llamada rechazada por el destinatario.',
+  31000: 'Error general en el SDK de Voz de Twilio.',
+  31001: 'Aplicación TwiML no encontrada.',
+  31002: 'Conexión de voz rechazada.',
+  31003: 'Tiempo de espera de conexión de voz agotado.',
+  31005: 'La conexión WebSocket con el servidor de señalización se cerró inesperadamente.',
+  31009: 'No hay transporte disponible para enviar o recibir mensajes de señalización.',
+  31100: 'Solicitud de SDK de voz mal formada.',
+  31102: 'Falta el token de autorización en la solicitud.',
+  31105: 'Nombre de cliente / Identidad no válida en el token de acceso.',
+
+  // ── 4. SMS & Messaging Errors (21xxx & 3xxxx) ────────────────────
+  21211: 'El número de teléfono de destino no es válido.',
+  21212: 'El número de teléfono de origen no es válido.',
+  21214: 'El número de teléfono de destino no se puede localizar.',
+  21401: 'El número de teléfono no es válido.',
+  21402: 'La URL proporcionada no es válida.',
+  21408: 'Permisos de geobloqueo deshabilitados para la región de destino.',
+  21601: 'El número no es un número de entrada compatible con SMS.',
+  21602: 'El cuerpo del mensaje ("Body") es obligatorio.',
+  21603: 'Se requiere el parámetro "From" o "MessagingServiceSid".',
+  21604: 'El número de destino "To" es obligatorio.',
+  21605: 'La longitud máxima del mensaje SMS estándar es de 160 caracteres.',
+  21606: 'El número "From" no es un número de Twilio habilitado para SMS en esta cuenta.',
+  21608: 'Esta cuenta de prueba solo puede enviar mensajes a números verificados.',
+  21609: 'El número "From" no está activo en esta cuenta.',
+  21610: 'El destinatario se dio de baja (STOP/Opt-out) y bloqueó las entregas.',
+  21611: 'El número "From" excedió la cantidad máxima de mensajes en cola.',
+  21612: 'No se puede enviar el mensaje con la combinación de parámetros "To" y "From".',
+  21614: 'El número "To" no es un número móvil válido.',
+  21617: 'El cuerpo del mensaje concatenado excede el límite de 1,600 caracteres.',
+  21618: 'El cuerpo del mensaje no puede ser enviado.',
+  21619: 'Se requiere un cuerpo de texto, una URL de medios o un ContentSid.',
+  21620: 'URL(s) de archivos multimedia no válidas.',
+  21654: 'Se requiere el parámetro ContentSid.',
+  21655: 'El ContentSid no es válido.',
+  21656: 'El parámetro ContentVariables no es válido.',
+  30001: 'La cola de mensajes está saturada. Intente de nuevo más tarde.',
+  30002: 'La cuenta de Twilio ha sido suspendida.',
+  30003: 'El número de destino no está localizable (apagado, sin señal o incorrecto).',
+  30004: 'El mensaje fue bloqueado por políticas de cumplimiento.',
+  30005: 'El dispositivo de destino es desconocido o no existe.',
+  30006: 'El número es una línea fija o el operador no soporta el tipo de mensaje.',
+  30007: 'El mensaje fue filtrado por el operador móvil (Spam/Compliance).',
+  30008: 'Error desconocido en la entrega del mensaje.',
+  30009: 'Falta el segmento de entrada del mensaje.',
+  30010: 'El precio del mensaje excede el costo máximo configurado por segmento.',
+  30011: 'MMS no está soportado por el operador o número de destino en esta región.',
+  30017: 'Congestión en la red del operador de telecomunicaciones.',
+  30019: 'El contenido del mensaje excede el límite permitido por el operador.',
+  30020: 'Error interno al programar el mensaje.',
+  30021: 'Error interno del Servicio de Mensajería (Messaging Service).',
+  30022: 'Límite de velocidad de envío excedido para la regla US A2P 10DLC.',
+  30023: 'Límite diario de mensajes alcanzado para el perfil US A2P 10DLC.',
+  30029: 'Se superó el límite máximo de intentos de reentrega del mensaje.',
+  30032: 'El número Toll-Free no ha completado el proceso de verificación.',
+  30034: 'El remitente US A2P 10DLC no está registrado ni aprobado.',
+  30036: 'El período de validez configurado para el mensaje ha expirado.',
+  30037: 'El envío de mensajes salientes está deshabilitado para esta cuenta.',
+  30038: 'El cuerpo del mensaje OTP fue filtrado por el operador.',
+  30040: 'El operador de destino requiere pre-registro oficial del remitente.',
+  30041: 'El remitente está restringido o no registrado en un país con norma legal.',
+  30042: 'El Sender ID alfanumérico no está autorizado en esta cuenta.',
+  30044: 'El mensaje excede la longitud permitida para cuentas de prueba.',
+  30046: 'La entrega del mensaje no fue confirmada por la red.',
+  30047: 'Error al programar el mensaje en una ventana de tiempo válida.',
+  30055: 'El Servicio de Mensajería no contiene números o remitentes válidos.',
+  30450: 'El envío del mensaje fue bloqueado por filtros internos.',
+  30453: 'El mensaje no pudo ser entregado al dispositivo final.',
+  30454: 'La cuenta excedió el límite total de mensajes asignado.',
+
+  // ── 5. Lookup API Errors (604xx) ──────────────────────────────────
+  60404: 'Número no encontrado en el registro del servicio de Lookup.',
+  60410: 'El formato del número de teléfono en la consulta Lookup no es válido.',
+
+  // ── 6. Verify API Errors (60xxx) ──────────────────────────────────
+  60001: 'Error de autenticación con el proveedor de telecomunicaciones downstream.',
+  60002: 'Tiempo de espera agotado al identificar al usuario final.',
+  60003: 'Los datos del usuario final no están disponibles para la verificación.',
+  60004: 'Configuración de servicio de verificación no válida.',
+  60005: 'Error en la infraestructura del operador downstream.',
+  60006: 'El número de teléfono proporcionado para verificación no es válido.',
+  60007: 'La verificación con el proveedor downstream ha fallado.',
+  60008: 'El operador telefónico no es compatible con el servicio de verificación.',
+  60200: 'El código de verificación (OTP) ingresado no es válido.',
+  60202: 'El código de verificación (OTP) ha caducado.',
+  60203: 'Se alcanzó el número máximo de intentos de envío de código.',
+  60204: 'Se alcanzó el número máximo de intentos fallidos de comprobación del código.',
+  60205: 'SMS no es compatible con números de teléfono de línea fija.',
+  60207: 'Se alcanzó el límite de velocidad de verificaciones por servicio.',
+  60212: 'Demasiadas solicitudes de verificación simultáneas para el mismo número.',
+  60223: 'El canal de entrega solicitado (SMS/Voz/WhatsApp) está deshabilitado.',
+  60238: 'El intento de verificación fue bloqueado por protección antifraude de Twilio.',
+  60245: 'Se excedieron los límites globales de mensajería para esta verificación.',
+  60247: 'La longitud de la plantilla de mensaje de verificación excede el límite.',
+  60300: 'Parámetro de solicitud no válido en la API de Verify.',
+  60306: 'Solicitud no válida o mal estructurada para el servicio de Verify.',
+
+  // ── 7. WhatsApp & Multi-Channel Errors (210xx & 63xxx) ───────────
+  21000: 'Error desconocido del canal de WhatsApp.',
+  21001: 'El número de teléfono no está registrado en WhatsApp.',
+  21002: 'La cuenta de WhatsApp no está configurada correctamente en Twilio.',
+  21003: 'La entrega del mensaje a través de WhatsApp ha fallado.',
+  21004: 'La cuenta de WhatsApp ha sido suspendida o deshabilitada por Meta.',
+  63001: 'La plantilla de mensaje de WhatsApp no existe o no ha sido aprobada por Meta.',
+  63002: 'Faltan parámetros variables obligatorios en la plantilla de WhatsApp.',
+  63003: 'Los parámetros enviados no coinciden con la estructura aprobada de la plantilla.',
+  63005: 'La ventana de conversación de 24 horas de WhatsApp ha caducado. Requiere plantilla.',
+  63010: 'Error interno de Twilio al procesar el mensaje para WhatsApp.',
+  63012: 'Error interno del servicio subyacente de Meta/WhatsApp.',
+  63015: 'El tipo de archivo o medio adjunto no es compatible con WhatsApp.',
+  63016: 'El tamaño del archivo excede el límite permitido por WhatsApp.',
+  63018: 'Se excedió el límite de velocidad de envío en el canal de WhatsApp.',
+  63019: 'No se pudo descargar el archivo multimedia desde la URL proporcionada.',
+  63020: 'La cuenta de Meta Business Manager no está configurada o vinculada correctamente.',
+  63021: 'El contenido del mensaje no cumple con las políticas del canal de WhatsApp.',
+  63022: 'El certificado de nombre de visualización verificado no es válido.',
+  63024: 'El destinatario no usa WhatsApp o no ha aceptado los términos de servicio.',
+  63025: 'Conflicto al subir el archivo multimedia: el contenido ya existe.',
+  63032: 'No se puede enviar el mensaje a este usuario debido a restricciones de WhatsApp.',
+  63038: 'La cuenta ha alcanzado el límite máximo diario de mensajes en WhatsApp.',
+};
+
+const DEFAULT_ERROR = 'Error de entrega no especificado';
+
+/**
+ * Resolves a Twilio numeric error code into a user-friendly Spanish message.
+ *
+ * @param errorCode  - Numeric error code from Twilio (e.g. 30003)
+ * @param fallback   - Optional fallback message when the code is unknown
+ * @returns          - Human-readable Spanish message
+ */
+export function resolveTwilioError(
+  errorCode: number | null | undefined,
+  fallback?: string | null,
+): string {
+  if (errorCode == null) return fallback ?? DEFAULT_ERROR;
+  const mapped = TWILIO_ERROR_MESSAGES[errorCode];
+  if (mapped) return mapped;
+  if (fallback) return fallback;
+  return `${DEFAULT_ERROR} (código ${errorCode})`;
+}

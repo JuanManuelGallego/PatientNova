@@ -26,7 +26,7 @@ import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
 import { PatientStatusPill } from "@/src/components/Info/StatusPill";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { Users, UserCheck, UserX } from "lucide-react";
+import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
@@ -80,12 +80,23 @@ function PatientsPageContent() {
           title="Pacientes"
           subtitle={todayString()}
           actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary btn-hero"
-            >
-              Nuevo Paciente
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  fetchPatients();
+                  fetchStats();
+                }}
+                className="btn-secondary"
+              >
+                <RefreshCw size={16} />
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary btn-hero"
+              >
+                Nuevo Paciente
+              </button>
+            </>
           }
         />
         <div className="stats-grid">

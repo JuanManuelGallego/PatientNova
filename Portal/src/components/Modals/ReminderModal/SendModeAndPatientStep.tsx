@@ -3,7 +3,7 @@ import { ReminderMode, ReminderForm } from "@/src/types/Reminder";
 import { Appointment } from "@/src/types/Appointment";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate } from "@/src/utils/TimeUtils";
-import { LBL_NO_PATIENTS } from "@/src/constants/ui";
+import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { RequiredField } from "@/src/components/Info/Required";
@@ -84,20 +84,10 @@ export function SendModeAndPatientStep({
       )}
       <label className="form-label">
         <RequiredField label="Paciente" />
-        <CustomSelect
+        <PatientAutocomplete
           disabled={patients.length === 0}
           value={form.patientId}
           placeholder="Seleccionar paciente…"
-          options={
-            patients.length > 0
-              ? patients
-                .filter((p) => p.status === "ACTIVE")
-                .map((p) => ({
-                  value: p.id,
-                  label: `${p.name} ${p.lastName}`,
-                }))
-              : [ { value: "", label: LBL_NO_PATIENTS } ]
-          }
           onChange={onPatientChange}
         />
       </label>

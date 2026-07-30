@@ -13,6 +13,7 @@ import {
   Clock,
   AlertCircle,
   DollarSign,
+  RefreshCw,
 } from "lucide-react";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
@@ -146,14 +147,25 @@ function AppointmentsPageContent() {
           title="Citas"
           subtitle={todayString()}
           actions={
-            <button
-              onClick={() => {
-                setShowCreate(true);
-              }}
-              className="btn-primary btn-hero"
-            >
-              Nueva Cita
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  fetchAppointments();
+                  fetchStats();
+                }}
+                className="btn-secondary"
+              >
+                <RefreshCw size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreate(true);
+                }}
+                className="btn-primary btn-hero"
+              >
+                Nueva Cita
+              </button>
+            </>
           }
         />
         <div className="stats-grid stats-grid--5">

@@ -25,6 +25,7 @@ export interface NotificationResult {
   to: string;
   sentAt: string;
   error?: string;
+  errorCode?: number | null;
 }
 
 export interface ScheduleResult {

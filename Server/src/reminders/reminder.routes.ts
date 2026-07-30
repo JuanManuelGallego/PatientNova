@@ -96,6 +96,21 @@ reminderRouter.post(
 );
 
 /**
+ * POST /reminders/:id/retry
+ * Retry a failed reminder (sets status -> PENDING and re-enqueues).
+ * Returns 409 if reminder is not in FAILED status, already retried,
+ * or linked to a past appointment.
+ */
+reminderRouter.post(
+  '/:id/retry',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const reminder = await reminderService.retry(req.params.id as string, req.user!.id);
+    ok(res, reminder);
+  })
+);
+
+/**
  * DELETE /reminders/:id
  * Soft-delete a reminder record (sets isActive=false).
  */

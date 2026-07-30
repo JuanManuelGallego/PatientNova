@@ -3,6 +3,7 @@ import { useMemo, useState, Suspense } from "react";
 import {
   CHANNEL_CFG,
   FetchRemindersFilters,
+  MAX_RETRIES,
   Reminder,
   ReminderStatus,
 } from "@/src/types/Reminder";
@@ -17,6 +18,7 @@ import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
 import PageLayout from "@/src/components/PageLayout";
@@ -24,7 +26,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { Megaphone, Send, XCircle, AlertTriangle } from "lucide-react";
+import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import {
   useQueryState,
@@ -43,34 +45,34 @@ const PAGE_SIZE = 10;
 function RemindersPageContent() {
   const { stats, fetchStats } = useFetchRemindersStats();
 
-  const [activeTab, setActiveTab] = useQueryState(
+  const [ activeTab, setActiveTab ] = useQueryState(
     "activeTab",
     parseAsStringEnum(Object.values(ActiveTab)).withDefault(ActiveTab.Active),
   );
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [search, setSearch] = useQueryState(
+  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [ search, setSearch ] = useQueryState(
     "search",
     parseAsString.withDefault(""),
   );
   const debouncedSearch = useDebounceState(search, 250);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [editReminder, setEditReminder] = useState<Reminder | null>(null);
+  const [ showCreate, setShowCreate ] = useState(false);
+  const [ editReminder, setEditReminder ] = useState<Reminder | null>(null);
 
-  const [viewReminder, setViewReminder] = useState<Reminder | null>(null);
-  const [cancelReminder, setCancelReminder] = useState<Reminder | null>(null);
+  const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
+  const [ cancelReminder, setCancelReminder ] = useState<Reminder | null>(null);
 
   const filters = useMemo<FetchRemindersFilters>(
     () => ({
       status:
         activeTab === "Active"
-          ? [ReminderStatus.PENDING, ReminderStatus.QUEUED]
+          ? [ ReminderStatus.PENDING, ReminderStatus.QUEUED ]
           : activeTab === "History"
             ? [
-                ReminderStatus.SENT,
-                ReminderStatus.FAILED,
-                ReminderStatus.CANCELLED,
-              ]
+              ReminderStatus.SENT,
+              ReminderStatus.FAILED,
+              ReminderStatus.CANCELLED,
+            ]
             : undefined,
       page,
       pageSize: PAGE_SIZE,
@@ -78,11 +80,13 @@ function RemindersPageContent() {
       orderBy: activeTab === "Active" ? "sendAt" : "updatedAt",
       order: activeTab === "Active" ? "asc" : "desc",
     }),
-    [page, debouncedSearch, activeTab],
+    [ page, debouncedSearch, activeTab ],
   );
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
     useFetchReminders(filters);
+
+  const { retryReminder, loading: retryLoading } = useRetryReminder();
 
   return (
     <>
@@ -91,20 +95,31 @@ function RemindersPageContent() {
           title="Recordatorios"
           subtitle={todayString()}
           actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="btn-primary btn-hero"
-            >
-              Nuevo Recordatorio
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  fetchReminders();
+                  fetchStats();
+                }}
+                className="btn-secondary"
+              >
+                <RefreshCw size={16} />
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="btn-primary btn-hero"
+              >
+                Nuevo Recordatorio
+              </button>
+            </>
           }
         />
         <div className="stats-grid">
           <StatCard
             label="Activos"
             value={
-              (stats?.byStatus[ReminderStatus.PENDING] || 0) +
-              (stats?.byStatus[ReminderStatus.QUEUED] || 0)
+              (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
+              (stats?.byStatus[ ReminderStatus.QUEUED ] || 0)
             }
             sub="por enviar"
             accent="var(--c-link)"
@@ -112,21 +127,21 @@ function RemindersPageContent() {
           />
           <StatCard
             label="Enviados"
-            value={stats?.byStatus[ReminderStatus.SENT] || 0}
+            value={stats?.byStatus[ ReminderStatus.SENT ] || 0}
             sub="entregados"
             accent="var(--c-success)"
             icon={Megaphone}
           />
           <StatCard
             label="Fallidos"
-            value={stats?.byStatus[ReminderStatus.FAILED] || 0}
+            value={stats?.byStatus[ ReminderStatus.FAILED ] || 0}
             sub="requieren atención"
             accent="var(--c-error)"
             icon={AlertTriangle}
           />
           <StatCard
             label="Cancelados"
-            value={stats?.byStatus[ReminderStatus.CANCELLED] || 0}
+            value={stats?.byStatus[ ReminderStatus.CANCELLED ] || 0}
             sub="fuera de la cola"
             accent="var(--c-gray-400)"
             icon={XCircle}
@@ -179,6 +194,11 @@ function RemindersPageContent() {
             totalPages={totalPages}
             setPage={setPage}
             setViewReminder={setViewReminder}
+            onRetry={async (id) => {
+              await retryReminder(id);
+              fetchReminders();
+              fetchStats();
+            }}
           />
         )}
         {activeTab === "Bulk" && <BulkTab />}
@@ -218,6 +238,13 @@ function RemindersPageContent() {
             setCancelReminder(viewReminder);
             setViewReminder(null);
           }}
+          onRetry={async () => {
+            await retryReminder(viewReminder.id);
+            setViewReminder(null);
+            fetchReminders();
+            fetchStats();
+          }}
+          retryLoading={retryLoading}
         />
       )}
       {cancelReminder && (
@@ -283,7 +310,7 @@ function ActiveRemindersTab({
             </div>
             <div className="td-name__secondary">{reminder.to}</div>
           </td>
-          <td className="td td--date">{CHANNEL_CFG[reminder.channel].label}</td>
+          <td className="td td--date">{CHANNEL_CFG[ reminder.channel ].label}</td>
           <td className="td">
             <ReminderStatusPill status={reminder.status} />
           </td>
@@ -337,6 +364,7 @@ function HistoryRemindersTab({
   totalPages,
   setPage,
   setViewReminder,
+  onRetry,
 }: {
   reminders: Reminder[];
   loading: boolean;
@@ -345,6 +373,7 @@ function HistoryRemindersTab({
   totalPages: number;
   setPage: (p: number) => void;
   setViewReminder: (r: Reminder) => void;
+  onRetry: (id: string) => void;
 }) {
   return (
     <DataTable
@@ -356,6 +385,7 @@ function HistoryRemindersTab({
         "Última actualización",
         "ID Mensaje",
         "Error",
+        "",
       ]}
       rows={reminders}
       loading={loading}
@@ -373,7 +403,7 @@ function HistoryRemindersTab({
             </div>
             <div className="td-name__secondary">{reminder.to}</div>
           </td>
-          <td className="td td--date">{CHANNEL_CFG[reminder.channel].label}</td>
+          <td className="td td--date">{CHANNEL_CFG[ reminder.channel ].label}</td>
           <td className="td">
             <ReminderStatusPill status={reminder.status} />
           </td>
@@ -388,12 +418,23 @@ function HistoryRemindersTab({
           </td>
           <td className="td td--error-cell">
             {reminder.error ? (
-              <span title={reminder.error} className="td-error__text">
-                {reminder.error.slice(0, 40)}
-                {reminder.error.length > 40 ? "…" : ""}
-              </span>
+              <span className="td-error__text">{reminder.error}</span>
             ) : (
               <span className="td-error__empty">—</span>
+            )}
+          </td>
+          <td className="td" onClick={(e) => e.stopPropagation()}>
+            {reminder.status === ReminderStatus.FAILED && (
+              <div className="td-actions">
+                <button
+                  onClick={() => onRetry(reminder.id)}
+                  disabled={(reminder.retryCount ?? 0) > MAX_RETRIES}
+                  title={(reminder.retryCount ?? 0) > MAX_RETRIES ? 'Máximo de reintentos alcanzado' : undefined}
+                  className="btn-action-edit"
+                >
+                  <ACTION_ICONS.retry size={14} />
+                </button>
+              </div>
             )}
           </td>
         </tr>
@@ -448,23 +489,23 @@ function ReminderTabs({
 }: {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
-  stats: ReturnType<typeof useFetchRemindersStats>["stats"];
+  stats: ReturnType<typeof useFetchRemindersStats>[ "stats" ];
 }) {
   const tabs = [
     {
       key: ActiveTab.Active,
       label: "Activos",
       badge:
-        (stats?.byStatus[ReminderStatus.PENDING] || 0) +
-        (stats?.byStatus[ReminderStatus.QUEUED] || 0),
+        (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
+        (stats?.byStatus[ ReminderStatus.QUEUED ] || 0),
     },
     {
       key: ActiveTab.History,
       label: "Historial",
       badge:
-        (stats?.byStatus[ReminderStatus.SENT] || 0) +
-        (stats?.byStatus[ReminderStatus.FAILED] || 0) +
-        (stats?.byStatus[ReminderStatus.CANCELLED] || 0),
+        (stats?.byStatus[ ReminderStatus.SENT ] || 0) +
+        (stats?.byStatus[ ReminderStatus.FAILED ] || 0) +
+        (stats?.byStatus[ ReminderStatus.CANCELLED ] || 0),
     },
     { key: ActiveTab.Bulk, label: "Envío Masivo", badge: null },
   ];

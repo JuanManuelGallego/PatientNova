@@ -2,11 +2,11 @@
 
 import { AppointmentForm, AppointmentDuration, AppointmentType } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
-import { getAvatarColor, getInitials, getPatientFullName } from "@/src/utils/AvatarHelper";
+import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { AppointmentDateTimePicker } from "@/src/components/AppointmentDateTimePicker";
+import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
-import { LBL_NO_PATIENTS } from "@/src/constants/ui";
 import React from "react";
 import { STATUS_ICONS } from "@/src/config/icons";
 
@@ -29,12 +29,9 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
             {!isEdit && (
                 <label className="form-label">
                     <RequiredField label="Paciente" />
-                    <CustomSelect
+                    <PatientAutocomplete
                         value={form.patientId}
                         placeholder="Seleccionar paciente…"
-                        options={patients.length > 0
-                            ? patients.filter(p => p.status === "ACTIVE").map(p => ({ value: p.id, label: getPatientFullName(p) }))
-                            : [ { value: "", label: LBL_NO_PATIENTS } ]}
                         onChange={(v) => {
                             const selectedPatient = patients.find(p => p.id === v);
                             const type = appointmentTypes.find(t => t.id === selectedPatient?.appointmentTypeId);

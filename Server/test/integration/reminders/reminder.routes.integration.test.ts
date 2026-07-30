@@ -163,4 +163,51 @@ describe('reminder routes (integration)', () => {
     expect(stats.byStatus[ReminderStatus.PENDING]).toBe(1);
     expect(stats.byChannel[Channel.WHATSAPP]).toBe(1);
   });
+
+  it('POST /:id/retry retries a FAILED reminder and returns 200', async () => {
+    const created = await invokeRoute(reminderRouter, 'post', '/', baseReq({ body: createBody() }));
+    const id = (created.body as any).data.id;
+
+    await prisma.reminder.update({
+      where: { id },
+      data: { status: ReminderStatus.FAILED, error: 'Test error' },
+    });
+
+    const res = await invokeRoute(reminderRouter, 'post', `/${id}/retry`, baseReq({ params: { id } }));
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data.status).toBe(ReminderStatus.PENDING);
+    expect((res.body as any).data.retryCount).toBe(1);
+    expect((res.body as any).data.error).toBeNull();
+  });
+
+  it('POST /:id/retry returns 409 for non-FAILED reminder', async () => {
+    const created = await invokeRoute(reminderRouter, 'post', '/', baseReq({ body: createBody() }));
+    const id = (created.body as any).data.id;
+
+    const res = await invokeRoute(reminderRouter, 'post', `/${id}/retry`, baseReq({ params: { id } }));
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('POST /:id/retry returns 404 for non-owned reminder', async () => {
+    const otherPatient = await createTestPatient((await createTestUser()).id);
+    const reminder = await prisma.reminder.create({
+      data: {
+        channel: Channel.SMS,
+        to: '+57300123456',
+        sendMode: ReminderMode.IMMEDIATE,
+        sendAt: futureDate(60),
+        status: ReminderStatus.FAILED,
+        patientId: otherPatient.id,
+        userId: otherPatient.userId,
+      },
+    });
+
+    const res = await invokeRoute(
+      reminderRouter,
+      'post',
+      `/${reminder.id}/retry`,
+      baseReq({ params: { id: reminder.id } }),
+    );
+    expect(res.statusCode).toBe(404);
+  });
 });

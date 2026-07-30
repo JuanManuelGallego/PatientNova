@@ -2,6 +2,7 @@ import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { validateReminder } from '../validation.js';
 import { dispatchMessage } from '../dispatch.js';
+import { resolveTwilioError } from '../../twilio/twilio-errors.js';
 import { REMINDER_SEND_RETRY_LIMIT } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
 
@@ -53,7 +54,10 @@ export async function sendReminderWorker([job]: Array<{
     if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
       await prisma.reminder.update({
         where: { id: reminderId },
-        data: { status: ReminderStatus.FAILED, error: result.error ?? 'Dispatch failed' },
+        data: {
+          status: ReminderStatus.FAILED,
+          error: resolveTwilioError(result.errorCode, result.error ?? 'Dispatch failed'),
+        },
       });
       logger.error({ reminderId, error: result.error }, 'Reminder permanently failed after max retries');
     }

@@ -48,6 +48,7 @@ export async function sendWhatsApp(
     to: req.to,
     sentAt: new Date().toISOString(),
     error: message.errorMessage,
+    errorCode: message.errorCode,
   };
 }
 
@@ -84,6 +85,7 @@ export async function scheduleWhatsApp(
     to: req.payload.to,
     sentAt: new Date().toISOString(),
     error: message.errorMessage,
+    errorCode: message.errorCode,
   };
 }
 
@@ -106,6 +108,7 @@ export async function sendWhatsAppFreeForm(to: string, body: string): Promise<No
     to,
     sentAt: new Date().toISOString(),
     error: message.errorMessage,
+    errorCode: message.errorCode,
   };
 }
 
@@ -132,6 +135,8 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
     channel: Channel.SMS,
     to: req.to,
     sentAt: new Date().toISOString(),
+    error: message.errorMessage,
+    errorCode: message.errorCode,
   };
 }
 

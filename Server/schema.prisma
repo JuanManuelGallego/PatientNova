@@ -67,8 +67,9 @@ model Reminder {
   contentVariables Json?
   body             String? @db.Text
 
-  status ReminderStatus @default(PENDING)
-  error  String?
+  status     ReminderStatus @default(PENDING)
+  error      String?
+  retryCount Int            @default(0)
 
   sendMode  ReminderMode
   sendAt    DateTime
