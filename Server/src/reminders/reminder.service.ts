@@ -13,6 +13,7 @@ import { getBoss } from '../scheduler/pg-boss.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 
 const QUEUE = 'send-reminder';
+const MAX_RETRIES = 1;
 
 export const reminderService = {
   findById: reminderRepository.findById.bind(reminderRepository),
@@ -140,7 +141,7 @@ export const reminderService = {
       throw new ReminderNotRetryableError(id, 'reminder is deleted');
     }
 
-    if (reminder.retryCount >= 1) {
+    if (reminder.retryCount >= MAX_RETRIES) {
       throw new ReminderNotRetryableError(id, 'max retries exceeded');
     }
 
