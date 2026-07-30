@@ -11,7 +11,7 @@ import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { Appointment } from "@/src/types/Appointment";
+import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "@/src/components/Calendar/types";
@@ -21,7 +21,6 @@ import { CalendarToolbar } from "@/src/components/Calendar/CalendarToolbar";
 import { CalendarLegend } from "@/src/components/Calendar/CalendarLegend";
 import { MonthView } from "@/src/components/Calendar/MonthView";
 import { WeekView } from "@/src/components/Calendar/WeekView";
-import { DayView } from "@/src/components/Calendar/DayView";
 import { DayPanel } from "@/src/components/Calendar/DayPanel";
 
 function CalendarContent() {
@@ -33,7 +32,6 @@ function CalendarContent() {
     calYear,
     calMonth,
     weekStart,
-    dayDate,
     selectedDay,
     setSelectedDay,
     calendarFilters,
@@ -43,8 +41,13 @@ function CalendarContent() {
     drillToDay,
   } = useCalendarNavigation();
 
+  const apptFilter: FetchAppointmentsFilters = {
+    ...calendarFilters,
+    status: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED ],
+  }
+
   const { appointments, loading, fetchAppointments } =
-    useFetchAppointments(calendarFilters);
+    useFetchAppointments(apptFilter);
 
   const { blockedTimes, loading: loadingBlocked, fetchBlockedTimes } =
     useFetchBlockedTimes(calendarFilters);
@@ -54,7 +57,6 @@ function CalendarContent() {
       calYear,
       calMonth,
       weekStart,
-      dayDate,
       viewMode,
       appointments,
       blockedTimes,
@@ -144,22 +146,6 @@ function CalendarContent() {
               loading={loading || loadingBlocked}
               hourRange={hourRange}
               onDrillToDay={drillToDay}
-              onViewAppt={setViewAppt}
-              onCreateAt={(date) => {
-                setPrefillDate(date);
-                setShowCreate(true);
-              }}
-              onSelectBlockedTime={setEditBlockedTime}
-            />
-          )}
-          {viewMode === ViewMode.Day && (
-            <DayView
-              dayDate={dayDate}
-              apptByDate={apptByDate}
-              blockedByDate={blockedByDate}
-              holidayMap={holidayMap}
-              loading={loading || loadingBlocked}
-              hourRange={hourRange}
               onViewAppt={setViewAppt}
               onCreateAt={(date) => {
                 setPrefillDate(date);

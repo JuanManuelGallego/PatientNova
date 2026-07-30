@@ -13,7 +13,6 @@ import { STATUS_ICONS } from "@/src/config/icons";
 interface Props {
     form: AppointmentForm;
     setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
-    patients: Patient[];
     isEdit: boolean;
     selectedPatient: Patient | undefined;
     appointmentTypes: AppointmentType[];
@@ -21,9 +20,10 @@ interface Props {
     blockedSlots: { start: string; end: string }[];
     onError: (error: string) => void;
     clearError: () => void;
+    onPatientSelect: (patient: Patient | undefined) => void;
 }
 
-export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPatient, appointmentTypes, bookedSlots, blockedSlots, onError, clearError }: Props) {
+export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, appointmentTypes, bookedSlots, blockedSlots, onError, clearError, onPatientSelect }: Props) {
     return (
         <div className="form-stack">
             {!isEdit && (
@@ -32,10 +32,10 @@ export function PatientAndTypeStep({ form, setForm, patients, isEdit, selectedPa
                     <PatientAutocomplete
                         value={form.patientId}
                         placeholder="Seleccionar paciente…"
-                        onChange={(v) => {
-                            const selectedPatient = patients.find(p => p.id === v);
-                            const type = appointmentTypes.find(t => t.id === selectedPatient?.appointmentTypeId);
+                        onChange={(v, patient) => {
+                            const type = appointmentTypes.find(t => t.id === patient?.appointmentTypeId);
                             setForm(f => ({ ...f, patientId: v, typeId: type?.id ?? '', price: type?.defaultPrice ?? 0 }));
+                            onPatientSelect(patient);
                         }}
                     />
                 </label>

@@ -28,7 +28,7 @@ export const buildPatientQueryString = (filters?: FetchPatientsFilters): string 
         status: filters?.status ?? DEFAULT_PATIENT_STATUS,
         search: filters?.search,
         page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
-        pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : undefined,
+        pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : 50,
         orderBy: filters?.orderBy,
         order: filters?.order,
         from: filters?.from,
