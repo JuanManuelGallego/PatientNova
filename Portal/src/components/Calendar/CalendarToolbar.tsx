@@ -42,12 +42,10 @@ export function CalendarToolbar({
               title={
                 v === ViewMode.Month
                   ? "Vista mensual (M)"
-                  : v === ViewMode.Week
-                    ? "Vista semanal (W)"
-                    : "Vista diaria (D)"
+                  : "Vista semanal (W)"
               }
             >
-              {v === ViewMode.Month ? "Mes" : v === ViewMode.Week ? "Semana" : "Día"}
+              {v === ViewMode.Month ? "Mes" : "Semana"}
             </button>
           ))}
         </div>
