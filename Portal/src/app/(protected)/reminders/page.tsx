@@ -86,7 +86,7 @@ function RemindersPageContent() {
   const { reminders, loading, error, fetchReminders, total, totalPages } =
     useFetchReminders(filters);
 
-  const { retryReminder } = useRetryReminder();
+  const { retryReminder, loading: retryLoading } = useRetryReminder();
 
   return (
     <>
@@ -244,6 +244,7 @@ function RemindersPageContent() {
             fetchReminders();
             fetchStats();
           }}
+          retryLoading={retryLoading}
         />
       )}
       {cancelReminder && (
@@ -423,10 +424,12 @@ function HistoryRemindersTab({
             )}
           </td>
           <td className="td" onClick={(e) => e.stopPropagation()}>
-            {reminder.status === ReminderStatus.FAILED && (reminder.retryCount ?? 0) <= MAX_RETRIES && (
+            {reminder.status === ReminderStatus.FAILED && (
               <div className="td-actions">
                 <button
                   onClick={() => onRetry(reminder.id)}
+                  disabled={(reminder.retryCount ?? 0) > MAX_RETRIES}
+                  title={(reminder.retryCount ?? 0) > MAX_RETRIES ? 'Máximo de reintentos alcanzado' : undefined}
                   className="btn-action-edit"
                 >
                   <ACTION_ICONS.retry size={14} />

@@ -158,7 +158,7 @@ export const reminderService = {
     const now = new Date();
     const sendAt = new Date(reminder.sendAt) > now ? new Date(reminder.sendAt) : now;
 
-    const retried = await reminderRepository.retry(id, userId, sendAt);
+    const retried = await reminderRepository.retry(id, sendAt);
 
     if (sendAt > now) {
       await reminderJobManager.enqueue(id, sendAt);

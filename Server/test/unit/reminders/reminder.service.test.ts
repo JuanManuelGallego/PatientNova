@@ -71,7 +71,7 @@ beforeEach(() => {
   mocks.repo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' });
   mocks.repo.delete.mockResolvedValue(fakeReminder);
   mocks.repo.restore.mockResolvedValue(fakeReminder);
-  mocks.repo.retry.mockImplementation(async (_id: string, _userId: string, sendAt: Date) => ({
+  mocks.repo.retry.mockImplementation(async (_id: string, sendAt: Date) => ({
     ...fakeReminder,
     status: 'PENDING',
     error: null,
@@ -259,7 +259,7 @@ describe('reminderService.retry', () => {
     const result = await reminderService.retry('rem-1', 'user-1');
     expect(result.status).toBe('PENDING');
     expect(result.retryCount).toBe(1);
-    expect(mocks.repo.retry).toHaveBeenCalledWith('rem-1', 'user-1', expect.any(Date));
+    expect(mocks.repo.retry).toHaveBeenCalledWith('rem-1', expect.any(Date));
     expect(mocks.jobManager.enqueueImmediate).toHaveBeenCalledWith('rem-1');
   });
 

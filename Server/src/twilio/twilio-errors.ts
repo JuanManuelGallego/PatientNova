@@ -193,7 +193,7 @@ export function resolveTwilioError(
   fallback?: string | null,
 ): string {
   if (errorCode == null) return fallback ?? DEFAULT_ERROR;
-  const mapped = TWILIO_ERROR_MESSAGES[ errorCode ];
+  const mapped = TWILIO_ERROR_MESSAGES[errorCode];
   if (mapped) return mapped;
   if (fallback) return fallback;
   return `${DEFAULT_ERROR} (código ${errorCode})`;

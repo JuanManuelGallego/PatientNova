@@ -20,16 +20,19 @@ export function ReminderDrawer({
   onEdit,
   onCancel,
   onRetry,
+  retryLoading,
 }: {
   reminder: Reminder;
   onClose: () => void;
   onEdit: () => void;
   onCancel: () => void;
   onRetry: () => void;
+  retryLoading?: boolean;
 }) {
   const s = REMINDER_STATUS_CONFIG[ reminder.status ];
   const isActive = reminder.status === ReminderStatus.PENDING || reminder.status === ReminderStatus.QUEUED;
-  const canRetry = reminder.status === ReminderStatus.FAILED && (reminder.retryCount ?? 0) <= MAX_RETRIES;
+  const isFailed = reminder.status === ReminderStatus.FAILED;
+  const retriesExhausted = isFailed && (reminder.retryCount ?? 0) > MAX_RETRIES;
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
@@ -181,10 +184,15 @@ export function ReminderDrawer({
             </button>
           </div>
         )}
-        {canRetry && (
+        {isFailed && (
           <div className="drawer-footer">
-            <button onClick={onRetry} className="btn-primary btn-primary--block">
-              <ACTION_ICONS.retry size={14} /> Reintentar
+            <button
+              onClick={onRetry}
+              disabled={retryLoading || retriesExhausted}
+              title={retriesExhausted ? 'Máximo de reintentos alcanzado' : undefined}
+              className="btn-primary btn-primary--block"
+            >
+              <ACTION_ICONS.retry size={14} /> {retryLoading ? 'Reintentando…' : 'Reintentar'}
             </button>
           </div>
         )}
