@@ -5,6 +5,7 @@ import {
   ReminderMode,
   Channel,
   CHANNEL_CFG,
+  MAX_RETRIES,
 } from "@/src/types/Reminder";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
@@ -18,16 +19,17 @@ export function ReminderDrawer({
   onClose,
   onEdit,
   onCancel,
+  onRetry,
 }: {
   reminder: Reminder;
   onClose: () => void;
   onEdit: () => void;
   onCancel: () => void;
+  onRetry: () => void;
 }) {
   const s = REMINDER_STATUS_CONFIG[ reminder.status ];
-  const isActive =
-    reminder.status === ReminderStatus.PENDING ||
-    reminder.status === ReminderStatus.QUEUED;
+  const isActive = reminder.status === ReminderStatus.PENDING || reminder.status === ReminderStatus.QUEUED;
+  const canRetry = reminder.status === ReminderStatus.FAILED && (reminder.retryCount ?? 0) <= MAX_RETRIES;
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
@@ -176,6 +178,13 @@ export function ReminderDrawer({
             </button>
             <button onClick={onCancel} className="btn-drawer-delete">
               <ACTION_ICONS.delete size={14} />
+            </button>
+          </div>
+        )}
+        {canRetry && (
+          <div className="drawer-footer">
+            <button onClick={onRetry} className="btn-primary btn-primary--block">
+              <ACTION_ICONS.retry size={14} /> Reintentar
             </button>
           </div>
         )}

@@ -3,6 +3,7 @@ import { useMemo, useState, Suspense } from "react";
 import {
   CHANNEL_CFG,
   FetchRemindersFilters,
+  MAX_RETRIES,
   Reminder,
   ReminderStatus,
 } from "@/src/types/Reminder";
@@ -17,6 +18,7 @@ import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
 import PageLayout from "@/src/components/PageLayout";
@@ -83,6 +85,8 @@ function RemindersPageContent() {
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
     useFetchReminders(filters);
+
+  const { retryReminder } = useRetryReminder();
 
   return (
     <>
@@ -190,6 +194,11 @@ function RemindersPageContent() {
             totalPages={totalPages}
             setPage={setPage}
             setViewReminder={setViewReminder}
+            onRetry={async (id) => {
+              await retryReminder(id);
+              fetchReminders();
+              fetchStats();
+            }}
           />
         )}
         {activeTab === "Bulk" && <BulkTab />}
@@ -228,6 +237,12 @@ function RemindersPageContent() {
           onCancel={() => {
             setCancelReminder(viewReminder);
             setViewReminder(null);
+          }}
+          onRetry={async () => {
+            await retryReminder(viewReminder.id);
+            setViewReminder(null);
+            fetchReminders();
+            fetchStats();
           }}
         />
       )}
@@ -348,6 +363,7 @@ function HistoryRemindersTab({
   totalPages,
   setPage,
   setViewReminder,
+  onRetry,
 }: {
   reminders: Reminder[];
   loading: boolean;
@@ -356,6 +372,7 @@ function HistoryRemindersTab({
   totalPages: number;
   setPage: (p: number) => void;
   setViewReminder: (r: Reminder) => void;
+  onRetry: (id: string) => void;
 }) {
   return (
     <DataTable
@@ -367,6 +384,7 @@ function HistoryRemindersTab({
         "Última actualización",
         "ID Mensaje",
         "Error",
+        "",
       ]}
       rows={reminders}
       loading={loading}
@@ -402,6 +420,19 @@ function HistoryRemindersTab({
               <span className="td-error__text">{reminder.error}</span>
             ) : (
               <span className="td-error__empty">—</span>
+            )}
+          </td>
+          <td className="td" onClick={(e) => e.stopPropagation()}>
+            {reminder.status === ReminderStatus.FAILED &&
+              (reminder.retryCount ?? 0) <= MAX_RETRIES && (
+              <div className="td-actions">
+                <button
+                  onClick={() => onRetry(reminder.id)}
+                  className="btn-action-edit"
+                >
+                  <ACTION_ICONS.retry size={14} />
+                </button>
+              </div>
             )}
           </td>
         </tr>

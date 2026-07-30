@@ -21,6 +21,7 @@ export interface Reminder {
   sendAt: string;
   sentAt?: string | null;
   messageId?: string | null;
+  retryCount?: number;
 
   appointmentId?: string | null;
   patientId: string;
@@ -170,3 +171,5 @@ export interface FetchRemindersFilters {
   orderBy?: "sendAt" | "createdAt" | "status" | "updatedAt";
   order?: "asc" | "desc";
 }
+
+export const MAX_RETRIES = 1
