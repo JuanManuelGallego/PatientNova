@@ -3,6 +3,7 @@ import { Suspense, useState, useEffect, useCallback } from "react";
 
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
@@ -30,12 +31,14 @@ import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpec
 
 function MedicalRecordsPageContent() {
   const { user } = useAuthContext();
-  const { patients, loading: loadingPatients, error, fetchPatients } = useFetchPatients();
+  const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState("patientId", parseAsString.withDefault(""));
   const [ form, setForm ] = useState<FormValues>(createEmptyForm());
 
   const { createMedicalRecord } = useCreateMedicalRecord();
   const { updateMedicalRecord } = useUpdateMedicalRecord();
+
+  const { patient: selectedPatient } = useFetchPatient(selectedPatientId || null);
 
   const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
   const medicalRecord = medicalRecords?.[ 0 ];
@@ -86,14 +89,13 @@ function MedicalRecordsPageContent() {
   }, []);
 
   const handleCreateRecord = useCallback(async (isFamily: boolean) => {
-    const patient = patients.find((p) => p.id === selectedPatientId);
     await createMedicalRecord({
       patientId: selectedPatientId,
-      name: getPatientFullName(patient),
+      name: getPatientFullName(selectedPatient),
       isFamily,
     });
     await fetchMedicalRecords();
-  }, [ createMedicalRecord, fetchMedicalRecords, patients, selectedPatientId ]);
+  }, [ createMedicalRecord, fetchMedicalRecords, selectedPatient, selectedPatientId ]);
 
   const showRecord = selectedPatientId && medicalRecord && !loadingMedicalRecord;
   const showEmpty = selectedPatientId && !medicalRecord && !loadingMedicalRecord;
@@ -126,7 +128,9 @@ function MedicalRecordsPageContent() {
               <PatientAutocomplete
                 value={selectedPatientId}
                 placeholder="Seleccionar paciente…"
-                onChange={setSelectedPatientId}
+                onChange={(v) => {
+                  setSelectedPatientId(v);
+                }}
               />
             )}
           </label>

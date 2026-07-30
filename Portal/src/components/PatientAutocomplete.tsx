@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { getPatientFullName } from "@/src/utils/AvatarHelper";
 import { SELECT_ICONS, ACTION_ICONS } from "@/src/config/icons";
@@ -55,9 +56,14 @@ export function PatientAutocomplete({
   const { patients, loading } = useFetchPatients(filters);
 
   const selectedPatient = patients.find((p) => p.id === value);
+  const { patient: fallbackPatient } = useFetchPatient(
+    value && !selectedPatient ? value : null,
+  );
+
+  const resolvedPatient = selectedPatient ?? fallbackPatient;
 
   const displayValue =
-    isSearching || !selectedPatient ? searchText : getPatientFullName(selectedPatient);
+    isSearching || !resolvedPatient ? searchText : getPatientFullName(resolvedPatient);
 
   const updateDropdownPosition = useCallback(() => {
     if (!inputRef.current) return;
