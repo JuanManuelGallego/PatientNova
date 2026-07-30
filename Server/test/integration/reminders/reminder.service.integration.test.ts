@@ -132,7 +132,7 @@ describe('reminderService (integration, pg-boss mocked)', () => {
     expect(retried.status).toBe(ReminderStatus.PENDING);
     expect(retried.retryCount).toBe(1);
     expect(retried.error).toBeNull();
-    expect(jobMock.enqueueImmediate).toHaveBeenCalledWith(created.id);
+    expect(jobMock.enqueue).toHaveBeenCalledWith(created.id, expect.any(Date));
 
     const raw = await prisma.reminder.findUnique({ where: { id: created.id } });
     expect(raw!.status).toBe(ReminderStatus.PENDING);
