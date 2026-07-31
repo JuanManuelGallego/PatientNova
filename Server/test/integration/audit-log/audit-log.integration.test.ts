@@ -240,4 +240,168 @@ describe('audit-log routes (integration)', () => {
     expect(body.data.data).toHaveLength(1);
     expect(body.data.total).toBe(1);
   });
+
+  it('GET / supports filtering by entityId', async () => {
+    await auditLogService.create({ ...baseLogData, userId, entityId: 'entity-aaa' });
+    await auditLogService.create({ ...baseLogData, userId, entityId: 'entity-bbb' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { entityId: 'entity-aaa' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: unknown[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('GET / supports filtering by actionType', async () => {
+    await auditLogService.create({ ...baseLogData, userId, actionType: 'CREATE' });
+    await auditLogService.create({ ...baseLogData, userId, actionType: 'UPDATE' });
+    await auditLogService.create({ ...baseLogData, userId, actionType: 'DELETE' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { actionType: 'DELETE' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: unknown[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('GET / supports filtering by source', async () => {
+    await auditLogService.create({ ...baseLogData, userId, source: 'API' });
+    await auditLogService.create({ ...baseLogData, userId, source: 'JOB' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { source: 'JOB' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: unknown[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('GET / supports filtering by actorId', async () => {
+    await auditLogService.create({ ...baseLogData, userId, actorId: 'actor-1' });
+    await auditLogService.create({ ...baseLogData, userId, actorId: 'actor-2' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { actorId: 'actor-1' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: unknown[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('GET / supports ordering asc', async () => {
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'PATIENT' });
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'APPOINTMENT' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { orderBy: 'entityType', order: 'asc' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: { entityType: string }[]; total: number } };
+    expect(body.data.data[0]!.entityType).toBe('APPOINTMENT');
+    expect(body.data.data[1]!.entityType).toBe('PATIENT');
+  });
+
+  it('GET / supports ordering desc', async () => {
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'PATIENT' });
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'APPOINTMENT' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { orderBy: 'entityType', order: 'desc' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: { entityType: string }[]; total: number } };
+    expect(body.data.data[0]!.entityType).toBe('PATIENT');
+    expect(body.data.data[1]!.entityType).toBe('APPOINTMENT');
+  });
+
+  it('GET / supports combined filters', async () => {
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'PATIENT', actionType: 'CREATE', actorId: 'actor-1' });
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'PATIENT', actionType: 'UPDATE', actorId: 'actor-1' });
+    await auditLogService.create({ ...baseLogData, userId, entityType: 'APPOINTMENT', actionType: 'CREATE', actorId: 'actor-2' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { entityType: 'PATIENT', actionType: 'CREATE' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: unknown[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+  });
+
+  it('GET / respects pageSize and page query params', async () => {
+    for (let i = 0; i < 5; i++) {
+      await auditLogService.create({ ...baseLogData, userId, entityType: 'PATIENT', entityId: `entity-${i}` });
+    }
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { pageSize: '2', page: '2', orderBy: 'eventTimeUtc', order: 'asc' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: { entityId: string }[]; total: number; page: number; pageSize: number } };
+    expect(body.data.data).toHaveLength(2);
+    expect(body.data.total).toBe(5);
+    expect(body.data.page).toBe(2);
+    expect(body.data.pageSize).toBe(2);
+  });
+
+  it('GET / returns 400 for invalid query params', async () => {
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { entityType: 'INVALID_ENUM' } })
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('service.create returns undefined when repository throws', async () => {
+    const log = await auditLogService.create({
+      ...baseLogData,
+      userId,
+      entityType: 'INVALID_ENTITY' as any,
+    });
+    expect(log).toBeUndefined();
+  });
+
+  it('scopes logs by userId — different users see different logs', async () => {
+    const otherUser = await createTestUser();
+    await auditLogService.create({ ...baseLogData, userId, entityId: 'mine' });
+    await auditLogService.create({ ...baseLogData, userId: otherUser.id, entityId: 'theirs' });
+
+    const res = await invokeRoute(auditLogRouter, 'get', '/', baseReq({ query: {} }));
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: { entityId: string }[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]!.entityId).toBe('mine');
+  });
 });
