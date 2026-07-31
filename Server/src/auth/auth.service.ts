@@ -13,8 +13,7 @@ import {
 } from './auth.errors.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import type { UserResponse } from '../users/user.dto.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry } from '../audit-log/audit-log.utils.js';
+import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 
 interface RefreshTokenPayload {
@@ -81,14 +80,14 @@ export const authService = {
     const updatedUser = await authRepository.recordSuccessfulLogin(user.id, ip);
     logger.info({ userId: user.id, email: maskEmail(email), ip }, 'Login successful');
 
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.USER,
       entityId: user.id,
       actionType: ActionType.UPDATE,
       description: `User ${user.email} logged in`,
       affectedFields: ['lastLoginAt', 'lastLoginIp'],
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
-    }));
+    });
 
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
@@ -111,13 +110,13 @@ export const authService = {
 
   async logout(userId: string): Promise<void> {
     await authRepository.incrementRefreshTokenVersion(userId);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.USER,
       entityId: userId,
       actionType: ActionType.UPDATE,
       description: `User ${userId} logged out`,
       affectedFields: ['refreshTokenVersion'],
-    }));
+    });
     logger.info({ userId }, 'User logged out');
   },
 
@@ -175,13 +174,13 @@ export const authService = {
 
     const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
     await authRepository.updatePassword(userId, passwordHash);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.USER,
       entityId: userId,
       actionType: ActionType.UPDATE,
       description: `User ${userId} changed password`,
       affectedFields: ['passwordHash'],
-    }));
+    });
     logger.info({ userId }, 'Password changed');
   },
 

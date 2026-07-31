@@ -1,12 +1,10 @@
 import { patientRepository } from './patient.repository.js';
-import { logger } from '../utils/api/logger.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { withAudit } from '../audit-log/with-audit.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 import { updatePatientSchema } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
-import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 type PatientWithRelations = Patient & {
@@ -31,61 +29,58 @@ export const patientService = {
     return patientRepository.getStats(userId, query);
   },
 
-  async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
-    const patient = await patientRepository.create(dto, userId);
-    await auditLogService.create(buildAuditEntry({
+  create: withAudit(
+    (dto: CreatePatientDto, userId: string) => patientRepository.create(dto, userId),
+    {
       entityType: EntityType.PATIENT,
-      entityId: patient.id,
-      actionType: ActionType.CREATE,
-      description: `Created patient ${patient.name} ${patient.lastName}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as Record<string, unknown>,
-    }));
-    logger.info({ patientId: patient.id, userId }, 'Patient created');
-    return patient;
-  },
+      action: 'CREATE',
+      description: (p) => `Created patient ${p.name} ${p.lastName}`,
+      affectedFields: (_p, dto) => Object.keys(dto as Record<string, unknown>),
+      fieldsAfter: (_p, dto) => dto as unknown as Record<string, unknown>,
+    },
+  ),
 
-  async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
-    const before = await patientRepository.findById(id, userId);
-    const patient = await patientRepository.update(id, dto, userId);
-    const diff = computeDiff(before as unknown as Record<string, unknown>, patient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
-    await auditLogService.create(buildAuditEntry({
+  update: withAudit(
+    (id: string, dto: UpdatePatientDto, userId: string) => patientRepository.update(id, dto, userId),
+    {
       entityType: EntityType.PATIENT,
-      entityId: id,
-      actionType: ActionType.UPDATE,
-      description: `Updated patient ${patient.name}`,
-      ...diff,
-    }));
-    logger.info({ patientId: id, userId, fields: Object.keys(dto) }, 'Patient updated');
-    return patient;
-  },
+      action: 'UPDATE',
+      description: (p) => `Updated patient ${p.name}`,
+      getBefore: (id, _dto, userId) =>
+        patientRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      diffFields: PATIENT_DIFF_FIELDS,
+    },
+  ),
 
-  async delete(id: string, userId: string): Promise<Patient> {
-    const before = await patientRepository.findById(id, userId);
-    const patient = await patientRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  delete: withAudit(
+    (id: string, userId: string) => patientRepository.delete(id, userId),
+    {
       entityType: EntityType.PATIENT,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Deleted patient ${before.name} ${before.lastName}`,
-      fieldsBefore: { name: before.name, lastName: before.lastName, email: before.email },
-    }));
-    logger.info({ patientId: id, userId }, 'Patient deleted');
-    return patient;
-  },
+      action: 'DELETE',
+      description: (p) => `Deleted patient ${p.name} ${p.lastName}`,
+      getBefore: (id, userId) =>
+        patientRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({
+        name: before.name,
+        lastName: before.lastName,
+        email: before.email,
+      }),
+    },
+  ),
 
-  async restore(id: string, userId: string): Promise<Patient> {
-    const patient = await patientRepository.restore(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  restore: withAudit(
+    (id: string, userId: string) => patientRepository.restore(id, userId),
+    {
       entityType: EntityType.PATIENT,
-      entityId: id,
-      actionType: ActionType.RESTORE,
-      description: `Restored patient ${patient.name} ${patient.lastName}`,
-      fieldsAfter: { name: patient.name, lastName: patient.lastName, email: patient.email },
-    }));
-    logger.info({ patientId: id, userId }, 'Patient restored');
-    return patient;
-  },
+      action: 'RESTORE',
+      description: (p) => `Restored patient ${p.name} ${p.lastName}`,
+      fieldsAfter: (p) => ({
+        name: p.name,
+        lastName: p.lastName,
+        email: p.email,
+      }),
+    },
+  ),
 
   async verifyOwnership(patientId: string, userId: string): Promise<void> {
     await patientRepository.findById(patientId, userId);

@@ -5,8 +5,7 @@ import { dispatchMessage } from '../dispatch.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
 import { REMINDER_SEND_RETRY_LIMIT } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
-import { auditLogService } from '../../audit-log/audit-log.service.js';
-import { buildAuditEntry } from '../../audit-log/audit-log.utils.js';
+import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 
@@ -36,7 +35,7 @@ export async function sendReminderWorker([job]: Array<{
       where: { id: reminderId },
       data: { status: ReminderStatus.FAILED, error: validation.error ?? null },
     });
-    await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+    await runInAuditContext(JOB_CTX, () => logAudit({
       entityType: EntityType.REMINDER,
       entityId: reminderId,
       actionType: ActionType.UPDATE,
@@ -45,7 +44,7 @@ export async function sendReminderWorker([job]: Array<{
       affectedFields: ['status', 'error'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
-    })));
+    }));
     return;
   }
 
@@ -66,7 +65,7 @@ export async function sendReminderWorker([job]: Array<{
         sentAt: result.sentAt ?? null,
       },
     });
-    await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+    await runInAuditContext(JOB_CTX, () => logAudit({
       entityType: EntityType.REMINDER,
       entityId: reminderId,
       actionType: ActionType.UPDATE,
@@ -75,7 +74,7 @@ export async function sendReminderWorker([job]: Array<{
       affectedFields: ['status', 'messageId', 'sentAt'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },
-    })));
+    }));
   } else {
     if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
       await prisma.reminder.update({
@@ -85,7 +84,7 @@ export async function sendReminderWorker([job]: Array<{
           error: resolveTwilioError(result.errorCode, result.error ?? 'Dispatch failed'),
         },
       });
-      await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+      await runInAuditContext(JOB_CTX, () => logAudit({
         entityType: EntityType.REMINDER,
         entityId: reminderId,
         actionType: ActionType.UPDATE,
@@ -94,7 +93,7 @@ export async function sendReminderWorker([job]: Array<{
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
-      })));
+      }));
       logger.error({ reminderId, error: result.error }, 'Reminder permanently failed after max retries');
     }
 

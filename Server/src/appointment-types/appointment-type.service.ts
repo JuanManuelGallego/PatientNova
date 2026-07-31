@@ -1,11 +1,8 @@
 import { appointmentTypeRepository } from './appointment-type.repository.js';
-import { logger } from '../utils/api/logger.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto } from './appointment-type.schemas.js';
 import { updateAppointmentTypeSchema } from './appointment-type.schemas.js';
-import type { AppointmentType } from '../../generated/prisma/client.ts';
-import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 const TYPE_DIFF_FIELDS = schemaKeys(updateAppointmentTypeSchema);
@@ -14,59 +11,49 @@ export const appointmentTypeService = {
   findById: appointmentTypeRepository.findById.bind(appointmentTypeRepository),
   findMany: appointmentTypeRepository.findMany.bind(appointmentTypeRepository),
 
-  async create(dto: CreateAppointmentTypeDto, userId: string): Promise<AppointmentType> {
-    const type = await appointmentTypeRepository.create(dto, userId);
-    await auditLogService.create(buildAuditEntry({
+  create: withAudit(
+    (dto: CreateAppointmentTypeDto, userId: string) => appointmentTypeRepository.create(dto, userId),
+    {
       entityType: EntityType.APPOINTMENT_TYPE,
-      entityId: type.id,
-      actionType: ActionType.CREATE,
-      description: `Created appointment type ${type.name}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
-    }));
-    logger.info({ appointmentTypeId: type.id, userId, name: type.name }, 'Appointment type created');
-    return type;
-  },
+      action: 'CREATE',
+      description: (t) => `Created appointment type ${t.name}`,
+      affectedFields: (_t, dto) => Object.keys(dto as Record<string, unknown>),
+      fieldsAfter: (_t, dto) => dto as unknown as Record<string, unknown>,
+    },
+  ),
 
-  async update(id: string, dto: UpdateAppointmentTypeDto, userId: string): Promise<AppointmentType> {
-    const before = await appointmentTypeRepository.findById(id, userId);
-    const type = await appointmentTypeRepository.update(id, dto, userId);
-    const diff = computeDiff(before as unknown as Record<string, unknown>, type as unknown as Record<string, unknown>, TYPE_DIFF_FIELDS);
-    await auditLogService.create(buildAuditEntry({
+  update: withAudit(
+    (id: string, dto: UpdateAppointmentTypeDto, userId: string) =>
+      appointmentTypeRepository.update(id, dto, userId),
+    {
       entityType: EntityType.APPOINTMENT_TYPE,
-      entityId: id,
-      actionType: ActionType.UPDATE,
-      description: `Updated appointment type ${type.name}`,
-      ...diff,
-    }));
-    logger.info({ appointmentTypeId: id, userId, fields: Object.keys(dto) }, 'Appointment type updated');
-    return type;
-  },
+      action: 'UPDATE',
+      description: (t) => `Updated appointment type ${t.name}`,
+      getBefore: (id, _dto, userId) =>
+        appointmentTypeRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      diffFields: TYPE_DIFF_FIELDS,
+    },
+  ),
 
-  async delete(id: string, userId: string): Promise<AppointmentType> {
-    const before = await appointmentTypeRepository.findById(id, userId);
-    const type = await appointmentTypeRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  delete: withAudit(
+    (id: string, userId: string) => appointmentTypeRepository.delete(id, userId),
+    {
       entityType: EntityType.APPOINTMENT_TYPE,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Deleted appointment type ${before.name}`,
-      fieldsBefore: { name: before.name, defaultDuration: before.defaultDuration },
-    }));
-    logger.info({ appointmentTypeId: id, userId }, 'Appointment type deleted');
-    return type;
-  },
+      action: 'DELETE',
+      description: (t) => `Deleted appointment type ${t.name}`,
+      getBefore: (id, userId) =>
+        appointmentTypeRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({ name: before.name, defaultDuration: before.defaultDuration }),
+    },
+  ),
 
-  async restore(id: string, userId: string): Promise<AppointmentType> {
-    const type = await appointmentTypeRepository.restore(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  restore: withAudit(
+    (id: string, userId: string) => appointmentTypeRepository.restore(id, userId),
+    {
       entityType: EntityType.APPOINTMENT_TYPE,
-      entityId: id,
-      actionType: ActionType.RESTORE,
-      description: `Restored appointment type ${type.name}`,
-      fieldsAfter: { name: type.name, defaultDuration: type.defaultDuration },
-    }));
-    logger.info({ appointmentTypeId: id, userId }, 'Appointment type restored');
-    return type;
-  },
+      action: 'RESTORE',
+      description: (t) => `Restored appointment type ${t.name}`,
+      fieldsAfter: (t) => ({ name: t.name, defaultDuration: t.defaultDuration }),
+    },
+  ),
 };

@@ -11,8 +11,7 @@ import type { Paginated } from '../utils/api/pagination.js';
 import type { ReminderWithRelations, ReminderStats } from './reminder.types.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 
 const QUEUE = 'send-reminder';
@@ -73,14 +72,14 @@ export const reminderService = {
 
     logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode, enqueued: enqueue }, 'Reminder created');
 
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: reminder.id,
       actionType: ActionType.CREATE,
       description: `Created reminder for patient ${dto.patientId}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: { channel: dto.channel, sendMode: dto.sendMode, patientId: dto.patientId, status: reminder.status },
-    }));
+    });
 
     return reminder;
   },
@@ -105,13 +104,13 @@ export const reminderService = {
 
     const updated = await reminderRepository.update(id, dto, userId);
     const diff = computeDiff(reminder as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Updated reminder ${id}`,
       ...diff,
-    }));
+    });
     logger.info({ reminderId: id, userId, fields: Object.keys(dto) }, 'Reminder updated');
     return updated;
   },
@@ -123,7 +122,7 @@ export const reminderService = {
     }
     await reminderJobManager.cancel(id);
     const cancelled = await reminderRepository.cancel(id, userId);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
@@ -131,7 +130,7 @@ export const reminderService = {
       affectedFields: ['status'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
-    }));
+    });
     logger.info({ reminderId: id, userId }, 'Reminder cancelled');
     return cancelled;
   },
@@ -142,13 +141,13 @@ export const reminderService = {
       await reminderJobManager.cancel(id);
     }
     const deleted = await reminderRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Deleted reminder ${id}`,
       fieldsBefore: { status: reminder.status, channel: reminder.channel, patientId: reminder.patientId },
-    }));
+    });
     logger.info({ reminderId: id, userId }, 'Reminder deleted');
     return deleted;
   },
@@ -163,13 +162,13 @@ export const reminderService = {
       }
     }
 
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.RESTORE,
       description: `Restored reminder ${id}`,
       fieldsAfter: { status: restored.status, channel: restored.channel, patientId: restored.patientId },
-    }));
+    });
 
     logger.info({ reminderId: id, userId }, 'Reminder restored');
     return restored;
@@ -205,7 +204,7 @@ export const reminderService = {
 
     const retried = await reminderRepository.retry(id, sendAt);
 
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
@@ -213,7 +212,7 @@ export const reminderService = {
       affectedFields: ['status', 'retryCount'],
       fieldsBefore: { status: ReminderStatus.FAILED, retryCount: reminder.retryCount },
       fieldsAfter: { status: ReminderStatus.PENDING, retryCount: retried.retryCount },
-    }));
+    });
 
     if (sendAt > now) {
       await reminderJobManager.enqueue(id, sendAt);

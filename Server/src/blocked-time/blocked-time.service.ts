@@ -1,12 +1,12 @@
 import { blockedTimeRepository } from './blocked-time.repository.js';
 import { BlockedTimeOverlapError } from './blocked-time.errors.js';
 import { logger } from '../utils/api/logger.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { withAudit } from '../audit-log/with-audit.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
 import { updateBlockedTimeSchema } from './blocked-time.schemas.js';
 import type { BlockedTime } from '../../generated/prisma/client.ts';
-import type { Paginated } from '../utils/api/pagination.js';
+import type { Paginated } from '../utils/api/pagination.ts';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
@@ -26,20 +26,19 @@ export const blockedTimeService = {
     return blockedTimeRepository.findMany(userId, query);
   },
 
-  async create(dto: CreateBlockedTimeDto, userId: string): Promise<BlockedTime> {
-    await checkOverlap(userId, dto.startTimeUtc, dto.endTimeUtc);
-    const blockedTime = await blockedTimeRepository.create(dto, userId);
-    await auditLogService.create(buildAuditEntry({
+  create: withAudit(
+    async (dto: CreateBlockedTimeDto, userId: string) => {
+      await checkOverlap(userId, dto.startTimeUtc, dto.endTimeUtc);
+      return blockedTimeRepository.create(dto, userId);
+    },
+    {
       entityType: EntityType.BLOCKED_TIME,
-      entityId: blockedTime.id,
-      actionType: ActionType.CREATE,
-      description: `Created blocked time slot`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
-    }));
-    logger.info({ blockedTimeId: blockedTime.id, userId }, 'Blocked time created');
-    return blockedTime;
-  },
+      action: 'CREATE',
+      description: 'Created blocked time slot',
+      affectedFields: (_bt, dto) => Object.keys(dto),
+      fieldsAfter: (_bt, dto) => dto as unknown as Record<string, unknown>,
+    },
+  ),
 
   async update(id: string, dto: UpdateBlockedTimeDto, userId: string): Promise<BlockedTime> {
     const before = await blockedTimeRepository.findById(id, userId);
@@ -50,41 +49,44 @@ export const blockedTimeService = {
     }
     const blockedTime = await blockedTimeRepository.update(id, dto, userId);
     const diff = computeDiff(before as unknown as Record<string, unknown>, blockedTime as unknown as Record<string, unknown>, BLOCKED_TIME_DIFF_FIELDS);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated blocked time slot`,
+      description: 'Updated blocked time slot',
       ...diff,
-    }));
+    });
     logger.info({ blockedTimeId: id, userId, fields: Object.keys(dto) }, 'Blocked time updated');
     return blockedTime;
   },
 
-  async delete(id: string, userId: string): Promise<BlockedTime> {
-    const before = await blockedTimeRepository.findById(id, userId);
-    const blockedTime = await blockedTimeRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  delete: withAudit(
+    (id: string, userId: string) => blockedTimeRepository.delete(id, userId),
+    {
       entityType: EntityType.BLOCKED_TIME,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Deleted blocked time slot`,
-      fieldsBefore: { description: before.description, startTimeUtc: before.startTimeUtc, endTimeUtc: before.endTimeUtc },
-    }));
-    logger.info({ blockedTimeId: id, userId }, 'Blocked time deleted');
-    return blockedTime;
-  },
+      action: 'DELETE',
+      description: 'Deleted blocked time slot',
+      getBefore: (id, userId) =>
+        blockedTimeRepository.findById(id, userId) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({
+        description: before.description,
+        startTimeUtc: before.startTimeUtc,
+        endTimeUtc: before.endTimeUtc,
+      }),
+    },
+  ),
 
-  async restore(id: string, userId: string): Promise<BlockedTime> {
-    const blockedTime = await blockedTimeRepository.restore(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  restore: withAudit(
+    (id: string, userId: string) => blockedTimeRepository.restore(id, userId),
+    {
       entityType: EntityType.BLOCKED_TIME,
-      entityId: id,
-      actionType: ActionType.RESTORE,
-      description: `Restored blocked time slot`,
-      fieldsAfter: { description: blockedTime.description, startTimeUtc: blockedTime.startTimeUtc, endTimeUtc: blockedTime.endTimeUtc },
-    }));
-    logger.info({ blockedTimeId: id, userId }, 'Blocked time restored');
-    return blockedTime;
-  },
+      action: 'RESTORE',
+      description: 'Restored blocked time slot',
+      fieldsAfter: (bt) => ({
+        description: bt.description,
+        startTimeUtc: bt.startTimeUtc,
+        endTimeUtc: bt.endTimeUtc,
+      }),
+    },
+  ),
 };

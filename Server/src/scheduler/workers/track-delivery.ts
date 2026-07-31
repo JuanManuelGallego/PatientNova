@@ -4,8 +4,7 @@ import { getMessageStatus } from '../../twilio/client.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
 import { REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
-import { auditLogService } from '../../audit-log/audit-log.service.js';
-import { buildAuditEntry } from '../../audit-log/audit-log.utils.js';
+import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 
@@ -38,7 +37,7 @@ export async function trackDeliveryWorker(): Promise<void> {
       },
     });
     await runInAuditContext(JOB_CTX, () => Promise.all(
-      stale.map(r => auditLogService.create(buildAuditEntry({
+      stale.map(r => logAudit({
         entityType: EntityType.REMINDER,
         entityId: r.id,
         actionType: ActionType.UPDATE,
@@ -47,7 +46,7 @@ export async function trackDeliveryWorker(): Promise<void> {
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: ReminderStatus.QUEUED },
         fieldsAfter: { status: ReminderStatus.FAILED, error: 'Status tracking timed out' },
-      })))
+      }))
     ));
     logger.warn({ count: stale.length }, 'Dropped stale QUEUED reminders');
   }
@@ -84,7 +83,7 @@ export async function trackDeliveryWorker(): Promise<void> {
                   : null,
               },
             });
-            await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+            await runInAuditContext(JOB_CTX, () => logAudit({
               entityType: EntityType.REMINDER,
               entityId: reminder.id,
               actionType: ActionType.UPDATE,
@@ -93,7 +92,7 @@ export async function trackDeliveryWorker(): Promise<void> {
               affectedFields: ['status', 'error'],
               fieldsBefore: { status: ReminderStatus.QUEUED },
               fieldsAfter: { status: mappedStatus, error: mappedStatus === ReminderStatus.FAILED ? message.errorMessage : null },
-            })));
+            }));
           }
         } catch (error) {
           logger.error({ reminderId: reminder.id, error }, 'Failed to poll reminder status');

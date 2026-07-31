@@ -1,10 +1,7 @@
-import { prisma } from '../utils/prisma/prisma-client.js';
-import { PatientNotFoundError } from '../utils/errors/errors.js';
-import { MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
 import { medicalRecordRepository } from './medical-record.repository.js';
 import { logger } from '../utils/api/logger.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { withAudit } from '../audit-log/with-audit.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateMedicalRecordDto, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 import { updateMedicalRecordSchema } from './medical-record.schemas.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
@@ -17,80 +14,63 @@ export const medicalRecordService = {
   findByPatientId: medicalRecordRepository.findByPatientId.bind(medicalRecordRepository),
   findMany: medicalRecordRepository.findMany.bind(medicalRecordRepository),
 
-  async create(dto: CreateMedicalRecordDto, userId: string) {
-    const patient = await prisma.patient.findFirst({
-      where: { id: dto.patientId, userId },
-      include: { medicalRecord: true },
-    });
-    if (!patient) throw new PatientNotFoundError(dto.patientId);
-    if (patient.medicalRecord) throw new MedicalRecordAlreadyExistsError(dto.patientId);
-
-    const record = await medicalRecordRepository.create(dto, userId);
-    await auditLogService.create(buildAuditEntry({
+  create: withAudit(
+    (dto: CreateMedicalRecordDto, userId: string) => medicalRecordRepository.create(dto, userId),
+    {
       entityType: EntityType.MEDICAL_RECORD,
-      entityId: record.id,
-      actionType: ActionType.CREATE,
-      description: `Created medical record for patient ${dto.patientId}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
-    }));
-    logger.info({ medicalRecordId: record.id, patientId: dto.patientId, userId }, 'Medical record created');
-    return record;
-  },
+      action: 'CREATE',
+      description: (_r, dto) => `Created medical record for patient ${(dto as CreateMedicalRecordDto).patientId}`,
+      affectedFields: (_r, dto) => Object.keys(dto as Record<string, unknown>),
+      fieldsAfter: (_r, dto) => dto as unknown as Record<string, unknown>,
+    },
+  ),
 
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
     const before = await medicalRecordRepository.findById(id, userId);
     const record = await medicalRecordRepository.update(id, dto, userId);
     const diff = computeDiff(before as unknown as Record<string, unknown>, record as unknown as Record<string, unknown>, MEDICAL_RECORD_DIFF_FIELDS);
-    await auditLogService.create(buildAuditEntry({
+    await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Updated medical record ${id}`,
       ...diff,
-    }));
+    });
     logger.info({ medicalRecordId: id, userId, fields: Object.keys(dto) }, 'Medical record updated');
     return record;
   },
 
-  async softDelete(id: string, userId: string) {
-    const before = await medicalRecordRepository.findById(id, userId);
-    const record = await medicalRecordRepository.softDelete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  softDelete: withAudit(
+    (id: string, userId: string) => medicalRecordRepository.softDelete(id, userId) as Promise<{ id: string }>,
+    {
       entityType: EntityType.MEDICAL_RECORD,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Deleted medical record ${id}`,
-      fieldsBefore: { patientId: (before as Record<string, unknown>).patientId },
-    }));
-    logger.info({ medicalRecordId: id, userId }, 'Medical record deleted');
-    return record;
-  },
+      action: 'DELETE',
+      description: (_r, id) => `Deleted medical record ${id}`,
+      getBefore: (id, userId) =>
+        medicalRecordRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({ patientId: before.patientId }),
+    },
+  ),
 
-  async restore(id: string, userId: string) {
-    const record = await medicalRecordRepository.restore(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  restore: withAudit(
+    (id: string, userId: string) => medicalRecordRepository.restore(id, userId) as Promise<{ id: string; patientId: unknown }>,
+    {
       entityType: EntityType.MEDICAL_RECORD,
-      entityId: id,
-      actionType: ActionType.RESTORE,
-      description: `Restored medical record ${id}`,
-      fieldsAfter: { patientId: (record as Record<string, unknown>).patientId },
-    }));
-    logger.info({ medicalRecordId: id, userId }, 'Medical record restored');
-    return record;
-  },
+      action: 'RESTORE',
+      description: (_r, id) => `Restored medical record ${id}`,
+      fieldsAfter: (r) => ({ patientId: r.patientId }),
+    },
+  ),
 
-  async delete(id: string, userId: string) {
-    const before = await medicalRecordRepository.findById(id, userId);
-    const record = await medicalRecordRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  delete: withAudit(
+    (id: string, userId: string) => medicalRecordRepository.delete(id, userId) as Promise<{ id: string }>,
+    {
       entityType: EntityType.MEDICAL_RECORD,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Permanently deleted medical record ${id}`,
-      fieldsBefore: { patientId: (before as Record<string, unknown>).patientId },
-    }));
-    logger.info({ medicalRecordId: id, userId }, 'Medical record permanently deleted');
-    return record;
-  },
+      action: 'DELETE',
+      description: (_r, id) => `Permanently deleted medical record ${id}`,
+      getBefore: (id, userId) =>
+        medicalRecordRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({ patientId: before.patientId }),
+    },
+  ),
 };

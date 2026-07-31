@@ -1,11 +1,8 @@
 import { locationRepository } from './location.repository.js';
-import { logger } from '../utils/api/logger.js';
-import { auditLogService } from '../audit-log/audit-log.service.js';
-import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.js';
+import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
 import { updateLocationSchema } from './location.schemas.js';
-import type { AppointmentLocation } from '../../generated/prisma/client.ts';
-import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 const LOCATION_DIFF_FIELDS = schemaKeys(updateLocationSchema);
@@ -14,59 +11,48 @@ export const locationService = {
   findById: locationRepository.findById.bind(locationRepository),
   findMany: locationRepository.findMany.bind(locationRepository),
 
-  async create(dto: CreateLocationDto, userId: string): Promise<AppointmentLocation> {
-    const location = await locationRepository.create(dto, userId);
-    await auditLogService.create(buildAuditEntry({
+  create: withAudit(
+    (dto: CreateLocationDto, userId: string) => locationRepository.create(dto, userId),
+    {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      entityId: location.id,
-      actionType: ActionType.CREATE,
-      description: `Created location ${location.name}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
-    }));
-    logger.info({ locationId: location.id, userId, name: location.name }, 'Location created');
-    return location;
-  },
+      action: 'CREATE',
+      description: (loc) => `Created location ${loc.name}`,
+      affectedFields: (_loc, dto) => Object.keys(dto as Record<string, unknown>),
+      fieldsAfter: (_loc, dto) => dto as unknown as Record<string, unknown>,
+    },
+  ),
 
-  async update(id: string, dto: UpdateLocationDto, userId: string): Promise<AppointmentLocation> {
-    const before = await locationRepository.findById(id, userId);
-    const location = await locationRepository.update(id, dto, userId);
-    const diff = computeDiff(before as unknown as Record<string, unknown>, location as unknown as Record<string, unknown>, LOCATION_DIFF_FIELDS);
-    await auditLogService.create(buildAuditEntry({
+  update: withAudit(
+    (id: string, dto: UpdateLocationDto, userId: string) => locationRepository.update(id, dto, userId),
+    {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      entityId: id,
-      actionType: ActionType.UPDATE,
-      description: `Updated location ${location.name}`,
-      ...diff,
-    }));
-    logger.info({ locationId: id, userId, fields: Object.keys(dto) }, 'Location updated');
-    return location;
-  },
+      action: 'UPDATE',
+      description: (loc) => `Updated location ${loc.name}`,
+      getBefore: (id, _dto, userId) =>
+        locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      diffFields: LOCATION_DIFF_FIELDS,
+    },
+  ),
 
-  async delete(id: string, userId: string): Promise<AppointmentLocation> {
-    const before = await locationRepository.findById(id, userId);
-    const location = await locationRepository.delete(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  delete: withAudit(
+    (id: string, userId: string) => locationRepository.delete(id, userId),
+    {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Deleted location ${before.name}`,
-      fieldsBefore: { name: before.name, address: before.address },
-    }));
-    logger.info({ locationId: id, userId }, 'Location deleted');
-    return location;
-  },
+      action: 'DELETE',
+      description: (loc) => `Deleted location ${loc.name}`,
+      getBefore: (id, userId) =>
+        locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
+      fieldsBefore: (before) => ({ name: before.name, address: before.address }),
+    },
+  ),
 
-  async restore(id: string, userId: string): Promise<AppointmentLocation> {
-    const location = await locationRepository.restore(id, userId);
-    await auditLogService.create(buildAuditEntry({
+  restore: withAudit(
+    (id: string, userId: string) => locationRepository.restore(id, userId),
+    {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      entityId: id,
-      actionType: ActionType.RESTORE,
-      description: `Restored location ${location.name}`,
-      fieldsAfter: { name: location.name, address: location.address },
-    }));
-    logger.info({ locationId: id, userId }, 'Location restored');
-    return location;
-  },
+      action: 'RESTORE',
+      description: (loc) => `Restored location ${loc.name}`,
+      fieldsAfter: (loc) => ({ name: loc.name, address: loc.address }),
+    },
+  ),
 };

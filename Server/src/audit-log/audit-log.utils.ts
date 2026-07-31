@@ -1,5 +1,6 @@
 import type { CreateAuditLogDto } from './audit-log.schemas.js';
 import { getAuditContext } from './audit-log-context.js';
+import { auditLogService } from './audit-log.service.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums';
 
 /**
@@ -52,4 +53,17 @@ export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAu
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
     userId: 'userId' in overrides ? overrides.userId : ctx?.userId,
   };
+}
+
+export async function logAudit(params: {
+  entityType: EntityType;
+  entityId: string;
+  actionType: ActionType;
+  description: string;
+  source?: ActionSource;
+  affectedFields?: string[];
+  fieldsBefore?: Record<string, unknown> | null;
+  fieldsAfter?: Record<string, unknown> | null;
+}): Promise<void> {
+  await auditLogService.create(buildAuditEntry(params));
 }

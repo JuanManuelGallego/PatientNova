@@ -1,8 +1,7 @@
 import { AppointmentStatus } from "../../../generated/prisma/client.ts";
 import { prisma } from "../../utils/prisma/prisma-client.js";
 import { logger } from "../../utils/api/logger.js";
-import { auditLogService } from "../../audit-log/audit-log.service.js";
-import { buildAuditEntry } from "../../audit-log/audit-log.utils.js";
+import { logAudit } from "../../audit-log/audit-log.utils.js";
 import { runInAuditContext } from "../../audit-log/audit-log-context.js";
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 
@@ -34,7 +33,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
   });
 
   await runInAuditContext(JOB_CTX, () => Promise.all(
-    pending.map(a => auditLogService.create(buildAuditEntry({
+    pending.map(a => logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: a.id,
       actionType: ActionType.UPDATE,
@@ -43,7 +42,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       affectedFields: ['status'],
       fieldsBefore: { status: a.status },
       fieldsAfter: { status: AppointmentStatus.COMPLETED },
-    })))
+    }))
   ));
 
   logger.info({ count: pending.length, appointmentIds: pending.map(a => a.id) }, "Appointments marked as completed");
