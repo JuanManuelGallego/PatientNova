@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../../generated/prisma/client.js"; // adjust path to your output
 import { logger } from "../api/logger.js";
 import { encryptionExtension } from "./encryption-extension.js";
+import { auditLogGuardExtension } from "./audit-log-guard.js";
 import { config } from "../config/config.js";
 
 declare global {
@@ -36,7 +37,7 @@ function createPrismaClient() {
     logger.warn({ message: e.message, target: e.target }, "Prisma warn event");
   });
 
-  return baseClient.$extends(encryptionExtension);
+  return baseClient.$extends(encryptionExtension).$extends(auditLogGuardExtension);
 }
 
 export const prisma = global.__prisma ?? createPrismaClient();
