@@ -1,0 +1,58 @@
+import type { AuditLog } from '../../generated/prisma/client.ts';
+import { Prisma } from '../../generated/prisma/client.ts';
+import { prisma } from '../utils/prisma/prisma-client.js';
+import type { CreateAuditLogDto, ListAuditLogsQuery } from './audit-log.schemas.js';
+import { AuditLogNotFoundError } from './audit-log.errors.js';
+import { paginate, type Paginated } from '../utils/api/pagination.js';
+
+export const auditLogRepository = {
+  async create(dto: CreateAuditLogDto): Promise<AuditLog> {
+    return prisma.auditLog.create({
+      data: {
+        userId: dto.userId ?? null,
+        actorId: dto.actorId,
+        actorDisplayName: dto.actorDisplayName,
+        entityType: dto.entityType,
+        entityId: dto.entityId,
+        actionType: dto.actionType,
+        source: dto.source,
+        description: dto.description,
+        affectedFields: dto.affectedFields,
+        fieldsBefore: (dto.fieldsBefore as Prisma.InputJsonValue) ?? Prisma.DbNull,
+        fieldsAfter: (dto.fieldsAfter as Prisma.InputJsonValue) ?? Prisma.DbNull,
+        reason: dto.reason ?? null,
+        ipAddress: dto.ipAddress ?? null,
+      },
+    });
+  },
+
+  async findById(id: string, userId: string): Promise<AuditLog> {
+    const log = await prisma.auditLog.findFirst({ where: { id, userId } });
+    if (!log) throw new AuditLogNotFoundError(id);
+    return log;
+  },
+
+  async findMany(userId: string, query: ListAuditLogsQuery): Promise<Paginated<AuditLog>> {
+    const { entityType, entityId, actionType, source, actorId, orderBy, order, page, pageSize } = query;
+    const where: Prisma.AuditLogWhereInput = { 
+      userId,
+      ...(entityType && { entityType }),
+      ...(entityId && { entityId }),
+      ...(actionType && { actionType }),
+      ...(source && { source }),
+      ...(actorId && { actorId })
+    };
+
+    return paginate(
+      prisma.auditLog.findMany({ 
+        where, 
+        orderBy: { [ orderBy ]: order }, 
+        skip: (page - 1) * pageSize, 
+        take: pageSize 
+      }),
+      prisma.auditLog.count({ where }),
+      page,
+      pageSize,
+    );
+  },
+};
