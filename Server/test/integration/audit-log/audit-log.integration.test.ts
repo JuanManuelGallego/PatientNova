@@ -59,13 +59,15 @@ describe('auditLogRepository (integration)', () => {
       actionType: 'UPDATE',
     });
 
-    const all = await auditLogRepository.findMany(userId, { page: 1, pageSize: 20 });
+    const all = await auditLogRepository.findMany(userId, { page: 1, pageSize: 20, orderBy: 'eventTimeUtc', order: 'desc' });
     expect(all.data).toHaveLength(2);
     expect(all.total).toBe(2);
 
     const filtered = await auditLogRepository.findMany(userId, {
       page: 1,
       pageSize: 20,
+      orderBy: 'eventTimeUtc',
+      order: 'desc',
       entityType: 'PATIENT',
     });
     expect(filtered.data).toHaveLength(1);
@@ -81,11 +83,11 @@ describe('auditLogRepository (integration)', () => {
       });
     }
 
-    const page1 = await auditLogRepository.findMany(userId, { page: 1, pageSize: 2 });
+    const page1 = await auditLogRepository.findMany(userId, { page: 1, pageSize: 2, orderBy: 'eventTimeUtc', order: 'desc' });
     expect(page1.data).toHaveLength(2);
     expect(page1.total).toBe(3);
 
-    const page2 = await auditLogRepository.findMany(userId, { page: 2, pageSize: 2 });
+    const page2 = await auditLogRepository.findMany(userId, { page: 2, pageSize: 2, orderBy: 'eventTimeUtc', order: 'desc' });
     expect(page2.data).toHaveLength(1);
   });
 });
@@ -165,7 +167,7 @@ describe('AuditLog Prisma guard (integration)', () => {
 
   it('allows findMany on AuditLog', async () => {
     await auditLogRepository.create({ ...baseLogData, userId });
-    const result = await auditLogRepository.findMany(userId, { page: 1, pageSize: 10 });
+    const result = await auditLogRepository.findMany(userId, { page: 1, pageSize: 10, orderBy: 'eventTimeUtc', order: 'desc' });
     expect(result.data).toHaveLength(1);
   });
 });

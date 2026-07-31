@@ -6,6 +6,12 @@ import { logger } from "../../utils/api/logger.ts";
 import { getLocalTimeParts, getTomorrowUTCRange } from "../../utils/time/time-utils.ts";
 import { dispatchMessage, type DispatchOpts } from "../dispatch.js";
 import type { AppointmentWithDetails } from "../../appointments/appointment.types.ts";
+import { auditLogService } from "../../audit-log/audit-log.service.js";
+import { buildAuditEntry } from "../../audit-log/audit-log.utils.js";
+import { runInAuditContext } from "../../audit-log/audit-log-context.js";
+import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
+
+const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
 function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezone: string): string[] {
   const fmt = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
@@ -150,6 +156,15 @@ export async function dailyReminderWorker(): Promise<void> {
           where: { id: user.id },
           data: { lastDailyReminderDate: new Date(todayLocal) },
         });
+        await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+          entityType: EntityType.USER,
+          entityId: user.id,
+          actionType: ActionType.UPDATE,
+          source: ActionSource.JOB,
+          description: `Daily reminder sent for ${appointments.length} appointment(s)`,
+          affectedFields: ['lastDailyReminderDate'],
+          fieldsAfter: { lastDailyReminderDate: new Date(todayLocal) },
+        })));
         logger.info({ userId: user.id, channel }, "Daily reminder sent");
       } else {
         logger.error({ userId: user.id, channel, error: result.error }, "Failed to send daily reminder");

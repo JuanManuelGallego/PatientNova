@@ -16,6 +16,9 @@ import { logger } from '../utils/api/logger.ts';
 import type { AppointmentWithRelations, AppointmentStats } from './appointment.types.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
 import { blockedTimeRepository } from '../blocked-time/blocked-time.repository.ts';
+import { auditLogService } from '../audit-log/audit-log.service.ts';
+import { buildAuditEntry, computeDiff } from '../audit-log/audit-log.utils.ts';
+import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
@@ -245,6 +248,16 @@ export const appointmentService = {
       }
 
       logger.info({ appointmentId: created.id, patientId: dto.patientId, userId, startAt: dto.startAt }, 'Appointment created');
+
+      await auditLogService.create(buildAuditEntry({
+        entityType: EntityType.APPOINTMENT,
+        entityId: created.id,
+        actionType: ActionType.CREATE,
+        description: `Created appointment for patient ${dto.patientId}`,
+        affectedFields: Object.keys(dto),
+        fieldsAfter: { patientId: dto.patientId, startAt: dto.startAt, endAt: dto.endAt, typeId: dto.typeId, locationId: dto.locationId },
+      }));
+
       return result;
     }, { timeout: 10000 });
   },
@@ -298,6 +311,15 @@ export const appointmentService = {
         });
       }
 
+      const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
+      await auditLogService.create(buildAuditEntry({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        actionType: ActionType.UPDATE,
+        description: `Updated appointment ${id}`,
+        ...diff,
+      }));
+
       return updated;
     }, { timeout: 10000 });
   },
@@ -307,8 +329,18 @@ export const appointmentService = {
     if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
       throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
     }
+    const updated = await appointmentRepository.update(id, { status });
+    await auditLogService.create(buildAuditEntry({
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      actionType: 'UPDATE',
+      description: `Changed appointment status from ${appt.status} to ${status}`,
+      affectedFields: ['status'],
+      fieldsBefore: { status: appt.status },
+      fieldsAfter: { status },
+    }));
     logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
-    return appointmentRepository.update(id, { status });
+    return updated;
   },
 
   async markPaid(id: string, userId: string): Promise<AppointmentWithRelations> {
@@ -320,12 +352,29 @@ export const appointmentService = {
       throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
     }
 
-    return await appointmentRepository.update(id, { paid: true });
+    const updated = await appointmentRepository.update(id, { paid: true });
+    await auditLogService.create(buildAuditEntry({
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      actionType: 'UPDATE',
+      description: `Marked appointment ${id} as paid`,
+      affectedFields: ['paid'],
+      fieldsBefore: { paid: false },
+      fieldsAfter: { paid: true },
+    }));
+    return updated;
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
-    await appointmentRepository.findById(id, userId);
+    const before = await appointmentRepository.findById(id, userId);
     await appointmentRepository.delete(id, userId);
+    await auditLogService.create(buildAuditEntry({
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Deleted appointment ${id}`,
+      fieldsBefore: { patientId: before.patientId, startAt: before.startAt, endAt: before.endAt, status: before.status },
+    }));
     logger.info({ appointmentId: id, userId }, 'Appointment deleted');
     return { id };
   },
@@ -333,6 +382,13 @@ export const appointmentService = {
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId, true);
     const restored = await appointmentRepository.restore(id, userId);
+    await auditLogService.create(buildAuditEntry({
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      actionType: ActionType.RESTORE,
+      description: `Restored appointment ${id}`,
+      fieldsAfter: { patientId: restored.patientId, startAt: restored.startAt, endAt: restored.endAt, status: restored.status },
+    }));
     logger.info({ appointmentId: id, userId }, 'Appointment restored');
     return restored;
   },

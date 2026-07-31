@@ -4,8 +4,13 @@ import { getMessageStatus } from '../../twilio/client.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
 import { REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
+import { auditLogService } from '../../audit-log/audit-log.service.js';
+import { buildAuditEntry } from '../../audit-log/audit-log.utils.js';
+import { runInAuditContext } from '../../audit-log/audit-log-context.js';
+import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 
 const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
+const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
 const TWILIO_TO_PRISMA_STATUS: Partial<Record<string, ReminderStatus>> = {
   queued: ReminderStatus.QUEUED,
@@ -32,6 +37,18 @@ export async function trackDeliveryWorker(): Promise<void> {
         error: 'Status tracking timed out — message may have been delivered',
       },
     });
+    await runInAuditContext(JOB_CTX, () => Promise.all(
+      stale.map(r => auditLogService.create(buildAuditEntry({
+        entityType: EntityType.REMINDER,
+        entityId: r.id,
+        actionType: ActionType.UPDATE,
+        source: ActionSource.JOB,
+        description: `Reminder marked as failed (stale timeout)`,
+        affectedFields: ['status', 'error'],
+        fieldsBefore: { status: ReminderStatus.QUEUED },
+        fieldsAfter: { status: ReminderStatus.FAILED, error: 'Status tracking timed out' },
+      })))
+    ));
     logger.warn({ count: stale.length }, 'Dropped stale QUEUED reminders');
   }
 
@@ -67,6 +84,16 @@ export async function trackDeliveryWorker(): Promise<void> {
                   : null,
               },
             });
+            await runInAuditContext(JOB_CTX, () => auditLogService.create(buildAuditEntry({
+              entityType: EntityType.REMINDER,
+              entityId: reminder.id,
+              actionType: ActionType.UPDATE,
+              source: ActionSource.JOB,
+              description: `Delivery status updated to ${mappedStatus}`,
+              affectedFields: ['status', 'error'],
+              fieldsBefore: { status: ReminderStatus.QUEUED },
+              fieldsAfter: { status: mappedStatus, error: mappedStatus === ReminderStatus.FAILED ? message.errorMessage : null },
+            })));
           }
         } catch (error) {
           logger.error({ reminderId: reminder.id, error }, 'Failed to poll reminder status');
