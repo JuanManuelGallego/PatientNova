@@ -490,3 +490,50 @@ model BlockedTime {
   @@map("blocked_time")
 }
 
+// ─── Audit Log ───────────────────────────────────────────────────────────
+
+enum EntityType {
+  USER
+  APPOINTMENT
+  PATIENT
+  REMINDER
+  MEDICAL_RECORD
+  APPOINTMENT_TYPE
+  APPOINTMENT_LOCATION
+  BLOCKED_TIME
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+}
+
+enum ActionSource {
+  API
+  ADMIN_PANEL
+  JOB
+  MIGRATION
+}
+
+model AuditLog {
+  id                String    @id @default(uuid())
+  userId            String?
+  actorId           String
+  actorDisplayName  String 
+  eventTimeUtc      DateTime  @default(now())
+  entityType        EntityType
+  entityId          String
+  actionType        ActionType
+  source            ActionSource
+  description       String
+  affectedFields    String[]
+  fieldsBefore      Json?
+  fieldsAfter       Json?
+  reason            String?
+  ipAddress         String?
+
+  @@index([entityType, entityId])
+  @@index([eventTimeUtc])
+}
