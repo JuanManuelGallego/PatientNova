@@ -10,7 +10,7 @@ CREATE TYPE "ActionSource" AS ENUM ('API', 'ADMIN_PANEL', 'JOB', 'MIGRATION');
 -- CreateTable
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL,
-    "userId" TEXT,
+    "userId" TEXT NOT NULL,
     "actorId" TEXT NOT NULL,
     "actorDisplayName" TEXT NOT NULL,
     "eventTimeUtc" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

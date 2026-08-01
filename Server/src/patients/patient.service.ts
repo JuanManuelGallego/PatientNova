@@ -45,7 +45,7 @@ export const patientService = {
     {
       entityType: EntityType.PATIENT,
       action: 'UPDATE',
-      description: (p) => `Updated patient ${p.name}`,
+      description: (p) => `Updated patient ${p.name} ${p.lastName}`,
       getBefore: (id, _dto, userId) =>
         patientRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
       diffFields: PATIENT_DIFF_FIELDS,

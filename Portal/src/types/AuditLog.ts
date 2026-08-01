@@ -71,10 +71,10 @@ export const ACTION_TYPE_CONFIG: Record<
   ActionType,
   { label: string; color: string; bg: string }
 > = {
-  [ActionType.CREATE]: { label: "Creo", color: "#059669", bg: "#F0FDF4" },
-  [ActionType.UPDATE]: { label: "Actualizo", color: "#2563EB", bg: "#EFF6FF" },
-  [ActionType.DELETE]: { label: "Elimino", color: "#DC2626", bg: "#FEF2F2" },
-  [ActionType.RESTORE]: { label: "Restauro", color: "#D97706", bg: "#FFFBEB" },
+  [ActionType.CREATE]: { label: "Creación", color: "#059669", bg: "#F0FDF4" },
+  [ActionType.UPDATE]: { label: "Actualización", color: "#2563EB", bg: "#EFF6FF" },
+  [ActionType.DELETE]: { label: "Eliminación", color: "#DC2626", bg: "#FEF2F2" },
+  [ActionType.RESTORE]: { label: "Restauración", color: "#D97706", bg: "#FFFBEB" },
 };
 
 export const ACTION_SOURCE_CONFIG: Record<

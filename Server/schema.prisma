@@ -520,7 +520,8 @@ enum ActionSource {
 
 model AuditLog {
   id                String    @id @default(uuid())
-  userId            String?
+  userId            String
+
   actorId           String
   actorDisplayName  String 
   eventTimeUtc      DateTime  @default(now())
