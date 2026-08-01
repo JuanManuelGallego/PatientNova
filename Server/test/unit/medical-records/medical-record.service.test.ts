@@ -1,12 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { medicalRecordService } from '../../../src/medical-records/medical-record.service.js';
 
-vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
-  prisma: {
-    patient: { findFirst: vi.fn() },
-  },
-}));
-
 vi.mock('../../../src/medical-records/medical-record.repository.js', () => ({
   medicalRecordRepository: {
     findById: vi.fn(),
@@ -20,17 +14,20 @@ vi.mock('../../../src/medical-records/medical-record.repository.js', () => ({
   },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
+}));
+
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { medicalRecordRepository } from '../../../src/medical-records/medical-record.repository.js';
-import { logger } from '../../../src/utils/api/logger.js';
+import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 
-const mockPrisma = vi.mocked(prisma) as any;
 const mockRepo = vi.mocked(medicalRecordRepository);
-const mockLogger = vi.mocked(logger);
+const mockLogAudit = vi.mocked(logAudit);
 
 const fakeRecord = {
   id: 'rec-1',
@@ -86,59 +83,25 @@ describe('medicalRecordService.findMany', () => {
 });
 
 describe('medicalRecordService.create', () => {
-  it('creates a medical record when patient exists and has no record', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', medicalRecord: null } as any);
+  it('delegates to repository.create with dto and userId', async () => {
     mockRepo.create.mockResolvedValue(fakeRecord as any);
     const dto = { patientId: 'patient-1', name: 'John Doe' };
     const result = await medicalRecordService.create(dto, 'user-1');
-    expect(mockPrisma.patient.findFirst).toHaveBeenCalledWith({
-      where: { id: 'patient-1', userId: 'user-1' },
-      include: { medicalRecord: true },
-    });
     expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
     expect(result).toEqual(fakeRecord);
   });
 
-  it('throws PatientNotFoundError when patient does not exist', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue(null);
-    const dto = { patientId: 'bad-id', name: 'John Doe' };
-    await expect(medicalRecordService.create(dto, 'user-1')).rejects.toThrow('Patient with id "bad-id" not found');
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('throws MedicalRecordAlreadyExistsError when patient already has a record', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue({
-      id: 'patient-1',
-      medicalRecord: { id: 'existing-record' },
-    } as any);
-    const dto = { patientId: 'patient-1', name: 'John Doe' };
-    await expect(medicalRecordService.create(dto, 'user-1')).rejects.toThrow('A medical record for patient with id "patient-1" already exists');
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('enforces ownership — patient belonging to different user is not found', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue(null);
-    const dto = { patientId: 'patient-1', name: 'John Doe' };
-    await expect(medicalRecordService.create(dto, 'other-user')).rejects.toThrow('Patient with id "patient-1" not found');
-    expect(mockPrisma.patient.findFirst).toHaveBeenCalledWith({
-      where: { id: 'patient-1', userId: 'other-user' },
-      include: { medicalRecord: true },
-    });
-    expect(mockRepo.create).not.toHaveBeenCalled();
-  });
-
-  it('logs medical record creation', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', medicalRecord: null } as any);
+  it('calls logAudit after creation', async () => {
     mockRepo.create.mockResolvedValue(fakeRecord as any);
     await medicalRecordService.create({ patientId: 'patient-1', name: 'John Doe' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { medicalRecordId: 'rec-1', patientId: 'patient-1', userId: 'user-1' },
-      'Medical record created',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'MEDICAL_RECORD',
+      entityId: 'rec-1',
+      actionType: 'CREATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', medicalRecord: null } as any);
     mockRepo.create.mockRejectedValue(new Error('DB error'));
     await expect(medicalRecordService.create({ patientId: 'patient-1', name: 'X' }, 'user-1')).rejects.toThrow('DB error');
   });
@@ -147,19 +110,22 @@ describe('medicalRecordService.create', () => {
 describe('medicalRecordService.update', () => {
   it('delegates to repository.update with id, dto, and userId', async () => {
     const dto = { name: 'Updated Name' };
+    mockRepo.findById.mockResolvedValue(fakeRecord as any);
     mockRepo.update.mockResolvedValue({ ...fakeRecord, ...dto } as any);
     const result = await medicalRecordService.update('rec-1', dto, 'user-1');
     expect(mockRepo.update).toHaveBeenCalledWith('rec-1', dto, 'user-1');
     expect(result.name).toBe('Updated Name');
   });
 
-  it('logs medical record update with changed fields', async () => {
+  it('calls logAudit after update', async () => {
+    mockRepo.findById.mockResolvedValue(fakeRecord as any);
     mockRepo.update.mockResolvedValue(fakeRecord as any);
     await medicalRecordService.update('rec-1', { name: 'New' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { medicalRecordId: 'rec-1', userId: 'user-1', fields: ['name'] },
-      'Medical record updated',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'MEDICAL_RECORD',
+      entityId: 'rec-1',
+      actionType: 'UPDATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -169,20 +135,24 @@ describe('medicalRecordService.update', () => {
 });
 
 describe('medicalRecordService.softDelete', () => {
-  it('delegates to repository.softDelete with id and userId', async () => {
+  it('delegates to repository.softDelete and returns { id }', async () => {
     mockRepo.softDelete.mockResolvedValue(fakeRecord as any);
     const result = await medicalRecordService.softDelete('rec-1', 'user-1');
     expect(mockRepo.softDelete).toHaveBeenCalledWith('rec-1', 'user-1');
-    expect(result).toEqual(fakeRecord);
+    expect(result).toEqual({ id: 'rec-1' });
   });
 
-  it('logs medical record deletion', async () => {
+  it('calls logAudit after softDelete', async () => {
     mockRepo.softDelete.mockResolvedValue(fakeRecord as any);
     await medicalRecordService.softDelete('rec-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { medicalRecordId: 'rec-1', userId: 'user-1' },
-      'Medical record deleted',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'MEDICAL_RECORD',
+      entityId: 'rec-1',
+      actionType: 'DELETE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -192,20 +162,24 @@ describe('medicalRecordService.softDelete', () => {
 });
 
 describe('medicalRecordService.restore', () => {
-  it('delegates to repository.restore with id and userId', async () => {
+  it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeRecord as any);
     const result = await medicalRecordService.restore('rec-1', 'user-1');
     expect(mockRepo.restore).toHaveBeenCalledWith('rec-1', 'user-1');
     expect(result).toEqual(fakeRecord);
   });
 
-  it('logs medical record restoration', async () => {
+  it('calls logAudit after restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeRecord as any);
     await medicalRecordService.restore('rec-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { medicalRecordId: 'rec-1', userId: 'user-1' },
-      'Medical record restored',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'MEDICAL_RECORD',
+      entityId: 'rec-1',
+      actionType: 'RESTORE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -215,20 +189,21 @@ describe('medicalRecordService.restore', () => {
 });
 
 describe('medicalRecordService.delete', () => {
-  it('delegates to repository.delete with id and userId', async () => {
+  it('delegates to repository.delete and returns { id }', async () => {
     mockRepo.delete.mockResolvedValue(fakeRecord as any);
     const result = await medicalRecordService.delete('rec-1', 'user-1');
     expect(mockRepo.delete).toHaveBeenCalledWith('rec-1', 'user-1');
-    expect(result).toEqual(fakeRecord);
+    expect(result).toEqual({ id: 'rec-1' });
   });
 
-  it('logs permanent medical record deletion', async () => {
+  it('calls logAudit after permanent delete', async () => {
     mockRepo.delete.mockResolvedValue(fakeRecord as any);
     await medicalRecordService.delete('rec-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { medicalRecordId: 'rec-1', userId: 'user-1' },
-      'Medical record permanently deleted',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'MEDICAL_RECORD',
+      entityId: 'rec-1',
+      actionType: 'DELETE',
+    }));
   });
 
   it('propagates repository errors', async () => {

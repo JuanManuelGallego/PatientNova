@@ -1,7 +1,6 @@
 import { blockedTimeRepository } from './blocked-time.repository.js';
 import { BlockedTimeOverlapError } from './blocked-time.errors.js';
 import { logger } from '../utils/api/logger.js';
-import { withAudit } from '../audit-log/with-audit.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
 import { updateBlockedTimeSchema } from './blocked-time.schemas.js';
@@ -26,29 +25,29 @@ export const blockedTimeService = {
     return blockedTimeRepository.findMany(userId, query);
   },
 
-  create: withAudit(
-    async (dto: CreateBlockedTimeDto, userId: string) => {
-      await checkOverlap(userId, dto.startTimeUtc, dto.endTimeUtc);
-      return blockedTimeRepository.create(dto, userId);
-    },
-    {
+  async create(dto: CreateBlockedTimeDto, userId: string) {
+    await checkOverlap(userId, dto.startTimeUtc, dto.endTimeUtc);
+    const createdBlockedTime = await blockedTimeRepository.create(dto, userId);
+    await logAudit({
       entityType: EntityType.BLOCKED_TIME,
-      action: ActionType.CREATE,
+      entityId: createdBlockedTime.id,
+      actionType: ActionType.CREATE,
       description: 'Created blocked time slot',
-      affectedFields: (_bt, dto) => Object.keys(dto),
-      fieldsAfter: (_bt, dto) => dto as unknown as Record<string, unknown>,
-    },
-  ),
+      affectedFields: Object.keys(dto),
+      fieldsAfter: dto as unknown as Record<string, unknown>,
+    });
+    return createdBlockedTime;
+  },
 
   async update(id: string, dto: UpdateBlockedTimeDto, userId: string): Promise<BlockedTime> {
-    const before = await blockedTimeRepository.findById(id, userId);
+    const existingBlockedTime = await blockedTimeRepository.findById(id, userId);
     if (dto.startTimeUtc || dto.endTimeUtc) {
-      const startAt = dto.startTimeUtc ?? before.startTimeUtc.toISOString();
-      const endAt = dto.endTimeUtc ?? before.endTimeUtc.toISOString();
+      const startAt = dto.startTimeUtc ?? existingBlockedTime.startTimeUtc.toISOString();
+      const endAt = dto.endTimeUtc ?? existingBlockedTime.endTimeUtc.toISOString();
       await checkOverlap(userId, startAt, endAt, id);
     }
-    const blockedTime = await blockedTimeRepository.update(id, dto, userId);
-    const diff = computeDiff(before as unknown as Record<string, unknown>, blockedTime as unknown as Record<string, unknown>, BLOCKED_TIME_DIFF_FIELDS);
+    const updatedBlockedTime = await blockedTimeRepository.update(id, dto, userId);
+    const diff = computeDiff(existingBlockedTime as unknown as Record<string, unknown>, updatedBlockedTime as unknown as Record<string, unknown>, BLOCKED_TIME_DIFF_FIELDS);
     await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
@@ -57,46 +56,34 @@ export const blockedTimeService = {
       ...diff,
     });
     logger.info({ blockedTimeId: id, userId, fields: Object.keys(dto) }, 'Blocked time updated');
-    return blockedTime;
+    return updatedBlockedTime;
   },
 
-  delete: withAudit(
-    (id: string, userId: string) => blockedTimeRepository.delete(id, userId),
-    {
+  async delete(id: string, userId: string): Promise<{ id: string }> {
+    await blockedTimeRepository.delete(id, userId);
+    await logAudit({
       entityType: EntityType.BLOCKED_TIME,
-      action: ActionType.DELETE,
+      entityId: id,
+      actionType: ActionType.DELETE,
       description: 'Deleted blocked time slot',
-      getBefore: (id, userId) =>
-        blockedTimeRepository.findById(id, userId) as Promise<Record<string, unknown>>,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: (before) => ({
-        isDeleted: false,
-        description: before.description,
-        startTimeUtc: before.startTimeUtc,
-        endTimeUtc: before.endTimeUtc,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: true,
-      }),
-    },
-  ),
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    });
+    return { id };
+  },
 
-  restore: withAudit(
-    (id: string, userId: string) => blockedTimeRepository.restore(id, userId),
-    {
+  async restore(id: string, userId: string) {
+    const restoredBlockedTime = await blockedTimeRepository.restore(id, userId);
+    await logAudit({
       entityType: EntityType.BLOCKED_TIME,
-      action: ActionType.RESTORE,
+      entityId: id,
+      actionType: ActionType.RESTORE,
       description: 'Restored blocked time slot',
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: true,
-      }),
-      fieldsAfter: (bt) => ({
-        isDeleted: false,
-        description: bt.description,
-        startTimeUtc: bt.startTimeUtc,
-        endTimeUtc: bt.endTimeUtc,
-      }),
-    },
-  ),
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    });
+    return restoredBlockedTime;
+  },
 };

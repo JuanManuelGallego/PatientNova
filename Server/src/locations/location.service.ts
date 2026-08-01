@@ -1,9 +1,9 @@
 import { locationRepository } from './location.repository.js';
-import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
 import { updateLocationSchema } from './location.schemas.js';
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 
 const LOCATION_DIFF_FIELDS = schemaKeys(updateLocationSchema);
 
@@ -11,60 +11,58 @@ export const locationService = {
   findById: locationRepository.findById.bind(locationRepository),
   findMany: locationRepository.findMany.bind(locationRepository),
 
-  create: withAudit(
-    (dto: CreateLocationDto, userId: string) => locationRepository.create(dto, userId),
-    {
+  async create(dto: CreateLocationDto, userId: string) {
+    const createdLocation = await locationRepository.create(dto, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: ActionType.CREATE,
-      description: (loc) => `Created location ${loc.name}`,
-      affectedFields: (_loc, dto) => Object.keys(dto),
-      fieldsAfter: (_loc, dto) => dto,
-    },
-  ),
+      entityId: createdLocation.id,
+      actionType: ActionType.CREATE,
+      description: `Created location ${createdLocation.name}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: dto as unknown as Record<string, unknown>,
+    });
+    return createdLocation;
+  },
 
-  update: withAudit(
-    (id: string, dto: UpdateLocationDto, userId: string) => locationRepository.update(id, dto, userId),
-    {
+  async update(id: string, dto: UpdateLocationDto, userId: string) {
+    const existingLocation = await locationRepository.findById(id, userId);
+    const updatedLocation = await locationRepository.update(id, dto, userId);
+    const diff = computeDiff(existingLocation as unknown as Record<string, unknown>, updatedLocation as unknown as Record<string, unknown>, LOCATION_DIFF_FIELDS);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: ActionType.UPDATE,
-      description: (loc) => `Updated location ${loc.name}`,
-      getBefore: (id, _dto, userId) =>
-        locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      diffFields: LOCATION_DIFF_FIELDS,
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.UPDATE,
+      description: `Updated location ${updatedLocation.name}`,
+      ...diff,
+    });
+    return updatedLocation;
+  },
 
-  delete: withAudit(
-    (id: string, userId: string) => locationRepository.delete(id, userId),
-    {
+  async delete(id: string, userId: string): Promise<{ id: string }> {
+    const deletedLocation = await locationRepository.delete(id, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: ActionType.DELETE,
-      description: (loc) => `Deleted location ${loc.name}`,
-      getBefore: (id, userId) =>
-        locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: false,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: true,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Deleted location ${deletedLocation.name}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    });
+    return { id };
+  },
 
-  restore: withAudit(
-    (id: string, userId: string) => locationRepository.restore(id, userId),
-    {
+  async restore(id: string, userId: string) {
+    const restoredLocation = await locationRepository.restore(id, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: ActionType.RESTORE,
-      description: (loc) => `Restored location ${loc.name}`,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: true,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: false,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.RESTORE,
+      description: `Restored location ${restoredLocation.name}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    });
+    return restoredLocation;
+  },
 };

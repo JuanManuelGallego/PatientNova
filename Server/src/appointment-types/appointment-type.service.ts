@@ -1,9 +1,9 @@
 import { appointmentTypeRepository } from './appointment-type.repository.js';
-import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto } from './appointment-type.schemas.js';
 import { updateAppointmentTypeSchema } from './appointment-type.schemas.js';
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 
 const TYPE_DIFF_FIELDS = schemaKeys(updateAppointmentTypeSchema);
 
@@ -11,59 +11,58 @@ export const appointmentTypeService = {
   findById: appointmentTypeRepository.findById.bind(appointmentTypeRepository),
   findMany: appointmentTypeRepository.findMany.bind(appointmentTypeRepository),
 
-  create: withAudit(
-    (dto: CreateAppointmentTypeDto, userId: string) => appointmentTypeRepository.create(dto, userId),
-    {
+  async create(dto: CreateAppointmentTypeDto, userId: string) {
+    const createdType = await appointmentTypeRepository.create(dto, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: ActionType.CREATE,
-      description: (t) => `Created appointment type ${t.name}`,
-      affectedFields: (_t, dto) => Object.keys(dto),
-      fieldsAfter: (_t, dto) => dto,
-    },
-  ),
+      entityId: createdType.id,
+      actionType: ActionType.CREATE,
+      description: `Created appointment type ${createdType.name}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: dto as unknown as Record<string, unknown>,
+    });
+    return createdType;
+  },
 
-  update: withAudit(
-    (id: string, dto: UpdateAppointmentTypeDto, userId: string) =>
-      appointmentTypeRepository.update(id, dto, userId),
-    {
+  async update(id: string, dto: UpdateAppointmentTypeDto, userId: string) {
+    const existingType = await appointmentTypeRepository.findById(id, userId);
+    const updatedType = await appointmentTypeRepository.update(id, dto, userId);
+    const diff = computeDiff(existingType as unknown as Record<string, unknown>, updatedType as unknown as Record<string, unknown>, TYPE_DIFF_FIELDS);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: ActionType.UPDATE,
-      description: (t) => `Updated appointment type ${t.name}`,
-      getBefore: (id, _dto, userId) =>
-        appointmentTypeRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      diffFields: TYPE_DIFF_FIELDS,
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.UPDATE,
+      description: `Updated appointment type ${updatedType.name}`,
+      ...diff,
+    });
+    return updatedType;
+  },
 
-  delete: withAudit(
-    (id: string, userId: string) => appointmentTypeRepository.delete(id, userId),
-    {
+  async delete(id: string, userId: string): Promise<{ id: string }> {
+    const deletedType = await appointmentTypeRepository.delete(id, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: ActionType.DELETE,
-      description: (t) => `Deleted appointment type ${t.name}`,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: false,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: true,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Deleted appointment type ${deletedType.name}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    });
+    return { id };
+  },
 
-  restore: withAudit(
-    (id: string, userId: string) => appointmentTypeRepository.restore(id, userId),
-    {
+  async restore(id: string, userId: string) {
+    const restoredType = await appointmentTypeRepository.restore(id, userId);
+    await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: ActionType.RESTORE,
-      description: (t) => `Restored appointment type ${t.name}`,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: true,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: false,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.RESTORE,
+      description: `Restored appointment type ${restoredType.name}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    });
+    return restoredType;
+  },
 };

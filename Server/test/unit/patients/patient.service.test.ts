@@ -14,15 +14,20 @@ vi.mock('../../../src/patients/patient.repository.js', () => ({
   },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
+}));
+
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 import { patientRepository } from '../../../src/patients/patient.repository.js';
-import { logger } from '../../../src/utils/api/logger.js';
+import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 
 const mockRepo = vi.mocked(patientRepository);
-const mockLogger = vi.mocked(logger);
+const mockLogAudit = vi.mocked(logAudit);
 
 const fakePatient = {
   id: 'patient-1',
@@ -116,61 +121,69 @@ describe('patientService.create', () => {
     expect(result).toEqual(fakePatient);
   });
 
-  it('logs patient creation', async () => {
+  it('calls logAudit after creation', async () => {
     mockRepo.create.mockResolvedValue(fakePatient as any);
     await patientService.create({ name: 'John', lastName: 'Doe', email: 'j@t.com', status: 'ACTIVE' as const }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { patientId: 'patient-1', userId: 'user-1' },
-      'Patient created',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'PATIENT',
+      entityId: 'patient-1',
+      actionType: 'CREATE',
+    }));
   });
 
   it('propagates repository errors without logging', async () => {
     mockRepo.create.mockRejectedValue(new Error('Email conflict'));
     await expect(patientService.create({ name: 'X', lastName: 'Y', email: 'dup', status: 'ACTIVE' as const }, 'user-1')).rejects.toThrow('Email conflict');
-    expect(mockLogger.info).not.toHaveBeenCalled();
+    expect(mockLogAudit).not.toHaveBeenCalled();
   });
 });
 
 describe('patientService.update', () => {
   it('delegates to repository.update with id, dto, and userId', async () => {
     const dto = { name: 'Updated' };
+    mockRepo.findById.mockResolvedValue(fakePatient as any);
     mockRepo.update.mockResolvedValue({ ...fakePatient, ...dto } as any);
     const result = await patientService.update('patient-1', dto, 'user-1');
     expect(mockRepo.update).toHaveBeenCalledWith('patient-1', dto, 'user-1');
     expect(result.name).toBe('Updated');
   });
 
-  it('logs patient update with changed fields', async () => {
+  it('calls logAudit after update', async () => {
+    mockRepo.findById.mockResolvedValue(fakePatient as any);
     mockRepo.update.mockResolvedValue(fakePatient as any);
     await patientService.update('patient-1', { name: 'New', email: 'new@test.com' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { patientId: 'patient-1', userId: 'user-1', fields: ['name', 'email'] },
-      'Patient updated',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'PATIENT',
+      entityId: 'patient-1',
+      actionType: 'UPDATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
-    mockRepo.update.mockRejectedValue(new Error('Not found'));
+    mockRepo.findById.mockRejectedValue(new Error('Not found'));
     await expect(patientService.update('bad', { name: 'X' }, 'user-1')).rejects.toThrow('Not found');
   });
 });
 
 describe('patientService.delete', () => {
-  it('delegates to repository.delete with id and userId', async () => {
+  it('delegates to repository.delete and returns { id }', async () => {
     mockRepo.delete.mockResolvedValue(fakePatient as any);
     const result = await patientService.delete('patient-1', 'user-1');
     expect(mockRepo.delete).toHaveBeenCalledWith('patient-1', 'user-1');
-    expect(result).toEqual(fakePatient);
+    expect(result).toEqual({ id: 'patient-1' });
   });
 
-  it('logs patient deletion', async () => {
+  it('calls logAudit after deletion', async () => {
     mockRepo.delete.mockResolvedValue(fakePatient as any);
     await patientService.delete('patient-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { patientId: 'patient-1', userId: 'user-1' },
-      'Patient deleted',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'PATIENT',
+      entityId: 'patient-1',
+      actionType: 'DELETE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -180,20 +193,24 @@ describe('patientService.delete', () => {
 });
 
 describe('patientService.restore', () => {
-  it('delegates to repository.restore with id and userId', async () => {
+  it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakePatient as any);
     const result = await patientService.restore('patient-1', 'user-1');
     expect(mockRepo.restore).toHaveBeenCalledWith('patient-1', 'user-1');
     expect(result).toEqual(fakePatient);
   });
 
-  it('logs patient restoration', async () => {
+  it('calls logAudit after restore', async () => {
     mockRepo.restore.mockResolvedValue(fakePatient as any);
     await patientService.restore('patient-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { patientId: 'patient-1', userId: 'user-1' },
-      'Patient restored',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'PATIENT',
+      entityId: 'patient-1',
+      actionType: 'RESTORE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    }));
   });
 
   it('propagates repository errors', async () => {

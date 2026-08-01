@@ -12,15 +12,20 @@ vi.mock('../../../src/appointment-types/appointment-type.repository.js', () => (
   },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
+}));
+
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 import { appointmentTypeRepository } from '../../../src/appointment-types/appointment-type.repository.js';
-import { logger } from '../../../src/utils/api/logger.js';
+import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 
 const mockRepo = vi.mocked(appointmentTypeRepository);
-const mockLogger = vi.mocked(logger);
+const mockLogAudit = vi.mocked(logAudit);
 
 const fakeType = {
   id: 'type-1',
@@ -71,38 +76,42 @@ describe('appointmentTypeService.create', () => {
     expect(result).toEqual(fakeType);
   });
 
-  it('logs appointment type creation', async () => {
+  it('calls logAudit after creation', async () => {
     mockRepo.create.mockResolvedValue(fakeType as any);
     await appointmentTypeService.create({ name: 'Consultation', defaultDuration: 30 }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { appointmentTypeId: 'type-1', userId: 'user-1', name: 'Consultation' },
-      'Appointment type created',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'APPOINTMENT_TYPE',
+      entityId: 'type-1',
+      actionType: 'CREATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
     mockRepo.create.mockRejectedValue(new Error('Name already exists'));
     await expect(appointmentTypeService.create({ name: 'Dup', defaultDuration: 15 }, 'user-1')).rejects.toThrow('Name already exists');
-    expect(mockLogger.info).not.toHaveBeenCalled();
+    expect(mockLogAudit).not.toHaveBeenCalled();
   });
 });
 
 describe('appointmentTypeService.update', () => {
   it('delegates to repository.update with id, dto, and userId', async () => {
     const dto = { name: 'Updated Type' };
+    mockRepo.findById.mockResolvedValue(fakeType as any);
     mockRepo.update.mockResolvedValue({ ...fakeType, ...dto } as any);
     const result = await appointmentTypeService.update('type-1', dto, 'user-1');
     expect(mockRepo.update).toHaveBeenCalledWith('type-1', dto, 'user-1');
     expect(result.name).toBe('Updated Type');
   });
 
-  it('logs appointment type update with changed fields', async () => {
+  it('calls logAudit after update', async () => {
+    mockRepo.findById.mockResolvedValue(fakeType as any);
     mockRepo.update.mockResolvedValue(fakeType as any);
     await appointmentTypeService.update('type-1', { name: 'New' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { appointmentTypeId: 'type-1', userId: 'user-1', fields: ['name'] },
-      'Appointment type updated',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'APPOINTMENT_TYPE',
+      entityId: 'type-1',
+      actionType: 'UPDATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -112,20 +121,24 @@ describe('appointmentTypeService.update', () => {
 });
 
 describe('appointmentTypeService.delete', () => {
-  it('delegates to repository.delete with id and userId', async () => {
+  it('delegates to repository.delete and returns { id }', async () => {
     mockRepo.delete.mockResolvedValue(fakeType as any);
     const result = await appointmentTypeService.delete('type-1', 'user-1');
     expect(mockRepo.delete).toHaveBeenCalledWith('type-1', 'user-1');
-    expect(result).toEqual(fakeType);
+    expect(result).toEqual({ id: 'type-1' });
   });
 
-  it('logs appointment type deletion', async () => {
+  it('calls logAudit after deletion', async () => {
     mockRepo.delete.mockResolvedValue(fakeType as any);
     await appointmentTypeService.delete('type-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { appointmentTypeId: 'type-1', userId: 'user-1' },
-      'Appointment type deleted',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'APPOINTMENT_TYPE',
+      entityId: 'type-1',
+      actionType: 'DELETE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -135,20 +148,24 @@ describe('appointmentTypeService.delete', () => {
 });
 
 describe('appointmentTypeService.restore', () => {
-  it('delegates to repository.restore with id and userId', async () => {
+  it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeType as any);
     const result = await appointmentTypeService.restore('type-1', 'user-1');
     expect(mockRepo.restore).toHaveBeenCalledWith('type-1', 'user-1');
     expect(result).toEqual(fakeType);
   });
 
-  it('logs appointment type restoration', async () => {
+  it('calls logAudit after restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeType as any);
     await appointmentTypeService.restore('type-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { appointmentTypeId: 'type-1', userId: 'user-1' },
-      'Appointment type restored',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'APPOINTMENT_TYPE',
+      entityId: 'type-1',
+      actionType: 'RESTORE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    }));
   });
 
   it('propagates repository errors', async () => {

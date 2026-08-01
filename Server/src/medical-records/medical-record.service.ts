@@ -1,6 +1,5 @@
 import { medicalRecordRepository } from './medical-record.repository.js';
 import { logger } from '../utils/api/logger.js';
-import { withAudit } from '../audit-log/with-audit.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateMedicalRecordDto, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 import { updateMedicalRecordSchema } from './medical-record.schemas.js';
@@ -14,21 +13,23 @@ export const medicalRecordService = {
   findByPatientId: medicalRecordRepository.findByPatientId.bind(medicalRecordRepository),
   findMany: medicalRecordRepository.findMany.bind(medicalRecordRepository),
 
-  create: withAudit(
-    (dto: CreateMedicalRecordDto, userId: string) => medicalRecordRepository.create(dto, userId),
-    {
+  async create(dto: CreateMedicalRecordDto, userId: string) {
+    const createdRecord = await medicalRecordRepository.create(dto, userId);
+    await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
-      action: ActionType.CREATE,
-      description: (_r, dto) => `Created medical record for patient ${(dto as CreateMedicalRecordDto).patientId}`,
-      affectedFields: (_r, dto) => Object.keys(dto as Record<string, unknown>),
-      fieldsAfter: (_r, dto) => dto as unknown as Record<string, unknown>,
-    },
-  ),
+      entityId: createdRecord.id,
+      actionType: ActionType.CREATE,
+      description: `Created medical record for patient ${dto.patientId}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: dto as unknown as Record<string, unknown>,
+    });
+    return createdRecord;
+  },
 
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
-    const before = await medicalRecordRepository.findById(id, userId);
-    const record = await medicalRecordRepository.update(id, dto, userId);
-    const diff = computeDiff(before as unknown as Record<string, unknown>, record as unknown as Record<string, unknown>, MEDICAL_RECORD_DIFF_FIELDS);
+    const existingRecord = await medicalRecordRepository.findById(id, userId);
+    const updatedRecord = await medicalRecordRepository.update(id, dto, userId);
+    const diff = computeDiff(existingRecord as unknown as Record<string, unknown>, updatedRecord as unknown as Record<string, unknown>, MEDICAL_RECORD_DIFF_FIELDS);
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
@@ -37,49 +38,45 @@ export const medicalRecordService = {
       ...diff,
     });
     logger.info({ medicalRecordId: id, userId, fields: Object.keys(dto) }, 'Medical record updated');
-    return record;
+    return updatedRecord;
   },
 
-  softDelete: withAudit(
-    (id: string, userId: string) => medicalRecordRepository.softDelete(id, userId) as Promise<{ id: string }>,
-    {
+  async softDelete(id: string, userId: string): Promise<{ id: string }> {
+    await medicalRecordRepository.softDelete(id, userId);
+    await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
-      action: ActionType.DELETE,
-      description: (_r, id) => `Deleted medical record ${id}`,
-      getBefore: (id, userId) =>
-        medicalRecordRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: false,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: true,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Deleted medical record ${id}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    });
+    return { id };
+  },
 
-  restore: withAudit(
-    (id: string, userId: string) => medicalRecordRepository.restore(id, userId) as Promise<{ id: string; patientId: unknown }>,
-    {
+  async restore(id: string, userId: string) {
+    const restoredRecord = await medicalRecordRepository.restore(id, userId);
+    await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
-      action: ActionType.RESTORE,
-      description: (_r, id) => `Restored medical record ${id}`,
-      affectedFields: () => ['isDeleted'],
-      fieldsBefore: () => ({
-        isDeleted: true,
-      }),
-      fieldsAfter: () => ({
-        isDeleted: false,
-      }),
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.RESTORE,
+      description: `Restored medical record ${id}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    });
+    return restoredRecord;
+  },
 
-  delete: withAudit(
-    (id: string, userId: string) => medicalRecordRepository.delete(id, userId) as Promise<{ id: string }>,
-    {
+  async delete(id: string, userId: string): Promise<{ id: string }> {
+    await medicalRecordRepository.delete(id, userId);
+    await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
-      action: ActionType.DELETE,
-      description: (_r, id) => `Permanently deleted medical record ${id}`,
-    },
-  ),
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Permanently deleted medical record ${id}`,
+    });
+    return { id };
+  },
 };
