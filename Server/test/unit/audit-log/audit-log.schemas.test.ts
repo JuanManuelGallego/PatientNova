@@ -149,6 +149,7 @@ describe('listAuditLogsSchema', () => {
       actionType: 'UPDATE',
       source: 'API',
       actorId: 'a-1',
+      search: 'test',
       orderBy: 'actionType',
       order: 'asc',
     });

@@ -33,14 +33,26 @@ export const auditLogRepository = {
   },
 
   async findMany(userId: string, query: ListAuditLogsQuery): Promise<Paginated<AuditLog>> {
-    const { entityType, entityId, actionType, source, actorId, orderBy, order, page, pageSize } = query;
+    const { entityType, entityId, actionType, source, actorId, search, dateFrom, dateTo, orderBy, order, page, pageSize } = query;
+    const eventTimeFilter: Prisma.DateTimeFilter = {
+      ...(dateFrom && { gte: new Date(dateFrom) }),
+      ...(dateTo && { lte: new Date(dateTo) }),
+    };
     const where: Prisma.AuditLogWhereInput = { 
       userId,
       ...(entityType && { entityType }),
       ...(entityId && { entityId }),
       ...(actionType && { actionType }),
       ...(source && { source }),
-      ...(actorId && { actorId })
+      ...(actorId && { actorId }),
+      ...(search && {
+        OR: [
+          { actorDisplayName: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { entityId: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+      ...(Object.keys(eventTimeFilter).length > 0 && { eventTimeUtc: eventTimeFilter }),
     };
 
     return paginate(

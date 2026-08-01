@@ -46,6 +46,9 @@ export interface FetchAuditLogsFilters {
   entityType?: EntityType;
   actionType?: ActionType;
   source?: ActionSource;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   pageSize?: number;
   orderBy?: "eventTimeUtc" | "entityType" | "actionType" | "source" | "actorId";

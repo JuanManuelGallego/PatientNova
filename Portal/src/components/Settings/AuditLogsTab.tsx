@@ -1,13 +1,22 @@
 import { useFetchAuditLogs } from "@/src/api/audit-logs";
-import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
+import { AuditLog, EntityType, ActionType, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
 import { CustomSelect, SelectOption } from "@/src/components/CustomSelect";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
 import { ActionPill } from "@/src/components/Info/ActionPill";
+import { FilterBar } from "@/src/components/FilterBar";
+import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
+import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
-import { useState } from "react";
+import { ACTION_ICONS } from "@/src/config/icons";
+import { useMemo, useState } from "react";
+import {
+  useQueryState,
+  parseAsInteger,
+  parseAsString,
+} from "nuqs";
 import { Clock } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -22,27 +31,32 @@ const ACTION_OPTIONS: SelectOption[] = [
   ...Object.values(ActionType).map((v) => ({ value: v, label: ACTION_TYPE_CONFIG[v].label })),
 ];
 
-const SOURCE_OPTIONS: SelectOption[] = [
-  { value: "", label: "Todas" },
-  ...Object.values(ActionSource).map((v) => ({ value: v, label: ACTION_SOURCE_CONFIG[v].label })),
-];
-
 export function AuditLogsTab() {
-  const [filters, setFilters] = useState<FetchAuditLogsFilters>({
-    page: 1,
-    pageSize: PAGE_SIZE,
-    orderBy: "eventTimeUtc",
-    order: "desc",
-  });
+  const [viewLog, setViewLog] = useState<AuditLog | null>(null);
+  const [search, setSearch] = useQueryState("search", parseAsString.withDefault(""));
+  const debouncedSearch = useDebounceState(search, 250);
+  const [entityType, setEntityType] = useQueryState("entityType", parseAsString.withDefault(""));
+  const [actionType, setActionType] = useQueryState("actionType", parseAsString.withDefault(""));
+  const [dateFilter, setDateFilter] = useQueryState("dateFilter", parseAsString.withDefault(""));
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+
+  const filters = useMemo<FetchAuditLogsFilters>(
+    () => ({
+      entityType: ( entityType as EntityType ) || undefined,
+      actionType: ( actionType as ActionType ) || undefined,
+      search: debouncedSearch.trim() || undefined,
+      dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
+      dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
+      page,
+      pageSize: PAGE_SIZE,
+      orderBy: "eventTimeUtc",
+      order: "desc",
+    }),
+    [entityType, actionType, debouncedSearch, dateFilter, page],
+  );
+
   const { auditLogs, loading, error, totalPages, total } = useFetchAuditLogs(filters);
   const showSpinner = useDelayedLoading(loading);
-  const [viewLog, setViewLog] = useState<AuditLog | null>(null);
-
-  function updateFilter(key: keyof FetchAuditLogsFilters, value: unknown) {
-    setFilters((prev) => ({ ...prev, [key]: value || undefined, page: 1 }));
-  }
-
-  const page = filters.page ?? 1;
 
   return (
     <div>
@@ -72,32 +86,44 @@ export function AuditLogsTab() {
         </div>
       </div>
 
-      <div className="form-grid-2" style={{ marginBottom: 16, gap: 12 }}>
-        <label className="form-label">
-          Tipo de entidad
-          <CustomSelect
-            value={filters.entityType ?? ""}
-            options={ENTITY_OPTIONS}
-            onChange={(v) => updateFilter("entityType", v)}
-          />
-        </label>
-        <label className="form-label">
-          Accion
-          <CustomSelect
-            value={filters.actionType ?? ""}
-            options={ACTION_OPTIONS}
-            onChange={(v) => updateFilter("actionType", v)}
-          />
-        </label>
-        <label className="form-label">
-          Fuente
-          <CustomSelect
-            value={filters.source ?? ""}
-            options={SOURCE_OPTIONS}
-            onChange={(v) => updateFilter("source", v)}
-          />
-        </label>
-      </div>
+      <FilterBar
+        value={search}
+        onChange={setSearch}
+        onClear={() => {
+          setSearch("");
+          setPage(1);
+          setEntityType("");
+          setActionType("");
+          setDateFilter("");
+        }}
+        placeholder="Buscar por actor, descripcion o entidad…"
+        wrap
+      >
+        <CustomSelect
+          value={entityType}
+          options={ENTITY_OPTIONS}
+          onChange={(v) => { setEntityType(v); setPage(1); }}
+          className="form-input--auto"
+        />
+        <CustomSelect
+          value={actionType}
+          options={ACTION_OPTIONS}
+          onChange={(v) => { setActionType(v); setPage(1); }}
+          className="form-input--auto"
+        />
+        <DateTimePicker
+          date={dateFilter}
+          onChanged={(iso) => setDateFilter(iso.slice(0, 10))}
+        />
+        {dateFilter && (
+          <button
+            onClick={() => setDateFilter("")}
+            className="btn-secondary btn-secondary--sm"
+          >
+            <ACTION_ICONS.close size={12} /> Fecha
+          </button>
+        )}
+      </FilterBar>
 
       {error && (
         <div className="error-inline" style={{ marginBottom: 16 }}>
@@ -133,7 +159,7 @@ export function AuditLogsTab() {
             total={total}
             totalPages={totalPages}
             label="registros"
-            onPageChange={(p) => setFilters((prev) => ({ ...prev, page: p }))}
+            onPageChange={setPage}
           />
         }
       />
