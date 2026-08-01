@@ -7,7 +7,6 @@ import {
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
-import { ActionPill } from "@/src/components/Info/ActionPill";
 
 export function AuditDrawer({
   log,
@@ -34,7 +33,7 @@ export function AuditDrawer({
             <div>
               <h2 className="drawer-header__title">{actionCfg.label}</h2>
               <div className="drawer-header__status">
-                <ActionPill action={log.actionType} />
+                {entityCfg.label}
               </div>
             </div>
             <button onClick={onClose} className="btn-close--transparent">
@@ -175,7 +174,7 @@ export function AuditDrawer({
             <Row
               icon={DETAIL_ICONS.clock}
               label="Fecha"
-              value={fmtDateTime(log.eventTimeUtc)}
+              value={<span className="td--dateTime">{fmtDateTime(log.eventTimeUtc)}</span>}
             />
           </Section>
         </div>

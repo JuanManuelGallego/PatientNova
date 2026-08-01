@@ -2,7 +2,7 @@ import { appointmentTypeRepository } from './appointment-type.repository.js';
 import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateAppointmentTypeDto, UpdateAppointmentTypeDto } from './appointment-type.schemas.js';
 import { updateAppointmentTypeSchema } from './appointment-type.schemas.js';
-import { EntityType } from '../../generated/prisma/enums.ts';
+import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 const TYPE_DIFF_FIELDS = schemaKeys(updateAppointmentTypeSchema);
@@ -15,10 +15,10 @@ export const appointmentTypeService = {
     (dto: CreateAppointmentTypeDto, userId: string) => appointmentTypeRepository.create(dto, userId),
     {
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: 'CREATE',
+      action: ActionType.CREATE,
       description: (t) => `Created appointment type ${t.name}`,
-      affectedFields: (_t, dto) => Object.keys(dto as Record<string, unknown>),
-      fieldsAfter: (_t, dto) => dto as unknown as Record<string, unknown>,
+      affectedFields: (_t, dto) => Object.keys(dto),
+      fieldsAfter: (_t, dto) => dto,
     },
   ),
 
@@ -27,7 +27,7 @@ export const appointmentTypeService = {
       appointmentTypeRepository.update(id, dto, userId),
     {
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: 'UPDATE',
+      action: ActionType.UPDATE,
       description: (t) => `Updated appointment type ${t.name}`,
       getBefore: (id, _dto, userId) =>
         appointmentTypeRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
@@ -39,11 +39,15 @@ export const appointmentTypeService = {
     (id: string, userId: string) => appointmentTypeRepository.delete(id, userId),
     {
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: (t) => `Deleted appointment type ${t.name}`,
-      getBefore: (id, userId) =>
-        appointmentTypeRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      fieldsBefore: (before) => ({ name: before.name, defaultDuration: before.defaultDuration }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: false,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: true,
+      }),
     },
   ),
 
@@ -51,9 +55,15 @@ export const appointmentTypeService = {
     (id: string, userId: string) => appointmentTypeRepository.restore(id, userId),
     {
       entityType: EntityType.APPOINTMENT_TYPE,
-      action: 'RESTORE',
+      action: ActionType.RESTORE,
       description: (t) => `Restored appointment type ${t.name}`,
-      fieldsAfter: (t) => ({ name: t.name, defaultDuration: t.defaultDuration }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: true,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: false,
+      }),
     },
   ),
 };

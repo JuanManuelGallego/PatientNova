@@ -1,4 +1,4 @@
-import { AppointmentStatus, ReminderStatus, type AppointmentLocation, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { appointmentRepository } from './appointment.repository.js';
 import {
   AppointmentConflictError,
@@ -50,7 +50,7 @@ const ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]>
   ],
 };
 
-async function validatePatient(patientId: string, userId: string) {
+async function validatePatient(patientId: string, userId: string): Promise<Patient> {
   const patient = await prisma.patient.findFirst({ where: { id: patientId, userId } });
   if (!patient) throw new AppointmentPatientNotFoundError(patientId);
   return patient;
@@ -62,9 +62,10 @@ async function validateLocation(locationId: string): Promise<AppointmentLocation
   return location as AppointmentLocation;
 }
 
-async function validateType(typeId: string) {
+async function validateType(typeId: string): Promise<AppointmentType> {
   const type = await prisma.appointmentType.findUnique({ where: { id: typeId } });
   if (!type) throw new AppointmentTypeNotFoundError(typeId);
+  return type;
 }
 
 async function validateReminder(reminderId: string | null | undefined): Promise<Reminder | null> {
@@ -90,6 +91,17 @@ async function handleReminderUpdate(
       where: { id: existing.reminder.id },
       data: { status: ReminderStatus.CANCELLED },
     });
+
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: existing.reminder.id,
+      actionType: ActionType.UPDATE,
+      description: `Cancelled reminder ${existing.reminder.id} (atomic with appointment update)`,
+      affectedFields: ['status'],
+      fieldsBefore: { status: existing.reminder.status },
+      fieldsAfter: { status: ReminderStatus.CANCELLED },
+    });
+    
     logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled (atomic with appointment update)');
     return { reminderId: null };
   }
@@ -109,6 +121,26 @@ async function handleReminderUpdate(
         userId,
       },
     });
+
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: createdReminder.id,
+      actionType: ActionType.CREATE,
+      description: `Created reminder for patient ${existing.patient.name} ${existing.patient.lastName}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: { 
+        channel: createdReminder.channel,
+        sendMode: createdReminder.sendMode, 
+        sendAt: createdReminder.sendAt, 
+        to: createdReminder.to, 
+        contentSid: createdReminder.contentSid, 
+        contentVariables: createdReminder.contentVariables, 
+        body: createdReminder.body, 
+        patientId: createdReminder.patientId, 
+        status: createdReminder.status
+      },
+    });
+
     logger.info({ reminderId: createdReminder.id }, 'Reminder created (atomic with appointment update)');
     return { reminderId: createdReminder.id, reminder: createdReminder };
   }
@@ -127,6 +159,16 @@ async function handleReminderUpdate(
         ...(dto.reminder.body !== undefined && { body: dto.reminder.body }),
       },
     });
+
+    const diff = computeDiff(existing.reminder as unknown as Record<string, unknown>, { ...existing.reminder, ...dto.reminder } as unknown as Record<string, unknown>, Object.keys(dto.reminder));
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: existing.reminder.id,
+      actionType: ActionType.UPDATE,
+      description: `Updated reminder ${existing.reminder.id} (atomic with appointment update)`,
+      ...diff,
+    });
+
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated (atomic with appointment update)');
   }
 
@@ -218,14 +260,34 @@ export const appointmentService = {
             userId,
           },
         });
-        logger.info({ reminderId: createdReminder.id, userId, mode: dto.reminder.sendMode }, 'Reminder created (atomic with appointment)');
+          
+        await logAudit({
+          entityType: EntityType.REMINDER,
+          entityId: createdReminder.id,
+          actionType: ActionType.CREATE,
+          description: `Created reminder for patient ${patient.name} ${patient.lastName}`,
+          affectedFields: Object.keys(dto),
+          fieldsAfter: { 
+            channel: createdReminder.channel,
+            sendMode: createdReminder.sendMode, 
+            sendAt: createdReminder.sendAt, 
+            to: createdReminder.to, 
+            contentSid: createdReminder.contentSid, 
+            contentVariables: createdReminder.contentVariables, 
+            body: createdReminder.body, 
+            patientId: patient.id, 
+            status: createdReminder.status
+          },
+        });
+
+        logger.info({ reminderId: createdReminder.id, userId, mode: createdReminder.sendMode }, 'Reminder created (atomic with appointment)');
       }
 
       const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
 
       const created = await appointmentRepository.create(
         { ...dto, reminderId: reminderId ?? undefined },
-        patient.userId,
+        userId,
         tx,
       );
 
@@ -238,24 +300,44 @@ export const appointmentService = {
       if (meetingUrl !== created.meetingUrl) {
         result = await appointmentRepository.update(created.id, { meetingUrl }, tx);
       }
+      
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: created.id,
+        actionType: ActionType.CREATE,
+        description: `Created appointment for patient ${patient.name} ${patient.lastName}`,
+        affectedFields: Object.keys(dto),
+        fieldsAfter: { 
+          patientId: created.patientId, 
+          startAt: created.startAt, 
+          endAt: created.endAt, 
+          typeId: created.typeId, 
+          locationId: created.locationId, 
+          price: created.price,
+          paid: created.paid ?? false,
+          notes: created.notes ?? null,
+          reminderId: reminderId ?? null, 
+          meetingUrl: meetingUrl ?? null, 
+          status: created.status ?? AppointmentStatus.SCHEDULED 
+        },
+      });
 
       if (createdReminder) {
         await tx.reminder.update({
           where: { id: createdReminder.id },
           data: { appointmentId: created.id },
         });
+        await logAudit({
+          entityType: EntityType.REMINDER,
+          entityId: createdReminder.id,
+          actionType: ActionType.UPDATE,
+          description: `Linked reminder ${createdReminder.id} to appointment ${created.id}`,
+          affectedFields: ['appointmentId'],
+          fieldsAfter: { appointmentId: created.id },
+        });
       }
 
-      logger.info({ appointmentId: created.id, patientId: dto.patientId, userId, startAt: dto.startAt }, 'Appointment created');
-
-      await logAudit({
-        entityType: EntityType.APPOINTMENT,
-        entityId: created.id,
-        actionType: ActionType.CREATE,
-        description: `Created appointment for patient ${dto.patientId}`,
-        affectedFields: Object.keys(dto),
-        fieldsAfter: { patientId: dto.patientId, startAt: dto.startAt, endAt: dto.endAt, typeId: dto.typeId, locationId: dto.locationId },
-      });
+      logger.info({ appointmentId: created.id, patientId: patient.id, userId, startAt: created.startAt }, 'Appointment created');
 
       return result;
     }, { timeout: 10000 });
@@ -302,22 +384,31 @@ export const appointmentService = {
         ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
         ...(meetingUrl !== existing.meetingUrl && { meetingUrl }),
       }, tx);
+      
+      const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        actionType: ActionType.UPDATE,
+        description: `Updated appointment for patient ${updated.patient.name} ${updated.patient.lastName}`,
+        ...diff,
+      });
 
       if (createdReminder) {
         await tx.reminder.update({
           where: { id: createdReminder.id },
           data: { appointmentId: id },
         });
-      }
 
-      const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
-      await logAudit({
-        entityType: EntityType.APPOINTMENT,
-        entityId: id,
-        actionType: ActionType.UPDATE,
-        description: `Updated appointment ${id}`,
-        ...diff,
-      });
+        await logAudit({
+          entityType: EntityType.REMINDER,
+          entityId: createdReminder.id,
+          actionType: ActionType.UPDATE,
+          description: `Linked reminder ${createdReminder.id} to appointment ${id}`,
+          affectedFields: ['appointmentId'],
+          fieldsAfter: { appointmentId: id },
+        });
+      }
 
       return updated;
     }, { timeout: 10000 });
@@ -333,7 +424,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Changed appointment status from ${appt.status} to ${status}`,
+      description: `Changed appointment status from ${appt.status} to ${status} for patient ${updated.patient.name} ${updated.patient.lastName}`,
       affectedFields: ['status'],
       fieldsBefore: { status: appt.status },
       fieldsAfter: { status },
@@ -356,7 +447,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Marked appointment ${id} as paid`,
+      description: `Marked appointment for patient ${updated.patient.name} ${updated.patient.lastName} as paid`,
       affectedFields: ['paid'],
       fieldsBefore: { paid: false },
       fieldsAfter: { paid: true },
@@ -365,14 +456,15 @@ export const appointmentService = {
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
-    const before = await appointmentRepository.findById(id, userId);
-    await appointmentRepository.delete(id, userId);
+    const deleted = await appointmentRepository.delete(id, userId);
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted appointment ${id}`,
-      fieldsBefore: { patientId: before.patientId, startAt: before.startAt, endAt: before.endAt, status: before.status },
+      description: `Deleted appointment for patient ${deleted.patient.name} ${deleted.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
     });
     logger.info({ appointmentId: id, userId }, 'Appointment deleted');
     return { id };
@@ -385,8 +477,10 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored appointment ${id}`,
-      fieldsAfter: { patientId: restored.patientId, startAt: restored.startAt, endAt: restored.endAt, status: restored.status },
+      description: `Restored appointment for patient ${restored.patient.name} ${restored.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
     });
     logger.info({ appointmentId: id, userId }, 'Appointment restored');
     return restored;

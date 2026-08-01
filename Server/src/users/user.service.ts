@@ -20,7 +20,27 @@ export const userService = {
       actionType: ActionType.CREATE,
       description: `Created user ${user.email}`,
       affectedFields: Object.keys(dto),
-      fieldsAfter: { email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
+      fieldsAfter: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar,
+        logo: user.logo,
+        altLogo: user.altLogo,
+        jobTitle: user.jobTitle,
+        phoneNumber: user.phoneNumber,
+        whatsappNumber: user.whatsappNumber,
+        reminderActive: user.reminderActive,
+        reminderChannel: user.reminderChannel,
+        timezone: user.timezone,
+        bankName: user.bankName,
+        accountNumber: user.accountNumber,
+        nationalId: user.nationalId,
+        bankingKey: user.bankingKey,
+      },
     });
     logger.info({ userId: user.id, email: user.email }, 'User created');
     return user;
@@ -49,7 +69,19 @@ export const userService = {
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Deleted user ${before.email}`,
-      fieldsBefore: { email: before.email, firstName: before.firstName, lastName: before.lastName },
+      affectedFields: ['isDeleted'],
+      fieldsBefore: {
+        isDeleted: false,
+        email: before.email,
+        firstName: before.firstName,
+        lastName: before.lastName,
+        displayName: before.displayName,
+        role: before.role,
+        status: before.status,
+      },
+      fieldsAfter: {
+        isDeleted: true,
+      },
     });
     logger.info({ userId: id }, 'User deleted');
     return user;
@@ -63,7 +95,32 @@ export const userService = {
       entityId: id,
       actionType: ActionType.RESTORE,
       description: `Restored user ${user.email}`,
-      fieldsAfter: { email: user.email, firstName: user.firstName, lastName: user.lastName },
+      affectedFields: ['isDeleted'],
+      fieldsBefore: {
+        isDeleted: true,
+      },
+      fieldsAfter: {
+        isDeleted: false,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar,
+        logo: user.logo,
+        altLogo: user.altLogo,
+        jobTitle: user.jobTitle,
+        phoneNumber: user.phoneNumber,
+        whatsappNumber: user.whatsappNumber,
+        reminderActive: user.reminderActive,
+        reminderChannel: user.reminderChannel,
+        timezone: user.timezone,
+        bankName: user.bankName,
+        accountNumber: user.accountNumber,
+        nationalId: user.nationalId,
+        bankingKey: user.bankingKey,
+      },
     });
     logger.info({ userId: id }, 'User restored');
     return user;

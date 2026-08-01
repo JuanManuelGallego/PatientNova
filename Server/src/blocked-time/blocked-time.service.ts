@@ -33,7 +33,7 @@ export const blockedTimeService = {
     },
     {
       entityType: EntityType.BLOCKED_TIME,
-      action: 'CREATE',
+      action: ActionType.CREATE,
       description: 'Created blocked time slot',
       affectedFields: (_bt, dto) => Object.keys(dto),
       fieldsAfter: (_bt, dto) => dto as unknown as Record<string, unknown>,
@@ -64,14 +64,19 @@ export const blockedTimeService = {
     (id: string, userId: string) => blockedTimeRepository.delete(id, userId),
     {
       entityType: EntityType.BLOCKED_TIME,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: 'Deleted blocked time slot',
       getBefore: (id, userId) =>
         blockedTimeRepository.findById(id, userId) as Promise<Record<string, unknown>>,
+      affectedFields: () => ['isDeleted'],
       fieldsBefore: (before) => ({
+        isDeleted: false,
         description: before.description,
         startTimeUtc: before.startTimeUtc,
         endTimeUtc: before.endTimeUtc,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: true,
       }),
     },
   ),
@@ -80,9 +85,14 @@ export const blockedTimeService = {
     (id: string, userId: string) => blockedTimeRepository.restore(id, userId),
     {
       entityType: EntityType.BLOCKED_TIME,
-      action: 'RESTORE',
+      action: ActionType.RESTORE,
       description: 'Restored blocked time slot',
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: true,
+      }),
       fieldsAfter: (bt) => ({
+        isDeleted: false,
         description: bt.description,
         startTimeUtc: bt.startTimeUtc,
         endTimeUtc: bt.endTimeUtc,

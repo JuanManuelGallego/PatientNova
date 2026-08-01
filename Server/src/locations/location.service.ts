@@ -2,7 +2,7 @@ import { locationRepository } from './location.repository.js';
 import { withAudit } from '../audit-log/with-audit.js';
 import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
 import { updateLocationSchema } from './location.schemas.js';
-import { EntityType } from '../../generated/prisma/enums.ts';
+import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 const LOCATION_DIFF_FIELDS = schemaKeys(updateLocationSchema);
@@ -15,10 +15,10 @@ export const locationService = {
     (dto: CreateLocationDto, userId: string) => locationRepository.create(dto, userId),
     {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: 'CREATE',
+      action: ActionType.CREATE,
       description: (loc) => `Created location ${loc.name}`,
-      affectedFields: (_loc, dto) => Object.keys(dto as Record<string, unknown>),
-      fieldsAfter: (_loc, dto) => dto as unknown as Record<string, unknown>,
+      affectedFields: (_loc, dto) => Object.keys(dto),
+      fieldsAfter: (_loc, dto) => dto,
     },
   ),
 
@@ -26,7 +26,7 @@ export const locationService = {
     (id: string, dto: UpdateLocationDto, userId: string) => locationRepository.update(id, dto, userId),
     {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: 'UPDATE',
+      action: ActionType.UPDATE,
       description: (loc) => `Updated location ${loc.name}`,
       getBefore: (id, _dto, userId) =>
         locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
@@ -38,11 +38,17 @@ export const locationService = {
     (id: string, userId: string) => locationRepository.delete(id, userId),
     {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: (loc) => `Deleted location ${loc.name}`,
       getBefore: (id, userId) =>
         locationRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      fieldsBefore: (before) => ({ name: before.name, address: before.address }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: false,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: true,
+      }),
     },
   ),
 
@@ -50,9 +56,15 @@ export const locationService = {
     (id: string, userId: string) => locationRepository.restore(id, userId),
     {
       entityType: EntityType.APPOINTMENT_LOCATION,
-      action: 'RESTORE',
+      action: ActionType.RESTORE,
       description: (loc) => `Restored location ${loc.name}`,
-      fieldsAfter: (loc) => ({ name: loc.name, address: loc.address }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: true,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: false,
+      }),
     },
   ),
 };

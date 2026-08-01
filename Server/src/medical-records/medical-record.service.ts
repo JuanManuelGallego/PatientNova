@@ -18,7 +18,7 @@ export const medicalRecordService = {
     (dto: CreateMedicalRecordDto, userId: string) => medicalRecordRepository.create(dto, userId),
     {
       entityType: EntityType.MEDICAL_RECORD,
-      action: 'CREATE',
+      action: ActionType.CREATE,
       description: (_r, dto) => `Created medical record for patient ${(dto as CreateMedicalRecordDto).patientId}`,
       affectedFields: (_r, dto) => Object.keys(dto as Record<string, unknown>),
       fieldsAfter: (_r, dto) => dto as unknown as Record<string, unknown>,
@@ -44,11 +44,17 @@ export const medicalRecordService = {
     (id: string, userId: string) => medicalRecordRepository.softDelete(id, userId) as Promise<{ id: string }>,
     {
       entityType: EntityType.MEDICAL_RECORD,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: (_r, id) => `Deleted medical record ${id}`,
       getBefore: (id, userId) =>
         medicalRecordRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      fieldsBefore: (before) => ({ patientId: before.patientId }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: false,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: true,
+      }),
     },
   ),
 
@@ -56,9 +62,15 @@ export const medicalRecordService = {
     (id: string, userId: string) => medicalRecordRepository.restore(id, userId) as Promise<{ id: string; patientId: unknown }>,
     {
       entityType: EntityType.MEDICAL_RECORD,
-      action: 'RESTORE',
+      action: ActionType.RESTORE,
       description: (_r, id) => `Restored medical record ${id}`,
-      fieldsAfter: (r) => ({ patientId: r.patientId }),
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: true,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: false,
+      }),
     },
   ),
 
@@ -66,11 +78,8 @@ export const medicalRecordService = {
     (id: string, userId: string) => medicalRecordRepository.delete(id, userId) as Promise<{ id: string }>,
     {
       entityType: EntityType.MEDICAL_RECORD,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: (_r, id) => `Permanently deleted medical record ${id}`,
-      getBefore: (id, userId) =>
-        medicalRecordRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      fieldsBefore: (before) => ({ patientId: before.patientId }),
     },
   ),
 };

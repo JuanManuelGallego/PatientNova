@@ -83,7 +83,7 @@ export const reminderRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
+  async update(id: string, dto: UpdateReminderDto, userId: string): Promise<ReminderWithRelations> {
     await reminderRepository.findById(id, userId);
 
     const data = buildUpdateData(
@@ -103,22 +103,22 @@ export const reminderRepository = {
     });
   },
 
-  async cancel(id: string, userId: string): Promise<Reminder> {
+  async cancel(id: string, userId: string): Promise<ReminderWithRelations> {
     await reminderRepository.findById(id, userId);
     return prisma.reminder.update({ where: { id }, data: { status: 'CANCELLED' }, include: reminderInclude });
   },
 
-  async delete(id: string, userId: string): Promise<Reminder> {
+  async delete(id: string, userId: string): Promise<ReminderWithRelations> {
     await reminderRepository.findById(id, userId);
-    return softDelete(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
+    return softDelete(prisma.reminder, id, userId, reminderInclude) as Promise<ReminderWithRelations>;
   },
 
-  async restore(id: string, userId: string): Promise<Reminder> {
+  async restore(id: string, userId: string): Promise<ReminderWithRelations> {
     await reminderRepository.findById(id, userId);
-    return restore(prisma.reminder, id, userId, reminderInclude) as Promise<Reminder>;
+    return restore(prisma.reminder, id, userId, reminderInclude) as Promise<ReminderWithRelations>;
   },
 
-  async retry(id: string, sendAt: Date): Promise<Reminder> {
+  async retry(id: string, sendAt: Date): Promise<ReminderWithRelations> {
     return prisma.reminder.update({
       where: { id },
       data: {

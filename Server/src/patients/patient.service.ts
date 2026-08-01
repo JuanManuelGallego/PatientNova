@@ -4,7 +4,7 @@ import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStat
 import { updatePatientSchema } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
-import { EntityType } from '../../generated/prisma/enums.ts';
+import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 type PatientWithRelations = Patient & {
@@ -33,7 +33,7 @@ export const patientService = {
     (dto: CreatePatientDto, userId: string) => patientRepository.create(dto, userId),
     {
       entityType: EntityType.PATIENT,
-      action: 'CREATE',
+      action: ActionType.CREATE,
       description: (p) => `Created patient ${p.name} ${p.lastName}`,
       affectedFields: (_p, dto) => Object.keys(dto as Record<string, unknown>),
       fieldsAfter: (_p, dto) => dto as unknown as Record<string, unknown>,
@@ -44,7 +44,7 @@ export const patientService = {
     (id: string, dto: UpdatePatientDto, userId: string) => patientRepository.update(id, dto, userId),
     {
       entityType: EntityType.PATIENT,
-      action: 'UPDATE',
+      action: ActionType.UPDATE,
       description: (p) => `Updated patient ${p.name} ${p.lastName}`,
       getBefore: (id, _dto, userId) =>
         patientRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
@@ -56,14 +56,16 @@ export const patientService = {
     (id: string, userId: string) => patientRepository.delete(id, userId),
     {
       entityType: EntityType.PATIENT,
-      action: 'DELETE',
+      action: ActionType.DELETE,
       description: (p) => `Deleted patient ${p.name} ${p.lastName}`,
       getBefore: (id, userId) =>
         patientRepository.findById(id, userId as string) as Promise<Record<string, unknown>>,
-      fieldsBefore: (before) => ({
-        name: before.name,
-        lastName: before.lastName,
-        email: before.email,
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: false,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: true,
       }),
     },
   ),
@@ -72,12 +74,14 @@ export const patientService = {
     (id: string, userId: string) => patientRepository.restore(id, userId),
     {
       entityType: EntityType.PATIENT,
-      action: 'RESTORE',
+      action: ActionType.RESTORE,
       description: (p) => `Restored patient ${p.name} ${p.lastName}`,
-      fieldsAfter: (p) => ({
-        name: p.name,
-        lastName: p.lastName,
-        email: p.email,
+      affectedFields: () => ['isDeleted'],
+      fieldsBefore: () => ({
+        isDeleted: true,
+      }),
+      fieldsAfter: () => ({
+        isDeleted: false,
       }),
     },
   ),

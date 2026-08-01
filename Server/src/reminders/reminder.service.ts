@@ -76,9 +76,20 @@ export const reminderService = {
       entityType: EntityType.REMINDER,
       entityId: reminder.id,
       actionType: ActionType.CREATE,
-      description: `Created reminder for patient ${dto.patientId}`,
+      description: `Created reminder for patient ${reminder.patient.name} ${reminder.patient.lastName}`,
       affectedFields: Object.keys(dto),
-      fieldsAfter: { channel: dto.channel, sendMode: dto.sendMode, patientId: dto.patientId, status: reminder.status },
+      fieldsAfter: { 
+        channel: reminder.channel,
+        sendMode: reminder.sendMode, 
+        sendAt: reminder.sendAt, 
+        to: reminder.to, 
+        contentSid: reminder.contentSid, 
+        contentVariables: reminder.contentVariables, 
+        body: reminder.body, 
+        patientId: reminder.patientId, 
+        status: reminder.status ,
+        appointmentId: reminder.appointmentId,
+      },
     });
 
     return reminder;
@@ -108,7 +119,7 @@ export const reminderService = {
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated reminder ${id}`,
+      description: `Updated reminder for patient ${updated.patient.name} ${updated.patient.lastName}`,
       ...diff,
     });
     logger.info({ reminderId: id, userId, fields: Object.keys(dto) }, 'Reminder updated');
@@ -126,7 +137,7 @@ export const reminderService = {
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Cancelled reminder ${id}`,
+      description: `Cancelled reminder for patient ${cancelled.patient.name} ${cancelled.patient.lastName}`,
       affectedFields: ['status'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
@@ -145,8 +156,10 @@ export const reminderService = {
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted reminder ${id}`,
-      fieldsBefore: { status: reminder.status, channel: reminder.channel, patientId: reminder.patientId },
+      description: `Deleted reminder for patient ${deleted.patient.name} ${deleted.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
     });
     logger.info({ reminderId: id, userId }, 'Reminder deleted');
     return deleted;
@@ -166,8 +179,10 @@ export const reminderService = {
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored reminder ${id}`,
-      fieldsAfter: { status: restored.status, channel: restored.channel, patientId: restored.patientId },
+      description: `Restored reminder for patient ${restored.patient.name} ${restored.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
     });
 
     logger.info({ reminderId: id, userId }, 'Reminder restored');

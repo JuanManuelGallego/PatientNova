@@ -21,7 +21,12 @@ export const consentDocumentService = {
       actionType: ActionType.CREATE,
       description: `Created consent document for user ${userId}`,
       affectedFields: Object.keys(dto),
-      fieldsAfter: { version: (dto as Record<string, unknown>).version },
+      fieldsAfter: {
+        name: doc.name,
+        mimeType: doc.mimeType,
+        sizeBytes: doc.sizeBytes,
+        checksum: doc.checksum,
+      },
     });
     logger.info({ userId }, 'Consent document created');
     return doc;
@@ -45,14 +50,12 @@ export const consentDocumentService = {
   },
 
   async delete(userId: string) {
-    const before = await consentDocumentRepository.findByUserIdOrNull(userId);
     const doc = await consentDocumentRepository.delete(userId);
     await logAudit({
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
       actionType: ActionType.DELETE,
       description: `Deleted consent document for user ${userId}`,
-      fieldsBefore: before ? { version: (before as Record<string, unknown>).version } : null,
     });
     logger.info({ userId }, 'Consent document deleted');
     return doc;
