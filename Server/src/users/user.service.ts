@@ -18,7 +18,7 @@ export const userService = {
       entityType: EntityType.USER,
       entityId: user.id,
       actionType: ActionType.CREATE,
-      description: `Created user ${user.email}`,
+      description: `Usuario creado ${user.email}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: {
         email: user.email,
@@ -54,7 +54,7 @@ export const userService = {
       entityType: EntityType.USER,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated user ${user.email}`,
+      description: `Usuario actualizado ${user.email}`,
       ...diff,
     });
     logger.info({ userId: id, fields: Object.keys(dto) }, 'User updated');
@@ -68,7 +68,7 @@ export const userService = {
       entityType: EntityType.USER,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted user ${before.email}`,
+      description: `Usuario eliminado ${before.email}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: {
         isDeleted: false,
@@ -94,7 +94,7 @@ export const userService = {
       entityType: EntityType.USER,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored user ${user.email}`,
+      description: `Usuario restaurado ${user.email}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: {
         isDeleted: true,

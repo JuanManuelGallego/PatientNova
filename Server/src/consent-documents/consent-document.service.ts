@@ -19,7 +19,7 @@ export const consentDocumentService = {
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
       actionType: ActionType.CREATE,
-      description: `Created consent document for user ${userId}`,
+      description: `Documento de consentimiento creado para el usuario ${userId}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: {
         name: doc.name,
@@ -42,7 +42,7 @@ export const consentDocumentService = {
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
       actionType: ActionType.UPDATE,
-      description: `Updated consent document for user ${userId}`,
+      description: `Documento de consentimiento actualizado para el usuario ${userId}`,
       ...diff,
     });
     logger.info({ userId, fields: Object.keys(dto) }, 'Consent document updated');
@@ -55,7 +55,7 @@ export const consentDocumentService = {
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
       actionType: ActionType.DELETE,
-      description: `Deleted consent document for user ${userId}`,
+      description: `Documento de consentimiento eliminado para el usuario ${userId}`,
     });
     logger.info({ userId }, 'Consent document deleted');
     return doc;

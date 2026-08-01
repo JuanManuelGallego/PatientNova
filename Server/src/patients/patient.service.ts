@@ -35,7 +35,7 @@ export const patientService = {
       entityType: EntityType.PATIENT,
       entityId: createdPatient.id,
       actionType: ActionType.CREATE,
-      description: `Created patient ${createdPatient.name} ${createdPatient.lastName}`,
+      description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -50,7 +50,7 @@ export const patientService = {
       entityType: EntityType.PATIENT,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated patient ${updatedPatient.name} ${updatedPatient.lastName}`,
+      description: `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
       ...diff,
     });
     return updatedPatient;
@@ -62,7 +62,7 @@ export const patientService = {
       entityType: EntityType.PATIENT,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted patient ${deletedPatient.name} ${deletedPatient.lastName}`,
+      description: `Paciente eliminado ${deletedPatient.name} ${deletedPatient.lastName}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -76,7 +76,7 @@ export const patientService = {
       entityType: EntityType.PATIENT,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored patient ${restoredPatient.name} ${restoredPatient.lastName}`,
+      description: `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },

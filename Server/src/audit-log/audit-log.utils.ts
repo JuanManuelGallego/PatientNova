@@ -42,7 +42,7 @@ export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAu
   const ctx = getAuditContext();
   return {
     actorId: ctx?.actorId ?? 'system',
-    actorDisplayName: ctx?.actorDisplayName ?? 'System',
+    actorDisplayName: ctx?.actorDisplayName ?? 'Sistema',
     entityType: EntityType.USER,
     entityId: '',
     actionType: ActionType.CREATE,

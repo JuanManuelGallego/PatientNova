@@ -160,7 +160,7 @@ export async function dailyReminderWorker(): Promise<void> {
           entityId: user.id,
           actionType: ActionType.UPDATE,
           source: ActionSource.JOB,
-          description: `Daily reminder sent for ${appointments.length} appointment(s)`,
+          description: `Recordatorio diario enviado para ${appointments.length} cita(s)`,
           affectedFields: ['lastDailyReminderDate'],
           fieldsAfter: { lastDailyReminderDate: new Date(todayLocal) },
         }));

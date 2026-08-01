@@ -38,7 +38,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       entityId: a.id,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Appointment auto-completed`,
+      description: `Cita completada automáticamente`,
       affectedFields: ['status'],
       fieldsBefore: { status: a.status },
       fieldsAfter: { status: AppointmentStatus.COMPLETED },

@@ -17,7 +17,7 @@ export const locationService = {
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: createdLocation.id,
       actionType: ActionType.CREATE,
-      description: `Created location ${createdLocation.name}`,
+      description: `Ubicación creada ${createdLocation.name}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -32,7 +32,7 @@ export const locationService = {
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated location ${updatedLocation.name}`,
+      description: `Ubicación actualizada ${updatedLocation.name}`,
       ...diff,
     });
     return updatedLocation;
@@ -44,7 +44,7 @@ export const locationService = {
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted location ${deletedLocation.name}`,
+      description: `Ubicación eliminada ${deletedLocation.name}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -58,7 +58,7 @@ export const locationService = {
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored location ${restoredLocation.name}`,
+      description: `Ubicación restaurada ${restoredLocation.name}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },

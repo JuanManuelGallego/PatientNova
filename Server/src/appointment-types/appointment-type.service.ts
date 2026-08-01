@@ -17,7 +17,7 @@ export const appointmentTypeService = {
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: createdType.id,
       actionType: ActionType.CREATE,
-      description: `Created appointment type ${createdType.name}`,
+      description: `Tipo de cita creado ${createdType.name}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -32,7 +32,7 @@ export const appointmentTypeService = {
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated appointment type ${updatedType.name}`,
+      description: `Tipo de cita actualizado ${updatedType.name}`,
       ...diff,
     });
     return updatedType;
@@ -44,7 +44,7 @@ export const appointmentTypeService = {
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted appointment type ${deletedType.name}`,
+      description: `Tipo de cita eliminado ${deletedType.name}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -58,7 +58,7 @@ export const appointmentTypeService = {
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored appointment type ${restoredType.name}`,
+      description: `Tipo de cita restaurado ${restoredType.name}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },

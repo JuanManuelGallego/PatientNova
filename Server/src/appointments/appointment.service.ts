@@ -96,7 +96,7 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: existing.reminder.id,
       actionType: ActionType.UPDATE,
-      description: `Cancelled reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
+      description: `Recordatorio cancelado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       affectedFields: ['status'],
       fieldsBefore: { status: existing.reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
@@ -126,7 +126,7 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: createdReminder.id,
       actionType: ActionType.CREATE,
-      description: `Created reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
+      description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       affectedFields: Object.keys(dto),
       fieldsAfter: { 
         channel: createdReminder.channel,
@@ -165,7 +165,7 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: existing.reminder.id,
       actionType: ActionType.UPDATE,
-      description: `Updated reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
+      description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       ...diff,
     });
 
@@ -265,7 +265,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.CREATE,
-          description: `Created reminder for patient ${patient.name} ${patient.lastName} via appointment creation`,
+          description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
           affectedFields: Object.keys(dto),
           fieldsAfter: { 
             channel: createdReminder.channel,
@@ -305,7 +305,7 @@ export const appointmentService = {
         entityType: EntityType.APPOINTMENT,
         entityId: created.id,
         actionType: ActionType.CREATE,
-        description: `Created appointment for patient ${patient.name} ${patient.lastName}`,
+        description: `Cita creada para el paciente ${patient.name} ${patient.lastName}`,
         affectedFields: Object.keys(dto),
         fieldsAfter: { 
           patientId: created.patientId, 
@@ -331,7 +331,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
-          description: `Linked reminder to appointment for patient ${patient.name} ${patient.lastName}`,
+          description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
           affectedFields: ['appointmentId'],
           fieldsAfter: { appointmentId: created.id },
         });
@@ -390,7 +390,7 @@ export const appointmentService = {
         entityType: EntityType.APPOINTMENT,
         entityId: id,
         actionType: ActionType.UPDATE,
-        description: `Updated appointment for patient ${updated.patient.name} ${updated.patient.lastName}`,
+        description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
         ...diff,
       });
 
@@ -404,7 +404,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
-          description: `Linked reminder to appointment for patient ${updated.patient.name} ${updated.patient.lastName}`,
+          description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
           affectedFields: ['appointmentId'],
           fieldsAfter: { appointmentId: id },
         });
@@ -424,7 +424,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Changed appointment status from ${appt.status} to ${status} for patient ${updated.patient.name} ${updated.patient.lastName}`,
+      description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
       affectedFields: ['status'],
       fieldsBefore: { status: appt.status },
       fieldsAfter: { status },
@@ -447,7 +447,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Marked appointment for patient ${updated.patient.name} ${updated.patient.lastName} as paid`,
+      description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
       affectedFields: ['paid'],
       fieldsBefore: { paid: false },
       fieldsAfter: { paid: true },
@@ -461,7 +461,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted appointment for patient ${deleted.patient.name} ${deleted.patient.lastName}`,
+      description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -477,7 +477,7 @@ export const appointmentService = {
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored appointment for patient ${restored.patient.name} ${restored.patient.lastName}`,
+      description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },

@@ -19,7 +19,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: createdRecord.id,
       actionType: ActionType.CREATE,
-      description: `Created medical record for patient ${dto.patientId}`,
+      description: `Historia clínica creada para el paciente ${dto.patientId}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -34,7 +34,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Updated medical record ${id}`,
+      description: `Historia clínica actualizada ${id}`,
       ...diff,
     });
     logger.info({ medicalRecordId: id, userId, fields: Object.keys(dto) }, 'Medical record updated');
@@ -47,7 +47,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Deleted medical record ${id}`,
+      description: `Historia clínica eliminada ${id}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -61,7 +61,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Restored medical record ${id}`,
+      description: `Historia clínica restaurada ${id}`,
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },
@@ -75,7 +75,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Permanently deleted medical record ${id}`,
+      description: `Historia clínica eliminada permanentemente ${id}`,
     });
     return { id };
   },

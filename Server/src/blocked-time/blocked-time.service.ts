@@ -32,7 +32,7 @@ export const blockedTimeService = {
       entityType: EntityType.BLOCKED_TIME,
       entityId: createdBlockedTime.id,
       actionType: ActionType.CREATE,
-      description: 'Created blocked time slot',
+      description: 'Bloqueo de tiempo creado',
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -52,7 +52,7 @@ export const blockedTimeService = {
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: 'Updated blocked time slot',
+      description: 'Bloqueo de tiempo actualizado',
       ...diff,
     });
     logger.info({ blockedTimeId: id, userId, fields: Object.keys(dto) }, 'Blocked time updated');
@@ -65,7 +65,7 @@ export const blockedTimeService = {
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: 'Deleted blocked time slot',
+      description: 'Bloqueo de tiempo eliminado',
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
@@ -79,7 +79,7 @@ export const blockedTimeService = {
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: 'Restored blocked time slot',
+      description: 'Bloqueo de tiempo restaurado',
       affectedFields: ['isDeleted'],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },

@@ -114,7 +114,7 @@ export class TwilioWebhookService {
             entityId: reminder.appointmentId!,
             actionType: ActionType.UPDATE,
             source: ActionSource.API,
-            description: `Appointment confirmed via WhatsApp quick-reply`,
+            description: `Cita confirmada via respuesta rápida de WhatsApp`,
             affectedFields: ['status'],
             fieldsAfter: { status: AppointmentStatus.CONFIRMED },
         });
@@ -151,7 +151,7 @@ export class TwilioWebhookService {
             entityId: reminder.appointmentId!,
             actionType: ActionType.UPDATE,
             source: ActionSource.API,
-            description: `Appointment cancelled via WhatsApp quick-reply`,
+            description: `Cita cancelada via respuesta rápida de WhatsApp`,
             affectedFields: ['status'],
             fieldsAfter: { status: AppointmentStatus.CANCELLED },
         });

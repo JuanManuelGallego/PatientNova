@@ -84,7 +84,7 @@ export const authService = {
       entityType: EntityType.USER,
       entityId: user.id,
       actionType: ActionType.UPDATE,
-      description: `User ${user.email} logged in`,
+      description: `Usuario ${user.email} inició sesión`,
       affectedFields: ['lastLoginAt', 'lastLoginIp'],
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
     });
@@ -114,7 +114,7 @@ export const authService = {
       entityType: EntityType.USER,
       entityId: userId,
       actionType: ActionType.UPDATE,
-      description: `User ${userId} logged out`,
+      description: `Usuario ${userId} cerró sesión`,
       affectedFields: ['refreshTokenVersion'],
     });
     logger.info({ userId }, 'User logged out');
@@ -178,7 +178,7 @@ export const authService = {
       entityType: EntityType.USER,
       entityId: userId,
       actionType: ActionType.UPDATE,
-      description: `User ${userId} changed password`,
+      description: `Usuario ${userId} cambió contraseña`,
       affectedFields: ['passwordHash'],
     });
     logger.info({ userId }, 'Password changed');
