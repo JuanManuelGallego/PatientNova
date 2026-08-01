@@ -96,13 +96,13 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: existing.reminder.id,
       actionType: ActionType.UPDATE,
-      description: `Cancelled reminder ${existing.reminder.id} (atomic with appointment update)`,
+      description: `Cancelled reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
       affectedFields: ['status'],
       fieldsBefore: { status: existing.reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
     });
     
-    logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled (atomic with appointment update)');
+    logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
     return { reminderId: null };
   }
 
@@ -126,7 +126,7 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: createdReminder.id,
       actionType: ActionType.CREATE,
-      description: `Created reminder for patient ${existing.patient.name} ${existing.patient.lastName}`,
+      description: `Created reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
       affectedFields: Object.keys(dto),
       fieldsAfter: { 
         channel: createdReminder.channel,
@@ -141,7 +141,7 @@ async function handleReminderUpdate(
       },
     });
 
-    logger.info({ reminderId: createdReminder.id }, 'Reminder created (atomic with appointment update)');
+    logger.info({ reminderId: createdReminder.id }, 'Reminder created');
     return { reminderId: createdReminder.id, reminder: createdReminder };
   }
 
@@ -165,11 +165,11 @@ async function handleReminderUpdate(
       entityType: EntityType.REMINDER,
       entityId: existing.reminder.id,
       actionType: ActionType.UPDATE,
-      description: `Updated reminder ${existing.reminder.id} (atomic with appointment update)`,
+      description: `Updated reminder for patient ${existing.patient.name} ${existing.patient.lastName} via appointment update`,
       ...diff,
     });
 
-    logger.info({ reminderId: existing.reminder.id }, 'Reminder updated (atomic with appointment update)');
+    logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
   }
 
   return {};
@@ -265,7 +265,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.CREATE,
-          description: `Created reminder for patient ${patient.name} ${patient.lastName}`,
+          description: `Created reminder for patient ${patient.name} ${patient.lastName} via appointment creation`,
           affectedFields: Object.keys(dto),
           fieldsAfter: { 
             channel: createdReminder.channel,
@@ -331,7 +331,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
-          description: `Linked reminder ${createdReminder.id} to appointment ${created.id}`,
+          description: `Linked reminder to appointment for patient ${patient.name} ${patient.lastName}`,
           affectedFields: ['appointmentId'],
           fieldsAfter: { appointmentId: created.id },
         });
@@ -404,7 +404,7 @@ export const appointmentService = {
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
-          description: `Linked reminder ${createdReminder.id} to appointment ${id}`,
+          description: `Linked reminder to appointment for patient ${updated.patient.name} ${updated.patient.lastName}`,
           affectedFields: ['appointmentId'],
           fieldsAfter: { appointmentId: id },
         });

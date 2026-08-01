@@ -9,7 +9,7 @@ import { FilterBar } from "@/src/components/FilterBar";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
-import { fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtTimestamp } from "@/src/utils/TimeUtils";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { useMemo, useState } from "react";
 import {
@@ -18,8 +18,9 @@ import {
   parseAsString,
 } from "nuqs";
 import { Clock } from "lucide-react";
+import { EntityTypePill } from "../Info/EntityTypePill";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const ENTITY_OPTIONS: SelectOption[] = [
   { value: "", label: "Todas" },
@@ -55,7 +56,7 @@ export function AuditLogsTab() {
     [entityType, actionType, debouncedSearch, dateFilter, page],
   );
 
-  const { auditLogs, loading, error, totalPages, total } = useFetchAuditLogs(filters);
+  const { auditLogs, loading, error, fetchAuditLogs, totalPages, total } = useFetchAuditLogs(filters);
   const showSpinner = useDelayedLoading(loading);
 
   return (
@@ -84,6 +85,13 @@ export function AuditLogsTab() {
             Historial de acciones realizadas en el sistema
           </div>
         </div>
+        <button
+          onClick={() => fetchAuditLogs()}
+          className="btn-secondary btn-secondary--sm"
+          title="Actualizar"
+        >
+          <ACTION_ICONS.retry size={14} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
       <FilterBar
@@ -132,7 +140,7 @@ export function AuditLogsTab() {
       )}
 
       <DataTable
-        columns={["Accion", "Descripcion", "Fecha"]}
+        columns={["Accion", "Endidad", "Descripcion", "Fecha"]}
         rows={auditLogs}
         loading={showSpinner}
         skeletonCount={5}
@@ -141,8 +149,11 @@ export function AuditLogsTab() {
             <td className="td">
               <ActionPill action={log.actionType} />
             </td>
+            <td className="td">
+              <EntityTypePill entityType={log.entityType} />
+            </td>
             <td className="td td--date" >{log.description}</td>
-            <td className="td td--date">{fmtDateTime(log.eventTimeUtc)}</td>
+            <td className="td td--date">{fmtTimestamp(log.eventTimeUtc)}</td>
           </tr>
         )}
         emptyState={

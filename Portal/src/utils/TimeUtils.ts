@@ -1,6 +1,13 @@
 import { AppointmentDuration } from "@/src/types/Appointment";
 import { REMINDER_TYPE_CONFIG, ReminderType } from "@/src/types/Reminder";
 
+function fmtTimestamp(iso: string | undefined): string {
+    if (!iso) return "Invalid Date"
+    return new Date(iso).toLocaleString("es-ES", {
+        day: "numeric", month: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true, second: "numeric",
+    });
+}
+
 function fmtDateTime(iso: string | undefined): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {
@@ -271,6 +278,7 @@ export {
     fmtDateWeekDay,
     fmtDatePlusOneDay,
     fmtRelative,
+    fmtTimestamp,
     getDate,
     getAppointmentEndTime,
     getDuration,

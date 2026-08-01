@@ -20,15 +20,17 @@ export function Row({
   label,
   value,
 }: {
-  icon: LucideIcon;
+  icon: LucideIcon | null;
   label: string;
   value: React.ReactNode;
 }) {
   return (
     <div className="detail-row">
-      <span className="detail-row__icon">
-        <Icon size={14} />
-      </span>
+      {Icon && (
+        <span className="detail-row__icon">
+          <Icon size={14} />
+        </span>
+      )}
       <span className="detail-row__label">{label}</span>
       <span className="detail-row__value">{value}</span>
     </div>

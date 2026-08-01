@@ -1,12 +1,74 @@
 import {
   AuditLog,
   ACTION_TYPE_CONFIG,
-  ENTITY_TYPE_CONFIG,
   ACTION_SOURCE_CONFIG,
 } from "@/src/types/AuditLog";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { EntityTypePill } from "../Info/EntityTypePill";
+
+function formatValue(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "boolean") return v ? "Sí" : "No";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "string") {
+    const d = Date.parse(v);
+    if (!isNaN(d) && v.length >= 10 && v.length <= 25) {
+      try {
+        return fmtDateTime(v);
+      } catch {
+        /* fall through */
+      }
+    }
+    return v;
+  }
+  if (Array.isArray(v)) return `${v.length} elemento${v.length !== 1 ? "s" : ""}`;
+  if (typeof v === "object") {
+    const entries = Object.entries(v as Record<string, unknown>);
+    return entries.length > 0
+      ? entries.map(([k, val]) => `${k}: ${val}`).join(", ")
+      : "Objeto vacío";
+  } 
+  return String(v);
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Nombre",
+  lastName: "Apellido",
+  email: "Correo",
+  whatsappNumber: "WhatsApp",
+  smsNumber: "SMS",
+  phone: "Teléfono",
+  dateOfBirth: "Fecha de Nacimiento",
+  notes: "Notas",
+  status: "Estado",
+  type: "Tipo",
+  channel: "Canal",
+  sendAt: "Programado para",
+  sentAt: "Enviado el",
+  paid: "Pagado",
+  location: "Ubicación",
+  locationId: "Ubicación",
+  typeId: "Tipo de Cita",
+  patientId: "Paciente",
+  appointmentId: "Cita",
+  startAt: "Inicio",
+  endAt: "Fin",
+  reason: "Razón",
+  duration: "Duración",
+  capacity: "Capacidad",
+  createdAt: "Creado",
+  updatedAt: "Actualizado",
+  deletedAt: "Eliminado",
+  source: "Fuente",
+  error: "Error",
+  consentDocumentUrl: "Documento",
+};
+
+function fieldLabel(key: string): string {
+  return FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function AuditDrawer({
   log,
@@ -16,7 +78,6 @@ export function AuditDrawer({
   onClose: () => void;
 }) {
   const actionCfg = ACTION_TYPE_CONFIG[log.actionType];
-  const entityCfg = ENTITY_TYPE_CONFIG[log.entityType];
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
@@ -32,8 +93,8 @@ export function AuditDrawer({
           <div className="drawer-header__top">
             <div>
               <h2 className="drawer-header__title">{actionCfg.label}</h2>
-              <div className="drawer-header__status">
-                {entityCfg.label}
+              <div className="drawer-header__status" >
+                <EntityTypePill entityType={log.entityType} />
               </div>
             </div>
             <button onClick={onClose} className="btn-close--transparent">
@@ -43,19 +104,28 @@ export function AuditDrawer({
         </div>
         <div className="drawer-body">
           <Section title="Actor">
-            <div style={{ fontSize: 13, color: "var(--c-gray-700)" }}>
-              {log.actorDisplayName} - <span className="mono-sm">{log.actorId}</span>
-            </div>
+            <Row
+              icon={DETAIL_ICONS.id}
+              label="Usuario"
+              value={
+                <span>
+                  {log.actorDisplayName}{" "}
+                  <span className="mono-sm" style={{ color: "var(--c-gray-400)" }}>
+                    {log.actorId}
+                  </span>
+                </span>
+              }
+            />
           </Section>
           
-          <Section title="Descripcion">
+          <Section title="Descripción">
             <div style={{ fontSize: 13, color: "var(--c-gray-700)" }}>
               {log.description}
             </div>
           </Section>
 
           {log.reason && (
-            <Section title="Razon">
+            <Section title="Razón">
               <div style={{ fontSize: 13, color: "var(--c-gray-700)" }}>
                 {log.reason}
               </div>
@@ -64,89 +134,61 @@ export function AuditDrawer({
 
           {log.fieldsBefore && log.fieldsAfter && (
             <Section title="Cambios">
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                }}
-              >
-                {log.affectedFields.map((field) => {
-                  const before = log.fieldsBefore?.[field];
-                  const after = log.fieldsAfter?.[field];
-                  return (
-                    <div
-                      key={field}
-                      style={{
-                        fontSize: 12,
-                        display: "flex",
-                        gap: 6,
-                        alignItems: "baseline",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          color: "var(--c-gray-700)",
-                          minWidth: 80,
-                        }}
-                      >
-                        {field}
+              {log.affectedFields.map((field) => {
+                const before = log.fieldsBefore?.[field];
+                const after = log.fieldsAfter?.[field];
+                return (
+                  <div
+                    key={field}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 2,
+                      padding: "6px 0",
+                      borderBottom: "1px solid var(--c-gray-100)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--c-gray-500)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {fieldLabel(field)}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: "var(--c-gray-400)", textDecoration: "line-through", flex: 1 }}>
+                        {formatValue(before)}
                       </span>
-                      <span
-                        style={{
-                          color: "var(--c-gray-400)",
-                          textDecoration: "line-through",
-                        }}
-                      >
-                        {JSON.stringify(before)}
-                      </span>
-                      <span style={{ color: "var(--c-gray-400)" }}>
-                        &rarr;
-                      </span>
-                      <span style={{ color: "var(--c-gray-700)" }}>
-                        {JSON.stringify(after)}
+                      <span style={{ color: "var(--c-gray-300)", fontSize: 11 }}>&rarr;</span>
+                      <span style={{ fontSize: 12, color: "var(--c-gray-900)", fontWeight: 500, flex: 1 }}>
+                        {formatValue(after)}
                       </span>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </Section>
           )}
 
           {log.fieldsBefore && !log.fieldsAfter && (
             <Section title="Datos eliminados">
-              <pre
-                style={{
-                  fontSize: 12,
-                  color: "var(--c-gray-700)",
-                  whiteSpace: "pre-wrap",
-                  margin: 0,
-                  padding: 8,
-                  background: "var(--c-gray-100)",
-                  borderRadius: 6,
-                }}
-              >
-                {JSON.stringify(log.fieldsBefore, null, 2)}
-              </pre>
+              {Object.entries(log.fieldsBefore).map(([key, val]) => (
+                <Row
+                  key={key}
+                  icon={DETAIL_ICONS.note}
+                  label={fieldLabel(key)}
+                  value={formatValue(val)}
+                />
+              ))}
             </Section>
           )}
 
           {log.fieldsAfter && !log.fieldsBefore && (
             <Section title="Datos creados">
-              <pre
-                style={{
-                  fontSize: 12,
-                  color: "var(--c-gray-700)",
-                  whiteSpace: "pre-wrap",
-                  margin: 0,
-                  padding: 8,
-                  background: "var(--c-gray-100)",
-                  borderRadius: 6,
-                }}
-              >
-                {JSON.stringify(log.fieldsAfter, null, 2)}
-              </pre>
+              {Object.entries(log.fieldsAfter).map(([key, val]) => (
+                <Row
+                  key={key}
+                  label={fieldLabel(key)}
+                  value={formatValue(val)}
+                  icon={null}
+                />
+              ))}
             </Section>
           )}
 
@@ -170,7 +212,7 @@ export function AuditDrawer({
             />
           </Section>
 
-          <Section title="Informacion del sistema">
+          <Section title="Información del sistema">
             <Row
               icon={DETAIL_ICONS.clock}
               label="Fecha"
