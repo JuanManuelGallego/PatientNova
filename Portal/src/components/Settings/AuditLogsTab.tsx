@@ -39,11 +39,13 @@ export function AuditLogsTab() {
   const [entityType, setEntityType] = useQueryState("entityType", parseAsString.withDefault(""));
   const [actionType, setActionType] = useQueryState("actionType", parseAsString.withDefault(""));
   const [dateFilter, setDateFilter] = useQueryState("dateFilter", parseAsString.withDefault(""));
+  const [entityId, setEntityId] = useQueryState("entityId", parseAsString.withDefault(""));
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
   const filters = useMemo<FetchAuditLogsFilters>(
     () => ({
       entityType: ( entityType as EntityType ) || undefined,
+      entityId: entityId.trim() || undefined,
       actionType: ( actionType as ActionType ) || undefined,
       search: debouncedSearch.trim() || undefined,
       dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
@@ -53,7 +55,7 @@ export function AuditLogsTab() {
       orderBy: "eventTimeUtc",
       order: "desc",
     }),
-    [entityType, actionType, debouncedSearch, dateFilter, page],
+    [entityType, entityId, actionType, debouncedSearch, dateFilter, page],
   );
 
   const { auditLogs, loading, error, fetchAuditLogs, totalPages, total } = useFetchAuditLogs(filters);
@@ -103,6 +105,7 @@ export function AuditLogsTab() {
           setEntityType("");
           setActionType("");
           setDateFilter("");
+          setEntityId("");
         }}
         placeholder="Buscar por actor, descripcion o entidad…"
         wrap
@@ -129,6 +132,14 @@ export function AuditLogsTab() {
             className="btn-secondary btn-secondary--sm"
           >
             <ACTION_ICONS.close size={12} /> Fecha
+          </button>
+        )}
+        {entityId && (
+          <button
+            onClick={() => setEntityId("")}
+            className="btn-secondary btn-secondary--sm"
+          >
+            <ACTION_ICONS.close size={12} /> Entidad ID
           </button>
         )}
       </FilterBar>

@@ -13,6 +13,7 @@ import { Section, Row } from "./DrawerUtils";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import Link from "next/link";
 
 export function ReminderDrawer({
   reminder,
@@ -172,6 +173,13 @@ export function ReminderDrawer({
               label="Twilio ID"
               value={<span className="mono">{reminder.messageId ?? "-"}</span>}
             />
+            <Link
+              href={`/settings?tab=Registro+de+actividad&entityId=${reminder.id}`}
+              className="btn-secondary btn-primary--block"
+              style={{ marginTop: 12, textDecoration: "none" }}
+            >
+              <DETAIL_ICONS.history size={14} /> Ver registros de actividad
+            </Link>
           </Section>
         </div>
         {isActive && (

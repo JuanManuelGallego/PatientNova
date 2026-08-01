@@ -132,6 +132,7 @@ export const DETAIL_ICONS = {
   send: Send,
   megaphone: Megaphone,
   flag: Flag,
+  history: FileText,
 } as const satisfies Record<string, LucideIcon>;
 
 /* ── File / Document MIME Icons ──────────────────────────────────────────── */

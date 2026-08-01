@@ -87,6 +87,7 @@ export const buildBlockedTimeQueryString = (filters?: FetchBlockedTimeFilters): 
 export const buildAuditLogQueryString = (filters?: FetchAuditLogsFilters): string =>
     buildQueryString({
         entityType: filters?.entityType,
+        entityId: filters?.entityId,
         actionType: filters?.actionType,
         source: filters?.source,
         search: filters?.search,

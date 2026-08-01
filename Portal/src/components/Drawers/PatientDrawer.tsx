@@ -154,7 +154,7 @@ export function PatientDrawer({
               className="btn-secondary btn-primary--block"
               style={{ marginTop: 12, textDecoration: "none" }}
             >
-              Ver historia clínica
+              <DETAIL_ICONS.history size={14} /> Ver historia clínica
             </Link>
           </Section>
           {filteredAppointments && filteredAppointments.length > 0 && (
@@ -284,6 +284,13 @@ export function PatientDrawer({
               label="Actualizado"
               value={new Date(patient.updatedAt).toLocaleString("es-ES")}
             />
+            <Link
+              href={`/settings?tab=Registro+de+actividad&entityId=${patient.id}`}
+              className="btn-secondary btn-primary--block"
+              style={{ marginTop: 12, textDecoration: "none" }}
+            >
+              <DETAIL_ICONS.history size={14} /> Ver registros de actividad
+            </Link>
           </Section>
         </div>
         <div className="drawer-footer">

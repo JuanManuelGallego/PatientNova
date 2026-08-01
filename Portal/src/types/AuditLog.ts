@@ -44,6 +44,7 @@ export interface AuditLog {
 
 export interface FetchAuditLogsFilters {
   entityType?: EntityType;
+  entityId?: string;
   actionType?: ActionType;
   source?: ActionSource;
   search?: string;
