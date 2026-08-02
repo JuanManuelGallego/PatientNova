@@ -406,4 +406,20 @@ describe('audit-log routes (integration)', () => {
     expect(body.data.data).toHaveLength(1);
     expect(body.data.data[0]!.entityId).toBe('mine');
   });
+
+  it('GET / supports search across encrypted actorDisplayName and description', async () => {
+    await auditLogService.create({ ...baseLogData, userId, actorDisplayName: 'alice@example.com', description: 'Created patient Juan Perez' });
+    await auditLogService.create({ ...baseLogData, userId, actorDisplayName: 'bob@example.com', description: 'Created patient Maria Lopez' });
+
+    const res = await invokeRoute(
+      auditLogRouter,
+      'get',
+      '/',
+      baseReq({ query: { search: 'Juan' } })
+    );
+    expect(res.statusCode).toBe(200);
+    const body = res.body as { data: { data: { description: string }[]; total: number } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]!.description).toContain('Juan');
+  });
 });
