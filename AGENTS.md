@@ -48,7 +48,7 @@ They use the `integration` vitest project (`src/**/*.integration.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `19` files, `133` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -69,6 +69,8 @@ Suite: `19` files, `133` tests, all against real Postgres, `tsc --noEmit` clean.
 | Scheduler | `src/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
 | Scheduler workers | `src/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |
 | Notify routes | `src/notify/notify.integration.test.ts` | POST /whatsapp & /sms → create+send+SENT; ownership 404; Twilio-failure → FAILED (jobManager + twilio mocked) |
+| Bulk send (routes) | `src/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, SMS body render per patient (`{{N}}` placeholders) + missing-body 400, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
+| Bulk send (worker) | `src/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter (dispatch mock) |
 | Patients (routes) | `src/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; validation 400, ownership 404 |
 | Patient seed | `src/patients/patient.integration.test.ts` | seed/ownership baseline |
 

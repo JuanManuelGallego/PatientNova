@@ -1,34 +1,31 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useCreateReminder } from "@/src/api/reminders/useCreateReminder";
-import { useNotify } from "@/src/api/notify/useNotify";
+import { useRouter } from "next/navigation";
+import { useBulkSend } from "@/src/api/notify/useBulkSend";
 import { Patient } from "@/src/types/Patient";
 import { ReminderMode, Channel } from "@/src/types/Reminder";
-import { getUserName } from "@/src/utils/AvatarHelper";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
-import { ERR_PATIENT_NOT_FOUND } from "@/src/constants/ui";
-import { BulkRemindersResult } from "@/src/types/Reminder";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { STATUS_ICONS } from "@/src/config/icons";
 import { WizardStepper } from "./WizardStepper";
 import { StepChannel } from "./StepChannel";
 import { StepPatients } from "./StepPatients";
-import { StepMessage } from "./StepMessage";
-import { StepResults } from "./StepResults";
+import { StepTemplate } from "./StepTemplate";
 
 export function BulkSendWizard({ patients }: { patients: Patient[] }) {
-  const { notify } = useNotify();
-  const { createReminder } = useCreateReminder();
+  const { bulkSend } = useBulkSend();
   const { user } = useAuthContext();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const channel = user?.reminderChannel;
-  const [message, setMessage] = useState("");
   const [sendMode, setMode] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
   const [sendAt, setSendAt] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
-  const [results, setResults] = useState<BulkRemindersResult[]>([]);
-  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [sharedVariables, setSharedVariables] = useState<Record<string, string>>({});
 
   const eligible = useMemo(() => {
     if (!channel) return [];
@@ -60,128 +57,47 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!channel) return;
+    if (!channel || !selectedTemplate) return;
     setSending(true);
-    const patientMap = new Map(eligible.map((p) => [p.id, p]));
-    const tasks = Array.from(selected).map(
-      async (pid): Promise<BulkRemindersResult> => {
-        const p = patientMap.get(pid);
-        if (!p)
-          return {
-            patientId: pid,
-            name: pid,
-            channel,
-            status: "skipped",
-            reason: ERR_PATIENT_NOT_FOUND,
-          };
-
-        const fullName = `${p.name} ${p.lastName}`;
-        const to =
-          channel === Channel.WHATSAPP
-            ? p.whatsappNumber
-            : channel === Channel.SMS
-              ? p.smsNumber
-              : p.email;
-        if (!to)
-          return {
-            patientId: pid,
-            name: fullName,
-            channel,
-            status: "skipped",
-            reason: "Sin número",
-          };
-
-        try {
-          if (sendMode === ReminderMode.IMMEDIATE) {
-            await notify(channel, {
-              to,
-              patientId: pid,
-              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.contentSid,
-              contentVariables: {
-                "1": p.name,
-                "2": getUserName(user) || "su profesional de salud",
-                "3": "12 de Abril",
-                "4": "3:00 PM",
-              },
-              body:
-                message ||
-                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
-                  .replace("{{1}}", p.name)
-                  .replace(
-                    "{{2}}",
-                    getUserName(user) || "su profesional de salud",
-                  ),
-            });
-          } else {
-            await createReminder({
-              patientId: pid,
-              contentSid: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.contentSid,
-              contentVariables: {
-                "1": p.name,
-                "2": getUserName(user) || "su profesional de salud",
-                "3": "12 de Abril",
-                "4": "3:00 PM",
-              },
-              sendMode,
-              channel,
-              to,
-              sendAt,
-              body:
-                message ||
-                TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
-                  .replace("{{1}}", p.name)
-                  .replace(
-                    "{{2}}",
-                    getUserName(user) || "su profesional de salud",
-                  ),
-            });
-          }
-          return {
-            patientId: pid,
-            name: fullName,
-            channel,
-            status: "ok",
-            reason: "",
-          };
-        } catch (e) {
-          return {
-            patientId: pid,
-            name: fullName,
-            channel,
-            status: "error",
-            reason: String(e),
-          };
-        }
-      },
-    );
-    const res = await Promise.all(tasks);
-    setResults(res);
-    setSending(false);
-    setDone(true);
-    setStep(4);
+    setError(null);
+    try {
+      // SMS has no WhatsApp content template: send the raw message text and
+      // let the server render {{N}} placeholders per patient.
+      const body =
+        channel === Channel.SMS ? TWILIO_CONFIG[selectedTemplate]?.template ?? "" : undefined;
+      await bulkSend({
+        channel,
+        templateKey: selectedTemplate,
+        patientIds: Array.from(selected),
+        sendMode,
+        ...(sendMode === ReminderMode.SCHEDULED && sendAt ? { sendAt } : {}),
+        sharedVariables,
+        ...(body !== undefined ? { body } : {}),
+      });
+      router.push("/reminders");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al enviar");
+      setSending(false);
+    }
   }, [
-    eligible,
-    selected,
     channel,
+    selectedTemplate,
+    selected,
     sendMode,
-    notify,
-    message,
-    user,
-    createReminder,
     sendAt,
+    sharedVariables,
+    bulkSend,
+    router,
   ]);
-
-  const reset = useCallback(() => {
-    setStep(1);
-    setSelected(new Set());
-    setMessage("");
-    setResults([]);
-    setDone(false);
-  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <WizardStepper step={step} />
+      {error && (
+        <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <STATUS_ICONS.warning size={14} /> {error}
+        </div>
+      )}
       {step === 1 && (
         <StepChannel
           channel={channel}
@@ -204,9 +120,11 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
         />
       )}
       {step === 3 && (
-        <StepMessage
-          message={message}
-          setMessage={setMessage}
+        <StepTemplate
+          selectedTemplate={selectedTemplate}
+          onTemplateChange={setSelectedTemplate}
+          sharedVariables={sharedVariables}
+          onSharedVariablesChange={setSharedVariables}
           recipientCount={selected.size}
           sendMode={sendMode}
           sending={sending}
@@ -214,7 +132,6 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
           onSend={handleSend}
         />
       )}
-      {step === 4 && done && <StepResults results={results} onReset={reset} />}
     </div>
   );
 }
