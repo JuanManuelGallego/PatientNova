@@ -1,11 +1,12 @@
 import { PgBoss } from 'pg-boss';
 import { config } from '../utils/config/config.js';
-import { REMINDER_SEND_RETRY_LIMIT } from '../utils/config/constants.js';
+import { REMINDER_SEND_RETRY_LIMIT, BULK_SEND_CONCURRENCY } from '../utils/config/constants.js';
 import { logger } from '../utils/api/logger.js';
 import { sendReminderWorker } from './workers/send-reminder.js';
 import { trackDeliveryWorker } from './workers/track-delivery.js';
 import { dailyReminderWorker } from './workers/daily-reminder.js';
 import { completeAppointmentsWorker } from './workers/complete-appointments.js';
+import { bulkSendWorker } from './workers/bulk-send-message.js';
 
 let boss: PgBoss | null = null;
 
@@ -38,11 +39,24 @@ export async function initializePgBoss(): Promise<void> {
     deadLetter: 'send-reminder-dlq',
   });
 
+  await boss.createQueue('bulk-send-message-dlq', {
+    deleteAfterSeconds: 30 * 24 * 60 * 60,
+  });
+
+  await boss.createQueue('bulk-send-message', {
+    retryLimit: REMINDER_SEND_RETRY_LIMIT,
+    retryDelay: 60,
+    retryBackoff: true,
+    retryDelayMax: 900,
+    deadLetter: 'bulk-send-message-dlq',
+  });
+
   await boss.createQueue('track-delivery');
   await boss.createQueue('daily-reminder', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('complete-appointments', { retryLimit: 2, retryDelay: 30 });
 
   boss.work('send-reminder', sendReminderWorker);
+  boss.work('bulk-send-message', { batchSize: BULK_SEND_CONCURRENCY, concurrency: BULK_SEND_CONCURRENCY }, bulkSendWorker);
   boss.work('track-delivery', { batchSize: 100 }, trackDeliveryWorker);
   boss.work('daily-reminder', dailyReminderWorker);
   boss.work('complete-appointments', completeAppointmentsWorker);

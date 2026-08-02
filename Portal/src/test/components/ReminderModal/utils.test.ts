@@ -16,7 +16,8 @@ function makeTemplate(variables: TwilioTemplate["variables"]): TwilioTemplate {
     contentSid: "HXtest",
     template: variables.map((v) => `{{${v.key}}}`).join(" "),
     variables,
-  };
+    canBulkSend: true,
+  } satisfies TwilioTemplate;
 }
 
 function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
@@ -287,6 +288,7 @@ describe("buildPreview", () => {
       contentSid: "HXtest",
       template: "Hello world",
       variables: [],
+      canBulkSend: true,
     };
     const result = buildPreview(tmpl, {});
     expect(result).toBe("Hello world");
@@ -298,6 +300,7 @@ describe("buildPreview", () => {
       contentSid: "HXtest",
       template: "{{1}} and {{1}} again",
       variables: [{ key: "1", label: "Name", autoFill: "patientName" }],
+      canBulkSend: true,
     };
     const result = buildPreview(tmpl, { "1": "Ana" });
     expect(result).toBe("Ana and Ana again");

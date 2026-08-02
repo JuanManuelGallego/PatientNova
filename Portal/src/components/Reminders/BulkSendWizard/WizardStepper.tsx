@@ -10,7 +10,7 @@ export const WizardStepper = memo(function WizardStepper({
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-      {["Canal", "Pacientes", "Mensaje", "Resultado"].map((s, i) => (
+      {["Canal", "Pacientes", "Plantilla"].map((s, i) => (
         <div
           key={s}
           style={{ display: "flex", alignItems: "center", flex: i < 3 ? 1 : 0 }}
@@ -55,7 +55,7 @@ export const WizardStepper = memo(function WizardStepper({
               {s}
             </span>
           </div>
-          {i < 3 && (
+          {i < 2 && (
             <div
               style={{
                 flex: 1,

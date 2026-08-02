@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { Channel } from '../../../generated/prisma/enums.js';
+import { Channel, ReminderMode } from '../../../generated/prisma/enums.js';
+import { BULK_SEND_MAX_PATIENTS } from '../config/constants.js';
 
 export const e164Regex = /^\+[1-9]\d{7,14}$/;
 
@@ -12,16 +13,16 @@ const futureIso = z
   .datetime({ message: 'Must be a valid ISO-8601 datetime string' })
   .refine(v => new Date(v) > new Date(), { message: 'sentAt must be in the future' });
 
+const contentVariablesRecord = z.record(z.string(), z.string()).refine(
+  (obj) => Object.keys(obj).length <= 10 && JSON.stringify(obj).length <= 1000,
+  { error: 'Content variables too large (max 10 keys, 1000 characters total)' }
+);
+
 export const sendWhatsAppSchema = z
   .object({
     to: e164,
     contentSid: z.string().startsWith('HX'),
-    contentVariables: z.record(z.string(), z.string())
-      .refine(
-        (obj) => Object.keys(obj).length <= 10 && JSON.stringify(obj).length <= 1000,
-        { error: 'Content variables too large (max 10 keys, 1000 characters total)' }
-      )
-      .optional(),
+    contentVariables: contentVariablesRecord.optional(),
     patientId: z.uuid().optional(),
   });
 
@@ -50,3 +51,21 @@ export const strongPassword = z
   .refine(p => /[a-z]/.test(p), 'At least one lowercase letter')
   .refine(p => /[0-9]/.test(p), 'At least one number')
   .refine(p => /[!@#$%^&*(),.?":{}|<>]/.test(p), 'At least one special character');
+
+export const bulkSendSchema = z.object({
+  channel: z.enum(Channel),
+  templateKey: z.string().min(1),
+  patientIds: z.array(z.uuid()).min(1).max(BULK_SEND_MAX_PATIENTS),
+  sendMode: z.enum(ReminderMode),
+  sendAt: futureIso.optional(),
+  sharedVariables: contentVariablesRecord.optional(),
+  // Raw message text for SMS with {{N}} placeholders; the server renders it
+  // per patient (shared variables + patient name). WhatsApp uses templates.
+  body: z.string().min(1, 'body cannot be empty').max(1600, 'body exceeds 1600 characters').optional(),
+}).refine(
+  (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
+  { message: 'sendAt is required when sendMode is SCHEDULED', path: ['sendAt'] }
+).refine(
+  (d) => d.channel !== Channel.SMS || !!d.body,
+  { message: 'body is required when channel is SMS', path: ['body'] }
+);

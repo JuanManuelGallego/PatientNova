@@ -25,6 +25,7 @@ export type TwilioTemplate = {
   contentSid: string;
   template: string;
   variables: TemplateVariable[];
+  canBulkSend: boolean;
 };
 
 export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
@@ -40,6 +41,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "5", label: "Dirección", autoFill: "locationAddress" },
             { key: "6", label: "Instrucciones", autoFill: "locationInstructions" },
         ],
+        canBulkSend: false,
     },
     PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL: {
         label: "Recordatorio cita virtual",
@@ -52,6 +54,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "4", label: "Hora", autoFill: "appointmentTime" },
             { key: "5", label: "Enlace de reunión", autoFill: "meetingUrl" },
         ],
+        canBulkSend: false,
     },
     PATIENT_WELCOME_MESSAGE: {
         label: "Mensaje de bienvenida",
@@ -67,6 +70,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "7", label: "Llave", autoFill: "bankingKey" },
             { key: "8", label: "UserId", autoFill: "userId" },
         ],
+        canBulkSend: false,
     },
     PATIENT_CONSENT_DOCUMENT:{
         label: "Documento de consentimiento",
@@ -76,7 +80,8 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "1", label: "Nombre del paciente", autoFill: "patientName" },
             { key: "2", label: "Doctor", autoFill: "doctorName" },
             { key: "3", label: "UserId", autoFill: "userId" },
-        ]
+        ],
+        canBulkSend: false,
     },
     PATIENT_PAYMENT_REMINDER:{
         label: "Recordatorio de pago",
@@ -90,8 +95,13 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "5", label: "A nombre de", autoFill: "accountHolder" },
             { key: "6", label: "Cédula", autoFill: "nationalId" },
             { key: "7", label: "Llave", autoFill: "bankingKey" },
-        ]
+        ],
+        canBulkSend: false,
     },
 };
 
 export const TEMPLATE_KEYS = Object.keys(TWILIO_CONFIG) as (keyof typeof TWILIO_CONFIG)[];
+
+export const BULK_TEMPLATE_KEYS = TEMPLATE_KEYS.filter(
+  (key) => TWILIO_CONFIG[key].canBulkSend,
+) as (keyof typeof TWILIO_CONFIG)[];

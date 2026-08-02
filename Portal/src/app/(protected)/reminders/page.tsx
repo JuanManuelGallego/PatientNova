@@ -17,7 +17,7 @@ import { EmptyState } from "@/src/components/EmptyState";
 import { DataTable, TableFooter } from "@/src/components/DataTable";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
-import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
+import { useFetchAllPatients } from "@/src/api/patients/useFetchAllPatients";
 import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
@@ -461,7 +461,7 @@ function HistoryRemindersTab({
 }
 
 function BulkTab() {
-  const { patients } = useFetchPatients();
+  const { patients, loading: loadingPatients } = useFetchAllPatients();
   return (
     <div className="bulk-section fade-in">
       <div className="info-banner">
@@ -477,7 +477,13 @@ function BulkTab() {
           </div>
         </div>
       </div>
-      <BulkSendWizard patients={patients} />
+      {loadingPatients ? (
+        <div className="table-card" style={{ padding: 28 }}>
+          <div className="patient-preview__detail">Cargando pacientes…</div>
+        </div>
+      ) : (
+        <BulkSendWizard patients={patients} />
+      )}
     </div>
   );
 }

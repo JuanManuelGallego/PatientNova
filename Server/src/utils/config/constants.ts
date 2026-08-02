@@ -21,3 +21,23 @@ export const REMINDER_SEND_RETRY_LIMIT = 3;
 
 /** Default locale used for date/time formatting in user-facing messages. */
 export const DEFAULT_LOCALE = 'es-ES';
+
+// ─── Bulk Send ──────────────────────────────────────────────────────────────
+
+/** Max messages processed concurrently by the bulk-send worker. */
+export const BULK_SEND_CONCURRENCY = 5;
+
+/** Max messages dispatched per rate-limit window (1 minute). */
+export const BULK_SEND_RATE_LIMIT = 30;
+
+/** Rate-limit window for bulk sends (1 minute in ms). */
+export const BULK_SEND_RATE_WINDOW_MS = 60_000;
+
+/** Delay (ms) between enqueued bulk-send jobs to stagger Twilio calls. */
+export const BULK_SEND_STAGGER_MS = 2_000;
+
+/** Max patients per bulk send request. */
+export const BULK_SEND_MAX_PATIENTS = 200;
+
+/** Number of reminder creates to batch in a single Promise.all during enqueue. */
+export const BULK_SEND_CHUNK_SIZE = 50;

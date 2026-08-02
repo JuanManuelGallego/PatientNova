@@ -1,6 +1,5 @@
 import {
   ReminderMode,
-  BulkRemindersResult,
   Channel,
 } from "@/src/types/Reminder";
 import { Patient } from "@/src/types/Patient";
@@ -24,17 +23,14 @@ export interface StepPatientsProps {
   onNext: () => void;
 }
 
-export interface StepMessageProps {
-  message: string;
-  setMessage: (m: string) => void;
+export interface StepTemplateProps {
+  selectedTemplate: string;
+  onTemplateChange: (key: string) => void;
+  sharedVariables: Record<string, string>;
+  onSharedVariablesChange: (vars: Record<string, string>) => void;
   recipientCount: number;
   sendMode: ReminderMode;
   sending: boolean;
   onBack: () => void;
   onSend: () => void;
-}
-
-export interface StepResultsProps {
-  results: BulkRemindersResult[];
-  onReset: () => void;
 }
