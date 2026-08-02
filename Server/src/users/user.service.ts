@@ -69,7 +69,7 @@ export const userService = {
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Usuario eliminado ${before.email}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: ['isDeleted', 'email', 'firstName', 'lastName', 'displayName', 'role', 'status'],
       fieldsBefore: {
         isDeleted: false,
         email: before.email,
@@ -81,6 +81,12 @@ export const userService = {
       },
       fieldsAfter: {
         isDeleted: true,
+        email: before.email,
+        firstName: before.firstName,
+        lastName: before.lastName,
+        displayName: before.displayName,
+        role: before.role,
+        status: before.status,
       },
     });
     logger.info({ userId: id }, 'User deleted');
@@ -95,7 +101,7 @@ export const userService = {
       entityId: id,
       actionType: ActionType.RESTORE,
       description: `Usuario restaurado ${user.email}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: ['isDeleted', 'email', 'firstName', 'lastName', 'displayName', 'role', 'status', 'avatar', 'logo', 'altLogo', 'jobTitle', 'phoneNumber', 'whatsappNumber', 'reminderActive', 'reminderChannel', 'timezone', 'bankName', 'accountNumber', 'nationalId', 'bankingKey'],
       fieldsBefore: {
         isDeleted: true,
       },

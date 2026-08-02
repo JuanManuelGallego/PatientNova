@@ -151,7 +151,7 @@ export function AuditLogsTab() {
       )}
 
       <DataTable
-        columns={["Accion", "Endidad", "Descripcion", "Fecha"]}
+        columns={["Accion", "Entidad", "Descripcion", "Fecha"]}
         rows={auditLogs}
         loading={showSpinner}
         skeletonCount={5}

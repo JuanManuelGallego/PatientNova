@@ -100,6 +100,7 @@ async function handleReminderUpdate(
       affectedFields: ['status'],
       fieldsBefore: { status: existing.reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
+      tx,
     });
     
     logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
@@ -127,7 +128,7 @@ async function handleReminderUpdate(
       entityId: createdReminder.id,
       actionType: ActionType.CREATE,
       description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: Object.keys(dto),
+      affectedFields: ['channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId'],
       fieldsAfter: { 
         channel: createdReminder.channel,
         sendMode: createdReminder.sendMode, 
@@ -139,6 +140,7 @@ async function handleReminderUpdate(
         patientId: createdReminder.patientId, 
         status: createdReminder.status
       },
+      tx,
     });
 
     logger.info({ reminderId: createdReminder.id }, 'Reminder created');
@@ -167,6 +169,7 @@ async function handleReminderUpdate(
       actionType: ActionType.UPDATE,
       description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       ...diff,
+      tx,
     });
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
@@ -266,7 +269,7 @@ export const appointmentService = {
           entityId: createdReminder.id,
           actionType: ActionType.CREATE,
           description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
-          affectedFields: Object.keys(dto),
+          affectedFields: ['channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId'],
           fieldsAfter: { 
             channel: createdReminder.channel,
             sendMode: createdReminder.sendMode, 
@@ -278,6 +281,7 @@ export const appointmentService = {
             patientId: patient.id, 
             status: createdReminder.status
           },
+          tx,
         });
 
         logger.info({ reminderId: createdReminder.id, userId, mode: createdReminder.sendMode }, 'Reminder created (atomic with appointment)');
@@ -320,6 +324,7 @@ export const appointmentService = {
           meetingUrl: meetingUrl ?? null, 
           status: created.status ?? AppointmentStatus.SCHEDULED 
         },
+        tx,
       });
 
       if (createdReminder) {
@@ -333,7 +338,9 @@ export const appointmentService = {
           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
           affectedFields: ['appointmentId'],
+          fieldsBefore: { appointmentId: null },
           fieldsAfter: { appointmentId: created.id },
+          tx,
         });
       }
 
@@ -392,6 +399,7 @@ export const appointmentService = {
         actionType: ActionType.UPDATE,
         description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
         ...diff,
+        tx,
       });
 
       if (createdReminder) {
@@ -406,7 +414,9 @@ export const appointmentService = {
           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
           affectedFields: ['appointmentId'],
+          fieldsBefore: { appointmentId: null },
           fieldsAfter: { appointmentId: id },
+          tx,
         });
       }
 

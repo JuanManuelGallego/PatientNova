@@ -25,7 +25,7 @@ export type CreateAuditLogDto = z.infer<typeof createAuditLogSchema>;
 
 export const listAuditLogsSchema = z.object({
   entityType: entityTypeEnum.optional(),
-  entityId: z.string().optional(),
+  entityId: z.string().uuid().optional(),
   actionType: actionTypeEnum.optional(),
   source: actionSourceEnum.optional(),
   actorId: z.string().optional(),

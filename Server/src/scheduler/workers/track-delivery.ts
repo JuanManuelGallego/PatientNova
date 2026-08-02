@@ -36,7 +36,7 @@ export async function trackDeliveryWorker(): Promise<void> {
         error: 'Status tracking timed out — message may have been delivered',
       },
     });
-    await runInAuditContext(JOB_CTX, () => Promise.all(
+    await runInAuditContext(JOB_CTX, () => Promise.allSettled(
       stale.map(r => logAudit({
         entityType: EntityType.REMINDER,
         entityId: r.id,

@@ -76,6 +76,7 @@ export const medicalRecordService = {
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Historia clínica eliminada permanentemente ${id}`,
+      affectedFields: [],
     });
     return { id };
   },

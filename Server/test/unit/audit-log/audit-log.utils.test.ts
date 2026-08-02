@@ -9,7 +9,6 @@ vi.mock('../../../src/audit-log/audit-log.service.js', () => ({
 }));
 
 import { computeDiff, buildAuditEntry } from '../../../src/audit-log/audit-log.utils.js';
-import { auditLogService } from '../../../src/audit-log/audit-log.service.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 
 beforeEach(() => vi.clearAllMocks());

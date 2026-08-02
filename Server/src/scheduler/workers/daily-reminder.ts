@@ -162,6 +162,7 @@ export async function dailyReminderWorker(): Promise<void> {
           source: ActionSource.JOB,
           description: `Recordatorio diario enviado para ${appointments.length} cita(s)`,
           affectedFields: ['lastDailyReminderDate'],
+          fieldsBefore: { lastDailyReminderDate: user.lastDailyReminderDate ?? null },
           fieldsAfter: { lastDailyReminderDate: new Date(todayLocal) },
         }));
         logger.info({ userId: user.id, channel }, "Daily reminder sent");

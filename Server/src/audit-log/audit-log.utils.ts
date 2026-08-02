@@ -2,6 +2,7 @@ import type { CreateAuditLogDto } from './audit-log.schemas.js';
 import { getAuditContext } from './audit-log-context.js';
 import { auditLogService } from './audit-log.service.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums';
+import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 
 /**
  * Compare two objects on the specified fields.
@@ -48,8 +49,8 @@ export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAu
     actionType: ActionType.CREATE,
     source: ActionSource.API,
     description: '',
-    affectedFields: [],
     ...overrides,
+    affectedFields: overrides.affectedFields ?? [],
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
     userId: 'userId' in overrides ? overrides.userId : ctx?.userId,
   };
@@ -64,6 +65,7 @@ export async function logAudit(params: {
   affectedFields?: string[];
   fieldsBefore?: Record<string, unknown> | null;
   fieldsAfter?: Record<string, unknown> | null;
+  tx?: TransactionClient;
 }): Promise<void> {
-  await auditLogService.create(buildAuditEntry(params));
+  await auditLogService.create(buildAuditEntry(params), params.tx);
 }

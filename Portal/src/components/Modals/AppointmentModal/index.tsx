@@ -66,7 +66,7 @@ export function AppointmentModal({
   const { patient: fetchedPatient } = useFetchPatient(appt?.patientId ?? null);
   const [ userSelectedPatient, setUserSelectedPatient ] = useState<Patient | undefined>(undefined);
 
-  const selectedPatient = isEdit ? fetchedPatient : userSelectedPatient;
+  const selectedPatient = isEdit ? (fetchedPatient ?? appt?.patient) : userSelectedPatient;
 
   const { appointments } = useFetchAppointments({
     dateFrom: getTomorrowSixAm(),

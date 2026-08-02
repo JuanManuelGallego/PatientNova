@@ -32,7 +32,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
     data: { status: AppointmentStatus.COMPLETED, completedAt: now },
   });
 
-  await runInAuditContext(JOB_CTX, () => Promise.all(
+  await runInAuditContext(JOB_CTX, () => Promise.allSettled(
     pending.map(a => logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: a.id,

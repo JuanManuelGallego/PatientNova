@@ -97,7 +97,6 @@ describe('Audit writing: appointments (integration)', () => {
   it('creates an audit log on appointment update with diff', async () => {
     const appt = await withAuditContext(() => appointmentService.create(baseApptDto(), userId));
 
-    const { start, end } = appointmentTimeRange(240, 30);
     await withAuditContext(() => appointmentService.update(appt.id, { notes: 'Updated notes' }, userId));
 
     const logs = await getAuditLogsForEntity('APPOINTMENT', appt.id);
@@ -164,8 +163,9 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     const log = await getLatestAuditLog('REMINDER', reminder.id);
@@ -183,12 +183,13 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     await withAuditContext(() => reminderService.update(reminder.id, {
-      sendAt: future2.toISOString(),
+      sendAt: future2,
     }, userId));
 
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
@@ -203,8 +204,9 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     await withAuditContext(() => reminderService.cancel(reminder.id, userId));
@@ -222,8 +224,9 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     await withAuditContext(() => reminderService.softDelete(reminder.id, userId));
@@ -240,8 +243,9 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     await withAuditContext(() => reminderService.softDelete(reminder.id, userId));
@@ -259,8 +263,9 @@ describe('Audit writing: reminders (integration)', () => {
       channel: Channel.WHATSAPP,
       to: '+573001234567',
       sendMode: ReminderMode.SCHEDULED,
-      sendAt: future.toISOString(),
+      sendAt: future,
       patientId,
+      status: ReminderStatus.PENDING,
     }, userId, false));
 
     await prisma.reminder.update({
@@ -398,12 +403,6 @@ describe('Audit writing: auth (integration)', () => {
 
 describe('Audit writing: consent documents (integration)', () => {
   it('creates an audit log on consent document create', async () => {
-    const doc = await withAuditContext(() => consentDocumentService.create({
-      name: 'Privacy Policy',
-      content: 'base64content==',
-      mimeType: 'application/pdf',
-    }, userId));
-
     const log = await getLatestAuditLog('CONSENT_DOCUMENT', userId);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('CREATE');
@@ -448,7 +447,6 @@ describe('Audit writing: twilio webhook (integration)', () => {
   it('creates an audit log on appointment confirm via webhook', async () => {
     const appt = await withAuditContext(() => appointmentService.create(baseApptDto(), userId));
 
-    const future = new Date(Date.now() + 2 * 60 * 60_000);
     const reminder = await prisma.reminder.create({
       data: {
         channel: Channel.WHATSAPP,

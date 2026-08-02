@@ -1,13 +1,14 @@
 import type { AuditLog } from '../../generated/prisma/client.ts';
 import { Prisma } from '../../generated/prisma/client.ts';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { CreateAuditLogDto, ListAuditLogsQuery } from './audit-log.schemas.js';
 import { AuditLogNotFoundError } from './audit-log.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
 
 export const auditLogRepository = {
-  async create(dto: CreateAuditLogDto): Promise<AuditLog> {
-    return prisma.auditLog.create({
+  async create(dto: CreateAuditLogDto, tx?: TransactionClient): Promise<AuditLog> {
+    const client = tx ?? prisma;
+    return client.auditLog.create({
       data: {
         userId: dto.userId ?? null,
         actorId: dto.actorId,
