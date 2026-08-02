@@ -10,7 +10,7 @@ export const auditLogRepository = {
     const client = tx ?? prisma;
     return client.auditLog.create({
       data: {
-        userId: dto.userId ?? null,
+        userId: dto.userId,
         actorId: dto.actorId,
         actorDisplayName: dto.actorDisplayName,
         entityType: dto.entityType,

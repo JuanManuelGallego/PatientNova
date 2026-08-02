@@ -1,16 +1,16 @@
 import { z } from 'zod';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums';
 
-const entityTypeEnum = z.nativeEnum(EntityType);
-const actionTypeEnum = z.nativeEnum(ActionType);
-const actionSourceEnum = z.nativeEnum(ActionSource);
+const entityTypeEnum = z.enum(EntityType);
+const actionTypeEnum = z.enum(ActionType);
+const actionSourceEnum = z.enum(ActionSource);
 
 export const createAuditLogSchema = z.object({
-  userId: z.string().uuid().optional(),
+  userId: z.uuid(),
   actorId: z.string().min(1),
   actorDisplayName: z.string().min(1).max(200),
   entityType: entityTypeEnum,
-  entityId: z.string().min(1),
+  entityId: z.uuid(),
   actionType: actionTypeEnum,
   source: actionSourceEnum,
   description: z.string().min(1).max(500),
@@ -25,7 +25,7 @@ export type CreateAuditLogDto = z.infer<typeof createAuditLogSchema>;
 
 export const listAuditLogsSchema = z.object({
   entityType: entityTypeEnum.optional(),
-  entityId: z.string().uuid().optional(),
+  entityId: z.uuid().optional(),
   actionType: actionTypeEnum.optional(),
   source: actionSourceEnum.optional(),
   actorId: z.string().optional(),
