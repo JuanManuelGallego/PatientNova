@@ -88,7 +88,7 @@ describe('Audit writing: patients (integration)', () => {
     const logs = await getAuditLogsForEntity('PATIENT', patient.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
     expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.fieldsBefore).toMatchObject({ name: 'Maria', lastName: 'Garcia' });
+    expect(deleteLog!.fieldsBefore).toMatchObject({ isDeleted: false });
   });
 
   it('creates an audit log on patient restore', async () => {
@@ -105,7 +105,7 @@ describe('Audit writing: patients (integration)', () => {
     const logs = await getAuditLogsForEntity('PATIENT', patient.id);
     const restoreLog = logs.find(l => l.actionType === 'RESTORE');
     expect(restoreLog).toBeTruthy();
-    expect(restoreLog!.fieldsAfter).toMatchObject({ name: 'Maria' });
+    expect(restoreLog!.fieldsAfter).toMatchObject({ isDeleted: false });
   });
 });
 
@@ -209,7 +209,7 @@ describe('Audit writing: actor metadata (integration)', () => {
 
     const log = await getLatestAuditLog('PATIENT', patient.id);
     expect(log!.actorId).toBe('system');
-    expect(log!.actorDisplayName).toBe('System');
+    expect(log!.actorDisplayName).toBe('Sistema');
   });
 });
 

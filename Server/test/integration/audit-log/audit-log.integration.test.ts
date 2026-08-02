@@ -242,14 +242,16 @@ describe('audit-log routes (integration)', () => {
   });
 
   it('GET / supports filtering by entityId', async () => {
-    await auditLogService.create({ ...baseLogData, userId, entityId: 'entity-aaa' });
-    await auditLogService.create({ ...baseLogData, userId, entityId: 'entity-bbb' });
+    const uuid1 = '550e8400-e29b-41d4-a716-446655440001';
+    const uuid2 = '550e8400-e29b-41d4-a716-446655440002';
+    await auditLogService.create({ ...baseLogData, userId, entityId: uuid1 });
+    await auditLogService.create({ ...baseLogData, userId, entityId: uuid2 });
 
     const res = await invokeRoute(
       auditLogRouter,
       'get',
       '/',
-      baseReq({ query: { entityId: 'entity-aaa' } })
+      baseReq({ query: { entityId: uuid1 } })
     );
     expect(res.statusCode).toBe(200);
     const body = res.body as { data: { data: unknown[]; total: number } };

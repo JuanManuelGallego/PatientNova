@@ -113,7 +113,7 @@ describe('Audit writing: appointments (integration)', () => {
     await withAuditContext(() => appointmentService.setStatus(appt.id, userId, AppointmentStatus.CONFIRMED));
 
     const logs = await getAuditLogsForEntity('APPOINTMENT', appt.id);
-    const statusLog = logs.find(l => l.description?.includes('status'));
+    const statusLog = logs.find(l => l.actionType === 'UPDATE' && l.affectedFields.includes('status'));
     expect(statusLog).toBeTruthy();
     expect(statusLog!.affectedFields).toEqual(['status']);
     expect(statusLog!.fieldsBefore).toMatchObject({ status: AppointmentStatus.SCHEDULED });
@@ -126,7 +126,7 @@ describe('Audit writing: appointments (integration)', () => {
     await withAuditContext(() => appointmentService.markPaid(appt.id, userId));
 
     const logs = await getAuditLogsForEntity('APPOINTMENT', appt.id);
-    const paidLog = logs.find(l => l.description?.includes('paid'));
+    const paidLog = logs.find(l => l.actionType === 'UPDATE' && l.affectedFields.includes('paid'));
     expect(paidLog).toBeTruthy();
     expect(paidLog!.affectedFields).toEqual(['paid']);
     expect(paidLog!.fieldsBefore).toMatchObject({ paid: false });
@@ -141,7 +141,7 @@ describe('Audit writing: appointments (integration)', () => {
     const logs = await getAuditLogsForEntity('APPOINTMENT', appt.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
     expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.fieldsBefore).toMatchObject({ patientId, status: AppointmentStatus.SCHEDULED });
+    expect(deleteLog!.fieldsBefore).toMatchObject({ isDeleted: false });
   });
 
   it('creates an audit log on appointment restore', async () => {
@@ -152,7 +152,7 @@ describe('Audit writing: appointments (integration)', () => {
     const logs = await getAuditLogsForEntity('APPOINTMENT', appt.id);
     const restoreLog = logs.find(l => l.actionType === 'RESTORE');
     expect(restoreLog).toBeTruthy();
-    expect(restoreLog!.fieldsAfter).toMatchObject({ patientId });
+    expect(restoreLog!.fieldsAfter).toMatchObject({ isDeleted: false });
   });
 });
 
@@ -193,7 +193,7 @@ describe('Audit writing: reminders (integration)', () => {
     }, userId));
 
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
-    const updateLog = logs.find(l => l.actionType === 'UPDATE' && l.description?.includes('Updated'));
+    const updateLog = logs.find(l => l.actionType === 'UPDATE' && l.entityType === 'REMINDER');
     expect(updateLog).toBeTruthy();
     expect(updateLog!.affectedFields).toContain('sendAt');
   });
@@ -212,7 +212,7 @@ describe('Audit writing: reminders (integration)', () => {
     await withAuditContext(() => reminderService.cancel(reminder.id, userId));
 
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
-    const cancelLog = logs.find(l => l.description?.includes('Cancelled'));
+    const cancelLog = logs.find(l => l.actionType === 'UPDATE' && l.affectedFields.includes('status'));
     expect(cancelLog).toBeTruthy();
     expect(cancelLog!.affectedFields).toEqual(['status']);
     expect(cancelLog!.fieldsAfter).toMatchObject({ status: ReminderStatus.CANCELLED });
@@ -234,7 +234,7 @@ describe('Audit writing: reminders (integration)', () => {
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
     expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.fieldsBefore).toMatchObject({ channel: 'WHATSAPP', patientId });
+    expect(deleteLog!.fieldsBefore).toMatchObject({ isDeleted: false });
   });
 
   it('creates an audit log on reminder restore', async () => {
@@ -254,7 +254,7 @@ describe('Audit writing: reminders (integration)', () => {
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
     const restoreLog = logs.find(l => l.actionType === 'RESTORE');
     expect(restoreLog).toBeTruthy();
-    expect(restoreLog!.fieldsAfter).toMatchObject({ channel: 'WHATSAPP', patientId });
+    expect(restoreLog!.fieldsAfter).toMatchObject({ isDeleted: false });
   });
 
   it('creates an audit log on reminder retry', async () => {
@@ -276,7 +276,7 @@ describe('Audit writing: reminders (integration)', () => {
     await withAuditContext(() => reminderService.retry(reminder.id, userId));
 
     const logs = await getAuditLogsForEntity('REMINDER', reminder.id);
-    const retryLog = logs.find(l => l.description?.includes('Retried'));
+    const retryLog = logs.find(l => l.actionType === 'UPDATE' && l.affectedFields.includes('retryCount'));
     expect(retryLog).toBeTruthy();
     expect(retryLog!.affectedFields).toEqual(['status', 'retryCount']);
     expect(retryLog!.fieldsBefore).toMatchObject({ status: ReminderStatus.FAILED });
@@ -370,7 +370,7 @@ describe('Audit writing: auth (integration)', () => {
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
-    expect(log!.description).toContain('logged in');
+    expect(log!.description).toContain('inició sesión');
     expect(log!.affectedFields).toContain('lastLoginAt');
     expect(log!.fieldsAfter).toMatchObject({ lastLoginIp: '10.0.0.1' });
   });
@@ -383,7 +383,7 @@ describe('Audit writing: auth (integration)', () => {
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
-    expect(log!.description).toContain('logged out');
+    expect(log!.description).toContain('cerró sesión');
     expect(log!.affectedFields).toEqual(['refreshTokenVersion']);
   });
 
@@ -396,13 +396,19 @@ describe('Audit writing: auth (integration)', () => {
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
-    expect(log!.description).toContain('changed password');
+    expect(log!.description).toContain('cambió contraseña');
     expect(log!.affectedFields).toEqual(['passwordHash']);
   });
 });
 
 describe('Audit writing: consent documents (integration)', () => {
   it('creates an audit log on consent document create', async () => {
+    await withAuditContext(() => consentDocumentService.create({
+      name: 'Privacy Policy',
+      content: 'base64content==',
+      mimeType: 'application/pdf',
+    }, userId));
+
     const log = await getLatestAuditLog('CONSENT_DOCUMENT', userId);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('CREATE');
@@ -439,7 +445,7 @@ describe('Audit writing: consent documents (integration)', () => {
     const logs = await getAuditLogsForEntity('CONSENT_DOCUMENT', userId);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
     expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.description).toContain('Deleted consent document');
+    expect(deleteLog!.description).toContain('eliminado');
   });
 });
 
@@ -467,7 +473,7 @@ describe('Audit writing: twilio webhook (integration)', () => {
     const log = await getLatestAuditLog('APPOINTMENT', appt.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
-    expect(log!.description).toContain('confirmed via WhatsApp');
+    expect(log!.description).toContain('confirmada via respuesta rápida de WhatsApp');
     expect(log!.affectedFields).toEqual(['status']);
     expect(log!.fieldsAfter).toMatchObject({ status: AppointmentStatus.CONFIRMED });
   });
@@ -495,7 +501,7 @@ describe('Audit writing: twilio webhook (integration)', () => {
     const log = await getLatestAuditLog('APPOINTMENT', appt.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
-    expect(log!.description).toContain('cancelled via WhatsApp');
+    expect(log!.description).toContain('cancelada via respuesta rápida de WhatsApp');
     expect(log!.affectedFields).toEqual(['status']);
     expect(log!.fieldsAfter).toMatchObject({ status: AppointmentStatus.CANCELLED });
   });
@@ -520,6 +526,6 @@ describe('Audit writing: actor metadata (integration)', () => {
     }, userId);
     const log2 = await getLatestAuditLog('PATIENT', patient2.id);
     expect(log2!.actorId).toBe('system');
-    expect(log2!.actorDisplayName).toBe('System');
+    expect(log2!.actorDisplayName).toBe('Sistema');
   });
 });

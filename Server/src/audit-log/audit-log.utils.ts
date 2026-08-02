@@ -52,7 +52,7 @@ export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAu
     ...overrides,
     affectedFields: overrides.affectedFields ?? [],
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
-    userId: 'userId' in overrides ? overrides.userId : ctx?.userId,
+    userId: 'userId' in overrides ? overrides.userId : ctx?.userId ?? 'system',
   };
 }
 

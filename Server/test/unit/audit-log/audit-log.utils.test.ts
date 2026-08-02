@@ -150,7 +150,7 @@ describe('buildAuditEntry', () => {
       description: 'Created patient',
     });
     expect(entry.actorId).toBe('system');
-    expect(entry.actorDisplayName).toBe('System');
+    expect(entry.actorDisplayName).toBe('Sistema');
     expect(entry.entityType).toBe('PATIENT');
     expect(entry.entityId).toBe('p-1');
     expect(entry.actionType).toBe('CREATE');

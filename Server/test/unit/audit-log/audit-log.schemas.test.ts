@@ -3,10 +3,11 @@ import { createAuditLogSchema, listAuditLogsSchema } from '../../../src/audit-lo
 
 describe('createAuditLogSchema', () => {
   const validDto = {
+    userId: '550e8400-e29b-41d4-a716-446655440000',
     actorId: 'actor-1',
     actorDisplayName: 'Test Actor',
     entityType: 'PATIENT',
-    entityId: 'entity-1',
+    entityId: '550e8400-e29b-41d4-a716-446655440001',
     actionType: 'CREATE',
     source: 'API',
     description: 'Created patient',
@@ -145,7 +146,7 @@ describe('listAuditLogsSchema', () => {
   it('accepts valid filter values', () => {
     const result = listAuditLogsSchema.safeParse({
       entityType: 'PATIENT',
-      entityId: 'e-1',
+      entityId: '550e8400-e29b-41d4-a716-446655440000',
       actionType: 'UPDATE',
       source: 'API',
       actorId: 'a-1',
