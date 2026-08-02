@@ -13,6 +13,8 @@ import {
 } from './auth.errors.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import type { UserResponse } from '../users/user.dto.js';
+import { logAudit } from '../audit-log/audit-log.utils.js';
+import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 
 interface RefreshTokenPayload {
   type: string;
@@ -78,6 +80,15 @@ export const authService = {
     const updatedUser = await authRepository.recordSuccessfulLogin(user.id, ip);
     logger.info({ userId: user.id, email: maskEmail(email), ip }, 'Login successful');
 
+    await logAudit({
+      entityType: EntityType.USER,
+      entityId: user.id,
+      actionType: ActionType.UPDATE,
+      description: `Usuario ${user.email} inició sesión`,
+      affectedFields: ['lastLoginAt', 'lastLoginIp'],
+      fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
+    });
+
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
       config.auth.jwtSecret,
@@ -99,6 +110,13 @@ export const authService = {
 
   async logout(userId: string): Promise<void> {
     await authRepository.incrementRefreshTokenVersion(userId);
+    await logAudit({
+      entityType: EntityType.USER,
+      entityId: userId,
+      actionType: ActionType.UPDATE,
+      description: `Usuario ${userId} cerró sesión`,
+      affectedFields: ['refreshTokenVersion'],
+    });
     logger.info({ userId }, 'User logged out');
   },
 
@@ -156,6 +174,13 @@ export const authService = {
 
     const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
     await authRepository.updatePassword(userId, passwordHash);
+    await logAudit({
+      entityType: EntityType.USER,
+      entityId: userId,
+      actionType: ActionType.UPDATE,
+      description: `Usuario ${userId} cambió contraseña`,
+      affectedFields: ['passwordHash'],
+    });
     logger.info({ userId }, 'Password changed');
   },
 

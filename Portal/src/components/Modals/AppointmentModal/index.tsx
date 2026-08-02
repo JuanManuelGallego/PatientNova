@@ -3,7 +3,6 @@
 import { useCreateAppointment } from "@/src/api/appointments/useCreateAppointment";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
-import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
@@ -22,7 +21,6 @@ import {
   Channel,
   type ReminderInlineData,
 } from "@/src/types/Reminder";
-import { Patient } from "@/src/types/Patient";
 import { getUserName } from "@/src/utils/AvatarHelper";
 import {
   fmtDate,
@@ -47,6 +45,8 @@ import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { PatientAndTypeStep } from "./PatientAndTypeStep";
 import { LocationAndTimeStep } from "./LocationAndTimeStep";
 import { PaymentAndStatusStep } from "./PaymentAndStatusStep";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
+import { Patient } from "@/src/types/Patient";
 
 export function AppointmentModal({
   appt,
@@ -63,7 +63,11 @@ export function AppointmentModal({
   const { user } = useAuthContext();
   const { ref: trapRef, handleKeyDown: trapKeyDown } =
     useFocusTrap<HTMLDivElement>(onClose);
-  const { patients } = useFetchPatients();
+  const { patient: fetchedPatient } = useFetchPatient(appt?.patientId ?? null);
+  const [ userSelectedPatient, setUserSelectedPatient ] = useState<Patient | undefined>(undefined);
+
+  const selectedPatient = isEdit ? (fetchedPatient ?? appt?.patient) : userSelectedPatient;
+
   const { appointments } = useFetchAppointments({
     dateFrom: getTomorrowSixAm(),
     status: DEFAULT_APPT_STATUS,
@@ -77,9 +81,6 @@ export function AppointmentModal({
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
-  const [ selectedPatientData, setSelectedPatientData ] = useState<Patient | undefined>(
-    appt?.patient,
-  );
   const reminderChannel = user?.reminderChannel;
 
   const [ form, setForm ] = useState<AppointmentForm>({
@@ -114,7 +115,6 @@ export function AppointmentModal({
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }));
 
-  const selectedPatient = selectedPatientData ?? patients.find((p) => p.id === form.patientId);
   const selectedLocation = locations.find((l) => l.id === form.locationId);
 
   const selectedChannelAvailable = reminderChannel
@@ -313,7 +313,7 @@ export function AppointmentModal({
             blockedSlots={blockedSlots}
             onError={(error) => setError(error)}
             clearError={() => setError(null)}
-            onPatientSelect={(patient) => setSelectedPatientData(patient)}
+            onPatientSelect={(patient) => setUserSelectedPatient(patient)}
           />
         )}
         {step === 2 && (

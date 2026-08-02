@@ -24,6 +24,7 @@ import cookieParser from 'cookie-parser';
 import { googleRouter } from './google-meet/google-meet.routes.js';
 import { consentDocumentRouter } from './consent-documents/consent-document.routes.js';
 import { blockedTimeRouter } from './blocked-time/blocked-time.routes.js';
+import { auditLogRouter } from './audit-log/audit-log.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
 
 const app: Application = express();
@@ -92,6 +93,7 @@ v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTyp
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
 v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
 v1.use('/google', authenticate, requireAdminForWrites, googleRouter);
+v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 
 app.use('/v1', v1);
 

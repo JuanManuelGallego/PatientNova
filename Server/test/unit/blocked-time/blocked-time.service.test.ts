@@ -13,15 +13,20 @@ vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
   },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
+}));
+
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 import { blockedTimeRepository } from '../../../src/blocked-time/blocked-time.repository.js';
-import { logger } from '../../../src/utils/api/logger.js';
+import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 
 const mockRepo = vi.mocked(blockedTimeRepository);
-const mockLogger = vi.mocked(logger);
+const mockLogAudit = vi.mocked(logAudit);
 
 const fakeBlockedTime = {
   id: 'bt-1',
@@ -86,27 +91,29 @@ describe('blockedTimeService.create', () => {
     expect(mockRepo.create).not.toHaveBeenCalled();
   });
 
-  it('logs blocked time creation', async () => {
+  it('calls logAudit after creation', async () => {
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.create.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.create({ description: 'Lunch break', startTimeUtc: '2026-07-27T12:00:00.000Z', endTimeUtc: '2026-07-27T13:00:00.000Z' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { blockedTimeId: 'bt-1', userId: 'user-1' },
-      'Blocked time created',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'BLOCKED_TIME',
+      entityId: 'bt-1',
+      actionType: 'CREATE',
+    }));
   });
 
   it('propagates repository errors without logging', async () => {
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.create.mockRejectedValue(new Error('Validation error'));
     await expect(blockedTimeService.create({ description: 'X', startTimeUtc: '2026-07-27T12:00:00.000Z', endTimeUtc: '2026-07-27T13:00:00.000Z' }, 'user-1')).rejects.toThrow('Validation error');
-    expect(mockLogger.info).not.toHaveBeenCalled();
+    expect(mockLogAudit).not.toHaveBeenCalled();
   });
 });
 
 describe('blockedTimeService.update', () => {
   it('delegates to repository.update with id, dto, and userId', async () => {
     const dto = { description: 'Updated break' };
+    mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.update.mockResolvedValue({ ...fakeBlockedTime, ...dto } as any);
     const result = await blockedTimeService.update('bt-1', dto, 'user-1');
     expect(mockRepo.update).toHaveBeenCalledWith('bt-1', dto, 'user-1');
@@ -115,6 +122,7 @@ describe('blockedTimeService.update', () => {
 
   it('skips overlap check when only description is updated', async () => {
     const dto = { description: 'Updated break' };
+    mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.update.mockResolvedValue({ ...fakeBlockedTime, ...dto } as any);
     await blockedTimeService.update('bt-1', dto, 'user-1');
     expect(mockRepo.hasBlockedTimeOverlap).not.toHaveBeenCalled();
@@ -143,15 +151,16 @@ describe('blockedTimeService.update', () => {
     expect(mockRepo.update).not.toHaveBeenCalled();
   });
 
-  it('logs blocked time update with changed fields', async () => {
+  it('calls logAudit after update', async () => {
     mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.update.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.update('bt-1', { description: 'New', startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { blockedTimeId: 'bt-1', userId: 'user-1', fields: ['description', 'startTimeUtc'] },
-      'Blocked time updated',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'BLOCKED_TIME',
+      entityId: 'bt-1',
+      actionType: 'UPDATE',
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -161,20 +170,24 @@ describe('blockedTimeService.update', () => {
 });
 
 describe('blockedTimeService.delete', () => {
-  it('delegates to repository.delete with id and userId', async () => {
+  it('delegates to repository.delete and returns { id }', async () => {
     mockRepo.delete.mockResolvedValue(fakeBlockedTime as any);
     const result = await blockedTimeService.delete('bt-1', 'user-1');
     expect(mockRepo.delete).toHaveBeenCalledWith('bt-1', 'user-1');
-    expect(result).toEqual(fakeBlockedTime);
+    expect(result).toEqual({ id: 'bt-1' });
   });
 
-  it('logs blocked time deletion', async () => {
+  it('calls logAudit after deletion', async () => {
     mockRepo.delete.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.delete('bt-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { blockedTimeId: 'bt-1', userId: 'user-1' },
-      'Blocked time deleted',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'BLOCKED_TIME',
+      entityId: 'bt-1',
+      actionType: 'DELETE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    }));
   });
 
   it('propagates repository errors', async () => {
@@ -184,20 +197,24 @@ describe('blockedTimeService.delete', () => {
 });
 
 describe('blockedTimeService.restore', () => {
-  it('delegates to repository.restore with id and userId', async () => {
+  it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeBlockedTime as any);
     const result = await blockedTimeService.restore('bt-1', 'user-1');
     expect(mockRepo.restore).toHaveBeenCalledWith('bt-1', 'user-1');
     expect(result).toEqual(fakeBlockedTime);
   });
 
-  it('logs blocked time restoration', async () => {
+  it('calls logAudit after restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.restore('bt-1', 'user-1');
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { blockedTimeId: 'bt-1', userId: 'user-1' },
-      'Blocked time restored',
-    );
+    expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'BLOCKED_TIME',
+      entityId: 'bt-1',
+      actionType: 'RESTORE',
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    }));
   });
 
   it('propagates repository errors', async () => {

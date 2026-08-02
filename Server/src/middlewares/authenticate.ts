@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../utils/config/config.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
+import { runInAuditContext } from '../audit-log/audit-log-context.js';
 
 export interface AuthPayload {
   id: string;
@@ -68,7 +69,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       role:     payload.role,
       timezone: typeof (payload as unknown as Record<string, unknown>).timezone === 'string' ? (payload as unknown as Record<string, unknown>).timezone as string : 'UTC',
     };
-    next();
+
+    const ip = req.ip?.replace('::ffff:', '');
+    runInAuditContext({
+      actorId: payload.id,
+      actorDisplayName: payload.email,
+      ...(ip && { ipAddress: ip }),
+      userId: payload.id,
+    }, () => next());
   } catch (err) {
     logger.warn({ err, ip: req.ip }, 'Auth failure');
     if (err instanceof jwt.TokenExpiredError) {

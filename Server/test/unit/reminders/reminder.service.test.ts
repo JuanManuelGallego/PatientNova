@@ -32,6 +32,26 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({ prisma: mocks.pri
 vi.mock('pg-boss', () => ({ fromPrisma: mocks.fromPrisma }));
 vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: mocks.getBoss }));
 vi.mock('../../../src/scheduler/reminder-job-manager.js', () => ({ reminderJobManager: mocks.jobManager }));
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: (before: Record<string, unknown>, after: Record<string, unknown>, fields: string[]) => {
+    const affectedFields: string[] = [];
+    const fieldsBefore: Record<string, unknown> = {};
+    const fieldsAfter: Record<string, unknown> = {};
+    for (const field of fields) {
+      if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
+        affectedFields.push(field);
+        fieldsBefore[field] = before[field];
+        fieldsAfter[field] = after[field];
+      }
+    }
+    return {
+      affectedFields,
+      fieldsBefore: affectedFields.length > 0 ? fieldsBefore : null,
+      fieldsAfter: affectedFields.length > 0 ? fieldsAfter : null,
+    };
+  },
+}));
 
 const fakeReminder = {
   id: 'rem-1',
@@ -43,6 +63,7 @@ const fakeReminder = {
   userId: 'user-1',
   sendAt: new Date(Date.now() + 86400000),
   createdAt: new Date(),
+  patient: { name: 'John', lastName: 'Doe' },
 };
 
 const scheduledPending = { ...fakeReminder };

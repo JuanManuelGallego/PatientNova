@@ -16,6 +16,27 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: (before: Record<string, unknown>, after: Record<string, unknown>, fields: string[]) => {
+    const affectedFields: string[] = [];
+    const fieldsBefore: Record<string, unknown> = {};
+    const fieldsAfter: Record<string, unknown> = {};
+    for (const field of fields) {
+      if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
+        affectedFields.push(field);
+        fieldsBefore[field] = before[field];
+        fieldsAfter[field] = after[field];
+      }
+    }
+    return {
+      affectedFields,
+      fieldsBefore: affectedFields.length > 0 ? fieldsBefore : null,
+      fieldsAfter: affectedFields.length > 0 ? fieldsAfter : null,
+    };
+  },
+}));
+
 import { userRepository } from '../../../src/users/user.repository.js';
 import { logger } from '../../../src/utils/api/logger.js';
 
@@ -85,6 +106,7 @@ describe('userService.create', () => {
 describe('userService.update', () => {
   it('delegates to repository.update and returns updated user', async () => {
     const dto = { firstName: 'Updated' };
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.update.mockResolvedValue({ ...fakeUser, ...dto } as any);
     const result = await userService.update('user-1', dto);
     expect(mockRepo.update).toHaveBeenCalledWith('user-1', dto);
@@ -93,6 +115,7 @@ describe('userService.update', () => {
 
   it('logs user update with changed fields', async () => {
     const dto = { firstName: 'Updated', lastName: 'Name' };
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.update.mockResolvedValue({ ...fakeUser, ...dto } as any);
     await userService.update('user-1', dto);
     expect(mockLogger.info).toHaveBeenCalledWith(
@@ -102,6 +125,7 @@ describe('userService.update', () => {
   });
 
   it('propagates repository errors', async () => {
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.update.mockRejectedValue(new Error('Not found'));
     await expect(userService.update('bad', { firstName: 'X' })).rejects.toThrow('Not found');
   });
@@ -109,6 +133,7 @@ describe('userService.update', () => {
 
 describe('userService.delete', () => {
   it('delegates to repository.delete and returns deleted user', async () => {
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.delete.mockResolvedValue(fakeUser as any);
     const result = await userService.delete('user-1');
     expect(mockRepo.delete).toHaveBeenCalledWith('user-1');
@@ -116,12 +141,14 @@ describe('userService.delete', () => {
   });
 
   it('logs user deletion', async () => {
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.delete.mockResolvedValue(fakeUser as any);
     await userService.delete('user-1');
     expect(mockLogger.info).toHaveBeenCalledWith({ userId: 'user-1' }, 'User deleted');
   });
 
   it('propagates repository errors', async () => {
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     mockRepo.delete.mockRejectedValue(new Error('Not found'));
     await expect(userService.delete('bad')).rejects.toThrow('Not found');
   });
@@ -130,6 +157,7 @@ describe('userService.delete', () => {
 describe('userService.restore', () => {
   it('delegates to repository.restore and returns restored user', async () => {
     mockRepo.restore.mockResolvedValue(fakeUser as any);
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     const result = await userService.restore('user-1');
     expect(mockRepo.restore).toHaveBeenCalledWith('user-1');
     expect(result).toEqual(fakeUser);
@@ -137,6 +165,7 @@ describe('userService.restore', () => {
 
   it('logs user restoration', async () => {
     mockRepo.restore.mockResolvedValue(fakeUser as any);
+    mockRepo.findById.mockResolvedValue(fakeUser as any);
     await userService.restore('user-1');
     expect(mockLogger.info).toHaveBeenCalledWith({ userId: 'user-1' }, 'User restored');
   });

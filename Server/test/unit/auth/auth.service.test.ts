@@ -32,6 +32,10 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
   maskEmail: (e: string) => e.replace(/(.{2}).*(@.*)/, '$1***$2'),
 }));
 
+vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
+  prisma: {},
+}));
+
 vi.mock('../../../src/users/user.dto.js', () => ({
   toUserResponse: (u: any) => ({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role }),
 }));

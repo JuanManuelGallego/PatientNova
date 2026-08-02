@@ -5,7 +5,7 @@ import {
   isEncrypted,
   EncryptionError,
 } from "../encryption/field-encryption.js";
-import { ENCRYPTED_FIELDS } from "../encryption/encrypted-fields.js";
+import { ENCRYPTED_FIELDS, ENCRYPTED_JSON_FIELDS } from "../encryption/encrypted-fields.js";
 import { config } from "../config/config.js";
 import { logger } from "../api/logger.js";
 
@@ -45,16 +45,26 @@ function getKey(): string {
 
 function encryptField(value: unknown, model: string, field: string): unknown {
   if (value === null || value === undefined) return value;
-  if (typeof value !== "string") return value;
+
+  const isJsonField = ENCRYPTED_JSON_FIELDS[model]?.has(field) ?? false;
+
+  let plaintext: string;
+  if (typeof value === "string") {
+    plaintext = value;
+  } else if (isJsonField && typeof value === "object") {
+    plaintext = JSON.stringify(value);
+  } else {
+    return value;
+  }
 
   const key = getKey();
   if (!key) {
     logger.error({ model, field }, "Encryption key not set — storing plaintext");
-    return value;
+    return plaintext;
   }
 
-  if (isEncrypted(value)) return value; // idempotent
-  return encrypt(value, key);
+  if (isEncrypted(plaintext)) return plaintext; // idempotent
+  return encrypt(plaintext, key);
 }
 
 function decryptField(
@@ -77,7 +87,16 @@ function decryptField(
   }
 
   try {
-    return decrypt(value, key);
+    const decrypted = decrypt(value, key);
+    const isJsonField = ENCRYPTED_JSON_FIELDS[model]?.has(field) ?? false;
+    if (isJsonField) {
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted;
+      }
+    }
+    return decrypted;
   } catch {
     throw new EncryptionError(`Failed to decrypt ${model}.${field}`, {
       model,

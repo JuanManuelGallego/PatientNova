@@ -1,0 +1,23 @@
+meta {
+  name: List Audit Logs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/audit-logs
+  body: none
+  auth: none
+}
+
+params:query {
+  entityType: USER
+  entityId: 
+  actionType: CREATE
+  source: API
+  actorId: 
+  orderBy: eventTimeUtc
+  order: desc
+  page: 1
+  pageSize: 20
+}

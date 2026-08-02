@@ -5,6 +5,8 @@ import { logger } from '../utils/api/logger.js';
 import type { SendWhatsAppRequest } from './types';
 import { config } from '../utils/config/config.js';
 import type { SendSmsRequest } from './types';
+import { logAudit } from '../audit-log/audit-log.utils.js';
+import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 
 interface WebhookPayload {
     from?: string;
@@ -107,6 +109,16 @@ export class TwilioWebhookService {
             }),
         ]);
 
+        await logAudit({
+            entityType: EntityType.APPOINTMENT,
+            entityId: reminder.appointmentId!,
+            actionType: ActionType.UPDATE,
+            source: ActionSource.API,
+            description: `Cita confirmada via respuesta rápida de WhatsApp`,
+            affectedFields: ['status'],
+            fieldsAfter: { status: AppointmentStatus.CONFIRMED },
+        });
+
         logger.info(
             { appointmentId: reminder.appointmentId, reminderId: reminder.id },
             'Appointment confirmed via WhatsApp quick-reply',
@@ -133,6 +145,16 @@ export class TwilioWebhookService {
                 data: { status: ReminderStatus.CANCELLED },
             }),
         ]);
+
+        await logAudit({
+            entityType: EntityType.APPOINTMENT,
+            entityId: reminder.appointmentId!,
+            actionType: ActionType.UPDATE,
+            source: ActionSource.API,
+            description: `Cita cancelada via respuesta rápida de WhatsApp`,
+            affectedFields: ['status'],
+            fieldsAfter: { status: AppointmentStatus.CANCELLED },
+        });
 
         logger.info(
             { appointmentId: reminder.appointmentId, reminderId: reminder.id },

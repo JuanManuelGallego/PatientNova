@@ -147,9 +147,9 @@ export const appointmentRepository = {
     });
   },
 
-  async delete(id: string, userId: string): Promise<Appointment> {
+  async delete(id: string, userId: string): Promise<AppointmentWithRelations> {
     await appointmentRepository.findById(id, userId);
-    return softDelete(prisma.appointment, id, userId) as Promise<Appointment>;
+    return softDelete(prisma.appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {

@@ -33,4 +33,13 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
   Patient: new Set([ "notes" ]),
   Appointment: new Set([ "notes" ]),
   Reminder: new Set([ "body" ]),
+  AuditLog: new Set([ "actorDisplayName", "description", "ipAddress", "fieldsBefore", "fieldsAfter" ]),
+};
+
+/**
+ * Fields that contain Json (non-string) values and need JSON.stringify/parse
+ * around the encrypt/decrypt calls.
+ */
+export const ENCRYPTED_JSON_FIELDS: Record<string, Set<string>> = {
+  AuditLog: new Set([ "fieldsBefore", "fieldsAfter" ]),
 };

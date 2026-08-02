@@ -11,6 +11,7 @@ import { Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
+import Link from "next/link";
 
 export function AppointmentDrawer({
   appt,
@@ -169,6 +170,13 @@ export function AppointmentDrawer({
               label="Creada"
               value={new Date(appt.createdAt).toLocaleString("es-ES")}
             />
+            <Link
+              href={`/settings?tab=Registro+de+actividad&entityId=${appt.id}`}
+              className="btn-secondary btn-primary--block"
+              style={{ marginTop: 12, textDecoration: "none" }}
+            >
+              <DETAIL_ICONS.history size={14} /> Ver registros de actividad
+            </Link>
           </Section>
         </div>
         <div className="drawer-footer">

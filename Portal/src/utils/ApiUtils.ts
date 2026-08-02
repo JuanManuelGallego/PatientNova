@@ -1,4 +1,5 @@
 import { FetchAppointmentsFilters } from "@/src/types/Appointment";
+import { FetchAuditLogsFilters } from "@/src/types/AuditLog";
 import { FetchBlockedTimeFilters } from "@/src/types/BlockedTime";
 import { FetchMedicalRecordFilters } from "@/src/types/MedicalRecord";
 import { PatientStatus, FetchPatientsFilters } from "@/src/types/Patient";
@@ -79,6 +80,21 @@ export const buildBlockedTimeQueryString = (filters?: FetchBlockedTimeFilters): 
         to: filters?.dateTo,
         page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
         pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : undefined,
+        orderBy: filters?.orderBy,
+        order: filters?.order,
+    });
+
+export const buildAuditLogQueryString = (filters?: FetchAuditLogsFilters): string =>
+    buildQueryString({
+        entityType: filters?.entityType,
+        entityId: filters?.entityId,
+        actionType: filters?.actionType,
+        source: filters?.source,
+        search: filters?.search,
+        dateFrom: filters?.dateFrom,
+        dateTo: filters?.dateTo,
+        page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
+        pageSize: filters?.pageSize,
         orderBy: filters?.orderBy,
         order: filters?.order,
     });

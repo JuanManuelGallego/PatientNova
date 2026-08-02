@@ -110,4 +110,33 @@ describe("encryption", () => {
       expect(isEncrypted(ciphertext)).toBe(true);
     });
   });
+
+  describe("JSON field round-trip (stringify then encrypt)", () => {
+    it("encrypts and decrypts a JSON object via stringify", () => {
+      const obj = { name: "Juan", phone: "+573001234567" };
+      const jsonStr = JSON.stringify(obj);
+      const ciphertext = encrypt(jsonStr, TEST_KEY);
+      const decrypted = decrypt(ciphertext, TEST_KEY);
+      expect(JSON.parse(decrypted)).toEqual(obj);
+    });
+
+    it("handles null values in JSON", () => {
+      const obj = { name: "Test", notes: null };
+      const jsonStr = JSON.stringify(obj);
+      const ciphertext = encrypt(jsonStr, TEST_KEY);
+      const decrypted = decrypt(ciphertext, TEST_KEY);
+      expect(JSON.parse(decrypted)).toEqual(obj);
+    });
+
+    it("handles nested JSON objects", () => {
+      const obj = {
+        fieldsBefore: { name: "old", phone: "+57111222333" },
+        fieldsAfter: { name: "new", phone: "+57444555666" },
+      };
+      const jsonStr = JSON.stringify(obj);
+      const ciphertext = encrypt(jsonStr, TEST_KEY);
+      const decrypted = decrypt(ciphertext, TEST_KEY);
+      expect(JSON.parse(decrypted)).toEqual(obj);
+    });
+  });
 });

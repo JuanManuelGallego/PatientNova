@@ -11,6 +11,8 @@ import type { Paginated } from '../utils/api/pagination.js';
 import type { ReminderWithRelations, ReminderStats } from './reminder.types.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
+import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
+import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 
 const QUEUE = 'send-reminder';
 const MAX_RETRIES = 1;
@@ -69,6 +71,27 @@ export const reminderService = {
     });
 
     logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode, enqueued: enqueue }, 'Reminder created');
+
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: reminder.id,
+      actionType: ActionType.CREATE,
+      description: `Recordatorio creado para el paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: { 
+        channel: reminder.channel,
+        sendMode: reminder.sendMode, 
+        sendAt: reminder.sendAt, 
+        to: reminder.to, 
+        contentSid: reminder.contentSid, 
+        contentVariables: reminder.contentVariables, 
+        body: reminder.body, 
+        patientId: reminder.patientId, 
+        status: reminder.status ,
+        appointmentId: reminder.appointmentId,
+      },
+    });
+
     return reminder;
   },
 
@@ -91,6 +114,14 @@ export const reminderService = {
     }
 
     const updated = await reminderRepository.update(id, dto, userId);
+    const diff = computeDiff(reminder as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: id,
+      actionType: ActionType.UPDATE,
+      description: `Recordatorio actualizado para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
+      ...diff,
+    });
     logger.info({ reminderId: id, userId, fields: Object.keys(dto) }, 'Reminder updated');
     return updated;
   },
@@ -102,6 +133,15 @@ export const reminderService = {
     }
     await reminderJobManager.cancel(id);
     const cancelled = await reminderRepository.cancel(id, userId);
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: id,
+      actionType: ActionType.UPDATE,
+      description: `Recordatorio cancelado para el paciente ${cancelled.patient.name} ${cancelled.patient.lastName}`,
+      affectedFields: ['status'],
+      fieldsBefore: { status: reminder.status },
+      fieldsAfter: { status: ReminderStatus.CANCELLED },
+    });
     logger.info({ reminderId: id, userId }, 'Reminder cancelled');
     return cancelled;
   },
@@ -112,6 +152,15 @@ export const reminderService = {
       await reminderJobManager.cancel(id);
     }
     const deleted = await reminderRepository.delete(id, userId);
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: id,
+      actionType: ActionType.DELETE,
+      description: `Recordatorio eliminado para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: false },
+      fieldsAfter: { isDeleted: true },
+    });
     logger.info({ reminderId: id, userId }, 'Reminder deleted');
     return deleted;
   },
@@ -125,6 +174,16 @@ export const reminderService = {
         await reminderJobManager.enqueue(restored.id, new Date(restored.sendAt));
       }
     }
+
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: id,
+      actionType: ActionType.RESTORE,
+      description: `Recordatorio restaurado para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
+      affectedFields: ['isDeleted'],
+      fieldsBefore: { isDeleted: true },
+      fieldsAfter: { isDeleted: false },
+    });
 
     logger.info({ reminderId: id, userId }, 'Reminder restored');
     return restored;
@@ -159,6 +218,16 @@ export const reminderService = {
     const sendAt = new Date(reminder.sendAt) > now ? new Date(reminder.sendAt) : now;
 
     const retried = await reminderRepository.retry(id, sendAt);
+
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: id,
+      actionType: ActionType.UPDATE,
+      description: `Recordatorio ${id} reintentado (intento ${retried.retryCount})`,
+      affectedFields: ['status', 'retryCount'],
+      fieldsBefore: { status: ReminderStatus.FAILED, retryCount: reminder.retryCount },
+      fieldsAfter: { status: ReminderStatus.PENDING, retryCount: retried.retryCount },
+    });
 
     if (sendAt > now) {
       await reminderJobManager.enqueue(id, sendAt);
