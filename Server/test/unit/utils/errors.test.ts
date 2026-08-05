@@ -6,65 +6,44 @@ import { LocationNameConflictError } from '../../../src/locations/location.error
 import { UserInvalidCredentialsError } from '../../../src/auth/auth.errors.js';
 
 describe('ApiError', () => {
-  it('sets message and default status 400', () => {
-    const err = new ApiError('Bad input');
+  it('sets message, status code, and class name', () => {
+    const err = new ApiError('Bad input', 422);
     expect(err.message).toBe('Bad input');
-    expect(err.errorCode).toBe(400);
-    expect(err).toBeInstanceOf(Error);
-  });
-
-  it('accepts a custom status code', () => {
-    const err = new ApiError('Not found', 404);
-    expect(err.errorCode).toBe(404);
-  });
-
-  it('sets name to class name', () => {
-    const err = new ApiError('oops');
+    expect(err.errorCode).toBe(422);
     expect(err.name).toBe('ApiError');
+    expect(err).toBeInstanceOf(Error);
   });
 });
 
-describe('PatientNotFoundError', () => {
-  it('has 404 status and includes the id in the message', () => {
+describe('error subclasses set correct status codes and embed context', () => {
+  it('PatientNotFoundError has 404 and includes id', () => {
     const err = new PatientNotFoundError('abc-123');
     expect(err.errorCode).toBe(404);
     expect(err.message).toContain('abc-123');
     expect(err).toBeInstanceOf(ApiError);
   });
-});
 
-describe('AppointmentNotFoundError', () => {
-  it('has 404 status', () => {
-    const err = new AppointmentNotFoundError('xyz');
-    expect(err.errorCode).toBe(404);
+  it('AppointmentNotFoundError has 404', () => {
+    expect(new AppointmentNotFoundError('xyz').errorCode).toBe(404);
   });
-});
 
-describe('MedicalRecordAlreadyExistsError', () => {
-  it('has 409 status and includes patient id', () => {
+  it('MedicalRecordAlreadyExistsError has 409 and includes patient id', () => {
     const err = new MedicalRecordAlreadyExistsError('pid-1');
     expect(err.errorCode).toBe(409);
     expect(err.message).toContain('pid-1');
   });
-});
 
-describe('LocationNameConflictError', () => {
-  it('has 409 status and includes the location name', () => {
+  it('LocationNameConflictError has 409 and includes the name', () => {
     const err = new LocationNameConflictError('Main Office');
     expect(err.errorCode).toBe(409);
     expect(err.message).toContain('Main Office');
   });
-});
 
-describe('UserInvalidCredentialsError', () => {
-  it('has 401 status', () => {
-    const err = new UserInvalidCredentialsError();
-    expect(err.errorCode).toBe(401);
+  it('UserInvalidCredentialsError has 401', () => {
+    expect(new UserInvalidCredentialsError().errorCode).toBe(401);
   });
-});
 
-describe('ReminderNotCancellableError', () => {
-  it('has 409 status and includes the status string', () => {
+  it('ReminderNotCancellableError has 409 and includes the status', () => {
     const err = new ReminderNotCancellableError('SENT');
     expect(err.errorCode).toBe(409);
     expect(err.message).toContain('SENT');

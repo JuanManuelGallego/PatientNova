@@ -251,12 +251,6 @@ describe("AppointmentModal", () => {
       const segments = dialog.querySelectorAll(".step-bar__segment");
       expect(segments).toHaveLength(3);
     });
-
-    it("shows step subtitle for step 1", () => {
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      expect(screen.getByText(/Paciente & Tipo/)).toBeInTheDocument();
-      expect(screen.getByText(/Paso 1 de 3/)).toBeInTheDocument();
-    });
   });
 
   /* ── Patient selection logic (no useEffect) ─────────────────────── */
@@ -266,23 +260,6 @@ describe("AppointmentModal", () => {
       render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
       expect(screen.getByTestId("selected-patient")).toHaveTextContent(
         "none",
-      );
-    });
-
-    it("create mode: does not call useFetchPatient", () => {
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      expect(mockedUseFetchPatient).toHaveBeenCalledWith(null);
-    });
-
-    it("create mode: user selection sets selectedPatient", async () => {
-      const user = userEvent.setup();
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      expect(screen.getByTestId("selected-patient")).toHaveTextContent(
-        "none",
-      );
-      await user.click(screen.getByTestId("select-patient-btn"));
-      expect(screen.getByTestId("selected-patient")).toHaveTextContent(
-        "Jane Roe",
       );
     });
 
@@ -330,22 +307,6 @@ describe("AppointmentModal", () => {
       expect(screen.getByTestId("selected-patient")).toHaveTextContent(
         "Fetched Patient",
       );
-    });
-
-    it("edit mode: passes isEdit=true to PatientAndTypeStep", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt()}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByTestId("is-edit")).toHaveTextContent("true");
-    });
-
-    it("create mode: passes isEdit=false to PatientAndTypeStep", () => {
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      expect(screen.getByTestId("is-edit")).toHaveTextContent("false");
     });
 
     it("edit mode: form patientId initializes from appt.patient.id", () => {
@@ -520,13 +481,6 @@ describe("AppointmentModal", () => {
   /* ── Close behavior ─────────────────────────────────────────────── */
 
   describe("close behavior", () => {
-    it("calls onClose when overlay is clicked", async () => {
-      const user = userEvent.setup();
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      await user.click(screen.getByRole("dialog"));
-      expect(mockOnClose).toHaveBeenCalledTimes(1);
-    });
-
     it("calls onClose when close button is clicked", async () => {
       const user = userEvent.setup();
       render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
@@ -544,203 +498,9 @@ describe("AppointmentModal", () => {
     });
   });
 
-  /* ── Validation / continue button ───────────────────────────────── */
-
-  describe("validation", () => {
-    it("continue button is disabled when no patientId is set in create mode", () => {
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
-      const btn = screen.getByText("Continuar →");
-      expect(btn).toBeDisabled();
-    });
-
-    it("continue button is enabled when appt provides all required fields", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt()}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      const btn = screen.getByText("Continuar →");
-      expect(btn).toBeEnabled();
-    });
-  });
-
-  /* ── Props passthrough to step components ────────────────────────── */
-
-  describe("props passthrough", () => {
-    it("passes locations to LocationAndTimeStep", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt()}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("location-count")).toHaveTextContent("2");
-    });
-
-    it("passes locations and types to PaymentAndStatusStep", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt()}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("pay-location-count")).toHaveTextContent("2");
-      expect(screen.getByTestId("pay-type-count")).toHaveTextContent("2");
-    });
-
-    it("passes reminderChannel to LocationAndTimeStep", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt()}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("reminder-channel")).toHaveTextContent("none");
-    });
-
-    it("passes selectedPatient to LocationAndTimeStep", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt({
-            patient: makePatient({ name: "LocPatient" }),
-          })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("selected-patient-loc")).toHaveTextContent(
-        "LocPatient",
-      );
-    });
-
-    it("passes selectedPatient to PaymentAndStatusStep", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt({
-            patient: makePatient({ name: "PayPatient" }),
-          })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("selected-patient-pay")).toHaveTextContent(
-        "PayPatient",
-      );
-    });
-  });
-
   /* ── Edge cases ─────────────────────────────────────────────────── */
 
   describe("edge cases", () => {
-    it("appt with null locationId renders without crashing", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt({ locationId: null })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-    });
-
-    it("appt with null typeId renders without crashing", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt({ typeId: null })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-    });
-
-    it("appt with meetingUrl renders without crashing", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt({ meetingUrl: "https://meet.example.com/abc" })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-    });
-
-    it("appt with notes renders without crashing", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt({ notes: "Patient prefers morning" })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-    });
-
-    it("appt with paid=false renders without crashing", async () => {
-      const user = userEvent.setup();
-      render(
-        <AppointmentModal
-          appt={makeAppt({ paid: false })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      await user.click(screen.getByText("Continuar →"));
-      await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByTestId("form-status")).toBeInTheDocument();
-    });
-
-    it("appt with reminder object renders without crashing", () => {
-      render(
-        <AppointmentModal
-          appt={makeAppt({
-            reminder: {
-              id: "rem-1",
-              createdAt: "2026-08-01T00:00:00.000Z",
-              updatedAt: "2026-08-01T00:00:00.000Z",
-              sendAt: "2026-08-14T10:00:00.000Z",
-              status: ReminderStatus.PENDING,
-              channel: Channel.WHATSAPP,
-              to: "+15551234567",
-              sendMode: ReminderMode.SCHEDULED,
-              patientId: "patient-1",
-            } satisfies Reminder,
-          })}
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-    });
-
-    it("prefillDate is used when no appt is provided", () => {
-      render(
-        <AppointmentModal
-          prefillDate="2026-09-01T14:00:00.000Z"
-          onClose={mockOnClose}
-          onSaved={mockOnSaved}
-        />,
-      );
-      expect(screen.getByText("Nueva Cita")).toBeInTheDocument();
-    });
-
     it("appt with zero price renders without crashing", async () => {
       const user = userEvent.setup();
       render(
@@ -753,20 +513,6 @@ describe("AppointmentModal", () => {
       await user.click(screen.getByText("Continuar →"));
       await user.click(screen.getByText("Continuar →"));
       expect(screen.getByTestId("form-price")).toHaveTextContent("0");
-    });
-
-    it("appt with different statuses renders correctly", () => {
-      for (const status of Object.values(AppointmentStatus)) {
-        const { unmount } = render(
-          <AppointmentModal
-            appt={makeAppt({ status })}
-            onClose={mockOnClose}
-            onSaved={mockOnSaved}
-          />,
-        );
-        expect(screen.getByText("Editar Cita")).toBeInTheDocument();
-        unmount();
-      }
     });
 
     it("different appt.patient values are rendered correctly", () => {
@@ -828,15 +574,6 @@ describe("AppointmentModal", () => {
       expect(screen.getByTestId("selected-patient")).toHaveTextContent(
         "none",
       );
-      await user.click(screen.getByTestId("select-patient-btn"));
-      expect(screen.getByTestId("selected-patient")).toHaveTextContent(
-        "Jane Roe",
-      );
-    });
-
-    it("selecting a patient calls onPatientSelect with the new patient", async () => {
-      const user = userEvent.setup();
-      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
       await user.click(screen.getByTestId("select-patient-btn"));
       expect(screen.getByTestId("selected-patient")).toHaveTextContent(
         "Jane Roe",

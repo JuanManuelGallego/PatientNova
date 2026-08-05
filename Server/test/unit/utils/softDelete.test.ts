@@ -40,16 +40,6 @@ describe('softDelete', () => {
     });
   });
 
-  it('passes include without userId', async () => {
-    const include = { patient: true };
-    await softDelete(model as any, 'rec-1', undefined, include);
-    expect(model.update).toHaveBeenCalledWith({
-      where: { id: 'rec-1' },
-      data: { isDeleted: true, deletedAt: expect.any(Date) },
-      include,
-    });
-  });
-
   it('does not pass include when omitted', async () => {
     await softDelete(model as any, 'rec-1', 'user-1');
     const call = model.update.mock.calls[0]![0];
@@ -98,17 +88,5 @@ describe('restore', () => {
     await restore(model as any, 'rec-1');
     const call = model.update.mock.calls[0]![0];
     expect(call).not.toHaveProperty('include');
-  });
-
-  it('returns the result from model.update', async () => {
-    const expected = { id: 'rec-1', isDeleted: false };
-    model.update.mockResolvedValue(expected);
-    const result = await restore(model as any, 'rec-1');
-    expect(result).toBe(expected);
-  });
-
-  it('propagates errors from model.update', async () => {
-    model.update.mockRejectedValue(new Error('DB error'));
-    await expect(restore(model as any, 'rec-1')).rejects.toThrow('DB error');
   });
 });

@@ -98,8 +98,8 @@ describe('resolveTwilioError', () => {
     ];
     for (const code of codes) {
       const msg = resolveTwilioError(code);
-      expect(msg).toBeTruthy();
       expect(typeof msg).toBe('string');
+      expect(msg.length).toBeGreaterThan(0);
     }
   });
 });

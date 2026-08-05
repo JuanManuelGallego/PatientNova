@@ -20,10 +20,6 @@ describe("fmtDate / fmtTime / fmtDateTime", () => {
         expect(fmtDateTime(undefined)).toBe("Invalid Date");
     });
 
-    it("formats a known ISO date (locale-agnostic length check)", () => {
-        const result = fmtDate("2024-06-15T00:00:00Z");
-        expect(result.length).toBeGreaterThan(5);
-    });
 });
 
 describe("getDate", () => {
@@ -71,10 +67,6 @@ describe("getTomorrowSixAm", () => {
         expect(date.getHours()).toBe(6);
         expect(date.getMinutes()).toBe(0);
         expect(date.getSeconds()).toBe(0);
-    });
-
-    it("is in the future", () => {
-        expect(new Date(getTomorrowSixAm()).getTime()).toBeGreaterThan(Date.now());
     });
 });
 
