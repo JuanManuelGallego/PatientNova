@@ -33,6 +33,8 @@ describe('appointmentTypeRepository (integration)', () => {
     const other = await createTestUser();
     const created = await appointmentTypeRepository.create({ name: 'Shared Type', defaultDuration: 60 }, other.id);
     expect(created.id).toBeTruthy();
+    expect(created.name).toBe('Shared Type');
+    expect(created.userId).toBe(other.id);
   });
 
   it('lists only non-deleted types by default', async () => {

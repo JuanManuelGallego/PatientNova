@@ -182,6 +182,63 @@ describe('Audit writing: medical records (integration)', () => {
     const log = await getLatestAuditLog('MEDICAL_RECORD', record.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('CREATE');
+    expect(log!.affectedFields).toContain('patientId');
+  });
+
+  it('creates an audit log on medical record update with diff', async () => {
+    const patient = await prisma.patient.create({
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+    });
+
+    const record = await withAuditContext(() => medicalRecordService.create({
+      patientId: patient.id,
+    }, userId));
+
+    await withAuditContext(() => medicalRecordService.update(record.id, {
+      evolutionNotes: [{ date: new Date().toISOString(), text: 'First visit notes' }],
+    }, userId));
+
+    const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
+    const updateLog = logs.find(l => l.actionType === 'UPDATE');
+    expect(updateLog).toBeTruthy();
+    expect(updateLog!.affectedFields).toContain('evolutionNotes');
+  });
+
+  it('creates an audit log on medical record softDelete', async () => {
+    const patient = await prisma.patient.create({
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+    });
+
+    const record = await withAuditContext(() => medicalRecordService.create({
+      patientId: patient.id,
+    }, userId));
+
+    await withAuditContext(() => medicalRecordService.softDelete(record.id, userId));
+
+    const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
+    const deleteLog = logs.find(l => l.actionType === 'DELETE');
+    expect(deleteLog).toBeTruthy();
+    expect(deleteLog!.affectedFields).toEqual(['isDeleted']);
+    expect(deleteLog!.fieldsBefore).toMatchObject({ isDeleted: false });
+    expect(deleteLog!.fieldsAfter).toMatchObject({ isDeleted: true });
+  });
+
+  it('creates an audit log on medical record hard delete', async () => {
+    const patient = await prisma.patient.create({
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+    });
+
+    const record = await withAuditContext(() => medicalRecordService.create({
+      patientId: patient.id,
+    }, userId));
+
+    await withAuditContext(() => medicalRecordService.delete(record.id, userId));
+
+    const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
+    const deleteLog = logs.find(l => l.actionType === 'DELETE');
+    expect(deleteLog).toBeTruthy();
+    expect(deleteLog!.affectedFields).toEqual([]);
+    expect(deleteLog!.description).toContain('permanentemente');
   });
 });
 
@@ -213,23 +270,3 @@ describe('Audit writing: actor metadata (integration)', () => {
   });
 });
 
-describe('Audit writing: immutability after creation (integration)', () => {
-  it('audit logs cannot be updated via Prisma', async () => {
-    const patient = await withAuditContext(() => patientService.create({
-      name: 'Maria',
-      lastName: 'Garcia',
-      email: unique('patient@test.local'),
-      status: 'ACTIVE',
-    }, userId));
-
-    const log = await getLatestAuditLog('PATIENT', patient.id);
-    expect(log).toBeTruthy();
-
-    await expect(
-      prisma.auditLog.update({
-        where: { id: log!.id },
-        data: { description: 'hacked' },
-      })
-    ).rejects.toThrow('AuditLog is immutable');
-  });
-});

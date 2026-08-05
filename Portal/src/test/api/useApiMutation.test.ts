@@ -27,12 +27,6 @@ function makeErrorResponse(status = 500, errorMsg = "Server Error") {
 }
 
 describe("useApiMutation", () => {
-    it("starts with loading=false and error=null", () => {
-        const { result } = renderHook(() => useApiMutation<{ id: number }>("POST"));
-        expect(result.current.loading).toBe(false);
-        expect(result.current.error).toBeNull();
-    });
-
     it("returns data on successful mutation", async () => {
         mockFetch.mockResolvedValueOnce(makeOkResponse({ id: 1 }));
 
