@@ -1,18 +1,33 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { ReminderModal } from './ReminderModal';
 import { EditReminderModal } from './EditReminderModal';
 import { CancelReminderModal } from './CancelReminderModal';
 import { ReminderDrawer } from './ReminderDrawer';
 
 export class RemindersPage extends BasePage {
-  readonly createButton = this.page.getByRole('button', { name: 'Nuevo Recordatorio' });
-  readonly table = this.page.getByRole('table');
-  readonly searchInput = this.page.getByPlaceholder(/Buscar por nombre, número, canal/);
+  readonly createButton: Locator;
+  readonly table: Locator;
+  readonly searchInput: Locator;
+  readonly tabActive: Locator;
+  readonly tabHistory: Locator;
+  readonly tabBulk: Locator;
+  readonly rescheduleTestId: string;
+  readonly cancelTestId: string;
+  readonly retryTestId: string;
 
-  readonly tabActive = this.page.getByRole('button', { name: 'Activos' });
-  readonly tabHistory = this.page.getByRole('button', { name: 'Historial' });
-  readonly tabBulk = this.page.getByRole('button', { name: 'Envío Masivo' });
+  constructor(page: Page) {
+    super(page);
+    this.createButton = this.page.getByTestId('reminders-new-button');
+    this.table = this.page.getByRole('table');
+    this.searchInput = this.page.getByPlaceholder(/Buscar por nombre, número, canal/);
+    this.tabActive = this.page.getByTestId('reminders-tab-active');
+    this.tabHistory = this.page.getByTestId('reminders-tab-history');
+    this.tabBulk = this.page.getByTestId('reminders-tab-bulk');
+    this.rescheduleTestId = 'reminder-reschedule-button';
+    this.cancelTestId = 'reminder-row-cancel-button';
+    this.retryTestId = 'reminder-row-retry-button';
+  }
 
   async openCreateModal() {
     await this.createButton.click();
@@ -43,7 +58,7 @@ export class RemindersPage extends BasePage {
 
   async rescheduleReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.getByRole('button', { name: /Reprogramar/ }).click();
+    await row.locator(`[data-testid="${this.rescheduleTestId}"]`).click();
     const modal = new EditReminderModal(this.page);
     await expect(modal.panel).toBeVisible();
     return modal;
@@ -51,7 +66,7 @@ export class RemindersPage extends BasePage {
 
   async cancelReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.locator('.btn-action-delete').click();
+    await row.locator(`[data-testid="${this.cancelTestId}"]`).click();
     const modal = new CancelReminderModal(this.page);
     await expect(modal.dialog).toBeVisible();
     return modal;
@@ -59,7 +74,7 @@ export class RemindersPage extends BasePage {
 
   async retryReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.locator('.btn-action-edit').click();
+    await row.locator(`[data-testid="${this.retryTestId}"]`).click();
   }
 
   async expectReminderVisible(rowText: string) {

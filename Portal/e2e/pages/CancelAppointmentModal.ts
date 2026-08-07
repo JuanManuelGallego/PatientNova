@@ -8,9 +8,9 @@ export class CancelAppointmentModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('alertdialog', { name: 'Cancelar Cita' });
-    this.confirmButton = this.dialog.getByRole('button', { name: 'Sí, cancelar' });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Regresar' });
+    this.dialog = page.getByTestId('cancel-appointment-dialog');
+    this.confirmButton = this.dialog.getByTestId('cancel-appointment-confirm-button');
+    this.cancelButton = this.dialog.getByTestId('cancel-appointment-cancel-button');
   }
 
   async confirm() {

@@ -71,7 +71,7 @@ export function AppointmentTypesTab() {
             Configura los tipos de cita que ofreces
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setModalType(null)}>
+        <button className="btn-primary" onClick={() => setModalType(null)} data-testid="settings-new-type-button">
           Nuevo tipo
         </button>
       </div>

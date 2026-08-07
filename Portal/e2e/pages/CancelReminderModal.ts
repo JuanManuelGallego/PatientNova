@@ -8,9 +8,9 @@ export class CancelReminderModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('alertdialog', { name: /Cancelar Recordatorio/ });
-    this.confirmButton = this.dialog.getByRole('button', { name: 'Sí, cancelar' });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Regresar' });
+    this.dialog = page.getByTestId('cancel-reminder-dialog');
+    this.confirmButton = this.dialog.getByTestId('cancel-reminder-confirm-button');
+    this.cancelButton = this.dialog.getByTestId('cancel-reminder-cancel-button');
   }
 
   async confirm() {

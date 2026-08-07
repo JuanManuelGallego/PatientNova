@@ -8,9 +8,9 @@ export class EditReminderModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('.modal-panel--sm');
-    this.saveButton = this.panel.getByRole('button', { name: 'Reprogramar' });
-    this.cancelButton = this.panel.getByRole('button', { name: 'Cancelar' });
+    this.panel = page.getByTestId('edit-reminder-modal-panel');
+    this.saveButton = this.panel.getByTestId('edit-reminder-save-button');
+    this.cancelButton = this.panel.getByTestId('edit-reminder-cancel-button');
   }
 
   async save() {

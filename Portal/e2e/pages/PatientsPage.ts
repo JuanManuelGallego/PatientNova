@@ -1,16 +1,30 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { PatientModal } from './PatientModal';
 import { DeletePatientModal } from './DeletePatientModal';
 import { PatientDrawer } from './PatientDrawer';
 
 export class PatientsPage extends BasePage {
-  readonly createButton = this.page.getByRole('button', { name: 'Nuevo Paciente' });
-  readonly table = this.page.getByRole('table');
-  readonly searchInput = this.page.getByPlaceholder(/Buscar/);
-  readonly statTotal = this.page.locator('.stat-card').filter({ hasText: 'Total Pacientes' });
-  readonly statActive = this.page.locator('.stat-card').filter({ hasText: 'Activos' });
-  readonly statInactive = this.page.locator('.stat-card').filter({ hasText: 'Inactivos' });
+  readonly createButton: Locator;
+  readonly table: Locator;
+  readonly searchInput: Locator;
+  readonly statTotal: Locator;
+  readonly statActive: Locator;
+  readonly statInactive: Locator;
+  readonly deleteRowButton: Locator;
+  readonly deleteRowTestId: string;
+
+  constructor(page: Page) {
+    super(page);
+    this.createButton = this.page.getByTestId('patients-new-button');
+    this.table = this.page.getByRole('table');
+    this.searchInput = this.page.getByPlaceholder(/Buscar/);
+    this.statTotal = this.page.getByTestId('stat-card-total-pacientes');
+    this.statActive = this.page.getByTestId('stat-card-activos');
+    this.statInactive = this.page.getByTestId('stat-card-inactivos');
+    this.deleteRowButton = this.page.getByTestId('patient-row-delete-button');
+    this.deleteRowTestId = 'patient-row-delete-button';
+  }
 
   async openCreateModal() {
     await this.createButton.click();
@@ -43,7 +57,7 @@ export class PatientsPage extends BasePage {
 
   async openDeleteModal(name: string) {
     const row = this.table.getByRole('row').filter({ hasText: name });
-    await row.locator('.btn-action-delete').click();
+    await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
     const modal = new DeletePatientModal(this.page);
     await expect(modal.dialog).toBeVisible();
     return modal;

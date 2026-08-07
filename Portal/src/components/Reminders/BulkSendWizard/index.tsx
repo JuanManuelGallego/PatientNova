@@ -91,7 +91,7 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
   ]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }} data-testid="bulk-send-wizard">
       <WizardStepper step={step} />
       {error && (
         <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>

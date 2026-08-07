@@ -9,10 +9,10 @@ export class PatientDrawer {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('.drawer-panel');
-    this.closeButton = page.locator('.drawer-panel .btn-close--transparent');
-    this.editButton = this.panel.getByRole('button', { name: /Editar/ });
-    this.deleteButton = this.panel.locator('.btn-drawer-delete');
+    this.panel = page.getByTestId('patient-drawer-panel');
+    this.closeButton = page.getByTestId('patient-drawer-close-button');
+    this.editButton = this.panel.getByTestId('patient-drawer-edit-button');
+    this.deleteButton = this.panel.getByTestId('patient-drawer-delete-button');
   }
 
   async waitForOpen() {

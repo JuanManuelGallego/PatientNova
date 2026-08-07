@@ -38,7 +38,7 @@ export function ReminderDrawer({
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
-      <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="reminder-drawer-panel">
         <div
           className="drawer-header"
           style={{ background: s.bg, borderBottom: `3px solid ${s.dot}` }}
@@ -52,7 +52,7 @@ export function ReminderDrawer({
                 <ReminderStatusPill status={reminder.status} />
               </div>
             </div>
-            <button onClick={onClose} className="btn-close--transparent">
+            <button onClick={onClose} className="btn-close--transparent" data-testid="reminder-drawer-close-button">
               <ACTION_ICONS.close size={16} />
             </button>
           </div>
@@ -184,10 +184,10 @@ export function ReminderDrawer({
         </div>
         {isActive && (
           <div className="drawer-footer">
-            <button onClick={onEdit} className="btn-primary btn-primary--block">
+            <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="reminder-drawer-reschedule-button">
               <ACTION_ICONS.edit size={14} /> Reprogramar
             </button>
-            <button onClick={onCancel} className="btn-drawer-delete">
+            <button onClick={onCancel} className="btn-drawer-delete" data-testid="reminder-drawer-cancel-button">
               <ACTION_ICONS.delete size={14} />
             </button>
           </div>
@@ -199,6 +199,7 @@ export function ReminderDrawer({
               disabled={retryLoading || retriesExhausted}
               title={retriesExhausted ? 'Máximo de reintentos alcanzado' : undefined}
               className="btn-primary btn-primary--block"
+              data-testid="reminder-drawer-retry-button"
             >
               <ACTION_ICONS.retry size={14} /> {retryLoading ? 'Reintentando…' : 'Reintentar'}
             </button>

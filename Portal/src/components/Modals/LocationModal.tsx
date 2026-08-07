@@ -78,6 +78,7 @@ export function LocationModal({
       <div
         ref={ref}
         className="modal-panel modal-panel--sm"
+        data-testid="location-modal-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
@@ -91,7 +92,7 @@ export function LocationModal({
                 : "Configura un nuevo lugar de atención"}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="location-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -110,6 +111,7 @@ export function LocationModal({
               value={form.name}
               onChange={setField("name")}
               placeholder="Consultorio Centro"
+              data-testid="location-name-input"
               required
             />
           </label>
@@ -160,6 +162,7 @@ export function LocationModal({
                   }))
                 }
                 style={{ width: 15, height: 15 }}
+                data-testid="location-virtual-checkbox"
               />
               <span>
                 Es ubicación virtual
@@ -186,6 +189,7 @@ export function LocationModal({
                   onChange={setField("address")}
                   placeholder="Calle 50 #30-20"
                   disabled={form.isVirtual}
+                  data-testid="location-address-input"
                 />
               </label>
               <label className="form-label">
@@ -196,6 +200,7 @@ export function LocationModal({
                   onChange={setField("instructions")}
                   placeholder="Preguntar en recepcion por el local 5"
                   disabled={form.isVirtual}
+                  data-testid="location-instructions-input"
                 />
               </label>
             </>
@@ -207,6 +212,7 @@ export function LocationModal({
               className="btn-secondary"
               onClick={onClose}
               disabled={saving}
+              data-testid="location-modal-cancel-button"
             >
               {LBL_CANCEL}
             </button>
@@ -219,6 +225,7 @@ export function LocationModal({
                 (!form.isVirtual && !form.address.trim()) ||
                 (!form.isVirtual && !form.instructions.trim())
               }
+              data-testid="location-modal-submit-button"
             >
               {saving ? LBL_SAVING : isEdit ? LBL_SAVE : LBL_CREATE_LOCATION}
             </button>

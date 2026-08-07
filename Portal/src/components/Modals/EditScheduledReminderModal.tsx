@@ -44,6 +44,7 @@ export function EditScheduledReminderModal({
         ref={ref}
         className="modal-panel modal-panel--sm"
         onClick={(e) => e.stopPropagation()}
+        data-testid="edit-reminder-modal-panel"
       >
         <div className="modal-header">
           <h2 className="modal-title modal-title--sm">
@@ -87,6 +88,7 @@ export function EditScheduledReminderModal({
             onClick={onClose}
             className="btn-secondary btn-block"
             disabled={saving}
+            data-testid="edit-reminder-cancel-button"
           >
             Cancelar
           </button>
@@ -94,6 +96,7 @@ export function EditScheduledReminderModal({
             onClick={handleSave}
             disabled={saving}
             className="btn-primary btn-block"
+            data-testid="edit-reminder-save-button"
           >
             {saving ? "Guardando…" : "Reprogramar"}
           </button>

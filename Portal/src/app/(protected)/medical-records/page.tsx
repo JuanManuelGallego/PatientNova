@@ -108,7 +108,7 @@ function MedicalRecordsPageContent() {
         subtitle={todayString()}
         actions={
           medicalRecord && (
-            <button type="button" className="btn-primary" onClick={() => downloadMedicalRecordPDF(user, form)}>
+            <button type="button" className="btn-primary" onClick={() => downloadMedicalRecordPDF(user, form)} data-testid="medical-records-download-pdf-button">
               Descargar PDF
             </button>
           )
@@ -145,10 +145,10 @@ function MedicalRecordsPageContent() {
           <div style={{ textAlign: "center", padding: 24 }}>
             <MedicalRecordCard title="" icon="">
               <p className="dash-empty__text" style={{ paddingBottom: 10 }}>El paciente no tiene una historia clínica registrada.</p>
-              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(false)} style={{ marginRight: 8 }}>
+              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(false)} style={{ marginRight: 8 }} data-testid="medical-records-create-individual-button">
                 Crear historia clínica individual
               </button>
-              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(true)}>
+              <button type="button" className="btn-primary" onClick={() => handleCreateRecord(true)} data-testid="medical-records-create-family-button">
                 Crear historia clínica de familia
               </button>
             </MedicalRecordCard>

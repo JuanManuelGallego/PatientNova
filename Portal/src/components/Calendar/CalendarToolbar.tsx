@@ -15,6 +15,7 @@ export function CalendarToolbar({
         onClick={onPrev}
         className="btn-secondary"
         style={{ padding: "7px 14px", fontSize: 16 }}
+        data-testid="calendar-nav-prev-button"
       >
         &#8249;
       </button>
@@ -27,7 +28,7 @@ export function CalendarToolbar({
         }}
       >
         <span className="cal-month-label">{navLabel}</span>
-        <button onClick={onToday} className="btn-secondary btn-secondary--sm">
+        <button onClick={onToday} className="btn-secondary btn-secondary--sm" data-testid="calendar-today-button">
           Hoy
         </button>
         <div style={calendarStyles.viewToggle}>
@@ -39,6 +40,7 @@ export function CalendarToolbar({
                 ...calendarStyles.viewToggleBtn,
                 ...(viewMode === v ? calendarStyles.viewToggleBtnActive : calendarStyles.viewToggleBtnDisabled),
               }}
+              data-testid={v === ViewMode.Month ? "calendar-view-month-button" : "calendar-view-week-button"}
               title={
                 v === ViewMode.Month
                   ? "Vista mensual (M)"
@@ -54,6 +56,7 @@ export function CalendarToolbar({
         onClick={onNext}
         className="btn-secondary"
         style={{ padding: "7px 14px", fontSize: 16 }}
+        data-testid="calendar-nav-next-button"
       >
         &#8250;
       </button>

@@ -14,7 +14,7 @@ export function StatCard({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card" data-testid={label ? `stat-card-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined}>
       <div className="stat-card__top">
         <span className="stat-card__label">{label}</span>
         {Icon && (

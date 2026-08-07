@@ -3,10 +3,18 @@ import { expect, Page, Locator } from '@playwright/test';
 export class ReminderModal {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly nextButton: Locator;
+  readonly backButton: Locator;
+  readonly submitButton: Locator;
+  readonly closeButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /Recordatorio/ });
+    this.dialog = page.getByTestId('reminder-modal-dialog');
+    this.nextButton = this.dialog.getByTestId('reminder-modal-next-button');
+    this.backButton = this.dialog.getByTestId('reminder-modal-back-button');
+    this.submitButton = this.dialog.getByTestId('reminder-modal-submit-button');
+    this.closeButton = this.dialog.getByTestId('reminder-modal-close-button');
   }
 
   async waitForOpen() {
@@ -18,19 +26,19 @@ export class ReminderModal {
   }
 
   async next() {
-    await this.dialog.getByRole('button', { name: /Continuar/ }).click();
+    await this.nextButton.click();
   }
 
   async back() {
-    await this.dialog.getByRole('button', { name: /Atrás/ }).click();
+    await this.backButton.click();
   }
 
   async submit() {
-    await this.dialog.getByRole('button', { name: /Enviar ahora|Programar/ }).click();
+    await this.submitButton.click();
   }
 
   async cancel() {
-    await this.dialog.locator('.btn-close').click();
+    await this.closeButton.click();
     await this.waitForClose();
   }
 }

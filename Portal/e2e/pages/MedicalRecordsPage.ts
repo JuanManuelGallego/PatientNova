@@ -1,11 +1,19 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 
 export class MedicalRecordsPage extends BasePage {
-  readonly createIndividualButton = this.page.getByRole('button', { name: /Crear historia clínica individual/ });
-  readonly createFamilyButton = this.page.getByRole('button', { name: /Crear historia clínica de familia/ });
-  readonly downloadPdfButton = this.page.getByRole('button', { name: /Descargar PDF/ });
-  readonly patientInput = this.page.getByPlaceholder(/Seleccionar paciente/);
+  readonly createIndividualButton: Locator;
+  readonly createFamilyButton: Locator;
+  readonly downloadPdfButton: Locator;
+  readonly patientInput: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.createIndividualButton = this.page.getByTestId('medical-records-create-individual-button');
+    this.createFamilyButton = this.page.getByTestId('medical-records-create-family-button');
+    this.downloadPdfButton = this.page.getByTestId('medical-records-download-pdf-button');
+    this.patientInput = this.page.getByTestId('medical-records-patient-input');
+  }
 
   async selectPatient(name: string) {
     await this.patientInput.fill(name);

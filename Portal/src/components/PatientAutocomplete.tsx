@@ -281,6 +281,7 @@ export function PatientAutocomplete({
           type="text"
           role="combobox"
           className="patient-autocomplete__input"
+          data-testid="medical-records-patient-input"
           value={displayValue}
           placeholder={placeholder}
           disabled={disabled}

@@ -86,6 +86,7 @@ interface DataTableProps<T> {
   emptyState?: React.ReactNode;
   /** Rendered inside the footer bar (flex row, space-between). Hidden when rows is empty. */
   footer?: React.ReactNode;
+  testId?: string;
 }
 
 export function DataTable<T>({
@@ -96,12 +97,13 @@ export function DataTable<T>({
   renderRow,
   emptyState,
   footer,
+  testId,
 }: DataTableProps<T>) {
   return (
     <div className="table-card">
       {/* responsive: horizontal scroll wrapper for narrow viewports */}
       <div className="table-scroll">
-        <table className="table-full">
+        <table className="table-full" data-testid={testId}>
           <thead>
             <tr>
               {columns.map((h) => (

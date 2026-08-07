@@ -84,6 +84,7 @@ export function AppointmentTypeModal({
         ref={ref}
         className="modal-panel modal-panel--sm"
         onClick={(e) => e.stopPropagation()}
+        data-testid="appointment-type-modal-panel"
       >
         <div className="modal-header">
           <div>
@@ -117,6 +118,7 @@ export function AppointmentTypeModal({
                 onChange={setField("name")}
                 placeholder="Individual"
                 required
+                data-testid="appointment-type-name-input"
               />
             </label>
             <label className="form-label">
@@ -132,6 +134,7 @@ export function AppointmentTypeModal({
                     defaultDuration: Number(e.target.value),
                   }))
                 }
+                data-testid="appointment-type-duration-input"
               />
             </label>
           </div>
@@ -143,6 +146,7 @@ export function AppointmentTypeModal({
               value={form.description}
               onChange={setField("description")}
               placeholder="Sesión individual de terapia"
+              data-testid="appointment-type-description-input"
             />
           </label>
 
@@ -162,6 +166,7 @@ export function AppointmentTypeModal({
                       defaultPrice: Number(e.target.value),
                     }))
                   }
+                  data-testid="appointment-type-price-input"
                 />
               </div>
             </label>
@@ -190,6 +195,7 @@ export function AppointmentTypeModal({
               className="btn-secondary"
               onClick={onClose}
               disabled={saving}
+              data-testid="appointment-type-cancel-button"
             >
               {LBL_CANCEL}
             </button>
@@ -197,6 +203,7 @@ export function AppointmentTypeModal({
               type="submit"
               className="btn-primary btn-hero"
               disabled={saving || !form.name.trim()}
+              data-testid="appointment-type-submit-button"
             >
               {saving ? LBL_SAVING : isEdit ? LBL_SAVE : LBL_CREATE_APPT_TYPE}
             </button>

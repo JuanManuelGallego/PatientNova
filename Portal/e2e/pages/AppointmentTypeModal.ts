@@ -12,13 +12,13 @@ export class AppointmentTypeModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.locator('.modal-overlay .modal-panel--sm');
-    this.nameInput = this.dialog.getByLabel('Nombre');
-    this.durationInput = this.dialog.getByLabel('Duración por defecto (min)');
-    this.descriptionInput = this.dialog.getByLabel('Descripción');
-    this.priceInput = this.dialog.getByLabel('Precio por defecto');
-    this.submitButton = this.dialog.getByRole('button', { name: /Crear tipo|Guardar Cambios/ });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Cancelar' });
+    this.dialog = page.getByTestId('appointment-type-modal-panel');
+    this.nameInput = this.dialog.getByTestId('appointment-type-name-input');
+    this.durationInput = this.dialog.getByTestId('appointment-type-duration-input');
+    this.descriptionInput = this.dialog.getByTestId('appointment-type-description-input');
+    this.priceInput = this.dialog.getByTestId('appointment-type-price-input');
+    this.submitButton = this.dialog.getByTestId('appointment-type-submit-button');
+    this.cancelButton = this.dialog.getByTestId('appointment-type-cancel-button');
   }
 
   async waitForOpen() {

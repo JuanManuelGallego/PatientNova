@@ -67,6 +67,7 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
+              data-testid="login-email-input"
             />
           </label>
 
@@ -82,6 +83,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
+                data-testid="login-password-input"
               />
               <button
                 type="button"
@@ -98,7 +100,7 @@ function LoginForm() {
           </label>
 
           {error && (
-            <div className="login-card__error" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="login-card__error" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="login-error-alert">
               <STATUS_ICONS.warning size={14} />{" "}
               Credenciales incorrectas
             </div>
@@ -108,6 +110,7 @@ function LoginForm() {
             type="submit"
             className="btn-primary login-card__submit"
             disabled={loading || !email || !password}
+            data-testid="login-submit-button"
           >
             {loading ? "Iniciando sesión…" : "Iniciar sesión"}
           </button>

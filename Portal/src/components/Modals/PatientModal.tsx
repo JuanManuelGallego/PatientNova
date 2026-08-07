@@ -157,6 +157,7 @@ export function PatientModal({
       aria-label={isEdit ? "Editar Paciente" : "Nuevo Paciente"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid="patient-modal-dialog"
     >
       <div
         className="modal-panel modal-panel--md"
@@ -173,7 +174,7 @@ export function PatientModal({
                 : "Registrar un nuevo paciente en el sistema"}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="patient-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -191,6 +192,7 @@ export function PatientModal({
                 value={form.name}
                 onChange={set("name")}
                 placeholder="ej. María"
+                data-testid="patient-name-input"
               />
             </label>
             <label className="form-label">
@@ -201,6 +203,7 @@ export function PatientModal({
                 value={form.lastName}
                 onChange={set("lastName")}
                 placeholder="ej. García"
+                data-testid="patient-lastname-input"
               />
             </label>
           </div>
@@ -212,6 +215,7 @@ export function PatientModal({
               value={form.email || undefined}
               onChange={set("email")}
               placeholder="paciente@ejemplo.com"
+              data-testid="patient-email-input"
             />
           </label>
           <div className="form-grid-2">
@@ -336,13 +340,14 @@ export function PatientModal({
           )}
         </div>
         <div className="modal-footer">
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>
+          <button onClick={onClose} className="btn-secondary" disabled={saving} data-testid="patient-modal-cancel-button">
             {LBL_CANCEL}
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving || !isValid}
             className="btn-primary"
+            data-testid="patient-modal-submit-button"
           >
             {saving
               ? LBL_SAVING

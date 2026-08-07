@@ -1,15 +1,25 @@
 import { BasePage } from './BasePage';
-import { expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 export class DashboardPage extends BasePage {
-  readonly statCitasHoy = this.page.locator('.stat-card').filter({ hasText: 'Citas Hoy' });
-  readonly statPacientes = this.page.locator('.stat-card').filter({ hasText: 'Pacientes' });
-  readonly statRecordatorios = this.page.locator('.stat-card').filter({ hasText: 'Recordatorios' });
-  readonly statSinPagar = this.page.locator('.stat-card').filter({ hasText: 'Sin Pagar' });
-  readonly statIngresos = this.page.locator('.stat-card').filter({ hasText: 'Ingresos' });
+  readonly statCitasHoy: Locator;
+  readonly statPacientes: Locator;
+  readonly statRecordatorios: Locator;
+  readonly statSinPagar: Locator;
+  readonly statIngresos: Locator;
+  readonly newAppointmentButton: Locator;
+  readonly newPatientButton: Locator;
 
-  readonly newAppointmentButton = this.page.getByRole('link', { name: 'Nueva Cita' });
-  readonly newPatientButton = this.page.getByRole('link', { name: 'Nuevo Paciente' });
+  constructor(page: Page) {
+    super(page);
+    this.statCitasHoy = this.page.getByTestId('stat-card-citas-hoy');
+    this.statPacientes = this.page.getByTestId('stat-card-pacientes');
+    this.statRecordatorios = this.page.getByTestId('stat-card-recordatorios');
+    this.statSinPagar = this.page.getByTestId('stat-card-sin-pagar');
+    this.statIngresos = this.page.getByTestId('stat-card-ingresos');
+    this.newAppointmentButton = this.page.getByTestId('dashboard-new-appointment-button');
+    this.newPatientButton = this.page.getByTestId('dashboard-new-patient-button');
+  }
 
   async expectLoaded() {
     await expect(this.page.getByText(/Buenos días|Buenas tardes|Buenas noches/)).toBeVisible();
