@@ -136,10 +136,11 @@ jobs:
         working-directory: Portal
         run: npx playwright test
         env:
-          BASE_URL: https://staging.patientnova.net
-          API_BASE_URL: https://api.staging.patientnova.net
-          ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
-          ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+          CI: "true"
+          PLAYWRIGHT_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+          TEST_USER_EMAIL: ${{ secrets.STAGING_TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.STAGING_TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: failure()
