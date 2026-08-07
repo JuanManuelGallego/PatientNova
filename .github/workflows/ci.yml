@@ -112,3 +112,38 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:integration
+
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [portal, server]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "npm"
+          cache-dependency-path: Portal/package-lock.json
+      - name: Install Portal deps
+        working-directory: Portal
+        run: npm ci
+      - name: Install Playwright browsers
+        working-directory: Portal
+        run: npx playwright install chromium --with-deps
+      - name: Run E2E tests
+        working-directory: Portal
+        run: npx playwright test
+        env:
+          BASE_URL: https://staging.patientnova.net
+          API_BASE_URL: https://api.staging.patientnova.net
+          ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: Portal/playwright-report/
+          retention-days: 30
