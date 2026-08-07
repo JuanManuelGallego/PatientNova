@@ -35,6 +35,7 @@ export function DeleteLocationModal({
       loadingLabel="Desactivando…"
       loading={loading}
       error={error}
+      testId="delete-location-dialog"
       onClose={onClose}
       onConfirm={handleConfirm}
     >
