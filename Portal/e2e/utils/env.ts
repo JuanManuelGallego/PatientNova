@@ -1,6 +1,8 @@
 import { config } from 'dotenv-safe';
 
-config({ path: 'e2e/.env', example: 'e2e/.env.example', allowEmptyValues: true });
+if (!process.env.CI) {
+    config({ path: 'e2e/.env', example: 'e2e/.env.example', allowEmptyValues: true });
+}
 
 export const Env = {
     baseUrl: process.env.PLAYWRIGHT_BASE_URL as string,
