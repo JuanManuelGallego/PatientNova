@@ -12,13 +12,13 @@ export class LocationModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.locator('.modal-overlay .modal-panel--sm');
-    this.nameInput = this.dialog.getByLabel('Nombre');
-    this.addressInput = this.dialog.getByLabel('Dirección');
-    this.instructionsInput = this.dialog.getByLabel('Instrucciones para los pacientes');
-    this.virtualCheckbox = this.dialog.getByLabel('Es ubicación virtual');
-    this.submitButton = this.dialog.getByRole('button', { name: /Crear ubicación|Guardar Cambios/ });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Cancelar' });
+    this.dialog = page.getByTestId('location-modal-panel');
+    this.nameInput = this.dialog.getByTestId('location-name-input');
+    this.addressInput = this.dialog.getByTestId('location-address-input');
+    this.instructionsInput = this.dialog.getByTestId('location-instructions-input');
+    this.virtualCheckbox = this.dialog.getByTestId('location-virtual-checkbox');
+    this.submitButton = this.dialog.getByTestId('location-modal-submit-button');
+    this.cancelButton = this.dialog.getByTestId('location-modal-cancel-button');
   }
 
   async waitForOpen() {

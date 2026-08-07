@@ -1,15 +1,29 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { LocationModal } from './LocationModal';
 import { AppointmentTypeModal } from './AppointmentTypeModal';
 
 export class SettingsPage extends BasePage {
-  readonly tabProfile = this.page.getByRole('button', { name: 'Perfil' });
-  readonly tabSecurity = this.page.getByRole('button', { name: 'Seguridad' });
-  readonly tabLocations = this.page.getByRole('button', { name: 'Ubicaciones' });
-  readonly tabAppointmentTypes = this.page.getByRole('button', { name: 'Tipos de Cita' });
-  readonly tabReminders = this.page.getByRole('button', { name: 'Recordatorios' });
-  readonly tabAuditLogs = this.page.getByRole('button', { name: 'Registro de actividad' });
+  readonly tabProfile: Locator;
+  readonly tabSecurity: Locator;
+  readonly tabLocations: Locator;
+  readonly tabAppointmentTypes: Locator;
+  readonly tabReminders: Locator;
+  readonly tabAuditLogs: Locator;
+  readonly newLocationButton: Locator;
+  readonly newTypeButton: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.tabProfile = this.page.getByTestId('settings-tab-perfil');
+    this.tabSecurity = this.page.getByTestId('settings-tab-seguridad');
+    this.tabLocations = this.page.getByTestId('settings-tab-ubicaciones');
+    this.tabAppointmentTypes = this.page.getByTestId('settings-tab-tipos-de-cita');
+    this.tabReminders = this.page.getByTestId('settings-tab-recordatorios');
+    this.tabAuditLogs = this.page.getByTestId('settings-tab-registro-de-actividad');
+    this.newLocationButton = this.page.getByTestId('settings-new-location-button');
+    this.newTypeButton = this.page.getByTestId('settings-new-type-button');
+  }
 
   async goToProfile() { await this.tabProfile.click(); }
   async goToSecurity() { await this.tabSecurity.click(); }
@@ -20,7 +34,7 @@ export class SettingsPage extends BasePage {
 
   async openLocationModal() {
     await this.tabLocations.click();
-    await this.page.getByRole('button', { name: 'Nueva ubicación' }).click();
+    await this.newLocationButton.click();
     const modal = new LocationModal(this.page);
     await modal.waitForOpen();
     return modal;
@@ -28,7 +42,7 @@ export class SettingsPage extends BasePage {
 
   async openAppointmentTypeModal() {
     await this.tabAppointmentTypes.click();
-    await this.page.getByRole('button', { name: 'Nuevo tipo' }).click();
+    await this.newTypeButton.click();
     const modal = new AppointmentTypeModal(this.page);
     await modal.waitForOpen();
     return modal;

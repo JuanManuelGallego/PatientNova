@@ -99,12 +99,14 @@ function CalendarContent() {
               <button
                 onClick={() => setShowCreateBlockedTime(true)}
                 className="btn-secondary"
+                data-testid="calendar-block-time-button"
               >
                 Bloquear Horario
               </button>
               <button
                 onClick={() => setShowCreate(true)}
                 className="btn-primary btn-hero"
+                data-testid="calendar-new-appointment-button"
               >
                 Nueva Cita
               </button>

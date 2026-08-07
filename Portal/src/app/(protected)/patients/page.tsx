@@ -93,6 +93,7 @@ function PatientsPageContent() {
               <button
                 onClick={() => setShowCreate(true)}
                 className="btn-primary btn-hero"
+                data-testid="patients-new-button"
               >
                 Nuevo Paciente
               </button>
@@ -232,6 +233,7 @@ function PatientsPageContent() {
                       setDeletePatient(p);
                     }}
                     className="btn-action-delete"
+                    data-testid="patient-row-delete-button"
                   >
                     <ACTION_ICONS.close size={14} />
                   </button>

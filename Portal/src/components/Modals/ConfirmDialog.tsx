@@ -14,6 +14,7 @@ interface ConfirmDialogProps {
   loading?: boolean;
   error?: string | null;
   nested?: boolean;
+  testId?: string;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   loading = false,
   error = null,
   nested = false,
+  testId,
   onClose,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -43,6 +45,7 @@ export function ConfirmDialog({
       aria-label={title}
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid={testId}
     >
       <div
         className="modal-panel modal-panel--sm"
@@ -65,6 +68,7 @@ export function ConfirmDialog({
             onClick={onClose}
             className="btn-secondary btn-block"
             disabled={loading}
+            data-testid={testId ? `${testId}-cancel-button` : undefined}
           >
             {cancelLabel}
           </button>
@@ -72,6 +76,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={loading}
             className="btn-danger btn-block"
+            data-testid={testId ? `${testId}-confirm-button` : undefined}
           >
             {loading ? (loadingLabel ?? `${confirmLabel}…`) : confirmLabel}
           </button>

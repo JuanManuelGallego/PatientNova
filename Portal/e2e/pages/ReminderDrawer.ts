@@ -10,11 +10,11 @@ export class ReminderDrawer {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('.drawer-panel');
-    this.closeButton = page.locator('.drawer-panel .btn-close--transparent');
-    this.rescheduleButton = this.panel.getByRole('button', { name: 'Reprogramar' });
-    this.retryButton = this.panel.getByRole('button', { name: /Reintentar/ });
-    this.deleteButton = this.panel.locator('.btn-drawer-delete');
+    this.panel = page.getByTestId('reminder-drawer-panel');
+    this.closeButton = page.getByTestId('reminder-drawer-close-button');
+    this.rescheduleButton = this.panel.getByTestId('reminder-drawer-reschedule-button');
+    this.retryButton = this.panel.getByTestId('reminder-drawer-retry-button');
+    this.deleteButton = this.panel.getByTestId('reminder-drawer-cancel-button');
   }
 
   async waitForOpen() {

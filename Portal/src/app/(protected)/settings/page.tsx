@@ -28,6 +28,7 @@ export default function SettingsPage() {
                         key={t}
                         className={`filter-chip${tab === t ? " filter-chip--active" : ""}`}
                         onClick={() => setTab(t)}
+                        data-testid={`settings-tab-${t.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                        {t}
                     </button>

@@ -10,11 +10,11 @@ export class AppointmentDrawer {
 
   constructor(page: Page) {
     this.page = page;
-    this.panel = page.locator('.drawer-panel');
-    this.closeButton = page.locator('.drawer-panel .btn-close--transparent');
-    this.editButton = this.panel.getByRole('button', { name: /Editar/ });
-    this.payButton = this.panel.getByRole('button', { name: /Marcar pagado/ });
-    this.deleteButton = this.panel.locator('.btn-drawer-delete');
+    this.panel = page.getByTestId('appointment-drawer-panel');
+    this.closeButton = page.getByTestId('appointment-drawer-close-button');
+    this.editButton = this.panel.getByTestId('appointment-drawer-edit-button');
+    this.payButton = this.panel.getByTestId('appointment-drawer-pay-button');
+    this.deleteButton = this.panel.getByTestId('appointment-drawer-delete-button');
   }
 
   async waitForOpen() {

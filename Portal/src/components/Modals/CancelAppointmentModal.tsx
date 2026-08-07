@@ -45,6 +45,7 @@ export function CancelAppointmentModal({
       loading={loading}
       error={error}
       nested
+      testId="cancel-appointment"
       onClose={onClose}
       onConfirm={handleCancel}
     >

@@ -162,6 +162,7 @@ function AppointmentsPageContent() {
                   setShowCreate(true);
                 }}
                 className="btn-primary btn-hero"
+                data-testid="appointments-new-button"
               >
                 Nueva Cita
               </button>
@@ -259,6 +260,7 @@ function AppointmentsPageContent() {
                 key={k}
                 onClick={() => setFilterStatus(k)}
                 className={`filter-chip ${filterStatus === k ? "filter-chip--active" : ""}`}
+                data-testid={`appointments-filter-${k.toLowerCase()}`}
               >
                 {l}
               </button>
@@ -349,6 +351,7 @@ function AppointmentsPageContent() {
                   <button
                     onClick={() => handleConfirm(a.id)}
                     className="btn-pay"
+                    data-testid="appointment-confirm-button"
                   >
                     Confirmó
                   </button>
@@ -358,7 +361,7 @@ function AppointmentsPageContent() {
                 <div className="td-actions">
                   <PayStatusPill paid={a.paid} />
                   {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
-                    <button onClick={() => handlePay(a.id)} className="btn-pay">
+                    <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid="appointment-pay-button">
                       Pagó
                     </button>
                   )}
@@ -375,6 +378,7 @@ function AppointmentsPageContent() {
                   <button
                     onClick={() => setDeleteAppt(a)}
                     className="btn-action-delete"
+                    data-testid="appointment-row-delete-button"
                   >
                     <ACTION_ICONS.close size={14} />
                   </button>

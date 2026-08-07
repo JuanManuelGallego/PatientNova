@@ -11,12 +11,12 @@ export class PatientModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /Paciente/ });
-    this.nameInput = this.dialog.getByLabel('Nombre');
-    this.lastNameInput = this.dialog.getByLabel('Apellido');
-    this.emailInput = this.dialog.getByLabel('Correo electrónico');
-    this.submitButton = this.dialog.getByRole('button', { name: /Crear Paciente|Guardar Cambios/ });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Cancelar' });
+    this.dialog = page.getByTestId('patient-modal-dialog');
+    this.nameInput = this.dialog.getByTestId('patient-name-input');
+    this.lastNameInput = this.dialog.getByTestId('patient-lastname-input');
+    this.emailInput = this.dialog.getByTestId('patient-email-input');
+    this.submitButton = this.dialog.getByTestId('patient-modal-submit-button');
+    this.cancelButton = this.dialog.getByTestId('patient-modal-cancel-button');
   }
 
   async waitForOpen() {

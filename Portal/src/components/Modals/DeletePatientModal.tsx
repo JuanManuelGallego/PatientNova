@@ -36,6 +36,7 @@ export function DeletePatientModal({
       cancelLabel="Cancelar"
       loading={loading}
       error={error}
+      testId="delete-patient"
       onClose={onClose}
       onConfirm={handleDelete}
     >

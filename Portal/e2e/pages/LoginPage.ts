@@ -1,11 +1,19 @@
 import { BasePage } from './BasePage';
-import { expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 export class LoginPage extends BasePage {
-  readonly emailInput = this.page.getByLabel('Correo electrónico');
-  readonly passwordInput = this.page.getByLabel('Contraseña');
-  readonly submitButton = this.page.getByRole('button', { name: 'Iniciar sesión' });
-  readonly errorMessage = this.page.getByRole('alert');
+  readonly emailInput: Locator;
+  readonly passwordInput: Locator;
+  readonly submitButton: Locator;
+  readonly errorMessage: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.emailInput = this.page.getByTestId('login-email-input');
+    this.passwordInput = this.page.getByTestId('login-password-input');
+    this.submitButton = this.page.getByTestId('login-submit-button');
+    this.errorMessage = this.page.getByTestId('login-error-alert');
+  }
 
   async login(email: string, password: string) {
     await this.goto('/login');

@@ -9,10 +9,10 @@ export class BlockedTimeModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /Bloquear horario|Editar horario bloqueado/ });
-    this.submitButton = this.dialog.getByRole('button', { name: /Bloquear|Guardar Cambios/ });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Cancelar' });
-    this.deleteButton = this.dialog.locator('.btn-action-delete');
+    this.dialog = page.getByTestId('blocked-time-modal-dialog');
+    this.submitButton = this.dialog.getByTestId('blocked-time-modal-submit-button');
+    this.cancelButton = this.dialog.getByTestId('blocked-time-modal-cancel-button');
+    this.deleteButton = this.dialog.getByTestId('blocked-time-modal-delete-button');
   }
 
   async waitForOpen() {

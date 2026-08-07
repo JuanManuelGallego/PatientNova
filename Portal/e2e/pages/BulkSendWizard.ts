@@ -3,10 +3,20 @@ import { expect, Page, Locator } from '@playwright/test';
 export class BulkSendWizard {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly immediateOption: Locator;
+  readonly scheduledOption: Locator;
+  readonly nextButton: Locator;
+  readonly backButton: Locator;
+  readonly submitButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /Envío Masivo|Envio Masivo/ });
+    this.dialog = page.getByTestId('bulk-send-wizard');
+    this.immediateOption = this.dialog.getByTestId('bulk-send-option-immediate');
+    this.scheduledOption = this.dialog.getByTestId('bulk-send-option-scheduled');
+    this.nextButton = this.dialog.getByTestId('bulk-send-next-button');
+    this.backButton = this.dialog.getByTestId('bulk-send-back-button');
+    this.submitButton = this.dialog.getByTestId('bulk-send-submit-button');
   }
 
   async waitForOpen() {
@@ -18,27 +28,26 @@ export class BulkSendWizard {
   }
 
   async selectImmediate() {
-    await this.dialog.getByText('Enviar ahora').first().click();
+    await this.immediateOption.click();
   }
 
   async selectScheduled() {
-    await this.dialog.getByText('Programar envío').first().click();
+    await this.scheduledOption.click();
   }
 
   async next() {
-    await this.dialog.getByRole('button', { name: /Continuar/ }).click();
+    await this.nextButton.click();
   }
 
   async back() {
-    await this.dialog.getByRole('button', { name: /Atrás/ }).click();
+    await this.backButton.click();
   }
 
   async send() {
-    await this.dialog.getByRole('button', { name: /Enviar a \d+ pacientes/ }).click();
+    await this.submitButton.click();
   }
 
   async cancel() {
-    await this.dialog.locator('.btn-close').click();
     await this.waitForClose();
   }
 }

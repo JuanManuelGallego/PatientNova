@@ -282,6 +282,7 @@ const [ form, setForm ] = useState<ReminderForm>({
       aria-label={isEdit ? "Editar Recordatorio" : "Nuevo Recordatorio"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid="reminder-modal-dialog"
     >
       <div
         className="modal-panel modal-panel--md slide-up"
@@ -296,7 +297,7 @@ const [ form, setForm ] = useState<ReminderForm>({
               Paso {step} de {totalSteps}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="reminder-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -360,6 +361,7 @@ const [ form, setForm ] = useState<ReminderForm>({
               onClick={() => setStep((s) => s - 1)}
               className="btn-secondary"
               disabled={saving}
+              data-testid="reminder-modal-back-button"
             >
               Atrás
             </button>
@@ -372,6 +374,7 @@ const [ form, setForm ] = useState<ReminderForm>({
               }}
               disabled={!isValid}
               className="btn-primary"
+              data-testid="reminder-modal-next-button"
             >
               Continuar →
             </button>
@@ -380,6 +383,7 @@ const [ form, setForm ] = useState<ReminderForm>({
               onClick={handleSubmit}
               disabled={saving}
               className="btn-primary"
+              data-testid="reminder-modal-submit-button"
             >
               {saving
                 ? "Enviando…"

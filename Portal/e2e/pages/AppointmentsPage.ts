@@ -1,21 +1,46 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { AppointmentModal } from './AppointmentModal';
 import { CancelAppointmentModal } from './CancelAppointmentModal';
 import { AppointmentDrawer } from './AppointmentDrawer';
 
 export class AppointmentsPage extends BasePage {
-  readonly createButton = this.page.getByRole('button', { name: 'Nueva Cita' });
-  readonly table = this.page.getByRole('table');
-  readonly searchInput = this.page.getByPlaceholder(/Buscar paciente, tipo, ubicación/);
+  readonly createButton: Locator;
+  readonly table: Locator;
+  readonly searchInput: Locator;
+  readonly filterAll: Locator;
+  readonly filterUpcoming: Locator;
+  readonly filterScheduled: Locator;
+  readonly filterConfirmed: Locator;
+  readonly filterCompleted: Locator;
+  readonly filterCancelled: Locator;
+  readonly filterNoShow: Locator;
+  readonly confirmButton: Locator;
+  readonly payButton: Locator;
+  readonly deleteRowButton: Locator;
+  readonly confirmTestId: string;
+  readonly payTestId: string;
+  readonly deleteRowTestId: string;
 
-  readonly filterAll = this.page.getByRole('button', { name: /Todas/ });
-  readonly filterUpcoming = this.page.getByRole('button', { name: /Próximas/ });
-  readonly filterScheduled = this.page.getByRole('button', { name: /Programadas/ });
-  readonly filterConfirmed = this.page.getByRole('button', { name: /Confirmadas/ });
-  readonly filterCompleted = this.page.getByRole('button', { name: /Completadas/ });
-  readonly filterCancelled = this.page.getByRole('button', { name: /Canceladas/ });
-  readonly filterNoShow = this.page.getByRole('button', { name: /No asistió/ });
+  constructor(page: Page) {
+    super(page);
+    this.createButton = this.page.getByTestId('appointments-new-button');
+    this.table = this.page.getByRole('table');
+    this.searchInput = this.page.getByTestId('appointments-search-input');
+    this.filterAll = this.page.getByTestId('appointments-filter-all');
+    this.filterUpcoming = this.page.getByTestId('appointments-filter-upcoming');
+    this.filterScheduled = this.page.getByTestId('appointments-filter-scheduled');
+    this.filterConfirmed = this.page.getByTestId('appointments-filter-confirmed');
+    this.filterCompleted = this.page.getByTestId('appointments-filter-completed');
+    this.filterCancelled = this.page.getByTestId('appointments-filter-cancelled');
+    this.filterNoShow = this.page.getByTestId('appointments-filter-no_show');
+    this.confirmButton = this.page.getByTestId('appointment-confirm-button');
+    this.payButton = this.page.getByTestId('appointment-pay-button');
+    this.deleteRowButton = this.page.getByTestId('appointment-row-delete-button');
+    this.confirmTestId = 'appointment-confirm-button';
+    this.payTestId = 'appointment-pay-button';
+    this.deleteRowTestId = 'appointment-row-delete-button';
+  }
 
   async openCreateModal() {
     await this.createButton.click();
@@ -34,17 +59,17 @@ export class AppointmentsPage extends BasePage {
 
   async confirmAppointment(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.getByRole('button', { name: /Confirmó/ }).click();
+    await row.locator(`[data-testid="${this.confirmTestId}"]`).click();
   }
 
   async markAsPaid(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.getByRole('button', { name: /Pagó/ }).click();
+    await row.locator(`[data-testid="${this.payTestId}"]`).click();
   }
 
   async cancelAppointment(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.locator('.btn-action-delete').click();
+    await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
     const modal = new CancelAppointmentModal(this.page);
     await expect(modal.dialog).toBeVisible();
     return modal;

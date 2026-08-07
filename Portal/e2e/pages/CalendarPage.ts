@@ -1,16 +1,27 @@
 import { BasePage } from './BasePage';
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { BlockedTimeModal } from './BlockedTimeModal';
 import { AppointmentModal } from './AppointmentModal';
 
 export class CalendarPage extends BasePage {
-  readonly newAppointmentButton = this.page.getByRole('button', { name: 'Nueva Cita' });
-  readonly blockedTimeButton = this.page.getByRole('button', { name: 'Bloquear Horario' });
-  readonly todayButton = this.page.getByRole('button', { name: 'Hoy' });
-  readonly monthViewButton = this.page.getByRole('button', { name: 'Mes' });
-  readonly weekViewButton = this.page.getByRole('button', { name: 'Semana' });
-  readonly prevButton = this.page.locator('.calendar-toolbar .btn-secondary').first();
-  readonly nextButton = this.page.locator('.calendar-toolbar .btn-secondary').last();
+  readonly newAppointmentButton: Locator;
+  readonly blockedTimeButton: Locator;
+  readonly todayButton: Locator;
+  readonly monthViewButton: Locator;
+  readonly weekViewButton: Locator;
+  readonly prevButton: Locator;
+  readonly nextButton: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.newAppointmentButton = this.page.getByTestId('calendar-new-appointment-button');
+    this.blockedTimeButton = this.page.getByTestId('calendar-block-time-button');
+    this.todayButton = this.page.getByTestId('calendar-today-button');
+    this.monthViewButton = this.page.getByTestId('calendar-view-month-button');
+    this.weekViewButton = this.page.getByTestId('calendar-view-week-button');
+    this.prevButton = this.page.getByTestId('calendar-nav-prev-button');
+    this.nextButton = this.page.getByTestId('calendar-nav-next-button');
+  }
 
   async openBlockedTimeModal() {
     await this.blockedTimeButton.click();

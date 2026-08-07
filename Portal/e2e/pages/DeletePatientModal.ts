@@ -8,9 +8,9 @@ export class DeletePatientModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('alertdialog', { name: /Eliminar|Desactivar/ });
-    this.confirmButton = this.dialog.getByRole('button', { name: /Sí|Si, (eliminar|desactivar)/ });
-    this.cancelButton = this.dialog.getByRole('button', { name: 'Regresar' });
+    this.dialog = page.getByTestId('delete-patient-dialog');
+    this.confirmButton = this.dialog.getByTestId('delete-patient-confirm-button');
+    this.cancelButton = this.dialog.getByTestId('delete-patient-cancel-button');
   }
 
   async confirm() {
