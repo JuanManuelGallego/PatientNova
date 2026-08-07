@@ -82,7 +82,7 @@ export function AuditDrawer({
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
-      <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="audit-drawer-panel">
         <div
           className="drawer-header"
           style={{
@@ -97,7 +97,7 @@ export function AuditDrawer({
                 <EntityTypePill entityType={log.entityType} />
               </div>
             </div>
-            <button onClick={onClose} className="btn-close--transparent">
+            <button onClick={onClose} className="btn-close--transparent" data-testid="audit-drawer-close-button">
               <ACTION_ICONS.close size={16} />
             </button>
           </div>
