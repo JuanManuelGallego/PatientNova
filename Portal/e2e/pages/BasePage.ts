@@ -14,4 +14,10 @@ export class BasePage {
   async waitForLoad() {
     await this.page.waitForLoadState('domcontentloaded');
   }
+
+  async clearCookies() {
+    const context = this.page.context();
+    await context.clearCookies();
+    await context.clearPermissions();
+  }
 }

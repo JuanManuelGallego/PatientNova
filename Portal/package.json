@@ -9,15 +9,16 @@
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
-    "test:e2e:report": "playwright show-report"
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:ui": "playwright test --ui -c e2e/playwright.config.ts",
+    "e2e:debug": "playwright test --debug -c e2e/playwright.config.ts",
+    "e2e:report": "playwright show-report -c e2e/playwright.config.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
     "antd": "^6.5.4",
     "dayjs": "^1.11.21",
+    "dotenv-safe": "^9.1.0",
     "lucide-react": "^1.30.0",
     "next": "^16.3.0",
     "node": "^24.19.0",
