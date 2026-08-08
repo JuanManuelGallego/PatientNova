@@ -11,12 +11,13 @@ import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
-export async function sendReminderWorker([job]: Array<{
+export async function sendReminderWorker([ job ]: Array<{
   data: { reminderId: string };
   retryCount?: number;
 }>): Promise<void> {
   if (!job) return;
   const { reminderId } = job.data;
+  logger.info({ reminderId, retryCount: job.retryCount ?? 0 }, 'Processing send-reminder job');
 
   const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
   if (!reminder) {
@@ -41,20 +42,47 @@ export async function sendReminderWorker([job]: Array<{
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
       description: `Recordatorio falló validación: ${validation.error}`,
-      affectedFields: ['status', 'error'],
+      affectedFields: [ 'status', 'error' ],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
+      userId: reminder.userId,
     }));
     return;
   }
 
   const contentVariables = reminder.contentVariables as Record<string, string> | undefined;
-  const result = await dispatchMessage(reminder.channel as Channel, {
-    to: reminder.to,
-    body: reminder.body,
-    contentSid: reminder.contentSid,
-    contentVariables,
-  });
+  let result;
+  try {
+    result = await dispatchMessage(reminder.channel as Channel, {
+      to: reminder.to,
+      body: reminder.body,
+      contentSid: reminder.contentSid,
+      contentVariables,
+    });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Dispatch threw';
+    if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
+      await prisma.reminder.update({
+        where: { id: reminderId },
+        data: { status: ReminderStatus.FAILED, error: errorMsg },
+      });
+      await runInAuditContext(JOB_CTX, () => logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: reminderId,
+        actionType: ActionType.UPDATE,
+        source: ActionSource.JOB,
+        description: `Recordatorio falló permanentemente después del máximo de reintentos`,
+        affectedFields: [ 'status', 'error' ],
+        fieldsBefore: { status: reminder.status },
+        fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
+        userId: reminder.userId,
+      }));
+      logger.error({ reminderId, error: errorMsg }, 'Reminder permanently failed after max retries');
+    } else {
+      throw err;
+    }
+    return;
+  }
 
   if (result.success) {
     await prisma.reminder.update({
@@ -70,10 +98,11 @@ export async function sendReminderWorker([job]: Array<{
       entityId: reminderId,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Recordatorio despachado y encolado`,
-      affectedFields: ['status', 'messageId', 'sentAt'],
+      description: `Recordatorio despachado`,
+      affectedFields: [ 'status', 'messageId', 'sentAt' ],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },
+      userId: reminder.userId,
     }));
   } else {
     if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
@@ -90,13 +119,14 @@ export async function sendReminderWorker([job]: Array<{
         actionType: ActionType.UPDATE,
         source: ActionSource.JOB,
         description: `Recordatorio falló permanentemente después del máximo de reintentos`,
-        affectedFields: ['status', 'error'],
+        affectedFields: [ 'status', 'error' ],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
+        userId: reminder.userId,
       }));
       logger.error({ reminderId, error: result.error }, 'Reminder permanently failed after max retries');
+    } else {
+      throw new Error(result.error ?? 'Dispatch failed');
     }
-
-    throw new Error(result.error ?? 'Dispatch failed');
   }
 }

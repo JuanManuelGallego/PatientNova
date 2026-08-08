@@ -29,7 +29,7 @@ export const createAppointmentSchema = z.object({
   price: z.number().min(0, 'Price must be non-negative'),
   currency: z.string().optional(),
   paid: z.boolean().default(false),
-  meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
+  meetingUrl: z.url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
   status: z.enum(AppointmentStatus).default(AppointmentStatus.SCHEDULED),
   patientId: z.uuid('patientId must be a valid UUID'),
@@ -56,7 +56,7 @@ export const updateAppointmentSchema = z
     price: z.number().min(0, 'Price must be non-negative').optional(),
     currency: z.string().optional(),
     paid: z.boolean().optional(),
-    meetingUrl: z.string().url('meetingUrl must be a valid URL').max(500).optional().or(z.literal('')),
+    meetingUrl: z.url('meetingUrl must be a valid URL').max(500).optional().or(z.literal('')),
     notes: z.string().max(1000).optional(),
     typeId: z.uuid('typeId must be a valid UUID').optional(),
     status: z.enum(AppointmentStatus).optional(),
@@ -74,11 +74,11 @@ export const updateAppointmentSchema = z
   )
   .refine(
     (d) => !d.startAt || !d.endAt || new Date(d.endAt) > new Date(d.startAt),
-    { message: 'endAt must be after startAt', path: ['endAt'] }
+    { message: 'must be after startAt', path: ['endAt'] }
   )
   .refine(
     (d) => !d.startAt || new Date(d.startAt) >= new Date(),
-    { message: 'startAt cannot be in the past', path: ['startAt'] }
+    { message: 'cannot be in the past', path: ['startAt'] }
   );
 
 export const listAppointmentsSchema = z.object({

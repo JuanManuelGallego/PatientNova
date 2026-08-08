@@ -66,6 +66,7 @@ export async function logAudit(params: {
   fieldsBefore?: Record<string, unknown> | null;
   fieldsAfter?: Record<string, unknown> | null;
   tx?: TransactionClient;
+  userId?: string;
 }): Promise<void> {
   await auditLogService.create(buildAuditEntry(params), params.tx);
 }

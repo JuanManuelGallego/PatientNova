@@ -177,6 +177,7 @@ const TWILIO_ERROR_MESSAGES: Record<number, string> = {
   63025: 'Conflicto al subir el archivo multimedia: el contenido ya existe.',
   63032: 'No se puede enviar el mensaje a este usuario debido a restricciones de WhatsApp.',
   63038: 'La cuenta ha alcanzado el límite máximo diario de mensajes en WhatsApp.',
+  63049: 'Entrega rechazada por Meta por infringieron las políticas de spam de WhatsApp.'
 };
 
 const DEFAULT_ERROR = 'Error de entrega no especificado';

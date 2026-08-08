@@ -5,6 +5,7 @@ import type { CreateMedicalRecordDto, UpdateMedicalRecordDto } from './medical-r
 import { updateMedicalRecordSchema } from './medical-record.schemas.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
+import type { MedicalRecord } from '../../generated/prisma/client.ts';
 
 const MEDICAL_RECORD_DIFF_FIELDS = schemaKeys(updateMedicalRecordSchema);
 
@@ -19,7 +20,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: createdRecord.id,
       actionType: ActionType.CREATE,
-      description: `Historia clínica creada para el paciente ${dto.patientId}`,
+      description: `Historia clínica creada para el paciente ${dto.name}`,
       affectedFields: Object.keys(dto),
       fieldsAfter: dto as unknown as Record<string, unknown>,
     });
@@ -34,7 +35,7 @@ export const medicalRecordService = {
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.UPDATE,
-      description: `Historia clínica actualizada ${id}`,
+      description: `Historia clínica de ${updatedRecord.name} actualizada`,
       ...diff,
     });
     logger.info({ medicalRecordId: id, userId, fields: Object.keys(dto) }, 'Medical record updated');
@@ -42,27 +43,27 @@ export const medicalRecordService = {
   },
 
   async softDelete(id: string, userId: string): Promise<{ id: string }> {
-    await medicalRecordRepository.softDelete(id, userId);
+    const deleted = await medicalRecordRepository.softDelete(id, userId);
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.DELETE,
-      description: `Historia clínica eliminada ${id}`,
-      affectedFields: ['isDeleted'],
+      description: `Historia clínica de ${deleted.name} eliminada`,
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
     });
     return { id };
   },
 
-  async restore(id: string, userId: string) {
+  async restore(id: string, userId: string): Promise<MedicalRecord> {
     const restoredRecord = await medicalRecordRepository.restore(id, userId);
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
       actionType: ActionType.RESTORE,
-      description: `Historia clínica restaurada ${id}`,
-      affectedFields: ['isDeleted'],
+      description: `Historia clínica de ${restoredRecord.name} restaurada`,
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },
     });

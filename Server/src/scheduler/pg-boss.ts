@@ -25,6 +25,10 @@ export async function initializePgBoss(): Promise<void> {
     logger.error({ error }, 'pg-boss error');
   });
 
+  boss.on('failed', (err) => {
+    logger.error({ jobId: err.data?.id, queue: err.queue, error: err.message }, 'pg-boss job failed');
+  });
+
   await boss.start();
 
   await boss.createQueue('send-reminder-dlq', {

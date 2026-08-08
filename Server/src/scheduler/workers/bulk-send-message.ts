@@ -51,17 +51,44 @@ export async function bulkSendWorker([job]: Array<{
       affectedFields: ['status', 'error'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
+      userId: reminder.userId,
     }));
     return;
   }
 
   const contentVariables = reminder.contentVariables as Record<string, string> | undefined;
-  const result = await dispatchMessage(reminder.channel as Channel, {
-    to: reminder.to,
-    body: reminder.body,
-    contentSid: reminder.contentSid,
-    contentVariables,
-  });
+  let result;
+  try {
+    result = await dispatchMessage(reminder.channel as Channel, {
+      to: reminder.to,
+      body: reminder.body,
+      contentSid: reminder.contentSid,
+      contentVariables,
+    });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Dispatch threw';
+    if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
+      await prisma.reminder.update({
+        where: { id: reminderId },
+        data: { status: ReminderStatus.FAILED, error: errorMsg },
+      });
+      await runInAuditContext(JOB_CTX, () => logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: reminderId,
+        actionType: ActionType.UPDATE,
+        source: ActionSource.JOB,
+        description: `Envío masivo falló permanentemente después del máximo de reintentos`,
+        affectedFields: ['status', 'error'],
+        fieldsBefore: { status: reminder.status },
+        fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
+        userId: reminder.userId,
+      }));
+      logger.error({ reminderId, error: errorMsg }, 'Bulk send reminder permanently failed after max retries');
+    } else {
+      throw err;
+    }
+    return;
+  }
 
   if (result.success) {
     await prisma.reminder.update({
@@ -77,10 +104,11 @@ export async function bulkSendWorker([job]: Array<{
       entityId: reminderId,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Envío masivo despachado y encolado`,
+      description: `Envío masivo despachado`,
       affectedFields: ['status', 'messageId', 'sentAt'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },
+      userId: reminder.userId,
     }));
   } else {
     if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
@@ -100,6 +128,7 @@ export async function bulkSendWorker([job]: Array<{
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
+        userId: reminder.userId,
       }));
       logger.error({ reminderId, error: result.error }, 'Bulk send reminder permanently failed after max retries');
     } else {
