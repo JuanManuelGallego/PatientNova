@@ -56,12 +56,37 @@ export async function bulkSendWorker([job]: Array<{
   }
 
   const contentVariables = reminder.contentVariables as Record<string, string> | undefined;
-  const result = await dispatchMessage(reminder.channel as Channel, {
-    to: reminder.to,
-    body: reminder.body,
-    contentSid: reminder.contentSid,
-    contentVariables,
-  });
+  let result;
+  try {
+    result = await dispatchMessage(reminder.channel as Channel, {
+      to: reminder.to,
+      body: reminder.body,
+      contentSid: reminder.contentSid,
+      contentVariables,
+    });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Dispatch threw';
+    if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
+      await prisma.reminder.update({
+        where: { id: reminderId },
+        data: { status: ReminderStatus.FAILED, error: errorMsg },
+      });
+      await runInAuditContext(JOB_CTX, () => logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: reminderId,
+        actionType: ActionType.UPDATE,
+        source: ActionSource.JOB,
+        description: `Envío masivo falló permanentemente después del máximo de reintentos`,
+        affectedFields: ['status', 'error'],
+        fieldsBefore: { status: reminder.status },
+        fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
+      }));
+      logger.error({ reminderId, error: errorMsg }, 'Bulk send reminder permanently failed after max retries');
+    } else {
+      throw err;
+    }
+    return;
+  }
 
   if (result.success) {
     await prisma.reminder.update({

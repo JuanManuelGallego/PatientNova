@@ -65,7 +65,6 @@ jobs:
       DEFAULT_CURRENCY: COP
       ENABLE_SCHEDULER: "false"
       DAILY_REMINDER_HOUR: "18"
-      CRON_SCHEDULE: "* * * * *"
       TWILIO_ACCOUNT_SID: dummySID
       TWILIO_AUTH_TOKEN: dummyToken
       TWILIO_WHATSAPP_FROM: dummyNumber
