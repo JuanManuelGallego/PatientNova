@@ -104,7 +104,7 @@ export async function bulkSendWorker([job]: Array<{
       entityId: reminderId,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Envío masivo despachado y encolado`,
+      description: `Envío masivo despachado`,
       affectedFields: ['status', 'messageId', 'sentAt'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },

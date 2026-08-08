@@ -16,7 +16,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] },
       endAt: { lte: now },
     },
-    select: { id: true, patientId: true, status: true, userId: true },
+    select: { id: true, patientId: true, status: true, userId: true, patient: true },
   });
 
   if (pending.length === 0) {
@@ -38,7 +38,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       entityId: a.id,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Cita completada automáticamente`,
+      description: `Cita completada automáticamente para paciente ${a.patient.name} ${a.patient.lastName}`,
       affectedFields: ['status'],
       fieldsBefore: { status: a.status },
       fieldsAfter: { status: AppointmentStatus.COMPLETED },

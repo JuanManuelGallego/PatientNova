@@ -11,12 +11,13 @@ import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
-export async function sendReminderWorker([job]: Array<{
+export async function sendReminderWorker([ job ]: Array<{
   data: { reminderId: string };
   retryCount?: number;
 }>): Promise<void> {
   if (!job) return;
   const { reminderId } = job.data;
+  logger.info({ reminderId, retryCount: job.retryCount ?? 0 }, 'Processing send-reminder job');
 
   const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
   if (!reminder) {
@@ -41,7 +42,7 @@ export async function sendReminderWorker([job]: Array<{
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
       description: `Recordatorio falló validación: ${validation.error}`,
-      affectedFields: ['status', 'error'],
+      affectedFields: [ 'status', 'error' ],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
       userId: reminder.userId,
@@ -71,7 +72,7 @@ export async function sendReminderWorker([job]: Array<{
         actionType: ActionType.UPDATE,
         source: ActionSource.JOB,
         description: `Recordatorio falló permanentemente después del máximo de reintentos`,
-        affectedFields: ['status', 'error'],
+        affectedFields: [ 'status', 'error' ],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
         userId: reminder.userId,
@@ -97,8 +98,8 @@ export async function sendReminderWorker([job]: Array<{
       entityId: reminderId,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Recordatorio despachado y encolado`,
-      affectedFields: ['status', 'messageId', 'sentAt'],
+      description: `Recordatorio despachado`,
+      affectedFields: [ 'status', 'messageId', 'sentAt' ],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },
       userId: reminder.userId,
@@ -118,7 +119,7 @@ export async function sendReminderWorker([job]: Array<{
         actionType: ActionType.UPDATE,
         source: ActionSource.JOB,
         description: `Recordatorio falló permanentemente después del máximo de reintentos`,
-        affectedFields: ['status', 'error'],
+        affectedFields: [ 'status', 'error' ],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
         userId: reminder.userId,

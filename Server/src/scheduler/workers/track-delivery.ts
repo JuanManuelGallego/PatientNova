@@ -24,7 +24,7 @@ export async function trackDeliveryWorker(): Promise<void> {
 
   const stale = await prisma.reminder.findMany({
     where: { status: ReminderStatus.QUEUED, updatedAt: { lte: cutoff }, isDeleted: false },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, patient: true },
     take: REMINDER_BATCH_SIZE,
   });
 
@@ -42,8 +42,8 @@ export async function trackDeliveryWorker(): Promise<void> {
         entityId: r.id,
         actionType: ActionType.UPDATE,
         source: ActionSource.JOB,
-        description: `Recordatorio marcado como fallido (tiempo de espera agotado)`,
-        affectedFields: ['status', 'error'],
+        description: `Recordatorio marcado como fallido (tiempo de espera agotado) para paciente ${r.patient.name} ${r.patient.lastName}`,
+        affectedFields: [ 'status', 'error' ],
         fieldsBefore: { status: ReminderStatus.QUEUED },
         fieldsAfter: { status: ReminderStatus.FAILED, error: 'Status tracking timed out' },
         userId: r.userId,
@@ -59,7 +59,7 @@ export async function trackDeliveryWorker(): Promise<void> {
       updatedAt: { gt: cutoff },
       isDeleted: false,
     },
-    select: { id: true, messageId: true, userId: true },
+    select: { id: true, messageId: true, userId: true, patient: true },
     take: REMINDER_BATCH_SIZE,
   });
 
@@ -72,7 +72,7 @@ export async function trackDeliveryWorker(): Promise<void> {
       batch.map(async (reminder) => {
         try {
           const message = await getMessageStatus(reminder.messageId!);
-          const mappedStatus = TWILIO_TO_PRISMA_STATUS[message.status] ?? ReminderStatus.QUEUED;
+          const mappedStatus = TWILIO_TO_PRISMA_STATUS[ message.status ] ?? ReminderStatus.QUEUED;
 
           if (mappedStatus !== ReminderStatus.QUEUED) {
             await prisma.reminder.update({
@@ -89,8 +89,8 @@ export async function trackDeliveryWorker(): Promise<void> {
               entityId: reminder.id,
               actionType: ActionType.UPDATE,
               source: ActionSource.JOB,
-              description: `Estado de entrega actualizado a ${mappedStatus}`,
-              affectedFields: ['status', 'error'],
+              description: `Estado de entrega actualizado para paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
+              affectedFields: [ 'status', 'error' ],
               fieldsBefore: { status: ReminderStatus.QUEUED },
               fieldsAfter: { status: mappedStatus, error: mappedStatus === ReminderStatus.FAILED ? message.errorMessage : null },
               userId: reminder.userId,
