@@ -202,6 +202,20 @@ export function AppointmentModal({
   }
 
   function buildAppointmentPayload(): Omit<Partial<Appointment>, 'reminder'> {
+    if (isEdit) {
+      return {
+        ...(form.startAt !== appt?.startAt && { startAt: form.startAt, endAt: getAppointmentEndTime(form.startAt, form.duration as AppointmentDuration) }),
+        ...(form.price !== appt?.price && { price: form.price }),
+        ...(form.paid !== (appt?.paid ? AppointmentPaidStatus.PAID : AppointmentPaidStatus.UNPAID) && { paid: form.paid === AppointmentPaidStatus.PAID }),
+        ...(form.meetingUrl !== appt?.meetingUrl && { meetingUrl: form.meetingUrl }),
+        ...(form.notes !== appt?.notes && { notes: form.notes }),
+        ...(form.status !== appt?.status && { status: form.status }),
+        ...(form.patientId !== appt?.patient.id && { patientId: form.patientId }),
+        ...(form.locationId !== appt?.appointmentLocation.id && { locationId: form.locationId }),
+        ...(form.typeId !== appt?.appointmentType.id && { typeId: form.typeId }),
+      };
+    }
+
     return {
       startAt: form.startAt,
       endAt: getAppointmentEndTime(

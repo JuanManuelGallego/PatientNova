@@ -6,6 +6,7 @@ import {
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
   AppointmentBlockedTimeConflictError,
+  PastAppointmentLockedError,
 } from './appointment.errors.js';
 import { LocationNotFoundError, ReminderNotCancellableError } from '../utils/errors/errors.js';
 import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-type.errors.js';
@@ -27,23 +28,23 @@ const PAYABLE_STATUSES = new Set<AppointmentStatus>([
 ]);
 
 const ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
-  [AppointmentStatus.SCHEDULED]: [
+  [ AppointmentStatus.SCHEDULED ]: [
     AppointmentStatus.SCHEDULED,
     AppointmentStatus.CONFIRMED,
     AppointmentStatus.CANCELLED,
     AppointmentStatus.COMPLETED,
     AppointmentStatus.NO_SHOW,
   ],
-  [AppointmentStatus.CONFIRMED]: [
+  [ AppointmentStatus.CONFIRMED ]: [
     AppointmentStatus.CONFIRMED,
     AppointmentStatus.CANCELLED,
     AppointmentStatus.COMPLETED,
     AppointmentStatus.NO_SHOW,
     AppointmentStatus.SCHEDULED,
   ],
-  [AppointmentStatus.CANCELLED]: [ AppointmentStatus.CANCELLED, AppointmentStatus.SCHEDULED ],
-  [AppointmentStatus.COMPLETED]: [ AppointmentStatus.COMPLETED, AppointmentStatus.SCHEDULED ],
-  [AppointmentStatus.NO_SHOW]: [
+  [ AppointmentStatus.CANCELLED ]: [ AppointmentStatus.CANCELLED, AppointmentStatus.SCHEDULED ],
+  [ AppointmentStatus.COMPLETED ]: [ AppointmentStatus.COMPLETED, AppointmentStatus.SCHEDULED ],
+  [ AppointmentStatus.NO_SHOW ]: [
     AppointmentStatus.NO_SHOW,
     AppointmentStatus.COMPLETED,
     AppointmentStatus.SCHEDULED,
@@ -97,12 +98,12 @@ async function handleReminderUpdate(
       entityId: existing.reminder.id,
       actionType: ActionType.UPDATE,
       description: `Recordatorio cancelado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: ['status'],
+      affectedFields: [ 'status' ],
       fieldsBefore: { status: existing.reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
       tx,
     });
-    
+
     logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
     return { reminderId: null };
   }
@@ -128,16 +129,16 @@ async function handleReminderUpdate(
       entityId: createdReminder.id,
       actionType: ActionType.CREATE,
       description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: ['channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId'],
-      fieldsAfter: { 
+      affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
+      fieldsAfter: {
         channel: createdReminder.channel,
-        sendMode: createdReminder.sendMode, 
-        sendAt: createdReminder.sendAt, 
-        to: createdReminder.to, 
-        contentSid: createdReminder.contentSid, 
-        contentVariables: createdReminder.contentVariables, 
-        body: createdReminder.body, 
-        patientId: createdReminder.patientId, 
+        sendMode: createdReminder.sendMode,
+        sendAt: createdReminder.sendAt,
+        to: createdReminder.to,
+        contentSid: createdReminder.contentSid,
+        contentVariables: createdReminder.contentVariables,
+        body: createdReminder.body,
+        patientId: createdReminder.patientId,
         status: createdReminder.status
       },
       tx,
@@ -188,7 +189,7 @@ async function checkConflict(
     where: {
       patientId,
       isDeleted: false,
-      status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+      status: { in: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] },
       ...(excludeId && { NOT: { id: excludeId } }),
       startAt: { lt: new Date(endAt) },
       endAt: { gt: new Date(startAt) },
@@ -234,7 +235,7 @@ export const appointmentService = {
 
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
     return prisma.$transaction(async (tx: TransactionClient) => {
-      const [existingReminder, patient, location] = await Promise.all([
+      const [ existingReminder, patient, location ] = await Promise.all([
         dto.reminderId ? validateReminder(dto.reminderId) : Promise.resolve(null),
         validatePatient(dto.patientId, userId),
         validateLocation(dto.locationId),
@@ -263,22 +264,22 @@ export const appointmentService = {
             userId,
           },
         });
-          
+
         await logAudit({
           entityType: EntityType.REMINDER,
           entityId: createdReminder.id,
           actionType: ActionType.CREATE,
           description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
-          affectedFields: ['channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId'],
-          fieldsAfter: { 
+          affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
+          fieldsAfter: {
             channel: createdReminder.channel,
-            sendMode: createdReminder.sendMode, 
-            sendAt: createdReminder.sendAt, 
-            to: createdReminder.to, 
-            contentSid: createdReminder.contentSid, 
-            contentVariables: createdReminder.contentVariables, 
-            body: createdReminder.body, 
-            patientId: patient.id, 
+            sendMode: createdReminder.sendMode,
+            sendAt: createdReminder.sendAt,
+            to: createdReminder.to,
+            contentSid: createdReminder.contentSid,
+            contentVariables: createdReminder.contentVariables,
+            body: createdReminder.body,
+            patientId: patient.id,
             status: createdReminder.status
           },
           tx,
@@ -304,25 +305,25 @@ export const appointmentService = {
       if (meetingUrl !== created.meetingUrl) {
         result = await appointmentRepository.update(created.id, { meetingUrl }, tx);
       }
-      
+
       await logAudit({
         entityType: EntityType.APPOINTMENT,
         entityId: created.id,
         actionType: ActionType.CREATE,
         description: `Cita creada para el paciente ${patient.name} ${patient.lastName}`,
         affectedFields: Object.keys(dto),
-        fieldsAfter: { 
-          patientId: created.patientId, 
-          startAt: created.startAt, 
-          endAt: created.endAt, 
-          typeId: created.typeId, 
-          locationId: created.locationId, 
+        fieldsAfter: {
+          patientId: created.patientId,
+          startAt: created.startAt,
+          endAt: created.endAt,
+          typeId: created.typeId,
+          locationId: created.locationId,
           price: created.price,
           paid: created.paid ?? false,
           notes: created.notes ?? null,
-          reminderId: reminderId ?? null, 
-          meetingUrl: meetingUrl ?? null, 
-          status: created.status ?? AppointmentStatus.SCHEDULED 
+          reminderId: reminderId ?? null,
+          meetingUrl: meetingUrl ?? null,
+          status: created.status ?? AppointmentStatus.SCHEDULED
         },
         tx,
       });
@@ -337,7 +338,7 @@ export const appointmentService = {
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
-          affectedFields: ['appointmentId'],
+          affectedFields: [ 'appointmentId' ],
           fieldsBefore: { appointmentId: null },
           fieldsAfter: { appointmentId: created.id },
           tx,
@@ -352,6 +353,12 @@ export const appointmentService = {
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
     const existing = await appointmentRepository.findByIdWithRelations(id, userId);
+
+    const newStatus = dto.status ?? existing.status;
+    const isPast = existing.startAt.getTime() < Date.now();
+    if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
+      throw new PastAppointmentLockedError(id);
+    }
 
     if (dto.startAt !== undefined || dto.endAt !== undefined) {
       const newStart = dto.startAt ?? existing.startAt;
@@ -391,7 +398,7 @@ export const appointmentService = {
         ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
         ...(meetingUrl !== existing.meetingUrl && { meetingUrl }),
       }, tx);
-      
+
       const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
       await logAudit({
         entityType: EntityType.APPOINTMENT,
@@ -413,7 +420,7 @@ export const appointmentService = {
           entityId: createdReminder.id,
           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
-          affectedFields: ['appointmentId'],
+          affectedFields: [ 'appointmentId' ],
           fieldsBefore: { appointmentId: null },
           fieldsAfter: { appointmentId: id },
           tx,
@@ -429,13 +436,17 @@ export const appointmentService = {
     if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
       throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
     }
+    const isPast = appt.startAt.getTime() < Date.now();
+    if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
+      throw new PastAppointmentLockedError(id);
+    }
     const updated = await appointmentRepository.update(id, { status });
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
-      affectedFields: ['status'],
+      affectedFields: [ 'status' ],
       fieldsBefore: { status: appt.status },
       fieldsAfter: { status },
     });
@@ -458,7 +469,7 @@ export const appointmentService = {
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
-      affectedFields: ['paid'],
+      affectedFields: [ 'paid' ],
       fieldsBefore: { paid: false },
       fieldsAfter: { paid: true },
     });
@@ -472,7 +483,7 @@ export const appointmentService = {
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
     });
@@ -488,7 +499,7 @@ export const appointmentService = {
       entityId: id,
       actionType: ActionType.RESTORE,
       description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },
     });

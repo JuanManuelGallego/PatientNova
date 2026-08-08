@@ -36,3 +36,9 @@ export class AppointmentBlockedTimeConflictError extends ApiError {
     super(`Appointment overlaps with blocked time ${label} (${startAt.toISOString()} – ${endAt.toISOString()})`, 409)
   }
 }
+
+export class PastAppointmentLockedError extends ApiError {
+  constructor(id: string) {
+    super(`Cannot update past appointment "${id}" with status SCHEDULED or CONFIRMED`, 409)
+  }
+}
