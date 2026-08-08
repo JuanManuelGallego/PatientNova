@@ -1,4 +1,4 @@
-import { useFetchAuditLogs } from "@/src/api/audit-logs";
+import { useFetchAuditLogs } from "@/src/api/audit-logs/useFetchAuditLogs";
 import { AuditLog, EntityType, ActionType, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
 import { CustomSelect, SelectOption } from "@/src/components/CustomSelect";
 import { DataTable, TableFooter } from "@/src/components/DataTable";

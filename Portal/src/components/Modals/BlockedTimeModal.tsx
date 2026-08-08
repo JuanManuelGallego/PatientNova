@@ -14,7 +14,7 @@ import {
 } from "@/src/constants/ui";
 import { RequiredField } from "../Info/Required";
 import { DateTimePicker } from "../DateTimePicker";
-import { useDeleteBlockedTime } from "@/src/api/blocked-time";
+import { useDeleteBlockedTime } from "@/src/api/blocked-time/useDeleteBlockedTime";
 
 function toLocalISOString(date: Date): string {
   const y = date.getFullYear();

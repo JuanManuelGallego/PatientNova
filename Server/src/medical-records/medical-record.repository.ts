@@ -1,5 +1,5 @@
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { type MedicalRecord, type MedicalRecord, type Prisma } from '../../generated/prisma/client.ts';
+import { type MedicalRecord, type Prisma } from '../../generated/prisma/client.ts';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
 import { paginate } from '../utils/api/pagination.js';
