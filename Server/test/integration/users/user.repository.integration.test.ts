@@ -26,7 +26,7 @@ describe('userRepository (integration)', () => {
 
     const stored = await prisma.user.findUnique({ where: { id: created.id } });
     expect(stored!.passwordHash).not.toBe('Password123!');
-    expect(stored!.passwordHash.startsWith('$2')).toBe(true);
+    expect(stored!.passwordHash.startsWith('$argon2')).toBe(true);
   });
 
   it('rejects duplicate email with UserEmailConflictError', async () => {
