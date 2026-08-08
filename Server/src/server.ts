@@ -3,6 +3,7 @@ import { config } from "./utils/config/config.js";
 import { logger } from "./utils/api/logger.js";
 import { prisma } from "./utils/prisma/prisma-client.js";
 import { initializePgBoss, stopPgBoss } from "./scheduler/pg-boss.js";
+import { reconcileScheduledReminders } from "./scheduler/reconcile-scheduled-reminder.js";
 
 async function start() {
   await prisma.$connect();
@@ -10,6 +11,7 @@ async function start() {
 
   if (config.scheduler.enabled) {
     await initializePgBoss();
+    await reconcileScheduledReminders();
   } else {
     logger.info('Schedulers disabled via config');
   }
