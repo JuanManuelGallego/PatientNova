@@ -7,7 +7,7 @@ on:
 
 jobs:
   portal:
-    name: Portal (Node 22.x)
+    name: Portal (Node 26.x)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 22.x
+      - name: Use Node.js 26.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 26.x
           cache: "npm"
           cache-dependency-path: Portal/package-lock.json
       - run: npm ci
@@ -28,7 +28,7 @@ jobs:
       - run: npm test
 
   server:
-    name: Server (Node 22.x)
+    name: Server (Node 26.x)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +57,9 @@ jobs:
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "30"
-      BCRYPT_ROUNDS: "12"
+      ARGON2_MEMORY: "19456"
+      ARGON2_ITERATIONS: "2"
+      ARGON2_PARALLELISM: "1"
       COOKIE_DOMAIN: localhost
       MAX_FAILED_ATTEMPTS: "5"
       LOCKOUT_DURATION_MS: "900000"
@@ -87,10 +89,10 @@ jobs:
       GOOGLE_REFRESH_TOKEN: dummy-google-refresh-token
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 22.x
+      - name: Use Node.js 26.x
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 26.x
           cache: "npm"
           cache-dependency-path: Server/package-lock.json
       - name: Generate encryption key

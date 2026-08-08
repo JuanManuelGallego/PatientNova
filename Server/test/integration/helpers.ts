@@ -1,5 +1,5 @@
 import { prisma } from '../../src/utils/prisma/prisma-client.js';
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import { config } from '../../src/utils/config/config.js';
 import {
   Channel,
@@ -22,7 +22,7 @@ export async function createTestUser(overrides: {
 } = {}) {
   const email = overrides.email ?? unique('user@test.local');
   const password = overrides.password ?? 'Password123!';
-  const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
+  const passwordHash = await argon2.hash(password);
   return prisma.user.create({
     data: {
       email,

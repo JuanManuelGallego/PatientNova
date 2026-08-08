@@ -1,6 +1,6 @@
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import { UserEmailConflictError } from './user.errors.js';
@@ -18,7 +18,7 @@ export const userRepository = {
             dto.email,
         );
 
-        const passwordHash = await bcrypt.hash(dto.password, config.auth.bcryptRounds);
+        const passwordHash = await argon2.hash(dto.password);
         return prisma.user.create({
             data: {
                 email: dto.email.toLowerCase(),

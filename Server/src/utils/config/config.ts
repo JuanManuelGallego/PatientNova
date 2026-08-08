@@ -42,7 +42,9 @@ export const config = {
 
   auth: {
     jwtSecret: requireEnv('AUTH_SECRET'),
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
+    argon2Memory: parseInt(process.env.ARGON2_MEMORY ?? '19456', 10),
+    argon2Iterations: parseInt(process.env.ARGON2_ITERATIONS ?? '2', 10),
+    argon2Parallelism: parseInt(process.env.ARGON2_PARALLELISM ?? '1', 10),
   },
 
   env: process.env.NODE_ENV ?? 'development',

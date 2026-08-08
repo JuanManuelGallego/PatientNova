@@ -16,7 +16,9 @@ vi.mock('../../../src/utils/config/config.js', () => ({
   config: {
     auth: {
       jwtSecret: 'test-secret-key-for-jwt',
-      bcryptRounds: 4,
+      argon2Memory: 19456,
+      argon2Iterations: 2,
+      argon2Parallelism: 1,
     },
     lockout: {
       maxFailedAttempts: 3,
@@ -40,9 +42,9 @@ vi.mock('../../../src/users/user.dto.js', () => ({
   toUserResponse: (u: any) => ({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role }),
 }));
 
-vi.mock('bcrypt', () => ({
+vi.mock('argon2', () => ({
   default: {
-    compare: vi.fn(),
+    verify: vi.fn(),
     hash: vi.fn(),
   },
 }));
@@ -64,17 +66,17 @@ vi.mock('jsonwebtoken', () => {
 });
 
 import { authRepository } from '../../../src/auth/auth.repository.js';
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 
 const mockRepo = vi.mocked(authRepository);
-const mockBcrypt = vi.mocked(bcrypt);
+const mockArgon2 = vi.mocked(argon2);
 const mockJwt = vi.mocked(jwt);
 
 const fakeUser = {
   id: 'user-1',
   email: 'test@example.com',
-  passwordHash: '$2b$04$hashedpassword',
+  passwordHash: '$argon2id$v=19$m=19456,t=2,p=1$fakehash',
   role: 'USER',
   timezone: 'America/Bogota',
   status: 'ACTIVE',
@@ -98,20 +100,20 @@ const fakeUpdatedUser = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockBcrypt.hash.mockResolvedValue('$2b$04$hashed' as any);
+  mockArgon2.hash.mockResolvedValue('$argon2id$v=19$m=19456,t=2,p=1$hashed' as any);
 });
 
 describe('authService.login', () => {
   it('returns user, accessToken, and refreshToken on valid login', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(true as any);
+    mockArgon2.verify.mockResolvedValue(true as any);
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('fake-jwt-token' as any);
 
     const result = await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockRepo.findByEmail).toHaveBeenCalledWith('test@example.com');
-    expect(mockBcrypt.compare).toHaveBeenCalledWith('password123', '$2b$04$hashedpassword');
+    expect(mockArgon2.verify).toHaveBeenCalledWith('$argon2id$v=19$m=19456,t=2,p=1$fakehash', 'password123');
     expect(mockRepo.recordSuccessfulLogin).toHaveBeenCalledWith('user-1', '127.0.0.1');
     expect(mockJwt.sign).toHaveBeenCalledTimes(2);
     expect(result.accessToken).toBe('fake-jwt-token');
@@ -120,7 +122,7 @@ describe('authService.login', () => {
 
   it('signs JWT with correct payload for access token', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(true as any);
+    mockArgon2.verify.mockResolvedValue(true as any);
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('token' as any);
 
@@ -135,7 +137,7 @@ describe('authService.login', () => {
 
   it('signs JWT with correct payload for refresh token', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(true as any);
+    mockArgon2.verify.mockResolvedValue(true as any);
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('token' as any);
 
@@ -150,14 +152,14 @@ describe('authService.login', () => {
 
   it('throws AuthInvalidCredentialsError when user not found', async () => {
     mockRepo.findByEmail.mockResolvedValue(null);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
 
     await expect(authService.login('unknown@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Invalid credentials');
   });
 
   it('throws AuthInvalidCredentialsError when user is not ACTIVE', async () => {
     mockRepo.findByEmail.mockResolvedValue({ ...fakeUser, status: 'INACTIVE' } as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
 
     await expect(authService.login('test@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Invalid credentials');
   });
@@ -167,12 +169,12 @@ describe('authService.login', () => {
     mockRepo.findByEmail.mockResolvedValue(lockedUser as any);
 
     await expect(authService.login('test@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Account temporarily locked');
-    expect(mockBcrypt.compare).not.toHaveBeenCalled();
+    expect(mockArgon2.verify).not.toHaveBeenCalled();
   });
 
   it('increments failed attempts on wrong password', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
     expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 1, undefined);
@@ -181,7 +183,7 @@ describe('authService.login', () => {
   it('locks account after max failed attempts', async () => {
     const almostLockedUser = { ...fakeUser, failedLoginAttempts: 2 };
     mockRepo.findByEmail.mockResolvedValue(almostLockedUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
     expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 3, expect.any(Date));
@@ -189,7 +191,7 @@ describe('authService.login', () => {
 
   it('still throws AuthInvalidCredentialsError when incrementFailedAttempts DB fails', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
     mockRepo.incrementFailedAttempts.mockRejectedValue(new Error('DB connection lost'));
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
@@ -260,15 +262,15 @@ describe('authService.refreshToken', () => {
 describe('authService.changePassword', () => {
   it('updates password when current password is correct', async () => {
     mockRepo.findByIdForAuth.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(true as any);
-    mockBcrypt.hash.mockResolvedValue('$2b$04$newhash' as any);
+    mockArgon2.verify.mockResolvedValue(true as any);
+    mockArgon2.hash.mockResolvedValue('$argon2id$v=19$m=19456,t=2,p=1$newhash' as any);
     mockRepo.updatePassword.mockResolvedValue(undefined as any);
 
     await authService.changePassword('user-1', 'oldpass', 'newpass');
 
-    expect(mockBcrypt.compare).toHaveBeenCalledWith('oldpass', '$2b$04$hashedpassword');
-    expect(mockBcrypt.hash).toHaveBeenCalledWith('newpass', 4);
-    expect(mockRepo.updatePassword).toHaveBeenCalledWith('user-1', '$2b$04$newhash');
+    expect(mockArgon2.verify).toHaveBeenCalledWith('$argon2id$v=19$m=19456,t=2,p=1$fakehash', 'oldpass');
+    expect(mockArgon2.hash).toHaveBeenCalledWith('newpass');
+    expect(mockRepo.updatePassword).toHaveBeenCalledWith('user-1', '$argon2id$v=19$m=19456,t=2,p=1$newhash');
   });
 
   it('throws UserNotFoundError when user does not exist', async () => {
@@ -279,7 +281,7 @@ describe('authService.changePassword', () => {
 
   it('throws UserInvalidCredentialsError when current password is wrong', async () => {
     mockRepo.findByIdForAuth.mockResolvedValue(fakeUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
+    mockArgon2.verify.mockResolvedValue(false as any);
 
     await expect(authService.changePassword('user-1', 'wrong', 'new')).rejects.toThrow('Current password is incorrect');
     expect(mockRepo.updatePassword).not.toHaveBeenCalled();

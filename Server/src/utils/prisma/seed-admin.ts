@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import { prisma } from './prisma-client.js';
 import { config } from '../config/config.js';
 import { AdminRole, AdminStatus, Channel } from '../../../generated/prisma/client.ts';
@@ -13,7 +13,7 @@ async function seedAdmin() {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
+  const passwordHash = await argon2.hash(password);
   await prisma.user.create({
     data: {
       email,

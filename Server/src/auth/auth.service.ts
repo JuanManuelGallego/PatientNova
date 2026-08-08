@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
 import { config } from '../utils/config/config.js';
@@ -15,6 +15,22 @@ import { UserNotFoundError } from '../utils/errors/errors.js';
 import type { UserResponse } from '../users/user.dto.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+
+function isBcryptHash(hash: string): boolean {
+  return hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2c$');
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  if (isBcryptHash(hash)) {
+    const bcrypt = await import('bcrypt');
+    return bcrypt.compare(password, hash);
+  }
+  return argon2.verify(hash, password);
+}
+
+async function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password);
+}
 
 interface RefreshTokenPayload {
   type: string;
@@ -35,7 +51,7 @@ function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload
 
 let _dummyHash: string | undefined;
 async function getDummyHash(): Promise<string> {
-  if (!_dummyHash) _dummyHash = await bcrypt.hash('__dummy_timing_sink__', config.auth.bcryptRounds);
+  if (!_dummyHash) _dummyHash = await argon2.hash('__dummy_timing_sink__');
   return _dummyHash;
 }
 
@@ -50,7 +66,7 @@ export const authService = {
     const user = await authRepository.findByEmail(email);
 
     if (!user || user.status !== 'ACTIVE') {
-      await bcrypt.compare(password, await getDummyHash());
+      await argon2.verify(await getDummyHash(), password);
       logger.info({ email: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
       throw new AuthInvalidCredentialsError();
     }
@@ -60,7 +76,7 @@ export const authService = {
       throw new AuthAccountLockedError();
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       const failedAttempts = user.failedLoginAttempts + 1;
       let lockUntil: Date | undefined;
@@ -166,13 +182,13 @@ export const authService = {
       throw new UserNotFoundError(userId);
     }
 
-    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
     if (!valid) {
       logger.info({ userId }, 'Password change failed: incorrect current password');
       throw new UserInvalidCredentialsError();
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
+    const passwordHash = await hashPassword(newPassword);
     await authRepository.updatePassword(userId, passwordHash);
     await logAudit({
       entityType: EntityType.USER,
