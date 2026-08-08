@@ -29,7 +29,11 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 }
 
 async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password);
+  return argon2.hash(password, {
+    memoryCost: config.auth.argon2Memory,
+    timeCost: config.auth.argon2Iterations,
+    parallelism: config.auth.argon2Parallelism,
+  });
 }
 
 interface RefreshTokenPayload {
@@ -51,7 +55,11 @@ function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload
 
 let _dummyHash: string | undefined;
 async function getDummyHash(): Promise<string> {
-  if (!_dummyHash) _dummyHash = await argon2.hash('__dummy_timing_sink__');
+  if (!_dummyHash) _dummyHash = await argon2.hash('__dummy_timing_sink__', {
+    memoryCost: config.auth.argon2Memory,
+    timeCost: config.auth.argon2Iterations,
+    parallelism: config.auth.argon2Parallelism,
+  });
   return _dummyHash;
 }
 

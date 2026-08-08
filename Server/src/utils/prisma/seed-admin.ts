@@ -13,7 +13,11 @@ async function seedAdmin() {
     return;
   }
 
-  const passwordHash = await argon2.hash(password);
+  const passwordHash = await argon2.hash(password, {
+    memoryCost: config.auth.argon2Memory,
+    timeCost: config.auth.argon2Iterations,
+    parallelism: config.auth.argon2Parallelism,
+  });
   await prisma.user.create({
     data: {
       email,

@@ -18,7 +18,11 @@ export const userRepository = {
             dto.email,
         );
 
-        const passwordHash = await argon2.hash(dto.password);
+        const passwordHash = await argon2.hash(dto.password, {
+            memoryCost: config.auth.argon2Memory,
+            timeCost: config.auth.argon2Iterations,
+            parallelism: config.auth.argon2Parallelism,
+        });
         return prisma.user.create({
             data: {
                 email: dto.email.toLowerCase(),
