@@ -164,6 +164,7 @@ export async function dailyReminderWorker(): Promise<void> {
           affectedFields: ['lastDailyReminderDate'],
           fieldsBefore: { lastDailyReminderDate: user.lastDailyReminderDate ?? null },
           fieldsAfter: { lastDailyReminderDate: new Date(todayLocal) },
+          userId: user.id,
         }));
         logger.info({ userId: user.id, channel }, "Daily reminder sent");
       } else {

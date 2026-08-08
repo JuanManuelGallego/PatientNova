@@ -24,7 +24,7 @@ export async function trackDeliveryWorker(): Promise<void> {
 
   const stale = await prisma.reminder.findMany({
     where: { status: ReminderStatus.QUEUED, updatedAt: { lte: cutoff }, isDeleted: false },
-    select: { id: true },
+    select: { id: true, userId: true },
     take: REMINDER_BATCH_SIZE,
   });
 
@@ -46,6 +46,7 @@ export async function trackDeliveryWorker(): Promise<void> {
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: ReminderStatus.QUEUED },
         fieldsAfter: { status: ReminderStatus.FAILED, error: 'Status tracking timed out' },
+        userId: r.userId,
       }))
     ));
     logger.warn({ count: stale.length }, 'Dropped stale QUEUED reminders');
@@ -58,7 +59,7 @@ export async function trackDeliveryWorker(): Promise<void> {
       updatedAt: { gt: cutoff },
       isDeleted: false,
     },
-    select: { id: true, messageId: true },
+    select: { id: true, messageId: true, userId: true },
     take: REMINDER_BATCH_SIZE,
   });
 
@@ -92,6 +93,7 @@ export async function trackDeliveryWorker(): Promise<void> {
               affectedFields: ['status', 'error'],
               fieldsBefore: { status: ReminderStatus.QUEUED },
               fieldsAfter: { status: mappedStatus, error: mappedStatus === ReminderStatus.FAILED ? message.errorMessage : null },
+              userId: reminder.userId,
             }));
           }
         } catch (error) {

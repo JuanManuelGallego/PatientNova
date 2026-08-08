@@ -51,6 +51,7 @@ export async function bulkSendWorker([job]: Array<{
       affectedFields: ['status', 'error'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
+      userId: reminder.userId,
     }));
     return;
   }
@@ -80,6 +81,7 @@ export async function bulkSendWorker([job]: Array<{
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
+        userId: reminder.userId,
       }));
       logger.error({ reminderId, error: errorMsg }, 'Bulk send reminder permanently failed after max retries');
     } else {
@@ -106,6 +108,7 @@ export async function bulkSendWorker([job]: Array<{
       affectedFields: ['status', 'messageId', 'sentAt'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.QUEUED, messageId: result.messageSid },
+      userId: reminder.userId,
     }));
   } else {
     if ((job.retryCount ?? 0) >= REMINDER_SEND_RETRY_LIMIT - 1) {
@@ -125,6 +128,7 @@ export async function bulkSendWorker([job]: Array<{
         affectedFields: ['status', 'error'],
         fieldsBefore: { status: reminder.status },
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
+        userId: reminder.userId,
       }));
       logger.error({ reminderId, error: result.error }, 'Bulk send reminder permanently failed after max retries');
     } else {

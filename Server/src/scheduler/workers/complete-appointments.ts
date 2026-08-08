@@ -16,7 +16,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] },
       endAt: { lte: now },
     },
-    select: { id: true, patientId: true, status: true },
+    select: { id: true, patientId: true, status: true, userId: true },
   });
 
   if (pending.length === 0) {
@@ -42,6 +42,7 @@ export async function completeAppointmentsWorker(): Promise<void> {
       affectedFields: ['status'],
       fieldsBefore: { status: a.status },
       fieldsAfter: { status: AppointmentStatus.COMPLETED },
+      userId: a.userId,
     }))
   ));
 
