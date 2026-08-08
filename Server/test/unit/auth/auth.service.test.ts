@@ -269,7 +269,11 @@ describe('authService.changePassword', () => {
     await authService.changePassword('user-1', 'oldpass', 'newpass');
 
     expect(mockArgon2.verify).toHaveBeenCalledWith('$argon2id$v=19$m=19456,t=2,p=1$fakehash', 'oldpass');
-    expect(mockArgon2.hash).toHaveBeenCalledWith('newpass');
+    expect(mockArgon2.hash).toHaveBeenCalledWith('newpass', {
+      memoryCost: 19456,
+      timeCost: 2,
+      parallelism: 1,
+    });
     expect(mockRepo.updatePassword).toHaveBeenCalledWith('user-1', '$argon2id$v=19$m=19456,t=2,p=1$newhash');
   });
 

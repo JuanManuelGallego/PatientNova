@@ -24,9 +24,6 @@
   "author": "Juan Manuel Gallego",
   "license": "ISC",
   "description": "",
-  "engines": {
-    "node": ">=26"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
@@ -41,8 +38,7 @@
     "prisma": "^7.9.1",
     "tsup": "^8.5.1",
     "tsx": "^4.23.1",
-    "@typescript/native": "npm:typescript@^7.0.2",
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10"
   },
