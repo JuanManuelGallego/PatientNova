@@ -19,7 +19,8 @@ function buildUserMeetClient(): SpacesServiceClient {
     });
 
     return new SpacesServiceClient({
-        authClient: oauth2Client
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        authClient: oauth2Client as any
     });
 }
 
