@@ -6,6 +6,10 @@ import { CancelAppointmentModal } from '../pages/CancelAppointmentModal';
 import { uniqueName, uniqueEmail, futureDateTime } from '../utils/test-data';
 
 test.describe('Appointments', () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/appointments');
+  });
+
   test('should display appointments list', async ({ authenticatedPage }) => {
     const appointments = new AppointmentsPage(authenticatedPage);
     await expect(appointments.table).toBeVisible();

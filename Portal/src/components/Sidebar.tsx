@@ -39,6 +39,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     <aside
       className={`sidebar ${isOpen ? "sidebar--open" : ""}`}
       aria-label="Navegación principal"
+      data-testid="sidebar"
     >
       {/* Brand */}
       <div className="sidebar-brand">
@@ -60,7 +61,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="sidebar-divider" />
 
       {/* Navigation */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" data-testid="sidebar-nav">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
           const Icon = NAV_ICONS[item.id];
@@ -70,6 +71,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               href={item.path}
               onClick={onClose}
               aria-current={isActive ? "page" : undefined}
+              data-testid={`sidebar-link-${item.id}`}
             >
               <div className={`nav-item ${isActive ? "active" : ""}`}>
                 <Icon size={18} />
@@ -81,7 +83,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="sidebar-user">
+      <div className="sidebar-user" data-testid="sidebar-user">
         <div className="sidebar-user__inner">
           <div className="sidebar-user__avatar">
             {user?.avatar ? (
@@ -110,6 +112,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             onClick={toggleTheme}
             title={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
             className="sidebar-logout"
+            data-testid="sidebar-theme-toggle"
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -120,6 +123,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             }}
             title="Cerrar sesión"
             className="sidebar-logout"
+            data-testid="sidebar-logout"
           >
             <LogoutIcon size={18} />
           </button>

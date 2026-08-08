@@ -8,6 +8,10 @@ import { AuditDrawer } from '../pages/AuditDrawer';
 import { uniqueName } from '../utils/test-data';
 
 test.describe('Settings', () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/settings');
+  });
+
   test.describe('Navigation', () => {
     test('should navigate between all tabs', async ({ authenticatedPage }) => {
       const settings = new SettingsPage(authenticatedPage);
@@ -39,12 +43,10 @@ test.describe('Settings', () => {
 
   test.describe('Profile Tab', () => {
     test('should display profile tab by default', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/settings');
       await expect(authenticatedPage.getByTestId('settings-tab-perfil')).toHaveAttribute('aria-selected', 'true');
     });
 
     test('should display profile form fields', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/settings');
       const firstNameInput = authenticatedPage.getByTestId('profile-first-name-input');
       const lastNameInput = authenticatedPage.getByTestId('profile-last-name-input');
       if (await firstNameInput.isVisible()) {
@@ -56,7 +58,6 @@ test.describe('Settings', () => {
     });
 
     test('should update profile fields with auto-save', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/settings');
       const firstNameInput = authenticatedPage.getByTestId('profile-first-name-input');
       if (await firstNameInput.isVisible()) {
         const originalValue = await firstNameInput.inputValue();
@@ -70,7 +71,6 @@ test.describe('Settings', () => {
     });
 
     test('should display banking info fields', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/settings');
       const bankNameInput = authenticatedPage.getByTestId('profile-bank-name-input');
       if (await bankNameInput.isVisible()) {
         await expect(bankNameInput).toBeVisible();

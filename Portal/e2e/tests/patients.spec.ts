@@ -6,6 +6,10 @@ import { DeletePatientModal } from '../pages/DeletePatientModal';
 import { uniqueName, uniqueEmail } from '../utils/test-data';
 
 test.describe('Patients', () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/patients');
+  });
+
   test('should display patients list', async ({ authenticatedPage }) => {
     const patients = new PatientsPage(authenticatedPage);
     await expect(patients.table).toBeVisible();

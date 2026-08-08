@@ -58,6 +58,7 @@ export default function PageLayout({
           className="sidebar-backdrop"
           onClick={closeSidebar}
           aria-hidden="true"
+          data-testid="sidebar-backdrop"
         />
       )}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
@@ -68,6 +69,7 @@ export default function PageLayout({
             onClick={() => setSidebarOpen((o) => !o)}
             aria-label="Abrir menú"
             aria-expanded={sidebarOpen}
+            data-testid="hamburger-button"
           >
             <MenuIcon size={22} />
           </button>
