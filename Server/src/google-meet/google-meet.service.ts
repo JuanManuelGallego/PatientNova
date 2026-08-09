@@ -19,7 +19,7 @@ function buildUserMeetClient(): SpacesServiceClient {
     });
 
     return new SpacesServiceClient({
-        authClient: oauth2Client
+        authClient: oauth2Client as never
     });
 }
 
