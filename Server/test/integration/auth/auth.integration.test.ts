@@ -60,7 +60,7 @@ describe('authService (integration)', () => {
     const segments = accessToken.split('.');
     expect(segments).toHaveLength(3);
     const payload = JSON.parse(Buffer.from(segments[1]!, 'base64').toString());
-    expect(payload.sub).toBe(user.id);
+    expect(payload.id).toBe(user.id);
   });
 
   it('rejects a refresh token after logout (version bump)', async () => {
