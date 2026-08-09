@@ -1,34 +1,14 @@
-import { test as base, Page } from '@playwright/test';
-import { LoginPage } from './pages/LoginPage';
+import { test as base } from '@playwright/test';
 import { ApiClient, createApiClient } from './utils/api';
-import { Env } from './utils/env';
 
-type Fixtures = {
-  authenticatedPage: Page;
+type TestFixtures = {
   api: ApiClient;
-  seededIds: { [resource: string]: string[] };
 };
 
-export const test = base.extend<Fixtures>({
-  authenticatedPage: async ({ page }, use) => {
-    const context = page.context();
-    await context.clearCookies();
-    await context.clearPermissions();
-
-    const loginPage = new LoginPage(page);
-    await loginPage.login(Env.testUserEmail, Env.testUserPassword);
-
-    await use(page);
-  },
-
-  api: async ({ authenticatedPage }, use) => {
-    const api = createApiClient(authenticatedPage);
+export const test = base.extend<TestFixtures>({
+  api: async ({ page }, use) => {
+    const api = createApiClient(page);
     await use(api);
-  },
-
-  seededIds: async ({}, use) => {
-    const ids: { [resource: string]: string[] } = {};
-    await use(ids);
   },
 });
 

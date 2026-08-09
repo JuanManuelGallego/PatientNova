@@ -1,32 +1,15 @@
 import { test, expect } from '../fixtures';
 import { PatientsPage } from '../pages/PatientsPage';
 import { PatientModal } from '../pages/Modals/PatientModal';
-import { PatientDrawer } from '../pages/Drawers/PatientDrawer';
 import { DeletePatientModal } from '../pages/Modals/DeletePatientModal';
 import { uniqueName, uniqueEmail } from '../utils/test-data';
-import { login } from '../utils/login';
-import { Page } from '@playwright/test';
-import { EntityTypes, Routes } from '../utils/const';
 import { SidebarPage } from '../pages/SidebarPage';
-import { ApiClient, createApiClient } from '../utils/api';
-
-let page: Page;
-let api: ApiClient;
-
-test.describe.configure({ mode: 'default' });
+import { EntityTypes, Routes } from '../utils/const';
 
 test.describe('Patients', () => {
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    api = createApiClient(page);
+  test('Create patient', async ({ page, api }) => {
+    await page.goto(Routes.PATIENTS)
 
-    await login(page);
-
-    const sidebar = new SidebarPage(page);
-    await sidebar.navigateToPatients();
-  });
-
-  test('Create patient', async () => {
     const patientPage = new PatientsPage(page);
     await patientPage.openCreateModal();
 
@@ -42,11 +25,16 @@ test.describe('Patients', () => {
     await api.deletePatient(patientId);
   });
 
-  test('Edit patient', async () => {
+  test('Edit patient', async ({ page, api }) => {
+    await page.goto(Routes.PATIENTS)
+
     const name = uniqueName(EntityTypes.PATIENT);
     const email = uniqueEmail();
 
     const patientResponse = await api.createPatient({ name, lastName: name, email });
+
+    const sidebar = new SidebarPage(page);
+    await sidebar.navigateToPatients();
 
     const patientPage = new PatientsPage(page);
     await patientPage.searchPatient(name);
@@ -66,11 +54,16 @@ test.describe('Patients', () => {
     await api.deletePatient(patientResponse.data.id);
   });
 
-  test('Delete patient', async () => {
+  test('Delete patient', async ({ page, api }) => {
+    await page.goto(Routes.PATIENTS)
+
     const name = uniqueName(EntityTypes.PATIENT);
     const email = uniqueEmail();
 
     await api.createPatient({ name, lastName: name, email });
+
+    const sidebar = new SidebarPage(page);
+    await sidebar.navigateToPatients();
 
     const patientPage = new PatientsPage(page);
     await patientPage.searchPatient(name);

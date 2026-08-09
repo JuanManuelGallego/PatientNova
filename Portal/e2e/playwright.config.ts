@@ -9,7 +9,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 8,
-  reporter: [['list'], ['html'] ],
+  reporter: [ [ 'list' ], [ 'html' ] ],
 
   use: {
     baseURL: Env.baseUrl,
@@ -28,13 +28,19 @@ export default defineConfig({
   },
 
   projects: [
+    { name: 'setup', testMatch: /.*\.setup\.ts/, testDir: '.' },
+
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices[ 'Desktop Chrome' ],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: [ 'setup' ],
     },
   ],
 
-  expect:{
+  expect: {
     timeout: 10_000,
   }
 });

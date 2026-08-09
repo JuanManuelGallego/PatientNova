@@ -29,27 +29,31 @@ export interface ApiClient {
 }
 
 async function getAuthToken(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const cookies = document.cookie.split(';').map(c => c.trim());
-    const tokenCookie = cookies.find(c => c.startsWith('token='));
-    if (tokenCookie) return tokenCookie.split('=').slice(1).join('=');
+  const cookies = await page.context().cookies();
+  const tokenCookie = cookies.find(c => c.name === 'token');
+  if (tokenCookie) return tokenCookie.value;
 
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('token') || key.includes('auth') || key.includes('jwt'))) {
-        const val = localStorage.getItem(key);
-        if (val) {
-          try {
-            const parsed = JSON.parse(val);
-            return parsed.accessToken || parsed.token || parsed.jwt || val;
-          } catch {
-            return val;
+  try {
+    return await page.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('token') || key.includes('auth') || key.includes('jwt'))) {
+          const val = localStorage.getItem(key);
+          if (val) {
+            try {
+              const parsed = JSON.parse(val);
+              return parsed.accessToken || parsed.token || parsed.jwt || val;
+            } catch {
+              return val;
+            }
           }
         }
       }
-    }
+      return '';
+    });
+  } catch {
     return '';
-  });
+  }
 }
 
 function apiBase(): string {
