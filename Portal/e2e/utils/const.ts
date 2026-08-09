@@ -33,4 +33,6 @@ export const PATIENT_LAST_NAME = 'Patient'
 
 export const PATIENT_EMAIL = 'playwright@patientnova.net'
 
+export const PATIENT_ID = '5cfd4f7e-867e-4549-a431-62e113ec0c44'
+
 export const APPT_DATE = '10 de agosto de 2126'

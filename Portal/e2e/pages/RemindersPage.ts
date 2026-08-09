@@ -77,7 +77,15 @@ export class RemindersPage extends BasePage {
     await row.locator(`[data-testid="${this.retryTestId}"]`).click();
   }
 
+  async searchReminder(name: string) {
+    await this.searchInput.fill(name);
+  }
+
   async expectReminderVisible(rowText: string) {
     await expect(this.table.getByRole('row').filter({ hasText: rowText })).toBeVisible();
+  }
+
+  async expectReminderNotVisible(rowText: string) {
+    await expect(this.table.getByRole('row').filter({ hasText: rowText })).not.toBeVisible();
   }
 }
