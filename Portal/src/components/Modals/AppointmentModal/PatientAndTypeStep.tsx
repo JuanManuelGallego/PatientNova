@@ -32,6 +32,7 @@ export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, app
                     <PatientAutocomplete
                         value={form.patientId}
                         placeholder="Seleccionar paciente…"
+                        data-testid="appointment-patient-autocomplete"
                         onChange={(v, patient) => {
                             const type = appointmentTypes.find(t => t.id === patient?.appointmentTypeId);
                             setForm(f => ({ ...f, patientId: v, typeId: type?.id ?? '', price: type?.defaultPrice ?? 0 }));
@@ -70,6 +71,7 @@ export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, app
                     <CustomSelect
                         value={form.typeId}
                         placeholder="Seleccionar tipo…"
+                        data-testid="appointment-type-select"
                         options={appointmentTypes.map(t => ({ value: t.id, label: t.name }))}
                         onChange={(v) => setForm(f => ({
                             ...f,

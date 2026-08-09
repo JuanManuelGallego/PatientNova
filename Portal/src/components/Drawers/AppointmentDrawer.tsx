@@ -37,7 +37,7 @@ export function AppointmentDrawer({
         >
           <div className="drawer-header__top">
             <div>
-              <h2 className="drawer-header__title">
+              <h2 className="drawer-header__title" data-testid="appointment-drawer-type-name">
                 {appt.appointmentType.name}
               </h2>
               <div className="drawer-header__status">
@@ -50,7 +50,7 @@ export function AppointmentDrawer({
           </div>
         </div>
         <div className="drawer-body">
-          <Section title="Paciente">
+          <Section title="Paciente" testId="appointment-drawer-section-paciente">
             <div className="td-identity">
               <div
                 className="avatar avatar--lg"
@@ -59,35 +59,39 @@ export function AppointmentDrawer({
                 {getInitials(appt.patient.name, appt.patient.lastName)}
               </div>
               <div>
-                <div className="drawer-patient__name">
+                <div className="drawer-patient__name" data-testid="appointment-drawer-patient-name">
                   {appt.patient.name} {appt.patient.lastName}
                 </div>
-                <div className="text-muted">{appt.patient.email}</div>
+                <div className="text-muted" data-testid="appointment-drawer-patient-email">{appt.patient.email}</div>
               </div>
             </div>
           </Section>
-          <Section title="Fecha y Hora">
+          <Section title="Fecha y Hora" testId="appointment-drawer-section-fecha-hora">
             <Row
               icon={DETAIL_ICONS.calendar}
               label="Fecha"
               value={fmtDate(appt.startAt)}
+              testId="appointment-drawer-date"
             />
             <Row
               icon={DETAIL_ICONS.clock}
               label="Hora"
               value={fmtTime(appt.startAt)}
+              testId="appointment-drawer-time"
             />
             <Row
               icon={DETAIL_ICONS.timer}
               label="Duración"
               value={getDuration(appt.startAt, appt.endAt)}
+              testId="appointment-drawer-duration"
             />
           </Section>
-          <Section title="Lugar">
+          <Section title="Lugar" testId="appointment-drawer-section-lugar">
             <Row
               icon={DETAIL_ICONS.mapPin}
               label="Ubicación"
               value={appt.appointmentLocation.name}
+              testId="appointment-drawer-location"
             />
             {appt.meetingUrl && (
               <div className="detail-row">
@@ -105,17 +109,19 @@ export function AppointmentDrawer({
               </div>
             )}
           </Section>
-          <Section title="Pago">
+          <Section title="Pago" testId="appointment-drawer-section-pago">
             <Row
               icon={DETAIL_ICONS.dollar}
               label="Precio"
               value={`$${appt.price}`}
+              testId="appointment-drawer-price"
             />
             <div className="row-between">
               <Row
                 icon={DETAIL_ICONS.creditCard}
                 label="Estado"
                 value={<PayStatusPill paid={appt.paid} />}
+                testId="appointment-drawer-paid-status"
               />
               {!appt.paid && (
                 <button
@@ -128,11 +134,12 @@ export function AppointmentDrawer({
               )}
             </div>
           </Section>
-          <Section title="Notas">
+          <Section title="Notas" testId="appointment-drawer-section-notas">
             <Row
               icon={DETAIL_ICONS.note}
               label="Notas"
               value={`${appt.notes || "Ninguna Nota"}`}
+              testId="appointment-drawer-notes"
             />
           </Section>
           {appt.reminder && (
@@ -175,6 +182,7 @@ export function AppointmentDrawer({
               href={`/settings?tab=Registro+de+actividad&entityId=${appt.id}`}
               className="btn-secondary btn-primary--block"
               style={{ marginTop: 12, textDecoration: "none" }}
+              data-testid="appointment-drawer-audit-link"
             >
               <DETAIL_ICONS.history size={14} /> Ver registros de actividad
             </Link>

@@ -368,21 +368,23 @@ function AppointmentsPageContent() {
                 </div>
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
-                <div className="td-actions">
-                  <button
-                    onClick={() => setEditAppt(a)}
-                    className="btn-action-edit"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => setDeleteAppt(a)}
-                    className="btn-action-delete"
-                    data-testid="appointment-row-delete-button"
-                  >
-                    <ACTION_ICONS.close size={14} />
-                  </button>
-                </div>
+                {(a.status == AppointmentStatus.CONFIRMED || a.status == AppointmentStatus.SCHEDULED) &&
+                  (<div className="td-actions">
+                    <button
+                      onClick={() => setEditAppt(a)}
+                      className="btn-action-edit"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => setDeleteAppt(a)}
+                      className="btn-action-delete"
+                      data-testid="appointment-row-delete-button"
+                    >
+                      <ACTION_ICONS.close size={14} />
+                    </button>
+                  </div>)
+                }
               </td>
             </tr>
           )}

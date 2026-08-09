@@ -13,6 +13,7 @@ import { getBoss } from '../scheduler/pg-boss.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { config } from '../utils/config/config.ts';
 
 const QUEUE = 'send-reminder';
 const MAX_RETRIES = 1;
@@ -57,7 +58,7 @@ export const reminderService = {
         include: reminderInclude,
       });
 
-      if (enqueue) {
+      if (enqueue && config.scheduler.enabled) {
         const boss = getBoss();
         const db = fromPrisma(tx);
         if (dto.sendMode === ReminderMode.IMMEDIATE) {
@@ -78,16 +79,16 @@ export const reminderService = {
       actionType: ActionType.CREATE,
       description: `Recordatorio creado para el paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
       affectedFields: Object.keys(dto),
-      fieldsAfter: { 
+      fieldsAfter: {
         channel: reminder.channel,
-        sendMode: reminder.sendMode, 
-        sendAt: reminder.sendAt, 
-        to: reminder.to, 
-        contentSid: reminder.contentSid, 
-        contentVariables: reminder.contentVariables, 
-        body: reminder.body, 
-        patientId: reminder.patientId, 
-        status: reminder.status ,
+        sendMode: reminder.sendMode,
+        sendAt: reminder.sendAt,
+        to: reminder.to,
+        contentSid: reminder.contentSid,
+        contentVariables: reminder.contentVariables,
+        body: reminder.body,
+        patientId: reminder.patientId,
+        status: reminder.status,
         appointmentId: reminder.appointmentId,
       },
     });

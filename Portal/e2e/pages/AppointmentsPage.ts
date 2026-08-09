@@ -70,9 +70,7 @@ export class AppointmentsPage extends BasePage {
   async cancelAppointment(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
     await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
-    const modal = new CancelAppointmentModal(this.page);
-    await expect(modal.dialog).toBeVisible();
-    return modal;
+    return new CancelAppointmentModal(this.page);
   }
 
   async searchAppointment(name: string) {

@@ -3,12 +3,14 @@ import { type LucideIcon } from "@/src/config/icons";
 export function Section({
   title,
   children,
+  testId,
 }: {
   title: string;
   children: React.ReactNode;
+  testId?: string;
 }) {
   return (
-    <div>
+    <div data-testid={testId}>
       <div className="section-title">{title}</div>
       <div className="section-body">{children}</div>
     </div>
@@ -19,13 +21,15 @@ export function Row({
   icon: Icon,
   label,
   value,
+  testId,
 }: {
   icon: LucideIcon | null;
   label: string;
   value: React.ReactNode;
+  testId?: string;
 }) {
   return (
-    <div className="detail-row">
+    <div className="detail-row" data-testid={testId}>
       {Icon && (
         <span className="detail-row__icon">
           <Icon size={14} />

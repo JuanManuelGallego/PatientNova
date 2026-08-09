@@ -18,7 +18,7 @@ export class PatientsPage extends BasePage {
     super(page);
     this.createButton = this.page.getByTestId('patients-new-button');
     this.table = this.page.getByRole('table');
-    this.searchInput = this.page.getByPlaceholder(/Buscar/);
+    this.searchInput = this.page.getByRole('textbox', { name: 'Buscar por nombre, apellido o' })
     this.statTotal = this.page.getByTestId('stat-card-total-pacientes');
     this.statActive = this.page.getByTestId('stat-card-activos');
     this.statInactive = this.page.getByTestId('stat-card-inactivos');

@@ -9,7 +9,8 @@ import {
   APPT_TYPE_NAME,
   Routes,
 } from '../utils/const';
-import { futureDateTime } from '../utils/test-data';
+import { futureDateTime, uniquePhoneNumber } from '../utils/test-data';
+import { Channel, ReminderMode } from '@/src/types/Reminder';
 
 test.describe('Reminders', () => {
   test('Create reminder', async ({ page, api }) => {
@@ -33,9 +34,9 @@ test.describe('Reminders', () => {
     await page.goto(Routes.REMINDERS);
 
     const reminder = await api.createReminder({
-      channel: 'WHATSAPP',
-      to: '+15551234567',
-      sendMode: 'SCHEDULED',
+      channel: Channel.WHATSAPP,
+      to: uniquePhoneNumber(),
+      sendMode: ReminderMode.SCHEDULED,
       sendAt: futureDateTime(48),
       patientId: PATIENT_ID,
     });
@@ -56,9 +57,9 @@ test.describe('Reminders', () => {
     await page.goto(Routes.REMINDERS);
 
     const reminder = await api.createReminder({
-      channel: 'WHATSAPP',
-      to: '+15551234567',
-      sendMode: 'SCHEDULED',
+      channel: Channel.WHATSAPP,
+      to: uniquePhoneNumber(),
+      sendMode: ReminderMode.SCHEDULED,
       sendAt: futureDateTime(48),
       patientId: PATIENT_ID,
     });
@@ -79,9 +80,9 @@ test.describe('Reminders', () => {
     await page.goto(Routes.REMINDERS);
 
     const reminder = await api.createReminder({
-      channel: 'WHATSAPP',
-      to: '+15551234567',
-      sendMode: 'SCHEDULED',
+      channel: Channel.WHATSAPP,
+      to: uniquePhoneNumber(),
+      sendMode: ReminderMode.SCHEDULED,
       sendAt: futureDateTime(48),
       patientId: PATIENT_ID,
     });
@@ -109,9 +110,9 @@ test.describe('Reminders', () => {
     await page.goto(Routes.REMINDERS);
 
     const reminder = await api.createReminder({
-      channel: 'WHATSAPP',
-      to: '+15551234567',
-      sendMode: 'SCHEDULED',
+      channel: Channel.WHATSAPP,
+      to: uniquePhoneNumber(),
+      sendMode: ReminderMode.SCHEDULED,
       sendAt: futureDateTime(48),
       patientId: PATIENT_ID,
     });

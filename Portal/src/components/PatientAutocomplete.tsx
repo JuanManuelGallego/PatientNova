@@ -23,6 +23,7 @@ interface PatientAutocompleteProps {
   disabled?: boolean;
   className?: string;
   "aria-label"?: string;
+  "data-testid"?: string;
 }
 
 export function PatientAutocomplete({
@@ -32,6 +33,7 @@ export function PatientAutocomplete({
   disabled,
   className,
   "aria-label": ariaLabel,
+  "data-testid": testId,
 }: PatientAutocompleteProps) {
   const [searchText, setSearchText] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -268,6 +270,7 @@ export function PatientAutocomplete({
       ref={ref}
       onKeyDown={handleKeyDown}
       style={disabled ? { opacity: 0.45, userSelect: "none" } : undefined}
+      data-testid={testId}
     >
       <div
         className={`patient-autocomplete__trigger${!displayValue && !isSearching ? " patient-autocomplete__trigger--placeholder" : ""}`}

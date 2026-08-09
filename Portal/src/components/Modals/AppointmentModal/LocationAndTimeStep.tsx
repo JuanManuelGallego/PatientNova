@@ -54,6 +54,7 @@ export function LocationAndTimeStep({
         <RequiredField label="Duración" />
         <CustomSelect
           value={form.duration}
+          data-testid="appointment-duration-select"
           options={Object.values(AppointmentDuration).map((d) => ({
             value: d,
             label: d,
@@ -68,6 +69,7 @@ export function LocationAndTimeStep({
           <CustomSelect
             value={form.locationId}
             placeholder="Seleccionar ubicación…"
+            data-testid="appointment-location-select"
             options={locations.map((d) => ({ value: d.id, label: d.name }))}
             onChange={setField("locationId")}
           />
@@ -97,6 +99,7 @@ export function LocationAndTimeStep({
             Recordatorio
             <CustomSelect
               value={form.reminderType}
+              data-testid="appointment-reminder-select"
               options={[
                 { value: ReminderType.NONE, label: LBL_NO_REMINDER },
                 {

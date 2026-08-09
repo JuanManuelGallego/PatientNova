@@ -8,6 +8,15 @@ export class AppointmentModal {
   readonly nextButton: Locator;
   readonly backButton: Locator;
   readonly closeButton: Locator;
+  readonly patientInput: Locator;
+  readonly typeSelect: Locator;
+  readonly durationSelect: Locator;
+  readonly locationSelect: Locator;
+  readonly reminderSelect: Locator;
+  readonly priceInput: Locator;
+  readonly paidSelect: Locator;
+  readonly statusSelect: Locator;
+  readonly notesInput: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -16,6 +25,15 @@ export class AppointmentModal {
     this.nextButton = this.dialog.getByTestId('appointment-modal-next-button');
     this.backButton = this.dialog.getByTestId('appointment-modal-back-button');
     this.closeButton = this.dialog.getByTestId('appointment-modal-close-button');
+    this.patientInput = this.dialog.getByTestId('appointment-patient-autocomplete');
+    this.typeSelect = this.dialog.getByTestId('appointment-type-select');
+    this.durationSelect = this.dialog.getByTestId('appointment-duration-select');
+    this.locationSelect = this.dialog.getByTestId('appointment-location-select');
+    this.reminderSelect = this.dialog.getByTestId('appointment-reminder-select');
+    this.priceInput = this.dialog.getByTestId('appointment-price-input');
+    this.paidSelect = this.dialog.getByTestId('appointment-paid-select');
+    this.statusSelect = this.dialog.getByTestId('appointment-status-select');
+    this.notesInput = this.dialog.getByTestId('appointment-notes-input');
   }
 
   async waitForOpen() {
@@ -44,36 +62,32 @@ export class AppointmentModal {
   }
 
   async selectPatient(name: string) {
-    const input = this.dialog.getByRole('combobox');
+    const input = this.patientInput.getByRole('combobox');
     await input.click();
     await input.fill(name);
     await this.page.getByRole('option', { name }).click();
   }
 
-  async selectFromDropdown(labelText: string, optionLabel: string) {
-    const label = this.dialog.locator('.form-label', { hasText: labelText });
-    const trigger = label.getByRole('combobox');
-    await trigger.click();
+  async selectFromDropdown(trigger: Locator, optionLabel: string) {
+    const combobox = trigger.getByRole('combobox');
+    await combobox.click();
     await this.page.getByRole('option', { name: optionLabel }).click();
   }
 
   async selectType(name: string) {
-    await this.selectFromDropdown('Tipo de cita', name);
+    await this.selectFromDropdown(this.typeSelect, name);
   }
 
   async selectLocation(name: string) {
-    await this.selectFromDropdown('Ubicación', name);
+    await this.selectFromDropdown(this.locationSelect, name);
   }
 
   async setPrice(price: number) {
-    const input = this.dialog.locator('input[type="number"]');
-    await input.fill(String(price));
+    await this.priceInput.fill(String(price));
   }
 
   async fillNotes(notes: string) {
-    const label = this.dialog.locator('.form-label', { hasText: 'Notas' });
-    const input = label.locator('input');
-    await input.fill(notes);
+    await this.notesInput.fill(notes);
   }
 
   async createAppointment(data: {
