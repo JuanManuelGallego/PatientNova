@@ -100,7 +100,7 @@ test.describe('Patients', () => {
     const drawer = await patientPage.openDrawer(name);
     await drawer.expectSection('Información de Contacto');
     await expect(drawer.panel.getByText(email)).toBeVisible();
-    await expect(drawer.panel.getByText(phone)).toBeVisible();
+    await expect(drawer.panel.getByText(phone).first()).toBeVisible();
     await drawer.expectSection('Información Adicional');
     await drawer.expectSection('Información del sistema');
 
@@ -139,7 +139,7 @@ test.describe('Patients', () => {
     const drawer = await patientPage.openDrawer(name);
     await expect(drawer.panel.getByText(name)).toBeVisible();
     await expect(drawer.panel.getByText(email)).toBeVisible();
-    await expect(drawer.panel.getByText(phone)).toBeVisible();
+    await expect(drawer.panel.getByText(phone).first()).toBeVisible();
     await expect(drawer.panel.getByText(notes)).toBeVisible();
 
     await drawer.delete();

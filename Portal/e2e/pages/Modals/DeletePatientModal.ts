@@ -8,7 +8,7 @@ export class DeletePatientModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByTestId('delete-patient-dialog');
+    this.dialog = page.getByTestId('delete-patient');
     this.confirmButton = this.page.getByTestId('delete-patient-confirm-button');
     this.cancelButton = this.page.getByTestId('delete-patient-cancel-button');
   }

@@ -30,6 +30,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     res.cookie('token', result.accessToken, {
       ...cookieDefaults,
+      path: '/',
       maxAge: FIFTEEN_MINUTES_MS,
     });
 
@@ -63,7 +64,7 @@ authRouter.post('/logout', authenticate, async (req: Request, res: Response) => 
   try {
     await authService.logout(req.user!.id);
     const cookieDefaults = authService.getCookieDefaults();
-    res.clearCookie('token', cookieDefaults);
+    res.clearCookie('token', { ...cookieDefaults, path: '/' });
     res.clearCookie('refreshToken', { ...cookieDefaults, path: '/v1/auth/refresh' });
     ok(res, { message: 'Logged out' });
   } catch (err) {
@@ -86,6 +87,7 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
 
     res.cookie('token', result.accessToken, {
       ...cookieDefaults,
+      path: '/',
       maxAge: FIFTEEN_MINUTES_MS,
     });
 
