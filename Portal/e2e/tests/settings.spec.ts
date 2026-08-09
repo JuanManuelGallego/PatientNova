@@ -1,10 +1,10 @@
 import { test, expect } from '../fixtures';
 import { SettingsPage } from '../pages/SettingsPage';
-import { LocationModal } from '../pages/LocationModal';
-import { AppointmentTypeModal } from '../pages/AppointmentTypeModal';
-import { DeleteLocationModal } from '../pages/DeleteLocationModal';
-import { DeleteAppointmentTypeModal } from '../pages/DeleteAppointmentTypeModal';
-import { AuditDrawer } from '../pages/AuditDrawer';
+import { LocationModal } from '../pages/Modals/LocationModal';
+import { AppointmentTypeModal } from '../pages/Modals/AppointmentTypeModal';
+import { DeleteLocationModal } from '../pages/Modals/DeleteLocationModal';
+import { DeleteAppointmentTypeModal } from '../pages/Modals/DeleteAppointmentTypeModal';
+import { AuditDrawer } from '../pages/Drawers/AuditDrawer';
 import { uniqueName } from '../utils/test-data';
 
 test.describe('Settings', () => {
@@ -164,7 +164,7 @@ test.describe('Settings', () => {
         await deleteModal.confirm();
       }
 
-      await api.deleteLocation(location.id as string).catch(() => {});
+      await api.deleteLocation(location.id as string).catch(() => { });
     });
 
     test('should show empty state when no locations', async ({ authenticatedPage }) => {
@@ -208,7 +208,7 @@ test.describe('Settings', () => {
         await deleteModal.confirm();
       }
 
-      await api.deleteAppointmentType(apptType.id as string).catch(() => {});
+      await api.deleteAppointmentType(apptType.id as string).catch(() => { });
     });
 
     test('should show empty state when no appointment types', async ({ authenticatedPage }) => {

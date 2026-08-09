@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { DashboardPage } from '../pages/DashboardPage';
-import { AppointmentModal } from '../pages/AppointmentModal';
-import { PatientModal } from '../pages/PatientModal';
+import { AppointmentModal } from '../pages/Modals/AppointmentModal';
+import { PatientModal } from '../pages/Modals/PatientModal';
 
 test.describe('Dashboard', () => {
   test('should display welcome greeting', async ({ authenticatedPage }) => {

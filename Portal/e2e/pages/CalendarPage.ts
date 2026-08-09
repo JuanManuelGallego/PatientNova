@@ -1,7 +1,7 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { BlockedTimeModal } from './BlockedTimeModal';
-import { AppointmentModal } from './AppointmentModal';
+import { BlockedTimeModal } from './Modals/BlockedTimeModal';
+import { AppointmentModal } from './Modals/AppointmentModal';
 
 export class CalendarPage extends BasePage {
   readonly newAppointmentButton: Locator;

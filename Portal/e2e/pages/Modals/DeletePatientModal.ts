@@ -9,8 +9,8 @@ export class DeletePatientModal {
   constructor(page: Page) {
     this.page = page;
     this.dialog = page.getByTestId('delete-patient-dialog');
-    this.confirmButton = this.dialog.getByTestId('delete-patient-confirm-button');
-    this.cancelButton = this.dialog.getByTestId('delete-patient-cancel-button');
+    this.confirmButton = this.page.getByTestId('delete-patient-confirm-button');
+    this.cancelButton = this.page.getByTestId('delete-patient-cancel-button');
   }
 
   async confirm() {

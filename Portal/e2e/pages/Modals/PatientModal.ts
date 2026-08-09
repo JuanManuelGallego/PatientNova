@@ -1,3 +1,4 @@
+import { HttpMethods, Routes } from '@/e2e/utils/const';
 import { Page, Locator, expect } from '@playwright/test';
 
 export class PatientModal {
@@ -44,10 +45,20 @@ export class PatientModal {
     await this.cancelButton.click();
   }
 
-  async createPatient(data: { name: string; lastName: string; email?: string }) {
+  async createPatient(data: { name: string; lastName: string; email?: string }): Promise<string> {
     await this.fillRequiredFields(data.name, data.lastName);
     if (data.email) await this.fillOptionalEmail(data.email);
+
+    const createPatientPromise = this.page.waitForResponse((response) => {
+      return response.request().method() === HttpMethods.POST && response.url().includes(Routes.PATIENTS);
+    });
+
     await this.submit();
-    await this.waitForClose();
+
+    const response = await createPatientPromise;
+    expect(response.ok()).toBeTruthy();
+
+    const createdPatient = await response.json();
+    return createdPatient.data.id;
   }
 }

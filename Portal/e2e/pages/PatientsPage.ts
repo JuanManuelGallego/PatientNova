@@ -1,8 +1,8 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { PatientModal } from './PatientModal';
-import { DeletePatientModal } from './DeletePatientModal';
-import { PatientDrawer } from './PatientDrawer';
+import { PatientModal } from './Modals/PatientModal';
+import { DeletePatientModal } from './Modals/DeletePatientModal';
+import { PatientDrawer } from './Drawers/PatientDrawer';
 
 export class PatientsPage extends BasePage {
   readonly createButton: Locator;
@@ -28,9 +28,6 @@ export class PatientsPage extends BasePage {
 
   async openCreateModal() {
     await this.createButton.click();
-    const modal = new PatientModal(this.page);
-    await modal.waitForOpen();
-    return modal;
   }
 
   async openRowActions(name: string) {
@@ -50,17 +47,11 @@ export class PatientsPage extends BasePage {
   async openEditModal(name: string) {
     const row = this.table.getByRole('row').filter({ hasText: name });
     await row.getByRole('button', { name: /Editar/ }).click();
-    const modal = new PatientModal(this.page);
-    await modal.waitForOpen();
-    return modal;
   }
 
   async openDeleteModal(name: string) {
     const row = this.table.getByRole('row').filter({ hasText: name });
     await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
-    const modal = new DeletePatientModal(this.page);
-    await expect(modal.dialog).toBeVisible();
-    return modal;
   }
 
   async expectPatientVisible(name: string) {
@@ -73,5 +64,13 @@ export class PatientsPage extends BasePage {
 
   async getRowCount() {
     return this.table.getByRole('row').count();
+  }
+
+  async searchPatient(name: string) {
+    await this.searchInput.fill(name);
+  }
+
+  async clearSearch() {
+    await this.searchInput.fill('');
   }
 }

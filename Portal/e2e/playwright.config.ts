@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 4,
+  workers: 8,
   reporter: [['list'], ['html'] ],
 
   use: {
@@ -20,7 +20,7 @@ export default defineConfig({
     navigationTimeout: 15 * 1000,
     ignoreHTTPSErrors: true,
     locale: 'en-US',
-    extraHTTPHeaders: 
+    extraHTTPHeaders:
     {
       'x-vercel-protection-bypass': Env.vercelAutomationBypassSecret,
       'x-vercel-set-bypass-cookie': 'true',

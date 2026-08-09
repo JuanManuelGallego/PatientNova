@@ -1,8 +1,8 @@
 import { test, expect } from '../fixtures';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
-import { AppointmentModal } from '../pages/AppointmentModal';
-import { AppointmentDrawer } from '../pages/AppointmentDrawer';
-import { CancelAppointmentModal } from '../pages/CancelAppointmentModal';
+import { AppointmentModal } from '../pages/Modals/AppointmentModal';
+import { AppointmentDrawer } from '../pages/Drawers/AppointmentDrawer';
+import { CancelAppointmentModal } from '../pages/Modals/CancelAppointmentModal';
 import { uniqueName, uniqueEmail, futureDateTime } from '../utils/test-data';
 
 test.describe('Appointments', () => {
@@ -74,10 +74,10 @@ test.describe('Appointments', () => {
       await confirmBtn.click();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should mark appointment as paid', async ({ authenticatedPage, api }) => {
@@ -101,10 +101,10 @@ test.describe('Appointments', () => {
       await payBtn.click();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should cancel an appointment', async ({ authenticatedPage, api }) => {
@@ -130,9 +130,9 @@ test.describe('Appointments', () => {
       await cancelModal.confirm();
     }
 
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should cancel appointment deletion (abort)', async ({ authenticatedPage, api }) => {
@@ -157,10 +157,10 @@ test.describe('Appointments', () => {
       await cancelModal.cancel();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should open appointment drawer on row click', async ({ authenticatedPage, api }) => {
@@ -188,10 +188,10 @@ test.describe('Appointments', () => {
       await drawer.close();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should display patient info in drawer', async ({ authenticatedPage, api }) => {
@@ -217,10 +217,10 @@ test.describe('Appointments', () => {
       await drawer.close();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should filter by upcoming status', async ({ authenticatedPage }) => {

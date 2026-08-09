@@ -1,8 +1,8 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { AppointmentModal } from './AppointmentModal';
-import { CancelAppointmentModal } from './CancelAppointmentModal';
-import { AppointmentDrawer } from './AppointmentDrawer';
+import { AppointmentModal } from './Modals/AppointmentModal';
+import { CancelAppointmentModal } from './Modals/CancelAppointmentModal';
+import { AppointmentDrawer } from './Drawers/AppointmentDrawer';
 
 export class AppointmentsPage extends BasePage {
   readonly createButton: Locator;

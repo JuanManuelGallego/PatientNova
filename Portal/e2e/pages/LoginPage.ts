@@ -1,3 +1,4 @@
+import { Routes } from '../utils/const';
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
 
@@ -16,11 +17,10 @@ export class LoginPage extends BasePage {
   }
 
   async login(email: string, password: string) {
-    await this.goto('/login');
+    await this.goto(Routes.LOGIN);
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.submitButton.click();
-    await this.page.waitForURL(/\/dashboard/);
   }
 
   async expectError() {

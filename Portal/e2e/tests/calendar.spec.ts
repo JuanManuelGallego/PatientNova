@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { CalendarPage } from '../pages/CalendarPage';
-import { AppointmentModal } from '../pages/AppointmentModal';
-import { BlockedTimeModal } from '../pages/BlockedTimeModal';
+import { AppointmentModal } from '../pages/Modals/AppointmentModal';
+import { BlockedTimeModal } from '../pages/Modals/BlockedTimeModal';
 import { uniqueName, uniqueEmail, futureDateTime } from '../utils/test-data';
 
 test.describe('Calendar', () => {
@@ -98,10 +98,10 @@ test.describe('Calendar', () => {
     await authenticatedPage.waitForLoadState('domcontentloaded');
     await expect(authenticatedPage.getByRole('table')).toBeVisible();
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should show blocked time on calendar', async ({ authenticatedPage, api }) => {
@@ -115,7 +115,7 @@ test.describe('Calendar', () => {
     await authenticatedPage.waitForLoadState('domcontentloaded');
     await expect(authenticatedPage.getByRole('table')).toBeVisible();
 
-    await api.deleteBlockedTime(blocked.id as string).catch(() => {});
+    await api.deleteBlockedTime(blocked.id as string).catch(() => { });
   });
 
   test('should open appointment drawer from calendar event', async ({ authenticatedPage, api }) => {
@@ -140,10 +140,10 @@ test.describe('Calendar', () => {
       await eventChip.click();
     }
 
-    await api.deleteAppointment(appointment.id as string).catch(() => {});
-    await api.deleteAppointmentType(apptType.id as string).catch(() => {});
-    await api.deleteLocation(location.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deleteAppointment(appointment.id as string).catch(() => { });
+    await api.deleteAppointmentType(apptType.id as string).catch(() => { });
+    await api.deleteLocation(location.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should handle blocked time validation - end before start', async ({ authenticatedPage }) => {

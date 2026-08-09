@@ -98,4 +98,39 @@ export class SidebarPage extends BasePage {
   async expectLogoutButtonVisible() {
     await expect(this.logoutButton).toBeVisible();
   }
+
+  async navigateToDashboard() {
+    await this.clickLink('dashboard');
+    await expect(this.page).toHaveURL(/\/dashboard/);
+  }
+
+  async navigateToPatients() {
+    await this.clickLink('patients');
+    await expect(this.page).toHaveURL(/\/patients/);
+  }
+
+  async navigateToMedicalRecords() {
+    await this.clickLink('medical-records');
+    await expect(this.page).toHaveURL(/\/medical-records/);
+  }
+
+  async navigateToAppointments() {
+    await this.clickLink('appointments');
+    await expect(this.page).toHaveURL(/\/appointments/);
+  }
+
+  async navigateToCalendar() {
+    await this.clickLink('calendar');
+    await expect(this.page).toHaveURL(/\/calendar/);
+  }
+
+  async navigateToReminders() {
+    await this.clickLink('reminders');
+    await expect(this.page).toHaveURL(/\/reminders/);
+  }
+
+  async navigateToSettings() {
+    await this.clickLink('settings');
+    await expect(this.page).toHaveURL(/\/settings/);
+  }
 }

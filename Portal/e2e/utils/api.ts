@@ -1,8 +1,31 @@
 import { Page } from '@playwright/test';
+import { Env } from './env';
+export interface ApiResponse<T = { id: string }> {
+    success: boolean;
+    data: T;
+    timestamp: string;
+}
 
-interface ApiEntity {
-  id: string;
-  [key: string]: unknown;
+export interface ApiClient {
+  createPatient(data: Record<string, unknown>): Promise<ApiResponse>;
+  deletePatient(id: string): Promise<ApiResponse>;
+  createLocation(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteLocation(id: string): Promise<ApiResponse>;
+  createAppointmentType(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteAppointmentType(id: string): Promise<ApiResponse>;
+  createAppointment(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteAppointment(id: string): Promise<ApiResponse>;
+  createReminder(data: Record<string, unknown>): Promise<ApiResponse>;
+  cancelReminder(id: string): Promise<ApiResponse>;
+  deleteReminder(id: string): Promise<ApiResponse>;
+  createBlockedTime(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteBlockedTime(id: string): Promise<ApiResponse>;
+  createMedicalRecord(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteMedicalRecord(id: string): Promise<ApiResponse>;
+  updateProfile(data: Record<string, unknown>): Promise<ApiResponse>;
+  deleteConsentDocument(): Promise<ApiResponse>;
+  get(path: string): Promise<ApiResponse>;
+  patch(path: string, data: Record<string, unknown>): Promise<ApiResponse>;
 }
 
 async function getAuthToken(page: Page): Promise<string> {
@@ -29,23 +52,21 @@ async function getAuthToken(page: Page): Promise<string> {
   });
 }
 
-function apiBase(page: Page): string {
-  const url = page.url();
-  const origin = new URL(url).origin;
-  return `${origin}/v1`;
+function apiBase(): string {
+  return Env.apiBaseUrl;
 }
 
 async function authHeaders(page: Page): Promise<Record<string, string>> {
   const token = await getAuthToken(page);
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (token) headers[ 'Authorization' ] = `Bearer ${token}`;
   return headers;
 }
 
-export function createApiClient(page: Page) {
-  const base = () => apiBase(page);
+export function createApiClient(page: Page): ApiClient {
+  const base = () => apiBase();
 
-  async function request(method: string, path: string, body?: unknown): Promise<ApiEntity> {
+  async function request(method: string, path: string, body?: unknown): Promise<ApiResponse> {
     const headers = await authHeaders(page);
     const resp = await page.request.fetch(`${base()}${path}`, {
       method,
@@ -56,7 +77,7 @@ export function createApiClient(page: Page) {
       const text = await resp.text();
       throw new Error(`API ${method} ${path} failed (${resp.status()}): ${text}`);
     }
-    return resp.json() as Promise<ApiEntity>;
+    return resp.json() as Promise<ApiResponse>;
   }
 
   return {

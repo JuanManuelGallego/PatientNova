@@ -1,6 +1,6 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { LoginModal } from './LoginModal';
+import { LoginModal } from './Modals/LoginModal';
 
 export class LandingPage extends BasePage {
   readonly loginButton: Locator;

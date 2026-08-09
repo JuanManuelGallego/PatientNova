@@ -1,9 +1,9 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { ReminderModal } from './ReminderModal';
-import { EditReminderModal } from './EditReminderModal';
-import { CancelReminderModal } from './CancelReminderModal';
-import { ReminderDrawer } from './ReminderDrawer';
+import { ReminderModal } from './Modals/ReminderModal';
+import { EditReminderModal } from './Modals/EditReminderModal';
+import { CancelReminderModal } from './Modals/CancelReminderModal';
+import { ReminderDrawer } from './Drawers/ReminderDrawer';
 
 export class RemindersPage extends BasePage {
   readonly createButton: Locator;

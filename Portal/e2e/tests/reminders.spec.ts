@@ -1,9 +1,9 @@
 import { test, expect } from '../fixtures';
 import { RemindersPage } from '../pages/RemindersPage';
-import { ReminderModal } from '../pages/ReminderModal';
-import { ReminderDrawer } from '../pages/ReminderDrawer';
-import { EditReminderModal } from '../pages/EditReminderModal';
-import { CancelReminderModal } from '../pages/CancelReminderModal';
+import { ReminderModal } from '../pages/Modals/ReminderModal';
+import { ReminderDrawer } from '../pages/Drawers/ReminderDrawer';
+import { EditReminderModal } from '../pages/Modals/EditReminderModal';
+import { CancelReminderModal } from '../pages/Modals/CancelReminderModal';
 import { uniqueName, uniqueEmail, futureDateTime, validE164Phone } from '../utils/test-data';
 
 test.describe('Reminders', () => {
@@ -77,8 +77,8 @@ test.describe('Reminders', () => {
       await editModal.cancel();
     }
 
-    await api.cancelReminder(reminder.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.cancelReminder(reminder.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should cancel reminder', async ({ authenticatedPage, api }) => {
@@ -102,7 +102,7 @@ test.describe('Reminders', () => {
       await cancelModal.confirm();
     }
 
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should cancel reminder deletion (abort)', async ({ authenticatedPage, api }) => {
@@ -125,8 +125,8 @@ test.describe('Reminders', () => {
       await cancelModal.cancel();
     }
 
-    await api.cancelReminder(reminder.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.cancelReminder(reminder.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should open reminder drawer', async ({ authenticatedPage, api }) => {
@@ -151,8 +151,8 @@ test.describe('Reminders', () => {
       await drawer.close();
     }
 
-    await api.cancelReminder(reminder.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.cancelReminder(reminder.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should search reminders', async ({ authenticatedPage }) => {
@@ -232,8 +232,8 @@ test.describe('Reminders', () => {
       await drawer.close();
     }
 
-    await api.cancelReminder(reminder.id as string).catch(() => {});
-    await api.deletePatient(patient.id as string).catch(() => {});
+    await api.cancelReminder(reminder.id as string).catch(() => { });
+    await api.deletePatient(patient.id as string).catch(() => { });
   });
 
   test('should view history tab with past reminders', async ({ authenticatedPage }) => {

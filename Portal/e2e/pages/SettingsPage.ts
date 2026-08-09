@@ -1,7 +1,7 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
-import { LocationModal } from './LocationModal';
-import { AppointmentTypeModal } from './AppointmentTypeModal';
+import { LocationModal } from './Modals/LocationModal';
+import { AppointmentTypeModal } from './Modals/AppointmentTypeModal';
 
 export class SettingsPage extends BasePage {
   readonly tabProfile: Locator;

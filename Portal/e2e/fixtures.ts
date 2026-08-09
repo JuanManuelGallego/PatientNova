@@ -1,11 +1,11 @@
 import { test as base, Page } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
-import { createApiClient } from './utils/api';
+import { ApiClient, createApiClient } from './utils/api';
 import { Env } from './utils/env';
 
 type Fixtures = {
   authenticatedPage: Page;
-  api: ReturnType<typeof createApiClient>;
+  api: ApiClient;
   seededIds: { [resource: string]: string[] };
 };
 
