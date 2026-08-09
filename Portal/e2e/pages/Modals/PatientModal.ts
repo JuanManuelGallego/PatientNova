@@ -138,7 +138,6 @@ export class PatientModal {
     sms?: string;
     appointmentType?: string;
     notes?: string;
-    sendWelcome?: boolean;
   }): Promise<string> {
     await this.fillRequiredFields(data.name, data.lastName);
     if (data.email) await this.fillEmail(data.email);
@@ -146,7 +145,8 @@ export class PatientModal {
     if (data.sms) await this.fillSmsNumber(data.sms);
     if (data.appointmentType) await this.selectAppointmentType(data.appointmentType);
     if (data.notes) await this.fillNotes(data.notes);
-    if (data.sendWelcome) await this.checkWelcomeMessage();
+
+    await this.expectWelcomeCheckboxVisible();
 
     const createPatientPromise = this.page.waitForResponse(
       (response) =>

@@ -82,16 +82,13 @@ test.describe('Patients', () => {
   });
 
   test('Open patient drawer and edit from drawer', async ({ page, api }) => {
+    await page.goto(Routes.PATIENTS);
+
     const name = uniqueName(EntityTypes.PATIENT);
     const email = uniqueEmail();
     const phone = uniquePhoneNumber();
 
     const patientResponse = await api.createPatient({ name, lastName: name, email, whatsappNumber: phone, smsNumber: phone, notes: randomString(50) });
-
-    await page.goto(Routes.PATIENTS);
-
-    const sidebar = new SidebarPage(page);
-    await sidebar.navigateToPatients();
 
     const patientPage = new PatientsPage(page);
     await patientPage.searchPatient(name);
@@ -120,17 +117,14 @@ test.describe('Patients', () => {
   });
 
   test('Delete patient from drawer', async ({ page, api }) => {
+    await page.goto(Routes.PATIENTS);
+
     const name = uniqueName(EntityTypes.PATIENT);
     const email = uniqueEmail();
     const phone = uniquePhoneNumber();
     const notes = randomString(50);
 
     await api.createPatient({ name, lastName: name, email, whatsappNumber: phone, smsNumber: phone, notes });
-
-    await page.goto(Routes.PATIENTS);
-
-    const sidebar = new SidebarPage(page);
-    await sidebar.navigateToPatients();
 
     const patientPage = new PatientsPage(page);
     await patientPage.searchPatient(name);

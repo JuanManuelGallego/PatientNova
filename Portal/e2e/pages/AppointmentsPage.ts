@@ -75,7 +75,19 @@ export class AppointmentsPage extends BasePage {
     return modal;
   }
 
+  async searchAppointment(name: string) {
+    await this.searchInput.fill(name);
+  }
+
   async expectAppointmentVisible(patientName: string) {
     await expect(this.table.getByRole('row').filter({ hasText: patientName })).toBeVisible();
+  }
+
+  async expectAppointmentNotVisible(patientName: string) {
+    await expect(this.table.getByRole('row').filter({ hasText: patientName })).not.toBeVisible();
+  }
+
+  async filterBy(filterKey: string) {
+    await this.page.getByTestId(`appointments-filter-${filterKey}`).click();
   }
 }
