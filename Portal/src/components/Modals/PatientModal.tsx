@@ -162,6 +162,7 @@ export function PatientModal({
       <div
         className="modal-panel modal-panel--md"
         onClick={(e) => e.stopPropagation()}
+        data-testid="patient-modal-panel"
       >
         <div className="modal-header">
           <div>
@@ -179,7 +180,7 @@ export function PatientModal({
           </button>
         </div>
         {error && (
-          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="patient-modal-error">
             <STATUS_ICONS.warning size={14} /> {error}
           </div>
         )}
@@ -224,6 +225,7 @@ export function PatientModal({
               <CountryCodeInput
                 value={form.whatsappNumber || undefined}
                 onChange={(v) => setForm((f) => ({ ...f, whatsappNumber: v }))}
+                data-testid="patient-whatsapp-input"
               />
             </label>
             <label className="form-label">
@@ -231,6 +233,7 @@ export function PatientModal({
               <CountryCodeInput
                 value={form.smsNumber || undefined}
                 onChange={(v) => setForm((f) => ({ ...f, smsNumber: v }))}
+                data-testid="patient-sms-input"
               />
             </label>
           </div>
@@ -258,12 +261,13 @@ export function PatientModal({
                     onChange={(e) => setSendWelcomeMessage(e.target.checked)}
                     disabled={!form.whatsappNumber && !form.smsNumber}
                     style={{ width: 15, height: 15 }}
+                    data-testid="patient-welcome-checkbox"
                   />
                   <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
                 </label>
               </div>
             ) : (
-              <div className="info-banner" style={{ fontSize: 13 }}>
+              <div className="info-banner" style={{ fontSize: 13 }} data-testid="patient-welcome-info-banner">
                 <STATUS_ICONS.info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>
                   Completa tu perfil (datos bancarios, identificación y consentimiento)
@@ -310,6 +314,7 @@ export function PatientModal({
               onChange={(v) =>
                 setForm((f) => ({ ...f, appointmentTypeId: v }))
               }
+              data-testid="patient-appointment-type-select"
             />
           </label>
           <label className="form-label">
@@ -321,6 +326,7 @@ export function PatientModal({
                 setForm((f) => ({ ...f, notes: e.target.value }))
               }
               placeholder="Notas adicionales sobre el paciente..."
+              data-testid="patient-notes-input"
             />
           </label>
           {isEdit && (
@@ -335,6 +341,7 @@ export function PatientModal({
                 onChange={(v) =>
                   setForm((f) => ({ ...f, status: v as PatientStatus }))
                 }
+                data-testid="patient-status-select"
               />
             </label>
           )}

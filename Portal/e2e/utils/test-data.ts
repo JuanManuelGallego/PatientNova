@@ -12,6 +12,17 @@ export function uniqueEmail(): string {
   return `test-${ts}-${counter}@patientnova-test.com`;
 }
 
+export function uniquePhoneNumber(): string {
+  counter += 1;
+  const digits = (1000000 + counter * 7919) % 10000000;
+  return `+1555${digits.toString().padStart(7, '0')}`;
+}
+
+export function randomString(length: number = 10) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from({ length }, () => chars[ Math.floor(Math.random() * chars.length) ]).join('');
+}
+
 export function futureDateTime(hoursFromNow = 24): string {
   const d = new Date();
   d.setHours(d.getHours() + hoursFromNow);

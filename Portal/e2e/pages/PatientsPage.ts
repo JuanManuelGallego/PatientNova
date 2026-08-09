@@ -28,6 +28,9 @@ export class PatientsPage extends BasePage {
 
   async openCreateModal() {
     await this.createButton.click();
+    const modal = new PatientModal(this.page)
+    await modal.waitForOpen()
+    return modal
   }
 
   async openRowActions(name: string) {
@@ -47,11 +50,18 @@ export class PatientsPage extends BasePage {
   async openEditModal(name: string) {
     const row = this.table.getByRole('row').filter({ hasText: name });
     await row.getByRole('button', { name: /Editar/ }).click();
+    const modal = new PatientModal(this.page)
+    await modal.waitForOpen()
+    return modal
   }
 
   async openDeleteModal(name: string) {
     const row = this.table.getByRole('row').filter({ hasText: name });
     await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
+    const modal = new DeletePatientModal(this.page)
+    await modal.waitForOpen()
+    return modal
+
   }
 
   async expectPatientVisible(name: string) {

@@ -18,3 +18,7 @@ export enum HttpMethods {
     PUT = 'PUT',
     DELETE = 'DELETE',
 }
+
+export const APPT_TYPE_NAME = 'Tipo'
+
+export const LOCATION_NAME = 'Ubicacion'

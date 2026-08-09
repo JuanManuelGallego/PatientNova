@@ -58,10 +58,12 @@ export function CountryCodeInput({
     value,
     onChange,
     placeholder = "5551234567",
+    "data-testid": testId,
 }: {
     value: string | undefined;
     onChange: (fullNumber: string) => void;
     placeholder?: string;
+    "data-testid"?: string;
 }) {
     const parsed = useMemo(() => parsePhone(value), [ value ]);
     const [ selectedIso, setSelectedIso ] = useState(parsed.iso);
@@ -83,7 +85,7 @@ export function CountryCodeInput({
     }
 
     return (
-        <div className="phone-input-group">
+        <div className="phone-input-group" data-testid={testId}>
             <Image
                 className="phone-input-flag"
                 src={flagUrl(entry?.iso ?? "co")}

@@ -22,4 +22,9 @@ export class DeletePatientModal {
     await this.cancelButton.click();
     await expect(this.dialog).not.toBeVisible();
   }
+
+  async waitForOpen() {
+    await expect(this.dialog).toBeVisible();
+  }
+
 }
