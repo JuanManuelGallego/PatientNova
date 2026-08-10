@@ -20,7 +20,7 @@ export class RemindersPage extends BasePage {
     super(page);
     this.createButton = this.page.getByTestId('reminders-new-button');
     this.table = this.page.getByRole('table');
-    this.searchInput = this.page.getByPlaceholder(/Buscar por nombre, número, canal/);
+    this.searchInput = this.page.getByTestId('reminders-search-input');
     this.tabActive = this.page.getByTestId('reminders-tab-active');
     this.tabHistory = this.page.getByTestId('reminders-tab-history');
     this.tabBulk = this.page.getByTestId('reminders-tab-bulk');

@@ -162,6 +162,7 @@ function RemindersPageContent() {
               setPage(1);
             }}
             placeholder="Buscar por nombre, número, canal…"
+            testId="reminders-search-input"
           />
         )}
         {error && activeTab !== "Bulk" && (

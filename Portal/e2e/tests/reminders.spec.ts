@@ -4,10 +4,11 @@ import { EditReminderModal } from '../pages/Modals/EditReminderModal';
 import { CancelReminderModal } from '../pages/Modals/CancelReminderModal';
 import { APPT_DATE, APPT_TYPE_NAME, Routes } from '../utils/const';
 import { createTestPatient, createTestReminder } from '../utils/helpers';
+import { uniquePhoneNumber } from '../utils/test-data';
 
 test.skip('Reminders', () => {
   test('Create reminder', async ({ page, api, trackedPatients }) => {
-    const patient = await createTestPatient(api);
+    const patient = await createTestPatient(api, { whatsappNumber: uniquePhoneNumber() });
     trackedPatients.track(patient.id);
 
     await page.goto(Routes.REMINDERS);
@@ -17,10 +18,10 @@ test.skip('Reminders', () => {
 
     const reminderId = await modal.createReminder({
       patientName: patient.name,
-      appointmentDateLabel: `${APPT_DATE} — ${APPT_TYPE_NAME}`,
     });
 
     await remindersPage.switchToActive();
+    await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
     await api.deleteReminder(reminderId);
@@ -37,6 +38,7 @@ test.skip('Reminders', () => {
 
     const remindersPage = new RemindersPage(page);
     await remindersPage.switchToActive();
+    await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
     const cancelModal = await remindersPage.cancelReminder(patient.name);
@@ -58,6 +60,7 @@ test.skip('Reminders', () => {
 
     const remindersPage = new RemindersPage(page);
     await remindersPage.switchToActive();
+    await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
     const editModal = await remindersPage.rescheduleReminder(patient.name);
@@ -79,6 +82,7 @@ test.skip('Reminders', () => {
 
     const remindersPage = new RemindersPage(page);
     await remindersPage.switchToActive();
+    await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
     const drawer = await remindersPage.openDrawer(patient.name);
@@ -107,6 +111,7 @@ test.skip('Reminders', () => {
 
     const remindersPage = new RemindersPage(page);
     await remindersPage.switchToActive();
+    await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
     const drawer = await remindersPage.openDrawer(patient.name);

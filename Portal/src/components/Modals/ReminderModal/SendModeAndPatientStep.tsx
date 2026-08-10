@@ -79,6 +79,7 @@ export function SendModeAndPatientStep({
             onChanged={(d) => setForm((f) => ({ ...f, sendAt: d }))}
             showTime
             isFuture
+            testId="reminder-send-at-picker"
           />
         </label>
       )}

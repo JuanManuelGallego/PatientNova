@@ -1,5 +1,6 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { HttpMethods } from '../../utils/const';
+import { randomString } from '../../utils/test-data';
 
 export class ReminderModal {
   readonly page: Page;
@@ -8,6 +9,7 @@ export class ReminderModal {
   readonly backButton: Locator;
   readonly submitButton: Locator;
   readonly closeButton: Locator;
+  readonly sendAtPicker: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -16,6 +18,7 @@ export class ReminderModal {
     this.backButton = this.dialog.getByTestId('reminder-modal-back-button');
     this.submitButton = this.dialog.getByTestId('reminder-modal-submit-button');
     this.closeButton = this.dialog.getByTestId('reminder-modal-close-button');
+    this.sendAtPicker = this.dialog.getByTestId('reminder-send-at-picker');
   }
 
   async waitForOpen() {
@@ -70,6 +73,21 @@ export class ReminderModal {
     await this.selectFromDropdown('Plantilla', label);
   }
 
+  async selectSendAt(dateString: string) {
+    const input = this.sendAtPicker.getByRole('textbox');
+    await input.click();
+    //await input.fill(dateString);
+    await input.press('Enter');
+  }
+
+  async fillAllVariablesWithRandomString() {
+    const variables = this.dialog.locator('.form-label:has(.form-input) .form-input');
+    const count = await variables.count();
+    for (let i = 0; i < count; i++) {
+      await variables.nth(i).fill(randomString(10));
+    }
+  }
+
   async fillVariable(label: string, value: string) {
     const field = this.dialog.locator('.form-label', { hasText: label });
     const input = field.locator('input');
@@ -84,15 +102,17 @@ export class ReminderModal {
 
   async createReminder(data: {
     patientName: string;
-    appointmentDateLabel: string;
+    appointmentDateLabel?: string;
     sendMode?: 'IMMEDIATE' | 'SCHEDULED';
   }): Promise<string> {
     const mode = data.sendMode ?? 'SCHEDULED';
     await this.selectSendMode(mode);
     await this.selectPatient(data.patientName);
 
+    if (data.appointmentDateLabel) await this.selectAppointment(data.appointmentDateLabel);
+
     if (mode === 'SCHEDULED') {
-      await this.selectAppointment(data.appointmentDateLabel);
+      await this.selectSendAt(' tomorrow at 10:00');
     }
 
     await this.next();

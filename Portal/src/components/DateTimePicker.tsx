@@ -17,11 +17,13 @@ export function DateTimePicker({
   onChanged,
   showTime = false,
   isFuture = false,
+  testId,
 }: {
   date: string | undefined;
   onChanged: (date: string) => void;
   showTime?: boolean;
   isFuture?: boolean;
+  testId?: string;
 }) {
   const { isDark } = useTheme();
   const handleChange = (selectedDate: Dayjs | null) => {
@@ -72,6 +74,7 @@ export function DateTimePicker({
         }
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}
+        data-testid={testId}
       />
     </ConfigProvider>
   );
