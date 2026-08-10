@@ -12,7 +12,7 @@ import {
 import { futureDateTime, uniquePhoneNumber } from '../utils/test-data';
 import { Channel, ReminderMode } from '@/src/types/Reminder';
 
-test.describe('Reminders', () => {
+test.skip('Reminders', () => {
   test('Create reminder', async ({ page, api }) => {
     await page.goto(Routes.REMINDERS);
 

@@ -13,7 +13,7 @@ import {
   LOCATION_ID,
   APPT_TYPE_ID,
 } from '../utils/const';
-import { futureDateTime } from '../utils/test-data';
+import { futureDateTime, randomNumber } from '../utils/test-data';
 
 test.describe('Appointments', () => {
   test('Create appointment', async ({ page, api, trackedAppointments }) => {
@@ -64,12 +64,13 @@ test.describe('Appointments', () => {
   test('Cancel appointment from table', async ({ page, api, trackedAppointments }) => {
     await page.goto(Routes.APPOINTMENTS);
 
+    const randomStartAt = randomNumber()
     const appointment = await api.createAppointment({
       patientId: PATIENT_ID,
       locationId: LOCATION_ID,
       typeId: APPT_TYPE_ID,
-      startAt: futureDateTime(24),
-      endAt: futureDateTime(25),
+      startAt: futureDateTime(randomStartAt),
+      endAt: futureDateTime(randomStartAt + 1),
       sendMode: ReminderMode.SCHEDULED,
       paid: false,
       price: Number(APPT_TYPE_PRICE),
@@ -90,12 +91,13 @@ test.describe('Appointments', () => {
   test('Open drawer and edit from drawer', async ({ page, api, trackedAppointments }) => {
     await page.goto(Routes.APPOINTMENTS);
 
+    const randomStartAt = randomNumber()
     const appointment = await api.createAppointment({
       patientId: PATIENT_ID,
       locationId: LOCATION_ID,
       typeId: APPT_TYPE_ID,
-      startAt: futureDateTime(24),
-      endAt: futureDateTime(25),
+      startAt: futureDateTime(randomStartAt),
+      endAt: futureDateTime(randomStartAt + 1),
       sendMode: ReminderMode.SCHEDULED,
       paid: false,
       price: Number(APPT_TYPE_PRICE),
@@ -129,12 +131,13 @@ test.describe('Appointments', () => {
   test('Cancel appointment from drawer', async ({ page, api, trackedAppointments }) => {
     await page.goto(Routes.APPOINTMENTS);
 
+    const randomStartAt = randomNumber()
     const appointment = await api.createAppointment({
       patientId: PATIENT_ID,
       locationId: LOCATION_ID,
       typeId: APPT_TYPE_ID,
-      startAt: futureDateTime(24),
-      endAt: futureDateTime(25),
+      startAt: futureDateTime(randomStartAt),
+      endAt: futureDateTime(randomStartAt + 1),
       sendMode: ReminderMode.SCHEDULED,
       paid: false,
       price: Number(APPT_TYPE_PRICE),

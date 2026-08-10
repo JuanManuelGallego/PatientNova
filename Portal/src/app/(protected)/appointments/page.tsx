@@ -212,6 +212,7 @@ function AppointmentsPageContent() {
           }}
           placeholder="Buscar paciente, tipo, ubicación…"
           wrap
+          testId="appointments-search-input"
         >
           <DateTimePicker
             date={dateFilter}

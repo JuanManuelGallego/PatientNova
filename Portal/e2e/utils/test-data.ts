@@ -23,6 +23,10 @@ export function randomString(length: number = 10) {
   return Array.from({ length }, () => chars[ Math.floor(Math.random() * chars.length) ]).join('');
 }
 
+export function randomNumber(): number {
+  return Math.floor(Math.random() * 10000) + 1;
+}
+
 export function futureDateTime(hoursFromNow = 24): string {
   const d = new Date();
   d.setHours(d.getHours() + hoursFromNow);

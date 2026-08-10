@@ -26,6 +26,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('../../../src/utils/config/config.js', () => ({
+  config: {
+    scheduler: { enabled: true },
+  },
+}));
 vi.mock('../../../src/reminders/reminder.repository.js', () => ({ reminderRepository: mocks.repo }));
 vi.mock('../../../src/utils/api/logger.js', () => ({ logger: mocks.logger }));
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({ prisma: mocks.prisma }));

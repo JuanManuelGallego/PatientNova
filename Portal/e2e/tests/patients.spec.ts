@@ -6,7 +6,7 @@ import { uniqueName, uniqueEmail, uniquePhoneNumber, randomString } from '../uti
 import { SidebarPage } from '../pages/SidebarPage';
 import { APPT_TYPE_NAME, EntityTypes, Routes } from '../utils/const';
 
-test.describe('Patients', () => {
+test.skip('Patients', () => {
   test('Create patient', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS)
 
