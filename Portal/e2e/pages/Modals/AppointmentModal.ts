@@ -98,6 +98,7 @@ export class AppointmentModal {
     notes?: string;
   }): Promise<string> {
     await this.selectPatient(data.patientName);
+    await this.selectType(data.typeName)
     await this.next();
 
     await this.selectLocation(data.locationName);

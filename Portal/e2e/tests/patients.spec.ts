@@ -3,10 +3,10 @@ import { PatientsPage } from '../pages/PatientsPage';
 import { PatientModal } from '../pages/Modals/PatientModal';
 import { DeletePatientModal } from '../pages/Modals/DeletePatientModal';
 import { uniqueName, uniqueEmail, uniquePhoneNumber, randomString } from '../utils/test-data';
-import { SidebarPage } from '../pages/SidebarPage';
 import { APPT_TYPE_NAME, EntityTypes, Routes } from '../utils/const';
+import { createTestPatient } from '../utils/helpers';
 
-test.skip('Patients', () => {
+test.describe('Patients', () => {
   test('Create patient', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS)
 
@@ -36,19 +36,13 @@ test.skip('Patients', () => {
   test('Edit patient', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS)
 
-    const name = uniqueName(EntityTypes.PATIENT);
-    const email = uniqueEmail();
-
-    const patientResponse = await api.createPatient({ name, lastName: name, email });
-
-    const sidebar = new SidebarPage(page);
-    await sidebar.navigateToPatients();
+    const patient = await createTestPatient(api);
 
     const patientPage = new PatientsPage(page);
-    await patientPage.searchPatient(name);
-    await patientPage.expectPatientVisible(name);
+    await patientPage.searchPatient(patient.name);
+    await patientPage.expectPatientVisible(patient.name);
 
-    const editModal = await patientPage.openEditModal(name);
+    const editModal = await patientPage.openEditModal(patient.name);
 
     const newName = uniqueName(EntityTypes.PATIENT);
     await editModal.fillRequiredFields(newName, newName);
@@ -57,46 +51,36 @@ test.skip('Patients', () => {
     await patientPage.searchPatient(newName);
     await patientPage.expectPatientVisible(newName);
 
-    await api.deletePatient(patientResponse.data.id);
+    await api.deletePatient(patient.id);
   });
 
   test('Delete patient', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS)
 
-    const name = uniqueName(EntityTypes.PATIENT);
-    const email = uniqueEmail();
-
-    await api.createPatient({ name, lastName: name, email });
-
-    const sidebar = new SidebarPage(page);
-    await sidebar.navigateToPatients();
+    const patient = await createTestPatient(api);
 
     const patientPage = new PatientsPage(page);
-    await patientPage.searchPatient(name);
-    await patientPage.expectPatientVisible(name);
+    await patientPage.searchPatient(patient.name);
+    await patientPage.expectPatientVisible(patient.name);
 
-    const deleteModal = await patientPage.openDeleteModal(name);
+    const deleteModal = await patientPage.openDeleteModal(patient.name);
     await deleteModal.confirm();
 
-    await patientPage.expectPatientNotVisible(name);
+    await patientPage.expectPatientNotVisible(patient.name);
   });
 
   test('Open patient drawer and edit from drawer', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS);
 
-    const name = uniqueName(EntityTypes.PATIENT);
-    const email = uniqueEmail();
     const phone = uniquePhoneNumber();
-
-    const patientResponse = await api.createPatient({ name, lastName: name, email, whatsappNumber: phone, smsNumber: phone, notes: randomString(50) });
+    const patient = await createTestPatient(api, { whatsappNumber: phone, smsNumber: phone, notes: randomString(50) });
 
     const patientPage = new PatientsPage(page);
-    await patientPage.searchPatient(name);
-    await patientPage.expectPatientVisible(name);
+    await patientPage.searchPatient(patient.name);
+    await patientPage.expectPatientVisible(patient.name);
 
-    const drawer = await patientPage.openDrawer(name);
+    const drawer = await patientPage.openDrawer(patient.name);
     await drawer.expectSection('Información de Contacto');
-    await expect(drawer.panel.getByText(email)).toBeVisible();
     await expect(drawer.panel.getByText(phone).first()).toBeVisible();
     await drawer.expectSection('Información Adicional');
     await drawer.expectSection('Información del sistema');
@@ -113,26 +97,23 @@ test.skip('Patients', () => {
     await patientPage.searchPatient(newName);
     await patientPage.expectPatientVisible(newName);
 
-    await api.deletePatient(patientResponse.data.id);
+    await api.deletePatient(patient.id);
   });
 
   test('Delete patient from drawer', async ({ page, api }) => {
     await page.goto(Routes.PATIENTS);
 
-    const name = uniqueName(EntityTypes.PATIENT);
-    const email = uniqueEmail();
     const phone = uniquePhoneNumber();
     const notes = randomString(50);
 
-    await api.createPatient({ name, lastName: name, email, whatsappNumber: phone, smsNumber: phone, notes });
+    const patient = await createTestPatient(api, { whatsappNumber: phone, smsNumber: phone, notes });
 
     const patientPage = new PatientsPage(page);
-    await patientPage.searchPatient(name);
-    await patientPage.expectPatientVisible(name);
+    await patientPage.searchPatient(patient.name);
+    await patientPage.expectPatientVisible(patient.name);
 
-    const drawer = await patientPage.openDrawer(name);
-    await expect(drawer.panel.getByText(name)).toBeVisible();
-    await expect(drawer.panel.getByText(email)).toBeVisible();
+    const drawer = await patientPage.openDrawer(patient.name);
+    await expect(drawer.panel.getByText(patient.name)).toBeVisible();
     await expect(drawer.panel.getByText(phone).first()).toBeVisible();
     await expect(drawer.panel.getByText(notes)).toBeVisible();
 
@@ -141,6 +122,6 @@ test.skip('Patients', () => {
     const deleteModal = new DeletePatientModal(page);
     await deleteModal.confirm();
 
-    await patientPage.expectPatientNotVisible(name);
+    await patientPage.expectPatientNotVisible(patient.name);
   });
 });

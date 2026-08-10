@@ -4,6 +4,8 @@ import { ApiClient, createApiClient } from './utils/api';
 type TestFixtures = {
   api: ApiClient;
   trackedAppointments: { track: (id: string) => void }
+  trackedPatients: { track: (id: string) => void }
+  trackedReminders: { track: (id: string) => void }
 };
 
 export const test = base.extend<TestFixtures>({
@@ -15,6 +17,16 @@ export const test = base.extend<TestFixtures>({
     const ids: string[] = [];
     await use({ track: (id) => ids.push(id) });
     await Promise.allSettled(ids.map(id => api.deleteAppointment(id)));
+  },
+  trackedPatients: async ({ api }, use) => {
+    const ids: string[] = [];
+    await use({ track: (id) => ids.push(id) });
+    await Promise.allSettled(ids.map(id => api.deletePatient(id)));
+  },
+  trackedReminders: async ({ api }, use) => {
+    const ids: string[] = [];
+    await use({ track: (id) => ids.push(id) });
+    await Promise.allSettled(ids.map(id => api.deleteReminder(id)));
   },
 });
 
