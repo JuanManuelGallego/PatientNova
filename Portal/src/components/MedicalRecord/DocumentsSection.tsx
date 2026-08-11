@@ -156,7 +156,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }} data-testid="documents-section-container">
       {/* Drop zone */}
       <div
         onClick={() => fileRef.current?.click()}

@@ -16,7 +16,7 @@ export function SaveStatusIndicator({
   return (
     <>
       {showPill && (
-        <div className="save-status-pill" data-status={status}>
+        <div className="save-status-pill" data-status={status} data-testid="save-status-indicator">
           {status === "saved" && <>{LBL_SAVED}</>}
           {status === "error" && <>{LBL_SAVE_ERROR}</>}
         </div>

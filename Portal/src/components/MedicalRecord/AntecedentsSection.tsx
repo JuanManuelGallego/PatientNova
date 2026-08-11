@@ -16,6 +16,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.earlyDevelopment}
                     onChange={(e) => onChange("earlyDevelopment", e.target.value)}
                     placeholder="Describa el desarrollo temprano"
+                    data-testid="antecedents-early-development-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -25,6 +26,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.schoolAndWork}
                     onChange={(e) => onChange("schoolAndWork", e.target.value)}
                     placeholder="Información escolar y laboral"
+                    data-testid="antecedents-school-and-work-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -34,6 +36,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.lifestyleHabits}
                     onChange={(e) => onChange("lifestyleHabits", e.target.value)}
                     placeholder="Hábitos diarios y estilo de vida"
+                    data-testid="antecedents-lifestyle-habits-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -43,6 +46,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.traumaticEvents}
                     onChange={(e) => onChange("traumaticEvents", e.target.value)}
                     placeholder="Eventos traumáticos o estresores previos"
+                    data-testid="antecedents-traumatic-events-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -52,6 +56,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.emotionalConsiderations}
                     onChange={(e) => onChange("emotionalConsiderations", e.target.value)}
                     placeholder="Consideraciones emocionales"
+                    data-testid="antecedents-emotional-considerations-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -61,6 +66,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.physicalConsiderations}
                     onChange={(e) => onChange("physicalConsiderations", e.target.value)}
                     placeholder="Detalles físicos, etiología y salud"
+                    data-testid="antecedents-physical-considerations-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -70,6 +76,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.mentalHistory}
                     onChange={(e) => onChange("mentalHistory", e.target.value)}
                     placeholder="Antecedentes mentales"
+                    data-testid="antecedents-mental-history-input"
                 />
             </label>
             <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -79,6 +86,7 @@ export function AntecedentsSection({ form, onChange }: AntecedentsSectionProps) 
                     value={form.objective}
                     onChange={(e) => onChange("objective", e.target.value)}
                     placeholder="Objetivo clínico"
+                    data-testid="antecedents-objective-input"
                 />
             </label>
         </div>

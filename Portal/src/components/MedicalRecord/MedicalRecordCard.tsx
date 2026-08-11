@@ -4,7 +4,7 @@ export const MedicalRecordCard = ({ children, title, icon }: { children: React.R
     borderRadius: "var(--r-3xl)",
     boxShadow: "var(--shadow-card)",
     padding: 24,
-  }}>
+  }} data-testid="medical-record-card">
     <div style={{
       display: "flex",
       alignItems: "center",

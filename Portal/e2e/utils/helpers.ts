@@ -52,3 +52,17 @@ export async function createTestReminder(
   };
   return api.createReminder({ ...defaults, ...overrides });
 }
+
+export async function createTestMedicalRecord(
+  api: ApiClient,
+  patientId: string,
+  patientFullName: string,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = {
+    patientId,
+    name: patientFullName,
+    isFamily: false,
+  };
+  return api.createMedicalRecord({ ...defaults, ...overrides });
+}

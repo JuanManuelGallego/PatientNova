@@ -5,6 +5,7 @@ export enum Routes {
     DASHBOARD = '/dashboard',
     LOGIN = '/login',
     CALENDAR = '/calendar',
+    MEDICAL_RECORDS = '/medical-records',
 }
 
 export enum EntityTypes {
@@ -18,6 +19,7 @@ export enum HttpMethods {
     GET = 'GET',
     POST = 'POST',
     PUT = 'PUT',
+    PATCH = 'PATCH',
     DELETE = 'DELETE',
 }
 
