@@ -12,6 +12,17 @@ vi.mock('../../../src/scheduler/reminder-job-manager.js', () => ({
   },
 }));
 
+vi.mock('../../../src/utils/config/config.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/utils/config/config.ts')>();
+  return {
+    ...actual,
+    config: {
+      ...actual.config,
+      scheduler: { ...actual.config.scheduler, enabled: true },
+    },
+  };
+});
+
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { reminderService } from '../../../src/reminders/reminder.service.js';
 import { reminderJobManager } from '../../../src/scheduler/reminder-job-manager.js';

@@ -1,6 +1,7 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { HttpMethods } from '../../utils/const';
 import { randomString } from '../../utils/test-data';
+import { ReminderMode } from '@/src/types/Reminder';
 
 export class ReminderModal {
   readonly page: Page;
@@ -10,15 +11,17 @@ export class ReminderModal {
   readonly submitButton: Locator;
   readonly closeButton: Locator;
   readonly sendAtPicker: Locator;
+  readonly datePickerAccept: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.dialog = page.getByTestId('reminder-modal-dialog');
-    this.nextButton = this.dialog.getByTestId('reminder-modal-next-button');
-    this.backButton = this.dialog.getByTestId('reminder-modal-back-button');
-    this.submitButton = this.dialog.getByTestId('reminder-modal-submit-button');
-    this.closeButton = this.dialog.getByTestId('reminder-modal-close-button');
-    this.sendAtPicker = this.dialog.getByTestId('reminder-send-at-picker');
+    this.nextButton = this.page.getByTestId('reminder-modal-next-button');
+    this.backButton = this.page.getByTestId('reminder-modal-back-button');
+    this.submitButton = this.page.getByTestId('reminder-modal-submit-button');
+    this.closeButton = this.page.getByTestId('reminder-modal-close-button');
+    this.sendAtPicker = this.page.getByTestId('reminder-send-at-picker');
+    this.datePickerAccept = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
   async waitForOpen() {
@@ -74,17 +77,23 @@ export class ReminderModal {
   }
 
   async selectSendAt(dateString: string) {
-    const input = this.sendAtPicker.getByRole('textbox');
-    await input.click();
-    //await input.fill(dateString);
-    await input.press('Enter');
+    await this.sendAtPicker.click();
+    await this.page.getByText('30').nth(1).click()
+    await this.datePickerAccept.click();
   }
 
   async fillAllVariablesWithRandomString() {
-    const variables = this.dialog.locator('.form-label:has(.form-input) .form-input');
-    const count = await variables.count();
-    for (let i = 0; i < count; i++) {
-      await variables.nth(i).fill(randomString(10));
+    //const variables = this.dialog.locator('.form-label:has(.form-input) .form-input');
+    // const variables = this.page.locator('textbox');
+    // const count = await variables.count();
+    // for (let i = 1; i < count; i++) {
+    //   await variables.nth(i).fill(randomString(10));
+    // }
+
+    const textboxes = await this.page.getByRole('textbox').all();
+
+    for (let i = 2; i < textboxes.length; i++) {
+      await textboxes[ i ].fill(randomString());
     }
   }
 
@@ -102,22 +111,22 @@ export class ReminderModal {
 
   async createReminder(data: {
     patientName: string;
+    sendMode: ReminderMode
     appointmentDateLabel?: string;
-    sendMode?: 'IMMEDIATE' | 'SCHEDULED';
   }): Promise<string> {
-    const mode = data.sendMode ?? 'SCHEDULED';
-    await this.selectSendMode(mode);
-    await this.selectPatient(data.patientName);
-
-    if (data.appointmentDateLabel) await this.selectAppointment(data.appointmentDateLabel);
-
-    if (mode === 'SCHEDULED') {
+    await this.selectSendMode(data.sendMode);
+    if (data.sendMode === ReminderMode.SCHEDULED) {
       await this.selectSendAt(' tomorrow at 10:00');
     }
 
-    await this.next();
+    await this.selectPatient(data.patientName);
+    if (data.appointmentDateLabel) await this.selectAppointment(data.appointmentDateLabel);
+
 
     await this.next();
+    await this.next();
+
+    await this.fillAllVariablesWithRandomString()
 
     await this.next();
 

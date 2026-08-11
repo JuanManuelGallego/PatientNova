@@ -5,8 +5,9 @@ import { CancelReminderModal } from '../pages/Modals/CancelReminderModal';
 import { APPT_DATE, APPT_TYPE_NAME, Routes } from '../utils/const';
 import { createTestPatient, createTestReminder } from '../utils/helpers';
 import { uniquePhoneNumber } from '../utils/test-data';
+import { ReminderMode } from '@/src/types/Reminder';
 
-test.skip('Reminders', () => {
+test.describe('Reminders', () => {
   test('Create reminder', async ({ page, api, trackedPatients }) => {
     const patient = await createTestPatient(api, { whatsappNumber: uniquePhoneNumber() });
     trackedPatients.track(patient.id);
@@ -18,6 +19,7 @@ test.skip('Reminders', () => {
 
     const reminderId = await modal.createReminder({
       patientName: patient.name,
+      sendMode: ReminderMode.SCHEDULED
     });
 
     await remindersPage.switchToActive();

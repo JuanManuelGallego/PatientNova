@@ -99,19 +99,21 @@ export const reminderService = {
   async update(id: string, dto: UpdateReminderDto, userId: string): Promise<Reminder> {
     const reminder = await reminderRepository.findById(id, userId);
 
-    if (dto.sendAt && reminder.status === ReminderStatus.PENDING) {
-      await reminderJobManager.reschedule(id, new Date(dto.sendAt));
-    }
-
-    if (dto.sendMode === ReminderMode.IMMEDIATE && reminder.sendMode === ReminderMode.SCHEDULED) {
-      if (reminder.status === ReminderStatus.PENDING) {
-        await reminderJobManager.cancel(id);
-        await reminderJobManager.enqueueImmediate(id);
+    if (config.scheduler.enabled) {
+      if (dto.sendAt && reminder.status === ReminderStatus.PENDING) {
+        await reminderJobManager.reschedule(id, new Date(dto.sendAt));
       }
-    }
 
-    if (dto.status && dto.status !== ReminderStatus.PENDING) {
-      await reminderJobManager.cancel(id);
+      if (dto.sendMode === ReminderMode.IMMEDIATE && reminder.sendMode === ReminderMode.SCHEDULED) {
+        if (reminder.status === ReminderStatus.PENDING) {
+          await reminderJobManager.cancel(id);
+          await reminderJobManager.enqueueImmediate(id);
+        }
+      }
+
+      if (dto.status && dto.status !== ReminderStatus.PENDING) {
+        await reminderJobManager.cancel(id);
+      }
     }
 
     const updated = await reminderRepository.update(id, dto, userId);
@@ -132,14 +134,16 @@ export const reminderService = {
     if (reminder.status !== ReminderStatus.PENDING) {
       throw new ReminderNotCancellableError(reminder.status);
     }
-    await reminderJobManager.cancel(id);
+    if (config.scheduler.enabled) {
+      await reminderJobManager.cancel(id);
+    }
     const cancelled = await reminderRepository.cancel(id, userId);
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Recordatorio cancelado para el paciente ${cancelled.patient.name} ${cancelled.patient.lastName}`,
-      affectedFields: ['status'],
+      affectedFields: [ 'status' ],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: ReminderStatus.CANCELLED },
     });
@@ -149,7 +153,7 @@ export const reminderService = {
 
   async softDelete(id: string, userId: string): Promise<Reminder> {
     const reminder = await reminderRepository.findById(id, userId);
-    if (reminder.status === ReminderStatus.PENDING) {
+    if (reminder.status === ReminderStatus.PENDING && config.scheduler.enabled) {
       await reminderJobManager.cancel(id);
     }
     const deleted = await reminderRepository.delete(id, userId);
@@ -158,7 +162,7 @@ export const reminderService = {
       entityId: id,
       actionType: ActionType.DELETE,
       description: `Recordatorio eliminado para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: false },
       fieldsAfter: { isDeleted: true },
     });
@@ -169,7 +173,7 @@ export const reminderService = {
   async restore(id: string, userId: string): Promise<Reminder> {
     const restored = await reminderRepository.restore(id, userId);
 
-    if (restored.status === ReminderStatus.PENDING && new Date(restored.sendAt) > new Date()) {
+    if (config.scheduler.enabled && restored.status === ReminderStatus.PENDING && new Date(restored.sendAt) > new Date()) {
       const hasJob = await reminderJobManager.hasQueuedJob(restored.id);
       if (!hasJob) {
         await reminderJobManager.enqueue(restored.id, new Date(restored.sendAt));
@@ -181,7 +185,7 @@ export const reminderService = {
       entityId: id,
       actionType: ActionType.RESTORE,
       description: `Recordatorio restaurado para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
-      affectedFields: ['isDeleted'],
+      affectedFields: [ 'isDeleted' ],
       fieldsBefore: { isDeleted: true },
       fieldsAfter: { isDeleted: false },
     });
@@ -225,15 +229,17 @@ export const reminderService = {
       entityId: id,
       actionType: ActionType.UPDATE,
       description: `Recordatorio ${id} reintentado (intento ${retried.retryCount})`,
-      affectedFields: ['status', 'retryCount'],
+      affectedFields: [ 'status', 'retryCount' ],
       fieldsBefore: { status: ReminderStatus.FAILED, retryCount: reminder.retryCount },
       fieldsAfter: { status: ReminderStatus.PENDING, retryCount: retried.retryCount },
     });
 
-    if (sendAt > now) {
-      await reminderJobManager.enqueue(id, sendAt);
-    } else {
-      await reminderJobManager.enqueueImmediate(id);
+    if (config.scheduler.enabled) {
+      if (sendAt > now) {
+        await reminderJobManager.enqueue(id, sendAt);
+      } else {
+        await reminderJobManager.enqueueImmediate(id);
+      }
     }
 
     logger.info({ reminderId: id, userId, retryCount: retried.retryCount }, 'Reminder retried');

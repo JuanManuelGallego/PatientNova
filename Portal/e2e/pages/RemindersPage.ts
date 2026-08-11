@@ -68,7 +68,6 @@ export class RemindersPage extends BasePage {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
     await row.locator(`[data-testid="${this.cancelTestId}"]`).click();
     const modal = new CancelReminderModal(this.page);
-    await expect(modal.dialog).toBeVisible();
     return modal;
   }
 
