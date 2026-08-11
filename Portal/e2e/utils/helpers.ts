@@ -1,7 +1,8 @@
 import { Channel, ReminderMode } from '@/src/types/Reminder';
 import { ApiClient, ApiResponse } from './api';
-import { LOCATION_ID, APPT_TYPE_ID, EntityTypes } from './const';
+import { EntityTypes } from './const';
 import { uniqueName, uniqueEmail, uniquePhoneNumber, futureDateTime, randomNumber } from './test-data';
+import { Env } from './env';
 
 export interface TestPatient {
   id: string;
@@ -26,8 +27,8 @@ export async function createTestAppointment(
   const offset = randomNumber();
   const defaults = {
     patientId,
-    locationId: LOCATION_ID,
-    typeId: APPT_TYPE_ID,
+    locationId: Env.locationId,
+    typeId: Env.apptTypeId,
     startAt: futureDateTime(offset),
     endAt: futureDateTime(offset + 1),
     sendMode: ReminderMode.SCHEDULED,

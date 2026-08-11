@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures';
 import { RemindersPage } from '../pages/RemindersPage';
 import { EditReminderModal } from '../pages/Modals/EditReminderModal';
 import { CancelReminderModal } from '../pages/Modals/CancelReminderModal';
-import { APPT_DATE, APPT_TYPE_NAME, Routes } from '../utils/const';
+import { Routes } from '../utils/const';
 import { createTestPatient, createTestReminder } from '../utils/helpers';
 import { uniquePhoneNumber } from '../utils/test-data';
 import { ReminderMode } from '@/src/types/Reminder';

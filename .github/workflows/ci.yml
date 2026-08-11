@@ -141,6 +141,10 @@ jobs:
           TEST_USER_EMAIL: ${{ secrets.STAGING_TEST_USER_EMAIL }}
           TEST_USER_PASSWORD: ${{ secrets.STAGING_TEST_USER_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          APPT_TYPE_NAME: ${{ secrets.APPT_TYPE_NAME }}
+          APPT_TYPE_ID: ${{ secrets.APPT_TYPE_ID }}
+          LOCATION_NAME: ${{ secrets.LOCATION_NAME }}
+          LOCATION_ID: ${{ secrets.LOCATION_ID }}
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: failure()

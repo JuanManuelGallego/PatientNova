@@ -2,7 +2,8 @@ import { test, expect } from '../fixtures';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
 import { AppointmentModal } from '../pages/Modals/AppointmentModal';
 import { CancelAppointmentModal } from '../pages/Modals/CancelAppointmentModal';
-import { APPT_TYPE_NAME, APPT_TYPE_PRICE, LOCATION_NAME, Routes } from '../utils/const';
+import { APPT_TYPE_PRICE, Routes } from '../utils/const';
+import { Env } from '../utils/env';
 import { createTestPatient, createTestAppointment } from '../utils/helpers';
 
 test.describe('Appointments', () => {
@@ -17,8 +18,8 @@ test.describe('Appointments', () => {
 
     const appointmentId = await modal.createAppointment({
       patientName: patient.name,
-      typeName: APPT_TYPE_NAME,
-      locationName: LOCATION_NAME,
+      typeName: Env.apptTypeName,
+      locationName: Env.locationId,
       price: Number(APPT_TYPE_PRICE),
     });
     trackedAppointments.track(appointmentId);
@@ -83,8 +84,8 @@ test.describe('Appointments', () => {
     await drawer.waitForOpen();
     await drawer.expectContent({
       patientName: patient.name,
-      typeName: APPT_TYPE_NAME,
-      location: LOCATION_NAME,
+      typeName: Env.apptTypeName,
+      location: Env.locationName,
     });
 
     await drawer.edit();
