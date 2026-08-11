@@ -1,7 +1,7 @@
 import { Channel, ReminderMode } from '@/src/types/Reminder';
 import { ApiClient, ApiResponse } from './api';
 import { EntityTypes } from './const';
-import { uniqueName, uniqueEmail, uniquePhoneNumber, futureDateTime, randomNumber } from './test-data';
+import { uniqueName, uniqueEmail, uniquePhoneNumber, futureDateTime, futureBusinessHourDateTime, addHours, randomNumber } from './test-data';
 import { Env } from './env';
 
 export interface TestPatient {
@@ -81,4 +81,15 @@ export async function createTestAppointmentType(
 ): Promise<ApiResponse> {
   const defaults = { name: uniqueName('Type'), defaultDuration: 60, defaultPrice: 50000 };
   return api.createAppointmentType({ ...defaults, ...overrides });
+}
+
+export async function createTestBlockedTime(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = {
+    description: uniqueName('Block'),
+    startTimeUtc: futureBusinessHourDateTime(),
+  };
+  return api.createBlockedTime({ ...defaults, endTimeUtc: addHours(defaults.startTimeUtc, 1), ...overrides });
 }

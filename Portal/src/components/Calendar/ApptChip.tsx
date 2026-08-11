@@ -11,6 +11,7 @@ export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProp
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onViewAppt(a); }}
+      data-testid={`calendar-event-${a.id}`}
       className={[
         "cal-chip",
         isCancelled ? "cal-chip--cancelled" : "",

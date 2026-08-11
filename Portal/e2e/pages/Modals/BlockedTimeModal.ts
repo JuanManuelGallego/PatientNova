@@ -1,4 +1,5 @@
 import { expect, Page, Locator } from '@playwright/test';
+import { HttpMethods } from '../../utils/const';
 
 export class BlockedTimeModal {
   readonly page: Page;
@@ -6,6 +7,9 @@ export class BlockedTimeModal {
   readonly submitButton: Locator;
   readonly cancelButton: Locator;
   readonly deleteButton: Locator;
+  readonly descriptionInput: Locator;
+  readonly startTimeInput: Locator;
+  readonly endTimeInput: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -13,6 +17,9 @@ export class BlockedTimeModal {
     this.submitButton = this.dialog.getByTestId('blocked-time-modal-submit-button');
     this.cancelButton = this.dialog.getByTestId('blocked-time-modal-cancel-button');
     this.deleteButton = this.dialog.getByTestId('blocked-time-modal-delete-button');
+    this.descriptionInput = this.dialog.getByTestId('blocked-time-description-input');
+    this.startTimeInput = this.dialog.getByTestId('blocked-time-start-input');
+    this.endTimeInput = this.dialog.getByTestId('blocked-time-end-input');
   }
 
   async waitForOpen() {
@@ -34,6 +41,53 @@ export class BlockedTimeModal {
   }
 
   async delete() {
+    await this.deleteButton.click();
+  }
+
+  async createBlockedTime(data: {
+    description: string;
+    startTimeUtc?: string;
+    endTimeUtc?: string;
+  }): Promise<string> {
+    await this.descriptionInput.fill(data.description);
+    if (data.startTimeUtc) {
+      await this.startTimeInput.fill(data.startTimeUtc);
+    }
+    if (data.endTimeUtc) {
+      await this.endTimeInput.fill(data.endTimeUtc);
+    }
+
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.POST &&
+        response.url().includes('/blocked-time'),
+    );
+
+    await this.submit();
+
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+
+    const created = await response.json();
+    return created.data.id;
+  }
+
+  async editBlockedTime(data: { description: string }): Promise<void> {
+    await this.descriptionInput.fill(data.description);
+
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes('/blocked-time'),
+    );
+
+    await this.submit();
+
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+  }
+
+  async deleteBlockedTime(): Promise<void> {
     await this.deleteButton.click();
   }
 }

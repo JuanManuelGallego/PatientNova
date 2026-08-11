@@ -34,6 +34,20 @@ export function futureDateTime(hoursFromNow = 24): string {
   return d.toISOString();
 }
 
+export function futureBusinessHourDateTime(daysFromNow = 1): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  const hour = 8 + Math.floor(Math.random() * 12);
+  d.setUTCHours(hour, 0, 0, 0);
+  return d.toISOString();
+}
+
+export function addHours(iso: string, hours: number): string {
+  const d = new Date(iso);
+  d.setUTCHours(d.getUTCHours() + hours);
+  return d.toISOString();
+}
+
 export function futureDate(daysFromNow = 7): string {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);

@@ -4,6 +4,7 @@ import { BlockedTimeBlockProps } from "./types";
 export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTimeBlockProps) {
   return (
     <div
+      data-testid={`calendar-blocked-${bt.id}`}
       onClick={(e) => { e.stopPropagation(); onSelectBlockedTime(bt); }}
       style={{
         position: "absolute",
