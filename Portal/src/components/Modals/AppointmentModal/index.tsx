@@ -285,6 +285,7 @@ export function AppointmentModal({
       aria-label={isEdit ? "Editar Cita" : "Nueva Cita"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid="appointment-modal-dialog"
     >
       <div
         className="modal-panel modal-panel--lg slide-up"
@@ -299,7 +300,7 @@ export function AppointmentModal({
               {steps[ step - 1 ]} — Paso {step} de {steps.length}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="appointment-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -357,6 +358,7 @@ export function AppointmentModal({
               onClick={() => setStep((s) => s - 1)}
               className="btn-secondary"
               disabled={saving}
+              data-testid="appointment-modal-back-button"
             >
               {LBL_BACK}
             </button>
@@ -369,6 +371,7 @@ export function AppointmentModal({
               }}
               disabled={!isValid}
               className="btn-primary"
+              data-testid="appointment-modal-next-button"
             >
               Continuar →
             </button>
@@ -377,6 +380,7 @@ export function AppointmentModal({
               onClick={handleSubmit}
               disabled={saving || !isValid}
               className="btn-primary"
+              data-testid="appointment-modal-submit-button"
             >
               {saving
                 ? LBL_SAVING

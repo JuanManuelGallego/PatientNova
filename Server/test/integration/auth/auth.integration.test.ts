@@ -57,6 +57,10 @@ describe('authService (integration)', () => {
     const { refreshToken } = await authService.login(user.email, PASSWORD, '127.0.0.1');
     const { accessToken } = await authService.refreshToken(refreshToken);
     expect(accessToken).toBeTruthy();
+    const segments = accessToken.split('.');
+    expect(segments).toHaveLength(3);
+    const payload = JSON.parse(Buffer.from(segments[1]!, 'base64').toString());
+    expect(payload.id).toBe(user.id);
   });
 
   it('rejects a refresh token after logout (version bump)', async () => {

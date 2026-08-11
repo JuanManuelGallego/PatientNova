@@ -67,7 +67,7 @@ export function LocationsTab() {
             Configura los lugares donde atiendes pacientes
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setModalLocation(null)}>
+        <button className="btn-primary" onClick={() => setModalLocation(null)} data-testid="settings-new-location-button">
           Nueva ubicación
         </button>
       </div>

@@ -54,6 +54,7 @@ export function PaymentAndStatusStep({
               value={form.price}
               onChange={setPrice}
               placeholder="150.00"
+              data-testid="appointment-price-input"
             />
           </div>
         </label>
@@ -61,6 +62,7 @@ export function PaymentAndStatusStep({
           Pago
           <CustomSelect
             value={form.paid}
+            data-testid="appointment-paid-select"
             options={(
               Object.keys(APPT_PAID_STATUS_CFG) as AppointmentPaidStatus[]
             ).map((s) => ({
@@ -74,6 +76,7 @@ export function PaymentAndStatusStep({
           Estado
           <CustomSelect
             value={form.status}
+            data-testid="appointment-status-select"
             options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(
               (s) => ({ value: s, label: APPT_STATUS_CFG[ s ].label }),
             )}
@@ -119,7 +122,7 @@ export function PaymentAndStatusStep({
       <div>
         <label className="form-label">
           Notas
-          <input className="form-input" onChange={set("notes")} />
+          <input className="form-input" onChange={set("notes")} data-testid="appointment-notes-input" />
         </label>
       </div>
     </div>

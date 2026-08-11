@@ -108,6 +108,7 @@ function RemindersPageContent() {
               <button
                 onClick={() => setShowCreate(true)}
                 className="btn-primary btn-hero"
+                data-testid="reminders-new-button"
               >
                 Nuevo Recordatorio
               </button>
@@ -161,6 +162,7 @@ function RemindersPageContent() {
               setPage(1);
             }}
             placeholder="Buscar por nombre, número, canal…"
+            testId="reminders-search-input"
           />
         )}
         {error && activeTab !== "Bulk" && (
@@ -322,12 +324,14 @@ function ActiveRemindersTab({
               <button
                 onClick={() => setEditReminder(reminder)}
                 className="btn-action-edit"
+                data-testid="reminder-reschedule-button"
               >
                 Reprogramar
               </button>
               <button
                 onClick={() => setCancelReminder(reminder)}
                 className="btn-action-delete"
+                data-testid="reminder-row-cancel-button"
               >
                 <ACTION_ICONS.close size={14} />
               </button>
@@ -431,6 +435,7 @@ function HistoryRemindersTab({
                   disabled={(reminder.retryCount ?? 0) > MAX_RETRIES}
                   title={(reminder.retryCount ?? 0) > MAX_RETRIES ? 'Máximo de reintentos alcanzado' : undefined}
                   className="btn-action-edit"
+                  data-testid="reminder-row-retry-button"
                 >
                   <ACTION_ICONS.retry size={14} />
                 </button>
@@ -523,6 +528,7 @@ function ReminderTabs({
           key={tab.key}
           onClick={() => setActiveTab(tab.key)}
           className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
+          data-testid={`reminders-tab-${tab.key.toLowerCase()}`}
         >
           {tab.label}
           {tab.badge !== null && (

@@ -91,53 +91,20 @@ describe('computeDiff', () => {
     expect(result.fieldsAfter).toEqual({ meta: { a: 1, b: 3 } });
   });
 
-  it('does not flag identical nested objects', () => {
-    const obj = { a: 1, b: 2 };
-    const result = computeDiff(
-      { meta: obj },
-      { meta: { a: 1, b: 2 } },
-      ['meta'],
-    );
-    expect(result.affectedFields).toEqual([]);
-  });
-
-  it('handles null vs undefined (both JSON.stringify to different strings)', () => {
-    const result = computeDiff(
-      { val: null },
-      { val: undefined },
-      ['val'],
-    );
-    expect(result.affectedFields).toEqual(['val']);
-  });
-
-  it('handles numeric zero vs empty string', () => {
-    const result = computeDiff(
-      { count: 0 },
-      { count: '' },
-      ['count'],
-    );
-    expect(result.affectedFields).toEqual(['count']);
+  it('handles null vs undefined and zero vs empty string', () => {
+    expect(computeDiff({ val: null }, { val: undefined }, ['val']).affectedFields).toEqual(['val']);
+    expect(computeDiff({ count: 0 }, { count: '' }, ['count']).affectedFields).toEqual(['count']);
   });
 
   it('handles Date serialization', () => {
     const d1 = new Date('2024-01-01T00:00:00.000Z');
     const d2 = new Date('2024-06-15T12:00:00.000Z');
-    const result = computeDiff(
-      { date: d1 },
-      { date: d2 },
-      ['date'],
-    );
-    expect(result.affectedFields).toEqual(['date']);
+    expect(computeDiff({ date: d1 }, { date: d2 }, ['date']).affectedFields).toEqual(['date']);
   });
 
   it('does not flag identical Dates', () => {
     const d = new Date('2024-01-01T00:00:00.000Z');
-    const result = computeDiff(
-      { date: d },
-      { date: new Date('2024-01-01T00:00:00.000Z') },
-      ['date'],
-    );
-    expect(result.affectedFields).toEqual([]);
+    expect(computeDiff({ date: d }, { date: new Date('2024-01-01T00:00:00.000Z') }, ['date']).affectedFields).toEqual([]);
   });
 });
 
@@ -177,54 +144,31 @@ describe('buildAuditEntry', () => {
     );
   });
 
-  it('overrides ipAddress from context when explicitly provided', () => {
+  it('applies explicit overrides over context', () => {
     runInAuditContext(
       { actorId: 'user-1', actorDisplayName: 'Test User', ipAddress: '10.0.0.1' },
       () => {
         const entry = buildAuditEntry({
-          entityType: 'PATIENT',
-          entityId: 'p-1',
-          actionType: 'CREATE',
-          description: 'test',
+          entityType: 'REMINDER',
+          entityId: 'r-1',
+          actionType: 'DELETE',
+          source: 'JOB',
+          description: 'Deleted reminder',
+          affectedFields: ['status'],
+          fieldsBefore: { status: 'PENDING' },
+          reason: 'Cleanup',
           ipAddress: '192.168.1.1',
-        });
-        expect(entry.ipAddress).toBe('192.168.1.1');
-      },
-    );
-  });
-
-  it('overrides userId from context when explicitly provided', () => {
-    runInAuditContext(
-      { actorId: 'user-1', actorDisplayName: 'Test User', userId: 'ctx-user' },
-      () => {
-        const entry = buildAuditEntry({
-          entityType: 'PATIENT',
-          entityId: 'p-1',
-          actionType: 'CREATE',
-          description: 'test',
           userId: 'explicit-user',
         });
+        expect(entry.entityType).toBe('REMINDER');
+        expect(entry.actionType).toBe('DELETE');
+        expect(entry.source).toBe('JOB');
+        expect(entry.affectedFields).toEqual(['status']);
+        expect(entry.fieldsBefore).toEqual({ status: 'PENDING' });
+        expect(entry.reason).toBe('Cleanup');
+        expect(entry.ipAddress).toBe('192.168.1.1');
         expect(entry.userId).toBe('explicit-user');
       },
     );
-  });
-
-  it('applies all overrides correctly', () => {
-    const entry = buildAuditEntry({
-      entityType: 'REMINDER',
-      entityId: 'r-1',
-      actionType: 'DELETE',
-      source: 'JOB',
-      description: 'Deleted reminder',
-      affectedFields: ['status'],
-      fieldsBefore: { status: 'PENDING' },
-      reason: 'Cleanup',
-    });
-    expect(entry.entityType).toBe('REMINDER');
-    expect(entry.actionType).toBe('DELETE');
-    expect(entry.source).toBe('JOB');
-    expect(entry.affectedFields).toEqual(['status']);
-    expect(entry.fieldsBefore).toEqual({ status: 'PENDING' });
-    expect(entry.reason).toBe('Cleanup');
   });
 });

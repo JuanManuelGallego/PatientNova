@@ -8,7 +8,7 @@ Guidance for AI agents and contributors working in this repository.
 
 ## Running integration tests (Server)
 Integration tests hit a **real Postgres** and must run against a disposable test database.
-They use the `integration` vitest project (`src/**/*.integration.test.ts`).
+They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 
 1. Start the test database (port 5433):
    ```bash
@@ -52,27 +52,33 @@ Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
-| Appointments | `src/appointments/appointment.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
-| Appointments (routes) | `src/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
-| Auth | `src/auth/auth.integration.test.ts` | login, JWT, lockout |
-| Users | `src/users/user.integration.test.ts` | CRUD, scoping |
-| Medical records | `src/medical-records/medical-record.integration.test.ts` | create/read/delete |
-| Reminders (repo) | `src/reminders/reminder.repository.integration.test.ts` | create/findById/update/cancel/findMany/getStats/softDelete+restore |
-| Reminders (svc) | `src/reminders/reminder.service.integration.test.ts` | create(=false), cancel/softDelete/restore, sendAt reschedule (pg-boss mocked) |
-| Reminders (routes) | `src/reminders/reminder.routes.integration.test.ts` | POST/GET/PATCH/cancel/delete/restore/stats; validation 400, ownership 404 (`getBoss` + jobManager mocked) |
-| Locations | `src/locations/location.integration.test.ts` | CRUD, scoping |
-| Appointment types | `src/appointment-types/appointment-type.integration.test.ts` | CRUD, scoping |
-| Consent doc | `src/consent/consent-document.integration.test.ts` | upload/read/byUserId |
-| Twilio webhook (svc) | `src/twilio/twilio-webhook.integration.test.ts` | status callback handling (confirm/cancel/unknown intent) |
-| Twilio webhook (route) | `src/twilio/twilio.webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
-| Twilio client | `src/twilio/twilio-client.integration.test.ts` | send wrappers (mocked SDK) |
-| Scheduler | `src/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
-| Scheduler workers | `src/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |
-| Notify routes | `src/notify/notify.integration.test.ts` | POST /whatsapp & /sms → create+send+SENT; ownership 404; Twilio-failure → FAILED (jobManager + twilio mocked) |
-| Bulk send (routes) | `src/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, SMS body render per patient (`{{N}}` placeholders) + missing-body 400, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
-| Bulk send (worker) | `src/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter (dispatch mock) |
-| Patients (routes) | `src/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; validation 400, ownership 404 |
-| Patient seed | `src/patients/patient.integration.test.ts` | seed/ownership baseline |
+| Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
+| Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
+| Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout |
+| Users (repo) | `test/integration/users/user.repository.integration.test.ts` | CRUD, scoping |
+| Medical records (repo) | `test/integration/medical-records/medical-record.repository.integration.test.ts` | create/read/delete |
+| Reminders (repo) | `test/integration/reminders/reminder.repository.integration.test.ts` | create/findById/update/cancel/findMany/getStats/softDelete+restore |
+| Reminders (svc) | `test/integration/reminders/reminder.service.integration.test.ts` | cancel/softDelete/restore, sendAt reschedule (pg-boss mocked) |
+| Reminders (routes) | `test/integration/reminders/reminder.routes.integration.test.ts` | POST/GET/PATCH/cancel/delete/restore/stats; validation 400, ownership 404 (`getBoss` + jobManager mocked) |
+| Locations (repo) | `test/integration/locations/location.repository.integration.test.ts` | CRUD, scoping |
+| Appointment types (repo) | `test/integration/appointment-types/appointment-type.repository.integration.test.ts` | CRUD, scoping |
+| Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
+| Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
+| Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
+| Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | status callback handling (confirm/cancel/unknown intent) |
+| Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
+| Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
+| Notify (routes) | `test/integration/twilio/notify/notify.integration.test.ts` | POST /whatsapp & /sms → create+send+SENT; ownership 404; Twilio-failure → FAILED (jobManager + twilio mocked) |
+| Bulk send (routes) | `test/integration/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, SMS body render per patient (`{{N}}` placeholders) + missing-body 400, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
+| Scheduler | `test/integration/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
+| Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |
+| Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter (dispatch mock) |
+| Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
+| Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; validation 400, ownership 404 |
+| Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
+| Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
+| Audit log (writing expanded) | `test/integration/audit-log/audit-log-writing-expanded.integration.test.ts` | audit trails for appointments/reminders/users/auth/consent docs/twilio webhooks |
+| Tenant isolation | `test/integration/tenants/tenant-isolation.integration.test.ts` | cross-tenant data isolation across all repositories |
 
 ### Known product bugs found & fixed during test build
 - `sendSmsSchema` (`src/utils/validation.ts`) lacked `patientId`, so SMS
@@ -86,7 +92,7 @@ Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
 
 ## Test conventions
 - Scope A (implemented): repository/service-level tests against real Postgres, no HTTP layer.
-- Unit tests (`src/**/*.test.ts`) mock Prisma/DB and run fast.
+- Unit tests (`test/unit/**/*.test.ts`) mock Prisma/DB and run fast.
 - `test/integration/helpers.ts` provides `createTestUser`, `createTestPatient`,
   `createTestLocation`, `createTestAppointmentType`, `appointmentTimeRange`, `futureDate`,
   `unique` (sequence-suffixed unique strings for emails etc.), and the route-layer

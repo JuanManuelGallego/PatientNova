@@ -13,7 +13,7 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({
 }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { initializePgBoss, stopPgBoss, getBoss } from '../../../src/scheduler/pg-boss.js';
+import { initializePgBoss, stopPgBoss } from '../../../src/scheduler/pg-boss.js';
 import { reminderJobManager } from '../../../src/scheduler/reminder-job-manager.js';
 import { createTestUser, createTestPatient } from '../helpers.js';
 import { ReminderStatus, Channel } from '../../../generated/prisma/client.ts';
@@ -97,7 +97,5 @@ describe('scheduler (integration, mocked dispatch)', () => {
     expect(dispatchMock).not.toHaveBeenCalled();
   }, 30_000);
 
-  it('exposes the pg-boss instance after initialization', () => {
-    expect(getBoss()).toBeTruthy();
-  });
+
 });

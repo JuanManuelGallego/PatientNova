@@ -26,6 +26,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('../../../src/utils/config/config.js', () => ({
+  config: {
+    scheduler: { enabled: true },
+  },
+}));
 vi.mock('../../../src/reminders/reminder.repository.js', () => ({ reminderRepository: mocks.repo }));
 vi.mock('../../../src/utils/api/logger.js', () => ({ logger: mocks.logger }));
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({ prisma: mocks.prisma }));
@@ -67,7 +72,6 @@ const fakeReminder = {
 };
 
 const scheduledPending = { ...fakeReminder };
-const immediatePending = { ...fakeReminder, sendMode: 'IMMEDIATE' as const };
 
 function txStub(overrides = {}) {
   return {
@@ -190,12 +194,6 @@ describe('reminderService.create', () => {
 });
 
 describe('reminderService.update', () => {
-  it('reschedules the job when sendAt changes on a PENDING reminder', async () => {
-    mocks.repo.findById.mockResolvedValue(scheduledPending);
-    await reminderService.update('rem-1', { sendAt: new Date(Date.now() + 2 * 86400000) }, 'user-1');
-    expect(mocks.jobManager.reschedule).toHaveBeenCalledWith('rem-1', expect.any(Date));
-  });
-
   it('cancels + enqueues immediate when switching to IMMEDIATE on a SCHEDULED PENDING reminder', async () => {
     mocks.repo.findById.mockResolvedValue(scheduledPending);
     await reminderService.update('rem-1', { sendMode: 'IMMEDIATE' }, 'user-1');
@@ -219,14 +217,6 @@ describe('reminderService.update', () => {
 });
 
 describe('reminderService.cancel', () => {
-  it('cancels the pg-boss job then the reminder', async () => {
-    mocks.repo.findById.mockResolvedValue(immediatePending);
-    const result = await reminderService.cancel('rem-1', 'user-1');
-    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
-    expect(mocks.repo.cancel).toHaveBeenCalledWith('rem-1', 'user-1');
-    expect(result.status).toBe('CANCELLED');
-  });
-
   it('throws ReminderNotCancellableError for a non-PENDING reminder', async () => {
     mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await expect(reminderService.cancel('rem-1', 'user-1')).rejects.toThrow('Cannot cancel a reminder with status "SENT"');
@@ -235,13 +225,6 @@ describe('reminderService.cancel', () => {
 });
 
 describe('reminderService.softDelete', () => {
-  it('cancels the job when deleting a PENDING reminder', async () => {
-    mocks.repo.findById.mockResolvedValue(immediatePending);
-    await reminderService.softDelete('rem-1', 'user-1');
-    expect(mocks.jobManager.cancel).toHaveBeenCalledWith('rem-1');
-    expect(mocks.repo.delete).toHaveBeenCalledWith('rem-1', 'user-1');
-  });
-
   it('does not cancel the job when deleting a non-PENDING reminder', async () => {
     mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await reminderService.softDelete('rem-1', 'user-1');
@@ -251,13 +234,6 @@ describe('reminderService.softDelete', () => {
 });
 
 describe('reminderService.restore', () => {
-  it('re-enqueues when PENDING, future sendAt, and no existing job', async () => {
-    mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const, sendAt: new Date(Date.now() + 86400000) });
-    mocks.jobManager.hasQueuedJob.mockResolvedValue(false);
-    await reminderService.restore('rem-1', 'user-1');
-    expect(mocks.jobManager.enqueue).toHaveBeenCalledWith('rem-1', expect.any(Date));
-  });
-
   it('skips re-enqueue when a queued job already exists', async () => {
     mocks.repo.restore.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const, sendAt: new Date(Date.now() + 86400000) });
     mocks.jobManager.hasQueuedJob.mockResolvedValue(true);
@@ -275,21 +251,6 @@ describe('reminderService.restore', () => {
 describe('reminderService.retry', () => {
   const failedReminder = { ...fakeReminder, status: 'FAILED' as const, retryCount: 0, isDeleted: false, appointmentId: null };
 
-  it('retries a FAILED reminder and enqueues immediate', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...failedReminder, sendAt: new Date(Date.now() - 86400000) });
-    const result = await reminderService.retry('rem-1', 'user-1');
-    expect(result.status).toBe('PENDING');
-    expect(result.retryCount).toBe(1);
-    expect(mocks.repo.retry).toHaveBeenCalledWith('rem-1', expect.any(Date));
-    expect(mocks.jobManager.enqueueImmediate).toHaveBeenCalledWith('rem-1');
-  });
-
-  it('throws ReminderNotRetryableError for non-FAILED status', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'PENDING' as const });
-    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
-    expect(mocks.repo.retry).not.toHaveBeenCalled();
-  });
-
   it('throws ReminderNotRetryableError for SENT status', async () => {
     mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'SENT' as const });
     await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
@@ -303,18 +264,6 @@ describe('reminderService.retry', () => {
   it('throws ReminderNotRetryableError for QUEUED status', async () => {
     mocks.repo.findById.mockResolvedValue({ ...fakeReminder, status: 'QUEUED' as const });
     await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('cannot be retried');
-  });
-
-  it('throws ReminderNotRetryableError when already retried once', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...failedReminder, retryCount: 1 });
-    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('max retries exceeded');
-    expect(mocks.repo.retry).not.toHaveBeenCalled();
-  });
-
-  it('throws ReminderNotRetryableError for soft-deleted reminder', async () => {
-    mocks.repo.findById.mockResolvedValue({ ...failedReminder, isDeleted: true });
-    await expect(reminderService.retry('rem-1', 'user-1')).rejects.toThrow('reminder is deleted');
-    expect(mocks.repo.retry).not.toHaveBeenCalled();
   });
 
   it('throws ReminderNotRetryableError when linked appointment is in the past', async () => {

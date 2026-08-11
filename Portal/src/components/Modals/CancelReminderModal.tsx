@@ -35,6 +35,7 @@ export function CancelReminderModal({
       loadingLabel="Cancelando…"
       loading={loading}
       error={error}
+      testId="cancel-reminder"
       onClose={onClose}
       onConfirm={handleCancel}
     >

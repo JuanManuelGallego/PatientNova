@@ -39,6 +39,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
       aria-label="Iniciar sesión"
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid="login-modal-overlay"
     >
       <div
         className="modal-panel modal-panel--sm fade-in"
@@ -51,7 +52,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="landing-modal-subtitle">Bienvenido de nuevo</div>
           </div>
-          <button className="btn-close" onClick={onClose} aria-label="Close">
+          <button className="btn-close" onClick={onClose} aria-label="Close" data-testid="login-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -72,6 +73,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               autoComplete="email"
               autoFocus
               required
+              data-testid="login-modal-email-input"
             />
           </label>
 
@@ -86,11 +88,12 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
+              data-testid="login-modal-password-input"
             />
           </label>
 
           {error && (
-            <div className="login-card__error" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="login-card__error" style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="login-modal-error-alert">
               <STATUS_ICONS.warning size={14} />{" "}
               Credenciales incorrectas
             </div>
@@ -101,6 +104,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             className="btn-primary login-card__submit"
             style={{ marginTop: 4 }}
             disabled={loading || !email || !password}
+            data-testid="login-modal-submit-button"
           >
             {loading ? "Iniciando sesión…" : "Iniciar sesión"}
           </button>

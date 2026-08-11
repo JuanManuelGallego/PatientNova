@@ -76,7 +76,7 @@ export function PatientDrawer({
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
-      <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="patient-drawer-panel">
         <div
           className="drawer-header"
           style={{ background: s.bg, borderBottom: `3px solid ${s.color}` }}
@@ -90,7 +90,7 @@ export function PatientDrawer({
                 <PatientStatusPill status={patient.status} />
               </div>
             </div>
-            <button onClick={onClose} className="btn-close--transparent">
+            <button onClick={onClose} className="btn-close--transparent" data-testid="patient-drawer-close-button">
               <ACTION_ICONS.close size={16} />
             </button>
           </div>
@@ -294,10 +294,10 @@ export function PatientDrawer({
           </Section>
         </div>
         <div className="drawer-footer">
-          <button onClick={onEdit} className="btn-primary btn-primary--block">
+          <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="patient-drawer-edit-button">
             <ACTION_ICONS.edit size={14} /> Editar
           </button>
-          <button onClick={onDelete} className="btn-drawer-delete">
+          <button onClick={onDelete} className="btn-drawer-delete" data-testid="patient-drawer-delete-button">
             <ACTION_ICONS.delete size={14} />
           </button>
         </div>

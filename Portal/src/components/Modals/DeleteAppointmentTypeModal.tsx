@@ -35,6 +35,7 @@ export function DeleteAppointmentTypeModal({
       loadingLabel="Desactivando…"
       loading={loading}
       error={error}
+      testId="delete-appointment-type-dialog"
       onClose={onClose}
       onConfirm={handleConfirm}
     >

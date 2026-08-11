@@ -24,6 +24,7 @@ interface CustomSelectProps {
   className?: string;
   disabled?: boolean;
   "aria-label"?: string;
+  "data-testid"?: string;
 }
 
 export function CustomSelect({
@@ -34,6 +35,7 @@ export function CustomSelect({
   className,
   disabled,
   "aria-label": ariaLabel,
+  "data-testid": testId,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
@@ -193,6 +195,7 @@ export function CustomSelect({
       ref={ref}
       onKeyDown={handleKeyDown}
       style={disabled ? { opacity: 0.45, userSelect: "none" } : undefined}
+      data-testid={testId}
     >
       <button
         type="button"

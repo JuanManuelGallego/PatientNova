@@ -9,6 +9,7 @@ interface FilterBarProps {
   placeholder?: string;
   wrap?: boolean;
   children?: React.ReactNode;
+  testId?: string;
 }
 
 export function FilterBar({
@@ -18,6 +19,7 @@ export function FilterBar({
   placeholder = "Buscar…",
   wrap = false,
   children,
+  testId,
 }: FilterBarProps) {
   const XIcon = ACTION_ICONS.close;
   const SearchIcon = STATUS_ICONS.search;
@@ -33,6 +35,7 @@ export function FilterBar({
           onChange={(e) => onChange(e.target.value)}
           className="form-input form-input--search"
           autoComplete="off"
+          data-testid={testId}
         />
         {value && (
           <button

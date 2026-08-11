@@ -15,6 +15,12 @@ function fmtDateTime(iso: string | undefined): string {
     });
 }
 
+const fmtDatePlusOneHour = (isoStr: string): string => {
+  const date = new Date(isoStr);
+  date.setTime(date.getTime() + 60 * 60 * 1000);
+  return date.toISOString();
+};
+
 function fmtDate(d: string | undefined): string {
     if (!d) return "Invalid Date"
 
@@ -277,6 +283,7 @@ export {
     fmtDateTime,
     fmtDateWeekDay,
     fmtDatePlusOneDay,
+    fmtDatePlusOneHour,
     fmtRelative,
     fmtTimestamp,
     getDate,

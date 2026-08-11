@@ -104,12 +104,14 @@ export default function DashboardPage() {
           <button
             className="btn-primary btn-hero"
             onClick={() => setShowApptModal(true)}
+            data-testid="dashboard-new-appointment-button"
           >
             Nueva Cita
           </button>
           <button
             className="btn-primary btn-hero"
             onClick={() => setShowPatientModal(true)}
+            data-testid="dashboard-new-patient-button"
           >
             Nuevo Paciente
           </button>

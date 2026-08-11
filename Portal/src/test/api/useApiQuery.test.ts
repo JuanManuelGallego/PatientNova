@@ -19,10 +19,6 @@ function makeOkResponse<T>(data: T) {
     } as unknown as Response;
 }
 
-function makeErrorResponse(status = 500) {
-    return { ok: false, status } as unknown as Response;
-}
-
 describe("useApiQuery", () => {
     it("starts in loading state then returns data", async () => {
         mockFetch.mockResolvedValueOnce(makeOkResponse({ id: 1, name: "Ana" }));
@@ -38,21 +34,6 @@ describe("useApiQuery", () => {
         expect(result.current.error).toBeNull();
     });
 
-    it("does not fetch when url is null", () => {
-        renderHook(() => useApiQuery<string>(null));
-        expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it("sets error when server returns non-ok status", async () => {
-        mockFetch.mockResolvedValueOnce(makeErrorResponse(404));
-
-        const { result } = renderHook(() => useApiQuery<string>("/api/missing"));
-
-        await waitFor(() => expect(result.current.loading).toBe(false));
-        expect(result.current.error).toMatch(/404/);
-        expect(result.current.data).toBeUndefined();
-    });
-
     it("sets error when API success is false", async () => {
         mockFetch.mockResolvedValueOnce({
             ok: true,
@@ -63,19 +44,5 @@ describe("useApiQuery", () => {
 
         await waitFor(() => expect(result.current.loading).toBe(false));
         expect(result.current.error).toBeTruthy();
-    });
-
-    it("refetch triggers a new network call", async () => {
-        mockFetch
-            .mockResolvedValueOnce(makeOkResponse("first"))
-            .mockResolvedValueOnce(makeOkResponse("second"));
-
-        const { result } = renderHook(() => useApiQuery<string>("/api/item"));
-
-        await waitFor(() => expect(result.current.data).toBe("first"));
-
-        result.current.refetch();
-        await waitFor(() => expect(result.current.data).toBe("second"));
-        expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 });

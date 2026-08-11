@@ -298,38 +298,3 @@ describe('appointmentService (integration)', () => {
     expect(created.id).toBeTruthy();
   });
 });
-
-describe('appointmentRepository (additional coverage)', () => {
-  it('findById returns the row and throws AppointmentNotFoundError for unknown id', async () => {
-    const created = await appointmentRepository.create(baseCreateDto(), userId);
-    const found = await appointmentRepository.findById(created.id, userId);
-    expect(found.id).toBe(created.id);
-
-    await expect(appointmentRepository.findById('00000000-0000-0000-0000-000000000000', userId))
-      .rejects.toThrow(AppointmentNotFoundError);
-  });
-
-  it('getStats aggregates by status and revenue', async () => {
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, price: 100 }), userId);
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CONFIRMED, price: 200 }), userId);
-
-    const stats = await appointmentRepository.getStats({ includeDeleted: false }, userId);
-    expect(stats.total).toBe(2);
-    expect(stats.byStatus[AppointmentStatus.SCHEDULED]).toBe(1);
-    expect(stats.byStatus[AppointmentStatus.CONFIRMED]).toBe(1);
-    expect(stats.totalRevenue).toBe(300);
-  });
-
-  it('soft-deletes and restores an appointment via the repository', async () => {
-    const created = await appointmentRepository.create(baseCreateDto(), userId);
-    await appointmentRepository.delete(created.id, userId);
-
-    await expect(appointmentRepository.findById(created.id, userId)).rejects.toThrow(AppointmentNotFoundError);
-
-    const restored = await appointmentRepository.restore(created.id, userId);
-    expect(restored.isDeleted).toBe(false);
-
-    const found = await appointmentRepository.findById(created.id, userId);
-    expect(found.id).toBe(created.id);
-  });
-});

@@ -140,13 +140,14 @@ export const StepTemplate = memo(function StepTemplate({
           alignItems: "center",
         }}
       >
-        <button onClick={onBack} className="btn-secondary">
+        <button onClick={onBack} className="btn-secondary" data-testid="bulk-send-back-button">
           Atrás
         </button>
         <button
           onClick={onSend}
           disabled={!canSend || sending}
           className="btn-primary btn-hero"
+          data-testid="bulk-send-submit-button"
         >
           {sending ? (
             <>

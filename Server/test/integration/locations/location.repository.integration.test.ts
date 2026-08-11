@@ -33,6 +33,8 @@ describe('locationRepository (integration)', () => {
     const other = await createTestUser();
     const created = await locationRepository.create({ name: 'Shared Office', isVirtual: false }, other.id);
     expect(created.id).toBeTruthy();
+    expect(created.name).toBe('Shared Office');
+    expect(created.userId).toBe(other.id);
   });
 
   it('lists only non-deleted locations by default', async () => {

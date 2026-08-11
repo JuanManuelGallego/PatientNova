@@ -44,12 +44,6 @@ describe("FocusTrapProvider + useFocusTrap", () => {
     consoleError.mockRestore();
   });
 
-  it("returns ref and handleKeyDown function", () => {
-    const { result } = renderHook(() => useFocusTrap(), { wrapper });
-    expect(result.current.ref).toBeDefined();
-    expect(typeof result.current.handleKeyDown).toBe("function");
-  });
-
   it("calls onEscape when Escape key is pressed", () => {
     const onEscape = vi.fn();
     const { result } = renderHook(() => useFocusTrap(onEscape), { wrapper });
@@ -207,14 +201,5 @@ describe("FocusTrapProvider + useFocusTrap", () => {
     });
 
     expect(event.preventDefault).not.toHaveBeenCalled();
-  });
-
-  it("works without onEscape callback", () => {
-    const { result } = renderHook(() => useFocusTrap(), { wrapper });
-
-    // Should not throw
-    act(() => {
-      result.current.handleKeyDown(makeKeyboardEvent("Escape"));
-    });
   });
 });

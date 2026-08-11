@@ -99,13 +99,14 @@ export const StepPatients = memo(function StepPatients({
         ))}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <button onClick={onBack} className="btn-secondary">
+        <button onClick={onBack} className="btn-secondary" data-testid="bulk-send-back-button">
           Atrás
         </button>
         <button
           onClick={onNext}
           disabled={selected.size === 0}
           className="btn-primary"
+          data-testid="bulk-send-next-button"
         >
           Continuar → ({selected.size})
         </button>

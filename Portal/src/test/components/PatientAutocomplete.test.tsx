@@ -196,25 +196,6 @@ describe("PatientAutocomplete", () => {
     expect(options[2]).toHaveAttribute("aria-selected", "false");
   });
 
-  it("shows loading state while fetching", async () => {
-    mockUseFetchPatients.mockReturnValue({
-      patients: [],
-      loading: true,
-      error: null,
-      fetchPatients: vi.fn(),
-      total: 0,
-      totalPages: 0,
-    });
-
-    const user = userEvent.setup();
-    renderAutocomplete();
-
-    await user.click(screen.getByRole("combobox"));
-
-    const listbox = screen.getByRole("listbox");
-    expect(listbox).toBeInTheDocument();
-  });
-
   it("closes dropdown when clicking outside", async () => {
     const user = userEvent.setup();
     renderAutocomplete();

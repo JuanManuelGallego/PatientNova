@@ -157,10 +157,12 @@ export function PatientModal({
       aria-label={isEdit ? "Editar Paciente" : "Nuevo Paciente"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
+      data-testid="patient-modal-dialog"
     >
       <div
         className="modal-panel modal-panel--md"
         onClick={(e) => e.stopPropagation()}
+        data-testid="patient-modal-panel"
       >
         <div className="modal-header">
           <div>
@@ -173,12 +175,12 @@ export function PatientModal({
                 : "Registrar un nuevo paciente en el sistema"}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="patient-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
         {error && (
-          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="patient-modal-error">
             <STATUS_ICONS.warning size={14} /> {error}
           </div>
         )}
@@ -191,6 +193,7 @@ export function PatientModal({
                 value={form.name}
                 onChange={set("name")}
                 placeholder="ej. María"
+                data-testid="patient-name-input"
               />
             </label>
             <label className="form-label">
@@ -201,6 +204,7 @@ export function PatientModal({
                 value={form.lastName}
                 onChange={set("lastName")}
                 placeholder="ej. García"
+                data-testid="patient-lastname-input"
               />
             </label>
           </div>
@@ -212,6 +216,7 @@ export function PatientModal({
               value={form.email || undefined}
               onChange={set("email")}
               placeholder="paciente@ejemplo.com"
+              data-testid="patient-email-input"
             />
           </label>
           <div className="form-grid-2">
@@ -220,6 +225,7 @@ export function PatientModal({
               <CountryCodeInput
                 value={form.whatsappNumber || undefined}
                 onChange={(v) => setForm((f) => ({ ...f, whatsappNumber: v }))}
+                data-testid="patient-whatsapp-input"
               />
             </label>
             <label className="form-label">
@@ -227,6 +233,7 @@ export function PatientModal({
               <CountryCodeInput
                 value={form.smsNumber || undefined}
                 onChange={(v) => setForm((f) => ({ ...f, smsNumber: v }))}
+                data-testid="patient-sms-input"
               />
             </label>
           </div>
@@ -254,12 +261,13 @@ export function PatientModal({
                     onChange={(e) => setSendWelcomeMessage(e.target.checked)}
                     disabled={!form.whatsappNumber && !form.smsNumber}
                     style={{ width: 15, height: 15 }}
+                    data-testid="patient-welcome-checkbox"
                   />
                   <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
                 </label>
               </div>
             ) : (
-              <div className="info-banner" style={{ fontSize: 13 }}>
+              <div className="info-banner" style={{ fontSize: 13 }} data-testid="patient-welcome-info-banner">
                 <STATUS_ICONS.info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>
                   Completa tu perfil (datos bancarios, identificación y consentimiento)
@@ -306,6 +314,7 @@ export function PatientModal({
               onChange={(v) =>
                 setForm((f) => ({ ...f, appointmentTypeId: v }))
               }
+              data-testid="patient-appointment-type-select"
             />
           </label>
           <label className="form-label">
@@ -317,6 +326,7 @@ export function PatientModal({
                 setForm((f) => ({ ...f, notes: e.target.value }))
               }
               placeholder="Notas adicionales sobre el paciente..."
+              data-testid="patient-notes-input"
             />
           </label>
           {isEdit && (
@@ -331,18 +341,20 @@ export function PatientModal({
                 onChange={(v) =>
                   setForm((f) => ({ ...f, status: v as PatientStatus }))
                 }
+                data-testid="patient-status-select"
               />
             </label>
           )}
         </div>
         <div className="modal-footer">
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>
+          <button onClick={onClose} className="btn-secondary" disabled={saving} data-testid="patient-modal-cancel-button">
             {LBL_CANCEL}
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving || !isValid}
             className="btn-primary"
+            data-testid="patient-modal-submit-button"
           >
             {saving
               ? LBL_SAVING

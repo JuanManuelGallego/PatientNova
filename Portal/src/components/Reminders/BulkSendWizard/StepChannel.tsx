@@ -76,6 +76,7 @@ export const StepChannel = memo(function StepChannel({
               onClick={() => setMode(opt.k)}
               className={`selection-card selection-card--column${sendMode === opt.k ? " selection-card--active" : ""}`}
               style={{ padding: "14px 18px" }}
+              data-testid={`bulk-send-option-${opt.k.toLowerCase()}`}
             >
               <span className="patient-preview__name">{opt.title}</span>
               <span className="patient-preview__detail">{opt.sub}</span>
@@ -101,6 +102,7 @@ export const StepChannel = memo(function StepChannel({
             !channel || (sendMode === ReminderMode.SCHEDULED && !sentAt)
           }
           className="btn-primary"
+          data-testid="bulk-send-next-button"
         >
           Continuar →
         </button>

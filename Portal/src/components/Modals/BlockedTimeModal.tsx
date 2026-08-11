@@ -157,6 +157,7 @@ export function BlockedTimeModal({
       role="dialog"
       aria-modal="true"
       aria-label={isEdit ? "Editar horario bloqueado" : "Bloquear horario"}
+      data-testid="blocked-time-modal-dialog"
     >
       <div
         className="modal-panel modal-panel--sm slide-up"
@@ -173,7 +174,7 @@ export function BlockedTimeModal({
                 : "Selecciona las fechas y horas que deseas bloquear"}
             </p>
           </div>
-          <button onClick={onClose} className="btn-close">
+          <button onClick={onClose} className="btn-close" data-testid="blocked-time-modal-close-button">
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
@@ -242,6 +243,7 @@ export function BlockedTimeModal({
                 onClick={handleDelete}
                 className="btn-action-delete"
                 disabled={saving}
+                data-testid="blocked-time-modal-delete-button"
               >
                 <ACTION_ICONS.delete size={14} />
               </button>)
@@ -250,6 +252,7 @@ export function BlockedTimeModal({
               className="btn-secondary"
               onClick={onClose}
               disabled={saving}
+              data-testid="blocked-time-modal-cancel-button"
             >
               {LBL_CANCEL}
             </button>
@@ -257,6 +260,7 @@ export function BlockedTimeModal({
               onClick={handleSubmit}
               className="btn-primary"
               disabled={saving || !validate()}
+              data-testid="blocked-time-modal-submit-button"
             >
               {saving ? LBL_SAVING : isEdit ? LBL_SAVE : "Bloquear"}
             </button>

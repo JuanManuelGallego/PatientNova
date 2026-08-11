@@ -85,7 +85,7 @@ export default function LandingPage() {
             <span className="landing-nav__logo-text">Patient Nova</span>
           </div>
           <div className="landing-nav__actions">
-            <button className="btn-primary" onClick={() => setLoginOpen(true)}>
+            <button className="btn-primary" onClick={() => setLoginOpen(true)} data-testid="landing-login-button">
               {"Iniciar sesión"}
             </button>
           </div>
@@ -106,6 +106,7 @@ export default function LandingPage() {
           <button
             className="btn-primary landing-hero__cta"
             onClick={() => setLoginOpen(true)}
+            data-testid="landing-cta-button"
           >
             Comenzar ahora
           </button>
