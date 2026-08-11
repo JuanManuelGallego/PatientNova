@@ -1,4 +1,5 @@
 import { expect, Page, Locator } from '@playwright/test';
+import { HttpMethods } from '../../utils/const';
 
 export class AppointmentTypeModal {
   readonly page: Page;
@@ -29,12 +30,24 @@ export class AppointmentTypeModal {
     await expect(this.dialog).not.toBeVisible();
   }
 
-  async create(data: { name: string; duration?: string; price?: string }) {
+  async create(data: { name: string; duration?: string; price?: string }): Promise<string> {
     await this.nameInput.fill(data.name);
     if (data.duration) await this.durationInput.fill(data.duration);
     if (data.price) await this.priceInput.fill(data.price);
+
+    const createTypePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.POST &&
+        response.url().includes('/appointment-types'),
+    );
+
     await this.submitButton.click();
-    await this.waitForClose();
+
+    const response = await createTypePromise;
+    expect(response.ok()).toBeTruthy();
+
+    const createdType = await response.json();
+    return createdType.data.id;
   }
 
   async cancel() {

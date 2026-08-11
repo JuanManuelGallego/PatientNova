@@ -65,6 +65,7 @@ export function SecurityTab() {
                 onChange={(e) => setCurrent(e.target.value)}
                 autoComplete="current-password"
                 placeholder="••••••••"
+                data-testid="security-current-password-input"
                 required
               />
             </label>
@@ -77,6 +78,7 @@ export function SecurityTab() {
                 onChange={(e) => setNext(e.target.value)}
                 autoComplete="new-password"
                 placeholder="••••••••"
+                data-testid="security-new-password-input"
                 required
               />
             </label>
@@ -90,6 +92,7 @@ export function SecurityTab() {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 style={mismatch ? { borderColor: "var(--c-error)" } : undefined}
+                data-testid="security-confirm-password-input"
                 required
               />
               {mismatch && (
@@ -100,6 +103,7 @@ export function SecurityTab() {
             </label>
             {next.length > 0 && (
               <div
+                data-testid="password-rules"
                 style={{
                   background: "var(--c-gray-50)",
                   borderRadius: "var(--r-lg)",

@@ -6,6 +6,7 @@ export enum Routes {
     LOGIN = '/login',
     CALENDAR = '/calendar',
     MEDICAL_RECORDS = '/medical-records',
+    SETTINGS = '/settings',
 }
 
 export enum EntityTypes {

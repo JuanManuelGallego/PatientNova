@@ -66,3 +66,19 @@ export async function createTestMedicalRecord(
   };
   return api.createMedicalRecord({ ...defaults, ...overrides });
 }
+
+export async function createTestLocation(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = { name: uniqueName('Loc'), address: '123 Test St', instructions: 'Test instructions' };
+  return api.createLocation({ ...defaults, ...overrides });
+}
+
+export async function createTestAppointmentType(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = { name: uniqueName('Type'), defaultDuration: 60, defaultPrice: 50000 };
+  return api.createAppointmentType({ ...defaults, ...overrides });
+}

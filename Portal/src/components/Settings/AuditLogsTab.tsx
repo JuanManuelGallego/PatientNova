@@ -115,6 +115,7 @@ export function AuditLogsTab() {
           options={ENTITY_OPTIONS}
           onChange={(v) => { setEntityType(v); setPage(1); }}
           className="form-input--auto"
+          data-testid="audit-entity-filter"
         />
         <CustomSelect
           value={actionType}

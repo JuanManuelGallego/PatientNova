@@ -63,7 +63,7 @@ export function RemindersTab() {
         </div>
         <div className="dash-card__body">
           <div style={{ paddingTop: 5 }}>
-            <label className="form-label">
+            <label className="form-label" data-testid="reminders-channel-selector">
               Canal de recordatorios para pacientes
               <CustomSelect
                 value={reminderChannel ?? Channel.WHATSAPP}
@@ -105,6 +105,7 @@ export function RemindersTab() {
               <label
                 className="form-label"
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                data-testid="reminders-active-toggle"
               >
                 <input
                   type="checkbox"

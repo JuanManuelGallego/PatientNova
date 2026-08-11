@@ -7,6 +7,8 @@ type TestFixtures = {
   trackedPatients: { track: (id: string) => void }
   trackedReminders: { track: (id: string) => void }
   trackedMedicalRecords: { track: (id: string) => void }
+  trackedLocations: { track: (id: string) => void }
+  trackedAppointmentTypes: { track: (id: string) => void }
 };
 
 export const test = base.extend<TestFixtures>({
@@ -33,6 +35,16 @@ export const test = base.extend<TestFixtures>({
     const ids: string[] = [];
     await use({ track: (id) => ids.push(id) });
     await Promise.allSettled(ids.map(id => api.deleteMedicalRecord(id)));
+  },
+  trackedLocations: async ({ api }, use) => {
+    const ids: string[] = [];
+    await use({ track: (id) => ids.push(id) });
+    await Promise.allSettled(ids.map(id => api.deleteLocation(id)));
+  },
+  trackedAppointmentTypes: async ({ api }, use) => {
+    const ids: string[] = [];
+    await use({ track: (id) => ids.push(id) });
+    await Promise.allSettled(ids.map(id => api.deleteAppointmentType(id)));
   },
 });
 
