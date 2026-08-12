@@ -8,7 +8,7 @@ import {
   AppointmentBlockedTimeConflictError,
   PastAppointmentLockedError,
 } from './appointment.errors.js';
-import { LocationNotFoundError, ReminderNotCancellableError } from '../utils/errors/errors.js';
+import { LocationNotFoundError } from '../utils/errors/errors.js';
 import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-type.errors.js';
 import type { CreateAppointmentDto, UpdateAppointmentDto, ListAppointmentsQuery, AppointmentStatsQuery } from './appointment.schemas.ts';
 import { appointmentMeetingService } from './appointment-meeting.service.ts';
@@ -85,26 +85,27 @@ async function handleReminderUpdate(
   tx: TransactionClient,
 ): Promise<{ reminderId?: string | null | undefined; reminder?: Reminder | null }> {
   if (dto.reminder === null && existing.reminder) {
-    if (existing.reminder.status !== ReminderStatus.PENDING) {
-      throw new ReminderNotCancellableError(existing.reminder.status);
+    if (existing.reminder.status === ReminderStatus.PENDING) {
+      await tx.reminder.update({
+        where: { id: existing.reminder.id },
+        data: { status: ReminderStatus.CANCELLED },
+      });
+
+      await logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: existing.reminder.id,
+        actionType: ActionType.UPDATE,
+        description: `Recordatorio cancelado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
+        affectedFields: [ 'status' ],
+        fieldsBefore: { status: existing.reminder.status },
+        fieldsAfter: { status: ReminderStatus.CANCELLED },
+        tx,
+      });
+
+      logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
+    } else {
+      logger.info({ reminderId: existing.reminder.id, status: existing.reminder.status }, 'Reminder unlinked (non-PENDING)');
     }
-    await tx.reminder.update({
-      where: { id: existing.reminder.id },
-      data: { status: ReminderStatus.CANCELLED },
-    });
-
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: existing.reminder.id,
-      actionType: ActionType.UPDATE,
-      description: `Recordatorio cancelado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: [ 'status' ],
-      fieldsBefore: { status: existing.reminder.status },
-      fieldsAfter: { status: ReminderStatus.CANCELLED },
-      tx,
-    });
-
-    logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
     return { reminderId: null };
   }
 

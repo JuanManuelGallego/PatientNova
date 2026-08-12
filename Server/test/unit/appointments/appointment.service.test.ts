@@ -311,7 +311,7 @@ describe('appointmentService.update', () => {
     expect(tx.appointment.update).toHaveBeenCalled();
   });
 
-  it('throws when trying to cancel non-PENDING reminder', async () => {
+  it('unlinks non-PENDING reminder without cancelling it', async () => {
     const apptWithSentReminder = {
       ...existingAppt,
       reminderId: 'reminder-1',
@@ -320,11 +320,13 @@ describe('appointmentService.update', () => {
     mockPrisma.appointment.findFirst.mockResolvedValue(apptWithSentReminder);
 
     const tx = mockTx();
+    tx.appointment.update.mockResolvedValue({ ...apptWithSentReminder, reminderId: null });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
-    await expect(
-      appointmentService.update('appt-1', { reminder: null } as Parameters<typeof appointmentService.update>[1], 'user-1')
-    ).rejects.toThrow();
+    await appointmentService.update('appt-1', { reminder: null } as Parameters<typeof appointmentService.update>[1], 'user-1');
+
+    expect(tx.reminder.update).not.toHaveBeenCalled();
+    expect(tx.appointment.update).toHaveBeenCalled();
   });
 
   it('updates existing reminder fields', async () => {
