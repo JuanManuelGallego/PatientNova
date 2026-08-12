@@ -356,7 +356,7 @@ export const appointmentService = {
     const existing = await appointmentRepository.findByIdWithRelations(id, userId);
 
     const newStatus = dto.status ?? existing.status;
-    const isPast = existing.startAt.getTime() < Date.now();
+    const isPast = existing.endAt.getTime() < Date.now();
     if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
       throw new PastAppointmentLockedError(id);
     }
