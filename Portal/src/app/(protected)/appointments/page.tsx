@@ -360,11 +360,15 @@ function AppointmentsPageContent() {
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
-                  <PayStatusPill paid={a.paid} />
-                  {!a.paid && a.status !== AppointmentStatus.CANCELLED && (
-                    <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid="appointment-pay-button">
-                      Pagó
-                    </button>
+                  {a.status !== AppointmentStatus.CANCELLED && (
+                    <>
+                      <PayStatusPill paid={a.paid} />
+                      {!a.paid && (
+                        <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid="appointment-pay-button">
+                          Pagó
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </td>

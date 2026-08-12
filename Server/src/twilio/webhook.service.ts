@@ -138,7 +138,7 @@ export class TwilioWebhookService {
         await prisma.$transaction([
             prisma.appointment.update({
                 where: { id: reminder.appointmentId! },
-                data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date() },
+                data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date(), paid: false },
             }),
             prisma.reminder.update({
                 where: { id: reminder.id },
@@ -152,8 +152,8 @@ export class TwilioWebhookService {
             actionType: ActionType.UPDATE,
             source: ActionSource.API,
             description: `Cita cancelada via respuesta rápida de WhatsApp`,
-            affectedFields: ['status'],
-            fieldsAfter: { status: AppointmentStatus.CANCELLED },
+            affectedFields: ['status', 'paid'],
+            fieldsAfter: { status: AppointmentStatus.CANCELLED, paid: false },
         });
 
         logger.info(

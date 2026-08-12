@@ -152,6 +152,7 @@ describe('appointmentService (integration)', () => {
     // Cannot re-confirm from COMPLETED via invalid transition is guarded; cancel is allowed
     const cancelled = await appointmentService.setStatus(confirmed.id, userId, AppointmentStatus.CANCELLED);
     expect(cancelled.status).toBe(AppointmentStatus.CANCELLED);
+    expect(cancelled.paid).toBe(false);
   });
 
   it('rejects overlapping appointments with AppointmentConflictError', async () => {
