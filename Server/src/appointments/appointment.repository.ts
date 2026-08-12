@@ -14,7 +14,7 @@ import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, local
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>[ 0 ];
 
 export const appointmentRepository = {
   async create(dto: CreateAppointmentDto, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
@@ -86,7 +86,7 @@ export const appointmentRepository = {
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
-      ...(paid !== undefined && { paid }),
+      ...(paid !== undefined && { paid, status: { not: AppointmentStatus.CANCELLED } }),
       ...(search && {
         OR: [
           {
@@ -130,6 +130,7 @@ export const appointmentRepository = {
       data.confirmedAt = new Date();
     } else if (dto.status === AppointmentStatus.CANCELLED) {
       data.cancelledAt = new Date();
+      data.paid = false;
     } else if (dto.status === AppointmentStatus.COMPLETED) {
       data.completedAt = new Date();
     }
@@ -186,7 +187,7 @@ export const appointmentRepository = {
       prisma.appointment.aggregate({
         _sum: { price: true },
         _count: { _all: true },
-        where: { ...where, paid: true },
+        where: { ...where, paid: true, status: { not: AppointmentStatus.CANCELLED } },
       }),
       prisma.appointment.aggregate({
         _sum: { price: true },

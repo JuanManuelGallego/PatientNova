@@ -1,4 +1,4 @@
-import { Appointment, APPT_STATUS_CFG } from "@/src/types/Appointment";
+import { Appointment, APPT_STATUS_CFG, AppointmentStatus } from "@/src/types/Appointment";
 import { CHANNEL_CFG, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import {
@@ -123,7 +123,7 @@ export function AppointmentDrawer({
                 value={<PayStatusPill paid={appt.paid} />}
                 testId="appointment-drawer-paid-status"
               />
-              {!appt.paid && (
+              {!appt.paid && appt.status !== AppointmentStatus.CANCELLED && (
                 <button
                   onClick={onPay}
                   className="btn-primary btn-primary--success"

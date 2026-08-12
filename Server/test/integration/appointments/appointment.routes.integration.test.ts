@@ -169,6 +169,20 @@ describe('appointment routes (integration)', () => {
     expect(stored!.paid).toBe(true);
   });
 
+  it('POST /:id/cancel resets paid to false', async () => {
+    const created = await invokeRoute(appointmentRouter, 'post', '/', baseReq({ body: createBody() }));
+    const id = (created.body as any).data.id;
+
+    // Mark as paid first
+    await invokeRoute(appointmentRouter, 'post', `/${id}/pay`, baseReq({ params: { id } }));
+
+    // Cancel the appointment
+    const cancelled = await invokeRoute(appointmentRouter, 'post', `/${id}/cancel`, baseReq({ params: { id } }));
+    expect(cancelled.statusCode).toBe(200);
+    expect((cancelled.body as any).data.paid).toBe(false);
+    expect((cancelled.body as any).data.status).toBe(AppointmentStatus.CANCELLED);
+  });
+
   it('GET / lists only the owning user appointments', async () => {
     await invokeRoute(appointmentRouter, 'post', '/', baseReq({ body: createBody() }));
 
