@@ -25,3 +25,5 @@ export enum HttpMethods {
 }
 
 export const APPT_TYPE_PRICE = '100000'
+
+export const APPT_TYPE_DURATION = '60'

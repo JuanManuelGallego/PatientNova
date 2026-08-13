@@ -84,6 +84,10 @@ export class AppointmentModal {
     await this.selectFromDropdown(this.locationSelect, name);
   }
 
+  async selectReminderType(label: string) {
+    await this.selectFromDropdown(this.reminderSelect, label);
+  }
+
   async setPrice(price: number) {
     await this.priceInput.fill(String(price));
   }
@@ -98,12 +102,14 @@ export class AppointmentModal {
     locationName: string;
     price?: number;
     notes?: string;
+    reminderType?: string;
   }): Promise<string> {
     await this.selectPatient(data.patientName);
     await this.selectType(data.typeName)
     await this.next();
 
     await this.selectLocation(data.locationName);
+    if (data.reminderType) await this.selectReminderType(data.reminderType);
     await this.next();
 
     if (data.price !== undefined) await this.setPrice(data.price);
