@@ -17,6 +17,7 @@ export class AppointmentModal {
   readonly paidSelect: Locator;
   readonly statusSelect: Locator;
   readonly notesInput: Locator;
+  readonly error: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -34,6 +35,7 @@ export class AppointmentModal {
     this.paidSelect = this.dialog.getByTestId('appointment-paid-select');
     this.statusSelect = this.dialog.getByTestId('appointment-status-select');
     this.notesInput = this.dialog.getByTestId('appointment-notes-input');
+    this.error = this.dialog.locator('.error-inline');
   }
 
   async waitForOpen() {

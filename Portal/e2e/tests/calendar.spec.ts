@@ -10,8 +10,6 @@ import {
 import { Env } from '../utils/env';
 import { EntityType } from '@/src/types/AuditLog';
 
-// TODO - add test to ensure appointment cannot be created if overlapping with blocked time
-
 test.describe('Calendar', () => {
   test('Create appointment from calendar', async ({
     page,

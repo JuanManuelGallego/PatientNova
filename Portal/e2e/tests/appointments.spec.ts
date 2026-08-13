@@ -19,7 +19,7 @@ test.describe('Appointments', () => {
     const appointmentId = await modal.createAppointment({
       patientName: patient.name,
       typeName: Env.apptTypeName,
-      locationName: Env.locationId,
+      locationName: Env.locationName,
       price: Number(APPT_TYPE_PRICE),
     });
     trackedAppointments.track(appointmentId);
