@@ -68,7 +68,7 @@ appointmentTypeRouter.patch(
 
 /**
  * DELETE /appointment-types/:id
- * Soft-delete an appointment type (sets isActive=false).
+ * Soft-delete an appointment type.
  */
 appointmentTypeRouter.delete(
   '/:id',
@@ -81,7 +81,7 @@ appointmentTypeRouter.delete(
 
 /**
  * PATCH /appointment-types/:id/restore
- * Restore a soft-deleted appointment type (sets isActive=true).
+ * Restore a soft-deleted appointment type.
  */
 appointmentTypeRouter.patch(
   '/:id/restore',

@@ -112,7 +112,7 @@ reminderRouter.post(
 
 /**
  * DELETE /reminders/:id
- * Soft-delete a reminder record (sets isActive=false).
+ * Soft-delete a reminder record.
  */
 reminderRouter.delete(
   '/:id',
@@ -125,7 +125,7 @@ reminderRouter.delete(
 
 /**
  * PATCH /reminders/:id/restore
- * Restore a soft-deleted reminder (sets isActive=true).
+ * Restore a soft-deleted reminder.
  */
 reminderRouter.patch(
   '/:id/restore',

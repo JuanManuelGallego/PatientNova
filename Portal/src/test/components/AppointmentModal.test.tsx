@@ -43,7 +43,6 @@ function makeAppt(overrides: Partial<Appointment> = {}): Appointment {
       id: "loc-1",
       name: "Clinic",
       isVirtual: false,
-      isActive: true,
       address: "123 Main St",
     },
     appointmentType: {
@@ -51,7 +50,6 @@ function makeAppt(overrides: Partial<Appointment> = {}): Appointment {
       name: "Consultation",
       defaultDuration: 60,
       defaultPrice: 150,
-      isActive: true,
     },
     ...overrides,
   };
@@ -79,8 +77,8 @@ vi.mock("@/src/api/appointments/useFetchAppointments", () => ({
 vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({
   useFetchAppointmentTypes: () => ({
     appointmentTypes: [
-      { id: "type-1", name: "Consultation", defaultDuration: 60, defaultPrice: 150, isActive: true },
-      { id: "type-2", name: "Follow-up", defaultDuration: 30, defaultPrice: 75, isActive: true },
+      { id: "type-1", name: "Consultation", defaultDuration: 60, defaultPrice: 150 },
+      { id: "type-2", name: "Follow-up", defaultDuration: 30, defaultPrice: 75 },
     ],
   }),
 }));
@@ -88,8 +86,8 @@ vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({
 vi.mock("@/src/api/locations/useFetchLocations", () => ({
   useFetchLocations: () => ({
     locations: [
-      { id: "loc-1", name: "Clinic", isVirtual: false, isActive: true, address: "123 Main St" },
-      { id: "loc-2", name: "Virtual", isVirtual: true, isActive: true },
+      { id: "loc-1", name: "Clinic", isVirtual: false, address: "123 Main St" },
+      { id: "loc-2", name: "Virtual", isVirtual: true},
     ],
   }),
 }));
@@ -439,7 +437,6 @@ describe("AppointmentModal", () => {
               id: "type-2",
               name: "Follow-up",
               defaultDuration: 30,
-              isActive: true,
             },
           })}
           onClose={mockOnClose}

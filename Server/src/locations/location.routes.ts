@@ -68,7 +68,7 @@ locationRouter.patch(
 
 /**
  * DELETE /locations/:id
- * Soft-delete an appointment location (sets isActive=false).
+ * Soft-delete an appointment location.
  */
 locationRouter.delete(
   '/:id',
@@ -81,7 +81,7 @@ locationRouter.delete(
 
 /**
  * PATCH /locations/:id/restore
- * Restore a soft-deleted appointment location (sets isActive=true).
+ * Restore a soft-deleted appointment location.
  */
 locationRouter.patch(
   '/:id/restore',

@@ -7,11 +7,11 @@ import { STATUS_ICONS } from "@/src/config/icons";
 export function DeleteLocationModal({
   location,
   onClose,
-  onDeactivated,
+  onDelete,
 }: {
   location: AppointmentLocation;
   onClose: () => void;
-  onDeactivated: () => void;
+  onDelete: () => void;
 }) {
   const { deleteLocation, loading } = useDeleteLocation();
   const [error, setError] = useState<string | null>(null);
@@ -20,18 +20,18 @@ export function DeleteLocationModal({
     setError(null);
     try {
       await deleteLocation(location.id);
-      onDeactivated();
+      onDelete();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al desactivar");
+      setError(err instanceof Error ? err.message : "Error al eliminar");
     }
   }
 
   return (
     <ConfirmDialog
       icon={STATUS_ICONS.mapPin}
-      title="Desactivar ubicación"
-      confirmLabel="Sí, desactivar"
+      title="Eliminar ubicación"
+      confirmLabel="Sí, eliminar"
       loadingLabel="Desactivando…"
       loading={loading}
       error={error}
@@ -40,8 +40,7 @@ export function DeleteLocationModal({
       onConfirm={handleConfirm}
     >
       <p className="modal-confirm__text">
-        ¿Deseas desactivar <strong>{location.name}</strong>?<br />
-        Podrás reactivarla en cualquier momento.
+        ¿Deseas eliminar <strong>{location.name}</strong>?<br />
       </p>
     </ConfirmDialog>
   );

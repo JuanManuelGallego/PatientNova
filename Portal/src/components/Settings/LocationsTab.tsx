@@ -1,5 +1,4 @@
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
-import { useUpdateLocation } from "@/src/api/locations/useUpdateLocation";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { LocationCard } from "@/src/components/LocationCard";
 import { DeleteLocationModal } from "@/src/components/Modals/DeleteLocationModal";
@@ -10,8 +9,7 @@ import { useState } from "react";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 
 export function LocationsTab() {
-  const { locations, loading, data, fetchLocations } = useFetchLocations(true);
-  const { updateLocation } = useUpdateLocation();
+  const { locations, loading, data, fetchLocations } = useFetchLocations();
   const showSpinner = useDelayedLoading(loading);
 
   const [modalLocation, setModalLocation] = useState<
@@ -27,17 +25,6 @@ export function LocationsTab() {
     setTimeout(() => setSuccess(false), 3000);
     fetchLocations();
   }
-
-  async function handleReactivate(loc: AppointmentLocation) {
-    try {
-      await updateLocation(loc.id, { isActive: true });
-      fetchLocations();
-    } catch {}
-  }
-
-  const activeLocations = locations.filter((l) => l.isActive);
-  const inactiveLocations = locations.filter((l) => !l.isActive);
-
   const showModal = modalLocation !== undefined;
 
   return (
@@ -83,7 +70,7 @@ export function LocationsTab() {
         </div>
       ) : data ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {activeLocations.length === 0 && (
+          {locations.length === 0 ? (
             <div className="dash-card">
               <div
                 className="dash-card__body"
@@ -124,9 +111,8 @@ export function LocationsTab() {
                 </div>
               </div>
             </div>
-          )}
-
-          {activeLocations.map((loc) => (
+          ): 
+          locations.map((loc) => (
             <LocationCard
               key={loc.id}
               loc={loc}
@@ -134,31 +120,6 @@ export function LocationsTab() {
               onDelete={() => setDeleteTarget(loc)}
             />
           ))}
-
-          {inactiveLocations.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--c-gray-400)",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  marginBottom: 8,
-                }}
-              >
-                Desactivadas ({inactiveLocations.length})
-              </div>
-              {inactiveLocations.map((loc) => (
-                <LocationCard
-                  key={loc.id}
-                  loc={loc}
-                  onReactivate={() => handleReactivate(loc)}
-                  inactive
-                />
-              ))}
-            </div>
-          )}
         </div>
       ) : null}
       {showModal && (
@@ -172,7 +133,7 @@ export function LocationsTab() {
         <DeleteLocationModal
           location={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onDeactivated={() => {
+          onDelete={() => {
             setDeleteTarget(null);
             fetchLocations();
           }}

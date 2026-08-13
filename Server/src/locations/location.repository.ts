@@ -62,7 +62,7 @@ export const locationRepository = {
 
     const data = buildUpdateData(
       dto,
-      [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual', 'isActive' ],
+      [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual' ],
     );
 
     return prisma.appointmentLocation.update({

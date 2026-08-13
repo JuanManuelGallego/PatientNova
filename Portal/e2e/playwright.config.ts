@@ -18,7 +18,6 @@ export default defineConfig({
     video: 'retain-on-failure',
     actionTimeout: 15 * 1000,
     navigationTimeout: 15 * 1000,
-    ignoreHTTPSErrors: true,
     locale: 'en-US',
     extraHTTPHeaders:
     {

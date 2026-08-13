@@ -101,13 +101,3 @@ Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
   (validateBody/Query/Params + asyncHandler), replicating short-circuiting
   (e.g. a 400 from `validateBody` stops the chain) and polling until `asyncHandler`
   settles the response.
-
-## Playwright e2e handoff (future work — Portal)
-The repository-level integration tests validate the DB layer that the future Playwright
-e2e suite will exercise end-to-end. When adding e2e tests:
-- A running **Server** + **Postgres** (seeded admin via `npm run db:seed-admin`) + **Portal** are required.
-- The Server must be started with `ENABLE_SCHEDULER=false` so background pg-boss workers
-  don't poll the shared test DB outside the controlled test run.
-- Reuse the same `DATABASE_URL` ("test") discipline — never target non-test databases.
-- Prefer asserting against the same repository/service behaviors covered here to avoid
-  duplication and drift between service and repository layers.

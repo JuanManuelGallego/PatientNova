@@ -37,7 +37,6 @@ export const updateLocationSchema = z
     color: z.string().max(20).nullable().optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().optional(),
-    isActive: z.boolean().optional(),
   })
   .superRefine((d, ctx) => {
     if (Object.keys(d).length === 0) {
