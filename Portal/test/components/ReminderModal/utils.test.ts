@@ -127,7 +127,7 @@ describe("computeAutoFilledVariables", () => {
       { key: "1", label: "Address", autoFill: "locationAddress" },
     ]);
     const appt = makeAppointment({
-      appointmentLocation: { id: "loc-1", name: "Office", address: "Calle 123", isVirtual: false, isActive: true },
+      appointmentLocation: { id: "loc-1", name: "Office", address: "Calle 123", isVirtual: false },
     });
     const result = computeAutoFilledVariables(tmpl, "", "", appt);
     expect(result["1"]).toBe("Calle 123");
@@ -138,7 +138,7 @@ describe("computeAutoFilledVariables", () => {
       { key: "1", label: "Instructions", autoFill: "locationInstructions" },
     ]);
     const appt = makeAppointment({
-      appointmentLocation: { id: "loc-1", name: "Office", instructions: "Piso 3", isVirtual: false, isActive: true },
+      appointmentLocation: { id: "loc-1", name: "Office", instructions: "Piso 3", isVirtual: false },
     });
     const result = computeAutoFilledVariables(tmpl, "", "", appt);
     expect(result["1"]).toBe("Piso 3");
@@ -310,7 +310,7 @@ describe("buildPreview", () => {
 describe("selectTemplateForAppointment", () => {
   it("returns VIRTUAL template for virtual location", () => {
     const appt = makeAppointment({
-      appointmentLocation: { id: "loc-1", name: "Virtual", isVirtual: true, isActive: true },
+      appointmentLocation: { id: "loc-1", name: "Virtual", isVirtual: true, },
     });
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL",
@@ -319,7 +319,7 @@ describe("selectTemplateForAppointment", () => {
 
   it("returns PRESENTIAL template for presential location", () => {
     const appt = makeAppointment({
-      appointmentLocation: { id: "loc-1", name: "Office", isVirtual: false, isActive: true },
+      appointmentLocation: { id: "loc-1", name: "Office", isVirtual: false },
     });
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL",

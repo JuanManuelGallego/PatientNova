@@ -60,7 +60,7 @@ export const appointmentTypeRepository = {
 
     const data = buildUpdateData(
       dto,
-      [ 'name', 'description', 'defaultDuration', 'defaultPrice', 'color', 'isActive' ],
+      [ 'name', 'description', 'defaultDuration', 'defaultPrice', 'color' ],
     );
 
     return prisma.appointmentType.update({

@@ -16,7 +16,6 @@ export const updateAppointmentTypeSchema = z
     defaultDuration: z.number().int().min(1).optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    isActive: z.boolean().optional(),
   })
   .refine(
     (d) => Object.keys(d).length > 0,

@@ -7,11 +7,11 @@ import { STATUS_ICONS } from "@/src/config/icons";
 export function DeleteAppointmentTypeModal({
   appointmentType,
   onClose,
-  onDeactivated,
+  onDelete,
 }: {
   appointmentType: AppointmentType;
   onClose: () => void;
-  onDeactivated: () => void;
+  onDelete: () => void;
 }) {
   const { deleteAppointmentType, loading } = useDeleteAppointmentType();
   const [ error, setError ] = useState<string | null>(null);
@@ -20,18 +20,18 @@ export function DeleteAppointmentTypeModal({
     setError(null);
     try {
       await deleteAppointmentType(appointmentType.id);
-      onDeactivated();
+      onDelete();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al desactivar");
+      setError(err instanceof Error ? err.message : "Error al eliminar");
     }
   }
 
   return (
     <ConfirmDialog
       icon={STATUS_ICONS.calendar}
-      title="Desactivar tipo de cita"
-      confirmLabel="Sí, desactivar"
+      title="Eliminar tipo de cita"
+      confirmLabel="Sí, eliminar"
       loadingLabel="Desactivando…"
       loading={loading}
       error={error}
@@ -40,8 +40,7 @@ export function DeleteAppointmentTypeModal({
       onConfirm={handleConfirm}
     >
       <p className="modal-confirm__text">
-        ¿Deseas desactivar <strong>{appointmentType.name}</strong>?<br />
-        Podrás reactivarlo en cualquier momento.
+        ¿Deseas eliminar <strong>{appointmentType.name}</strong>?<br />
       </p>
     </ConfirmDialog>
   );

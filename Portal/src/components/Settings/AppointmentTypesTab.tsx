@@ -1,5 +1,4 @@
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
-import { useUpdateAppointmentType } from "@/src/api/appointment-types/useUpdateAppointmentType";
 import { AppointmentTypeCard } from "@/src/components/AppointmentTypeCard";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { AppointmentTypeModal } from "@/src/components/Modals/AppointmentTypeModal";
@@ -12,7 +11,6 @@ import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 export function AppointmentTypesTab() {
   const { appointmentTypes, loading, data, fetchAppointmentTypes } =
     useFetchAppointmentTypes();
-  const { updateAppointmentType } = useUpdateAppointmentType();
   const showSpinner = useDelayedLoading(loading);
 
   const [modalType, setModalType] = useState<
@@ -29,15 +27,6 @@ export function AppointmentTypesTab() {
     fetchAppointmentTypes();
   }
 
-  async function handleReactivate(t: AppointmentType) {
-    try {
-      await updateAppointmentType(t.id, { isActive: true });
-      fetchAppointmentTypes();
-    } catch {}
-  }
-
-  const activeTypes = appointmentTypes.filter((t) => t.isActive);
-  const inactiveTypes = appointmentTypes.filter((t) => !t.isActive);
   const showModal = modalType !== undefined;
 
   return (
@@ -88,7 +77,7 @@ export function AppointmentTypesTab() {
         </div>
       ) : data ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {activeTypes.length === 0 && (
+          {appointmentTypes.length === 0 ? (
             <div className="dash-card">
               <div
                 className="dash-card__body"
@@ -129,9 +118,8 @@ export function AppointmentTypesTab() {
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTypes.map((t) => (
+          ) :
+          appointmentTypes.map((t) => (
             <AppointmentTypeCard
               key={t.id}
               type={t}
@@ -139,31 +127,6 @@ export function AppointmentTypesTab() {
               onDelete={() => setDeleteTarget(t)}
             />
           ))}
-
-          {inactiveTypes.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--c-gray-400)",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  marginBottom: 8,
-                }}
-              >
-                Desactivados ({inactiveTypes.length})
-              </div>
-              {inactiveTypes.map((t) => (
-                <AppointmentTypeCard
-                  key={t.id}
-                  type={t}
-                  onReactivate={() => handleReactivate(t)}
-                  inactive
-                />
-              ))}
-            </div>
-          )}
         </div>
       ) : null}
       {showModal && (
@@ -178,7 +141,7 @@ export function AppointmentTypesTab() {
         <DeleteAppointmentTypeModal
           appointmentType={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onDeactivated={() => {
+          onDelete={() => {
             setDeleteTarget(null);
             fetchAppointmentTypes();
           }}

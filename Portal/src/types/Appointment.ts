@@ -157,7 +157,6 @@ export interface AppointmentLocation {
   address?: string | null;
   color?: string | null;
   isVirtual: boolean;
-  isActive: boolean;
   instructions?: string | null;
 }
 
@@ -176,5 +175,4 @@ export interface AppointmentType {
   defaultDuration: number;
   defaultPrice?: number | null;
   color?: string | null;
-  isActive: boolean;
 }
