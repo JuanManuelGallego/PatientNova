@@ -23,6 +23,7 @@ export class AppointmentsPage extends BasePage {
   readonly filterNoShow: Locator;
   readonly paidFilter: Locator;
   readonly dateFilter: Locator;
+  readonly dateFilterAcceptButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -38,6 +39,7 @@ export class AppointmentsPage extends BasePage {
     this.filterNoShow = this.page.getByTestId('appointments-filter-no_show');
     this.paidFilter = this.page.getByTestId('appointment-paid-filter');
     this.dateFilter = this.page.getByTestId('appointment-date-filter');
+    this.dateFilterAcceptButton = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
   appointmentRow(id: string): Locator {
@@ -110,6 +112,7 @@ export class AppointmentsPage extends BasePage {
   async setDateFilter(value: string) {
     await this.dateFilter.click();
     await this.page.getByTitle(value).first().click();
+    await this.dateFilterAcceptButton.click();
   }
 
   async goToNextPage() {
