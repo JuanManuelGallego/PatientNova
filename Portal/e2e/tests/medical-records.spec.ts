@@ -126,7 +126,7 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectRecordFormVisible();
 
     const patchPromise = recordPatchPromise(page, recordId);
-    await medicalRecordsPage.fillGeneralData('name', 'Ana Torres');
+    await medicalRecordsPage.fillGeneralData('name', patient.name);
     await medicalRecordsPage.fillGeneralData('national-id', '1029384756');
     await medicalRecordsPage.selectGeneralDataSex('Femenino');
     await medicalRecordsPage.fillGeneralData('birth-place', 'Bogota DC');
@@ -138,7 +138,7 @@ test.describe('Medical Records', () => {
     expect(response.status()).toBe(200);
     const json = await response.json();
     expect(json.data.id).toBe(recordId);
-    expect(json.data.name).toBe('Ana Torres');
+    expect(json.data.name).toBe(patient.name);
     expect(json.data.nationalId).toBe('1029384756');
     expect(json.data.sex).toBe('FEMALE');
     expect(json.data.consultationReason).toBe('Informe psicologico');
@@ -148,7 +148,7 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.selectPatient(patient.name);
     await medicalRecordsPage.expectRecordFormVisible();
 
-    await medicalRecordsPage.expectGeneralDataField('name', 'Ana Torres');
+    await medicalRecordsPage.expectGeneralDataField('name', patient.name);
     await medicalRecordsPage.expectGeneralDataField('national-id', '1029384756');
     await medicalRecordsPage.expectGeneralDataField('birth-place', 'Bogota DC');
     await medicalRecordsPage.expectGeneralDataField('consultation-reason', 'Informe psicologico');
@@ -156,7 +156,7 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectAntecedentField('school-and-work', 'Estudiante');
 
     const persisted = (await api.getMedicalRecord(recordId)).data as Record<string, unknown>;
-    expect(persisted.name).toBe('Ana Torres');
+    expect(persisted.name).toBe(patient.name);
     expect(persisted.nationalId).toBe('1029384756');
     expect(persisted.earlyDevelopment).toBe('Desarrollo normal');
   });

@@ -25,6 +25,7 @@ test.describe('Appointments', () => {
     });
     trackedAppointments.track(appointmentId);
 
+    await appointmentsPage.searchAppointment(patient.name)
     await appointmentsPage.expectAppointmentRowVisible(appointmentId);
 
     const appt = await api.getAppointment(appointmentId);
@@ -97,6 +98,7 @@ test.describe('Appointments', () => {
     await page.goto(Routes.APPOINTMENTS);
 
     const appointmentsPage = new AppointmentsPage(page);
+    await appointmentsPage.searchAppointment(patient.name)
     await appointmentsPage.expectAppointmentVisible(patient.name);
 
     const drawer = await appointmentsPage.openDrawer(patient.name);
@@ -494,6 +496,7 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     const id = json.data.id;
     trackedAppointments.track(id);
 
+    await appts.searchAppointment(patient.name)
     await appts.expectAppointmentRowVisible(id);
 
     const tableLink = page.getByTestId(`appointment-table-virtual-link-${id}`);
