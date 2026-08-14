@@ -21,6 +21,7 @@ export interface ApiClient {
   createBlockedTime(data: Record<string, unknown>): Promise<ApiResponse>;
   deleteBlockedTime(id: string): Promise<ApiResponse>;
   createMedicalRecord(data: Record<string, unknown>): Promise<ApiResponse>;
+  updateMedicalRecord(id: string, data: Record<string, unknown>): Promise<ApiResponse>;
   deleteMedicalRecord(id: string): Promise<ApiResponse>;
   updateProfile(data: Record<string, unknown>): Promise<ApiResponse>;
   deleteConsentDocument(): Promise<ApiResponse>;
@@ -139,6 +140,9 @@ export function createApiClient(page: Page): ApiClient {
     // Medical Records
     createMedicalRecord(data: Record<string, unknown>) {
       return request('POST', '/medical-records', data);
+    },
+    updateMedicalRecord(id: string, data: Record<string, unknown>) {
+      return request('PATCH', `/medical-records/${id}`, data);
     },
     deleteMedicalRecord(id: string) {
       return request('DELETE', `/medical-records/${id}`);

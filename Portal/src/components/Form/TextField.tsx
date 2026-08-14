@@ -4,9 +4,10 @@ interface TextFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  testId?: string;
 }
 
-export function TextField({ label, value, onChange, placeholder, hint }: TextFieldProps) {
+export function TextField({ label, value, onChange, placeholder, hint, testId }: TextFieldProps) {
   return (
     <label className="form-label">
       {label}
@@ -16,6 +17,7 @@ export function TextField({ label, value, onChange, placeholder, hint }: TextFie
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        data-testid={testId}
       />
       {hint && <span className="form-input-hint">{hint}</span>}
     </label>

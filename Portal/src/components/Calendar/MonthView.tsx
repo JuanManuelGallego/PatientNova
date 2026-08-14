@@ -48,6 +48,7 @@ export function MonthView({
             return (
               <div
                 key={i}
+                data-testid={date ? `calendar-cell-${date}` : undefined}
                 onClick={() => {
                   if (date) onSelectDay(date);
                 }}

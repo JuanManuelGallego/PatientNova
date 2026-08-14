@@ -226,12 +226,14 @@ export function ProfileTab() {
           <div className="form-stack">
             <div className="form-grid-2">
               <TextField
+                testId="profile-first-name-input"
                 label="Nombre"
                 value={fields.firstName}
                 onChange={(v) => setField("firstName", v)}
                 placeholder="Juan"
               />
               <TextField
+                testId="profile-last-name-input"
                 label="Apellido"
                 value={fields.lastName}
                 onChange={(v) => setField("lastName", v)}
@@ -328,6 +330,7 @@ export function ProfileTab() {
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}
           >
             <TextField
+              testId="profile-bank-name-input"
               label="Nombre del banco"
               value={fields.bankName}
               onChange={(v) => setField("bankName", v)}

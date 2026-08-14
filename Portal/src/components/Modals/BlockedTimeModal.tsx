@@ -192,6 +192,7 @@ export function BlockedTimeModal({
               isFuture
               showTime
               date={form.startTimeUtc}
+              testId="blocked-time-start-input"
               onChanged={(v) =>
                 setForm((f) => {
                   const newStart = new Date(v);
@@ -211,6 +212,7 @@ export function BlockedTimeModal({
               isFuture
               showTime
               date={form.endTimeUtc}
+              testId="blocked-time-end-input"
               onChanged={(v) =>
                 setForm((f) => {
                   const newEnd = new Date(v);
@@ -234,6 +236,7 @@ export function BlockedTimeModal({
               onChange={setField("description")}
               placeholder="Ej: Almuerzo, Reunión, etc."
               maxLength={255}
+              data-testid="blocked-time-description-input"
             />
           </label>
 

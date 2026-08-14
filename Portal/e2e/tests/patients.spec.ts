@@ -3,8 +3,9 @@ import { PatientsPage } from '../pages/PatientsPage';
 import { PatientModal } from '../pages/Modals/PatientModal';
 import { DeletePatientModal } from '../pages/Modals/DeletePatientModal';
 import { uniqueName, uniqueEmail, uniquePhoneNumber, randomString } from '../utils/test-data';
-import { APPT_TYPE_NAME, EntityTypes, Routes } from '../utils/const';
+import { EntityTypes, Routes } from '../utils/const';
 import { createTestPatient } from '../utils/helpers';
+import { Env } from '../utils/env';
 
 test.describe('Patients', () => {
   test('Create patient', async ({ page, api }) => {
@@ -22,7 +23,7 @@ test.describe('Patients', () => {
       email: uniqueEmail(),
       whatsapp: number,
       sms: number,
-      appointmentType: APPT_TYPE_NAME,
+      appointmentType: Env.apptTypeName,
       notes: randomString(100)
     });
 

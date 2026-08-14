@@ -1,4 +1,5 @@
 import { expect, Page, Locator } from '@playwright/test';
+import { HttpMethods } from '../../utils/const';
 
 export class LocationModal {
   readonly page: Page;
@@ -29,15 +30,27 @@ export class LocationModal {
     await expect(this.dialog).not.toBeVisible();
   }
 
-  async create(data: { name: string; address?: string; instructions?: string; virtual?: boolean }) {
+  async create(data: { name: string; address?: string; instructions?: string; virtual?: boolean }): Promise<string> {
     await this.nameInput.fill(data.name);
     if (data.virtual) {
       await this.virtualCheckbox.check();
     }
     if (data.address) await this.addressInput.fill(data.address);
     if (data.instructions) await this.instructionsInput.fill(data.instructions);
+
+    const createLocationPromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.POST &&
+        response.url().includes('/locations'),
+    );
+
     await this.submitButton.click();
-    await this.waitForClose();
+
+    const response = await createLocationPromise;
+    expect(response.ok()).toBeTruthy();
+
+    const createdLocation = await response.json();
+    return createdLocation.data.id;
   }
 
   async cancel() {

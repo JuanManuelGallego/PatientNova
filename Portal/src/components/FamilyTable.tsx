@@ -21,7 +21,7 @@ export function FamilyTable({
     <div style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: "var(--c-gray-900)" }}>Miembros de la familia</div>
-        <button type="button" className="btn-primary" onClick={addRow}>
+        <button type="button" className="btn-primary" onClick={addRow} data-testid="family-table-add-button">
           Agregar miembro
         </button>
       </div>

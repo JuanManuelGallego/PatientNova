@@ -5,6 +5,7 @@ export function BlockedTimeChip({ bt, onSelectBlockedTime, style }: BlockedTimeC
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onSelectBlockedTime(bt); }}
+      data-testid={`calendar-blocked-${bt.id}`}
       className="cal-chip"
       style={{
         background: "var(--c-gray-100)",

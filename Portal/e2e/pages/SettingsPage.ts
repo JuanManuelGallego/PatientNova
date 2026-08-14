@@ -47,4 +47,18 @@ export class SettingsPage extends BasePage {
     await modal.waitForOpen();
     return modal;
   }
+
+  async deleteLocationByName(name: string) {
+    const card = this.page.getByText(name);
+    await expect(card).toBeVisible();
+    const deleteBtn = card.locator('..').getByTestId('location-delete-button');
+    await deleteBtn.click();
+  }
+
+  async deleteAppointmentTypeByName(name: string) {
+    const card = this.page.getByText(name);
+    await expect(card).toBeVisible();
+    const deleteBtn = card.locator('..').getByTestId('appointment-type-delete-button');
+    await deleteBtn.click();
+  }
 }

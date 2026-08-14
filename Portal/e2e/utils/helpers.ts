@@ -1,7 +1,8 @@
 import { Channel, ReminderMode } from '@/src/types/Reminder';
 import { ApiClient, ApiResponse } from './api';
-import { LOCATION_ID, APPT_TYPE_ID, EntityTypes } from './const';
-import { uniqueName, uniqueEmail, uniquePhoneNumber, futureDateTime, randomNumber } from './test-data';
+import { EntityTypes } from './const';
+import { uniqueName, uniqueEmail, uniquePhoneNumber, futureDateTime, futureBusinessHourDateTime, addHours, randomNumber } from './test-data';
+import { Env } from './env';
 
 export interface TestPatient {
   id: string;
@@ -26,8 +27,8 @@ export async function createTestAppointment(
   const offset = randomNumber();
   const defaults = {
     patientId,
-    locationId: LOCATION_ID,
-    typeId: APPT_TYPE_ID,
+    locationId: Env.locationId,
+    typeId: Env.apptTypeId,
     startAt: futureDateTime(offset),
     endAt: futureDateTime(offset + 1),
     sendMode: ReminderMode.SCHEDULED,
@@ -50,4 +51,45 @@ export async function createTestReminder(
     patientId,
   };
   return api.createReminder({ ...defaults, ...overrides });
+}
+
+export async function createTestMedicalRecord(
+  api: ApiClient,
+  patientId: string,
+  patientFullName: string,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = {
+    patientId,
+    name: patientFullName,
+    isFamily: false,
+  };
+  return api.createMedicalRecord({ ...defaults, ...overrides });
+}
+
+export async function createTestLocation(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = { name: uniqueName('Loc'), address: '123 Test St', instructions: 'Test instructions' };
+  return api.createLocation({ ...defaults, ...overrides });
+}
+
+export async function createTestAppointmentType(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = { name: uniqueName('Type'), defaultDuration: 60, defaultPrice: 50000 };
+  return api.createAppointmentType({ ...defaults, ...overrides });
+}
+
+export async function createTestBlockedTime(
+  api: ApiClient,
+  overrides: Record<string, unknown> = {}
+): Promise<ApiResponse> {
+  const defaults = {
+    description: uniqueName('Block'),
+    startTimeUtc: futureBusinessHourDateTime(),
+  };
+  return api.createBlockedTime({ ...defaults, endTimeUtc: addHours(defaults.startTimeUtc, 1), ...overrides });
 }

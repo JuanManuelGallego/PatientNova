@@ -18,6 +18,7 @@ export function AppointmentTypeCard({
   return (
     <div
       className="location-card"
+      data-testid="appointment-type-card"
       style={{
         padding: 0,
         overflow: "hidden",
@@ -65,6 +66,7 @@ export function AppointmentTypeCard({
               className="btn-action-delete"
               onClick={onDelete}
               title="Desactivar"
+              data-testid="appointment-type-delete-button"
             >
               <ACTION_ICONS.close size={14} />
             </button>

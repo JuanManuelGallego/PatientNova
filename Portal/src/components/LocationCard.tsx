@@ -17,6 +17,7 @@ export function LocationCard({
   return (
     <div
       className="location-card"
+      data-testid="location-card"
       style={{
         padding: 0,
         overflow: "hidden",
@@ -93,6 +94,7 @@ export function LocationCard({
               className="btn-action-delete"
               onClick={onDelete}
               title="Desactivar"
+              data-testid="location-delete-button"
             >
               <ACTION_ICONS.close size={14} />
             </button>
