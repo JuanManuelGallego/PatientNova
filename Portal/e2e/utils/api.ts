@@ -6,6 +6,53 @@ export interface ApiResponse<T = { id: string }> {
     timestamp: string;
 }
 
+export interface AppointmentData {
+  id: string;
+  patientId: string;
+  typeId: string;
+  locationId: string;
+  price: number;
+  status: string;
+  paid: boolean;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface LocationData {
+  id: string;
+  name: string;
+  address: string;
+  instructions?: string;
+  isVirtual?: boolean;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+}
+
+export interface AppointmentTypeData {
+  id: string;
+  name: string;
+  defaultDuration: number;
+  defaultPrice: number;
+  description?: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+}
+
+export interface ReminderData {
+  id: string;
+  sendAt: string;
+  status: string;
+  patientId?: string;
+  channel?: string;
+}
+
+export interface BlockedTimeData {
+  id: string;
+  description: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+}
+
 export interface ApiClient {
   createPatient(data: Record<string, unknown>): Promise<ApiResponse>;
   deletePatient(id: string): Promise<ApiResponse>;
@@ -27,6 +74,16 @@ export interface ApiClient {
   deleteConsentDocument(): Promise<ApiResponse>;
   get(path: string): Promise<ApiResponse>;
   patch(path: string, data: Record<string, unknown>): Promise<ApiResponse>;
+  // ── Read helpers (post-action verification) ──────────────────────────────────
+  getAppointment(id: string): Promise<ApiResponse<AppointmentData>>;
+  getReminder(id: string): Promise<ApiResponse<ReminderData>>;
+  getLocation(id: string): Promise<ApiResponse<LocationData>>;
+  getAppointmentType(id: string): Promise<ApiResponse<AppointmentTypeData>>;
+  getMedicalRecord(id: string): Promise<ApiResponse>;
+  getBlockedTime(id: string): Promise<ApiResponse<BlockedTimeData>>;
+  getAuditLogs(query?: Record<string, string>): Promise<ApiResponse>;
+  // ── Non-throwing request for expected negative responses ──────────────────────
+  requestRaw(method: string, path: string, body?: unknown): Promise<{ status: number; body: unknown }>;
 }
 
 async function getAuthToken(page: Page): Promise<string> {
@@ -71,7 +128,7 @@ async function authHeaders(page: Page): Promise<Record<string, string>> {
 export function createApiClient(page: Page): ApiClient {
   const base = () => apiBase();
 
-  async function request(method: string, path: string, body?: unknown): Promise<ApiResponse> {
+  async function request<T = { id: string }>(method: string, path: string, body?: unknown): Promise<ApiResponse<T>> {
     const headers = await authHeaders(page);
     const resp = await page.request.fetch(`${base()}${path}`, {
       method,
@@ -82,7 +139,7 @@ export function createApiClient(page: Page): ApiClient {
       const text = await resp.text();
       throw new Error(`API ${method} ${path} failed (${resp.status()}): ${text}`);
     }
-    return resp.json() as Promise<ApiResponse>;
+    return resp.json() as Promise<ApiResponse<T>>;
   }
 
   return {
@@ -164,6 +221,49 @@ export function createApiClient(page: Page): ApiClient {
     },
     patch(path: string, data: Record<string, unknown>) {
       return request('PATCH', path, data);
+    },
+
+    // ── Read helpers ────────────────────────────────────────────────────────────
+    getAppointment(id: string) {
+      return request<AppointmentData>('GET', `/appointments/${id}`);
+    },
+    getReminder(id: string) {
+      return request<ReminderData>('GET', `/reminders/${id}`);
+    },
+    getLocation(id: string) {
+      return request<LocationData>('GET', `/locations/${id}`);
+    },
+    getAppointmentType(id: string) {
+      return request<AppointmentTypeData>('GET', `/appointment-types/${id}`);
+    },
+    getMedicalRecord(id: string) {
+      return request('GET', `/medical-records/${id}`);
+    },
+    getBlockedTime(id: string) {
+      return request<BlockedTimeData>('GET', `/blocked-time/${id}`);
+    },
+    getAuditLogs(query?: Record<string, string>) {
+      const qs = query
+        ? '?' + new URLSearchParams(query).toString()
+        : '';
+      return request('GET', `/audit-logs${qs}`);
+    },
+
+    // ── Non-throwing request for expected negative responses ────────────────────
+    async requestRaw(method: string, path: string, body?: unknown) {
+      const headers = await authHeaders(page);
+      const resp = await page.request.fetch(`${base()}${path}`, {
+        method,
+        headers,
+        data: body,
+      });
+      let parsed: unknown = null;
+      try {
+        parsed = await resp.json();
+      } catch {
+        parsed = await resp.text();
+      }
+      return { status: resp.status(), body: parsed };
     },
   };
 }

@@ -72,7 +72,7 @@ export class BlockedTimeModal {
     return created.data.id;
   }
 
-  async editBlockedTime(data: { description: string }): Promise<void> {
+  async editBlockedTime(data: { description: string }): Promise<{ id: string; description: string; isDeleted?: boolean; deletedAt?: string | null }> {
     await this.descriptionInput.fill(data.description);
 
     const responsePromise = this.page.waitForResponse(
@@ -85,6 +85,10 @@ export class BlockedTimeModal {
 
     const response = await responsePromise;
     expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const json = await response.json();
+    return json.data;
   }
 
   async deleteBlockedTime(): Promise<void> {

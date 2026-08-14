@@ -2,10 +2,22 @@ import { test, expect } from '../fixtures';
 import { RemindersPage } from '../pages/RemindersPage';
 import { EditReminderModal } from '../pages/Modals/EditReminderModal';
 import { CancelReminderModal } from '../pages/Modals/CancelReminderModal';
-import { Routes } from '../utils/const';
+import { Routes, HttpMethods } from '../utils/const';
 import { createTestPatient, createTestReminder } from '../utils/helpers';
-import { uniquePhoneNumber } from '../utils/test-data';
+import { uniquePhoneNumber, futureDateTime } from '../utils/test-data';
 import { ReminderMode } from '@/src/types/Reminder';
+
+function expectedDateLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function normalize(iso: string): number {
+  return new Date(iso).getTime();
+}
 
 test.describe('Reminders', () => {
   test('Create reminder', async ({ page, api, trackedPatients }) => {
@@ -19,7 +31,7 @@ test.describe('Reminders', () => {
 
     const reminderId = await modal.createReminder({
       patientName: patient.name,
-      sendMode: ReminderMode.SCHEDULED
+      sendMode: ReminderMode.SCHEDULED,
     });
 
     await remindersPage.switchToActive();
@@ -65,10 +77,28 @@ test.describe('Reminders', () => {
     await remindersPage.searchReminder(patient.name);
     await remindersPage.expectReminderVisible(patient.name);
 
-    const editModal = await remindersPage.rescheduleReminder(patient.name);
-    await editModal.save();
+    const targetIso = futureDateTime(72);
+    const editModal = await remindersPage.rescheduleReminderById(reminder.data.id);
+    await editModal.selectSendAt(targetIso);
 
-    await remindersPage.expectReminderVisible(patient.name);
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes(`/reminders/${reminder.data.id}`),
+    );
+    await editModal.save();
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+    const json = await response.json();
+    expect(json.data.id).toBe(reminder.data.id);
+    expect(Math.abs(normalize(json.data.sendAt) - normalize(targetIso))).toBeLessThan(60000);
+
+    const fetched = await api.getReminder(reminder.data.id);
+    expect(Math.abs(normalize(fetched.data.sendAt) - normalize(targetIso))).toBeLessThan(60000);
+
+    await remindersPage.expectReminderVisibleById(reminder.data.id);
+    await expect(remindersPage.reminderRow(reminder.data.id)).toContainText(expectedDateLabel(targetIso));
 
     await api.deleteReminder(reminder.data.id);
   });
@@ -95,9 +125,23 @@ test.describe('Reminders', () => {
 
     await drawer.reschedule();
     const editModal = new EditReminderModal(page);
-    await editModal.save();
+    await editModal.waitForOpen();
 
-    await remindersPage.expectReminderVisible(patient.name);
+    const targetIso = futureDateTime(96);
+    await editModal.selectSendAt(targetIso);
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes(`/reminders/${reminder.data.id}`),
+    );
+    await editModal.save();
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+    const json = await response.json();
+    expect(json.data.id).toBe(reminder.data.id);
+
+    await remindersPage.expectReminderVisibleById(reminder.data.id);
 
     await api.deleteReminder(reminder.data.id);
   });

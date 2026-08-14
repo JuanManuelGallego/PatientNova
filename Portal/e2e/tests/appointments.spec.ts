@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
 import { AppointmentModal } from '../pages/Modals/AppointmentModal';
 import { CancelAppointmentModal } from '../pages/Modals/CancelAppointmentModal';
-import { APPT_TYPE_PRICE, Routes } from '../utils/const';
+import { HttpMethods, APPT_TYPE_PRICE, Routes } from '../utils/const';
 import { Env } from '../utils/env';
 import { createTestPatient, createTestAppointment } from '../utils/helpers';
 
@@ -24,8 +24,16 @@ test.describe('Appointments', () => {
     });
     trackedAppointments.track(appointmentId);
 
-    await appointmentsPage.searchAppointment(patient.name);
-    await appointmentsPage.expectAppointmentVisible(patient.name);
+    await appointmentsPage.expectAppointmentRowVisible(appointmentId);
+
+    const appt = await api.getAppointment(appointmentId);
+    expect(appt.data.id).toBe(appointmentId);
+    expect(appt.data.patientId).toBe(patient.id);
+    expect(appt.data.typeId).toBe(Env.apptTypeId);
+    expect(appt.data.locationId).toBe(Env.locationId);
+    expect(appt.data.price).toBe(Number(APPT_TYPE_PRICE));
+    expect(appt.data.status).toBe('SCHEDULED');
+    expect(appt.data.paid).toBe(false);
 
     await api.deleteAppointment(appointmentId);
   });
@@ -40,11 +48,17 @@ test.describe('Appointments', () => {
     await page.goto(Routes.APPOINTMENTS);
 
     const appointmentsPage = new AppointmentsPage(page);
-    await appointmentsPage.searchAppointment(patient.name)
     await appointmentsPage.expectAppointmentVisible(patient.name);
 
     await appointmentsPage.confirmAppointmentById(appointment.data.id);
+    await expect(page.getByTestId(`appointment-confirm-button-${appointment.data.id}`)).not.toBeVisible();
+
     await appointmentsPage.markAsPaidById(appointment.data.id);
+    await expect(page.getByTestId(`appointment-pay-button-${appointment.data.id}`)).not.toBeVisible();
+
+    const appt = await api.getAppointment(appointment.data.id);
+    expect(appt.data.status).toBe('CONFIRMED');
+    expect(appt.data.paid).toBe(true);
 
     await api.deleteAppointment(appointment.data.id);
   });
@@ -65,6 +79,9 @@ test.describe('Appointments', () => {
     await cancelModal.confirm();
 
     await appointmentsPage.expectAppointmentNotVisible(patient.name);
+
+    const appt = await api.getAppointment(appointment.data.id);
+    expect(appt.data.status).toBe('CANCELLED');
 
     await api.deleteAppointment(appointment.data.id);
   });
@@ -96,8 +113,23 @@ test.describe('Appointments', () => {
     await editModal.next();
     await editModal.next();
     await editModal.setPrice(200000);
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes(`/appointments/${appointment.data.id}`),
+    );
     await editModal.submit();
     await editModal.waitForClose();
+
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+    const json = await response.json();
+    expect(json.data.id).toBe(appointment.data.id);
+
+    const appt = await api.getAppointment(appointment.data.id);
+    expect(appt.data.price).toBe(200000);
 
     await api.deleteAppointment(appointment.data.id);
   });
@@ -123,6 +155,9 @@ test.describe('Appointments', () => {
     await cancelModal.confirm();
 
     await appointmentsPage.expectAppointmentNotVisible(patient.name);
+
+    const appt = await api.getAppointment(appointment.data.id);
+    expect(appt.data.status).toBe('CANCELLED');
 
     await api.deleteAppointment(appointment.data.id);
   });

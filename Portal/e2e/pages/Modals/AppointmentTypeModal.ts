@@ -54,4 +54,31 @@ export class AppointmentTypeModal {
     await this.cancelButton.click();
     await this.waitForClose();
   }
+
+  async edit(data: {
+    name?: string;
+    duration?: string;
+    description?: string;
+    price?: string;
+  }): Promise<{ id: string; name: string; defaultDuration: number; defaultPrice: number; description: string }> {
+    if (data.name) await this.nameInput.fill(data.name);
+    if (data.duration !== undefined) await this.durationInput.fill(data.duration);
+    if (data.description !== undefined) await this.descriptionInput.fill(data.description);
+    if (data.price !== undefined) await this.priceInput.fill(data.price);
+
+    const updatePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes('/appointment-types/'),
+    );
+
+    await this.submitButton.click();
+
+    const response = await updatePromise;
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const json = await response.json();
+    return json.data;
+  }
 }

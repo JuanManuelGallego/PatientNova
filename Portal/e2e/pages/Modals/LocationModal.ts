@@ -57,4 +57,29 @@ export class LocationModal {
     await this.cancelButton.click();
     await this.waitForClose();
   }
+
+  async edit(data: {
+    name?: string;
+    address?: string;
+    instructions?: string;
+  }): Promise<{ id: string; name: string; address: string; instructions: string }> {
+    if (data.name) await this.nameInput.fill(data.name);
+    if (data.address !== undefined) await this.addressInput.fill(data.address);
+    if (data.instructions !== undefined) await this.instructionsInput.fill(data.instructions);
+
+    const updatePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === HttpMethods.PATCH &&
+        response.url().includes('/locations/'),
+    );
+
+    await this.submitButton.click();
+
+    const response = await updatePromise;
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const json = await response.json();
+    return json.data;
+  }
 }
