@@ -215,6 +215,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
         type="file"
         style={{ display: "none" }}
         onChange={handleReplace}
+        data-testid="medical-document-replace-input"
       />
 
       {error && (

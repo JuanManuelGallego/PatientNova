@@ -78,7 +78,7 @@ export class BlockedTimeModal {
     const responsePromise = this.page.waitForResponse(
       (response) =>
         response.request().method() === HttpMethods.PATCH &&
-        response.url().includes('/blocked-time'),
+        response.url().includes('/blocked-time/'),
     );
 
     await this.submit();

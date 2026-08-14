@@ -506,4 +506,37 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     await expect(drawerLink).toBeVisible();
     expect(await drawerLink.getAttribute('href')).toBe('https://meet.google.com/test-room');
   });
+
+  test('Server rejects invalid appointment payloads', async ({ api, trackedPatients }) => {
+    const patient = await createTestPatient(api);
+    trackedPatients.track(patient.id);
+
+    const valid = () => ({
+      patientId: patient.id,
+      locationId: Env.locationId,
+      typeId: Env.apptTypeId,
+      startAt: futureDateTime(2),
+      endAt: addHours(futureDateTime(2), 1),
+      price: 100000,
+    });
+
+    const cases: Array<{
+      name: string;
+      body: Record<string, unknown>;
+      expectStatus: number;
+      expectError: string;
+    }> = [
+      { name: 'negative price', body: { ...valid(), price: -5 }, expectStatus: 400, expectError: 'Price must be non-negative' },
+      { name: 'endAt before startAt', body: { ...valid(), startAt: futureDateTime(3), endAt: futureDateTime(2) }, expectStatus: 400, expectError: 'endAt must be after startAt' },
+      { name: 'past startAt', body: { ...valid(), startAt: '2020-01-01T10:00:00.000Z', endAt: '2020-01-01T11:00:00.000Z' }, expectStatus: 400, expectError: 'startAt cannot be in the past' },
+      { name: 'invalid meetingUrl', body: { ...valid(), meetingUrl: 'not-a-url' }, expectStatus: 400, expectError: 'meetingUrl must be a valid URL' },
+    ];
+
+    for (const c of cases) {
+      const res = await api.requestRaw('POST', '/appointments', c.body);
+      expect(res.status, c.name).toBe(c.expectStatus);
+      const body = res.body as { error?: string };
+      expect(body.error ?? '', c.name).toContain(c.expectError);
+    }
+  });
 });

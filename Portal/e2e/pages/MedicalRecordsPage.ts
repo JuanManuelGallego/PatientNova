@@ -173,6 +173,36 @@ export class MedicalRecordsPage extends BasePage {
     await expect(this.evolutionNote(id)).not.toBeVisible();
   }
 
+  // The server may reassign note ids, so prefer index-based locators for
+  // evolution notes instead of relying on a captured id across reloads.
+  async firstEvolutionNoteId(): Promise<string> {
+    return this.page.evaluate(() => {
+      for (const el of Array.from(document.querySelectorAll('[data-testid^="evolution-note-"]'))) {
+        const testId = el.getAttribute('data-testid') ?? '';
+        const suffix = testId.slice('evolution-note-'.length);
+        if (suffix.startsWith('text-') || suffix.startsWith('date-') || suffix.startsWith('delete-')) continue;
+        return suffix;
+      }
+      return '';
+    });
+  }
+
+  async fillFirstEvolutionNoteText(value: string) {
+    await this.page.locator('[data-testid^="evolution-note-text-"]').first().fill(value);
+  }
+
+  async expectFirstEvolutionNoteText(value: string) {
+    await expect(this.page.locator('[data-testid^="evolution-note-text-"]').first()).toHaveValue(value);
+  }
+
+  async deleteFirstEvolutionNote() {
+    await this.page.locator('[data-testid^="evolution-note-delete-"]').first().click();
+  }
+
+  async expectNoEvolutionNotes() {
+    await expect(this.page.locator('[data-testid^="evolution-note-"]')).toHaveCount(0);
+  }
+
   // ── Subsystem relations matrix ──────────────────────────────────────────────
 
   subsystemCell(subsystem: string, status: string): Locator {
@@ -193,8 +223,8 @@ export class MedicalRecordsPage extends BasePage {
     return this.page.getByTestId(`medical-document-${id}`);
   }
 
-  async uploadDocument(path: string) {
-    await this.page.getByTestId('medical-document-file-input').setInputFiles(path);
+  async uploadDocument(files: string | { name: string; mimeType: string; buffer: Buffer }) {
+    await this.page.getByTestId('medical-document-file-input').setInputFiles(files as never);
   }
 
   async renameDocument(id: string, name: string) {
@@ -204,9 +234,12 @@ export class MedicalRecordsPage extends BasePage {
     await input.press('Enter');
   }
 
-  async replaceDocument(id: string, path: string) {
+  async replaceDocument(id: string, files: string | { name: string; mimeType: string; buffer: Buffer }) {
     await this.page.getByTestId(`medical-document-replace-${id}`).click();
-    await this.page.getByTestId('medical-document-file-input').setInputFiles(path);
+    const replaceInput = this.page
+      .getByTestId('medical-document-replace-input')
+      .or(this.page.locator('input[type="file"]:not([data-testid])'));
+    await replaceInput.setInputFiles(files as never);
   }
 
   async deleteDocument(id: string) {
@@ -220,5 +253,58 @@ export class MedicalRecordsPage extends BasePage {
 
   async expectDocumentNotVisible(id: string) {
     await expect(this.document(id)).not.toBeVisible();
+  }
+
+  async expectDocumentName(id: string, name: string) {
+    await expect(this.document(id).getByText(name, { exact: true })).toBeVisible();
+  }
+
+  async expectDocumentsEmpty() {
+    await expect(this.page.getByText('No hay documentos adjuntos.')).toBeVisible();
+  }
+
+  async expectDocumentError() {
+    await expect(this.page.getByText(/supera el límite de 5 MB/i)).toBeVisible();
+  }
+
+  // ── General data select ─────────────────────────────────────────────────────
+
+  async selectGeneralDataSex(label: string) {
+    await this.page.getByTestId('general-data-sex-select').click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  // ── Antecedents ─────────────────────────────────────────────────────────────
+
+  async fillAntecedent(field: string, value: string) {
+    await this.page.getByTestId(`antecedents-${field}-input`).fill(value);
+  }
+
+  async expectAntecedentField(field: string, value: string) {
+    await expect(this.page.getByTestId(`antecedents-${field}-input`)).toHaveValue(value);
+  }
+
+  // ── Family-specific fields ──────────────────────────────────────────────────
+
+  async fillFamilySpecific(field: string, value: string) {
+    await this.page.getByTestId(`family-specific-${field}-input`).fill(value);
+  }
+
+  async expectFamilySpecificField(field: string, value: string) {
+    await expect(this.page.getByTestId(`family-specific-${field}-input`)).toHaveValue(value);
+  }
+
+  // ── Family member field assertions ─────────────────────────────────────────
+
+  async expectFamilyMemberField(index: number, field: string, value: string) {
+    await expect(this.page.getByTestId(`family-member-${field}-${index}`)).toHaveValue(value);
+  }
+
+  // ── Subsystem relation assertions ───────────────────────────────────────────
+
+  async expectSubsystemNotMarked(subsystem: string, status: string) {
+    await expect(
+      this.subsystemCell(subsystem, status).locator('.markFunc, .markDysfunc, [class*="mark"]'),
+    ).toHaveCount(0);
   }
 }
