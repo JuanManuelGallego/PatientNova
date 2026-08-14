@@ -680,7 +680,6 @@ body {
   gap: 8px;
   padding: 12px 24px;
   box-shadow: var(--shadow-btn);
-  flex: 1;
 }
 
 .btn-close {
