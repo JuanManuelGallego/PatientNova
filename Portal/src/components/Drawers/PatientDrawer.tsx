@@ -112,6 +112,7 @@ export function PatientDrawer({
               <Row
                 icon={CHANNEL_ICONS.WHATSAPP}
                 label="WhatsApp"
+                testId="patient-drawer-whatsapp"
                 value={<span className="mono">{patient.whatsappNumber}</span>}
               />
             )}
@@ -119,6 +120,7 @@ export function PatientDrawer({
               <Row
                 icon={CHANNEL_ICONS.SMS}
                 label="SMS"
+                testId="patient-drawer-sms"
                 value={<span className="mono">{patient.smsNumber}</span>}
               />
             )}

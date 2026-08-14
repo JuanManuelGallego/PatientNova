@@ -24,6 +24,7 @@ export function TableFooter({
 }: TableFooterProps) {
   const prevTestId = testIdPrefix ? `${testIdPrefix}-previous` : undefined;
   const nextTestId = testIdPrefix ? `${testIdPrefix}-next` : undefined;
+  const countTestId = testIdPrefix ? `${testIdPrefix}-count` : undefined;
   const pageTestId = (n: number) =>
     testIdPrefix ? `${testIdPrefix}-page-${n}` : undefined;
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -36,7 +37,7 @@ export function TableFooter({
 
   return (
     <>
-      <span style={{ fontSize: 13, color: "var(--c-gray-400)" }}>
+      <span style={{ fontSize: 13, color: "var(--c-gray-400)" }} data-testid={countTestId}>
         Mostrando{" "}
         <strong style={{ color: "var(--c-gray-700)" }}>
           {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}

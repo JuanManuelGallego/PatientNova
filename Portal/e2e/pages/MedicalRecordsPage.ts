@@ -214,7 +214,7 @@ export class MedicalRecordsPage extends BasePage {
   }
 
   async expectSubsystemMarked(subsystem: string, status: string) {
-    await expect(this.subsystemCell(subsystem, status).locator('.markFunc, .markDysfunc, [class*="mark"]')).toBeVisible();
+    await expect(this.subsystemCell(subsystem, status).getByTestId(`subsystem-${subsystem}-${status}-mark`)).toBeVisible();
   }
 
   // ── Documents ───────────────────────────────────────────────────────────────
@@ -304,7 +304,7 @@ export class MedicalRecordsPage extends BasePage {
 
   async expectSubsystemNotMarked(subsystem: string, status: string) {
     await expect(
-      this.subsystemCell(subsystem, status).locator('.markFunc, .markDysfunc, [class*="mark"]'),
+      this.subsystemCell(subsystem, status).getByTestId(`subsystem-${subsystem}-${status}-mark`),
     ).toHaveCount(0);
   }
 }

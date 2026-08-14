@@ -6,6 +6,8 @@ export class PatientDrawer {
   readonly closeButton: Locator;
   readonly editButton: Locator;
   readonly deleteButton: Locator;
+  readonly whatsappNumber: Locator;
+  readonly smsNumber: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -13,6 +15,8 @@ export class PatientDrawer {
     this.closeButton = page.getByTestId('patient-drawer-close-button');
     this.editButton = this.panel.getByTestId('patient-drawer-edit-button');
     this.deleteButton = this.panel.getByTestId('patient-drawer-delete-button');
+    this.whatsappNumber = this.panel.getByTestId('patient-drawer-whatsapp');
+    this.smsNumber = this.panel.getByTestId('patient-drawer-sms');
   }
 
   async waitForOpen() {

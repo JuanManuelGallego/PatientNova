@@ -400,7 +400,7 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     );
 
     await expect(appts.table.locator('tbody tr')).toHaveCount(10);
-    await expect(page.locator('.table-footer')).toContainText('de 11 citas');
+    await expect(page.getByTestId('appointments-pagination-count')).toContainText('de 11 citas');
 
     let responsePromise = page.waitForResponse(
       (r) => r.url().includes('/appointments') && new URL(r.url()).searchParams.get('page') === '2',

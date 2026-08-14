@@ -74,7 +74,7 @@ export function SubsystemRelationsTable({
                                     data-testid={`subsystem-${subsystem}-${RelationshipStatus.FUNCIONAL}`}
                                 >
                                     {subsystemMap[ subsystem ]?.[ RelationshipStatus.FUNCIONAL ] && (
-                                        <span className={`${styles.mark} ${styles.markFunc}`}>✓</span>
+                                        <span className={`${styles.mark} ${styles.markFunc}`} data-testid={`subsystem-${subsystem}-${RelationshipStatus.FUNCIONAL}-mark`}>✓</span>
                                     )}
                                 </td>
                                 {DISFUNCTIONAL_SUBCATEGORIES.map(({ label, status }) => (
@@ -85,7 +85,7 @@ export function SubsystemRelationsTable({
                                         data-testid={`subsystem-${subsystem}-${status}`}
                                     >
                                         {subsystemMap[ subsystem ]?.[ status ] && (
-                                            <span className={`${styles.mark} ${styles.markDysfunc}`}>✓</span>
+                                            <span className={`${styles.mark} ${styles.markDysfunc}`} data-testid={`subsystem-${subsystem}-${status}-mark`}>✓</span>
                                         )}
                                     </td>
                                 ))}

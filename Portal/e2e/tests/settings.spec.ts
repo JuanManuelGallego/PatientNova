@@ -292,7 +292,7 @@ test.describe('Settings', () => {
 
       const table = page.getByTestId('audit-table');
       await expect(table.locator('tbody tr')).toHaveCount(10);
-      await expect(page.locator('.table-footer')).toContainText('de 12 registros');
+      await expect(page.getByTestId('audit-pagination-count')).toContainText('de 12 registros');
 
       await auditPage.goToNextPage();
       await page.waitForResponse(

@@ -104,6 +104,10 @@ test.describe('Calendar', () => {
     await modal.deleteBlockedTime();
 
     await expect(calendar.blockedTimeChip(blockedTime.data.id)).not.toBeVisible();
+
+    const fetched = await api.getBlockedTime(blockedTime.data.id);
+    expect(fetched.data.isDeleted).toBe(true);
+    expect(fetched.data.deletedAt).toBeTruthy();
   });
 
   test('Open appointment drawer from calendar event', async ({
