@@ -304,6 +304,7 @@ function ActiveRemindersTab({
           key={reminder.id}
           className="table-row"
           onClick={() => setViewReminder(reminder)}
+          data-testid={`reminder-row-${reminder.id}`}
         >
           <td className="td">
             <div className="td-name__primary">
@@ -324,14 +325,14 @@ function ActiveRemindersTab({
               <button
                 onClick={() => setEditReminder(reminder)}
                 className="btn-action-edit"
-                data-testid="reminder-reschedule-button"
+                data-testid={`reminder-reschedule-button-${reminder.id}`}
               >
                 Reprogramar
               </button>
               <button
                 onClick={() => setCancelReminder(reminder)}
                 className="btn-action-delete"
-                data-testid="reminder-row-cancel-button"
+                data-testid={`reminder-row-cancel-button-${reminder.id}`}
               >
                 <ACTION_ICONS.close size={14} />
               </button>
@@ -399,6 +400,7 @@ function HistoryRemindersTab({
           key={reminder.id}
           className="table-row"
           onClick={() => setViewReminder(reminder)}
+          data-testid={`reminder-row-${reminder.id}`}
         >
           <td className="td">
             <div className="td-name__primary">
@@ -435,7 +437,7 @@ function HistoryRemindersTab({
                   disabled={(reminder.retryCount ?? 0) > MAX_RETRIES}
                   title={(reminder.retryCount ?? 0) > MAX_RETRIES ? 'Máximo de reintentos alcanzado' : undefined}
                   className="btn-action-edit"
-                  data-testid="reminder-row-retry-button"
+                  data-testid={`reminder-row-retry-button-${reminder.id}`}
                 >
                   <ACTION_ICONS.retry size={14} />
                 </button>

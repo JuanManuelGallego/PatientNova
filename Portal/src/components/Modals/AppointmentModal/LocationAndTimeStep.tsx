@@ -89,6 +89,7 @@ export function LocationAndTimeStep({
             value={form.meetingUrl}
             onChange={set("meetingUrl")}
             placeholder="Al dejar este campo vacío, se creará un enlace automáticamente."
+            data-testid="appointment-meeting-url-input"
           />
         </label>
       )}

@@ -91,6 +91,7 @@ export function AuditLogsTab() {
           onClick={() => fetchAuditLogs()}
           className="btn-secondary btn-secondary--sm"
           title="Actualizar"
+          data-testid="audit-refresh-button"
         >
           <ACTION_ICONS.retry size={14} className={loading ? "animate-spin" : ""} />
         </button>
@@ -109,6 +110,7 @@ export function AuditLogsTab() {
         }}
         placeholder="Buscar por actor, descripcion o entidad…"
         wrap
+        testId="audit-search-input"
       >
         <CustomSelect
           value={entityType}
@@ -122,10 +124,12 @@ export function AuditLogsTab() {
           options={ACTION_OPTIONS}
           onChange={(v) => { setActionType(v); setPage(1); }}
           className="form-input--auto"
+          data-testid="audit-action-filter"
         />
         <DateTimePicker
           date={dateFilter}
           onChanged={(iso) => setDateFilter(iso.slice(0, 10))}
+          testId="audit-date-from-filter"
         />
         {dateFilter && (
           <button
@@ -156,8 +160,9 @@ export function AuditLogsTab() {
         rows={auditLogs}
         loading={showSpinner}
         skeletonCount={5}
+        testId="audit-table"
         renderRow={(log) => (
-          <tr key={log.id} className="table-row" onClick={() => setViewLog(log)}>
+          <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
             <td className="td">
               <ActionPill action={log.actionType} />
             </td>
@@ -183,6 +188,7 @@ export function AuditLogsTab() {
             totalPages={totalPages}
             label="registros"
             onPageChange={setPage}
+            testIdPrefix="audit-pagination"
           />
         }
       />

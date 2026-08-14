@@ -103,6 +103,7 @@ export function AppointmentDrawer({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="meeting-link"
+                  data-testid="appointment-drawer-meeting-link"
                 >
                   Unirse a la videollamada
                 </a>

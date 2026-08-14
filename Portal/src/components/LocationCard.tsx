@@ -13,7 +13,7 @@ export function LocationCard({
   return (
     <div
       className="location-card"
-      data-testid="location-card"
+      data-testid={`location-card-${loc.id}`}
       style={{
         padding: 0,
         overflow: "hidden",
@@ -78,14 +78,14 @@ export function LocationCard({
           )}
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          <button className="btn-action-edit" onClick={onEdit} title="Editar">
+          <button className="btn-action-edit" onClick={onEdit} title="Editar" data-testid={`location-edit-button-${loc.id}`}>
             <ACTION_ICONS.edit size={14} /> Editar
           </button>
           <button
             className="btn-action-delete"
             onClick={onDelete}
             title="Eliminar"
-            data-testid="location-delete-button"
+            data-testid={`location-delete-button-${loc.id}`}
           >
             <ACTION_ICONS.close size={14} />
           </button>

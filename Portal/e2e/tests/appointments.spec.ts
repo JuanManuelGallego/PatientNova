@@ -40,10 +40,11 @@ test.describe('Appointments', () => {
     await page.goto(Routes.APPOINTMENTS);
 
     const appointmentsPage = new AppointmentsPage(page);
+    await appointmentsPage.searchAppointment(patient.name)
     await appointmentsPage.expectAppointmentVisible(patient.name);
 
-    await appointmentsPage.confirmAppointment(patient.name);
-    await appointmentsPage.markAsPaid(patient.name);
+    await appointmentsPage.confirmAppointmentById(appointment.data.id);
+    await appointmentsPage.markAsPaidById(appointment.data.id);
 
     await api.deleteAppointment(appointment.data.id);
   });

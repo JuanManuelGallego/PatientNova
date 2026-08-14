@@ -71,6 +71,7 @@ export function SubsystemRelationsTable({
                                 <td
                                     className={`${styles.cell} ${styles.cellFunc}`}
                                     onClick={() => handleCellClick(subsystem, RelationshipStatus.FUNCIONAL)}
+                                    data-testid={`subsystem-${subsystem}-${RelationshipStatus.FUNCIONAL}`}
                                 >
                                     {subsystemMap[ subsystem ]?.[ RelationshipStatus.FUNCIONAL ] && (
                                         <span className={`${styles.mark} ${styles.markFunc}`}>✓</span>
@@ -81,6 +82,7 @@ export function SubsystemRelationsTable({
                                         key={`${subsystem}-${label}`}
                                         className={`${styles.cell} ${styles.cellDysfunc}`}
                                         onClick={() => handleCellClick(subsystem, status)}
+                                        data-testid={`subsystem-${subsystem}-${status}`}
                                     >
                                         {subsystemMap[ subsystem ]?.[ status ] && (
                                             <span className={`${styles.mark} ${styles.markDysfunc}`}>✓</span>

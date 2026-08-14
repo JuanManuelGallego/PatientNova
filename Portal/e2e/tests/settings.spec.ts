@@ -1,7 +1,5 @@
 import { test, expect } from '../fixtures';
 import { SettingsPage } from '../pages/SettingsPage';
-import { DeleteLocationModal } from '../pages/Modals/DeleteLocationModal';
-import { DeleteAppointmentTypeModal } from '../pages/Modals/DeleteAppointmentTypeModal';
 import { AuditDrawer } from '../pages/Drawers/AuditDrawer';
 import { uniqueName } from '../utils/test-data';
 import { Routes } from '../utils/const';
@@ -78,10 +76,7 @@ test.describe('Settings', () => {
       const locationCard = page.getByText(locationName);
       await expect(locationCard).toBeVisible();
 
-      const deleteBtn = page.getByTestId('location-delete-button').first();
-      await deleteBtn.click();
-
-      const deleteModal = new DeleteLocationModal(page);
+      const deleteModal = await settings.deleteLocation(location.data.id);
       await deleteModal.confirm();
 
       await expect(locationCard).not.toBeVisible();
@@ -116,10 +111,7 @@ test.describe('Settings', () => {
       const typeCard = page.getByText(typeName);
       await expect(typeCard).toBeVisible();
 
-      const deleteBtn = page.getByTestId('appointment-type-delete-button').first();
-      await deleteBtn.click();
-
-      const deleteModal = new DeleteAppointmentTypeModal(page);
+      const deleteModal = await settings.deleteAppointmentType(apptType.data.id);
       await deleteModal.confirm();
 
       await expect(typeCard).not.toBeVisible();

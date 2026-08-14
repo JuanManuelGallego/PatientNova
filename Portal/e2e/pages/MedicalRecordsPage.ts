@@ -114,4 +114,111 @@ export class MedicalRecordsPage extends BasePage {
   async expectNoEmptyState() {
     await expect(this.page.getByText('El paciente no tiene una historia clínica registrada.')).not.toBeVisible();
   }
+
+  // ── Family members ──────────────────────────────────────────────────────────
+
+  familyMember(index: number): Locator {
+    return this.page.getByTestId(`family-member-${index}`);
+  }
+
+  async fillFamilyMemberName(index: number, value: string) {
+    await this.page.getByTestId(`family-member-name-${index}`).fill(value);
+  }
+
+  async fillFamilyMemberAge(index: number, value: string) {
+    await this.page.getByTestId(`family-member-age-${index}`).fill(value);
+  }
+
+  async selectFamilyMemberSex(index: number, label: string) {
+    await this.page.getByTestId(`family-member-sex-${index}`).click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  async selectFamilyMemberRelationship(index: number, label: string) {
+    await this.page.getByTestId(`family-member-relationship-${index}`).click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  async deleteFamilyMember(index: number) {
+    await this.page.getByTestId(`family-member-delete-${index}`).click();
+  }
+
+  async expectFamilyMemberVisible(index: number) {
+    await expect(this.familyMember(index)).toBeVisible();
+  }
+
+  async expectFamilyMemberNotVisible(index: number) {
+    await expect(this.familyMember(index)).not.toBeVisible();
+  }
+
+  // ── Evolution notes ─────────────────────────────────────────────────────────
+
+  evolutionNote(id: string): Locator {
+    return this.page.getByTestId(`evolution-note-${id}`);
+  }
+
+  async fillEvolutionNoteText(id: string, value: string) {
+    await this.page.getByTestId(`evolution-note-text-${id}`).fill(value);
+  }
+
+  async deleteEvolutionNote(id: string) {
+    await this.page.getByTestId(`evolution-note-delete-${id}`).click();
+  }
+
+  async expectEvolutionNoteVisible(id: string) {
+    await expect(this.evolutionNote(id)).toBeVisible();
+  }
+
+  async expectEvolutionNoteNotVisible(id: string) {
+    await expect(this.evolutionNote(id)).not.toBeVisible();
+  }
+
+  // ── Subsystem relations matrix ──────────────────────────────────────────────
+
+  subsystemCell(subsystem: string, status: string): Locator {
+    return this.page.getByTestId(`subsystem-${subsystem}-${status}`);
+  }
+
+  async toggleSubsystem(subsystem: string, status: string) {
+    await this.subsystemCell(subsystem, status).click();
+  }
+
+  async expectSubsystemMarked(subsystem: string, status: string) {
+    await expect(this.subsystemCell(subsystem, status).locator('.markFunc, .markDysfunc, [class*="mark"]')).toBeVisible();
+  }
+
+  // ── Documents ───────────────────────────────────────────────────────────────
+
+  document(id: string): Locator {
+    return this.page.getByTestId(`medical-document-${id}`);
+  }
+
+  async uploadDocument(path: string) {
+    await this.page.getByTestId('medical-document-file-input').setInputFiles(path);
+  }
+
+  async renameDocument(id: string, name: string) {
+    await this.page.getByTestId(`medical-document-rename-${id}`).click();
+    const input = this.document(id).locator('input.form-input').first();
+    await input.fill(name);
+    await input.press('Enter');
+  }
+
+  async replaceDocument(id: string, path: string) {
+    await this.page.getByTestId(`medical-document-replace-${id}`).click();
+    await this.page.getByTestId('medical-document-file-input').setInputFiles(path);
+  }
+
+  async deleteDocument(id: string) {
+    await this.page.getByTestId(`medical-document-delete-${id}`).click();
+    await this.document(id).getByRole('button', { name: 'Sí' }).click();
+  }
+
+  async expectDocumentVisible(id: string) {
+    await expect(this.document(id)).toBeVisible();
+  }
+
+  async expectDocumentNotVisible(id: string) {
+    await expect(this.document(id)).not.toBeVisible();
+  }
 }

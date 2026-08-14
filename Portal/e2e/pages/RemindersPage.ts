@@ -12,9 +12,6 @@ export class RemindersPage extends BasePage {
   readonly tabActive: Locator;
   readonly tabHistory: Locator;
   readonly tabBulk: Locator;
-  readonly rescheduleTestId: string;
-  readonly cancelTestId: string;
-  readonly retryTestId: string;
 
   constructor(page: Page) {
     super(page);
@@ -24,9 +21,6 @@ export class RemindersPage extends BasePage {
     this.tabActive = this.page.getByTestId('reminders-tab-active');
     this.tabHistory = this.page.getByTestId('reminders-tab-history');
     this.tabBulk = this.page.getByTestId('reminders-tab-bulk');
-    this.rescheduleTestId = 'reminder-reschedule-button';
-    this.cancelTestId = 'reminder-row-cancel-button';
-    this.retryTestId = 'reminder-row-retry-button';
   }
 
   async openCreateModal() {
@@ -58,7 +52,14 @@ export class RemindersPage extends BasePage {
 
   async rescheduleReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.locator(`[data-testid="${this.rescheduleTestId}"]`).click();
+    await row.locator('[data-testid^="reminder-reschedule-button-"]').click();
+    const modal = new EditReminderModal(this.page);
+    await expect(modal.panel).toBeVisible();
+    return modal;
+  }
+
+  async rescheduleReminderById(id: string) {
+    await this.reminderRow(id).getByTestId(`reminder-reschedule-button-${id}`).click();
     const modal = new EditReminderModal(this.page);
     await expect(modal.panel).toBeVisible();
     return modal;
@@ -66,14 +67,24 @@ export class RemindersPage extends BasePage {
 
   async cancelReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.locator(`[data-testid="${this.cancelTestId}"]`).click();
+    await row.locator('[data-testid^="reminder-row-cancel-button-"]').click();
+    const modal = new CancelReminderModal(this.page);
+    return modal;
+  }
+
+  async cancelReminderById(id: string) {
+    await this.reminderRow(id).getByTestId(`reminder-row-cancel-button-${id}`).click();
     const modal = new CancelReminderModal(this.page);
     return modal;
   }
 
   async retryReminder(rowText: string) {
     const row = this.table.getByRole('row').filter({ hasText: rowText });
-    await row.locator(`[data-testid="${this.retryTestId}"]`).click();
+    await row.locator('[data-testid^="reminder-row-retry-button-"]').click();
+  }
+
+  async retryReminderById(id: string) {
+    await this.reminderRow(id).getByTestId(`reminder-row-retry-button-${id}`).click();
   }
 
   async searchReminder(name: string) {
@@ -86,5 +97,17 @@ export class RemindersPage extends BasePage {
 
   async expectReminderNotVisible(rowText: string) {
     await expect(this.table.getByRole('row').filter({ hasText: rowText })).not.toBeVisible();
+  }
+
+  reminderRow(id: string): Locator {
+    return this.page.getByTestId(`reminder-row-${id}`);
+  }
+
+  async expectReminderVisibleById(id: string) {
+    await expect(this.reminderRow(id)).toBeVisible();
+  }
+
+  async expectReminderNotVisibleById(id: string) {
+    await expect(this.reminderRow(id)).not.toBeVisible();
   }
 }

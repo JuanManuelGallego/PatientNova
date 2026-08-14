@@ -175,6 +175,7 @@ function PatientsPageContent() {
               onClick={() => setViewPatient(p)}
               key={p.id}
               className="table-row"
+              data-testid={`patient-row-${p.id}`}
             >
               <td className="td">
                 <div className="td-identity">
@@ -224,6 +225,7 @@ function PatientsPageContent() {
                       setEditPatient(p);
                     }}
                     className="btn-action-edit"
+                    data-testid={`patient-edit-button-${p.id}`}
                   >
                     Editar
                   </button>
@@ -233,7 +235,7 @@ function PatientsPageContent() {
                       setDeletePatient(p);
                     }}
                     className="btn-action-delete"
-                    data-testid="patient-row-delete-button"
+                    data-testid={`patient-delete-button-${p.id}`}
                   >
                     <ACTION_ICONS.close size={14} />
                   </button>
