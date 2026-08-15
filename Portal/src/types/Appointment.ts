@@ -138,6 +138,8 @@ export interface FetchAppointmentsFilters {
   dateTo?: string;
   search?: string;
   paid?: boolean;
+  typeId?: string;
+  locationId?: string;
   page?: number;
   pageSize?: number;
   orderBy?:

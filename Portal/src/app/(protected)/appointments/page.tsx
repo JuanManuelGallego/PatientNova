@@ -23,7 +23,6 @@ import {
   Appointment,
   AppointmentStatus,
   APPT_STATUS_CFG,
-  DEFAULT_APPT_STATUS,
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
@@ -38,6 +37,8 @@ import {
 } from "@/src/components/Info/StatusPill";
 import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import {
   useQueryState,
@@ -49,6 +50,11 @@ import {
 import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 
 const PAGE_SIZE = 10;
+
+enum AppointmentTab {
+  Upcoming = "upcoming",
+  History = "history",
+}
 
 const APPT_ORDER_BY = [
   "startAt",
@@ -63,9 +69,17 @@ const APPT_SORTABLE_COLUMNS = [
   "price",
 ] as const;
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS = (tab: AppointmentTab) => [
   { value: "", label: "Todos" },
-  ...Object.values(AppointmentStatus).map((v) => ({
+  ...(
+    tab === AppointmentTab.Upcoming
+      ? [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ]
+      : [
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.NO_SHOW,
+      ]
+  ).map((v) => ({
     value: v,
     label: APPT_STATUS_CFG[v].label,
   })),
@@ -77,17 +91,41 @@ const PAID_OPTIONS = [
   { value: "false", label: "Sin pagar" },
 ];
 
+const TYPE_OPTIONS = (types: { id: string; name: string }[]) => [
+  { value: "", label: "Todos" },
+  ...types.map((t) => ({ value: t.id, label: t.name })),
+];
+
+const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) => [
+  { value: "", label: "Todos" },
+  ...locations.map((l) => ({ value: l.id, label: l.name })),
+];
+
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
   const { updateAppointment } = useUpdateAppointment();
+  const { appointmentTypes } = useFetchAppointmentTypes();
+  const { locations } = useFetchLocations();
 
   const [ status, setStatus ] = useQueryState(
     "status",
-    parseAsArrayOf(parseAsString).withDefault([...DEFAULT_APPT_STATUS]),
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
+  const [ activeTab, setActiveTab ] = useQueryState(
+    "tab",
+    parseAsStringEnum(Object.values(AppointmentTab)).withDefault(AppointmentTab.Upcoming),
   );
   const [ paid, setPaid ] = useQueryState(
     "paid",
     parseAsArrayOf(parseAsString).withDefault([]),
+  );
+  const [ typeId, setTypeId ] = useQueryState(
+    "typeId",
+    parseAsString.withDefault(""),
+  );
+  const [ locationId, setLocationId ] = useQueryState(
+    "locationId",
+    parseAsString.withDefault(""),
   );
   const [ dateFilter, setDateFilter ] = useQueryState(
     "dateFilter",
@@ -119,6 +157,18 @@ function AppointmentsPageContent() {
     setPage(1);
   };
 
+  const handleTabChange = (tab: AppointmentTab) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (tab === AppointmentTab.History) {
+      setOrderBy("startAt");
+      setOrder("desc");
+    } else {
+      setOrderBy("startAt");
+      setOrder("asc");
+    }
+  };
+
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
   const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
@@ -126,20 +176,32 @@ function AppointmentsPageContent() {
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
 
   const filters = useMemo<FetchAppointmentsFilters>(
-    () => ({
-      patientId: undefined,
-      status: status.length ? (status as AppointmentStatus[]) : undefined,
-      startAt: undefined,
-      dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
-      dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
-      search: debouncedSearch.trim() || undefined,
-      paid: paid.length ? paid[0] === "true" : undefined,
-      page: page,
-      pageSize: PAGE_SIZE,
-      orderBy: orderBy as FetchAppointmentsFilters["orderBy"],
-      order: order as "asc" | "desc",
-    }),
-    [ status, paid, debouncedSearch, dateFilter, page, orderBy, order ],
+    () => {
+      const tabDefault =
+        activeTab === AppointmentTab.Upcoming
+          ? [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ]
+          : [
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+          ];
+      return {
+        patientId: undefined,
+        status: status.length ? (status as AppointmentStatus[]) : tabDefault,
+        startAt: undefined,
+        dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
+        dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
+        search: debouncedSearch.trim() || undefined,
+        paid: paid.length ? paid[0] === "true" : undefined,
+        typeId: typeId || undefined,
+        locationId: locationId || undefined,
+        page: page,
+        pageSize: PAGE_SIZE,
+        orderBy: orderBy as FetchAppointmentsFilters["orderBy"],
+        order: order as "asc" | "desc",
+      };
+    },
+    [ status, paid, debouncedSearch, dateFilter, typeId, locationId, activeTab, page, orderBy, order ],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -150,7 +212,7 @@ function AppointmentsPageContent() {
         sortKey: "status",
         filter: {
           kind: "enum",
-          options: STATUS_OPTIONS,
+          options: STATUS_OPTIONS(activeTab),
           value: status,
           onChange: (v: string[]) => {
             setStatus(v);
@@ -160,7 +222,20 @@ function AppointmentsPageContent() {
           triggerTestId: "appointment-status-filter-trigger",
         },
       },
-      { label: "Tipo" },
+      {
+        label: "Tipo",
+        filter: {
+          kind: "enum",
+          options: TYPE_OPTIONS(appointmentTypes),
+          value: typeId ? [typeId] : [],
+          onChange: (v: string[]) => {
+            setTypeId(v.length ? v[v.length - 1] : "");
+            setPage(1);
+          },
+          testId: "appointment-type-filter",
+          triggerTestId: "appointment-type-filter-trigger",
+        },
+      },
       {
         label: "Fecha y Hora",
         sortKey: "startAt",
@@ -176,7 +251,20 @@ function AppointmentsPageContent() {
         },
       },
       { label: "Recordatorio" },
-      { label: "Ubicación" },
+      {
+        label: "Ubicación",
+        filter: {
+          kind: "enum",
+          options: LOCATION_OPTIONS(locations),
+          value: locationId ? [locationId] : [],
+          onChange: (v: string[]) => {
+            setLocationId(v.length ? v[v.length - 1] : "");
+            setPage(1);
+          },
+          testId: "appointment-location-filter",
+          triggerTestId: "appointment-location-filter-trigger",
+        },
+      },
       {
         label: "Pago",
         sortKey: "price",
@@ -194,7 +282,7 @@ function AppointmentsPageContent() {
       },
       { label: "" },
     ],
-    [status, paid, dateFilter, setStatus, setPaid, setDateFilter, setPage],
+    [status, paid, dateFilter, typeId, locationId, activeTab, appointmentTypes, locations, setStatus, setPaid, setDateFilter, setTypeId, setLocationId, setPage],
   );
 
   const { appointments, loading, error, fetchAppointments, total, totalPages } =
@@ -285,6 +373,10 @@ function AppointmentsPageContent() {
             icon={DollarSign}
           />
         </div>
+        <AppointmentsTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
         {error && <ErrorBanner msg={error} onRetry={fetchAppointments} />}
         {actionError && (
           <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
@@ -484,6 +576,34 @@ function AppointmentsPageContent() {
         />
       )}
     </>
+  );
+}
+
+function AppointmentsTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: AppointmentTab;
+  onTabChange: (tab: AppointmentTab) => void;
+}) {
+  const tabs = [
+    { key: AppointmentTab.Upcoming, label: "Próximas" },
+    { key: AppointmentTab.History, label: "Historial" },
+  ];
+
+  return (
+    <div className="tab-nav">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => onTabChange(tab.key)}
+          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
+          data-testid={`appointments-tab-${tab.key}`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

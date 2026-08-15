@@ -43,6 +43,8 @@ export const buildAppointmentQueryString = (filters?: FetchAppointmentsFilters):
         dateTo: filters?.dateTo,
         search: filters?.search,
         paid: filters?.paid !== undefined ? filters.paid : undefined,
+        typeId: filters?.typeId,
+        locationId: filters?.locationId,
         page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
         pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : undefined,
         orderBy: filters?.orderBy,
