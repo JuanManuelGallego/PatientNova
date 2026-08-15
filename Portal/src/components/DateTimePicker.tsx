@@ -17,18 +17,23 @@ export function DateTimePicker({
   onChanged,
   showTime = false,
   isFuture = false,
+  /** When true, emits a local `YYYY-MM-DD` string instead of a UTC ISO. Used by day-only column filters to avoid timezone off-by-one. */
+  emitLocalDate = false,
   testId,
 }: {
   date: string | undefined;
   onChanged: (date: string) => void;
   showTime?: boolean;
   isFuture?: boolean;
+  emitLocalDate?: boolean;
   testId?: string;
 }) {
   const { isDark } = useTheme();
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
-    const selectedIso = selectedDate.toISOString();
+    const selectedIso = emitLocalDate
+      ? selectedDate.format("YYYY-MM-DD")
+      : selectedDate.toISOString();
     onChanged(selectedIso);
   };
 

@@ -220,6 +220,7 @@ function PatientsPageContent() {
           orderBy={orderBy}
           order={order}
           onSort={handleSort}
+          total={total}
           renderRow={(p) => (
             <tr
               onClick={() => setViewPatient(p)}

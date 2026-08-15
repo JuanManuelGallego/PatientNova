@@ -415,7 +415,7 @@ function ActiveRemindersTab({
           kind: "date",
           value: dateFilter,
           onChange: (iso) => {
-            setDateFilter(iso.slice(0, 10));
+            setDateFilter(iso);
             setPage(1);
           },
           testId: "reminder-date-filter",
@@ -560,7 +560,7 @@ function HistoryRemindersTab({
           kind: "date",
           value: dateFilter,
           onChange: (iso) => {
-            setDateFilter(iso.slice(0, 10));
+            setDateFilter(iso);
             setPage(1);
           },
           testId: "reminder-date-filter",

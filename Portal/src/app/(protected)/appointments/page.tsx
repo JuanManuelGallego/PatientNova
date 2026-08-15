@@ -225,11 +225,11 @@ function AppointmentsPageContent() {
       {
         label: "Tipo",
         filter: {
-          kind: "enum",
+          kind: "single-enum",
           options: TYPE_OPTIONS(appointmentTypes),
-          value: typeId ? [typeId] : [],
-          onChange: (v: string[]) => {
-            setTypeId(v.length ? v[v.length - 1] : "");
+          value: typeId,
+          onChange: (v: string) => {
+            setTypeId(v);
             setPage(1);
           },
           testId: "appointment-type-filter",
@@ -243,7 +243,7 @@ function AppointmentsPageContent() {
           kind: "date",
           value: dateFilter,
           onChange: (iso) => {
-            setDateFilter(iso.slice(0, 10));
+            setDateFilter(iso);
             setPage(1);
           },
           testId: "appointment-date-filter",
@@ -254,11 +254,11 @@ function AppointmentsPageContent() {
       {
         label: "Ubicación",
         filter: {
-          kind: "enum",
+          kind: "single-enum",
           options: LOCATION_OPTIONS(locations),
-          value: locationId ? [locationId] : [],
-          onChange: (v: string[]) => {
-            setLocationId(v.length ? v[v.length - 1] : "");
+          value: locationId,
+          onChange: (v: string) => {
+            setLocationId(v);
             setPage(1);
           },
           testId: "appointment-location-filter",
@@ -400,6 +400,7 @@ function AppointmentsPageContent() {
           orderBy={orderBy}
           order={order}
           onSort={handleSort}
+          total={total}
           renderRow={(a) => (
             <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)} data-testid={`appointment-row-${a.id}`}>
               <td className="td">

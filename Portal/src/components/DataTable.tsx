@@ -23,6 +23,14 @@ export type ColumnFilterConfig =
       onChange: (value: string) => void;
       testId?: string;
       triggerTestId?: string;
+    }
+  | {
+      kind: "single-enum";
+      options: SelectOption[];
+      value: string;
+      onChange: (value: string) => void;
+      testId?: string;
+      triggerTestId?: string;
     };
 
 export interface ColumnDef {
@@ -133,6 +141,8 @@ interface DataTableProps<T> {
   order?: "asc" | "desc";
   /** Called when a sortable header is activated. */
   onSort?: (sortKey: string) => void;
+  /** Total row count. When provided, the footer stays visible on out-of-range (empty) pages so users can navigate back. */
+  total?: number;
 }
 
 function HeaderFilterPopover({
@@ -207,17 +217,26 @@ function HeaderFilterPopover({
       role="dialog"
       aria-label="Filtro"
     >
-      {config.kind === "enum" ? (
+       {config.kind === "enum" ? (
         <EnumFilter
           options={config.options}
           value={config.value}
           onChange={config.onChange}
           testId={config.testId}
         />
+      ) : config.kind === "single-enum" ? (
+        <EnumFilter
+          single
+          options={config.options}
+          value={config.value ? [config.value] : []}
+          onChange={(next) => config.onChange(next[0] ?? "")}
+          testId={config.testId}
+        />
       ) : (
         <>
           <DateTimePicker
             date={config.value}
+            emitLocalDate
             onChanged={(iso) => {
               config.onChange(iso);
               onClose();
@@ -255,6 +274,7 @@ export function DataTable<T>({
   orderBy,
   order,
   onSort,
+  total,
 }: DataTableProps<T>) {
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
@@ -361,7 +381,7 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
-      {!loading && rows.length > 0 && footer && (
+      {!loading && footer && (rows.length > 0 || (total ?? 0) > 0) && (
         <div className="table-footer">{footer}</div>
       )}
       {openColumnIndex !== null &&

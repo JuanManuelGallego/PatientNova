@@ -125,7 +125,7 @@ export function AuditLogsTab() {
         filter: {
           kind: "date",
           value: dateFilter,
-          onChange: (iso) => { setDateFilter(iso.slice(0, 10)); setPage(1); },
+          onChange: (iso) => { setDateFilter(iso); setPage(1); },
           testId: "audit-date-from-filter",
           triggerTestId: "audit-date-from-filter-trigger",
         },
@@ -201,15 +201,16 @@ export function AuditLogsTab() {
         </div>
       )}
 
-      <DataTable
-        columns={columns}
-        rows={auditLogs}
-        loading={showSpinner}
-        skeletonCount={5}
-        testId="audit-table"
-        orderBy={orderBy}
-        order={order}
-        onSort={handleSort}
+        <DataTable
+          columns={columns}
+          rows={auditLogs}
+          loading={showSpinner}
+          skeletonCount={5}
+          testId="audit-table"
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+          total={total}
         renderRow={(log) => (
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
             <td className="td">
