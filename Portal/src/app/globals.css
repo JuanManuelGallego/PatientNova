@@ -2043,6 +2043,27 @@ tr:hover td {
   outline-offset: 2px;
 }
 
+.th-sort-btn--active {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.th-sort-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.th-sort-icon--idle {
+  color: var(--c-gray-300);
+  opacity: 0.7;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.th-sort-btn:hover .th-sort-icon--idle {
+  color: var(--c-gray-500);
+  opacity: 1;
+}
+
 .th-filter-btn {
   display: inline-flex;
   align-items: center;

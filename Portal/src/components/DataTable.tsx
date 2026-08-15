@@ -6,7 +6,7 @@ import { PAGINATION_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { SelectOption } from "./CustomSelect";
 import { DateTimePicker } from "./DateTimePicker";
 import { EnumFilter } from "./EnumFilter";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 export type ColumnFilterConfig =
   | {
@@ -298,17 +298,23 @@ export function DataTable<T>({
                       {sortable ? (
                         <button
                           type="button"
-                          className="th-sort-btn"
+                          className={`th-sort-btn${isSorted ? " th-sort-btn--active" : ""}`}
                           onClick={() => onSort!(col.sortKey!)}
                           aria-label={`Ordenar por ${col.label}`}
                         >
                           <span>{col.label}</span>
-                          {isSorted &&
-                            (order === "asc" ? (
-                              <ChevronUp size={14} />
+                          {isSorted ? (
+                            order === "asc" ? (
+                              <ChevronUp size={14} className="th-sort-icon" />
                             ) : (
-                              <ChevronDown size={14} />
-                            ))}
+                              <ChevronDown size={14} className="th-sort-icon" />
+                            )
+                          ) : (
+                            <ChevronsUpDown
+                              size={14}
+                              className="th-sort-icon th-sort-icon--idle"
+                            />
+                          )}
                         </button>
                       ) : (
                         <span className="th-label">{col.label}</span>

@@ -58,9 +58,17 @@ const REMINDER_SORTABLE_COLUMNS = [
   "updatedAt",
 ] as const;
 
-const STATUS_OPTIONS = [
+const STATUS_ACTIVE_OPTIONS = [
   { value: "", label: "Todos" },
-  ...Object.values(ReminderStatus).map((v) => ({
+  ...Object.values([ReminderStatus.PENDING, ReminderStatus.QUEUED]).map((v) => ({
+    value: v,
+    label: REMINDER_STATUS_CONFIG[v].label,
+  })),
+];
+
+const STATUS_HISTORY_OPTIONS = [
+  { value: "", label: "Todos" },
+  ...Object.values([ReminderStatus.CANCELLED, ReminderStatus.FAILED, ReminderStatus.SENT]).map((v) => ({
     value: v,
     label: REMINDER_STATUS_CONFIG[v].label,
   })),
@@ -390,7 +398,7 @@ function ActiveRemindersTab({
         sortKey: "status",
         filter: {
           kind: "enum",
-          options: STATUS_OPTIONS,
+          options: STATUS_ACTIVE_OPTIONS,
           value: statusFilter,
           onChange: (v: string[]) => {
             setStatusFilter(v);
@@ -535,7 +543,7 @@ function HistoryRemindersTab({
         sortKey: "status",
         filter: {
           kind: "enum",
-          options: STATUS_OPTIONS,
+          options: STATUS_HISTORY_OPTIONS,
           value: statusFilter,
           onChange: (v: string[]) => {
             setStatusFilter(v);
@@ -683,7 +691,6 @@ function BulkTab() {
 function ReminderTabs({
   activeTab,
   onTabChange,
-  stats,
 }: {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
@@ -693,19 +700,12 @@ function ReminderTabs({
     {
       key: ActiveTab.Active,
       label: "Activos",
-      badge:
-        (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
-        (stats?.byStatus[ ReminderStatus.QUEUED ] || 0),
     },
     {
       key: ActiveTab.History,
       label: "Historial",
-      badge:
-        (stats?.byStatus[ ReminderStatus.SENT ] || 0) +
-        (stats?.byStatus[ ReminderStatus.FAILED ] || 0) +
-        (stats?.byStatus[ ReminderStatus.CANCELLED ] || 0),
     },
-    { key: ActiveTab.Bulk, label: "Envío Masivo", badge: null },
+    { key: ActiveTab.Bulk, label: "Envío Masivo"},
   ];
 
   return (
@@ -718,13 +718,6 @@ function ReminderTabs({
           data-testid={`reminders-tab-${tab.key.toLowerCase()}`}
         >
           {tab.label}
-          {tab.badge !== null && (
-            <span
-              className={`tab-badge ${activeTab === tab.key ? "tab-badge--active" : ""}`}
-            >
-              {tab.badge}
-            </span>
-          )}
         </button>
       ))}
     </div>
