@@ -232,7 +232,7 @@ function RemindersPageContent() {
         {activeTab !== "Bulk" && (
           <FilterBar
             value={search}
-            onChange={(v) => setSearch(v)}
+            onChange={(v) => { setSearch(v); setPage(1); }}
             onClear={() => {
               setSearch("");
               setPage(1);

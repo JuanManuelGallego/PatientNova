@@ -180,7 +180,7 @@ export function AuditLogsTab() {
 
       <FilterBar
         value={search}
-        onChange={setSearch}
+        onChange={(v) => { setSearch(v); setPage(1); }}
         onClear={handleSearchClear}
         placeholder="Buscar por actor, descripcion o entidad…"
         testId="audit-search-input"

@@ -4,7 +4,6 @@ import {
   useQueryState,
   parseAsInteger,
   parseAsString,
-  parseAsArrayOf,
   parseAsStringEnum,
 } from "nuqs";
 
@@ -14,7 +13,6 @@ import {
   FetchPatientsFilters,
   Patient,
   PatientStatus,
-  PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
@@ -37,6 +35,11 @@ import { todayString } from "@/src/utils/TimeUtils";
 
 const PAGE_SIZE = 10;
 
+enum PatientTab {
+  Active = "active",
+  Inactive = "inactive",
+}
+
 const PATIENT_ORDER_BY = [
   "name",
   "email",
@@ -49,20 +52,12 @@ const PATIENT_SORTABLE_COLUMNS = [
   "createdAt",
 ] as const;
 
-const STATUS_OPTIONS = [
-  { value: "", label: "Todos" },
-  ...Object.values(PatientStatus).map((v) => ({
-    value: v,
-    label: PATIENT_STATUS_CONFIG[v].label,
-  })),
-];
-
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
 
-  const [status, setStatus] = useQueryState(
-    "status",
-    parseAsArrayOf(parseAsString).withDefault([]),
+  const [activeTab, setActiveTab] = useQueryState(
+    "tab",
+    parseAsStringEnum(Object.values(PatientTab)).withDefault(PatientTab.Active),
   );
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [search, setSearch] = useQueryState(
@@ -90,21 +85,39 @@ function PatientsPageContent() {
     setPage(1);
   };
 
+  const handleTabChange = (tab: PatientTab) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (tab === PatientTab.Inactive) {
+      setOrderBy("createdAt");
+      setOrder("desc");
+    } else {
+      setOrderBy("name");
+      setOrder("asc");
+    }
+  };
+
   const [showCreate, setShowCreate] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
   const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
   const [viewPatient, setViewPatient] = useState<Patient | null>(null);
 
   const filters = useMemo<FetchPatientsFilters>(
-    () => ({
-      search: debouncedSearch,
-      status: status.length ? status : undefined,
-      page,
-      pageSize: PAGE_SIZE,
-      orderBy: orderBy as FetchPatientsFilters["orderBy"],
-      order: order as "asc" | "desc",
-    }),
-    [debouncedSearch, status, page, orderBy, order],
+    () => {
+      const tabDefault =
+        activeTab === PatientTab.Active
+          ? [PatientStatus.ACTIVE]
+          : [PatientStatus.INACTIVE];
+      return {
+        search: debouncedSearch,
+        status: tabDefault,
+        page,
+        pageSize: PAGE_SIZE,
+        orderBy: orderBy as FetchPatientsFilters["orderBy"],
+        order: order as "asc" | "desc",
+      };
+    },
+    [debouncedSearch, activeTab, page, orderBy, order],
   );
 
   const { patients, loading, error, fetchPatients, total, totalPages } =
@@ -121,17 +134,6 @@ function PatientsPageContent() {
       { label: "SMS" },
       {
         label: "Estado",
-        filter: {
-          kind: "enum",
-          options: STATUS_OPTIONS,
-          value: status,
-          onChange: (v: string[]) => {
-            setStatus(v);
-            setPage(1);
-          },
-          testId: "patient-status-filter",
-          triggerTestId: "patient-status-filter-trigger",
-        },
       },
       {
         label: "Registrado",
@@ -139,7 +141,7 @@ function PatientsPageContent() {
       },
       { label: "" },
     ],
-    [status, setStatus, setPage],
+    [],
   );
 
   return (
@@ -192,6 +194,10 @@ function PatientsPageContent() {
             icon={UserX}
           />
         </div>
+        <PatientsTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
         <FilterBar
           value={search}
           onChange={(v) => {
@@ -291,12 +297,12 @@ function PatientsPageContent() {
             <EmptyState
               icon={STATUS_ICONS.search}
               title={
-                search || status.length > 0
+                search
                   ? "Sin resultados"
                   : "No hay pacientes aún"
               }
               sub={
-                search || status.length > 0
+                search
                   ? "Prueba ajustando los filtros de búsqueda."
                   : 'Haz clic en "Nuevo Paciente" para agregar el primero.'
               }
@@ -358,6 +364,34 @@ function PatientsPageContent() {
         />
       )}
     </>
+  );
+}
+
+function PatientsTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: PatientTab;
+  onTabChange: (tab: PatientTab) => void;
+}) {
+  const tabs = [
+    { key: PatientTab.Active, label: "Activos" },
+    { key: PatientTab.Inactive, label: "Inactivos" },
+  ];
+
+  return (
+    <div className="tab-nav">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => onTabChange(tab.key)}
+          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
+          data-testid={`patients-tab-${tab.key}`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
