@@ -1,39 +1,33 @@
 "use client";
 import React from "react";
-import { ACTION_ICONS, SELECT_ICONS } from "@/src/config/icons";
+import { SELECT_ICONS } from "@/src/config/icons";
 import { SelectOption } from "./CustomSelect";
 
 export interface EnumFilterProps {
   options: SelectOption[];
   value: string[];
   onChange: (value: string[]) => void;
-  /** Clears all selected values. */
-  onClear?: () => void;
-  /** When true, behaves as a single-select (clicking an option replaces the selection, and the "All" option is selectable). */
+  /** When true, behaves as a single-select (radio). Otherwise multi-select (checkbox). */
   single?: boolean;
   /** Hidden test id for the checklist container. */
   testId?: string;
-  /** Label used for the clear button when no empty-option label exists. */
-  clearLabel?: string;
 }
 
 export function EnumFilter({
   options,
   value,
   onChange,
-  onClear,
   single = false,
   testId,
-  clearLabel = "Limpiar",
 }: EnumFilterProps) {
-  const clear = () => {
-    if (onClear) onClear();
-    else onChange([]);
-  };
-
   const handleClick = (o: SelectOption) => {
+    if (o.value === "") {
+      // "All" choice clears the selection.
+      onChange([]);
+      return;
+    }
     if (single) {
-      onChange(o.value === "" ? [] : [o.value]);
+      onChange([o.value]);
       return;
     }
     const selected = value.includes(o.value);
@@ -42,6 +36,9 @@ export function EnumFilter({
     );
   };
 
+  const isSelected = (o: SelectOption) =>
+    o.value === "" ? value.length === 0 : value.includes(o.value);
+
   return (
     <div
       className="enum-filter"
@@ -49,7 +46,7 @@ export function EnumFilter({
       role={single ? "radiogroup" : "listbox"}
     >
       {options.map((o) => {
-        const selected = value.includes(o.value);
+        const selected = isSelected(o);
         return (
           <div
             key={o.value}
@@ -68,17 +65,6 @@ export function EnumFilter({
           </div>
         );
       })}
-      {value.length > 0 && (
-        <button
-          type="button"
-          className="btn-secondary btn-secondary--sm enum-filter__clear"
-          onClick={clear}
-          style={{display: "flex", alignItems: "center", gap: 6}}
-        >
-          <ACTION_ICONS.close size={12} />{" "}
-          {options.find((o) => o.value === "")?.label ?? clearLabel}
-        </button>
-      )}
     </div>
   );
 }

@@ -31,6 +31,15 @@ export type ColumnFilterConfig =
       onChange: (value: string) => void;
       testId?: string;
       triggerTestId?: string;
+    }
+  | {
+      kind: "custom";
+      /** Renders the filter body; receives a callback to close the popover. */
+      render: (onClose: () => void) => React.ReactNode;
+      /** Whether the filter is considered active (controls the trigger highlight). */
+      active?: boolean;
+      testId?: string;
+      triggerTestId?: string;
     };
 
 export interface ColumnDef {
@@ -145,7 +154,7 @@ interface DataTableProps<T> {
   total?: number;
 }
 
-function HeaderFilterPopover({
+export function HeaderFilterPopover({
   config,
   getAnchor,
   onClose,
@@ -192,6 +201,9 @@ function HeaderFilterPopover({
     };
   }, [update]);
 
+  // Close on outside click. Clicks inside the popover (including portaled
+  // child dropdowns such as the date picker, which render into `popoverRef`)
+  // are ignored, so no coupling to external component class names is needed.
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -199,10 +211,6 @@ function HeaderFilterPopover({
       const anchor = getAnchor();
       if (el?.contains(target)) return;
       if (anchor?.contains(target)) return;
-      if (target instanceof Element) {
-        if (target.closest(".custom-select__dropdown")) return;
-        if (target.closest(".ant-picker-dropdown")) return;
-      }
       onClose();
     };
     document.addEventListener("mousedown", handler);
@@ -217,7 +225,7 @@ function HeaderFilterPopover({
       role="dialog"
       aria-label="Filtro"
     >
-       {config.kind === "enum" ? (
+      {config.kind === "enum" ? (
         <EnumFilter
           options={config.options}
           value={config.value}
@@ -232,12 +240,15 @@ function HeaderFilterPopover({
           onChange={(next) => config.onChange(next[0] ?? "")}
           testId={config.testId}
         />
+      ) : config.kind === "custom" ? (
+        config.render(onClose)
       ) : (
         <>
           <DateTimePicker
             date={config.value}
             emitLocalDate
-            onChanged={(iso) => {
+            popupContainer={() => popoverRef.current}
+            onChange={(iso) => {
               config.onChange(iso);
               onClose();
             }}
@@ -281,6 +292,14 @@ export function DataTable<T>({
 
   const closePopover = useCallback(() => setOpenColumnIndex(null), []);
 
+  // Stable across re-renders that don't change the open column, so the
+  // popover's outside-click/positioning effects don't re-run needlessly.
+  const getAnchor = useCallback(
+    () =>
+      openColumnIndex !== null ? headerRefs.current[openColumnIndex] : null,
+    [openColumnIndex],
+  );
+
   return (
     <div className="table-card">
       {/* responsive: horizontal scroll wrapper for narrow viewports */}
@@ -301,13 +320,15 @@ export function DataTable<T>({
                   : undefined;
                 const filter = col.filter;
                 const filterActive = filter
-                  ? filter.kind === "enum"
-                    ? filter.value.length > 0
-                    : filter.value !== ""
+                  ? filter.kind === "custom"
+                    ? Boolean(filter.active)
+                    : filter.kind === "enum"
+                      ? filter.value.length > 0
+                      : filter.value !== ""
                   : false;
                 return (
                   <th
-                    key={i}
+                    key={col.sortKey ?? col.label}
                     className="th"
                     aria-sort={ariaSort}
                     ref={(el) => {
@@ -388,9 +409,9 @@ export function DataTable<T>({
         typeof document !== "undefined" &&
         columns[openColumnIndex]?.filter &&
         createPortal(
-          <HeaderFilterPopover
+           <HeaderFilterPopover
             config={columns[openColumnIndex].filter!}
-            getAnchor={() => headerRefs.current[openColumnIndex]}
+            getAnchor={getAnchor}
             onClose={closePopover}
           />,
           document.body,

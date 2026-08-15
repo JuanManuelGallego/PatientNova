@@ -58,7 +58,7 @@ export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, app
                 <RequiredField label="Fecha y Hora" />
                 <AppointmentDateTimePicker
                     date={form.startAt}
-                    onChanged={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
+                    onChange={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
                     onError={onError}
                     bookedSlots={bookedSlots}
                     blockedSlots={blockedSlots}

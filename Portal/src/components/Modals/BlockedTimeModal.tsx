@@ -193,7 +193,7 @@ export function BlockedTimeModal({
               showTime
               date={form.startTimeUtc}
               testId="blocked-time-start-input"
-              onChanged={(v) =>
+              onChange={(v) =>
                 setForm((f) => {
                   const newStart = new Date(v);
                   const currentEnd = new Date(f.endTimeUtc);
@@ -213,7 +213,7 @@ export function BlockedTimeModal({
               showTime
               date={form.endTimeUtc}
               testId="blocked-time-end-input"
-              onChanged={(v) =>
+              onChange={(v) =>
                 setForm((f) => {
                   const newEnd = new Date(v);
                   const currentStart = new Date(f.startTimeUtc);

@@ -76,7 +76,7 @@ export function SendModeAndPatientStep({
           <RequiredField label="Fecha y hora de envío" />
           <DateTimePicker
             date={form.sendAt}
-            onChanged={(d) => setForm((f) => ({ ...f, sendAt: d }))}
+            onChange={(d) => setForm((f) => ({ ...f, sendAt: d }))}
             showTime
             isFuture
             testId="reminder-send-at-picker"
