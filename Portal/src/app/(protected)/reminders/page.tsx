@@ -15,7 +15,12 @@ import { EditScheduledReminderModal } from "@/src/components/Modals/EditSchedule
 import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
-import { DataTable, TableFooter, ColumnDef } from "@/src/components/DataTable";
+import {
+  DataTable,
+  DataTableFooter,
+  ColumnDef,
+} from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchAllPatients } from "@/src/api/patients/useFetchAllPatients";
@@ -28,11 +33,10 @@ import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
-import { useSortHandler } from "@/src/hooks/useSortHandler";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { withAllOption } from "@/src/utils/options";
 import {
   useQueryState,
-  parseAsInteger,
   parseAsString,
   parseAsStringEnum,
   parseAsArrayOf,
@@ -52,27 +56,20 @@ const REMINDER_SORT = {
     "status",
     "updatedAt",
   ] as const,
-  // Only columns that actually expose a `sortKey` are sortable.
   sortable: ["sendAt", "status"] as const,
 } as const;
 
 type ReminderOrderBy = (typeof REMINDER_SORT.orderBy)[number];
 
-const STATUS_ACTIVE_OPTIONS = [
-  { value: "", label: "Todos" },
-  ...Object.values([ReminderStatus.PENDING, ReminderStatus.QUEUED]).map((v) => ({
-    value: v,
-    label: REMINDER_STATUS_CONFIG[v].label,
-  })),
-];
+const STATUS_ACTIVE_OPTIONS = withAllOption(
+  [ReminderStatus.PENDING, ReminderStatus.QUEUED],
+  (v) => REMINDER_STATUS_CONFIG[v].label,
+);
 
-const STATUS_HISTORY_OPTIONS = [
-  { value: "", label: "Todos" },
-  ...Object.values([ReminderStatus.CANCELLED, ReminderStatus.FAILED, ReminderStatus.SENT]).map((v) => ({
-    value: v,
-    label: REMINDER_STATUS_CONFIG[v].label,
-  })),
-];
+const STATUS_HISTORY_OPTIONS = withAllOption(
+  [ReminderStatus.CANCELLED, ReminderStatus.FAILED, ReminderStatus.SENT],
+  (v) => REMINDER_STATUS_CONFIG[v].label,
+);
 
 function RemindersPageContent() {
   const { stats, fetchStats } = useFetchRemindersStats();
@@ -81,12 +78,6 @@ function RemindersPageContent() {
     "activeTab",
     parseAsStringEnum(Object.values(ActiveTab)).withDefault(ActiveTab.Active),
   );
-  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [ search, setSearch ] = useQueryState(
-    "search",
-    parseAsString.withDefault(""),
-  );
-  const debouncedSearch = useDebounceState(search, 250);
   const [ dateFilter, setDateFilter ] = useQueryState(
     "dateFilter",
     parseAsString.withDefault(""),
@@ -95,23 +86,22 @@ function RemindersPageContent() {
     "status",
     parseAsArrayOf(parseAsString).withDefault([]),
   );
-  const [ orderBy, setOrderBy ] = useQueryState(
-    "orderBy",
-    parseAsStringEnum([...REMINDER_SORT.orderBy]).withDefault("sendAt"),
-  );
-  const [ order, setOrder ] = useQueryState(
-    "order",
-    parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
-  );
 
-  const handleSort = useSortHandler<ReminderOrderBy>(
-    REMINDER_SORT.sortable,
+  const {
+    page,
+    setPage,
+    debouncedSearch,
     orderBy,
     setOrderBy,
     order,
     setOrder,
-    setPage,
-  );
+    handleSort,
+    searchProps,
+  } = useListQueryState<ReminderOrderBy>({
+    orderByOptions: REMINDER_SORT.orderBy,
+    orderByDefault: "sendAt",
+    sortable: REMINDER_SORT.sortable,
+  });
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -229,12 +219,7 @@ function RemindersPageContent() {
         />
         {activeTab !== "Bulk" && (
           <FilterBar
-            value={search}
-            onChange={(v) => { setSearch(v); setPage(1); }}
-            onClear={() => {
-              setSearch("");
-              setPage(1);
-            }}
+            {...searchProps}
             placeholder="Buscar por nombre, número, canal…"
             testId="reminders-search-input"
           />
@@ -486,11 +471,11 @@ function ActiveRemindersTab({
         />
       }
       footer={
-        <TableFooter
+        <DataTableFooter
           page={page}
-          pageSize={PAGE_SIZE}
           total={total}
           totalPages={totalPages}
+          pageSize={PAGE_SIZE}
           label="recordatorios"
           onPageChange={setPage}
         />
@@ -645,11 +630,11 @@ function HistoryRemindersTab({
         />
       }
       footer={
-        <TableFooter
+        <DataTableFooter
           page={page}
-          pageSize={PAGE_SIZE}
           total={total}
           totalPages={totalPages}
+          pageSize={PAGE_SIZE}
           label="recordatorios"
           onPageChange={setPage}
         />
@@ -694,31 +679,17 @@ function ReminderTabs({
   onTabChange: (tab: ActiveTab) => void;
   stats: ReturnType<typeof useFetchRemindersStats>[ "stats" ];
 }) {
-  const tabs = [
-    {
-      key: ActiveTab.Active,
-      label: "Activos",
-    },
-    {
-      key: ActiveTab.History,
-      label: "Historial",
-    },
-    { key: ActiveTab.Bulk, label: "Envío Masivo"},
-  ];
-
   return (
-    <div className="tab-nav">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          onClick={() => onTabChange(tab.key)}
-          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
-          data-testid={`reminders-tab-${tab.key.toLowerCase()}`}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
+    <TabNav
+      items={[
+        { key: ActiveTab.Active, label: "Activos" },
+        { key: ActiveTab.History, label: "Historial" },
+        { key: ActiveTab.Bulk, label: "Envío Masivo" },
+      ]}
+      active={activeTab}
+      onSelect={(key) => onTabChange(key as ActiveTab)}
+      testIdPrefix="reminders-tab"
+    />
   );
 }
 

@@ -1,26 +1,28 @@
 import { useFetchAuditLogs } from "@/src/api/audit-logs/useFetchAuditLogs";
 import { AuditLog, EntityType, ActionType, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
 import { SelectOption } from "@/src/components/CustomSelect";
-import { DataTable, TableFooter, ColumnDef } from "@/src/components/DataTable";
+import {
+  DataTable,
+  DataTableFooter,
+  ColumnDef,
+} from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
 import { ActionPill } from "@/src/components/Info/ActionPill";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { fmtTimestamp } from "@/src/utils/TimeUtils";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { useMemo, useState } from "react";
 import {
   useQueryState,
-  parseAsInteger,
   parseAsString,
   parseAsArrayOf,
-  parseAsStringEnum,
 } from "nuqs";
 import { Clock } from "lucide-react";
 import { EntityTypePill } from "../Info/EntityTypePill";
-import { useSortHandler } from "@/src/hooks/useSortHandler";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { withAllOption } from "@/src/utils/options";
 
 const PAGE_SIZE = 10;
 
@@ -37,42 +39,39 @@ const AUDIT_SORT = {
 
 type AuditOrderBy = (typeof AUDIT_SORT.orderBy)[number];
 
-const ENTITY_OPTIONS: SelectOption[] = [
-  { value: "", label: "Todas" },
-  ...Object.values(EntityType).map((v) => ({ value: v, label: ENTITY_TYPE_CONFIG[v].label })),
-];
+const ENTITY_OPTIONS: SelectOption[] = withAllOption(
+  Object.values(EntityType),
+  (v) => ENTITY_TYPE_CONFIG[v].label,
+  "Todas",
+);
 
-const ACTION_OPTIONS: SelectOption[] = [
-  { value: "", label: "Todas" },
-  ...Object.values(ActionType).map((v) => ({ value: v, label: ACTION_TYPE_CONFIG[v].label })),
-];
+const ACTION_OPTIONS: SelectOption[] = withAllOption(
+  Object.values(ActionType),
+  (v) => ACTION_TYPE_CONFIG[v].label,
+  "Todas",
+);
 
 export function AuditLogsTab() {
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
-  const [search, setSearch] = useQueryState("search", parseAsString.withDefault(""));
-  const debouncedSearch = useDebounceState(search, 250);
   const [entityType, setEntityType] = useQueryState("entityType", parseAsArrayOf(parseAsString).withDefault([]));
   const [actionType, setActionType] = useQueryState("actionType", parseAsArrayOf(parseAsString).withDefault([]));
   const [dateFilter, setDateFilter] = useQueryState("dateFilter", parseAsString.withDefault(""));
   const [entityId, setEntityId] = useQueryState("entityId", parseAsString.withDefault(""));
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [orderBy, setOrderBy] = useQueryState(
-    "orderBy",
-    parseAsStringEnum([...AUDIT_SORT.orderBy]).withDefault("eventTimeUtc"),
-  );
-  const [order, setOrder] = useQueryState(
-    "order",
-    parseAsStringEnum(["asc", "desc"]).withDefault("desc"),
-  );
 
-  const handleSort = useSortHandler<AuditOrderBy>(
-    AUDIT_SORT.sortable,
-    orderBy,
-    setOrderBy,
-    order,
-    setOrder,
+  const {
+    page,
     setPage,
-  );
+    debouncedSearch,
+    orderBy,
+    order,
+    handleSort,
+    searchProps,
+  } = useListQueryState<AuditOrderBy>({
+    orderByOptions: AUDIT_SORT.orderBy,
+    orderByDefault: "eventTimeUtc",
+    sortable: AUDIT_SORT.sortable,
+    orderDefault: "desc",
+  });
 
   const filters = useMemo<FetchAuditLogsFilters>(
     () => ({
@@ -132,11 +131,6 @@ export function AuditLogsTab() {
     [actionType, entityType, dateFilter, setActionType, setEntityType, setDateFilter, setPage],
   );
 
-  const handleSearchClear = () => {
-    setSearch("");
-    setPage(1);
-  };
-
   const { auditLogs, loading, error, fetchAuditLogs, totalPages, total } = useFetchAuditLogs(filters);
   const showSpinner = useDelayedLoading(loading);
 
@@ -177,9 +171,7 @@ export function AuditLogsTab() {
       </div>
 
       <FilterBar
-        value={search}
-        onChange={(v) => { setSearch(v); setPage(1); }}
-        onClear={handleSearchClear}
+        {...searchProps}
         placeholder="Buscar por actor, descripcion o entidad…"
         testId="audit-search-input"
       />
@@ -229,11 +221,11 @@ export function AuditLogsTab() {
           />
         }
         footer={
-          <TableFooter
+          <DataTableFooter
             page={page}
-            pageSize={PAGE_SIZE}
             total={total}
             totalPages={totalPages}
+            pageSize={PAGE_SIZE}
             label="registros"
             onPageChange={setPage}
             testIdPrefix="audit-pagination"

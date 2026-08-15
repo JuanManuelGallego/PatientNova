@@ -59,6 +59,40 @@ interface TableFooterProps {
   testIdPrefix?: string;
 }
 
+export interface DataTableFooterProps {
+  page: number;
+  total: number;
+  totalPages: number;
+  pageSize: number;
+  label: string;
+  onPageChange: (page: number) => void;
+  /** Optional prefix that scopes the pagination control test IDs (e.g. "appointments-pagination"). */
+  testIdPrefix?: string;
+}
+
+/** Thin wrapper over {@link TableFooter} for the common `DataTable` footer assembly. */
+export function DataTableFooter({
+  page,
+  total,
+  totalPages,
+  pageSize,
+  label,
+  onPageChange,
+  testIdPrefix,
+}: DataTableFooterProps) {
+  return (
+    <TableFooter
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      totalPages={totalPages}
+      label={label}
+      onPageChange={onPageChange}
+      testIdPrefix={testIdPrefix}
+    />
+  );
+}
+
 export function TableFooter({
   page,
   pageSize,

@@ -15,7 +15,8 @@ import {
   DollarSign,
   RefreshCw,
 } from "lucide-react";
-import { DataTable, TableFooter, ColumnDef } from "@/src/components/DataTable";
+import { DataTable, DataTableFooter, ColumnDef } from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
@@ -41,11 +42,10 @@ import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppoin
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
-import { useSortHandler } from "@/src/hooks/useSortHandler";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { withAllOption } from "@/src/utils/options";
 import {
   useQueryState,
-  parseAsInteger,
   parseAsString,
   parseAsArrayOf,
   parseAsStringEnum,
@@ -78,13 +78,8 @@ type ApptOrderBy = (typeof APPT_SORT.orderBy)[number];
 const tabStatuses = (tab: AppointmentTab): AppointmentStatus[] =>
   tab === AppointmentTab.Upcoming ? DEFAULT_APPT_STATUS : HISTORY_APPT_STATUS;
 
-const STATUS_OPTIONS = (tab: AppointmentTab) => [
-  { value: "", label: "Todos" },
-  ...tabStatuses(tab).map((v) => ({
-    value: v,
-    label: APPT_STATUS_CFG[v].label,
-  })),
-];
+const STATUS_OPTIONS = (tab: AppointmentTab) =>
+  withAllOption(tabStatuses(tab), (v) => APPT_STATUS_CFG[v].label);
 
 const PAID_OPTIONS = [
   { value: "", label: "Todos" },
@@ -92,15 +87,11 @@ const PAID_OPTIONS = [
   { value: "false", label: "Sin pagar" },
 ];
 
-const TYPE_OPTIONS = (types: { id: string; name: string }[]) => [
-  { value: "", label: "Todos" },
-  ...types.map((t) => ({ value: t.id, label: t.name })),
-];
+const TYPE_OPTIONS = (types: { id: string; name: string }[]) =>
+  withAllOption(types, (t) => t.name);
 
-const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) => [
-  { value: "", label: "Todos" },
-  ...locations.map((l) => ({ value: l.id, label: l.name })),
-];
+const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
+  withAllOption(locations, (l) => l.name);
 
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
@@ -132,29 +123,21 @@ function AppointmentsPageContent() {
     "dateFilter",
     parseAsString.withDefault(""),
   );
-  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [ search, setSearch ] = useQueryState(
-    "search",
-    parseAsString.withDefault(""),
-  );
-  const debouncedSearch = useDebounceState(search, 250);
-  const [ orderBy, setOrderBy ] = useQueryState(
-    "orderBy",
-    parseAsStringEnum([...APPT_SORT.orderBy]).withDefault("startAt"),
-  );
-  const [ order, setOrder ] = useQueryState(
-    "order",
-    parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
-  );
-
-  const handleSort = useSortHandler<ApptOrderBy>(
-    APPT_SORT.sortable,
+  const {
+    page,
+    setPage,
+    debouncedSearch,
     orderBy,
     setOrderBy,
     order,
     setOrder,
-    setPage,
-  );
+    handleSort,
+    searchProps,
+  } = useListQueryState<ApptOrderBy>({
+    orderByOptions: APPT_SORT.orderBy,
+    orderByDefault: "startAt",
+    sortable: APPT_SORT.sortable,
+  });
 
   const handleTabChange = (tab: AppointmentTab) => {
     setActiveTab(tab);
@@ -365,21 +348,21 @@ function AppointmentsPageContent() {
             icon={DollarSign}
           />
         </div>
-        <AppointmentsTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
+        <TabNav
+          items={[
+            { key: AppointmentTab.Upcoming, label: "Próximas" },
+            { key: AppointmentTab.History, label: "Historial" },
+          ]}
+          active={activeTab}
+          onSelect={(key) => handleTabChange(key as AppointmentTab)}
+          testIdPrefix="appointments-tab"
         />
         {error && <ErrorBanner msg={error} onRetry={fetchAppointments} />}
         {actionError && (
           <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
         )}
         <FilterBar
-          value={search}
-          onChange={(v) => { setSearch(v); setPage(1); }}
-          onClear={() => {
-            setSearch("");
-            setPage(1);
-          }}
+          {...searchProps}
           placeholder="Buscar paciente, tipo, ubicación…"
           testId="appointments-search-input"
         />
@@ -504,11 +487,11 @@ function AppointmentsPageContent() {
             />
           }
           footer={
-            <TableFooter
+            <DataTableFooter
               page={page}
-              pageSize={PAGE_SIZE}
               total={total}
               totalPages={totalPages}
+              pageSize={PAGE_SIZE}
               label="citas"
               onPageChange={setPage}
               testIdPrefix="appointments-pagination"
@@ -569,34 +552,6 @@ function AppointmentsPageContent() {
         />
       )}
     </>
-  );
-}
-
-function AppointmentsTabs({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: AppointmentTab;
-  onTabChange: (tab: AppointmentTab) => void;
-}) {
-  const tabs = [
-    { key: AppointmentTab.Upcoming, label: "Próximas" },
-    { key: AppointmentTab.History, label: "Historial" },
-  ];
-
-  return (
-    <div className="tab-nav">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          onClick={() => onTabChange(tab.key)}
-          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
-          data-testid={`appointments-tab-${tab.key}`}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
   );
 }
 

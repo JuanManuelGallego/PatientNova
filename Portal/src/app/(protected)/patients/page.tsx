@@ -1,11 +1,6 @@
 "use client";
 import { useState, useMemo, Suspense } from "react";
-import {
-  useQueryState,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from "nuqs";
+import { useQueryState, parseAsStringEnum } from "nuqs";
 
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
@@ -18,7 +13,12 @@ import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
-import { DataTable, TableFooter, ColumnDef } from "@/src/components/DataTable";
+import {
+  DataTable,
+  DataTableFooter,
+  ColumnDef,
+} from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
 import { Channel } from "@/src/types/Reminder";
@@ -28,11 +28,10 @@ import { PatientStatusPill } from "@/src/components/Info/StatusPill";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
 import { todayString } from "@/src/utils/TimeUtils";
-import { useSortHandler } from "@/src/hooks/useSortHandler";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
 
 const PAGE_SIZE = 10;
 
@@ -55,29 +54,22 @@ function PatientsPageContent() {
     "tab",
     parseAsStringEnum(Object.values(PatientTab)).withDefault(PatientTab.Active),
   );
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [search, setSearch] = useQueryState(
-    "search",
-    parseAsString.withDefault(""),
-  );
-  const debouncedSearch = useDebounceState(search, 250);
-  const [orderBy, setOrderBy] = useQueryState(
-    "orderBy",
-    parseAsStringEnum([...PATIENT_SORT.orderBy]).withDefault("name"),
-  );
-  const [order, setOrder] = useQueryState(
-    "order",
-    parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
-  );
 
-  const handleSort = useSortHandler<PatientOrderBy>(
-    PATIENT_SORT.sortable,
+  const {
+    page,
+    setPage,
+    debouncedSearch,
     orderBy,
     setOrderBy,
     order,
     setOrder,
-    setPage,
-  );
+    handleSort,
+    searchProps,
+  } = useListQueryState<PatientOrderBy>({
+    orderByOptions: PATIENT_SORT.orderBy,
+    orderByDefault: "name",
+    sortable: PATIENT_SORT.sortable,
+  });
 
   const handleTabChange = (tab: PatientTab) => {
     setActiveTab(tab);
@@ -188,20 +180,17 @@ function PatientsPageContent() {
             icon={UserX}
           />
         </div>
-        <PatientsTabs
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
+        <TabNav
+          items={[
+            { key: PatientTab.Active, label: "Activos" },
+            { key: PatientTab.Inactive, label: "Inactivos" },
+          ]}
+          active={activeTab}
+          onSelect={(key) => handleTabChange(key as PatientTab)}
+          testIdPrefix="patients-tab"
         />
         <FilterBar
-          value={search}
-          onChange={(v) => {
-            setSearch(v);
-            setPage(1);
-          }}
-          onClear={() => {
-            setSearch("");
-            setPage(1);
-          }}
+          {...searchProps}
           placeholder="Buscar por nombre, apellido o correo…"
         />
         {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
@@ -292,23 +281,23 @@ function PatientsPageContent() {
             <EmptyState
               icon={STATUS_ICONS.search}
               title={
-                search
+                searchProps.value
                   ? "Sin resultados"
                   : "No hay pacientes aún"
               }
               sub={
-                search
+                searchProps.value
                   ? "Prueba ajustando los filtros de búsqueda."
                   : 'Haz clic en "Nuevo Paciente" para agregar el primero.'
               }
             />
           }
           footer={
-            <TableFooter
+            <DataTableFooter
               page={page}
-              pageSize={PAGE_SIZE}
               total={total}
               totalPages={totalPages}
+              pageSize={PAGE_SIZE}
               label="pacientes"
               onPageChange={setPage}
             />
@@ -359,34 +348,6 @@ function PatientsPageContent() {
         />
       )}
     </>
-  );
-}
-
-function PatientsTabs({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: PatientTab;
-  onTabChange: (tab: PatientTab) => void;
-}) {
-  const tabs = [
-    { key: PatientTab.Active, label: "Activos" },
-    { key: PatientTab.Inactive, label: "Inactivos" },
-  ];
-
-  return (
-    <div className="tab-nav">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          onClick={() => onTabChange(tab.key)}
-          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
-          data-testid={`patients-tab-${tab.key}`}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
   );
 }
 
