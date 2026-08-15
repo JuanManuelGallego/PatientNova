@@ -23,21 +23,13 @@ import { Clock } from "lucide-react";
 import { EntityTypePill } from "../Info/EntityTypePill";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { withAllOption } from "@/src/utils/options";
-
-const PAGE_SIZE = 10;
-
-const AUDIT_SORT = {
-  orderBy: [
-    "eventTimeUtc",
-    "entityType",
-    "actionType",
-    "source",
-    "actorId",
-  ] as const,
-  sortable: ["eventTimeUtc", "entityType", "actionType"] as const,
-} as const;
-
-type AuditOrderBy = (typeof AUDIT_SORT.orderBy)[number];
+import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  AUDIT_SORT,
+  SORT_DIRECTION,
+  type AuditOrderBy,
+} from "@/src/utils/listQuery";
 
 const ENTITY_OPTIONS: SelectOption[] = withAllOption(
   Object.values(EntityType),
@@ -53,10 +45,10 @@ const ACTION_OPTIONS: SelectOption[] = withAllOption(
 
 export function AuditLogsTab() {
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
-  const [entityType, setEntityType] = useQueryState("entityType", parseAsArrayOf(parseAsString).withDefault([]));
-  const [actionType, setActionType] = useQueryState("actionType", parseAsArrayOf(parseAsString).withDefault([]));
-  const [dateFilter, setDateFilter] = useQueryState("dateFilter", parseAsString.withDefault(""));
-  const [entityId, setEntityId] = useQueryState("entityId", parseAsString.withDefault(""));
+  const [entityType, setEntityType] = useQueryState(QUERY_PARAMS.auditEntityType, parseAsArrayOf(parseAsString).withDefault([]));
+  const [actionType, setActionType] = useQueryState(QUERY_PARAMS.auditActionType, parseAsArrayOf(parseAsString).withDefault([]));
+  const [dateFilter, setDateFilter] = useQueryState(QUERY_PARAMS.auditDate, parseAsString.withDefault(""));
+  const [entityId, setEntityId] = useQueryState(QUERY_PARAMS.auditEntityId, parseAsString.withDefault(""));
 
   const {
     page,
@@ -68,9 +60,9 @@ export function AuditLogsTab() {
     searchProps,
   } = useListQueryState<AuditOrderBy>({
     orderByOptions: AUDIT_SORT.orderBy,
-    orderByDefault: "eventTimeUtc",
+    orderByDefault: AUDIT_SORT.orderBy[0],
     sortable: AUDIT_SORT.sortable,
-    orderDefault: "desc",
+    orderDefault: SORT_DIRECTION.desc,
   });
 
   const filters = useMemo<FetchAuditLogsFilters>(
@@ -84,7 +76,7 @@ export function AuditLogsTab() {
       page,
       pageSize: PAGE_SIZE,
       orderBy: orderBy as FetchAuditLogsFilters["orderBy"],
-      order: order as "asc" | "desc",
+      order,
     }),
     [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order],
   );

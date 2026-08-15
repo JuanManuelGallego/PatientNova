@@ -36,6 +36,13 @@ import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { withAllOption } from "@/src/utils/options";
 import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  REMINDER_SORT,
+  SORT_DIRECTION,
+  type ReminderOrderBy,
+} from "@/src/utils/listQuery";
+import {
   useQueryState,
   parseAsString,
   parseAsStringEnum,
@@ -47,19 +54,6 @@ enum ActiveTab {
   History = "History",
   Bulk = "Bulk",
 }
-const PAGE_SIZE = 10;
-
-const REMINDER_SORT = {
-  orderBy: [
-    "sendAt",
-    "createdAt",
-    "status",
-    "updatedAt",
-  ] as const,
-  sortable: ["sendAt", "status"] as const,
-} as const;
-
-type ReminderOrderBy = (typeof REMINDER_SORT.orderBy)[number];
 
 const STATUS_ACTIVE_OPTIONS = withAllOption(
   [ReminderStatus.PENDING, ReminderStatus.QUEUED],
@@ -75,15 +69,15 @@ function RemindersPageContent() {
   const { stats, fetchStats } = useFetchRemindersStats();
 
   const [ activeTab, setActiveTab ] = useQueryState(
-    "activeTab",
+    QUERY_PARAMS.reminderTab,
     parseAsStringEnum(Object.values(ActiveTab)).withDefault(ActiveTab.Active),
   );
   const [ dateFilter, setDateFilter ] = useQueryState(
-    "dateFilter",
+    QUERY_PARAMS.reminderDate,
     parseAsString.withDefault(""),
   );
   const [ statusFilter, setStatusFilter ] = useQueryState(
-    "status",
+    QUERY_PARAMS.reminderStatus,
     parseAsArrayOf(parseAsString).withDefault([]),
   );
 
@@ -99,7 +93,7 @@ function RemindersPageContent() {
     searchProps,
   } = useListQueryState<ReminderOrderBy>({
     orderByOptions: REMINDER_SORT.orderBy,
-    orderByDefault: "sendAt",
+    orderByDefault: REMINDER_SORT.orderBy[0],
     sortable: REMINDER_SORT.sortable,
   });
 
@@ -107,11 +101,11 @@ function RemindersPageContent() {
     setActiveTab(tab);
     setPage(1);
     if (tab === ActiveTab.History) {
-      setOrderBy("updatedAt");
-      setOrder("desc");
+      setOrderBy(REMINDER_SORT.orderBy[3]);
+      setOrder(SORT_DIRECTION.desc);
     } else if (tab === ActiveTab.Active) {
-      setOrderBy("sendAt");
-      setOrder("asc");
+      setOrderBy(REMINDER_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
     }
   };
 
@@ -141,7 +135,7 @@ function RemindersPageContent() {
         dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
         dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
         orderBy: orderBy as FetchRemindersFilters["orderBy"],
-        order: order as "asc" | "desc",
+        order,
       };
     },
     [ page, debouncedSearch, activeTab, statusFilter, dateFilter, orderBy, order ],

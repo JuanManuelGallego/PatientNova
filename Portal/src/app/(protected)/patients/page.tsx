@@ -32,26 +32,24 @@ import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats"
 import { FilterBar } from "@/src/components/FilterBar";
 import { todayString } from "@/src/utils/TimeUtils";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
-
-const PAGE_SIZE = 10;
+import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  PATIENT_SORT,
+  SORT_DIRECTION,
+  type PatientOrderBy,
+} from "@/src/utils/listQuery";
 
 enum PatientTab {
   Active = "active",
   Inactive = "inactive",
 }
 
-const PATIENT_SORT = {
-  orderBy: ["name", "email", "createdAt"] as const,
-  sortable: ["name", "email", "createdAt"] as const,
-} as const;
-
-type PatientOrderBy = (typeof PATIENT_SORT.orderBy)[number];
-
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
 
   const [activeTab, setActiveTab] = useQueryState(
-    "tab",
+    QUERY_PARAMS.patientTab,
     parseAsStringEnum(Object.values(PatientTab)).withDefault(PatientTab.Active),
   );
 
@@ -67,7 +65,7 @@ function PatientsPageContent() {
     searchProps,
   } = useListQueryState<PatientOrderBy>({
     orderByOptions: PATIENT_SORT.orderBy,
-    orderByDefault: "name",
+    orderByDefault: PATIENT_SORT.orderBy[0],
     sortable: PATIENT_SORT.sortable,
   });
 
@@ -75,11 +73,11 @@ function PatientsPageContent() {
     setActiveTab(tab);
     setPage(1);
     if (tab === PatientTab.Inactive) {
-      setOrderBy("createdAt");
-      setOrder("desc");
+      setOrderBy(PATIENT_SORT.orderBy[2]);
+      setOrder(SORT_DIRECTION.desc);
     } else {
-      setOrderBy("name");
-      setOrder("asc");
+      setOrderBy(PATIENT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
     }
   };
 
@@ -100,7 +98,7 @@ function PatientsPageContent() {
         page,
         pageSize: PAGE_SIZE,
         orderBy: orderBy as FetchPatientsFilters["orderBy"],
-        order: order as "asc" | "desc",
+        order,
       };
     },
     [debouncedSearch, activeTab, page, orderBy, order],

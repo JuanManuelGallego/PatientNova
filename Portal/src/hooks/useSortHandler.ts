@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { SORT_DIRECTION, type SortDirection } from "@/src/utils/listQuery";
 
 /**
  * Returns a stable `onSort` handler that toggles direction on the active
@@ -11,18 +12,18 @@ export function useSortHandler<T extends string>(
   sortable: readonly T[],
   orderBy: T,
   setOrderBy: (value: T) => void,
-  order: "asc" | "desc",
-  setOrder: (value: "asc" | "desc") => void,
+  order: SortDirection,
+  setOrder: (value: SortDirection) => void,
   setPage: (page: number) => void,
 ): (sortKey: string) => void {
   return useCallback(
     (sortKey: string) => {
       if (!(sortable as readonly string[]).includes(sortKey)) return;
       if (orderBy === sortKey) {
-        setOrder(order === "asc" ? "desc" : "asc");
+        setOrder(order === SORT_DIRECTION.asc ? SORT_DIRECTION.desc : SORT_DIRECTION.asc);
       } else {
         setOrderBy(sortKey as T);
-        setOrder("asc");
+        setOrder(SORT_DIRECTION.asc);
       }
       setPage(1);
     },

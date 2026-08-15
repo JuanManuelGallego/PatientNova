@@ -45,6 +45,13 @@ import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { withAllOption } from "@/src/utils/options";
 import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  APPT_SORT,
+  SORT_DIRECTION,
+  type ApptOrderBy,
+} from "@/src/utils/listQuery";
+import {
   useQueryState,
   parseAsString,
   parseAsArrayOf,
@@ -52,28 +59,10 @@ import {
 } from "nuqs";
 import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 
-const PAGE_SIZE = 10;
-
 enum AppointmentTab {
   Upcoming = "upcoming",
   History = "history",
 }
-
-const APPT_SORT = {
-  orderBy: [
-    "startAt",
-    "status",
-    "price",
-    "createdAt",
-  ] as const,
-  sortable: [
-    "startAt",
-    "status",
-    "price",
-  ] as const,
-} as const;
-
-type ApptOrderBy = (typeof APPT_SORT.orderBy)[number];
 
 const tabStatuses = (tab: AppointmentTab): AppointmentStatus[] =>
   tab === AppointmentTab.Upcoming ? DEFAULT_APPT_STATUS : HISTORY_APPT_STATUS;
@@ -100,27 +89,27 @@ function AppointmentsPageContent() {
   const { locations } = useFetchLocations();
 
   const [ status, setStatus ] = useQueryState(
-    "status",
+    QUERY_PARAMS.apptStatus,
     parseAsArrayOf(parseAsString).withDefault([]),
   );
   const [ activeTab, setActiveTab ] = useQueryState(
-    "tab",
+    QUERY_PARAMS.apptTab,
     parseAsStringEnum(Object.values(AppointmentTab)).withDefault(AppointmentTab.Upcoming),
   );
   const [ paid, setPaid ] = useQueryState(
-    "paid",
+    QUERY_PARAMS.apptPaid,
     parseAsArrayOf(parseAsString).withDefault([]),
   );
   const [ typeId, setTypeId ] = useQueryState(
-    "typeId",
+    QUERY_PARAMS.apptTypeId,
     parseAsString.withDefault(""),
   );
   const [ locationId, setLocationId ] = useQueryState(
-    "locationId",
+    QUERY_PARAMS.apptLocationId,
     parseAsString.withDefault(""),
   );
   const [ dateFilter, setDateFilter ] = useQueryState(
-    "dateFilter",
+    QUERY_PARAMS.apptDate,
     parseAsString.withDefault(""),
   );
   const {
@@ -135,7 +124,7 @@ function AppointmentsPageContent() {
     searchProps,
   } = useListQueryState<ApptOrderBy>({
     orderByOptions: APPT_SORT.orderBy,
-    orderByDefault: "startAt",
+    orderByDefault: APPT_SORT.orderBy[0],
     sortable: APPT_SORT.sortable,
   });
 
@@ -143,11 +132,11 @@ function AppointmentsPageContent() {
     setActiveTab(tab);
     setPage(1);
     if (tab === AppointmentTab.History) {
-      setOrderBy("startAt");
-      setOrder("desc");
+      setOrderBy(APPT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.desc);
     } else {
-      setOrderBy("startAt");
-      setOrder("asc");
+      setOrderBy(APPT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
     }
   };
 
@@ -173,7 +162,7 @@ function AppointmentsPageContent() {
         page: page,
         pageSize: PAGE_SIZE,
         orderBy: orderBy as FetchAppointmentsFilters["orderBy"],
-        order: order as "asc" | "desc",
+        order,
       };
     },
     [ status, paid, debouncedSearch, dateFilter, typeId, locationId, activeTab, page, orderBy, order ],

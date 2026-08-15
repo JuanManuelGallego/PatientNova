@@ -16,6 +16,7 @@ import { AntecedentsSection } from "@/src/components/MedicalRecord/AntecedentsSe
 import { EvolutionNotes } from "@/src/components/EvolutionNotes";
 import { todayString } from "@/src/utils/TimeUtils";
 import { parseAsString, useQueryState } from "nuqs";
+import { QUERY_PARAMS } from "@/src/utils/listQuery";
 import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 import { MedicalRecordCard } from "@/src/components/MedicalRecord/MedicalRecordCard";
 import { useCreateMedicalRecord } from "@/src/api/medical-records/useCreateMedicalRecord";
@@ -32,7 +33,7 @@ import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpec
 function MedicalRecordsPageContent() {
   const { user } = useAuthContext();
   const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
-  const [ selectedPatientId, setSelectedPatientId ] = useQueryState("patientId", parseAsString.withDefault(""));
+  const [ selectedPatientId, setSelectedPatientId ] = useQueryState(QUERY_PARAMS.recordPatientId, parseAsString.withDefault(""));
   const [ form, setForm ] = useState<FormValues>(createEmptyForm());
 
   const { createMedicalRecord } = useCreateMedicalRecord();
