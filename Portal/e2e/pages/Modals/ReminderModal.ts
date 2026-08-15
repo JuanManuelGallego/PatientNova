@@ -53,10 +53,10 @@ export class ReminderModal {
   }
 
   async selectPatient(name: string) {
-    const input = this.dialog.getByRole('combobox');
+    const input = this.dialog.locator('input.patient-autocomplete__input');
     await input.click();
     await input.fill(name);
-    await this.page.getByRole('option', { name }).click();
+    await this.page.getByRole('option', { name }).first().click();
   }
 
   async selectFromDropdown(labelText: string, optionLabel: string) {

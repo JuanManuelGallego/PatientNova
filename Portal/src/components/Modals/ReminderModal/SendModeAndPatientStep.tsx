@@ -89,6 +89,7 @@ export function SendModeAndPatientStep({
           disabled={patients.length === 0}
           value={form.patientId}
           placeholder="Seleccionar paciente…"
+          data-testid="reminder-patient"
           onChange={onPatientChange}
         />
       </label>
