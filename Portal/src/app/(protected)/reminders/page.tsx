@@ -288,13 +288,13 @@ function ActiveRemindersTab({
   return (
     <DataTable
       columns={[
-        "Destinatario",
-        "Canal",
-        "Estado",
-        "Programado para",
-        "Dentro de",
-        "Creado el",
-        "",
+        { label: "Destinatario" },
+        { label: "Canal" },
+        { label: "Estado" },
+        { label: "Programado para" },
+        { label: "Dentro de" },
+        { label: "Creado el" },
+        { label: "" },
       ]}
       rows={reminders}
       loading={loading}
@@ -383,14 +383,14 @@ function HistoryRemindersTab({
   return (
     <DataTable
       columns={[
-        "Destinatario",
-        "Canal",
-        "Estado",
-        "Programado para",
-        "Última actualización",
-        "ID Mensaje",
-        "Error",
-        "",
+        { label: "Destinatario" },
+        { label: "Canal" },
+        { label: "Estado" },
+        { label: "Programado para" },
+        { label: "Última actualización" },
+        { label: "ID Mensaje" },
+        { label: "Error" },
+        { label: "" },
       ]}
       rows={reminders}
       loading={loading}

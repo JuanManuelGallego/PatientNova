@@ -55,6 +55,7 @@ import {
   Paperclip,
   Send,
   Flag,
+  Filter,
   CircleDot,
   Loader2,
   type LucideIcon,
@@ -86,6 +87,7 @@ export const ACTION_ICONS = {
   send: Send,
   link: ExternalLink,
   loader: Loader2,
+  filter: Filter,
 } as const satisfies Record<string, LucideIcon>;
 
 /* ── Status Icons (for ConfirmDialog, EmptyState, etc.) ──────────────────── */

@@ -282,14 +282,14 @@ function AppointmentsPageContent() {
         </FilterBar>
         <DataTable
           columns={[
-            "Paciente",
-            "Tipo",
-            "Fecha y Hora",
-            "Recordatorio",
-            "Ubicación",
-            "Estado",
-            "Pago",
-            "",
+            { label: "Paciente" },
+            { label: "Tipo" },
+            { label: "Fecha y Hora" },
+            { label: "Recordatorio" },
+            { label: "Ubicación" },
+            { label: "Estado" },
+            { label: "Pago" },
+            { label: "" },
           ]}
           rows={appointments}
           loading={loading}

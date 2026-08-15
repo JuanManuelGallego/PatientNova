@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Playwright e2e tests (not React code)
     "e2e/**",
+    // Generated Playwright report artifacts (gitignored)
+    "playwright-report/**",
+    "blob-report/**",
   ]),
 ]);
 

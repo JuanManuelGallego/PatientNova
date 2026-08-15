@@ -42,11 +42,14 @@ export const auditLogRepository = {
 
     const needsInMemorySearch = search && search.trim().length > 0;
 
+    const entityTypes = entityType ? (Array.isArray(entityType) ? entityType : [ entityType ]) : undefined;
+    const actionTypes = actionType ? (Array.isArray(actionType) ? actionType : [ actionType ]) : undefined;
+
     const where: Prisma.AuditLogWhereInput = {
       userId,
-      ...(entityType && { entityType }),
+      ...(entityTypes && { entityType: { in: entityTypes } }),
       ...(entityId && { entityId }),
-      ...(actionType && { actionType }),
+      ...(actionTypes && { actionType: { in: actionTypes } }),
       ...(source && { source }),
       ...(actorId && { actorId }),
       // Encrypted fields (actorDisplayName, description) cannot be searched via SQL LIKE.

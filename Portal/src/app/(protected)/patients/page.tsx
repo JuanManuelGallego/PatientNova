@@ -159,13 +159,13 @@ function PatientsPageContent() {
         {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
         <DataTable
           columns={[
-            "Paciente",
-            "Correo",
-            "WhatsApp",
-            "SMS",
-            "Estado",
-            "Registrado",
-            "",
+            { label: "Paciente" },
+            { label: "Correo" },
+            { label: "WhatsApp" },
+            { label: "SMS" },
+            { label: "Estado" },
+            { label: "Registrado" },
+            { label: "" },
           ]}
           rows={patients}
           loading={loading}
