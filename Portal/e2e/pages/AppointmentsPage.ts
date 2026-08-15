@@ -7,22 +7,27 @@ import { AppointmentDrawer } from './Drawers/AppointmentDrawer';
 const PAID_FILTER_LABELS: Record<'true' | 'false' | 'All', string> = {
   true: 'Pagadas',
   false: 'Sin pagar',
-  All: 'Todas',
+  All: 'Todos',
+};
+
+const STATUS_FILTER_LABELS: Record<string, string> = {
+  all: 'Todos',
+  scheduled: 'Programada',
+  confirmed: 'Confirmada',
+  completed: 'Completada',
+  cancelled: 'Cancelada',
+  no_show: 'No asistió',
 };
 
 export class AppointmentsPage extends BasePage {
   readonly createButton: Locator;
   readonly table: Locator;
   readonly searchInput: Locator;
-  readonly filterAll: Locator;
-  readonly filterUpcoming: Locator;
-  readonly filterScheduled: Locator;
-  readonly filterConfirmed: Locator;
-  readonly filterCompleted: Locator;
-  readonly filterCancelled: Locator;
-  readonly filterNoShow: Locator;
-  readonly paidFilter: Locator;
-  readonly dateFilter: Locator;
+  readonly statusFilterTrigger: Locator;
+  readonly statusFilterPopover: Locator;
+  readonly paidFilterTrigger: Locator;
+  readonly paidFilterPopover: Locator;
+  readonly dateFilterTrigger: Locator;
   readonly dateFilterAcceptButton: Locator;
 
   constructor(page: Page) {
@@ -30,15 +35,11 @@ export class AppointmentsPage extends BasePage {
     this.createButton = this.page.getByTestId('appointments-new-button');
     this.table = this.page.getByRole('table');
     this.searchInput = this.page.getByTestId('appointments-search-input');
-    this.filterAll = this.page.getByTestId('appointments-filter-all');
-    this.filterUpcoming = this.page.getByTestId('appointments-filter-upcoming');
-    this.filterScheduled = this.page.getByTestId('appointments-filter-scheduled');
-    this.filterConfirmed = this.page.getByTestId('appointments-filter-confirmed');
-    this.filterCompleted = this.page.getByTestId('appointments-filter-completed');
-    this.filterCancelled = this.page.getByTestId('appointments-filter-cancelled');
-    this.filterNoShow = this.page.getByTestId('appointments-filter-no_show');
-    this.paidFilter = this.page.getByTestId('appointment-paid-filter');
-    this.dateFilter = this.page.getByTestId('appointment-date-filter');
+    this.statusFilterTrigger = this.page.getByTestId('appointment-status-filter-trigger');
+    this.statusFilterPopover = this.page.getByTestId('appointment-status-filter');
+    this.paidFilterTrigger = this.page.getByTestId('appointment-paid-filter-trigger');
+    this.paidFilterPopover = this.page.getByTestId('appointment-paid-filter');
+    this.dateFilterTrigger = this.page.getByTestId('appointment-date-filter-trigger');
     this.dateFilterAcceptButton = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
@@ -105,12 +106,16 @@ export class AppointmentsPage extends BasePage {
   }
 
   async setPaidFilter(value: 'true' | 'false' | 'All') {
-    await this.paidFilter.click();
-    await this.page.getByRole('option', { name: PAID_FILTER_LABELS[value] }).click();
+    await this.paidFilterTrigger.click();
+    const clear = this.paidFilterPopover.getByRole('button', { name: 'Todos' });
+    if (await clear.isVisible().catch(() => false)) await clear.click();
+    if (value !== 'All') {
+      await this.paidFilterPopover.getByRole('option', { name: PAID_FILTER_LABELS[value] }).click();
+    }
   }
 
   async setDateFilter(value: string) {
-    await this.dateFilter.click();
+    await this.dateFilterTrigger.click();
     await this.page.getByTitle(value).first().click();
     await this.dateFilterAcceptButton.click();
   }
@@ -148,6 +153,12 @@ export class AppointmentsPage extends BasePage {
   }
 
   async filterBy(filterKey: string) {
-    await this.page.getByTestId(`appointments-filter-${filterKey}`).click();
+    const label = STATUS_FILTER_LABELS[filterKey];
+    await this.statusFilterTrigger.click();
+    const clear = this.statusFilterPopover.getByRole('button', { name: 'Todos' });
+    if (await clear.isVisible().catch(() => false)) await clear.click();
+    if (filterKey !== 'all') {
+      await this.statusFilterPopover.getByRole('option', { name: label }).click();
+    }
   }
 }

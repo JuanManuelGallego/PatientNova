@@ -77,16 +77,24 @@ export const appointmentRepository = {
       return undefined;
     })();
 
+    const statusFilter: Prisma.AppointmentWhereInput["status"] | undefined = (() => {
+      if (status && paid !== undefined) {
+        const base = Array.isArray(status) ? { in: status } : { equals: status };
+        return { ...base, not: AppointmentStatus.CANCELLED };
+      }
+      if (status) return Array.isArray(status) ? { in: status } : status;
+      if (paid !== undefined) return { not: AppointmentStatus.CANCELLED };
+      return undefined;
+    })();
+
     const where: Prisma.AppointmentWhereInput = {
       userId,
       ...(includeDeleted ? {} : { isDeleted: false }),
       ...(patientId && { patientId }),
       ...(locationId && { locationId }),
       ...(typeId && { typeId }),
-      ...(status && {
-        status: Array.isArray(status) ? { in: status } : status
-      }),
-      ...(paid !== undefined && { paid, status: { not: AppointmentStatus.CANCELLED } }),
+      ...(statusFilter && { status: statusFilter }),
+      ...(paid !== undefined && { paid }),
       ...(search && {
         OR: [
           {

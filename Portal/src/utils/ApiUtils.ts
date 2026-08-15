@@ -2,10 +2,8 @@ import { FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { FetchAuditLogsFilters } from "@/src/types/AuditLog";
 import { FetchBlockedTimeFilters } from "@/src/types/BlockedTime";
 import { FetchMedicalRecordFilters } from "@/src/types/MedicalRecord";
-import { PatientStatus, FetchPatientsFilters } from "@/src/types/Patient";
+import { FetchPatientsFilters } from "@/src/types/Patient";
 import { FetchRemindersFilters } from "@/src/types/Reminder";
-
-export const DEFAULT_PATIENT_STATUS = [ PatientStatus.ACTIVE, PatientStatus.INACTIVE ];
 
 /** Generic query string builder. Arrays become repeated params; empty/null/undefined values are skipped. */
 export const buildQueryString = (params: Record<string, unknown>): string => {
@@ -26,7 +24,7 @@ export const buildQueryString = (params: Record<string, unknown>): string => {
 
 export const buildPatientQueryString = (filters?: FetchPatientsFilters): string =>
     buildQueryString({
-        status: filters?.status ?? DEFAULT_PATIENT_STATUS,
+        status: filters?.status,
         search: filters?.search,
         page: (filters?.page ?? 0) > 0 ? filters?.page : undefined,
         pageSize: (filters?.pageSize ?? 0) > 0 ? filters?.pageSize : 50,

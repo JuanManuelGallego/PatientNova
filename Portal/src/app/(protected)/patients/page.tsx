@@ -4,6 +4,7 @@ import {
   useQueryState,
   parseAsInteger,
   parseAsString,
+  parseAsArrayOf,
   parseAsStringEnum,
 } from "nuqs";
 
@@ -13,12 +14,13 @@ import {
   FetchPatientsFilters,
   Patient,
   PatientStatus,
+  PATIENT_STATUS_CONFIG,
 } from "@/src/types/Patient";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
-import { DataTable, TableFooter } from "@/src/components/DataTable";
+import { DataTable, TableFooter, ColumnDef } from "@/src/components/DataTable";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
 import { Channel } from "@/src/types/Reminder";
@@ -35,16 +37,32 @@ import { todayString } from "@/src/utils/TimeUtils";
 
 const PAGE_SIZE = 10;
 
+const PATIENT_ORDER_BY = [
+  "name",
+  "email",
+  "createdAt",
+] as const;
+
+const PATIENT_SORTABLE_COLUMNS = [
+  "name",
+  "email",
+  "createdAt",
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: "", label: "Todos" },
+  ...Object.values(PatientStatus).map((v) => ({
+    value: v,
+    label: PATIENT_STATUS_CONFIG[v].label,
+  })),
+];
+
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
 
-  const [filterStatus, setFilterStatus] = useQueryState(
-    "filterStatus",
-    parseAsStringEnum<PatientStatus | "All">([
-      "All",
-      PatientStatus.ACTIVE,
-      PatientStatus.INACTIVE,
-    ]).withDefault("All"),
+  const [status, setStatus] = useQueryState(
+    "status",
+    parseAsArrayOf(parseAsString).withDefault([]),
   );
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [search, setSearch] = useQueryState(
@@ -52,6 +70,25 @@ function PatientsPageContent() {
     parseAsString.withDefault(""),
   );
   const debouncedSearch = useDebounceState(search, 250);
+  const [orderBy, setOrderBy] = useQueryState(
+    "orderBy",
+    parseAsStringEnum([...PATIENT_ORDER_BY]).withDefault("name"),
+  );
+  const [order, setOrder] = useQueryState(
+    "order",
+    parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
+  );
+
+  const handleSort = (sortKey: string) => {
+    if (!(PATIENT_SORTABLE_COLUMNS as readonly string[]).includes(sortKey)) return;
+    if (orderBy === sortKey) {
+      setOrder(order === "asc" ? "desc" : "asc");
+    } else {
+      setOrderBy(sortKey as typeof orderBy);
+      setOrder("asc");
+    }
+    setPage(1);
+  };
 
   const [showCreate, setShowCreate] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
@@ -61,17 +98,49 @@ function PatientsPageContent() {
   const filters = useMemo<FetchPatientsFilters>(
     () => ({
       search: debouncedSearch,
-      status: filterStatus !== "All" ? filterStatus : undefined,
+      status: status.length ? status : undefined,
       page,
       pageSize: PAGE_SIZE,
-      orderBy: "name",
-      order: "asc",
+      orderBy: orderBy as FetchPatientsFilters["orderBy"],
+      order: order as "asc" | "desc",
     }),
-    [debouncedSearch, filterStatus, page],
+    [debouncedSearch, status, page, orderBy, order],
   );
 
   const { patients, loading, error, fetchPatients, total, totalPages } =
     useFetchPatients(filters);
+
+  const columns = useMemo<ColumnDef[]>(
+    () => [
+      {
+        label: "Paciente",
+        sortKey: "name",
+      },
+      { label: "Correo" },
+      { label: "WhatsApp" },
+      { label: "SMS" },
+      {
+        label: "Estado",
+        filter: {
+          kind: "enum",
+          options: STATUS_OPTIONS,
+          value: status,
+          onChange: (v: string[]) => {
+            setStatus(v);
+            setPage(1);
+          },
+          testId: "patient-status-filter",
+          triggerTestId: "patient-status-filter-trigger",
+        },
+      },
+      {
+        label: "Registrado",
+        sortKey: "createdAt",
+      },
+      { label: "" },
+    ],
+    [status, setStatus, setPage],
+  );
 
   return (
     <>
@@ -134,42 +203,17 @@ function PatientsPageContent() {
             setPage(1);
           }}
           placeholder="Buscar por nombre, apellido o correo…"
-        >
-          <div className="filter-chips">
-            {(
-              [
-                { key: "All", label: "Todos" },
-                { key: PatientStatus.ACTIVE, label: "Activos" },
-                { key: PatientStatus.INACTIVE, label: "Inactivos" },
-              ] as const
-            ).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => {
-                  setFilterStatus(key);
-                  setPage(1);
-                }}
-                className={`filter-chip ${filterStatus === key ? "filter-chip--active" : ""}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </FilterBar>
+        />
         {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
         <DataTable
-          columns={[
-            { label: "Paciente" },
-            { label: "Correo" },
-            { label: "WhatsApp" },
-            { label: "SMS" },
-            { label: "Estado" },
-            { label: "Registrado" },
-            { label: "" },
-          ]}
+          columns={columns}
           rows={patients}
           loading={loading}
           skeletonCount={5}
+          testId="patients-table"
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
           renderRow={(p) => (
             <tr
               onClick={() => setViewPatient(p)}
@@ -247,12 +291,12 @@ function PatientsPageContent() {
             <EmptyState
               icon={STATUS_ICONS.search}
               title={
-                search || filterStatus !== "All"
+                search || status.length > 0
                   ? "Sin resultados"
                   : "No hay pacientes aún"
               }
               sub={
-                search || filterStatus !== "All"
+                search || status.length > 0
                   ? "Prueba ajustando los filtros de búsqueda."
                   : 'Haz clic en "Nuevo Paciente" para agregar el primero.'
               }

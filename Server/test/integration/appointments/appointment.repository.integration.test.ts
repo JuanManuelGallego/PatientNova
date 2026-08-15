@@ -110,6 +110,44 @@ describe('appointmentRepository (integration)', () => {
     const created = await appointmentRepository.create(baseCreateDto({ startAt: overlapStart, endAt: overlapEnd }), userId);
     expect(created.id).toBeTruthy();
   });
+
+  it('combines status + paid filters without the status filter being dropped', async () => {
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: true }), userId);
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: false }), userId);
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: true }), userId);
+
+    const page = await appointmentRepository.findMany(
+      { page: 1, pageSize: 20, status: [AppointmentStatus.SCHEDULED], paid: true, orderBy: 'startAt', order: 'asc', includeDeleted: false },
+      userId,
+    );
+
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]!.status).toBe(AppointmentStatus.SCHEDULED);
+    expect(page.data[0]!.paid).toBe(true);
+  });
+
+  it('excludes CANCELLED appointments when filtering by paid status', async () => {
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: true }), userId);
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: true }), userId);
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: false }), userId);
+    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: false }), userId);
+
+    const paidPage = await appointmentRepository.findMany(
+      { page: 1, pageSize: 20, paid: true, orderBy: 'startAt', order: 'asc', includeDeleted: false },
+      userId,
+    );
+    expect(paidPage.data).toHaveLength(1);
+    expect(paidPage.data[0]!.status).toBe(AppointmentStatus.SCHEDULED);
+    expect(paidPage.data[0]!.paid).toBe(true);
+
+    const unpaidPage = await appointmentRepository.findMany(
+      { page: 1, pageSize: 20, paid: false, orderBy: 'startAt', order: 'asc', includeDeleted: false },
+      userId,
+    );
+    expect(unpaidPage.data).toHaveLength(1);
+    expect(unpaidPage.data[0]!.status).toBe(AppointmentStatus.SCHEDULED);
+    expect(unpaidPage.data[0]!.paid).toBe(false);
+  });
 });
 
 describe('appointmentService (integration)', () => {
