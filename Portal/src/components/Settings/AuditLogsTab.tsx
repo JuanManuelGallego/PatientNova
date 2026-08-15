@@ -20,22 +20,22 @@ import {
 } from "nuqs";
 import { Clock } from "lucide-react";
 import { EntityTypePill } from "../Info/EntityTypePill";
+import { useSortHandler } from "@/src/hooks/useSortHandler";
 
 const PAGE_SIZE = 10;
 
-const AUDIT_ORDER_BY = [
-  "eventTimeUtc",
-  "entityType",
-  "actionType",
-  "source",
-  "actorId",
-] as const;
+const AUDIT_SORT = {
+  orderBy: [
+    "eventTimeUtc",
+    "entityType",
+    "actionType",
+    "source",
+    "actorId",
+  ] as const,
+  sortable: ["eventTimeUtc", "entityType", "actionType"] as const,
+} as const;
 
-const AUDIT_SORTABLE_COLUMNS = [
-  "eventTimeUtc",
-  "entityType",
-  "actionType",
-] as const;
+type AuditOrderBy = (typeof AUDIT_SORT.orderBy)[number];
 
 const ENTITY_OPTIONS: SelectOption[] = [
   { value: "", label: "Todas" },
@@ -58,23 +58,21 @@ export function AuditLogsTab() {
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [orderBy, setOrderBy] = useQueryState(
     "orderBy",
-    parseAsStringEnum([...AUDIT_ORDER_BY]).withDefault("eventTimeUtc"),
+    parseAsStringEnum([...AUDIT_SORT.orderBy]).withDefault("eventTimeUtc"),
   );
   const [order, setOrder] = useQueryState(
     "order",
     parseAsStringEnum(["asc", "desc"]).withDefault("desc"),
   );
 
-  const handleSort = (sortKey: string) => {
-    if (!(AUDIT_SORTABLE_COLUMNS as readonly string[]).includes(sortKey)) return;
-    if (orderBy === sortKey) {
-      setOrder(order === "asc" ? "desc" : "asc");
-    } else {
-      setOrderBy(sortKey as typeof orderBy);
-      setOrder("asc");
-    }
-    setPage(1);
-  };
+  const handleSort = useSortHandler<AuditOrderBy>(
+    AUDIT_SORT.sortable,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    setPage,
+  );
 
   const filters = useMemo<FetchAuditLogsFilters>(
     () => ({

@@ -29,6 +29,7 @@ import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersSta
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
+import { useSortHandler } from "@/src/hooks/useSortHandler";
 import {
   useQueryState,
   parseAsInteger,
@@ -44,19 +45,18 @@ enum ActiveTab {
 }
 const PAGE_SIZE = 10;
 
-const REMINDER_ORDER_BY = [
-  "sendAt",
-  "createdAt",
-  "status",
-  "updatedAt",
-] as const;
+const REMINDER_SORT = {
+  orderBy: [
+    "sendAt",
+    "createdAt",
+    "status",
+    "updatedAt",
+  ] as const,
+  // Only columns that actually expose a `sortKey` are sortable.
+  sortable: ["sendAt", "status"] as const,
+} as const;
 
-const REMINDER_SORTABLE_COLUMNS = [
-  "sendAt",
-  "createdAt",
-  "status",
-  "updatedAt",
-] as const;
+type ReminderOrderBy = (typeof REMINDER_SORT.orderBy)[number];
 
 const STATUS_ACTIVE_OPTIONS = [
   { value: "", label: "Todos" },
@@ -97,23 +97,21 @@ function RemindersPageContent() {
   );
   const [ orderBy, setOrderBy ] = useQueryState(
     "orderBy",
-    parseAsStringEnum([...REMINDER_ORDER_BY]).withDefault("sendAt"),
+    parseAsStringEnum([...REMINDER_SORT.orderBy]).withDefault("sendAt"),
   );
   const [ order, setOrder ] = useQueryState(
     "order",
     parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
   );
 
-  const handleSort = (sortKey: string) => {
-    if (!(REMINDER_SORTABLE_COLUMNS as readonly string[]).includes(sortKey)) return;
-    if (orderBy === sortKey) {
-      setOrder(order === "asc" ? "desc" : "asc");
-    } else {
-      setOrderBy(sortKey as typeof orderBy);
-      setOrder("asc");
-    }
-    setPage(1);
-  };
+  const handleSort = useSortHandler<ReminderOrderBy>(
+    REMINDER_SORT.sortable,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    setPage,
+  );
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);

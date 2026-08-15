@@ -32,6 +32,7 @@ import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
 import { todayString } from "@/src/utils/TimeUtils";
+import { useSortHandler } from "@/src/hooks/useSortHandler";
 
 const PAGE_SIZE = 10;
 
@@ -40,17 +41,12 @@ enum PatientTab {
   Inactive = "inactive",
 }
 
-const PATIENT_ORDER_BY = [
-  "name",
-  "email",
-  "createdAt",
-] as const;
+const PATIENT_SORT = {
+  orderBy: ["name", "email", "createdAt"] as const,
+  sortable: ["name", "email", "createdAt"] as const,
+} as const;
 
-const PATIENT_SORTABLE_COLUMNS = [
-  "name",
-  "email",
-  "createdAt",
-] as const;
+type PatientOrderBy = (typeof PATIENT_SORT.orderBy)[number];
 
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
@@ -67,23 +63,21 @@ function PatientsPageContent() {
   const debouncedSearch = useDebounceState(search, 250);
   const [orderBy, setOrderBy] = useQueryState(
     "orderBy",
-    parseAsStringEnum([...PATIENT_ORDER_BY]).withDefault("name"),
+    parseAsStringEnum([...PATIENT_SORT.orderBy]).withDefault("name"),
   );
   const [order, setOrder] = useQueryState(
     "order",
     parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
   );
 
-  const handleSort = (sortKey: string) => {
-    if (!(PATIENT_SORTABLE_COLUMNS as readonly string[]).includes(sortKey)) return;
-    if (orderBy === sortKey) {
-      setOrder(order === "asc" ? "desc" : "asc");
-    } else {
-      setOrderBy(sortKey as typeof orderBy);
-      setOrder("asc");
-    }
-    setPage(1);
-  };
+  const handleSort = useSortHandler<PatientOrderBy>(
+    PATIENT_SORT.sortable,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    setPage,
+  );
 
   const handleTabChange = (tab: PatientTab) => {
     setActiveTab(tab);

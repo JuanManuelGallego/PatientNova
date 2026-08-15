@@ -23,6 +23,8 @@ import {
   Appointment,
   AppointmentStatus,
   APPT_STATUS_CFG,
+  DEFAULT_APPT_STATUS,
+  HISTORY_APPT_STATUS,
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
@@ -40,6 +42,7 @@ import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointmen
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
+import { useSortHandler } from "@/src/hooks/useSortHandler";
 import {
   useQueryState,
   parseAsInteger,
@@ -56,30 +59,28 @@ enum AppointmentTab {
   History = "history",
 }
 
-const APPT_ORDER_BY = [
-  "startAt",
-  "status",
-  "price",
-  "createdAt",
-] as const;
+const APPT_SORT = {
+  orderBy: [
+    "startAt",
+    "status",
+    "price",
+    "createdAt",
+  ] as const,
+  sortable: [
+    "startAt",
+    "status",
+    "price",
+  ] as const,
+} as const;
 
-const APPT_SORTABLE_COLUMNS = [
-  "startAt",
-  "status",
-  "price",
-] as const;
+type ApptOrderBy = (typeof APPT_SORT.orderBy)[number];
+
+const tabStatuses = (tab: AppointmentTab): AppointmentStatus[] =>
+  tab === AppointmentTab.Upcoming ? DEFAULT_APPT_STATUS : HISTORY_APPT_STATUS;
 
 const STATUS_OPTIONS = (tab: AppointmentTab) => [
   { value: "", label: "Todos" },
-  ...(
-    tab === AppointmentTab.Upcoming
-      ? [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ]
-      : [
-        AppointmentStatus.COMPLETED,
-        AppointmentStatus.CANCELLED,
-        AppointmentStatus.NO_SHOW,
-      ]
-  ).map((v) => ({
+  ...tabStatuses(tab).map((v) => ({
     value: v,
     label: APPT_STATUS_CFG[v].label,
   })),
@@ -139,23 +140,21 @@ function AppointmentsPageContent() {
   const debouncedSearch = useDebounceState(search, 250);
   const [ orderBy, setOrderBy ] = useQueryState(
     "orderBy",
-    parseAsStringEnum([...APPT_ORDER_BY]).withDefault("startAt"),
+    parseAsStringEnum([...APPT_SORT.orderBy]).withDefault("startAt"),
   );
   const [ order, setOrder ] = useQueryState(
     "order",
     parseAsStringEnum(["asc", "desc"]).withDefault("asc"),
   );
 
-  const handleSort = (sortKey: string) => {
-    if (!(APPT_SORTABLE_COLUMNS as readonly string[]).includes(sortKey)) return;
-    if (orderBy === sortKey) {
-      setOrder(order === "asc" ? "desc" : "asc");
-    } else {
-      setOrderBy(sortKey as typeof orderBy);
-      setOrder("asc");
-    }
-    setPage(1);
-  };
+  const handleSort = useSortHandler<ApptOrderBy>(
+    APPT_SORT.sortable,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    setPage,
+  );
 
   const handleTabChange = (tab: AppointmentTab) => {
     setActiveTab(tab);
@@ -177,14 +176,7 @@ function AppointmentsPageContent() {
 
   const filters = useMemo<FetchAppointmentsFilters>(
     () => {
-      const tabDefault =
-        activeTab === AppointmentTab.Upcoming
-          ? [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ]
-          : [
-            AppointmentStatus.COMPLETED,
-            AppointmentStatus.CANCELLED,
-            AppointmentStatus.NO_SHOW,
-          ];
+      const tabDefault = tabStatuses(activeTab);
       return {
         patientId: undefined,
         status: status.length ? (status as AppointmentStatus[]) : tabDefault,
