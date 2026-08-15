@@ -131,7 +131,6 @@ export class AppointmentsPage extends BasePage {
     };
     await clickDay(from);
     await clickDay(to);
-    await this.page.getByRole('button', { name: 'Aceptar' }).click();
   }
 
   async goToNextPage() {

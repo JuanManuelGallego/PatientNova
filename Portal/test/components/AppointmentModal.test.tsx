@@ -5,7 +5,6 @@ import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { AppointmentStatus, type Appointment } from "@/src/types/Appointment";
 import { PatientStatus, type Patient } from "@/src/types/Patient";
-import { Channel, ReminderMode, ReminderStatus, type Reminder } from "@/src/types/Reminder";
 
 /* ── Shared mock factories ────────────────────────────────────────── */
 

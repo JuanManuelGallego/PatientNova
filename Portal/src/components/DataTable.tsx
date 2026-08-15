@@ -366,7 +366,11 @@ export function DataTable<T>({
                     ? Boolean(filter.active)
                     : filter.kind === "enum"
                       ? filter.value.length > 0
-                      : filter.value !== ""
+                      : filter.kind === "date-range"
+                        ? filter.value !== null &&
+                          filter.value[0] !== "" &&
+                          filter.value[1] !== ""
+                        : filter.value !== ""
                   : false;
                 return (
                   <th
