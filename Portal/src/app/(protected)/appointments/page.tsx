@@ -172,21 +172,6 @@ function AppointmentsPageContent() {
     () => [
       { label: "Paciente" },
       {
-        label: "Estado",
-        sortKey: "status",
-        filter: {
-          kind: "enum",
-          options: STATUS_OPTIONS(activeTab),
-          value: status,
-          onChange: (v: string[]) => {
-            setStatus(v);
-            setPage(1);
-          },
-          testId: "appointment-status-filter",
-          triggerTestId: "appointment-status-filter-trigger",
-        },
-      },
-      {
         label: "Tipo",
         filter: {
           kind: "single-enum",
@@ -227,6 +212,21 @@ function AppointmentsPageContent() {
           },
           testId: "appointment-location-filter",
           triggerTestId: "appointment-location-filter-trigger",
+        },
+      },
+      {
+        label: "Estado",
+        sortKey: "status",
+        filter: {
+          kind: "enum",
+          options: STATUS_OPTIONS(activeTab),
+          value: status,
+          onChange: (v: string[]) => {
+            setStatus(v);
+            setPage(1);
+          },
+          testId: "appointment-status-filter",
+          triggerTestId: "appointment-status-filter-trigger",
         },
       },
       {
@@ -383,18 +383,6 @@ function AppointmentsPageContent() {
                   </div>
                 </div>
               </td>
-              <td className="td" onClick={(e) => e.stopPropagation()}>
-                <AppointmentStatusPill status={a.status} />
-                {a.status === AppointmentStatus.SCHEDULED && (
-                    <button
-                      onClick={() => handleConfirm(a.id)}
-                      className="btn-pay"
-                      data-testid={`appointment-confirm-button-${a.id}`}
-                    >
-                      Confirmó
-                    </button>
-                )}
-              </td>
               <td className="td">
                 <AppointmentTypePill appointmentType={a.appointmentType} />
               </td>
@@ -431,6 +419,18 @@ function AppointmentsPageContent() {
                     a.appointmentLocation.name
                   )}
                 </div>
+              </td>
+              <td className="td" onClick={(e) => e.stopPropagation()}>
+                <AppointmentStatusPill status={a.status} />
+                {a.status === AppointmentStatus.SCHEDULED && (
+                    <button
+                      onClick={() => handleConfirm(a.id)}
+                      className="btn-pay"
+                      data-testid={`appointment-confirm-button-${a.id}`}
+                    >
+                      Confirmó
+                    </button>
+                )}
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
