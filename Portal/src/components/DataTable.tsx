@@ -9,6 +9,8 @@ interface TableFooterProps {
   totalPages: number;
   label: string;
   onPageChange: (page: number) => void;
+  /** Optional prefix that scopes the pagination control test IDs (e.g. "appointments-pagination"). */
+  testIdPrefix?: string;
 }
 
 export function TableFooter({
@@ -18,7 +20,13 @@ export function TableFooter({
   totalPages,
   label,
   onPageChange,
+  testIdPrefix,
 }: TableFooterProps) {
+  const prevTestId = testIdPrefix ? `${testIdPrefix}-previous` : undefined;
+  const nextTestId = testIdPrefix ? `${testIdPrefix}-next` : undefined;
+  const countTestId = testIdPrefix ? `${testIdPrefix}-count` : undefined;
+  const pageTestId = (n: number) =>
+    testIdPrefix ? `${testIdPrefix}-page-${n}` : undefined;
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
     .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
     .reduce<(number | "...")[]>((acc, n, idx, arr) => {
@@ -29,7 +37,7 @@ export function TableFooter({
 
   return (
     <>
-      <span style={{ fontSize: 13, color: "var(--c-gray-400)" }}>
+      <span style={{ fontSize: 13, color: "var(--c-gray-400)" }} data-testid={countTestId}>
         Mostrando{" "}
         <strong style={{ color: "var(--c-gray-700)" }}>
           {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)}
@@ -43,6 +51,7 @@ export function TableFooter({
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page === 1}
             className="pagination-btn"
+            data-testid={prevTestId}
           >
             <PAGINATION_ICONS.prev size={14} /> Anterior
           </button>
@@ -57,6 +66,7 @@ export function TableFooter({
               key={item}
               onClick={() => onPageChange(item as number)}
               className={`pagination-num ${page === item ? "pagination-num--active" : ""}`}
+              data-testid={pageTestId(item as number)}
             >
               {item}
             </button>
@@ -66,6 +76,7 @@ export function TableFooter({
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
           disabled={page === totalPages}
           className="pagination-btn"
+          data-testid={nextTestId}
         >
           Siguiente <PAGINATION_ICONS.next size={14} />
         </button>

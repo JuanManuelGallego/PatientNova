@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { CalendarPage } from '../pages/CalendarPage';
-import { Routes } from '../utils/const';
+import { Routes, HttpMethods } from '../utils/const';
 import { uniqueName, futureBusinessHourDateTime, addHours } from '../utils/test-data';
 import {
   createTestPatient,
@@ -72,14 +72,21 @@ test.describe('Calendar', () => {
     const modal = await calendar.openBlockedTimeEditModal(description);
 
     const updatedDescription = uniqueName(EntityType.BLOCKED_TIME);
-    await modal.editBlockedTime({ description: updatedDescription });
+    const result = await modal.editBlockedTime({ description: updatedDescription });
 
-    await expect(
-      calendar.blockedTimeChip(blockedTime.data.id),
-    ).toBeVisible();
+    expect(result.id).toBe(blockedTime.data.id);
+    expect(result.description).toBe(updatedDescription);
+
+    await expect(calendar.blockedTimeChip(blockedTime.data.id)).toBeVisible();
+    await expect(page.getByTitle(updatedDescription)).toBeVisible();
+
+    const fetched = await api.getBlockedTime(blockedTime.data.id);
+    expect(fetched.data.id).toBe(blockedTime.data.id);
+    expect(fetched.data.description).toBe(updatedDescription);
+    expect(fetched.data.isDeleted).toBe(false);
   });
 
-  test('Delete blocked time', async ({ page, api }) => {
+  test('Delete blocked time', async ({ page, api, trackedBlockedTime }) => {
     const description = uniqueName(EntityType.BLOCKED_TIME);
     const startTimeUtc = futureBusinessHourDateTime();
     const endTimeUtc = addHours(startTimeUtc, 1);
@@ -88,12 +95,12 @@ test.describe('Calendar', () => {
       startTimeUtc,
       endTimeUtc,
     });
+    trackedBlockedTime.track(blockedTime.data.id);
 
     await page.goto(Routes.CALENDAR);
 
     const calendar = new CalendarPage(page);
     const modal = await calendar.openBlockedTimeEditModal(description);
-
     await modal.deleteBlockedTime();
 
     await expect(calendar.blockedTimeChip(blockedTime.data.id)).not.toBeVisible();

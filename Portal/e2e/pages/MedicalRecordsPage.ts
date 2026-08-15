@@ -114,4 +114,197 @@ export class MedicalRecordsPage extends BasePage {
   async expectNoEmptyState() {
     await expect(this.page.getByText('El paciente no tiene una historia clínica registrada.')).not.toBeVisible();
   }
+
+  // ── Family members ──────────────────────────────────────────────────────────
+
+  familyMember(index: number): Locator {
+    return this.page.getByTestId(`family-member-${index}`);
+  }
+
+  async fillFamilyMemberName(index: number, value: string) {
+    await this.page.getByTestId(`family-member-name-${index}`).fill(value);
+  }
+
+  async fillFamilyMemberAge(index: number, value: string) {
+    await this.page.getByTestId(`family-member-age-${index}`).fill(value);
+  }
+
+  async selectFamilyMemberSex(index: number, label: string) {
+    await this.page.getByTestId(`family-member-sex-${index}`).click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  async selectFamilyMemberRelationship(index: number, label: string) {
+    await this.page.getByTestId(`family-member-relationship-${index}`).click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  async deleteFamilyMember(index: number) {
+    await this.page.getByTestId(`family-member-delete-${index}`).click();
+  }
+
+  async expectFamilyMemberVisible(index: number) {
+    await expect(this.familyMember(index)).toBeVisible();
+  }
+
+  async expectFamilyMemberNotVisible(index: number) {
+    await expect(this.familyMember(index)).not.toBeVisible();
+  }
+
+  // ── Evolution notes ─────────────────────────────────────────────────────────
+
+  evolutionNote(id: string): Locator {
+    return this.page.getByTestId(`evolution-note-${id}`);
+  }
+
+  async fillEvolutionNoteText(id: string, value: string) {
+    await this.page.getByTestId(`evolution-note-text-${id}`).fill(value);
+  }
+
+  async deleteEvolutionNote(id: string) {
+    await this.page.getByTestId(`evolution-note-delete-${id}`).click();
+  }
+
+  async expectEvolutionNoteVisible(id: string) {
+    await expect(this.evolutionNote(id)).toBeVisible();
+  }
+
+  async expectEvolutionNoteNotVisible(id: string) {
+    await expect(this.evolutionNote(id)).not.toBeVisible();
+  }
+
+  // The server may reassign note ids, so prefer index-based locators for
+  // evolution notes instead of relying on a captured id across reloads.
+  async firstEvolutionNoteId(): Promise<string> {
+    return this.page.evaluate(() => {
+      for (const el of Array.from(document.querySelectorAll('[data-testid^="evolution-note-"]'))) {
+        const testId = el.getAttribute('data-testid') ?? '';
+        const suffix = testId.slice('evolution-note-'.length);
+        if (suffix.startsWith('text-') || suffix.startsWith('date-') || suffix.startsWith('delete-')) continue;
+        return suffix;
+      }
+      return '';
+    });
+  }
+
+  async fillFirstEvolutionNoteText(value: string) {
+    await this.page.locator('[data-testid^="evolution-note-text-"]').first().fill(value);
+  }
+
+  async expectFirstEvolutionNoteText(value: string) {
+    await expect(this.page.locator('[data-testid^="evolution-note-text-"]').first()).toHaveValue(value);
+  }
+
+  async deleteFirstEvolutionNote() {
+    await this.page.locator('[data-testid^="evolution-note-delete-"]').first().click();
+  }
+
+  async expectNoEvolutionNotes() {
+    await expect(this.page.locator('[data-testid^="evolution-note-"]')).toHaveCount(0);
+  }
+
+  // ── Subsystem relations matrix ──────────────────────────────────────────────
+
+  subsystemCell(subsystem: string, status: string): Locator {
+    return this.page.getByTestId(`subsystem-${subsystem}-${status}`);
+  }
+
+  async toggleSubsystem(subsystem: string, status: string) {
+    await this.subsystemCell(subsystem, status).click();
+  }
+
+  async expectSubsystemMarked(subsystem: string, status: string) {
+    await expect(this.subsystemCell(subsystem, status).getByTestId(`subsystem-${subsystem}-${status}-mark`)).toBeVisible();
+  }
+
+  // ── Documents ───────────────────────────────────────────────────────────────
+
+  document(id: string): Locator {
+    return this.page.getByTestId(`medical-document-${id}`);
+  }
+
+  async uploadDocument(files: string | { name: string; mimeType: string; buffer: Buffer }) {
+    await this.page.getByTestId('medical-document-file-input').setInputFiles(files as never);
+  }
+
+  async renameDocument(id: string, name: string) {
+    await this.page.getByTestId(`medical-document-rename-${id}`).click();
+    const input = this.document(id).locator('input.form-input').first();
+    await input.fill(name);
+    await input.press('Enter');
+  }
+
+  async replaceDocument(id: string, files: string | { name: string; mimeType: string; buffer: Buffer }) {
+    await this.page.getByTestId(`medical-document-replace-${id}`).click();
+    const replaceInput = this.page
+      .getByTestId('medical-document-replace-input')
+      .or(this.page.locator('input[type="file"]:not([data-testid])'));
+    await replaceInput.setInputFiles(files as never);
+  }
+
+  async deleteDocument(id: string) {
+    await this.page.getByTestId(`medical-document-delete-${id}`).click();
+    await this.document(id).getByRole('button', { name: 'Sí' }).click();
+  }
+
+  async expectDocumentVisible(id: string) {
+    await expect(this.document(id)).toBeVisible();
+  }
+
+  async expectDocumentNotVisible(id: string) {
+    await expect(this.document(id)).not.toBeVisible();
+  }
+
+  async expectDocumentName(id: string, name: string) {
+    await expect(this.document(id).getByText(name, { exact: true })).toBeVisible();
+  }
+
+  async expectDocumentsEmpty() {
+    await expect(this.page.getByText('No hay documentos adjuntos.')).toBeVisible();
+  }
+
+  async expectDocumentError() {
+    await expect(this.page.getByText(/supera el límite de 5 MB/i)).toBeVisible();
+  }
+
+  // ── General data select ─────────────────────────────────────────────────────
+
+  async selectGeneralDataSex(label: string) {
+    await this.page.getByTestId('general-data-sex-select').click();
+    await this.page.getByRole('option', { name: label }).click();
+  }
+
+  // ── Antecedents ─────────────────────────────────────────────────────────────
+
+  async fillAntecedent(field: string, value: string) {
+    await this.page.getByTestId(`antecedents-${field}-input`).fill(value);
+  }
+
+  async expectAntecedentField(field: string, value: string) {
+    await expect(this.page.getByTestId(`antecedents-${field}-input`)).toHaveValue(value);
+  }
+
+  // ── Family-specific fields ──────────────────────────────────────────────────
+
+  async fillFamilySpecific(field: string, value: string) {
+    await this.page.getByTestId(`family-specific-${field}-input`).fill(value);
+  }
+
+  async expectFamilySpecificField(field: string, value: string) {
+    await expect(this.page.getByTestId(`family-specific-${field}-input`)).toHaveValue(value);
+  }
+
+  // ── Family member field assertions ─────────────────────────────────────────
+
+  async expectFamilyMemberField(index: number, field: string, value: string) {
+    await expect(this.page.getByTestId(`family-member-${field}-${index}`)).toHaveValue(value);
+  }
+
+  // ── Subsystem relation assertions ───────────────────────────────────────────
+
+  async expectSubsystemNotMarked(subsystem: string, status: string) {
+    await expect(
+      this.subsystemCell(subsystem, status).getByTestId(`subsystem-${subsystem}-${status}-mark`),
+    ).toHaveCount(0);
+  }
 }

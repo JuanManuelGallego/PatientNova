@@ -81,6 +81,7 @@ export function EditScheduledReminderModal({
             onChanged={setsendAt}
             showTime
             isFuture
+            testId="edit-reminder-send-at-picker"
           />
         </label>
         <div className="modal-footer modal-footer--stretch">

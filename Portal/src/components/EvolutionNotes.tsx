@@ -30,6 +30,7 @@ export function EvolutionNotes({
         {evolutionNotes.map((note, index) => (
           <div
             key={`note-${index}`}
+            data-testid={`evolution-note-${note.id}`}
             style={{
               border: "1px solid var(--c-gray-200)",
               borderRadius: "16px",
@@ -46,6 +47,7 @@ export function EvolutionNotes({
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => removeRow(index)}
+                data-testid={`evolution-note-delete-${note.id}`}
               >
                 Eliminar
               </button>
@@ -56,6 +58,7 @@ export function EvolutionNotes({
                 <DateTimePicker
                   date={note.date || undefined}
                   onChanged={(date) => updateMember(index, "date", date)}
+                  testId={`evolution-note-date-${note.id}`}
                 />
               </label>
               <label className="form-label" style={{ gridColumn: "1 / -1" }}>
@@ -65,6 +68,7 @@ export function EvolutionNotes({
                   value={note.text}
                   onChange={(e) => updateMember(index, "text", e.target.value)}
                   placeholder="Escriba la nota de evolución después de la cita"
+                  data-testid={`evolution-note-text-${note.id}`}
                 />
               </label>
             </div>

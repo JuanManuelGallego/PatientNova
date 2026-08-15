@@ -1,6 +1,6 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { HttpMethods } from '../../utils/const';
-import { randomString } from '../../utils/test-data';
+import { randomString, futureDateTime } from '../../utils/test-data';
 import { ReminderMode } from '@/src/types/Reminder';
 
 export class ReminderModal {
@@ -11,7 +11,6 @@ export class ReminderModal {
   readonly submitButton: Locator;
   readonly closeButton: Locator;
   readonly sendAtPicker: Locator;
-  readonly datePickerAccept: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -21,7 +20,6 @@ export class ReminderModal {
     this.submitButton = this.page.getByTestId('reminder-modal-submit-button');
     this.closeButton = this.page.getByTestId('reminder-modal-close-button');
     this.sendAtPicker = this.page.getByTestId('reminder-send-at-picker');
-    this.datePickerAccept = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
   async waitForOpen() {
@@ -55,10 +53,10 @@ export class ReminderModal {
   }
 
   async selectPatient(name: string) {
-    const input = this.dialog.getByRole('combobox');
+    const input = this.dialog.locator('input.patient-autocomplete__input');
     await input.click();
     await input.fill(name);
-    await this.page.getByRole('option', { name }).click();
+    await this.page.getByRole('option', { name }).first().click();
   }
 
   async selectFromDropdown(labelText: string, optionLabel: string) {
@@ -77,23 +75,57 @@ export class ReminderModal {
   }
 
   async selectSendAt(dateString: string) {
-    await this.sendAtPicker.click();
-    await this.page.getByText('30').nth(1).click()
-    await this.datePickerAccept.click();
+    await ReminderModal.pickDateTime(this.page, this.sendAtPicker, dateString);
+  }
+
+  /**
+   * Sets an antd DateTimePicker (with showTime) to the given ISO string by
+   * clicking the calendar day cell and the time-panel columns, then confirming.
+   * Shared so EditReminderModal can reuse the exact same interaction.
+   */
+  static async pickDateTime(page: Page, picker: Locator, dateString: string) {
+    const iso = new Date(dateString);
+    const dayNumber = String(iso.getDate());
+    const hourRaw = iso.getHours();
+    const minuteRaw = iso.getMinutes();
+    const hourRe = new RegExp(`^0?${hourRaw}$`);
+    const minuteRe = new RegExp(`^0?${minuteRaw}$`);
+
+    await picker.click();
+
+    // Navigate the panel to the target month/year if it differs from the
+    // month the picker opens on (today's month).
+    const now = new Date();
+    const monthDiff =
+      (iso.getFullYear() - now.getFullYear()) * 12 + (iso.getMonth() - now.getMonth());
+    if (monthDiff !== 0) {
+      const nextBtn = page.locator('.ant-picker-header-next-btn');
+      const prevBtn = page.locator('.ant-picker-header-prev-btn');
+      const btn = monthDiff > 0 ? nextBtn : prevBtn;
+      for (let i = 0; i < Math.abs(monthDiff); i++) {
+        await btn.click();
+      }
+    }
+
+    const dayCell = page
+      .locator('.ant-picker-cell-in-view')
+      .filter({ hasText: new RegExp(`^${dayNumber}$`) })
+      .first();
+    await dayCell.click();
+
+    await page.locator('.ant-picker-time-panel-column').first()
+      .getByText(hourRe).first().click();
+    await page.locator('.ant-picker-time-panel-column').nth(1)
+      .getByText(minuteRe).first().click();
+
+    await page.getByRole('button', { name: 'Aceptar' }).click();
   }
 
   async fillAllVariablesWithRandomString() {
-    //const variables = this.dialog.locator('.form-label:has(.form-input) .form-input');
-    // const variables = this.page.locator('textbox');
-    // const count = await variables.count();
-    // for (let i = 1; i < count; i++) {
-    //   await variables.nth(i).fill(randomString(10));
-    // }
-
-    const textboxes = await this.page.getByRole('textbox').all();
-
-    for (let i = 2; i < textboxes.length; i++) {
-      await textboxes[ i ].fill(randomString());
+    const inputs = this.dialog.locator('input.form-input');
+    const count = await inputs.count();
+    for (let i = 0; i < count; i++) {
+      await inputs.nth(i).fill(randomString());
     }
   }
 
@@ -116,7 +148,7 @@ export class ReminderModal {
   }): Promise<string> {
     await this.selectSendMode(data.sendMode);
     if (data.sendMode === ReminderMode.SCHEDULED) {
-      await this.selectSendAt(' tomorrow at 10:00');
+      await this.selectSendAt(futureDateTime(48));
     }
 
     await this.selectPatient(data.patientName);

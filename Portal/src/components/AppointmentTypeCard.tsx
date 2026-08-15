@@ -18,7 +18,7 @@ export function AppointmentTypeCard({
   return (
     <div
       className="location-card"
-      data-testid="appointment-type-card"
+      data-testid={`appointment-type-card-${type.id}`}
       style={{
         padding: 0,
         overflow: "hidden",
@@ -54,19 +54,19 @@ export function AppointmentTypeCard({
           </div>
         </div>
         {inactive ? (
-          <button className="btn-secondary btn-sm" onClick={onReactivate}>
+          <button className="btn-secondary btn-sm" onClick={onReactivate} data-testid={`appointment-type-reactivate-button-${type.id}`}>
             Reactivar
           </button>
         ) : (
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button className="btn-action-edit" onClick={onEdit} title="Editar">
+            <button className="btn-action-edit" onClick={onEdit} title="Editar" data-testid={`appointment-type-edit-button-${type.id}`}>
               <ACTION_ICONS.edit size={14} /> Editar
             </button>
             <button
               className="btn-action-delete"
               onClick={onDelete}
               title="Desactivar"
-              data-testid="appointment-type-delete-button"
+              data-testid={`appointment-type-delete-button-${type.id}`}
             >
               <ACTION_ICONS.close size={14} />
             </button>

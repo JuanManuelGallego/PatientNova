@@ -207,6 +207,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
         multiple
         style={{ display: "none" }}
         onChange={(e) => handleFiles(e.target.files)}
+        data-testid="medical-document-file-input"
       />
 
       <input
@@ -214,6 +215,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
         type="file"
         style={{ display: "none" }}
         onChange={handleReplace}
+        data-testid="medical-document-replace-input"
       />
 
       {error && (
@@ -227,6 +229,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
           {documents.map((doc) => (
             <div
               key={doc.id}
+              data-testid={`medical-document-${doc.id}`}
               style={{
                 display: "grid",
                 gridTemplateColumns: "36px 1fr auto",
@@ -321,6 +324,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
                   <ActionBtn
                     title="Descargar"
                     onClick={() => handleDownload(doc)}
+                    testId={`medical-document-download-${doc.id}`}
                   >
                     <Download size={14} />
                   </ActionBtn>
@@ -330,6 +334,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
                       setEditingId(doc.id);
                       setEditingName(doc.name);
                     }}
+                    testId={`medical-document-rename-${doc.id}`}
                   >
                     <ACTION_ICONS.edit size={14} />
                   </ActionBtn>
@@ -339,12 +344,14 @@ export function DocumentsSection({ documents, onChange }: Props) {
                       setReplacingId(doc.id);
                       replaceRef.current?.click();
                     }}
+                    testId={`medical-document-replace-${doc.id}`}
                   >
                     <RefreshCw size={14} />
                   </ActionBtn>
                   <ActionBtn
                     title="Eliminar"
                     onClick={() => setConfirmDeleteId(doc.id)}
+                    testId={`medical-document-delete-${doc.id}`}
                   >
                     <ACTION_ICONS.delete size={14} />
                   </ActionBtn>
@@ -376,16 +383,19 @@ function ActionBtn({
   onClick,
   title,
   children,
+  testId,
 }: {
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  testId?: string;
 }) {
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
+      data-testid={testId}
       style={{
         background: "none",
         border: "1px solid var(--c-gray-100)",

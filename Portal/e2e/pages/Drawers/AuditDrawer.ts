@@ -27,4 +27,28 @@ export class AuditDrawer {
   async expectNotVisible() {
     await expect(this.panel).not.toBeVisible();
   }
+
+  async expectAction(label: string) {
+    await expect(this.panel.getByText(label, { exact: true })).toBeVisible();
+  }
+
+  async expectEntityType(label: string) {
+    await expect(this.panel.getByText(label, { exact: true })).toBeVisible();
+  }
+
+  async expectEntityId(id: string) {
+    await expect(this.panel.getByText(id)).toBeVisible();
+  }
+
+  async expectDescription(text: string) {
+    await expect(this.panel.getByText(text)).toBeVisible();
+  }
+
+  async expectActor(name: string) {
+    await expect(this.panel.getByText(name)).toBeVisible();
+  }
+
+  async expectSource(label: string) {
+    await expect(this.panel.getByText(label, { exact: true })).toBeVisible();
+  }
 }

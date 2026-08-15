@@ -61,6 +61,7 @@ test.describe('Appointment-Reminder lifecycle', () => {
       lastName: patientLastName,
       email: patientEmail,
       whatsapp: patientPhone,
+      appointmentType: typeName
     });
     trackedPatients.track(patientId);
 

@@ -92,6 +92,10 @@ export class AppointmentModal {
     await this.priceInput.fill(String(price));
   }
 
+  async setMeetingUrl(url: string) {
+    await this.dialog.getByTestId('appointment-meeting-url-input').fill(url);
+  }
+
   async fillNotes(notes: string) {
     await this.notesInput.fill(notes);
   }

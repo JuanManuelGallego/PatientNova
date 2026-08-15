@@ -1,20 +1,15 @@
-let counter = 0;
-
 export function uniqueName(prefix = 'Test'): string {
-  counter += 1;
   const ts = Date.now().toString(36);
-  return `${prefix} ${ts}-${counter}`;
+  return `${prefix} ${ts}`;
 }
 
 export function uniqueEmail(): string {
-  counter += 1;
   const ts = Date.now().toString(36);
-  return `test-${ts}-${counter}@patientnova-test.com`;
+  return `test-${ts}@patientnova-test.com`;
 }
 
 export function uniquePhoneNumber(): string {
-  counter += 1;
-  const digits = (1000000 + counter * 7919) % 10000000;
+  const digits = (1000000 + randomNumber() * 7919) % 10000000;
   return `+1555${digits.toString().padStart(7, '0')}`;
 }
 
@@ -56,8 +51,7 @@ export function futureDate(daysFromNow = 7): string {
 }
 
 export function validE164Phone(): string {
-  counter += 1;
-  const suffix = String(1000000 + counter).slice(-7);
+  const suffix = String(1000000 + randomNumber()).slice(-7);
   return `+1${suffix}`;
 }
 

@@ -4,6 +4,12 @@ import { AppointmentModal } from './Modals/AppointmentModal';
 import { CancelAppointmentModal } from './Modals/CancelAppointmentModal';
 import { AppointmentDrawer } from './Drawers/AppointmentDrawer';
 
+const PAID_FILTER_LABELS: Record<'true' | 'false' | 'All', string> = {
+  true: 'Pagadas',
+  false: 'Sin pagar',
+  All: 'Todas',
+};
+
 export class AppointmentsPage extends BasePage {
   readonly createButton: Locator;
   readonly table: Locator;
@@ -15,12 +21,9 @@ export class AppointmentsPage extends BasePage {
   readonly filterCompleted: Locator;
   readonly filterCancelled: Locator;
   readonly filterNoShow: Locator;
-  readonly confirmButton: Locator;
-  readonly payButton: Locator;
-  readonly deleteRowButton: Locator;
-  readonly confirmTestId: string;
-  readonly payTestId: string;
-  readonly deleteRowTestId: string;
+  readonly paidFilter: Locator;
+  readonly dateFilter: Locator;
+  readonly dateFilterAcceptButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -34,12 +37,13 @@ export class AppointmentsPage extends BasePage {
     this.filterCompleted = this.page.getByTestId('appointments-filter-completed');
     this.filterCancelled = this.page.getByTestId('appointments-filter-cancelled');
     this.filterNoShow = this.page.getByTestId('appointments-filter-no_show');
-    this.confirmButton = this.page.getByTestId('appointment-confirm-button');
-    this.payButton = this.page.getByTestId('appointment-pay-button');
-    this.deleteRowButton = this.page.getByTestId('appointment-row-delete-button');
-    this.confirmTestId = 'appointment-confirm-button';
-    this.payTestId = 'appointment-pay-button';
-    this.deleteRowTestId = 'appointment-row-delete-button';
+    this.paidFilter = this.page.getByTestId('appointment-paid-filter');
+    this.dateFilter = this.page.getByTestId('appointment-date-filter');
+    this.dateFilterAcceptButton = this.page.getByRole('button', { name: 'Aceptar' });
+  }
+
+  appointmentRow(id: string): Locator {
+    return this.page.getByTestId(`appointment-row-${id}`);
   }
 
   async openCreateModal() {
@@ -57,20 +61,78 @@ export class AppointmentsPage extends BasePage {
     return drawer;
   }
 
+  async openDrawerById(id: string) {
+    await this.appointmentRow(id).click();
+    const drawer = new AppointmentDrawer(this.page);
+    await drawer.waitForOpen();
+    return drawer;
+  }
+
   async confirmAppointment(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.locator(`[data-testid="${this.confirmTestId}"]`).click();
+    await row.locator('[data-testid^="appointment-confirm-button-"]').click();
+  }
+
+  async confirmAppointmentById(id: string) {
+    await this.page.getByTestId(`appointment-confirm-button-${id}`).click();
   }
 
   async markAsPaid(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.locator(`[data-testid="${this.payTestId}"]`).click();
+    await row.locator('[data-testid^="appointment-pay-button-"]').click();
+  }
+
+  async markAsPaidById(id: string) {
+    await this.page.getByTestId(`appointment-pay-button-${id}`).click();
   }
 
   async cancelAppointment(patientName: string) {
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.locator(`[data-testid="${this.deleteRowTestId}"]`).click();
+    await row.locator('[data-testid^="appointment-delete-button-"]').click();
     return new CancelAppointmentModal(this.page);
+  }
+
+  async cancelAppointmentById(id: string) {
+    await this.page.getByTestId(`appointment-delete-button-${id}`).click();
+    return new CancelAppointmentModal(this.page);
+  }
+
+  async editAppointmentById(id: string) {
+    await this.appointmentRow(id).getByTestId(`appointment-edit-button-${id}`).click();
+    const modal = new AppointmentModal(this.page);
+    await modal.waitForOpen();
+    return modal;
+  }
+
+  async setPaidFilter(value: 'true' | 'false' | 'All') {
+    await this.paidFilter.click();
+    await this.page.getByRole('option', { name: PAID_FILTER_LABELS[value] }).click();
+  }
+
+  async setDateFilter(value: string) {
+    await this.dateFilter.click();
+    await this.page.getByTitle(value).first().click();
+    await this.dateFilterAcceptButton.click();
+  }
+
+  async goToNextPage() {
+    await this.page.getByTestId('appointments-pagination-next').click();
+  }
+
+  async goToPreviousPage() {
+    await this.page.getByTestId('appointments-pagination-previous').click();
+  }
+
+  async goToPage(page: number) {
+    await this.page.getByTestId(`appointments-pagination-page-${page}`).click();
+  }
+
+  async expectAppointmentRowVisible(id: string) {
+    await expect(this.appointmentRow(id)).toBeVisible();
+  }
+
+  async expectAppointmentRowHidden(id: string) {
+    await expect(this.appointmentRow(id)).not.toBeVisible();
   }
 
   async searchAppointment(name: string) {

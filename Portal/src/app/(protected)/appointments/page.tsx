@@ -218,6 +218,7 @@ function AppointmentsPageContent() {
             date={dateFilter}
             onChanged={(iso) => setDateFilter(iso.slice(0, 10))}
             isFuture
+            testId="appointment-date-filter"
           />
           {dateFilter && (
             <button
@@ -270,6 +271,7 @@ function AppointmentsPageContent() {
           <CustomSelect
             value={filterPaid}
             className="form-input--auto"
+            data-testid="appointment-paid-filter"
             options={[
               { value: "All", label: "Todas" },
               { value: "true", label: "Pagadas" },
@@ -293,7 +295,7 @@ function AppointmentsPageContent() {
           loading={loading}
           skeletonCount={6}
           renderRow={(a) => (
-            <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)}>
+            <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)} data-testid={`appointment-row-${a.id}`}>
               <td className="td">
                 <div className="td-identity">
                   <div
@@ -338,6 +340,7 @@ function AppointmentsPageContent() {
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       className="location-badge__link"
+                      data-testid={`appointment-table-virtual-link-${a.id}`}
                     >
                       <ExternalLink size={12} /> Virtual
                     </a>
@@ -349,13 +352,13 @@ function AppointmentsPageContent() {
               <td className="td" onClick={(e) => e.stopPropagation()}>
                 <AppointmentStatusPill status={a.status} />
                 {a.status === AppointmentStatus.SCHEDULED && (
-                  <button
-                    onClick={() => handleConfirm(a.id)}
-                    className="btn-pay"
-                    data-testid="appointment-confirm-button"
-                  >
-                    Confirmó
-                  </button>
+                    <button
+                      onClick={() => handleConfirm(a.id)}
+                      className="btn-pay"
+                      data-testid={`appointment-confirm-button-${a.id}`}
+                    >
+                      Confirmó
+                    </button>
                 )}
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
@@ -364,7 +367,7 @@ function AppointmentsPageContent() {
                     <>
                       <PayStatusPill paid={a.paid} />
                       {!a.paid && (
-                        <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid="appointment-pay-button">
+                        <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid={`appointment-pay-button-${a.id}`}>
                           Pagó
                         </button>
                       )}
@@ -378,13 +381,14 @@ function AppointmentsPageContent() {
                     <button
                       onClick={() => setEditAppt(a)}
                       className="btn-action-edit"
+                      data-testid={`appointment-edit-button-${a.id}`}
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => setDeleteAppt(a)}
                       className="btn-action-delete"
-                      data-testid="appointment-row-delete-button"
+                      data-testid={`appointment-delete-button-${a.id}`}
                     >
                       <ACTION_ICONS.close size={14} />
                     </button>
@@ -408,6 +412,7 @@ function AppointmentsPageContent() {
               totalPages={totalPages}
               label="citas"
               onPageChange={setPage}
+              testIdPrefix="appointments-pagination"
             />
           }
         />
