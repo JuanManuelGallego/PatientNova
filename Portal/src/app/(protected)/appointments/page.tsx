@@ -43,6 +43,7 @@ import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointmen
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { withAllOption } from "@/src/utils/options";
 import {
   PAGE_SIZE,
@@ -108,9 +109,8 @@ function AppointmentsPageContent() {
     QUERY_PARAMS.apptLocationId,
     parseAsString.withDefault(""),
   );
-  const [ dateFilter, setDateFilter ] = useQueryState(
+  const { range: dateRange, setRange: setDateRange } = useDateRangeFilter(
     QUERY_PARAMS.apptDate,
-    parseAsString.withDefault(""),
   );
   const {
     page,
@@ -153,8 +153,8 @@ function AppointmentsPageContent() {
         patientId: undefined,
         status: status.length ? (status as AppointmentStatus[]) : tabDefault,
         startAt: undefined,
-        dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
-        dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
+        dateFrom: dateRange?.[0] ? `${dateRange[0]}T00:00:00.000Z` : undefined,
+        dateTo: dateRange?.[1] ? `${dateRange[1]}T23:59:59.999Z` : undefined,
         search: debouncedSearch.trim() || undefined,
         paid: paid.length ? paid[0] === "true" : undefined,
         typeId: typeId || undefined,
@@ -165,7 +165,7 @@ function AppointmentsPageContent() {
         order,
       };
     },
-    [ status, paid, debouncedSearch, dateFilter, typeId, locationId, activeTab, page, orderBy, order ],
+    [ status, paid, debouncedSearch, dateRange, typeId, locationId, activeTab, page, orderBy, order ],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -204,14 +204,14 @@ function AppointmentsPageContent() {
         label: "Fecha y Hora",
         sortKey: "startAt",
         filter: {
-          kind: "date",
-          value: dateFilter,
-          onChange: (iso) => {
-            setDateFilter(iso);
+          kind: "date-range",
+          value: dateRange,
+          onChange: (range) => {
+            setDateRange(range);
             setPage(1);
           },
-          testId: "appointment-date-filter",
-          triggerTestId: "appointment-date-filter-trigger",
+          testId: "appointment-date-range-filter",
+          triggerTestId: "appointment-date-range-filter-trigger",
         },
       },
       { label: "Recordatorio" },
@@ -246,7 +246,7 @@ function AppointmentsPageContent() {
       },
       { label: "" },
     ],
-    [status, paid, dateFilter, typeId, locationId, activeTab, appointmentTypes, locations, setStatus, setPaid, setDateFilter, setTypeId, setLocationId, setPage],
+    [status, paid, dateRange, typeId, locationId, activeTab, appointmentTypes, locations, setStatus, setPaid, setDateRange, setTypeId, setLocationId, setPage],
   );
 
   const { appointments, loading, error, fetchAppointments, total, totalPages } =

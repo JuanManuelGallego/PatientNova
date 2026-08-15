@@ -226,8 +226,18 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
       CANCELLED: 'cancelled',
       NO_SHOW: 'no_show',
     };
+    const upcoming = new Set(['SCHEDULED', 'CONFIRMED']);
+
+    let currentTab: 'upcoming' | 'history' | null = null;
+    const ensureTab = async (tab: 'upcoming' | 'history') => {
+      if (currentTab !== tab) {
+        await appts.switchToTab(tab);
+        currentTab = tab;
+      }
+    };
 
     for (const status of statuses) {
+      await ensureTab(upcoming.has(status) ? 'upcoming' : 'history');
       const responsePromise = page.waitForResponse((r) =>
         appointmentsEndpointMatches(r.url(), { status, search: patient.name }),
       );
@@ -236,6 +246,9 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
       await expect(
         appts.table.locator('tbody tr').filter({ hasText: patient.name }),
       ).toHaveCount(1);
+      // Clear the status filter before switching tabs / next status, since
+      // the status column filter is scoped to the active tab's statuses.
+      await appts.filterBy('all');
     }
   });
 
@@ -355,18 +368,22 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     });
     trackedAppointments.track(otherAppt.data.id);
 
-    const dateStr = startAt.slice(0, 10);
+    const dayStr = startAt.slice(0, 10);
 
     await page.goto(Routes.APPOINTMENTS);
     const appts = new AppointmentsPage(page);
 
+    page.on('response', (r) => {
+      if (r.url().includes('/appointments')) console.log('DATE-RESP', r.url());
+    });
+
     const responsePromise = page.waitForResponse((r) =>
       appointmentsEndpointMatches(r.url(), {
-        dateFrom: `${dateStr}T00:00:00.000Z`,
-        dateTo: `${dateStr}T23:59:59.999Z`,
+        dateFrom: `${dayStr}T00:00:00.000Z`,
+        dateTo: `${dayStr}T23:59:59.999Z`,
       }),
     );
-    await appts.setDateFilter(dateStr);
+    await appts.setDateRange(dayStr, dayStr);
     await responsePromise;
 
     await expect(

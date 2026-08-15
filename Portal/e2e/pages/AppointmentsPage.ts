@@ -39,7 +39,7 @@ export class AppointmentsPage extends BasePage {
     this.statusFilterPopover = this.page.getByTestId('appointment-status-filter');
     this.paidFilterTrigger = this.page.getByTestId('appointment-paid-filter-trigger');
     this.paidFilterPopover = this.page.getByTestId('appointment-paid-filter');
-    this.dateFilterTrigger = this.page.getByTestId('appointment-date-filter-trigger');
+    this.dateFilterTrigger = this.page.getByTestId('appointment-date-range-filter-trigger');
     this.dateFilterAcceptButton = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
@@ -63,7 +63,9 @@ export class AppointmentsPage extends BasePage {
   }
 
   async openDrawerById(id: string) {
-    await this.appointmentRow(id).click();
+    // Click the patient cell, not the whole row — the location cell may
+    // contain a virtual-meeting link that would navigate away.
+    await this.appointmentRow(id).locator('td').first().click();
     const drawer = new AppointmentDrawer(this.page);
     await drawer.waitForOpen();
     return drawer;
@@ -107,21 +109,38 @@ export class AppointmentsPage extends BasePage {
 
   async setPaidFilter(value: 'true' | 'false' | 'All') {
     await this.paidFilterTrigger.click();
-    const clear = this.paidFilterPopover.getByRole('button', { name: 'Todos' });
-    if (await clear.isVisible().catch(() => false)) await clear.click();
+    // Enum popovers stay open after selection, so clear first (the "Todos"
+    // choice is an `option`, not a button) then pick the target.
+    await this.paidFilterPopover.getByRole('option', { name: 'Todos' }).click();
     if (value !== 'All') {
       await this.paidFilterPopover.getByRole('option', { name: PAID_FILTER_LABELS[value] }).click();
     }
+    await this.paidFilterTrigger.click();
   }
 
-  async setDateFilter(value: string) {
+  async setDateRange(from: string, to: string) {
     await this.dateFilterTrigger.click();
-    await this.page.getByTitle(value).first().click();
-    await this.dateFilterAcceptButton.click();
+    await this.page.getByPlaceholder('Desde').click();
+    const clickDay = async (value: string) => {
+      const d = value.split('T')[0].split('-')[2];
+      await this.page
+        .locator('.ant-picker-cell-in-view')
+        .filter({ hasText: d })
+        .first()
+        .click();
+    };
+    await clickDay(from);
+    await clickDay(to);
+    await this.page.getByRole('button', { name: 'Aceptar' }).click();
   }
 
   async goToNextPage() {
     await this.page.getByTestId('appointments-pagination-next').click();
+  }
+
+  async switchToTab(tab: 'upcoming' | 'history') {
+    const label = tab === 'upcoming' ? 'Próximas' : 'Historial';
+    await this.page.getByRole('button', { name: label, exact: true }).click();
   }
 
   async goToPreviousPage() {
@@ -155,10 +174,12 @@ export class AppointmentsPage extends BasePage {
   async filterBy(filterKey: string) {
     const label = STATUS_FILTER_LABELS[filterKey];
     await this.statusFilterTrigger.click();
-    const clear = this.statusFilterPopover.getByRole('button', { name: 'Todos' });
-    if (await clear.isVisible().catch(() => false)) await clear.click();
+    // Enum popovers stay open after selection and accumulate; clear first
+    // (the "Todos" choice is an `option`, not a button) then pick the target.
+    await this.statusFilterPopover.getByRole('option', { name: 'Todos' }).click();
     if (filterKey !== 'all') {
       await this.statusFilterPopover.getByRole('option', { name: label }).click();
     }
+    await this.statusFilterTrigger.click();
   }
 }

@@ -5,6 +5,7 @@ import { SkeletonRow } from "./Info/Skeleton";
 import { PAGINATION_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { SelectOption } from "./CustomSelect";
 import { DateTimePicker } from "./DateTimePicker";
+import { DateRangePicker, type DateRangeValue } from "./DateRangePicker";
 import { EnumFilter } from "./EnumFilter";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
@@ -21,6 +22,13 @@ export type ColumnFilterConfig =
       kind: "date";
       value: string;
       onChange: (value: string) => void;
+      testId?: string;
+      triggerTestId?: string;
+    }
+  | {
+      kind: "date-range";
+      value: DateRangeValue;
+      onChange: (value: [string, string]) => void;
       testId?: string;
       triggerTestId?: string;
     }
@@ -276,6 +284,18 @@ export function HeaderFilterPopover({
         />
       ) : config.kind === "custom" ? (
         config.render(onClose)
+      ) : config.kind === "date-range" ? (
+        <>
+          <DateRangePicker
+            value={config.value}
+            popupContainer={() => popoverRef.current}
+            onChange={(range) => {
+              config.onChange(range);
+              onClose();
+            }}
+            testId={config.testId}
+          />
+        </>
       ) : (
         <>
           <DateTimePicker
@@ -288,18 +308,6 @@ export function HeaderFilterPopover({
             }}
             testId={config.testId}
           />
-          {config.value !== "" && (
-            <button
-              type="button"
-              className="btn-secondary btn-secondary--sm th-filter-popover__clear"
-              onClick={() => {
-                config.onChange("");
-                onClose();
-              }}
-            >
-              <ACTION_ICONS.close size={12} /> Limpiar
-            </button>
-          )}
         </>
       )}
     </div>,

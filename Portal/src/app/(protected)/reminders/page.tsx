@@ -34,6 +34,8 @@ import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersSta
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
+import { DateRangeValue } from "@/src/components/DateRangePicker";
 import { withAllOption } from "@/src/utils/options";
 import {
   PAGE_SIZE,
@@ -72,9 +74,8 @@ function RemindersPageContent() {
     QUERY_PARAMS.reminderTab,
     parseAsStringEnum(Object.values(ActiveTab)).withDefault(ActiveTab.Active),
   );
-  const [ dateFilter, setDateFilter ] = useQueryState(
+  const { range: dateFilter, setRange: setDateFilter } = useDateRangeFilter(
     QUERY_PARAMS.reminderDate,
-    parseAsString.withDefault(""),
   );
   const [ statusFilter, setStatusFilter ] = useQueryState(
     QUERY_PARAMS.reminderStatus,
@@ -132,8 +133,8 @@ function RemindersPageContent() {
         page,
         pageSize: PAGE_SIZE,
         search: debouncedSearch.trim() || undefined,
-        dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
-        dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
+        dateFrom: dateFilter?.[0] ? `${dateFilter[0]}T00:00:00.000Z` : undefined,
+        dateTo: dateFilter?.[1] ? `${dateFilter[1]}T23:59:59.999Z` : undefined,
         orderBy: orderBy as FetchRemindersFilters["orderBy"],
         order,
       };
@@ -360,8 +361,8 @@ function ActiveRemindersTab({
   setCancelReminder: (r: Reminder) => void;
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
-  dateFilter: string;
-  setDateFilter: (v: string) => void;
+  dateFilter: DateRangeValue;
+  setDateFilter: (v: [string, string]) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
@@ -389,14 +390,14 @@ function ActiveRemindersTab({
         label: "Programado para",
         sortKey: "sendAt",
         filter: {
-          kind: "date",
+          kind: "date-range",
           value: dateFilter,
-          onChange: (iso) => {
-            setDateFilter(iso);
+          onChange: (range) => {
+            setDateFilter(range);
             setPage(1);
           },
-          testId: "reminder-date-filter",
-          triggerTestId: "reminder-date-filter-trigger",
+          testId: "reminder-date-range-filter",
+          triggerTestId: "reminder-date-range-filter-trigger",
         },
       },
       { label: "Dentro de" },
@@ -505,8 +506,8 @@ function HistoryRemindersTab({
   onRetry: (id: string) => void;
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
-  dateFilter: string;
-  setDateFilter: (v: string) => void;
+  dateFilter: DateRangeValue;
+  setDateFilter: (v: [string, string]) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
@@ -534,14 +535,14 @@ function HistoryRemindersTab({
         label: "Programado para",
         sortKey: "sendAt",
         filter: {
-          kind: "date",
+          kind: "date-range",
           value: dateFilter,
-          onChange: (iso) => {
-            setDateFilter(iso);
+          onChange: (range) => {
+            setDateFilter(range);
             setPage(1);
           },
-          testId: "reminder-date-filter",
-          triggerTestId: "reminder-date-filter-trigger",
+          testId: "reminder-date-range-filter",
+          triggerTestId: "reminder-date-range-filter-trigger",
         },
       },
       {

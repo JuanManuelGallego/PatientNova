@@ -22,6 +22,7 @@ import {
 import { Clock } from "lucide-react";
 import { EntityTypePill } from "../Info/EntityTypePill";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { withAllOption } from "@/src/utils/options";
 import {
   PAGE_SIZE,
@@ -47,7 +48,7 @@ export function AuditLogsTab() {
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
   const [entityType, setEntityType] = useQueryState(QUERY_PARAMS.auditEntityType, parseAsArrayOf(parseAsString).withDefault([]));
   const [actionType, setActionType] = useQueryState(QUERY_PARAMS.auditActionType, parseAsArrayOf(parseAsString).withDefault([]));
-  const [dateFilter, setDateFilter] = useQueryState(QUERY_PARAMS.auditDate, parseAsString.withDefault(""));
+  const { range: dateFilter, setRange: setDateFilter } = useDateRangeFilter(QUERY_PARAMS.auditDate);
   const [entityId, setEntityId] = useQueryState(QUERY_PARAMS.auditEntityId, parseAsString.withDefault(""));
 
   const {
@@ -71,8 +72,8 @@ export function AuditLogsTab() {
       entityId: entityId.trim() || undefined,
       actionType: actionType.length ? (actionType as ActionType[]) : undefined,
       search: debouncedSearch.trim() || undefined,
-      dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
-      dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
+      dateFrom: dateFilter?.[0] ? `${dateFilter[0]}T00:00:00.000Z` : undefined,
+      dateTo: dateFilter?.[1] ? `${dateFilter[1]}T23:59:59.999Z` : undefined,
       page,
       pageSize: PAGE_SIZE,
       orderBy: orderBy as FetchAuditLogsFilters["orderBy"],
@@ -112,11 +113,11 @@ export function AuditLogsTab() {
         label: "Fecha",
         sortKey: "eventTimeUtc",
         filter: {
-          kind: "date",
+          kind: "date-range",
           value: dateFilter,
-          onChange: (iso) => { setDateFilter(iso); setPage(1); },
-          testId: "audit-date-from-filter",
-          triggerTestId: "audit-date-from-filter-trigger",
+          onChange: (range) => { setDateFilter(range); setPage(1); },
+          testId: "audit-date-range-filter",
+          triggerTestId: "audit-date-range-filter-trigger",
         },
       },
     ],

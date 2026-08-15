@@ -17,9 +17,7 @@ export function DateTimePicker({
   onChange,
   showTime = false,
   isFuture = false,
-  /** When true, emits a local `YYYY-MM-DD` string instead of a UTC ISO. Used by day-only column filters to avoid timezone off-by-one. */
   emitLocalDate = false,
-  /** Container the dropdown portals into (e.g. a filter popover) so outside-click handling doesn't close the host popover. */
   popupContainer,
   testId,
 }: {
