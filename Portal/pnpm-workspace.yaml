@@ -1,0 +1,3 @@
+allowBuilds:
+  node: true
+  unrs-resolver: true
