@@ -53,6 +53,7 @@ export class CalendarPage extends BasePage {
   }
 
   async openEventDrawer(id: string) {
+    await this.goToChipWeek(id);
     await this.eventChip(id).click();
     const drawer = new AppointmentDrawer(this.page);
     await drawer.waitForOpen();
@@ -60,10 +61,52 @@ export class CalendarPage extends BasePage {
   }
 
   async openBlockedTimeEditModal(description: string) {
-    await this.page.getByTitle(description).click();
+    const titleLocator = this.page.getByTitle(description);
+    if (!(await titleLocator.isVisible())) {
+      await this.goToWeekWith(() => titleLocator.isVisible());
+    }
+    await titleLocator.click();
     const modal = new BlockedTimeModal(this.page);
     await modal.waitForOpen();
     return modal;
+  }
+
+  private async waitForCalendarData() {
+    await this.page
+      .waitForResponse(
+        (r) =>
+          r.url().includes('/appointments') || r.url().includes('/blocked-time'),
+        { timeout: 10000 },
+      )
+      .catch(() => {});
+  }
+
+  private async goToWeekWith(isFound: () => Promise<boolean>) {
+    for (let i = 0; i < 6; i++) {
+      await this.goToNext();
+      await this.waitForCalendarData();
+      if (await isFound()) return;
+    }
+  }
+
+  async goToChipWeek(id: string) {
+    const eventLocator = this.eventChip(id);
+    const blockedLocator = this.blockedTimeChip(id);
+    if (await eventLocator.isVisible()) return;
+    if (await blockedLocator.isVisible()) return;
+    await this.goToWeekWith(async () => {
+      return (await eventLocator.isVisible()) || (await blockedLocator.isVisible());
+    });
+  }
+
+  async expectEventVisible(id: string) {
+    await this.goToChipWeek(id);
+    await expect(this.eventChip(id)).toBeVisible();
+  }
+
+  async expectBlockedTimeVisible(id: string) {
+    await this.goToChipWeek(id);
+    await expect(this.blockedTimeChip(id)).toBeVisible();
   }
 
   async goToToday() {

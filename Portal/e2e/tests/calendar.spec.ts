@@ -32,7 +32,7 @@ test.describe('Calendar', () => {
     });
     trackedAppointments.track(appointmentId);
 
-    await expect(calendar.eventChip(appointmentId)).toBeVisible();
+    await calendar.expectEventVisible(appointmentId);
   });
 
   test('Create blocked time', async ({ page, trackedBlockedTime }) => {
@@ -52,7 +52,7 @@ test.describe('Calendar', () => {
     });
     trackedBlockedTime.track(id);
 
-    await expect(calendar.blockedTimeChip(id)).toBeVisible();
+    await calendar.expectBlockedTimeVisible(id);
   });
 
   test('Edit blocked time', async ({ page, api, trackedBlockedTime }) => {
@@ -77,7 +77,7 @@ test.describe('Calendar', () => {
     expect(result.id).toBe(blockedTime.data.id);
     expect(result.description).toBe(updatedDescription);
 
-    await expect(calendar.blockedTimeChip(blockedTime.data.id)).toBeVisible();
+    await calendar.expectBlockedTimeVisible(blockedTime.data.id);
     await expect(page.getByTitle(updatedDescription)).toBeVisible();
 
     const fetched = await api.getBlockedTime(blockedTime.data.id);
@@ -103,6 +103,7 @@ test.describe('Calendar', () => {
     const modal = await calendar.openBlockedTimeEditModal(description);
     await modal.deleteBlockedTime();
 
+    await calendar.goToChipWeek(blockedTime.data.id);
     await expect(calendar.blockedTimeChip(blockedTime.data.id)).not.toBeVisible();
   });
 
