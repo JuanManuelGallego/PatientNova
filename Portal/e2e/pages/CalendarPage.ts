@@ -81,22 +81,32 @@ export class CalendarPage extends BasePage {
       .catch(() => {});
   }
 
-  private async goToWeekWith(isFound: () => Promise<boolean>) {
+  private async waitForVisible(
+    locator: Locator,
+    timeout = 5000,
+  ): Promise<boolean> {
+    return locator
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  private async goToWeekWith(isFound: (timeout: number) => Promise<boolean>) {
     for (let i = 0; i < 6; i++) {
       await this.goToNext();
       await this.waitForCalendarData();
-      if (await isFound()) return;
+      if (await isFound(5000)) return;
     }
   }
 
   async goToChipWeek(id: string) {
     const eventLocator = this.eventChip(id);
     const blockedLocator = this.blockedTimeChip(id);
-    if (await eventLocator.isVisible()) return;
-    if (await blockedLocator.isVisible()) return;
-    await this.goToWeekWith(async () => {
-      return (await eventLocator.isVisible()) || (await blockedLocator.isVisible());
-    });
+    const chipOnCurrentWeek = async (timeout: number) =>
+      (await this.waitForVisible(eventLocator, timeout)) ||
+      (await this.waitForVisible(blockedLocator, timeout));
+    if (await chipOnCurrentWeek(5000)) return;
+    await this.goToWeekWith(chipOnCurrentWeek);
   }
 
   async expectEventVisible(id: string) {
