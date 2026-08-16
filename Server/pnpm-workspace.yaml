@@ -1,4 +1,4 @@
-allowBuilds:
+onlyBuiltDependencies:
   '@prisma/engines': true
   bcrypt: true
   esbuild: true

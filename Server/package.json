@@ -2,11 +2,12 @@
   "name": "PatientNova_Server",
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.16.0",
   "main": "server.js",
   "scripts": {
     "build": "prisma generate && tsup",
     "typecheck": "tsc --noEmit",
-    "start": "prisma migrate deploy && npm run db:seed-admin && node dist/server.js",
+    "start": "prisma migrate deploy && pnpm run db:seed-admin && node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint . --ext .ts",
     "test": "vitest run --project unit",
@@ -18,8 +19,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/utils/prisma/seed-admin.ts",
-    "db:format": "npx prisma db push",
-    "db:wipe": "npx prisma migrate reset --force --skip-seed"
+    "db:format": "pnpm exec prisma db push",
+    "db:wipe": "pnpm exec prisma migrate reset --force --skip-seed"
   },
   "author": "Juan Manuel Gallego",
   "license": "ISC",
