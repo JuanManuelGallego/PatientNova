@@ -19,10 +19,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "pnpm"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.16.0
+          cache: pnpm
+          cache-dependency-path: Portal/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm exec tsc --noEmit
@@ -93,10 +91,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "pnpm"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.16.0
+          cache: pnpm
+          cache-dependency-path: Server/pnpm-lock.yaml
       - name: Generate encryption key
         run: echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Wait for Postgres
@@ -127,10 +123,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "pnpm"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.16.0
+          cache: pnpm
+          cache-dependency-path: Portal/pnpm-lock.yaml
       - name: Install Portal deps
         working-directory: Portal
         run: pnpm install --frozen-lockfile
