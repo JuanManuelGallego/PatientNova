@@ -103,7 +103,7 @@ test.describe('Calendar', () => {
     const modal = await calendar.openBlockedTimeEditModal(description);
     await modal.deleteBlockedTime();
 
-    await calendar.goToChipWeek(blockedTime.data.id);
+    await calendar.goToWeekOfDate(startTimeUtc);
     await expect(calendar.blockedTimeChip(blockedTime.data.id)).not.toBeVisible();
   });
 

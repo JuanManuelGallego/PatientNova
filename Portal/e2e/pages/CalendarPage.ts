@@ -62,8 +62,8 @@ export class CalendarPage extends BasePage {
 
   async openBlockedTimeEditModal(description: string) {
     const titleLocator = this.page.getByTitle(description);
-    if (!(await titleLocator.isVisible())) {
-      await this.goToWeekWith(() => titleLocator.isVisible());
+    if (!(await this.waitForVisible(titleLocator, 5000))) {
+      await this.goToWeekWith((timeout) => this.waitForVisible(titleLocator, timeout));
     }
     await titleLocator.click();
     const modal = new BlockedTimeModal(this.page);
@@ -117,6 +117,27 @@ export class CalendarPage extends BasePage {
   async expectBlockedTimeVisible(id: string) {
     await this.goToChipWeek(id);
     await expect(this.blockedTimeChip(id)).toBeVisible();
+  }
+
+  async goToWeekOfDate(iso: string) {
+    const weekStart = (d: Date) => {
+      const x = new Date(d);
+      const diff = (x.getDay() + 6) % 7;
+      x.setDate(x.getDate() - diff);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+    await this.goToToday();
+    await this.waitForCalendarData();
+    const diffWeeks = Math.round(
+      (weekStart(new Date(iso)).getTime() - weekStart(new Date()).getTime()) /
+        (7 * 24 * 60 * 60 * 1000),
+    );
+    for (let i = 0; i < Math.abs(diffWeeks); i++) {
+      if (diffWeeks > 0) await this.goToNext();
+      else await this.goToPrev();
+      await this.waitForCalendarData();
+    }
   }
 
   async goToToday() {
