@@ -1,6 +1,14 @@
-onlyBuiltDependencies:
+packages:
+  - "."
+allowBuilds:
   '@prisma/engines': true
   bcrypt: true
   esbuild: true
   prisma: true
   protobufjs: true
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - "prisma"
+  - "bcrypt"
+  - "esbuild"
+  - "protobufjs"
