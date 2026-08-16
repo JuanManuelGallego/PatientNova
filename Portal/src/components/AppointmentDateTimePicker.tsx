@@ -27,7 +27,7 @@ interface BlockedSlot {
 
 interface AppointmentDateTimePickerProps {
   date: string | undefined;
-  onChanged: (date: string) => void;
+  onChange: (date: string) => void;
   onError: (error: string) => void;
   bookedSlots?: string[];
   blockedSlots?: BlockedSlot[];
@@ -35,7 +35,7 @@ interface AppointmentDateTimePickerProps {
 
 export function AppointmentDateTimePicker({
   date,
-  onChanged,
+  onChange,
   onError,
   bookedSlots = [],
   blockedSlots = [],
@@ -77,7 +77,7 @@ export function AppointmentDateTimePicker({
       }
     }
 
-    onChanged(normalized.toISOString());
+    onChange(normalized.toISOString());
   };
 
   return (

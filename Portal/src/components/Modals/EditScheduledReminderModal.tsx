@@ -78,7 +78,7 @@ export function EditScheduledReminderModal({
           <RequiredField label="Nueva fecha y hora de envío" />
           <DateTimePicker
             date={sendAt}
-            onChanged={setsendAt}
+            onChange={setsendAt}
             showTime
             isFuture
             testId="edit-reminder-send-at-picker"

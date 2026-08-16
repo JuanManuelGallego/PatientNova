@@ -1,5 +1,5 @@
 import { expect, Page, Locator } from '@playwright/test';
-import { HttpMethods, Routes } from '../../utils/const';
+import { HttpMethods } from '../../utils/const';
 
 export class AppointmentModal {
   readonly page: Page;

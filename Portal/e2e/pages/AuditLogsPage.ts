@@ -4,8 +4,6 @@ import { AuditDrawer } from './Drawers/AuditDrawer';
 
 export class AuditLogsPage extends BasePage {
   readonly searchInput: Locator;
-  readonly entityFilter: Locator;
-  readonly actionFilter: Locator;
   readonly dateFromFilter: Locator;
   readonly refreshButton: Locator;
   readonly table: Locator;
@@ -13,9 +11,7 @@ export class AuditLogsPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.searchInput = page.getByTestId('audit-search-input');
-    this.entityFilter = page.getByTestId('audit-entity-filter');
-    this.actionFilter = page.getByTestId('audit-action-filter');
-    this.dateFromFilter = page.getByTestId('audit-date-from-filter');
+    this.dateFromFilter = page.getByTestId('audit-date-range-filter');
     this.refreshButton = page.getByTestId('audit-refresh-button');
     this.table = page.getByTestId('audit-table');
   }
@@ -33,18 +29,33 @@ export class AuditLogsPage extends BasePage {
   }
 
   async selectEntityFilter(label: string) {
-    await this.entityFilter.click();
-    await this.page.getByRole('option', { name: label }).click();
+    const trigger = this.page.getByTestId('audit-entity-filter-trigger');
+    await trigger.click();
+    await this.page.getByTestId('audit-entity-filter').getByRole('option', { name: label }).click();
+    await trigger.click();
   }
 
   async selectActionFilter(label: string) {
-    await this.actionFilter.click();
-    await this.page.getByRole('option', { name: label }).click();
+    const trigger = this.page.getByTestId('audit-action-filter-trigger');
+    await trigger.click();
+    await this.page.getByTestId('audit-action-filter').getByRole('option', { name: label }).click();
+    await trigger.click();
   }
 
-  async setDateFilter(value: string) {
-    await this.dateFromFilter.click();
-    await this.page.getByTitle(value).first().click();
+  async setDateRange(from: string, to: string) {
+    await this.page.getByTestId('audit-date-range-filter-trigger').click();
+    await this.page.getByPlaceholder('Desde').click();
+    const clickDay = async (value: string) => {
+      const d = value.split('T')[0].split('-')[2];
+      await this.page
+        .locator('.ant-picker-cell-in-view')
+        .filter({ hasText: d })
+        .first()
+        .click();
+    };
+    await clickDay(from);
+    await clickDay(to);
+    await this.page.getByRole('button', { name: 'Aceptar' }).click();
   }
 
   async refresh() {

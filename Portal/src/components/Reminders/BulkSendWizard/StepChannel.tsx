@@ -89,7 +89,7 @@ export const StepChannel = memo(function StepChannel({
           Fecha y hora de envío
           <DateTimePicker
             date={sentAt}
-            onChanged={setSentAt}
+            onChange={setSentAt}
             showTime
             isFuture
           />

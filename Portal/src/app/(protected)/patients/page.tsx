@@ -1,11 +1,6 @@
 "use client";
 import { useState, useMemo, Suspense } from "react";
-import {
-  useQueryState,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from "nuqs";
+import { useQueryState, parseAsStringEnum } from "nuqs";
 
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
@@ -18,7 +13,12 @@ import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
-import { DataTable, TableFooter } from "@/src/components/DataTable";
+import {
+  DataTable,
+  DataTableFooter,
+  ColumnDef,
+} from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
 import { Channel } from "@/src/types/Reminder";
@@ -28,30 +28,58 @@ import { PatientStatusPill } from "@/src/components/Info/StatusPill";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
 import { todayString } from "@/src/utils/TimeUtils";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  PATIENT_SORT,
+  SORT_DIRECTION,
+  type PatientOrderBy,
+} from "@/src/utils/listQuery";
 
-const PAGE_SIZE = 10;
+enum PatientTab {
+  Active = "active",
+  Inactive = "inactive",
+}
 
 function PatientsPageContent() {
   const { stats, fetchStats } = useFetchPatientsStats();
 
-  const [filterStatus, setFilterStatus] = useQueryState(
-    "filterStatus",
-    parseAsStringEnum<PatientStatus | "All">([
-      "All",
-      PatientStatus.ACTIVE,
-      PatientStatus.INACTIVE,
-    ]).withDefault("All"),
+  const [activeTab, setActiveTab] = useQueryState(
+    QUERY_PARAMS.patientTab,
+    parseAsStringEnum(Object.values(PatientTab)).withDefault(PatientTab.Active),
   );
-  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [search, setSearch] = useQueryState(
-    "search",
-    parseAsString.withDefault(""),
-  );
-  const debouncedSearch = useDebounceState(search, 250);
+
+  const {
+    page,
+    setPage,
+    debouncedSearch,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    handleSort,
+    searchProps,
+  } = useListQueryState<PatientOrderBy>({
+    orderByOptions: PATIENT_SORT.orderBy,
+    orderByDefault: PATIENT_SORT.orderBy[0],
+    sortable: PATIENT_SORT.sortable,
+  });
+
+  const handleTabChange = (tab: PatientTab) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (tab === PatientTab.Inactive) {
+      setOrderBy(PATIENT_SORT.orderBy[2]);
+      setOrder(SORT_DIRECTION.desc);
+    } else {
+      setOrderBy(PATIENT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
+    }
+  };
 
   const [showCreate, setShowCreate] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
@@ -59,19 +87,46 @@ function PatientsPageContent() {
   const [viewPatient, setViewPatient] = useState<Patient | null>(null);
 
   const filters = useMemo<FetchPatientsFilters>(
-    () => ({
-      search: debouncedSearch,
-      status: filterStatus !== "All" ? filterStatus : undefined,
-      page,
-      pageSize: PAGE_SIZE,
-      orderBy: "name",
-      order: "asc",
-    }),
-    [debouncedSearch, filterStatus, page],
+    () => {
+      const tabDefault =
+        activeTab === PatientTab.Active
+          ? [PatientStatus.ACTIVE]
+          : [PatientStatus.INACTIVE];
+      return {
+        search: debouncedSearch,
+        status: tabDefault,
+        page,
+        pageSize: PAGE_SIZE,
+        orderBy: orderBy as FetchPatientsFilters["orderBy"],
+        order,
+      };
+    },
+    [debouncedSearch, activeTab, page, orderBy, order],
   );
 
   const { patients, loading, error, fetchPatients, total, totalPages } =
     useFetchPatients(filters);
+
+  const columns = useMemo<ColumnDef[]>(
+    () => [
+      {
+        label: "Paciente",
+        sortKey: "name",
+      },
+      { label: "Correo" },
+      { label: "WhatsApp" },
+      { label: "SMS" },
+      {
+        label: "Estado",
+      },
+      {
+        label: "Registrado",
+        sortKey: "createdAt",
+      },
+      { label: "" },
+    ],
+    [],
+  );
 
   return (
     <>
@@ -123,53 +178,30 @@ function PatientsPageContent() {
             icon={UserX}
           />
         </div>
+        <TabNav
+          items={[
+            { key: PatientTab.Active, label: "Activos" },
+            { key: PatientTab.Inactive, label: "Inactivos" },
+          ]}
+          active={activeTab}
+          onSelect={(key) => handleTabChange(key as PatientTab)}
+          testIdPrefix="patients-tab"
+        />
         <FilterBar
-          value={search}
-          onChange={(v) => {
-            setSearch(v);
-            setPage(1);
-          }}
-          onClear={() => {
-            setSearch("");
-            setPage(1);
-          }}
+          {...searchProps}
           placeholder="Buscar por nombre, apellido o correo…"
-        >
-          <div className="filter-chips">
-            {(
-              [
-                { key: "All", label: "Todos" },
-                { key: PatientStatus.ACTIVE, label: "Activos" },
-                { key: PatientStatus.INACTIVE, label: "Inactivos" },
-              ] as const
-            ).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => {
-                  setFilterStatus(key);
-                  setPage(1);
-                }}
-                className={`filter-chip ${filterStatus === key ? "filter-chip--active" : ""}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </FilterBar>
+        />
         {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
         <DataTable
-          columns={[
-            "Paciente",
-            "Correo",
-            "WhatsApp",
-            "SMS",
-            "Estado",
-            "Registrado",
-            "",
-          ]}
+          columns={columns}
           rows={patients}
           loading={loading}
           skeletonCount={5}
+          testId="patients-table"
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+          total={total}
           renderRow={(p) => (
             <tr
               onClick={() => setViewPatient(p)}
@@ -247,23 +279,23 @@ function PatientsPageContent() {
             <EmptyState
               icon={STATUS_ICONS.search}
               title={
-                search || filterStatus !== "All"
+                searchProps.value
                   ? "Sin resultados"
                   : "No hay pacientes aún"
               }
               sub={
-                search || filterStatus !== "All"
+                searchProps.value
                   ? "Prueba ajustando los filtros de búsqueda."
                   : 'Haz clic en "Nuevo Paciente" para agregar el primero.'
               }
             />
           }
           footer={
-            <TableFooter
+            <DataTableFooter
               page={page}
-              pageSize={PAGE_SIZE}
               total={total}
               totalPages={totalPages}
+              pageSize={PAGE_SIZE}
               label="pacientes"
               onPageChange={setPage}
             />

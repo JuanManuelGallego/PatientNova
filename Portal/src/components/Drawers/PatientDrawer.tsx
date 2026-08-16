@@ -12,6 +12,7 @@ import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useState } from "react";
 import Link from "next/link";
+import { TabNav } from "@/src/components/TabNav";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { ACTION_ICONS, DETAIL_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
 
@@ -161,26 +162,16 @@ export function PatientDrawer({
           </Section>
           {filteredAppointments && filteredAppointments.length > 0 && (
             <Section title="Citas Vinculadas">
-              <div className="filter-chips">
-                <button
-                  onClick={() => setAppointmentView(RelativeTime.UPCOMING)}
-                  className={`filter-chip ${appointmentView === RelativeTime.UPCOMING ? "filter-chip--active" : ""}`}
-                >
-                  Próximas
-                </button>
-                <button
-                  onClick={() => setAppointmentView(RelativeTime.PAST)}
-                  className={`filter-chip ${appointmentView === RelativeTime.PAST ? "filter-chip--active" : ""}`}
-                >
-                  Pasadas
-                </button>
-                <button
-                  onClick={() => setAppointmentView(RelativeTime.ALL)}
-                  className={`filter-chip ${appointmentView === RelativeTime.ALL ? "filter-chip--active" : ""}`}
-                >
-                  Todas
-                </button>
-              </div>
+              <TabNav
+                wrapperClassName="filter-chips"
+                items={[
+                  { key: RelativeTime.UPCOMING, label: "Próximas" },
+                  { key: RelativeTime.PAST, label: "Pasadas" },
+                  { key: RelativeTime.ALL, label: "Todas" },
+                ]}
+                active={appointmentView}
+                onSelect={(key) => setAppointmentView(key as RelativeTime)}
+              />
               <div className="card-list">
                 {filteredAppointments.map((apt) => {
                   const aptStatus = APPT_STATUS_CFG[ apt.status ];
@@ -217,26 +208,16 @@ export function PatientDrawer({
           )}
           {filteredReminders && filteredReminders.length > 0 && (
             <Section title="Recordatorios Vinculados">
-              <div className="filter-chips">
-                <button
-                  onClick={() => setReminderView(RelativeTime.UPCOMING)}
-                  className={`filter-chip ${reminderView === RelativeTime.UPCOMING ? "filter-chip--active" : ""}`}
-                >
-                  Próximos
-                </button>
-                <button
-                  onClick={() => setReminderView(RelativeTime.PAST)}
-                  className={`filter-chip ${reminderView === RelativeTime.PAST ? "filter-chip--active" : ""}`}
-                >
-                  Pasados
-                </button>
-                <button
-                  onClick={() => setReminderView(RelativeTime.ALL)}
-                  className={`filter-chip ${reminderView === RelativeTime.ALL ? "filter-chip--active" : ""}`}
-                >
-                  Todos
-                </button>
-              </div>
+              <TabNav
+                wrapperClassName="filter-chips"
+                items={[
+                  { key: RelativeTime.UPCOMING, label: "Próximos" },
+                  { key: RelativeTime.PAST, label: "Pasados" },
+                  { key: RelativeTime.ALL, label: "Todos" },
+                ]}
+                active={reminderView}
+                onSelect={(key) => setReminderView(key as RelativeTime)}
+              />
               <div className="card-list">
                 {filteredReminders.map((rem) => {
                   const remStatus = REMINDER_STATUS_CONFIG[ rem.status ];

@@ -56,7 +56,9 @@ export class ReminderModal {
     const input = this.dialog.locator('input.patient-autocomplete__input');
     await input.click();
     await input.fill(name);
-    await this.page.getByRole('option', { name }).first().click();
+    const option = this.page.getByRole('option', { name }).first();
+    await option.waitFor();
+    await input.press('Enter');
   }
 
   async selectFromDropdown(labelText: string, optionLabel: string) {
@@ -78,11 +80,6 @@ export class ReminderModal {
     await ReminderModal.pickDateTime(this.page, this.sendAtPicker, dateString);
   }
 
-  /**
-   * Sets an antd DateTimePicker (with showTime) to the given ISO string by
-   * clicking the calendar day cell and the time-panel columns, then confirming.
-   * Shared so EditReminderModal can reuse the exact same interaction.
-   */
   static async pickDateTime(page: Page, picker: Locator, dateString: string) {
     const iso = new Date(dateString);
     const dayNumber = String(iso.getDate());
@@ -93,8 +90,6 @@ export class ReminderModal {
 
     await picker.click();
 
-    // Navigate the panel to the target month/year if it differs from the
-    // month the picker opens on (today's month).
     const now = new Date();
     const monthDiff =
       (iso.getFullYear() - now.getFullYear()) * 12 + (iso.getMonth() - now.getMonth());

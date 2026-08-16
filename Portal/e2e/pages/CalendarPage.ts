@@ -53,6 +53,7 @@ export class CalendarPage extends BasePage {
   }
 
   async openEventDrawer(id: string) {
+    await this.goToChipWeek(id);
     await this.eventChip(id).click();
     const drawer = new AppointmentDrawer(this.page);
     await drawer.waitForOpen();
@@ -60,10 +61,83 @@ export class CalendarPage extends BasePage {
   }
 
   async openBlockedTimeEditModal(description: string) {
-    await this.page.getByTitle(description).click();
+    const titleLocator = this.page.getByTitle(description);
+    if (!(await this.waitForVisible(titleLocator, 5000))) {
+      await this.goToWeekWith((timeout) => this.waitForVisible(titleLocator, timeout));
+    }
+    await titleLocator.click();
     const modal = new BlockedTimeModal(this.page);
     await modal.waitForOpen();
     return modal;
+  }
+
+  private async waitForCalendarData() {
+    await this.page
+      .waitForResponse(
+        (r) =>
+          r.url().includes('/appointments') || r.url().includes('/blocked-time'),
+        { timeout: 10000 },
+      )
+      .catch(() => {});
+  }
+
+  private async waitForVisible(
+    locator: Locator,
+    timeout = 5000,
+  ): Promise<boolean> {
+    return locator
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  private async goToWeekWith(isFound: (timeout: number) => Promise<boolean>) {
+    for (let i = 0; i < 6; i++) {
+      await this.goToNext();
+      await this.waitForCalendarData();
+      if (await isFound(5000)) return;
+    }
+  }
+
+  async goToChipWeek(id: string) {
+    const eventLocator = this.eventChip(id);
+    const blockedLocator = this.blockedTimeChip(id);
+    const chipOnCurrentWeek = async (timeout: number) =>
+      (await this.waitForVisible(eventLocator, timeout)) ||
+      (await this.waitForVisible(blockedLocator, timeout));
+    if (await chipOnCurrentWeek(5000)) return;
+    await this.goToWeekWith(chipOnCurrentWeek);
+  }
+
+  async expectEventVisible(id: string) {
+    await this.goToChipWeek(id);
+    await expect(this.eventChip(id)).toBeVisible();
+  }
+
+  async expectBlockedTimeVisible(id: string) {
+    await this.goToChipWeek(id);
+    await expect(this.blockedTimeChip(id)).toBeVisible();
+  }
+
+  async goToWeekOfDate(iso: string) {
+    const weekStart = (d: Date) => {
+      const x = new Date(d);
+      const diff = (x.getDay() + 6) % 7;
+      x.setDate(x.getDate() - diff);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    };
+    await this.goToToday();
+    await this.waitForCalendarData();
+    const diffWeeks = Math.round(
+      (weekStart(new Date(iso)).getTime() - weekStart(new Date()).getTime()) /
+        (7 * 24 * 60 * 60 * 1000),
+    );
+    for (let i = 0; i < Math.abs(diffWeeks); i++) {
+      if (diffWeeks > 0) await this.goToNext();
+      else await this.goToPrev();
+      await this.waitForCalendarData();
+    }
   }
 
   async goToToday() {

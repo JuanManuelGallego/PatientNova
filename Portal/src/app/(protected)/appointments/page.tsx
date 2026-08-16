@@ -15,16 +15,17 @@ import {
   DollarSign,
   RefreshCw,
 } from "lucide-react";
-import { DataTable, TableFooter } from "@/src/components/DataTable";
+import { DataTable, DataTableFooter, ColumnDef } from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
-import { DateTimePicker } from "@/src/components/DateTimePicker";
-import { CustomSelect } from "@/src/components/CustomSelect";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import {
   Appointment,
   AppointmentStatus,
+  APPT_STATUS_CFG,
   DEFAULT_APPT_STATUS,
+  HISTORY_APPT_STATUS,
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
@@ -39,49 +40,105 @@ import {
 } from "@/src/components/Info/StatusPill";
 import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppointmentsStats";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
+import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
+import { withAllOption } from "@/src/utils/options";
+import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  APPT_SORT,
+  SORT_DIRECTION,
+  type ApptOrderBy,
+} from "@/src/utils/listQuery";
 import {
   useQueryState,
-  parseAsInteger,
   parseAsString,
+  parseAsArrayOf,
   parseAsStringEnum,
 } from "nuqs";
 import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 
-const PAGE_SIZE = 10;
+enum AppointmentTab {
+  Upcoming = "upcoming",
+  History = "history",
+}
 
-type FilterStatus = AppointmentStatus | "All" | "Upcoming";
+const tabStatuses = (tab: AppointmentTab): AppointmentStatus[] =>
+  tab === AppointmentTab.Upcoming ? DEFAULT_APPT_STATUS : HISTORY_APPT_STATUS;
+
+const STATUS_OPTIONS = (tab: AppointmentTab) =>
+  withAllOption(tabStatuses(tab), (v) => APPT_STATUS_CFG[v].label);
+
+const PAID_OPTIONS = [
+  { value: "", label: "Todos" },
+  { value: "true", label: "Pagadas" },
+  { value: "false", label: "Sin pagar" },
+];
+
+const TYPE_OPTIONS = (types: { id: string; name: string }[]) =>
+  withAllOption(types, (t) => t.name);
+
+const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
+  withAllOption(locations, (l) => l.name);
 
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
   const { updateAppointment } = useUpdateAppointment();
+  const { appointmentTypes } = useFetchAppointmentTypes();
+  const { locations } = useFetchLocations();
 
-  const [ filterStatus, setFilterStatus ] = useQueryState(
-    "filterStatus",
-    parseAsStringEnum<FilterStatus>([
-      "All",
-      "Upcoming",
-      ...Object.values(AppointmentStatus),
-    ]).withDefault("Upcoming"),
+  const [ status, setStatus ] = useQueryState(
+    QUERY_PARAMS.apptStatus,
+    parseAsArrayOf(parseAsString).withDefault([]),
   );
-  const [ filterPaid, setFilterPaid ] = useQueryState(
-    "filterPaid",
-    parseAsStringEnum<"All" | "true" | "false">([
-      "All",
-      "true",
-      "false",
-    ]).withDefault("All"),
+  const [ activeTab, setActiveTab ] = useQueryState(
+    QUERY_PARAMS.apptTab,
+    parseAsStringEnum(Object.values(AppointmentTab)).withDefault(AppointmentTab.Upcoming),
   );
-  const [ dateFilter, setDateFilter ] = useQueryState(
-    "dateFilter",
+  const [ paid, setPaid ] = useQueryState(
+    QUERY_PARAMS.apptPaid,
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
+  const [ typeId, setTypeId ] = useQueryState(
+    QUERY_PARAMS.apptTypeId,
     parseAsString.withDefault(""),
   );
-  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [ search, setSearch ] = useQueryState(
-    "search",
+  const [ locationId, setLocationId ] = useQueryState(
+    QUERY_PARAMS.apptLocationId,
     parseAsString.withDefault(""),
   );
-  const debouncedSearch = useDebounceState(search, 250);
+  const { range: dateRange, setRange: setDateRange } = useDateRangeFilter(
+    QUERY_PARAMS.apptDate,
+  );
+  const {
+    page,
+    setPage,
+    debouncedSearch,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    handleSort,
+    searchProps,
+  } = useListQueryState<ApptOrderBy>({
+    orderByOptions: APPT_SORT.orderBy,
+    orderByDefault: APPT_SORT.orderBy[0],
+    sortable: APPT_SORT.sortable,
+  });
+
+  const handleTabChange = (tab: AppointmentTab) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (tab === AppointmentTab.History) {
+      setOrderBy(APPT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.desc);
+    } else {
+      setOrderBy(APPT_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
+    }
+  };
 
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
@@ -90,25 +147,106 @@ function AppointmentsPageContent() {
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
 
   const filters = useMemo<FetchAppointmentsFilters>(
-    () => ({
-      patientId: undefined,
-      status:
-        filterStatus === "Upcoming"
-          ? DEFAULT_APPT_STATUS
-          : filterStatus !== "All"
-            ? filterStatus
-            : undefined,
-      startAt: undefined,
-      dateFrom: dateFilter ? `${dateFilter}T00:00:00.000Z` : undefined,
-      dateTo: dateFilter ? `${dateFilter}T23:59:59.999Z` : undefined,
-      search: debouncedSearch.trim() || undefined,
-      paid: filterPaid !== "All" ? filterPaid === "true" : undefined,
-      page: page,
-      pageSize: PAGE_SIZE,
-      orderBy: "startAt",
-      order: "asc",
-    }),
-    [ filterStatus, filterPaid, debouncedSearch, dateFilter, page ],
+    () => {
+      const tabDefault = tabStatuses(activeTab);
+      return {
+        patientId: undefined,
+        status: status.length ? (status as AppointmentStatus[]) : tabDefault,
+        startAt: undefined,
+        dateFrom: dateRange?.[0] ? `${dateRange[0]}T00:00:00.000Z` : undefined,
+        dateTo: dateRange?.[1] ? `${dateRange[1]}T23:59:59.999Z` : undefined,
+        search: debouncedSearch.trim() || undefined,
+        paid: paid.length ? paid[0] === "true" : undefined,
+        typeId: typeId || undefined,
+        locationId: locationId || undefined,
+        page: page,
+        pageSize: PAGE_SIZE,
+        orderBy: orderBy as FetchAppointmentsFilters["orderBy"],
+        order,
+      };
+    },
+    [ status, paid, debouncedSearch, dateRange, typeId, locationId, activeTab, page, orderBy, order ],
+  );
+
+  const columns = useMemo<ColumnDef[]>(
+    () => [
+      { label: "Paciente" },
+      {
+        label: "Tipo",
+        filter: {
+          kind: "single-enum",
+          options: TYPE_OPTIONS(appointmentTypes),
+          value: typeId,
+          onChange: (v: string) => {
+            setTypeId(v);
+            setPage(1);
+          },
+          testId: "appointment-type-filter",
+          triggerTestId: "appointment-type-filter-trigger",
+        },
+      },
+      {
+        label: "Fecha y Hora",
+        sortKey: "startAt",
+        filter: {
+          kind: "date-range",
+          value: dateRange,
+          onChange: (range) => {
+            setDateRange(range);
+            setPage(1);
+          },
+          testId: "appointment-date-range-filter",
+          triggerTestId: "appointment-date-range-filter-trigger",
+        },
+      },
+      { label: "Recordatorio" },
+      {
+        label: "Ubicación",
+        filter: {
+          kind: "single-enum",
+          options: LOCATION_OPTIONS(locations),
+          value: locationId,
+          onChange: (v: string) => {
+            setLocationId(v);
+            setPage(1);
+          },
+          testId: "appointment-location-filter",
+          triggerTestId: "appointment-location-filter-trigger",
+        },
+      },
+      {
+        label: "Estado",
+        sortKey: "status",
+        filter: {
+          kind: "enum",
+          options: STATUS_OPTIONS(activeTab),
+          value: status,
+          onChange: (v: string[]) => {
+            setStatus(v);
+            setPage(1);
+          },
+          testId: "appointment-status-filter",
+          triggerTestId: "appointment-status-filter-trigger",
+        },
+      },
+      {
+        label: "Pago",
+        sortKey: "price",
+        filter: {
+          kind: "enum",
+          options: PAID_OPTIONS,
+          value: paid,
+          onChange: (v: string[]) => {
+            setPaid(v);
+            setPage(1);
+          },
+          testId: "appointment-paid-filter",
+          triggerTestId: "appointment-paid-filter-trigger",
+        },
+      },
+      { label: "" },
+    ],
+    [status, paid, dateRange, typeId, locationId, activeTab, appointmentTypes, locations, setStatus, setPaid, setDateRange, setTypeId, setLocationId, setPage],
   );
 
   const { appointments, loading, error, fetchAppointments, total, totalPages } =
@@ -199,101 +337,34 @@ function AppointmentsPageContent() {
             icon={DollarSign}
           />
         </div>
+        <TabNav
+          items={[
+            { key: AppointmentTab.Upcoming, label: "Próximas" },
+            { key: AppointmentTab.History, label: "Historial" },
+          ]}
+          active={activeTab}
+          onSelect={(key) => handleTabChange(key as AppointmentTab)}
+          testIdPrefix="appointments-tab"
+        />
         {error && <ErrorBanner msg={error} onRetry={fetchAppointments} />}
         {actionError && (
           <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
         )}
         <FilterBar
-          value={search}
-          onChange={(v) => setSearch(v)}
-          onClear={() => {
-            setSearch("");
-            setPage(1);
-          }}
+          {...searchProps}
           placeholder="Buscar paciente, tipo, ubicación…"
-          wrap
           testId="appointments-search-input"
-        >
-          <DateTimePicker
-            date={dateFilter}
-            onChanged={(iso) => setDateFilter(iso.slice(0, 10))}
-            isFuture
-            testId="appointment-date-filter"
-          />
-          {dateFilter && (
-            <button
-              onClick={() => setDateFilter("")}
-              className="btn-secondary btn-secondary--sm"
-            >
-              <ACTION_ICONS.close size={12} /> Fecha
-            </button>
-          )}
-          <div className="filter-chips filter-chips--wrap">
-            {(
-              [
-                { k: "All", l: `Todas (${stats?.total ?? 0})` },
-                {
-                  k: "Upcoming",
-                  l: `Próximas (${(stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0) + (stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0)})`,
-                },
-                {
-                  k: AppointmentStatus.SCHEDULED,
-                  l: `Programadas (${stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0})`,
-                },
-                {
-                  k: AppointmentStatus.CONFIRMED,
-                  l: `Confirmadas (${stats?.byStatus[ AppointmentStatus.CONFIRMED ] ?? 0})`,
-                },
-                {
-                  k: AppointmentStatus.COMPLETED,
-                  l: `Completadas (${stats?.byStatus[ AppointmentStatus.COMPLETED ] ?? 0})`,
-                },
-                {
-                  k: AppointmentStatus.CANCELLED,
-                  l: `Canceladas (${stats?.byStatus[ AppointmentStatus.CANCELLED ] ?? 0})`,
-                },
-                {
-                  k: AppointmentStatus.NO_SHOW,
-                  l: `No asistió (${stats?.byStatus[ AppointmentStatus.NO_SHOW ] ?? 0})`,
-                },
-              ] as const
-            ).map(({ k, l }) => (
-              <button
-                key={k}
-                onClick={() => setFilterStatus(k)}
-                className={`filter-chip ${filterStatus === k ? "filter-chip--active" : ""}`}
-                data-testid={`appointments-filter-${k.toLowerCase()}`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-          <CustomSelect
-            value={filterPaid}
-            className="form-input--auto"
-            data-testid="appointment-paid-filter"
-            options={[
-              { value: "All", label: "Todas" },
-              { value: "true", label: "Pagadas" },
-              { value: "false", label: "Sin pagar" },
-            ]}
-            onChange={(v) => setFilterPaid(v as "true" | "false" | "All")}
-          />
-        </FilterBar>
+        />
         <DataTable
-          columns={[
-            "Paciente",
-            "Tipo",
-            "Fecha y Hora",
-            "Recordatorio",
-            "Ubicación",
-            "Estado",
-            "Pago",
-            "",
-          ]}
+          columns={columns}
           rows={appointments}
           loading={loading}
           skeletonCount={6}
+          testId="appointments-table"
+          orderBy={orderBy}
+          order={order}
+          onSort={handleSort}
+          total={total}
           renderRow={(a) => (
             <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)} data-testid={`appointment-row-${a.id}`}>
               <td className="td">
@@ -376,24 +447,24 @@ function AppointmentsPageContent() {
                 </div>
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
-                {(a.status == AppointmentStatus.CONFIRMED || a.status == AppointmentStatus.SCHEDULED) &&
-                  (<div className="td-actions">
+                  <div className="td-actions">
                     <button
                       onClick={() => setEditAppt(a)}
                       className="btn-action-edit"
                       data-testid={`appointment-edit-button-${a.id}`}
-                    >
+                      >
                       Editar
                     </button>
-                    <button
-                      onClick={() => setDeleteAppt(a)}
-                      className="btn-action-delete"
-                      data-testid={`appointment-delete-button-${a.id}`}
-                    >
-                      <ACTION_ICONS.close size={14} />
-                    </button>
-                  </div>)
-                }
+                    {(a.status == AppointmentStatus.CONFIRMED || a.status == AppointmentStatus.SCHEDULED) &&
+                    (<button
+                        onClick={() => setDeleteAppt(a)}
+                        className="btn-action-delete"
+                        data-testid={`appointment-delete-button-${a.id}`}
+                      >
+                        <ACTION_ICONS.close size={14} />
+                      </button>
+                    )}
+                  </div>
               </td>
             </tr>
           )}
@@ -405,11 +476,11 @@ function AppointmentsPageContent() {
             />
           }
           footer={
-            <TableFooter
+            <DataTableFooter
               page={page}
-              pageSize={PAGE_SIZE}
               total={total}
               totalPages={totalPages}
+              pageSize={PAGE_SIZE}
               label="citas"
               onPageChange={setPage}
               testIdPrefix="appointments-pagination"

@@ -14,22 +14,28 @@ const mobilePopupStyle: React.CSSProperties = {
 
 export function DateTimePicker({
   date,
-  onChanged,
+  onChange,
   showTime = false,
   isFuture = false,
+  emitLocalDate = false,
+  popupContainer,
   testId,
 }: {
   date: string | undefined;
-  onChanged: (date: string) => void;
+  onChange: (date: string) => void;
   showTime?: boolean;
   isFuture?: boolean;
+  emitLocalDate?: boolean;
+  popupContainer?: () => HTMLElement | null;
   testId?: string;
 }) {
   const { isDark } = useTheme();
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
-    const selectedIso = selectedDate.toISOString();
-    onChanged(selectedIso);
+    const selectedIso = emitLocalDate
+      ? selectedDate.format("YYYY-MM-DD")
+      : selectedDate.toISOString();
+    onChange(selectedIso);
   };
 
   return (
@@ -74,6 +80,9 @@ export function DateTimePicker({
         }
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}
+        getPopupContainer={
+          popupContainer ? () => popupContainer() ?? document.body : undefined
+        }
         data-testid={testId}
       />
     </ConfigProvider>

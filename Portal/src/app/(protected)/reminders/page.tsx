@@ -6,6 +6,7 @@ import {
   MAX_RETRIES,
   Reminder,
   ReminderStatus,
+  REMINDER_STATUS_CONFIG,
 } from "@/src/types/Reminder";
 import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { StatCard } from "@/src/components/Info/StatCard";
@@ -14,7 +15,12 @@ import { EditScheduledReminderModal } from "@/src/components/Modals/EditSchedule
 import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
-import { DataTable, TableFooter } from "@/src/components/DataTable";
+import {
+  DataTable,
+  DataTableFooter,
+  ColumnDef,
+} from "@/src/components/DataTable";
+import { TabNav } from "@/src/components/TabNav";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchAllPatients } from "@/src/api/patients/useFetchAllPatients";
@@ -27,12 +33,22 @@ import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
-import { useDebounceState } from "@/src/hooks/useDebounceState";
+import { useListQueryState } from "@/src/hooks/useListQueryState";
+import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
+import { DateRangeValue } from "@/src/components/DateRangePicker";
+import { withAllOption } from "@/src/utils/options";
+import {
+  PAGE_SIZE,
+  QUERY_PARAMS,
+  REMINDER_SORT,
+  SORT_DIRECTION,
+  type ReminderOrderBy,
+} from "@/src/utils/listQuery";
 import {
   useQueryState,
-  parseAsInteger,
   parseAsString,
   parseAsStringEnum,
+  parseAsArrayOf,
 } from "nuqs";
 
 enum ActiveTab {
@@ -40,21 +56,59 @@ enum ActiveTab {
   History = "History",
   Bulk = "Bulk",
 }
-const PAGE_SIZE = 10;
+
+const STATUS_ACTIVE_OPTIONS = withAllOption(
+  [ReminderStatus.PENDING, ReminderStatus.QUEUED],
+  (v) => REMINDER_STATUS_CONFIG[v].label,
+);
+
+const STATUS_HISTORY_OPTIONS = withAllOption(
+  [ReminderStatus.CANCELLED, ReminderStatus.FAILED, ReminderStatus.SENT],
+  (v) => REMINDER_STATUS_CONFIG[v].label,
+);
 
 function RemindersPageContent() {
   const { stats, fetchStats } = useFetchRemindersStats();
 
   const [ activeTab, setActiveTab ] = useQueryState(
-    "activeTab",
+    QUERY_PARAMS.reminderTab,
     parseAsStringEnum(Object.values(ActiveTab)).withDefault(ActiveTab.Active),
   );
-  const [ page, setPage ] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [ search, setSearch ] = useQueryState(
-    "search",
-    parseAsString.withDefault(""),
+  const { range: dateFilter, setRange: setDateFilter } = useDateRangeFilter(
+    QUERY_PARAMS.reminderDate,
   );
-  const debouncedSearch = useDebounceState(search, 250);
+  const [ statusFilter, setStatusFilter ] = useQueryState(
+    QUERY_PARAMS.reminderStatus,
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
+
+  const {
+    page,
+    setPage,
+    debouncedSearch,
+    orderBy,
+    setOrderBy,
+    order,
+    setOrder,
+    handleSort,
+    searchProps,
+  } = useListQueryState<ReminderOrderBy>({
+    orderByOptions: REMINDER_SORT.orderBy,
+    orderByDefault: REMINDER_SORT.orderBy[0],
+    sortable: REMINDER_SORT.sortable,
+  });
+
+  const handleTabChange = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    setPage(1);
+    if (tab === ActiveTab.History) {
+      setOrderBy(REMINDER_SORT.orderBy[3]);
+      setOrder(SORT_DIRECTION.desc);
+    } else if (tab === ActiveTab.Active) {
+      setOrderBy(REMINDER_SORT.orderBy[0]);
+      setOrder(SORT_DIRECTION.asc);
+    }
+  };
 
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editReminder, setEditReminder ] = useState<Reminder | null>(null);
@@ -63,8 +117,8 @@ function RemindersPageContent() {
   const [ cancelReminder, setCancelReminder ] = useState<Reminder | null>(null);
 
   const filters = useMemo<FetchRemindersFilters>(
-    () => ({
-      status:
+    () => {
+      const tabDefault =
         activeTab === "Active"
           ? [ ReminderStatus.PENDING, ReminderStatus.QUEUED ]
           : activeTab === "History"
@@ -73,14 +127,19 @@ function RemindersPageContent() {
               ReminderStatus.FAILED,
               ReminderStatus.CANCELLED,
             ]
-            : undefined,
-      page,
-      pageSize: PAGE_SIZE,
-      search: debouncedSearch.trim() || undefined,
-      orderBy: activeTab === "Active" ? "sendAt" : "updatedAt",
-      order: activeTab === "Active" ? "asc" : "desc",
-    }),
-    [ page, debouncedSearch, activeTab ],
+            : undefined;
+      return {
+        status: statusFilter.length ? (statusFilter as ReminderStatus[]) : tabDefault,
+        page,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch.trim() || undefined,
+        dateFrom: dateFilter?.[0] ? `${dateFilter[0]}T00:00:00.000Z` : undefined,
+        dateTo: dateFilter?.[1] ? `${dateFilter[1]}T23:59:59.999Z` : undefined,
+        orderBy: orderBy as FetchRemindersFilters["orderBy"],
+        order,
+      };
+    },
+    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, orderBy, order ],
   );
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
@@ -150,17 +209,12 @@ function RemindersPageContent() {
         </div>
         <ReminderTabs
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          onTabChange={handleTabChange}
           stats={stats}
         />
         {activeTab !== "Bulk" && (
           <FilterBar
-            value={search}
-            onChange={(v) => setSearch(v)}
-            onClear={() => {
-              setSearch("");
-              setPage(1);
-            }}
+            {...searchProps}
             placeholder="Buscar por nombre, número, canal…"
             testId="reminders-search-input"
           />
@@ -185,6 +239,13 @@ function RemindersPageContent() {
             setViewReminder={setViewReminder}
             setEditReminder={setEditReminder}
             setCancelReminder={setCancelReminder}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            orderBy={orderBy}
+            order={order}
+            onSort={handleSort}
           />
         )}
         {activeTab === "History" && (
@@ -201,6 +262,13 @@ function RemindersPageContent() {
               fetchReminders();
               fetchStats();
             }}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            orderBy={orderBy}
+            order={order}
+            onSort={handleSort}
           />
         )}
         {activeTab === "Bulk" && <BulkTab />}
@@ -274,6 +342,13 @@ function ActiveRemindersTab({
   setViewReminder,
   setEditReminder,
   setCancelReminder,
+  statusFilter,
+  setStatusFilter,
+  dateFilter,
+  setDateFilter,
+  orderBy,
+  order,
+  onSort,
 }: {
   reminders: Reminder[];
   loading: boolean;
@@ -284,21 +359,64 @@ function ActiveRemindersTab({
   setViewReminder: (r: Reminder) => void;
   setEditReminder: (r: Reminder) => void;
   setCancelReminder: (r: Reminder) => void;
+  statusFilter: string[];
+  setStatusFilter: (v: string[]) => void;
+  dateFilter: DateRangeValue;
+  setDateFilter: (v: [string, string]) => void;
+  orderBy: string;
+  order: "asc" | "desc";
+  onSort: (sortKey: string) => void;
 }) {
+  const columns = useMemo<ColumnDef[]>(
+    () => [
+      { label: "Destinatario" },
+      { label: "Canal" },
+      {
+        label: "Estado",
+        sortKey: "status",
+        filter: {
+          kind: "enum",
+          options: STATUS_ACTIVE_OPTIONS,
+          value: statusFilter,
+          onChange: (v: string[]) => {
+            setStatusFilter(v);
+            setPage(1);
+          },
+          testId: "reminder-status-filter",
+          triggerTestId: "reminder-status-filter-trigger",
+        },
+      },
+      {
+        label: "Programado para",
+        sortKey: "sendAt",
+        filter: {
+          kind: "date-range",
+          value: dateFilter,
+          onChange: (range) => {
+            setDateFilter(range);
+            setPage(1);
+          },
+          testId: "reminder-date-range-filter",
+          triggerTestId: "reminder-date-range-filter-trigger",
+        },
+      },
+      { label: "Dentro de" },
+      { label: "Creado el" },
+      { label: "" },
+    ],
+    [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
+  );
+
   return (
     <DataTable
-      columns={[
-        "Destinatario",
-        "Canal",
-        "Estado",
-        "Programado para",
-        "Dentro de",
-        "Creado el",
-        "",
-      ]}
+      columns={columns}
       rows={reminders}
       loading={loading}
       skeletonCount={4}
+      testId="reminders-table"
+      orderBy={orderBy}
+      order={order}
+      onSort={onSort}
       renderRow={(reminder) => (
         <tr
           key={reminder.id}
@@ -348,11 +466,11 @@ function ActiveRemindersTab({
         />
       }
       footer={
-        <TableFooter
+        <DataTableFooter
           page={page}
-          pageSize={PAGE_SIZE}
           total={total}
           totalPages={totalPages}
+          pageSize={PAGE_SIZE}
           label="recordatorios"
           onPageChange={setPage}
         />
@@ -370,6 +488,13 @@ function HistoryRemindersTab({
   setPage,
   setViewReminder,
   onRetry,
+  statusFilter,
+  setStatusFilter,
+  dateFilter,
+  setDateFilter,
+  orderBy,
+  order,
+  onSort,
 }: {
   reminders: Reminder[];
   loading: boolean;
@@ -379,22 +504,68 @@ function HistoryRemindersTab({
   setPage: (p: number) => void;
   setViewReminder: (r: Reminder) => void;
   onRetry: (id: string) => void;
+  statusFilter: string[];
+  setStatusFilter: (v: string[]) => void;
+  dateFilter: DateRangeValue;
+  setDateFilter: (v: [string, string]) => void;
+  orderBy: string;
+  order: "asc" | "desc";
+  onSort: (sortKey: string) => void;
 }) {
+  const columns = useMemo<ColumnDef[]>(
+    () => [
+      { label: "Destinatario" },
+      { label: "Canal" },
+      {
+        label: "Estado",
+        sortKey: "status",
+        filter: {
+          kind: "enum",
+          options: STATUS_HISTORY_OPTIONS,
+          value: statusFilter,
+          onChange: (v: string[]) => {
+            setStatusFilter(v);
+            setPage(1);
+          },
+          testId: "reminder-status-filter",
+          triggerTestId: "reminder-status-filter-trigger",
+        },
+      },
+      {
+        label: "Programado para",
+        sortKey: "sendAt",
+        filter: {
+          kind: "date-range",
+          value: dateFilter,
+          onChange: (range) => {
+            setDateFilter(range);
+            setPage(1);
+          },
+          testId: "reminder-date-range-filter",
+          triggerTestId: "reminder-date-range-filter-trigger",
+        },
+      },
+      {
+        label: "Última actualización",
+        sortKey: "updatedAt",
+      },
+      { label: "ID Mensaje" },
+      { label: "Error" },
+      { label: "" },
+    ],
+    [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
+  );
+
   return (
     <DataTable
-      columns={[
-        "Destinatario",
-        "Canal",
-        "Estado",
-        "Programado para",
-        "Última actualización",
-        "ID Mensaje",
-        "Error",
-        "",
-      ]}
+      columns={columns}
       rows={reminders}
       loading={loading}
       skeletonCount={5}
+      testId="reminders-table"
+      orderBy={orderBy}
+      order={order}
+      onSort={onSort}
       renderRow={(reminder) => (
         <tr
           key={reminder.id}
@@ -454,11 +625,11 @@ function HistoryRemindersTab({
         />
       }
       footer={
-        <TableFooter
+        <DataTableFooter
           page={page}
-          pageSize={PAGE_SIZE}
           total={total}
           totalPages={totalPages}
+          pageSize={PAGE_SIZE}
           label="recordatorios"
           onPageChange={setPage}
         />
@@ -497,52 +668,23 @@ function BulkTab() {
 
 function ReminderTabs({
   activeTab,
-  setActiveTab,
-  stats,
+  onTabChange,
 }: {
   activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
+  onTabChange: (tab: ActiveTab) => void;
   stats: ReturnType<typeof useFetchRemindersStats>[ "stats" ];
 }) {
-  const tabs = [
-    {
-      key: ActiveTab.Active,
-      label: "Activos",
-      badge:
-        (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
-        (stats?.byStatus[ ReminderStatus.QUEUED ] || 0),
-    },
-    {
-      key: ActiveTab.History,
-      label: "Historial",
-      badge:
-        (stats?.byStatus[ ReminderStatus.SENT ] || 0) +
-        (stats?.byStatus[ ReminderStatus.FAILED ] || 0) +
-        (stats?.byStatus[ ReminderStatus.CANCELLED ] || 0),
-    },
-    { key: ActiveTab.Bulk, label: "Envío Masivo", badge: null },
-  ];
-
   return (
-    <div className="tab-nav">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          onClick={() => setActiveTab(tab.key)}
-          className={`filter-chip ${activeTab === tab.key ? "filter-chip--active" : ""}`}
-          data-testid={`reminders-tab-${tab.key.toLowerCase()}`}
-        >
-          {tab.label}
-          {tab.badge !== null && (
-            <span
-              className={`tab-badge ${activeTab === tab.key ? "tab-badge--active" : ""}`}
-            >
-              {tab.badge}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
+    <TabNav
+      items={[
+        { key: ActiveTab.Active, label: "Activos" },
+        { key: ActiveTab.History, label: "Historial" },
+        { key: ActiveTab.Bulk, label: "Envío Masivo" },
+      ]}
+      active={activeTab}
+      onSelect={(key) => onTabChange(key as ActiveTab)}
+      testIdPrefix="reminders-tab"
+    />
   );
 }
 

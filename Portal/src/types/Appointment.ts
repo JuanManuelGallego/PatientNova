@@ -94,6 +94,12 @@ export const DEFAULT_APPT_STATUS = [
   AppointmentStatus.CONFIRMED,
 ];
 
+export const HISTORY_APPT_STATUS = [
+  AppointmentStatus.COMPLETED,
+  AppointmentStatus.CANCELLED,
+  AppointmentStatus.NO_SHOW,
+];
+
 export const APPT_STATUS_CFG: Record<
   AppointmentStatus,
   { label: string; color: string; bg: string; dot: string; }
@@ -138,6 +144,8 @@ export interface FetchAppointmentsFilters {
   dateTo?: string;
   search?: string;
   paid?: boolean;
+  typeId?: string;
+  locationId?: string;
   page?: number;
   pageSize?: number;
   orderBy?:

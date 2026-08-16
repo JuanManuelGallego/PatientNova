@@ -48,7 +48,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
         Fecha de nacimiento
         <DateTimePicker
           date={form.birthDate || undefined}
-          onChanged={(date) => onChange("birthDate", date)}
+          onChange={(date) => onChange("birthDate", date)}
           data-testid="general-data-birth-date-input"
         />
       </label>

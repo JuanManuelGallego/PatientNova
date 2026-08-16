@@ -57,7 +57,7 @@ export function EvolutionNotes({
                 Fecha
                 <DateTimePicker
                   date={note.date || undefined}
-                  onChanged={(date) => updateMember(index, "date", date)}
+                  onChange={(date) => updateMember(index, "date", date)}
                   testId={`evolution-note-date-${note.id}`}
                 />
               </label>
