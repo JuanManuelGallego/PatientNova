@@ -674,6 +674,31 @@ body {
   cursor: not-allowed;
 }
 
+.btn-success {
+  padding: 10px 22px;
+  background: var(--c-success);
+  color: var(--c-white);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+.btn-success:focus-visible {
+  outline: 2px solid var(--c-success);
+  outline-offset: 2px;
+}
+.btn-success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-hero {
   display: flex;
   align-items: center;

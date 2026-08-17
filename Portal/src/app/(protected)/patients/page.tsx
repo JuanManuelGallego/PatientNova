@@ -274,13 +274,9 @@ function PatientsPageContent() {
                         title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
                       >
                         {isActive ? (
-                          <>
-                            <ACTION_ICONS.cancel size={14} /> Desactivar
-                          </>
+                          <ACTION_ICONS.close size={14} />
                         ) : (
-                          <>
-                            <ACTION_ICONS.retry size={14} /> Reactivar
-                          </>
+                          <ACTION_ICONS.retry size={14} />
                         )}
                       </button>
                     );

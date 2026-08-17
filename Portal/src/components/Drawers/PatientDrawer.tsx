@@ -287,13 +287,9 @@ export function PatientDrawer({
             title={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}
           >
             {patient.status === PatientStatus.ACTIVE ? (
-              <>
-                <ACTION_ICONS.cancel size={14} /> Desactivar
-              </>
+               <ACTION_ICONS.cancel size={14} />
             ) : (
-              <>
-                <ACTION_ICONS.retry size={14} /> Reactivar
-              </>
+              <ACTION_ICONS.retry size={14} />
             )}
           </button>
         </div>
