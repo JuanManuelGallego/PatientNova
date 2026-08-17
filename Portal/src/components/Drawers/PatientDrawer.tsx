@@ -1,5 +1,5 @@
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
-import { Patient, PATIENT_STATUS_CONFIG } from "@/src/types/Patient";
+import { Patient, PATIENT_STATUS_CONFIG, PatientStatus } from "@/src/types/Patient";
 import { Channel, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
@@ -280,8 +280,21 @@ export function PatientDrawer({
           <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="patient-drawer-edit-button">
             <ACTION_ICONS.edit size={14} /> Editar
           </button>
-          <button onClick={onDelete} className="btn-drawer-delete" data-testid="patient-drawer-delete-button">
-            <ACTION_ICONS.delete size={14} />
+          <button
+            onClick={onDelete}
+            className={patient.status === PatientStatus.ACTIVE ? "btn-drawer-delete" : "btn-drawer-activate"}
+            data-testid="patient-drawer-delete-button"
+            title={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}
+          >
+            {patient.status === PatientStatus.ACTIVE ? (
+              <>
+                <ACTION_ICONS.cancel size={14} /> Desactivar
+              </>
+            ) : (
+              <>
+                <ACTION_ICONS.retry size={14} /> Reactivar
+              </>
+            )}
           </button>
         </div>
       </div>
