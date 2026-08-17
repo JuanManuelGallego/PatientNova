@@ -64,7 +64,7 @@ describe('patientService.findByIdWithRelations', () => {
   it('delegates to repository.findByIdWithRelations with userId', async () => {
     mockRepo.findByIdWithRelations.mockResolvedValue(fakePatientWithRelations as any);
     const result = await patientService.findByIdWithRelations('patient-1', 'user-1');
-    expect(mockRepo.findByIdWithRelations).toHaveBeenCalledWith('patient-1', 'user-1');
+    expect(mockRepo.findByIdWithRelations).toHaveBeenCalledWith('patient-1', 'user-1', undefined);
     expect(result).toEqual(fakePatientWithRelations);
   });
 

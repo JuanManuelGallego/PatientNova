@@ -17,8 +17,12 @@ const PATIENT_DIFF_FIELDS = schemaKeys(updatePatientSchema);
 export const patientService = {
   findById: patientRepository.findById.bind(patientRepository),
 
-  async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
-    return patientRepository.findByIdWithRelations(id, userId);
+  async findByIdWithRelations(
+    id: string,
+    userId: string,
+    opts?: { take?: number },
+  ): Promise<PatientWithRelations> {
+    return patientRepository.findByIdWithRelations(id, userId, opts);
   },
 
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {

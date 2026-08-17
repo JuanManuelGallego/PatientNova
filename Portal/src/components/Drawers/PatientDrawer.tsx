@@ -10,11 +10,13 @@ import {
 import { Section, Row } from "./DrawerUtils";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { TabNav } from "@/src/components/TabNav";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { ACTION_ICONS, DETAIL_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
+
+const DRAWER_PREVIEW_TAKE = 10;
 
 export function PatientDrawer({
   patient,
@@ -27,51 +29,65 @@ export function PatientDrawer({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const { patient: patientWithRelations } = useFetchPatient(patient.id);
+  const { patient: patientWithRelations } = useFetchPatient(patient.id, {
+    take: DRAWER_PREVIEW_TAKE,
+  });
   const s = PATIENT_STATUS_CONFIG[ patient.status ];
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
 
   const [ appointmentView, setAppointmentView ] = useState<RelativeTime>(
-    RelativeTime.UPCOMING,
+    RelativeTime.ALL,
   );
   const [ reminderView, setReminderView ] = useState<RelativeTime>(
-    RelativeTime.UPCOMING,
+    RelativeTime.ALL,
   );
 
-  const filteredAppointments =
-    patientWithRelations?.appointments
-      ?.filter((apt) => {
-        const now = new Date();
-        const aptDate = new Date(apt.startAt);
-        if (appointmentView === RelativeTime.UPCOMING) return aptDate >= now;
-        if (appointmentView === RelativeTime.PAST) return aptDate < now;
-        return true;
-      })
-      .sort(
-        (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
-      ) || [];
-
-  const filteredReminders =
-    patientWithRelations?.reminders
-      ?.filter((rem) => {
-        const now = new Date();
-        const remDate = new Date(rem.sendAt);
-        if (reminderView === RelativeTime.UPCOMING) return remDate >= now;
-        if (reminderView === RelativeTime.PAST) return remDate < now;
-        return true;
-      })
-      .sort(
-        (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime(),
-      ) || [];
-
-  const locationNameById = locations.reduce(
-    (acc, loc) => ({ ...acc, [ loc.id ]: loc.name }),
-    {} as Record<string, string>,
+  const filteredAppointments = useMemo(
+    () =>
+      patientWithRelations?.appointments
+        ?.filter((apt) => {
+          const now = new Date();
+          const aptDate = new Date(apt.startAt);
+          if (appointmentView === RelativeTime.UPCOMING) return aptDate >= now;
+          if (appointmentView === RelativeTime.PAST) return aptDate < now;
+          return true;
+        })
+        .sort(
+          (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+        ) || [],
+    [ patientWithRelations?.appointments, appointmentView ],
   );
-  const appointmentTypeNameById = appointmentTypes.reduce(
-    (acc, at) => ({ ...acc, [ at.id ]: at.name }),
-    {} as Record<string, string>,
+
+  const filteredReminders = useMemo(
+    () =>
+      patientWithRelations?.reminders
+        ?.filter((rem) => {
+          const now = new Date();
+          const remDate = new Date(rem.sendAt);
+          if (reminderView === RelativeTime.UPCOMING) return remDate >= now;
+          if (reminderView === RelativeTime.PAST) return remDate < now;
+          return true;
+        })
+        .sort(
+          (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime(),
+        ) || [],
+    [ patientWithRelations?.reminders, reminderView ],
+  );
+
+  const locationNameById = useMemo(
+    () => locations.reduce(
+      (acc, loc) => ({ ...acc, [ loc.id ]: loc.name }),
+      {} as Record<string, string>,
+    ),
+    [ locations ],
+  );
+  const appointmentTypeNameById = useMemo(
+    () => appointmentTypes.reduce(
+      (acc, at) => ({ ...acc, [ at.id ]: at.name }),
+      {} as Record<string, string>,
+    ),
+    [ appointmentTypes ],
   );
 
   return (
@@ -204,6 +220,18 @@ export function PatientDrawer({
                   );
                 })}
               </div>
+              <Link
+                href={`/appointments?patientId=${patient.id}`}
+                className="btn-secondary btn-primary--block"
+                style={{ marginTop: 12, textDecoration: "none" }}
+              >
+                <DETAIL_ICONS.history size={14} /> Ver todas las citas
+              </Link>
+              {filteredAppointments.length === DRAWER_PREVIEW_TAKE && (
+                <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                  Mostrando las {DRAWER_PREVIEW_TAKE} más recientes
+                </div>
+              )}
             </Section>
           )}
           {filteredReminders && filteredReminders.length > 0 && (
@@ -249,6 +277,18 @@ export function PatientDrawer({
                   );
                 })}
               </div>
+              <Link
+                href={`/reminders?patientId=${patient.id}`}
+                className="btn-secondary btn-primary--block"
+                style={{ marginTop: 12, textDecoration: "none" }}
+              >
+                <DETAIL_ICONS.history size={14} /> Ver todos los recordatorios
+              </Link>
+              {filteredReminders.length === DRAWER_PREVIEW_TAKE && (
+                <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                  Mostrando los {DRAWER_PREVIEW_TAKE} más recientes
+                </div>
+              )}
             </Section>
           )}
           <Section title="Información del sistema">

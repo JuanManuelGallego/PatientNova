@@ -24,6 +24,7 @@ import { TabNav } from "@/src/components/TabNav";
 import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchAllPatients } from "@/src/api/patients/useFetchAllPatients";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
@@ -81,6 +82,11 @@ function RemindersPageContent() {
     QUERY_PARAMS.reminderStatus,
     parseAsArrayOf(parseAsString).withDefault([]),
   );
+  const [ patientId, setPatientId ] = useQueryState(
+    QUERY_PARAMS.reminderPatientId,
+    parseAsString.withDefault(""),
+  );
+  const { patient: filterPatient } = useFetchPatient(patientId || null);
 
   const {
     page,
@@ -129,7 +135,8 @@ function RemindersPageContent() {
             ]
             : undefined;
       return {
-        status: statusFilter.length ? (statusFilter as ReminderStatus[]) : tabDefault,
+        status: statusFilter.length ? (statusFilter as ReminderStatus[]) : patientId ? undefined : tabDefault,
+        patientId: patientId || undefined,
         page,
         pageSize: PAGE_SIZE,
         search: debouncedSearch.trim() || undefined,
@@ -139,7 +146,7 @@ function RemindersPageContent() {
         order,
       };
     },
-    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, orderBy, order ],
+    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, patientId, orderBy, order ],
   );
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
@@ -227,6 +234,18 @@ function RemindersPageContent() {
               fetchStats();
             }}
           />
+        )}
+        {patientId && (
+          <div className="text-muted" style={{ marginBottom: 12 }}>
+            Filtrando por paciente: {filterPatient?.name} {filterPatient?.lastName}{" "}
+            <button
+              type="button"
+              onClick={() => setPatientId("")}
+              style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", padding: 0 }}
+            >
+              Quitar filtro
+            </button>
+          </div>
         )}
         {activeTab === "Active" && (
           <ActiveRemindersTab
