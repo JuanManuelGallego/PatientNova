@@ -6,13 +6,11 @@ export function AppointmentTypeCard({
   type,
   onEdit,
   onDelete,
-  onReactivate,
   inactive = false,
 }: {
   type: AppointmentType;
   onEdit?: () => void;
   onDelete?: () => void;
-  onReactivate?: () => void;
   inactive?: boolean;
 }) {
   return (

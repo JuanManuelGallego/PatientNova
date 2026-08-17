@@ -202,7 +202,9 @@ function PatientsPageContent() {
           order={order}
           onSort={handleSort}
           total={total}
-          renderRow={(p) => (
+          renderRow={(p) => {
+            const isActive = p.status === PatientStatus.ACTIVE;
+            return (
             <tr
               onClick={() => setViewPatient(p)}
               key={p.id}
@@ -261,30 +263,26 @@ function PatientsPageContent() {
                   >
                     Editar
                   </button>
-                  {(() => {
-                    const isActive = p.status === PatientStatus.ACTIVE;
-                    return (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTogglePatient(p);
-                        }}
-                        className={isActive ? "btn-action-delete" : "btn-action-activate"}
-                        data-testid={`patient-delete-button-${p.id}`}
-                        title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
-                      >
-                        {isActive ? (
-                          <ACTION_ICONS.close size={14} />
-                        ) : (
-                          <ACTION_ICONS.retry size={14} />
-                        )}
-                      </button>
-                    );
-                  })()}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTogglePatient(p);
+                    }}
+                    className={isActive ? "btn-action-delete" : "btn-action-activate"}
+                    data-testid={`patient-delete-button-${p.id}`}
+                    title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
+                  >
+                    {isActive ? (
+                      <ACTION_ICONS.close size={14} />
+                    ) : (
+                      <ACTION_ICONS.retry size={14} />
+                    )}
+                  </button>
                 </div>
               </td>
             </tr>
-          )}
+          );
+          }}
           emptyState={
             <EmptyState
               icon={STATUS_ICONS.search}
