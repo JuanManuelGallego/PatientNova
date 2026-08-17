@@ -1,3 +1,5 @@
-onlyBuiltDependencies:
-  - node
-  - unrs-resolver
+packages:
+  - '.'
+
+allowBuilds:
+  unrs-resolver: true

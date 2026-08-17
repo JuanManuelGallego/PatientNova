@@ -15,6 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -87,6 +90,9 @@ jobs:
       GOOGLE_REFRESH_TOKEN: dummy-google-refresh-token
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -119,6 +125,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
