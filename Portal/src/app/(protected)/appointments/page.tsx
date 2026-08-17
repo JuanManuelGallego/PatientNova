@@ -33,6 +33,7 @@ import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
 import { useState, useMemo, Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
+import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import {
   ReminderStatusPill,
   EmptyStatusPill,
@@ -109,6 +110,11 @@ function AppointmentsPageContent() {
     QUERY_PARAMS.apptLocationId,
     parseAsString.withDefault(""),
   );
+  const [ patientId, setPatientId ] = useQueryState(
+    QUERY_PARAMS.apptPatientId,
+    parseAsString.withDefault(""),
+  );
+  const { patient: filterPatient } = useFetchPatient(patientId || null);
   const { range: dateRange, setRange: setDateRange } = useDateRangeFilter(
     QUERY_PARAMS.apptDate,
   );
@@ -150,8 +156,8 @@ function AppointmentsPageContent() {
     () => {
       const tabDefault = tabStatuses(activeTab);
       return {
-        patientId: undefined,
-        status: status.length ? (status as AppointmentStatus[]) : tabDefault,
+        patientId: patientId || undefined,
+        status: status.length ? (status as AppointmentStatus[]) : patientId ? undefined : tabDefault,
         startAt: undefined,
         dateFrom: dateRange?.[0] ? `${dateRange[0]}T00:00:00.000Z` : undefined,
         dateTo: dateRange?.[1] ? `${dateRange[1]}T23:59:59.999Z` : undefined,
@@ -165,7 +171,7 @@ function AppointmentsPageContent() {
         order,
       };
     },
-    [ status, paid, debouncedSearch, dateRange, typeId, locationId, activeTab, page, orderBy, order ],
+    [ status, paid, debouncedSearch, dateRange, typeId, locationId, patientId, activeTab, page, orderBy, order ],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -349,6 +355,18 @@ function AppointmentsPageContent() {
         {error && <ErrorBanner msg={error} onRetry={fetchAppointments} />}
         {actionError && (
           <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
+        )}
+        {patientId && (
+          <div className="text-muted" style={{ marginBottom: 12 }}>
+            Filtrando por paciente: {filterPatient?.name} {filterPatient?.lastName}{" "}
+            <button
+              type="button"
+              onClick={() => setPatientId("")}
+              style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", padding: 0 }}
+            >
+              Quitar filtro
+            </button>
+          </div>
         )}
         <FilterBar
           {...searchProps}

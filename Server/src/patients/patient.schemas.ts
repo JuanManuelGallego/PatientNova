@@ -43,7 +43,12 @@ export const listPatientsSchema = z.object({
 
 export const patientStatsSchema = z.object({}).extend(includeDeletedQuery.shape);
 
+export const patientDetailQuerySchema = z.object({
+  take: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 export type CreatePatientDto = z.infer<typeof createPatientSchema>;
 export type UpdatePatientDto = z.infer<typeof updatePatientSchema>;
 export type ListPatientsQuery = z.infer<typeof listPatientsSchema>;
 export type PatientStatsQuery = z.infer<typeof patientStatsSchema>;
+export type PatientDetailQuery = z.infer<typeof patientDetailQuerySchema>;

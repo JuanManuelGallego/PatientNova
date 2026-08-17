@@ -6,8 +6,10 @@ import {
   updatePatientSchema,
   listPatientsSchema,
   patientStatsSchema,
+  patientDetailQuerySchema,
   type ListPatientsQuery,
   type PatientStatsQuery,
+  type PatientDetailQuery,
 } from './patient.schemas.js';
 import { patientService } from './patient.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
@@ -46,11 +48,13 @@ patientRouter.get<ParamsDictionary, unknown, unknown, PatientStatsQuery & Parsed
  * GET /patients/:id
  * Get a single patient by UUID (includes appointments and reminders).
  */
-patientRouter.get(
+patientRouter.get<{ id: string } & ParamsDictionary, unknown, unknown, PatientDetailQuery & ParsedQs>(
   '/:id',
   validateParams(uuidParamSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    ok(res, await patientService.findByIdWithRelations(req.params.id as string, req.user!.id));
+  validateQuery(patientDetailQuerySchema),
+  asyncHandler(async (req: Request<{ id: string } & ParamsDictionary, unknown, unknown, PatientDetailQuery & ParsedQs>, res: Response) => {
+    const take = typeof req.query.take === "number" ? req.query.take : undefined;
+    ok(res, await patientService.findByIdWithRelations(req.params.id, req.user!.id, take !== undefined ? { take } : undefined));
   })
 );
 

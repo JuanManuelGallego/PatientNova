@@ -110,4 +110,41 @@ describe('patientRepository (integration)', () => {
     expect(found.reminders).toBeDefined();
     expect(found.medicalRecord).toBeNull();
   });
+
+  it('findByIdWithRelations caps appointments via take and orders them by startAt desc', async () => {
+    const patient = await patientRepository.create(
+      { name: 'Cap', lastName: 'Patient', status: 'ACTIVE' },
+      userId,
+    );
+    const location = await prisma.appointmentLocation.create({ data: { name: 'Loc', userId } });
+    const type = await prisma.appointmentType.create({ data: { name: 'Type', defaultDuration: 60, userId } });
+
+    const base = Date.now();
+    for (let i = 0; i < 15; i++) {
+      await prisma.appointment.create({
+        data: {
+          startAt: new Date(base + i * 60_000),
+          endAt: new Date(base + i * 60_000 + 30_000),
+          timezone: 'America/Bogota',
+          price: 0,
+          paid: false,
+          status: 'SCHEDULED',
+          patientId: patient.id,
+          userId,
+          locationId: location.id,
+          typeId: type.id,
+        },
+      });
+    }
+
+    const capped = await patientRepository.findByIdWithRelations(patient.id, userId, { take: 3 });
+    expect(capped.appointments).toHaveLength(3);
+    for (let i = 1; i < capped.appointments.length; i++) {
+      const prev = capped.appointments[i - 1];
+      const curr = capped.appointments[i];
+      expect(new Date(prev!.startAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(curr!.startAt).getTime(),
+      );
+    }
+  });
 });

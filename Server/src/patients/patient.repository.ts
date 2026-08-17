@@ -10,8 +10,8 @@ import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 
 type PatientWithRelations = Patient & {
-  appointments: { id: string }[];
-  reminders: { id: string }[];
+  appointments: { id: string; startAt: Date }[];
+  reminders: { id: string; sendAt: Date }[];
   medicalRecord: { id: string } | null;
   appointmentType: { id: string; name: string; defaultPrice: number | null } | null;
 };
@@ -66,12 +66,17 @@ export const patientRepository = {
     return patient;
   },
 
-  async findByIdWithRelations(id: string, userId: string): Promise<PatientWithRelations> {
+  async findByIdWithRelations(
+    id: string,
+    userId: string,
+    opts?: { take?: number },
+  ): Promise<PatientWithRelations> {
+    const take = opts?.take ?? 10;
     const patient = await prisma.patient.findFirst({
       where: { id, userId },
       include: {
-        appointments: true,
-        reminders: true,
+        appointments: { take, orderBy: { startAt: 'desc' } },
+        reminders: { take, orderBy: { sendAt: 'desc' } },
         medicalRecord: true,
         appointmentType: { select: { id: true, name: true, defaultPrice: true } },
       },

@@ -39,11 +39,13 @@ export const QUERY_PARAMS = {
   apptTypeId: "typeId",
   apptLocationId: "locationId",
   apptDate: "dateFilter",
+  apptPatientId: "patientId",
 
   // reminders
   reminderTab: "activeTab",
   reminderDate: "dateFilter",
   reminderStatus: "status",
+  reminderPatientId: "patientId",
 
   // audit logs
   auditEntityType: "entityType",
