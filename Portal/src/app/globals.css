@@ -674,6 +674,31 @@ body {
   cursor: not-allowed;
 }
 
+.btn-success {
+  padding: 10px 22px;
+  background: var(--c-success);
+  color: var(--c-white);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+.btn-success:focus-visible {
+  outline: 2px solid var(--c-success);
+  outline-offset: 2px;
+}
+.btn-success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-hero {
   display: flex;
   align-items: center;
@@ -775,6 +800,29 @@ body {
   outline-offset: 2px;
 }
 
+.btn-action-activate {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 550;
+  background: var(--c-success-light);
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--c-success);
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-action-activate:hover {
+  background: #dcfce7;
+}
+.btn-action-activate:focus-visible {
+  outline: 2px solid var(--c-success);
+  outline-offset: 2px;
+}
+
 .btn-plus-icon {
   font-size: 18px;
   line-height: 1;
@@ -840,6 +888,30 @@ body {
 }
 .btn-drawer-delete:focus-visible {
   outline: 2px solid var(--c-error);
+  outline-offset: 2px;
+}
+
+.btn-drawer-activate {
+  padding: 10px 16px;
+  background: var(--c-success-light);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-success);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-drawer-activate:hover {
+  background: #dcfce7;
+}
+.btn-drawer-activate:focus-visible {
+  outline: 2px solid var(--c-success);
   outline-offset: 2px;
 }
 

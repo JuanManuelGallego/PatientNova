@@ -20,7 +20,7 @@ import {
 } from "@/src/components/DataTable";
 import { TabNav } from "@/src/components/TabNav";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
-import { DeletePatientModal } from "@/src/components/Modals/DeletePatientModal";
+import { TogglePatientModal } from "@/src/components/Modals/TogglePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
@@ -83,7 +83,7 @@ function PatientsPageContent() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
-  const [deletePatient, setDeletePatient] = useState<Patient | null>(null);
+  const [togglePatient, setTogglePatient] = useState<Patient | null>(null);
   const [viewPatient, setViewPatient] = useState<Patient | null>(null);
 
   const filters = useMemo<FetchPatientsFilters>(
@@ -202,7 +202,9 @@ function PatientsPageContent() {
           order={order}
           onSort={handleSort}
           total={total}
-          renderRow={(p) => (
+          renderRow={(p) => {
+            const isActive = p.status === PatientStatus.ACTIVE;
+            return (
             <tr
               onClick={() => setViewPatient(p)}
               key={p.id}
@@ -264,17 +266,23 @@ function PatientsPageContent() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeletePatient(p);
+                      setTogglePatient(p);
                     }}
-                    className="btn-action-delete"
+                    className={isActive ? "btn-action-delete" : "btn-action-activate"}
                     data-testid={`patient-delete-button-${p.id}`}
+                    title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
                   >
-                    <ACTION_ICONS.close size={14} />
+                    {isActive ? (
+                      <ACTION_ICONS.close size={14} />
+                    ) : (
+                      <ACTION_ICONS.retry size={14} />
+                    )}
                   </button>
                 </div>
               </td>
             </tr>
-          )}
+          );
+          }}
           emptyState={
             <EmptyState
               icon={STATUS_ICONS.search}
@@ -321,11 +329,11 @@ function PatientsPageContent() {
           }}
         />
       )}
-      {deletePatient && (
-        <DeletePatientModal
-          patient={deletePatient}
-          onClose={() => setDeletePatient(null)}
-          onDeleted={() => {
+      {togglePatient && (
+        <TogglePatientModal
+          patient={togglePatient}
+          onClose={() => setTogglePatient(null)}
+          onDone={() => {
             fetchPatients();
             fetchStats();
           }}
@@ -336,7 +344,7 @@ function PatientsPageContent() {
           patient={viewPatient}
           onClose={() => setViewPatient(null)}
           onDelete={() => {
-            setDeletePatient(viewPatient);
+            setTogglePatient(viewPatient);
             setViewPatient(null);
           }}
           onEdit={() => {

@@ -6,13 +6,11 @@ export function AppointmentTypeCard({
   type,
   onEdit,
   onDelete,
-  onReactivate,
   inactive = false,
 }: {
   type: AppointmentType;
   onEdit?: () => void;
   onDelete?: () => void;
-  onReactivate?: () => void;
   inactive?: boolean;
 }) {
   return (
@@ -53,25 +51,19 @@ export function AppointmentTypeCard({
             {type.description ? ` · ${type.description}` : ""}
           </div>
         </div>
-        {inactive ? (
-          <button className="btn-secondary btn-sm" onClick={onReactivate} data-testid={`appointment-type-reactivate-button-${type.id}`}>
-            Reactivar
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button className="btn-action-edit" onClick={onEdit} title="Editar" data-testid={`appointment-type-edit-button-${type.id}`}>
+            <ACTION_ICONS.edit size={14} /> Editar
           </button>
-        ) : (
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button className="btn-action-edit" onClick={onEdit} title="Editar" data-testid={`appointment-type-edit-button-${type.id}`}>
-              <ACTION_ICONS.edit size={14} /> Editar
-            </button>
-            <button
-              className="btn-action-delete"
-              onClick={onDelete}
-              title="Desactivar"
-              data-testid={`appointment-type-delete-button-${type.id}`}
-            >
-              <ACTION_ICONS.close size={14} />
-            </button>
-          </div>
-        )}
+          <button
+            className="btn-action-delete"
+            onClick={onDelete}
+            title="Desactivar"
+            data-testid={`appointment-type-delete-button-${type.id}`}
+          >
+            <ACTION_ICONS.close size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

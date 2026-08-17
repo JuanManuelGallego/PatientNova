@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   children: React.ReactNode;
   cancelLabel?: string;
   confirmLabel: string;
+  confirmVariant?: "danger" | "success";
   loadingLabel?: string;
   loading?: boolean;
   error?: string | null;
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   children,
   cancelLabel = "Regresar",
   confirmLabel,
+  confirmVariant = "danger",
   loadingLabel,
   loading = false,
   error = null,
@@ -75,7 +77,7 @@ export function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="btn-danger btn-block"
+            className={`btn-${confirmVariant} btn-block`}
             data-testid={testId ? `${testId}-confirm-button` : undefined}
           >
             {loading ? (loadingLabel ?? `${confirmLabel}…`) : confirmLabel}
