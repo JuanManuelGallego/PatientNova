@@ -235,13 +235,13 @@ PatientNova/
 ```bash
 # Backend
 cd Server
-npm install
-npx prisma migrate deploy
-npm run db:seed-admin        # Creates the initial admin user
+pnpm install
+pnpm exec prisma migrate deploy
+pnpm run db:seed-admin        # Creates the initial admin user
 
 # Frontend
 cd Portal
-npm install
+pnpm install
 ```
 
 ### Running the App
@@ -250,12 +250,12 @@ npm install
 ```bash
 # Terminal 1 — Backend (hot reload)
 cd Server
-npm run dev
+pnpm run dev
 # → http://localhost:3001
 
 # Terminal 2 — Frontend (hot reload)
 cd Portal
-npm run dev
+pnpm run dev
 # → http://localhost:3000
 ```
 
@@ -263,13 +263,13 @@ npm run dev
 ```bash
 # Backend
 cd Server
-npm run build
-npm start          # Runs migrations, seeds admin, starts server
+pnpm run build
+pnpm start          # Runs migrations, seeds admin, starts server
 
 # Frontend
 cd Portal
-npm run build
-npm start          # Starts Next.js production server
+pnpm run build
+pnpm start          # Starts Next.js production server
 ```
 
 ---
@@ -492,14 +492,14 @@ All workers:
 ```bash
 # Server tests (168 tests across 12 suites)
 cd Server
-npm test                 # Run once
-npm run test:watch       # Watch mode
-npm run test:coverage    # With coverage report
+pnpm test                 # Run once
+pnpm run test:watch       # Watch mode
+pnpm run test:coverage    # With coverage report
 
 # Dashboard tests (41 tests across 4 suites)
 cd Portal
-npm test                 # Run once
-npm run test:watch       # Watch mode
+pnpm test                 # Run once
+pnpm run test:watch       # Watch mode
 ```
 
 Test suites cover:

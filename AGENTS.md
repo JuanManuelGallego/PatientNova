@@ -18,7 +18,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 2. Run the suite (loads `.env.test` automatically via `test/integration/setup.ts`):
    ```bash
    cd Server
-   npm run test:integration
+   pnpm run test:integration
    ```
 3. The suite runs serially (`fileParallelism: false`) and truncates all `public`
    tables between tests. `DATABASE_URL` must contain the string `test` or the guard
@@ -29,7 +29,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   directly (it does NOT load `.env.test`). When you add a `requireEnv(...)` var in
   `src/utils/config.ts`, update both places.
 - **Never point `DATABASE_URL` at dev/prod** — the guard blocks non-`test` URLs.
-- **Stale generated client:** if you change `schema.prisma`, run `npx prisma generate`.
+- **Stale generated client:** if you change `schema.prisma`, run `pnpm exec prisma generate`.
   The committed `generated/prisma` client is typechecked, so a stale client surfaces
   as `tsc` errors across many files.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK

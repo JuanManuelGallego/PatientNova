@@ -33,7 +33,7 @@ if (!/test/i.test(dbUrl)) {
 
 // Applied once per test process. `prisma migrate deploy` is idempotent.
 beforeAll(() => {
-  execSync('npx prisma migrate deploy', {
+  execSync('pnpm exec prisma migrate deploy', {
     stdio: 'inherit',
     env: { ...process.env },
   });

@@ -15,17 +15,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "npm"
-          cache-dependency-path: Portal/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npx tsc --noEmit
-      - run: npm run build
-      - run: npm test
+          cache: pnpm
+          cache-dependency-path: Portal/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm run build
+      - run: pnpm test
 
   server:
     name: Server (Node 22.x)
@@ -87,12 +90,15 @@ jobs:
       GOOGLE_REFRESH_TOKEN: dummy-google-refresh-token
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "npm"
-          cache-dependency-path: Server/package-lock.json
+          cache: pnpm
+          cache-dependency-path: Server/pnpm-lock.yaml
       - name: Generate encryption key
         run: echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Wait for Postgres
@@ -105,12 +111,12 @@ jobs:
           done
           echo "Postgres did not become ready in time" >&2
           exit 1
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run test:integration
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run test:integration
 
   e2e:
     name: E2E Tests (Playwright)
@@ -119,21 +125,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: "npm"
-          cache-dependency-path: Portal/package-lock.json
+          cache: pnpm
+          cache-dependency-path: Portal/pnpm-lock.yaml
       - name: Install Portal deps
         working-directory: Portal
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
         working-directory: Portal
-        run: npx playwright install chromium --with-deps
+        run: pnpm exec playwright install chromium --with-deps
       - name: Run E2E tests
         working-directory: Portal
-        run: npx playwright test -c e2e/playwright.config.ts
+        run: pnpm exec playwright test -c e2e/playwright.config.ts
         env:
           CI: "true"
           PLAYWRIGHT_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
