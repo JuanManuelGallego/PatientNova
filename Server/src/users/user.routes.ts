@@ -100,29 +100,29 @@ userRouter.patch(
 );
 
 /**
- * PATCH /users/:id/delete
+ * POST /users/:id/delete
  * Soft-delete a user (super admin only, sets isDeleted=true).
  */
-userRouter.patch(
-    '/:id/delete',
-    authenticate,
-    requireSuperAdmin,
-    asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.delete(req.params.id as string);
-        ok(res, user);
-    })
+userRouter.post(
+  '/:id/delete',
+  authenticate,
+  requireSuperAdmin,
+  asyncHandler(async (req: Request, res: Response) => {
+    const user = await userService.delete(req.params.id as string);
+    ok(res, user);
+  })
 );
 
 /**
- * PATCH /users/:id/restore
+ * POST /users/:id/restore
  * Restore a soft-deleted user (super admin only, sets isDeleted=false).
  */
-userRouter.patch(
-    '/:id/restore',
-    authenticate,
-    requireSuperAdmin,
-    asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.restore(req.params.id as string);
-        ok(res, user);
-    })
+userRouter.post(
+  '/:id/restore',
+  authenticate,
+  requireSuperAdmin,
+  asyncHandler(async (req: Request, res: Response) => {
+    const user = await userService.restore(req.params.id as string);
+    ok(res, user);
+  })
 );

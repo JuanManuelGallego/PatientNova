@@ -11,7 +11,7 @@ export const createBlockedTimeSchema = z.object({
 );
 
 export const updateBlockedTimeSchema = z.object({
-  description: z.string().min(1).max(255).nullish(),
+  description: z.string().max(255).nullish(),
   startTimeUtc: z.iso.datetime().optional(),
   endTimeUtc: z.iso.datetime().optional(),
 }).refine(

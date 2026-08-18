@@ -102,7 +102,7 @@ patientRouter.delete(
  * PATCH /patients/:id/restore
  * Restore a soft-deleted patient (sets isDeleted=false).
  */
-patientRouter.patch(
+patientRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

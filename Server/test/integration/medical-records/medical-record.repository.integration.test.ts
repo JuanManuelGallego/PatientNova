@@ -94,7 +94,7 @@ describe('medicalRecordRepository (integration)', () => {
 
   it('soft-deletes and restores a record', async () => {
     const created = await medicalRecordRepository.create(baseDto(), userId);
-    await medicalRecordRepository.softDelete(created.id, userId);
+    await medicalRecordRepository.delete(created.id, userId);
 
     const raw = await prisma.medicalRecord.findUnique({ where: { id: created.id } });
     expect(raw!.isDeleted).toBe(true);
@@ -102,14 +102,6 @@ describe('medicalRecordRepository (integration)', () => {
     await medicalRecordRepository.restore(created.id, userId);
     const rawRestored = await prisma.medicalRecord.findUnique({ where: { id: created.id } });
     expect(rawRestored!.isDeleted).toBe(false);
-  });
-
-  it('hard-deletes a record', async () => {
-    const created = await medicalRecordRepository.create(baseDto(), userId);
-    await medicalRecordRepository.delete(created.id, userId);
-
-    await expect(medicalRecordRepository.findById(created.id, userId))
-      .rejects.toThrow(MedicalRecordNotFoundError);
   });
 
   it('findMany lists records and supports search by name', async () => {

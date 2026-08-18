@@ -12,6 +12,7 @@ import { config } from '../utils/config/config.js';
 import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from './appointment.types.js';
 import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, localToUtc } from '../utils/time/time-utils.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>[ 0 ];
@@ -128,6 +129,9 @@ export const appointmentRepository = {
     const data: Prisma.AppointmentUpdateInput = buildUpdateData(
       dto,
       [ 'startAt', 'endAt', 'timezone', 'price', 'currency', 'paid', 'locationId', 'meetingUrl', 'notes', 'typeId', 'status' ],
+      {
+        meetingUrl: emptyToNull,
+      },
     );
 
     if (dto.status === AppointmentStatus.SCHEDULED) {

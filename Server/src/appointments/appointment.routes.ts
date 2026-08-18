@@ -97,11 +97,11 @@ appointmentRouter.delete(
   }),
 );
 
-appointmentRouter.patch(
+appointmentRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.restore(req.params.id as string, req.user!.id);
     ok(res, appt);
-  }),
+  })
 );

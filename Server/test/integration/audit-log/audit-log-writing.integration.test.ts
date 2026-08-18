@@ -213,7 +213,7 @@ describe('Audit writing: medical records (integration)', () => {
       patientId: patient.id,
     }, userId));
 
-    await withAuditContext(() => medicalRecordService.softDelete(record.id, userId));
+    await withAuditContext(() => medicalRecordService.delete(record.id, userId));
 
     const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');

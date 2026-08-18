@@ -42,8 +42,8 @@ export const medicalRecordService = {
     return updatedRecord;
   },
 
-  async softDelete(id: string, userId: string): Promise<{ id: string }> {
-    const deleted = await medicalRecordRepository.softDelete(id, userId);
+  async delete(id: string, userId: string): Promise<{ id: string }> {
+    const deleted = await medicalRecordRepository.delete(id, userId);
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
@@ -68,17 +68,5 @@ export const medicalRecordService = {
       fieldsAfter: { isDeleted: false },
     });
     return restoredRecord;
-  },
-
-  async delete(id: string, userId: string): Promise<{ id: string }> {
-    await medicalRecordRepository.delete(id, userId);
-    await logAudit({
-      entityType: EntityType.MEDICAL_RECORD,
-      entityId: id,
-      actionType: ActionType.DELETE,
-      description: `Historia clínica eliminada permanentemente ${id}`,
-      affectedFields: [],
-    });
-    return { id };
   },
 };

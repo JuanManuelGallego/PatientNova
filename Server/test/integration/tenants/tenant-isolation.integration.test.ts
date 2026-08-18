@@ -381,20 +381,14 @@ describe('tenant isolation: MedicalRecord', () => {
   });
 
   it('softDelete returns 404 for other user\'s record', async () => {
-    await expect(medicalRecordRepository.softDelete(recordA.id, userB.id)).rejects.toThrow(
+    await expect(medicalRecordRepository.delete(recordA.id, userB.id)).rejects.toThrow(
       MedicalRecordNotFoundError,
     );
   });
 
   it('restore returns 404 for other user\'s record', async () => {
-    await medicalRecordRepository.softDelete(recordA.id, userA.id);
+    await medicalRecordRepository.delete(recordA.id, userA.id);
     await expect(medicalRecordRepository.restore(recordA.id, userB.id)).rejects.toThrow(
-      MedicalRecordNotFoundError,
-    );
-  });
-
-  it('delete returns 404 for other user\'s record', async () => {
-    await expect(medicalRecordRepository.delete(recordA.id, userB.id)).rejects.toThrow(
       MedicalRecordNotFoundError,
     );
   });

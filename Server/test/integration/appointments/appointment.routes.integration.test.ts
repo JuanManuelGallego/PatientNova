@@ -203,7 +203,7 @@ describe('appointment routes (integration)', () => {
     expect(stats.byStatus[AppointmentStatus.SCHEDULED]).toBe(1);
   });
 
-  it('DELETE /:id soft-deletes and PATCH /:id/restore brings it back', async () => {
+  it('DELETE /:id soft-deletes and POST /:id/restore brings it back', async () => {
     const created = await invokeRoute(appointmentRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;
 
@@ -216,7 +216,7 @@ describe('appointment routes (integration)', () => {
 
     const restored = await invokeRoute(
       appointmentRouter,
-      'patch',
+      'post',
       `/${id}/restore`,
       baseReq({ params: { id } }),
     );

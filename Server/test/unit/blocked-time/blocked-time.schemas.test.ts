@@ -102,9 +102,9 @@ describe('updateBlockedTimeSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects description shorter than 1 char', () => {
+  it('accepts an empty description (normalized to null on update)', () => {
     const result = updateBlockedTimeSchema.safeParse({ description: '' });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects description exceeding 255 chars', () => {

@@ -83,7 +83,7 @@ locationRouter.delete(
  * PATCH /locations/:id/restore
  * Restore a soft-deleted appointment location.
  */
-locationRouter.patch(
+locationRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

@@ -83,7 +83,7 @@ blockedTimeRouter.delete(
  * PATCH /blocked-time/:id/restore
  * Restore a soft-deleted blocked time slot (sets isDeleted=false).
  */
-blockedTimeRouter.patch(
+blockedTimeRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

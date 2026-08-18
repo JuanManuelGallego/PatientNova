@@ -9,6 +9,7 @@ import { Channel } from '../../generated/prisma/enums.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {
@@ -61,6 +62,10 @@ export const userRepository = {
         const data = buildUpdateData(
             dto,
             [ 'firstName', 'lastName', 'displayName', 'jobTitle', 'avatar', 'logo', 'altLogo', 'phoneNumber', 'whatsappNumber', 'reminderActive', 'reminderChannel', 'timezone', 'bankName', 'accountNumber', 'nationalId', 'bankingKey' ],
+            {
+                phoneNumber: emptyToNull,
+                whatsappNumber: emptyToNull,
+            },
         );
         return prisma.user.update({
             where: { id },
