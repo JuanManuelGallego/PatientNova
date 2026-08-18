@@ -4,6 +4,7 @@ import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
 import { paginate } from '../utils/api/pagination.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 
@@ -209,6 +210,32 @@ export const medicalRecordRepository = {
           'lifecycle', 'genogram', 'resources', 'difficulties', 'communication',
           'rule', 'limits', 'familyContext', 'expectations', 'flexibility',
         ],
+        {
+          name: emptyToNull,
+          nationalId: emptyToNull,
+          birthPlace: emptyToNull,
+          consultationReason: emptyToNull,
+          earlyDevelopment: emptyToNull,
+          schoolAndWork: emptyToNull,
+          lifestyleHabits: emptyToNull,
+          traumaticEvents: emptyToNull,
+          emotionalConsiderations: emptyToNull,
+          physicalConsiderations: emptyToNull,
+          mentalHistory: emptyToNull,
+          objective: emptyToNull,
+          familyObservations: emptyToNull,
+          familyType: emptyToNull,
+          lifecycle: emptyToNull,
+          genogram: emptyToNull,
+          resources: emptyToNull,
+          difficulties: emptyToNull,
+          communication: emptyToNull,
+          rule: emptyToNull,
+          limits: emptyToNull,
+          familyContext: emptyToNull,
+          expectations: emptyToNull,
+          flexibility: emptyToNull,
+        },
       );
 
       return tx.medicalRecord.update({
@@ -219,7 +246,7 @@ export const medicalRecordRepository = {
     });
   },
 
-  async softDelete(id: string, userId: string): Promise<MedicalRecord> {
+  async delete(id: string, userId: string): Promise<MedicalRecord> {
     await medicalRecordRepository.findById(id, userId);
     return softDelete(prisma.medicalRecord, id) as Promise<MedicalRecord>;
   },
@@ -227,10 +254,5 @@ export const medicalRecordRepository = {
   async restore(id: string, userId: string): Promise<MedicalRecord> {
     await medicalRecordRepository.findById(id, userId);
     return restore(prisma.medicalRecord, id) as Promise<MedicalRecord>;
-  },
-
-  async delete(id: string, userId: string): Promise<MedicalRecord> {
-    await medicalRecordRepository.findById(id, userId);
-    return prisma.medicalRecord.delete({ where: { id } }) as Promise<MedicalRecord>;
   },
 };

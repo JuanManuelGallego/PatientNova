@@ -133,7 +133,7 @@ describe('reminder routes (integration)', () => {
     expect((res.body as any).data.status).toBe(ReminderStatus.CANCELLED);
   });
 
-  it('DELETE /:id soft-deletes and PATCH /:id/restore recovers it', async () => {
+  it('DELETE /:id soft-deletes and POST /:id/restore recovers it', async () => {
     const created = await invokeRoute(reminderRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;
 
@@ -146,7 +146,7 @@ describe('reminder routes (integration)', () => {
 
     const restored = await invokeRoute(
       reminderRouter,
-      'patch',
+      'post',
       `/${id}/restore`,
       baseReq({ params: { id } }),
     );

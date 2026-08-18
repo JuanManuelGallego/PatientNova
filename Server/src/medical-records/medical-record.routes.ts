@@ -63,7 +63,8 @@ medicalRecordRouter.patch(
 
 /**
  * DELETE /medical-records/:id
- * Hard-delete a medical record.
+ * Soft-delete a medical record (sets isDeleted=true). Mirrors every other
+ * entity so DELETE always means a recoverable delete.
  */
 medicalRecordRouter.delete(
   '/:id',
@@ -75,23 +76,10 @@ medicalRecordRouter.delete(
 );
 
 /**
- * PATCH /medical-records/:id/soft-delete
- * Soft-delete a medical record (sets isDeleted=true).
- */
-medicalRecordRouter.patch(
-  '/:id/soft-delete',
-  validateParams(uuidParamSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const rec = await medicalRecordService.softDelete(req.params.id as string, req.user!.id);
-    ok(res, rec);
-  })
-);
-
-/**
- * PATCH /medical-records/:id/restore
+ * POST /medical-records/:id/restore
  * Restore a soft-deleted medical record (sets isDeleted=false).
  */
-medicalRecordRouter.patch(
+medicalRecordRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

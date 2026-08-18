@@ -105,10 +105,10 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
 });
 
 /**
- * PATCH /auth/change-password
+ * POST /auth/change-password
  * Requires authentication. Changes the user's password.
  */
-authRouter.patch(
+authRouter.post(
   '/change-password',
   authenticate,
   validateBody(changePasswordSchema),

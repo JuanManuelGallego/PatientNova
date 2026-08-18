@@ -227,7 +227,7 @@ describe('blocked-time routes (integration)', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('PATCH /:id/restore restores a soft-deleted blocked time slot', async () => {
+  it('POST /:id/restore restores a soft-deleted blocked time slot', async () => {
     const created = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;
 
@@ -235,7 +235,7 @@ describe('blocked-time routes (integration)', () => {
 
     const restored = await invokeRoute(
       blockedTimeRouter,
-      'patch',
+      'post',
       `/${id}/restore`,
       baseReq({ params: { id } }),
     );

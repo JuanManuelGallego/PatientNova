@@ -2,6 +2,7 @@ import { type BlockedTime, type Prisma } from '../../generated/prisma/client.ts'
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { BlockedTimeNotFoundError } from './blocked-time.errors.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
@@ -60,6 +61,9 @@ export const blockedTimeRepository = {
     const data = buildUpdateData(
       dto,
       [ 'description', 'startTimeUtc', 'endTimeUtc' ],
+      {
+        description: emptyToNull,
+      },
     );
 
     return prisma.blockedTime.update({

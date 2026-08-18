@@ -4,6 +4,7 @@ import type { CreateLocationDto, UpdateLocationDto, ListLocationsQuery } from '.
 import { LocationNotFoundError } from '../utils/errors/errors.js';
 import { LocationNameConflictError } from './location.errors.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
 
@@ -63,6 +64,10 @@ export const locationRepository = {
     const data = buildUpdateData(
       dto,
       [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual' ],
+      {
+        address: emptyToNull,
+        instructions: emptyToNull,
+      },
     );
 
     return prisma.appointmentLocation.update({

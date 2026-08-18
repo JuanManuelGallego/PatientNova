@@ -83,7 +83,7 @@ appointmentTypeRouter.delete(
  * PATCH /appointment-types/:id/restore
  * Restore a soft-deleted appointment type.
  */
-appointmentTypeRouter.patch(
+appointmentTypeRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

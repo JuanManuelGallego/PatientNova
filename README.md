@@ -125,7 +125,7 @@ Request → Routes → Service → Repository → Prisma → PostgreSQL
 
 Key architectural patterns:
 - **Multi-tenant by user** — All data is scoped to the authenticated user via `userId` foreign keys
-- **Soft deletes** — Locations and appointment types use `isActive` flags rather than hard deletes
+- **Soft deletes** — All entities use `isDeleted` flags rather than hard deletes
 - **Optimistic audit trail** — Notifications create a `PENDING` record before dispatch, then update status (ensures audit trail even if the server crashes mid-send)
 - **Background workers** — pg-boss queues/schedules for reminder dispatch, delivery tracking, and appointment auto-completion
 - **Error boundaries** — React ErrorBoundary at root level catches render failures gracefully

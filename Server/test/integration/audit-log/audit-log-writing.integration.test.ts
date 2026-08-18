@@ -213,7 +213,7 @@ describe('Audit writing: medical records (integration)', () => {
       patientId: patient.id,
     }, userId));
 
-    await withAuditContext(() => medicalRecordService.softDelete(record.id, userId));
+    await withAuditContext(() => medicalRecordService.delete(record.id, userId));
 
     const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
@@ -221,24 +221,6 @@ describe('Audit writing: medical records (integration)', () => {
     expect(deleteLog!.affectedFields).toEqual(['isDeleted']);
     expect(deleteLog!.fieldsBefore).toMatchObject({ isDeleted: false });
     expect(deleteLog!.fieldsAfter).toMatchObject({ isDeleted: true });
-  });
-
-  it('creates an audit log on medical record hard delete', async () => {
-    const patient = await prisma.patient.create({
-      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
-    });
-
-    const record = await withAuditContext(() => medicalRecordService.create({
-      patientId: patient.id,
-    }, userId));
-
-    await withAuditContext(() => medicalRecordService.delete(record.id, userId));
-
-    const logs = await getAuditLogsForEntity('MEDICAL_RECORD', record.id);
-    const deleteLog = logs.find(l => l.actionType === 'DELETE');
-    expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.affectedFields).toEqual([]);
-    expect(deleteLog!.description).toContain('permanentemente');
   });
 });
 

@@ -127,7 +127,7 @@ reminderRouter.delete(
  * PATCH /reminders/:id/restore
  * Restore a soft-deleted reminder.
  */
-reminderRouter.patch(
+reminderRouter.post(
   '/:id/restore',
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {

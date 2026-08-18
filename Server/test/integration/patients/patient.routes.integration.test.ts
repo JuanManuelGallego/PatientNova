@@ -101,7 +101,7 @@ describe('patient routes (integration)', () => {
     expect(stats.byStatus[PatientStatus.ACTIVE]).toBe(1);
   });
 
-  it('DELETE /:id soft-deletes and PATCH /:id/restore recovers it', async () => {
+  it('DELETE /:id soft-deletes and POST /:id/restore recovers it', async () => {
     const created = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;
 
@@ -114,7 +114,7 @@ describe('patient routes (integration)', () => {
 
     const restored = await invokeRoute(
       patientRouter,
-      'patch',
+      'post',
       `/${id}/restore`,
       baseReq({ params: { id } }),
     );
