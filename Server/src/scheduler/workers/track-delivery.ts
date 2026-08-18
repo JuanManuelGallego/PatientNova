@@ -2,6 +2,7 @@ import { ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { getMessageStatus } from '../../twilio/client.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
+import { TWILIO_TO_PRISMA_STATUS } from '../../twilio/status-map.js';
 import { REMINDER_BATCH_SIZE, REMINDER_POLL_CONCURRENCY } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
 import { logAudit } from '../../audit-log/audit-log.utils.js';
@@ -10,14 +11,6 @@ import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/
 
 const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
-
-const TWILIO_TO_PRISMA_STATUS: Partial<Record<string, ReminderStatus>> = {
-  queued: ReminderStatus.QUEUED,
-  sent: ReminderStatus.SENT,
-  delivered: ReminderStatus.SENT,
-  failed: ReminderStatus.FAILED,
-  undelivered: ReminderStatus.FAILED,
-};
 
 export async function trackDeliveryWorker(): Promise<void> {
   const cutoff = new Date(Date.now() - MAX_TRACK_AGE_MS);
