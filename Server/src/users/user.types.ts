@@ -1,4 +1,4 @@
-import type { Patient } from '../../generated/prisma/client.ts';
+import type { Patient, Prisma } from '../../generated/prisma/client.ts';
 
 export const userInclude = {
   id: true,
@@ -35,6 +35,18 @@ export const userInclude = {
     },
   },
 } as const;
+
+// Same as userInclude but without the heavy base64 media columns
+// (avatar/logo/altLogo). Used for list endpoints where returning every
+// user's media inline would bloat the response payload.
+export const userListInclude = {
+  ...userInclude,
+  avatar: false,
+  logo: false,
+  altLogo: false,
+} as const;
+
+export type UserListItemResponse = Prisma.UserGetPayload<{ select: typeof userListInclude }>;
 
 export interface PaginatedPatients {
   data: Patient[];

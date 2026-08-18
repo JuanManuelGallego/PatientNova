@@ -19,6 +19,16 @@ const JOB_CTX = { actorId: 'twilio-status-callback', actorDisplayName: 'Twilio S
 export async function processMessageStatusCallback(payload: MessageStatusCallback): Promise<void> {
   const { messageSid, messageStatus } = payload;
 
+  if (!messageSid) {
+    logger.debug('Status callback received without MessageSid — ignoring');
+    return;
+  }
+
+  if (!messageStatus) {
+    logger.debug({ messageSid }, 'Status callback received without MessageStatus — ignoring');
+    return;
+  }
+
   const mappedStatus = TWILIO_TO_PRISMA_STATUS[messageStatus.toLowerCase()] ?? ReminderStatus.QUEUED;
   if (mappedStatus === ReminderStatus.QUEUED) {
     return;
@@ -59,7 +69,7 @@ export async function processMessageStatusCallback(payload: MessageStatusCallbac
       entityId: reminder.id,
       actionType: ActionType.UPDATE,
       source: ActionSource.JOB,
-      description: `Estado de entrega actualizado vía callback de Twilio para paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
+      description: `Estado de entrega actualizado vía callback de Twilio para paciente ${reminder.patient?.name ?? ''} ${reminder.patient?.lastName ?? ''}`,
       affectedFields: ['status', 'error'],
       fieldsBefore: { status: reminder.status },
       fieldsAfter: { status: mappedStatus, error },

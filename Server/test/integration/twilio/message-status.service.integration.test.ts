@@ -75,6 +75,21 @@ describe('processMessageStatusCallback (integration)', () => {
     expect(all).toHaveLength(0);
   });
 
+  it('ignores a callback missing MessageSid without mutating other reminders', async () => {
+    const r = await createQueuedReminder('SMvalid', userId, patientId);
+    // An undefined MessageSid in Prisma's `where` would otherwise match all rows.
+    await processMessageStatusCallback({ messageSid: '', messageStatus: 'delivered' });
+
+    expect((await statusOf(r.id)).status).toBe(ReminderStatus.QUEUED);
+  });
+
+  it('ignores a callback missing MessageStatus', async () => {
+    const r = await createQueuedReminder('SMnostatus', userId, patientId);
+    await processMessageStatusCallback({ messageSid: 'SMnostatus', messageStatus: '' });
+
+    expect((await statusOf(r.id)).status).toBe(ReminderStatus.QUEUED);
+  });
+
   it('applies a late FAILED over an earlier SENT (out-of-order)', async () => {
     const r = await createQueuedReminder('SMorder1', userId, patientId);
     await processMessageStatusCallback({ messageSid: 'SMorder1', messageStatus: 'sent' });
