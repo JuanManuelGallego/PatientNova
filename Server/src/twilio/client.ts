@@ -8,6 +8,10 @@ import { validateE164 } from './validator.js';
 
 let _client: Twilio | null = null;
 
+function statusCallbackUrl(): string {
+  return `${config.twilio.webhookBaseUrl.replace(/\/$/, '')}/webhooks/twilio/status`;
+}
+
 function getClient(): Twilio {
   if (!_client) {
     _client = twilio(config.twilio.accountSid, config.twilio.authToken);
@@ -30,6 +34,7 @@ export async function sendWhatsApp(
   {
     from,
     to,
+    statusCallback: statusCallbackUrl(),
     contentSid: req.contentSid,
     ...(req.contentVariables
       ? { contentVariables: JSON.stringify(req.contentVariables) }
@@ -68,6 +73,7 @@ export async function scheduleWhatsApp(
     from,
     to,
     sendAt: new Date(req.sendAt),
+    statusCallback: statusCallbackUrl(),
     contentSid: req.payload.contentSid,
     ...(req.payload.contentVariables
       ? { contentVariables: JSON.stringify(req.payload.contentVariables) }
@@ -124,6 +130,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
   const message = await getClient().messages.create({
     from: config.twilio.smsFrom,
     to: req.to,
+    statusCallback: statusCallbackUrl(),
     body: req.body,
   });
 

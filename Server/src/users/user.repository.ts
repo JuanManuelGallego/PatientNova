@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import { UserEmailConflictError } from './user.errors.js';
-import { userInclude } from './user.types.js';
+import { userInclude, userListInclude } from './user.types.js';
 import { Channel } from '../../generated/prisma/enums.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
@@ -47,7 +47,7 @@ export const userRepository = {
         const includeDeleted = query?.includeDeleted ?? false;
         return prisma.user.findMany({
             where: { ...(includeDeleted ? {} : { isDeleted: false }) },
-            select: userInclude,
+            select: userListInclude,
             orderBy: { createdAt: 'desc' },
         });
     },

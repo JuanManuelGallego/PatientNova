@@ -65,9 +65,9 @@ export async function initializePgBoss(): Promise<void> {
   boss.work('daily-reminder', dailyReminderWorker);
   boss.work('complete-appointments', completeAppointmentsWorker);
 
-  await boss.schedule('track-delivery', '*/5 * * * *', null, { key: 'every-5min' });
+  await boss.schedule('track-delivery', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
-  await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' }); // Phase 6
+  await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' });
 
   logger.info('pg-boss initialized (queues created)');
 }

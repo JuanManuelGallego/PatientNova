@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { twilioWebhookAuth } from '../middlewares/twilio-webhook-auth.js';
 import { twilioWebhookService } from './webhook.service.js';
+import { processMessageStatusCallback } from './message-status.service.js';
 import { logger } from '../utils/api/logger.js';
 
 export const twilioWebhookRouter = Router();
@@ -26,5 +27,30 @@ twilioWebhookRouter.post(
     }
 
     res.status(200).send(TWIML_EMPTY_RESPONSE);
+  },
+);
+
+/**
+ * POST /status
+ * Twilio message status callback (push-based delivery tracking).
+ * Reuses the same HMAC signature validation as the inbound reply webhook.
+ * Twilio requires only a 200 (no response body) for status callbacks.
+ */
+twilioWebhookRouter.post(
+  '/status',
+  twilioWebhookAuth,
+  async (req: Request, res: Response) => {
+    try {
+      await processMessageStatusCallback({
+        messageSid: req.body.MessageSid,
+        messageStatus: req.body.MessageStatus,
+        errorCode: req.body.ErrorCode,
+        errorMessage: req.body.ErrorMessage,
+      });
+    } catch (err) {
+      logger.error({ err, messageSid: req.body.MessageSid }, 'Twilio status callback failed');
+    }
+
+    res.status(200).end();
   },
 );
