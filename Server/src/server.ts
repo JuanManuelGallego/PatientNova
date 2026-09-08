@@ -1,9 +1,13 @@
 import app from "./app.js";
+import cron from "node-cron";
 import { config } from "./utils/config/config.js";
 import { logger } from "./utils/api/logger.js";
 import { prisma } from "./utils/prisma/prisma-client.js";
 import { initializePgBoss, stopPgBoss } from "./scheduler/pg-boss.js";
 import { reconcileScheduledReminders } from "./scheduler/reconcile-scheduled-reminder.js";
+
+const RECONCILIATION_CRON = '0 */12 * * *';
+let reconciliationTask: ReturnType<typeof cron.schedule> | undefined;
 
 async function start() {
   await prisma.$connect();
@@ -12,6 +16,11 @@ async function start() {
   if (config.scheduler.enabled) {
     await initializePgBoss();
     await reconcileScheduledReminders();
+    reconciliationTask = cron.schedule(RECONCILIATION_CRON, () => {
+      reconcileScheduledReminders().catch((error) => {
+        logger.error({ error }, 'Scheduled reminder reconciliation failed');
+      });
+    });
   } else {
     logger.info('Schedulers disabled via config');
   }
@@ -23,6 +32,10 @@ async function start() {
 
   async function gracefulShutdown() {
     logger.info('Shutting down gracefully...');
+    if (reconciliationTask) {
+      reconciliationTask.stop();
+      reconciliationTask = undefined;
+    }
 
     // Give pg-boss time to finish active jobs before closing.
     await Promise.race([
