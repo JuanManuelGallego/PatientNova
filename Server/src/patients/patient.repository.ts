@@ -88,6 +88,7 @@ export const patientRepository = {
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
     const { status, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
+    const searchTerms = search?.trim().split(/\s+/).filter(Boolean) ?? [];
 
     const where: Prisma.PatientWhereInput = {
       userId,
@@ -95,14 +96,16 @@ export const patientRepository = {
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { whatsappNumber: { contains: search, mode: 'insensitive' } },
-          { smsNumber: { contains: search, mode: 'insensitive' } },
-        ],
+      ...(searchTerms.length > 0 && {
+        AND: searchTerms.map((term) => ({
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { whatsappNumber: { contains: term, mode: 'insensitive' } },
+            { smsNumber: { contains: term, mode: 'insensitive' } },
+          ],
+        })),
       }),
     };
 
