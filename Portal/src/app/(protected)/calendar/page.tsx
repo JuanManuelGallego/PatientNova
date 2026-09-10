@@ -5,6 +5,8 @@ import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointment
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
 import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
+import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
+import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
@@ -12,6 +14,8 @@ import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
+import { Patient } from "@/src/types/Patient";
+import { Reminder } from "@/src/types/Reminder";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "@/src/components/Calendar/types";
@@ -65,6 +69,8 @@ function CalendarContent() {
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
   const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
+  const [ viewPatient, setViewPatient ] = useState<Patient | null>(null);
+  const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
   const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
 
@@ -212,6 +218,42 @@ function CalendarContent() {
           onDelete={() => {
             setDeleteAppt(viewAppt);
             setViewAppt(null);
+          }}
+          onViewPatient={(patient) => {
+            setViewAppt(null);
+            setViewPatient(patient);
+          }}
+          onViewReminder={(reminder) => {
+            setViewAppt(null);
+            setViewReminder(reminder);
+          }}
+        />
+      )}
+      {viewPatient && (
+        <PatientDrawer
+          patient={viewPatient}
+          onClose={() => setViewPatient(null)}
+          onViewAppointment={(appointment) => {
+            setViewPatient(null);
+            setViewAppt(appointment);
+          }}
+          onViewReminder={(reminder) => {
+            setViewPatient(null);
+            setViewReminder(reminder);
+          }}
+        />
+      )}
+      {viewReminder && (
+        <ReminderDrawer
+          reminder={viewReminder}
+          onClose={() => setViewReminder(null)}
+          onViewPatient={(patient) => {
+            setViewReminder(null);
+            setViewPatient(patient);
+          }}
+          onViewAppointment={(appointment) => {
+            setViewReminder(null);
+            setViewAppt(appointment);
           }}
         />
       )}

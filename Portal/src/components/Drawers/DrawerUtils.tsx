@@ -40,3 +40,36 @@ export function Row({
     </div>
   );
 }
+
+export function LinkedCard({
+  children,
+  onClick,
+  style,
+  testId,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+  testId?: string;
+}) {
+  const isInteractive = Boolean(onClick);
+
+  return (
+    <div
+      className={`linked-card${isInteractive ? " linked-card--interactive" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (isInteractive && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      style={style}
+      data-testid={testId}
+    >
+      {children}
+    </div>
+  );
+}

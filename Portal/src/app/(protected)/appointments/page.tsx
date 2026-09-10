@@ -1,5 +1,7 @@
 "use client";
 import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
+import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
+import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
@@ -28,7 +30,8 @@ import {
   HISTORY_APPT_STATUS,
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
-import { ReminderStatus } from "@/src/types/Reminder";
+import { Patient } from "@/src/types/Patient";
+import { Reminder, ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
 import { useState, useMemo, Suspense } from "react";
@@ -149,6 +152,8 @@ function AppointmentsPageContent() {
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
   const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
+  const [ viewPatient, setViewPatient ] = useState<Patient | null>(null);
+  const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
   const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
 
@@ -545,6 +550,42 @@ function AppointmentsPageContent() {
           onDelete={() => {
             setDeleteAppt(viewAppt);
             setViewAppt(null);
+          }}
+          onViewPatient={(patient) => {
+            setViewAppt(null);
+            setViewPatient(patient);
+          }}
+          onViewReminder={(reminder) => {
+            setViewAppt(null);
+            setViewReminder(reminder);
+          }}
+        />
+      )}
+      {viewPatient && (
+        <PatientDrawer
+          patient={viewPatient}
+          onClose={() => setViewPatient(null)}
+          onViewAppointment={(appointment) => {
+            setViewPatient(null);
+            setViewAppt(appointment);
+          }}
+          onViewReminder={(reminder) => {
+            setViewPatient(null);
+            setViewReminder(reminder);
+          }}
+        />
+      )}
+      {viewReminder && (
+        <ReminderDrawer
+          reminder={viewReminder}
+          onClose={() => setViewReminder(null)}
+          onViewPatient={(patient) => {
+            setViewReminder(null);
+            setViewPatient(patient);
+          }}
+          onViewAppointment={(appointment) => {
+            setViewReminder(null);
+            setViewAppt(appointment);
           }}
         />
       )}
