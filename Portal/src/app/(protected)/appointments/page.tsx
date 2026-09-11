@@ -1,7 +1,5 @@
 "use client";
-import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
-import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
-import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
+import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
@@ -30,8 +28,7 @@ import {
   HISTORY_APPT_STATUS,
   FetchAppointmentsFilters,
 } from "@/src/types/Appointment";
-import { Patient } from "@/src/types/Patient";
-import { Reminder, ReminderStatus } from "@/src/types/Reminder";
+import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
 import { useState, useMemo, Suspense } from "react";
@@ -63,6 +60,7 @@ import {
   parseAsStringEnum,
 } from "nuqs";
 import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
+import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 
 enum AppointmentTab {
   Upcoming = "upcoming",
@@ -151,11 +149,15 @@ function AppointmentsPageContent() {
 
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
-  const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
-  const [ viewPatient, setViewPatient ] = useState<Patient | null>(null);
-  const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
   const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
+  const {
+    target: drawerTarget,
+    close: closeDrawer,
+    openAppointment,
+    openPatient,
+    openReminder,
+  } = useDrawerNavigation();
 
   const filters = useMemo<FetchAppointmentsFilters>(
     () => {
@@ -389,7 +391,7 @@ function AppointmentsPageContent() {
           onSort={handleSort}
           total={total}
           renderRow={(a) => (
-            <tr key={a.id} className="table-row" onClick={() => setViewAppt(a)} data-testid={`appointment-row-${a.id}`}>
+            <tr key={a.id} className="table-row" onClick={() => openAppointment(a)} data-testid={`appointment-row-${a.id}`}>
               <td className="td">
                 <div className="td-identity">
                   <div
@@ -535,60 +537,27 @@ function AppointmentsPageContent() {
           }}
         />
       )}
-      {viewAppt && !editAppt && !deleteAppt && (
-        <AppointmentDrawer
-          appt={viewAppt}
-          onClose={() => setViewAppt(null)}
-          onEdit={() => {
-            setEditAppt(viewAppt);
-            setViewAppt(null);
-          }}
-          onPay={() => {
-            handlePay(viewAppt.id);
-            setViewAppt(null);
-          }}
-          onDelete={() => {
-            setDeleteAppt(viewAppt);
-            setViewAppt(null);
-          }}
-          onViewPatient={(patient) => {
-            setViewAppt(null);
-            setViewPatient(patient);
-          }}
-          onViewReminder={(reminder) => {
-            setViewAppt(null);
-            setViewReminder(reminder);
-          }}
-        />
-      )}
-      {viewPatient && (
-        <PatientDrawer
-          patient={viewPatient}
-          onClose={() => setViewPatient(null)}
-          onViewAppointment={(appointment) => {
-            setViewPatient(null);
-            setViewAppt(appointment);
-          }}
-          onViewReminder={(reminder) => {
-            setViewPatient(null);
-            setViewReminder(reminder);
-          }}
-        />
-      )}
-      {viewReminder && (
-        <ReminderDrawer
-          reminder={viewReminder}
-          onClose={() => setViewReminder(null)}
-          onViewPatient={(patient) => {
-            setViewReminder(null);
-            setViewPatient(patient);
-          }}
-          onViewAppointment={(appointment) => {
-            setViewReminder(null);
-            setViewAppt(appointment);
-          }}
-        />
-      )}
+      <RelatedDrawers
+        target={drawerTarget}
+        onClose={closeDrawer}
+        onViewAppointment={openAppointment}
+        onViewPatient={openPatient}
+        onViewReminder={openReminder}
+        appointmentActions={{
+          onEdit: (appointment) => {
+            setEditAppt(appointment);
+            closeDrawer();
+          },
+          onPay: (appointment) => {
+            handlePay(appointment.id);
+            closeDrawer();
+          },
+          onDelete: (appointment) => {
+            setDeleteAppt(appointment);
+            closeDrawer();
+          },
+        }}
+      />
       {deleteAppt && (
         <CancelAppointmentModal
           appt={deleteAppt}

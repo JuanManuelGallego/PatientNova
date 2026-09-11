@@ -8,15 +8,11 @@ import {
   ReminderStatus,
   REMINDER_STATUS_CONFIG,
 } from "@/src/types/Reminder";
-import { Patient } from "@/src/types/Patient";
-import { Appointment } from "@/src/types/Appointment";
 import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";
-import { ReminderDrawer } from "@/src/components/Drawers/ReminderDrawer";
-import { PatientDrawer } from "@/src/components/Drawers/PatientDrawer";
-import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
+import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import {
@@ -55,6 +51,7 @@ import {
   parseAsStringEnum,
   parseAsArrayOf,
 } from "nuqs";
+import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 
 enum ActiveTab {
   Active = "Active",
@@ -123,10 +120,14 @@ function RemindersPageContent() {
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editReminder, setEditReminder ] = useState<Reminder | null>(null);
 
-  const [ viewReminder, setViewReminder ] = useState<Reminder | null>(null);
-  const [ viewPatient, setViewPatient ] = useState<Patient | null>(null);
-  const [ viewAppointment, setViewAppointment ] = useState<Appointment | null>(null);
   const [ cancelReminder, setCancelReminder ] = useState<Reminder | null>(null);
+  const {
+    target: drawerTarget,
+    close: closeDrawer,
+    openAppointment,
+    openPatient,
+    openReminder,
+  } = useDrawerNavigation();
 
   const filters = useMemo<FetchRemindersFilters>(
     () => {
@@ -261,7 +262,7 @@ function RemindersPageContent() {
             total={total}
             totalPages={totalPages}
             setPage={setPage}
-            setViewReminder={setViewReminder}
+            setViewReminder={openReminder}
             setEditReminder={setEditReminder}
             setCancelReminder={setCancelReminder}
             statusFilter={statusFilter}
@@ -281,7 +282,7 @@ function RemindersPageContent() {
             total={total}
             totalPages={totalPages}
             setPage={setPage}
-            setViewReminder={setViewReminder}
+            setViewReminder={openReminder}
             onRetry={async (id) => {
               await retryReminder(id);
               fetchReminders();
@@ -321,63 +322,30 @@ function RemindersPageContent() {
           }}
         />
       )}
-      {viewReminder && (
-        <ReminderDrawer
-          reminder={viewReminder}
-          onClose={() => setViewReminder(null)}
-          onEdit={() => {
-            setEditReminder(viewReminder);
-            setViewReminder(null);
-          }}
-          onCancel={() => {
-            setCancelReminder(viewReminder);
-            setViewReminder(null);
-          }}
-          onRetry={async () => {
-            await retryReminder(viewReminder.id);
-            setViewReminder(null);
+      <RelatedDrawers
+        target={drawerTarget}
+        onClose={closeDrawer}
+        onViewAppointment={openAppointment}
+        onViewPatient={openPatient}
+        onViewReminder={openReminder}
+        reminderActions={{
+          onEdit: (reminder) => {
+            setEditReminder(reminder);
+            closeDrawer();
+          },
+          onCancel: (reminder) => {
+            setCancelReminder(reminder);
+            closeDrawer();
+          },
+          onRetry: async (reminder) => {
+            await retryReminder(reminder.id);
+            closeDrawer();
             fetchReminders();
             fetchStats();
-          }}
-          retryLoading={retryLoading}
-          onViewPatient={(patient) => {
-            setViewReminder(null);
-            setViewPatient(patient);
-          }}
-          onViewAppointment={(appointment) => {
-            setViewReminder(null);
-            setViewAppointment(appointment);
-          }}
-        />
-      )}
-      {viewPatient && (
-        <PatientDrawer
-          patient={viewPatient}
-          onClose={() => setViewPatient(null)}
-          onViewAppointment={(appointment) => {
-            setViewPatient(null);
-            setViewAppointment(appointment);
-          }}
-          onViewReminder={(reminder) => {
-            setViewPatient(null);
-            setViewReminder(reminder);
-          }}
-        />
-      )}
-      {viewAppointment && (
-        <AppointmentDrawer
-          appt={viewAppointment}
-          onClose={() => setViewAppointment(null)}
-          onViewPatient={(patient) => {
-            setViewAppointment(null);
-            setViewPatient(patient);
-          }}
-          onViewReminder={(reminder) => {
-            setViewAppointment(null);
-            setViewReminder(reminder);
-          }}
-        />
-      )}
+          },
+          retryLoading,
+        }}
+      />
       {cancelReminder && (
         <CancelReminderModal
           reminder={cancelReminder}
