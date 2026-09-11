@@ -140,7 +140,7 @@ export function PatientDrawer({
       <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="patient-drawer-panel">
         <div
           className="drawer-header"
-          style={{ background: s.bg, borderBottom: `3px solid ${s.color}` }}
+          style={{ borderBottom: `3px solid ${s.dot}` }}
         >
           <div className="drawer-header__top">
             <div>

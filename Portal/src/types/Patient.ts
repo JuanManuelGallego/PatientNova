@@ -9,10 +9,10 @@ export enum PatientStatus {
 
 export const PATIENT_STATUS_CONFIG: Record<
   PatientStatus,
-  { label: string; color: string; bg: string; icon: string }
+  { label: string; color: string; bg: string; dot: string; icon: string }
 > = {
-  ACTIVE: { label: "Activo", color: "#16A34A", bg: "#F0FDF4", icon: "" },
-  INACTIVE: { label: "Inactivo", color: "#D97706", bg: "#FFFBEB", icon: "" },
+  ACTIVE: { label: "Activo", color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E", icon: "" },
+  INACTIVE: { label: "Inactivo", color: "#D97706", bg: "#FFFBEB", dot: "#F59E0B", icon: "" },
 };
 
 export interface Patient {
