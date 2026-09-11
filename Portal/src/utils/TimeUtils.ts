@@ -107,7 +107,7 @@ const DAY_NAMES_ES = [ "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" ];
 
 
 function isReminderTypeFeasible(date: string, reminderType: ReminderType): boolean {
-    if (reminderType === ReminderType.NONE) return true;
+    if (reminderType === ReminderType.NONE || reminderType === ReminderType.IMMEDIATE) return true;
     if (!date) return false;
 
     const now = new Date();

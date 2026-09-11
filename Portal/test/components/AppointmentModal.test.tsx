@@ -3,8 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
-import { AppointmentStatus, type Appointment } from "@/src/types/Appointment";
+import {
+  AppointmentStatus,
+  type Appointment,
+  type AppointmentForm,
+} from "@/src/types/Appointment";
 import { PatientStatus, type Patient } from "@/src/types/Patient";
+import { Channel, ReminderMode, ReminderType } from "@/src/types/Reminder";
 
 /* ── Shared mock factories ────────────────────────────────────────── */
 
@@ -97,7 +102,7 @@ vi.mock("@/src/api/blocked-time/useFetchBlockedTimes", () => ({
 
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({
-    user: { id: "user-1", name: "Dr. Smith", reminderChannel: undefined },
+    user: { id: "user-1", name: "Dr. Smith", reminderChannel: Channel.WHATSAPP },
   }),
 }));
 
@@ -116,11 +121,13 @@ vi.mock("@/src/components/Modals/AppointmentModal/PatientAndTypeStep", () => ({
     selectedPatient,
     isEdit,
     form,
+    setForm,
     onPatientSelect,
   }: {
     selectedPatient?: Patient;
     isEdit: boolean;
     form: { patientId: string; typeId: string; startAt: string };
+    setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
     onPatientSelect: (p: Patient | undefined) => void;
   }) => (
     <div data-testid="step-patient">
@@ -134,7 +141,8 @@ vi.mock("@/src/components/Modals/AppointmentModal/PatientAndTypeStep", () => ({
       <span data-testid="form-type-id">{form.typeId}</span>
       <button
         data-testid="select-patient-btn"
-        onClick={() =>
+        onClick={() => {
+          setForm((f) => ({ ...f, patientId: "patient-2", typeId: "type-1" }));
           onPatientSelect({
             id: "patient-2",
             name: "Jane",
@@ -145,8 +153,8 @@ vi.mock("@/src/components/Modals/AppointmentModal/PatientAndTypeStep", () => ({
             status: "ACTIVE",
             createdAt: "2026-01-01T00:00:00.000Z",
             updatedAt: "2026-01-01T00:00:00.000Z",
-          } as Patient)
-        }
+          } as Patient);
+        }}
       >
         Select Jane
       </button>
@@ -159,10 +167,12 @@ vi.mock("@/src/components/Modals/AppointmentModal/LocationAndTimeStep", () => ({
     selectedPatient,
     reminderChannel,
     locations,
+    setForm,
   }: {
     selectedPatient?: Patient;
     reminderChannel?: string;
     locations: { id: string; name: string }[];
+    setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
   }) => (
     <div data-testid="step-location">
       <span data-testid="selected-patient-loc">
@@ -170,6 +180,19 @@ vi.mock("@/src/components/Modals/AppointmentModal/LocationAndTimeStep", () => ({
       </span>
       <span data-testid="reminder-channel">{reminderChannel ?? "none"}</span>
       <span data-testid="location-count">{locations.length}</span>
+      <button
+        data-testid="send-now-reminder"
+        onClick={() =>
+          setForm((f) => ({
+            ...f,
+            locationId: "loc-1",
+            price: 100,
+            reminderType: ReminderType.IMMEDIATE,
+          }))
+        }
+      >
+        Send now
+      </button>
     </div>
   ),
 }));
@@ -574,6 +597,28 @@ describe("AppointmentModal", () => {
       expect(screen.getByTestId("selected-patient")).toHaveTextContent(
         "Jane Roe",
       );
+    });
+
+    it("creates an immediate reminder when Send now is selected", async () => {
+      const user = userEvent.setup();
+      render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
+
+      await user.click(screen.getByTestId("select-patient-btn"));
+      await user.click(screen.getByText("Continuar →"));
+      await user.click(screen.getByTestId("send-now-reminder"));
+      await user.click(screen.getByText("Continuar →"));
+      await user.click(screen.getByTestId("appointment-modal-submit-button"));
+
+      expect(mockCreateAppointment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reminder: expect.objectContaining({
+            sendMode: ReminderMode.IMMEDIATE,
+          }),
+        }),
+      );
+
+      const payload = mockCreateAppointment.mock.calls[0][0];
+      expect(payload.reminder).not.toHaveProperty("sendAt");
     });
   });
 });

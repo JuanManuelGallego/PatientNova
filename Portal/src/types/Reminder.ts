@@ -38,7 +38,7 @@ export type ReminderInlineData = {
   sendMode: ReminderMode;
   contentSid?: string;
   contentVariables?: Record<string, string>;
-  sendAt: string;
+  sendAt?: string;
   status?: ReminderStatus;
   body?: string;
 };
@@ -136,6 +136,7 @@ export interface BulkRemindersResult {
 
 export enum ReminderType {
   NONE = "NINGUNO",
+  IMMEDIATE = "IMMEDIATE",
   ONE_HOUR_BEFORE = "1_HORA_ANTES",
   ONE_DAY_BEFORE = "1_DIA_ANTES",
   ONE_WEEK_BEFORE = "1_SEMANA_ANTES",
@@ -146,6 +147,7 @@ export const REMINDER_TYPE_CONFIG: Record<
   { label: string; offsetMs: number }
 > = {
   [ReminderType.NONE]: { label: "Ninguno", offsetMs: 0 },
+  [ReminderType.IMMEDIATE]: { label: "Enviar ahora", offsetMs: 0 },
   [ReminderType.ONE_HOUR_BEFORE]: {
     label: "1 hora antes",
     offsetMs: 60 * 60 * 1000,
