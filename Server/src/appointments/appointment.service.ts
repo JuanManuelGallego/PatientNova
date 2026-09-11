@@ -1,4 +1,5 @@
-import { AppointmentStatus, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
+import { fromPrisma } from 'pg-boss';
 import { appointmentRepository } from './appointment.repository.js';
 import {
   AppointmentConflictError,
@@ -19,6 +20,10 @@ import type { Paginated } from '../utils/api/pagination.ts';
 import { blockedTimeRepository } from '../blocked-time/blocked-time.repository.ts';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.ts';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { getBoss } from '../scheduler/pg-boss.js';
+import { config } from '../utils/config/config.ts';
+
+const REMINDER_QUEUE = 'send-reminder';
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
@@ -213,6 +218,12 @@ async function checkBlockedTimeConflict(
   }
 }
 
+async function enqueueImmediateReminder(reminderId: string, tx: TransactionClient): Promise<void> {
+  if (!config.scheduler.enabled) return;
+
+  await getBoss().send(REMINDER_QUEUE, { reminderId }, { db: fromPrisma(tx) });
+}
+
 export const appointmentService = {
   async findById(id: string, userId: string): Promise<AppointmentWithRelations> {
     return appointmentRepository.findByIdWithRelations(id, userId);
@@ -265,6 +276,10 @@ export const appointmentService = {
             userId,
           },
         });
+
+        if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
+          await enqueueImmediateReminder(createdReminder.id, tx);
+        }
 
         await logAudit({
           entityType: EntityType.REMINDER,

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
-import { AppointmentDrawer } from "@/src/components/Drawers/AppointmentDrawer";
+import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
@@ -22,6 +22,7 @@ import { CalendarLegend } from "@/src/components/Calendar/CalendarLegend";
 import { MonthView } from "@/src/components/Calendar/MonthView";
 import { WeekView } from "@/src/components/Calendar/WeekView";
 import { DayPanel } from "@/src/components/Calendar/DayPanel";
+import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 
 function CalendarContent() {
   const { updateAppointment } = useUpdateAppointment();
@@ -64,9 +65,15 @@ function CalendarContent() {
 
   const [ showCreate, setShowCreate ] = useState(false);
   const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
-  const [ viewAppt, setViewAppt ] = useState<Appointment | null>(null);
   const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
+  const {
+    target: drawerTarget,
+    close: closeDrawer,
+    openAppointment,
+    openPatient,
+    openReminder,
+  } = useDrawerNavigation();
 
   const [ showCreateBlockedTime, setShowCreateBlockedTime ] = useState(false);
   const [ editBlockedTime, setEditBlockedTime ] = useState<BlockedTime | null>(null);
@@ -135,7 +142,7 @@ function CalendarContent() {
               loading={loading || loadingBlocked}
               onSelectDay={setSelectedDay}
               onDrillToDay={drillToDay}
-              onViewAppt={setViewAppt}
+              onViewAppt={openAppointment}
               onSelectBlockedTime={setEditBlockedTime}
             />
           )}
@@ -148,7 +155,7 @@ function CalendarContent() {
               loading={loading || loadingBlocked}
               hourRange={hourRange}
               onDrillToDay={drillToDay}
-              onViewAppt={setViewAppt}
+              onViewAppt={openAppointment}
               onCreateAt={(date) => {
                 setPrefillDate(date);
                 setShowCreate(true);
@@ -166,7 +173,7 @@ function CalendarContent() {
           appts={selectedDayAppts}
           blockedTimes={selectedDayBlocked}
           onClose={() => setSelectedDay(null)}
-          onViewAppt={setViewAppt}
+          onViewAppt={openAppointment}
           onDrillToDay={drillToDay}
           onCreateAt={(date) => {
             setPrefillDate(date);
@@ -197,24 +204,27 @@ function CalendarContent() {
           onSaved={fetchAppointments}
         />
       )}
-      {viewAppt && !editAppt && !deleteAppt && (
-        <AppointmentDrawer
-          appt={viewAppt}
-          onClose={() => setViewAppt(null)}
-          onEdit={() => {
-            setEditAppt(viewAppt);
-            setViewAppt(null);
-          }}
-          onPay={() => {
-            handlePay(viewAppt.id);
-            setViewAppt(null);
-          }}
-          onDelete={() => {
-            setDeleteAppt(viewAppt);
-            setViewAppt(null);
-          }}
-        />
-      )}
+      <RelatedDrawers
+        target={drawerTarget}
+        onClose={closeDrawer}
+        onViewAppointment={openAppointment}
+        onViewPatient={openPatient}
+        onViewReminder={openReminder}
+        appointmentActions={{
+          onEdit: (appointment) => {
+            setEditAppt(appointment);
+            closeDrawer();
+          },
+          onPay: (appointment) => {
+            handlePay(appointment.id);
+            closeDrawer();
+          },
+          onDelete: (appointment) => {
+            setDeleteAppt(appointment);
+            closeDrawer();
+          },
+        }}
+      />
       {deleteAppt && (
         <CancelAppointmentModal
           appt={deleteAppt}

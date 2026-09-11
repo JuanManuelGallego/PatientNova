@@ -6,6 +6,7 @@ import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { logger } from '../utils/api/logger.js';
+import { sendReminderFailureAlert } from '../reminders/reminder-failure-alert.js';
 
 export interface MessageStatusCallback {
   messageSid: string;
@@ -76,6 +77,10 @@ export async function processMessageStatusCallback(payload: MessageStatusCallbac
       userId: reminder.userId,
     }),
   );
+
+  if (mappedStatus === ReminderStatus.FAILED) {
+    await sendReminderFailureAlert(reminder.id);
+  }
 
   logger.info({ messageSid, reminderId: reminder.id, status: mappedStatus }, 'Reminder status updated via Twilio callback');
 }

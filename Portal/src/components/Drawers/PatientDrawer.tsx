@@ -1,4 +1,4 @@
-import { APPT_STATUS_CFG } from "@/src/types/Appointment";
+import { APPT_STATUS_CFG, Appointment } from "@/src/types/Appointment";
 import { Patient, PATIENT_STATUS_CONFIG, PatientStatus } from "@/src/types/Patient";
 import { Channel, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
@@ -7,7 +7,7 @@ import {
   AppointmentStatusPill,
   ReminderStatusPill,
 } from "../Info/StatusPill";
-import { Section, Row } from "./DrawerUtils";
+import { LinkedCard, Section, Row } from "./DrawerUtils";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useState, useMemo } from "react";
@@ -18,21 +18,40 @@ import { ACTION_ICONS, DETAIL_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
 
 const DRAWER_PREVIEW_TAKE = 10;
 
+function getEmptyRelationMessage(
+  relation: "citas" | "recordatorios",
+  view: RelativeTime,
+) {
+  if (relation === "citas") {
+    if (view === RelativeTime.UPCOMING) return "No hay citas próximas para este paciente.";
+    if (view === RelativeTime.PAST) return "No hay citas pasadas para este paciente.";
+    return "No hay citas para este paciente.";
+  }
+
+  if (view === RelativeTime.UPCOMING) return "No hay recordatorios próximos para este paciente.";
+  if (view === RelativeTime.PAST) return "No hay recordatorios pasados para este paciente.";
+  return `No hay ${relation} para este paciente.`;
+}
+
 export function PatientDrawer({
-  patient,
+  patient: initialPatient,
   onClose,
   onEdit,
   onDelete,
+  onViewAppointment,
+  onViewReminder,
 }: {
   patient: Patient;
   onClose: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onViewAppointment?: (appointment: Appointment) => void;
+  onViewReminder?: (reminder: NonNullable<Patient["reminders"]>[number]) => void;
 }) {
-  const { patient: patientWithRelations } = useFetchPatient(patient.id, {
+  const { patient: patientWithRelations, error } = useFetchPatient(initialPatient.id, {
     take: DRAWER_PREVIEW_TAKE,
   });
-  const s = PATIENT_STATUS_CONFIG[ patient.status ];
+  const patient = patientWithRelations ?? initialPatient;
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
 
@@ -42,11 +61,13 @@ export function PatientDrawer({
   const [ reminderView, setReminderView ] = useState<RelativeTime>(
     RelativeTime.ALL,
   );
+  const appointments = patientWithRelations?.appointments;
+  const reminders = patientWithRelations?.reminders;
 
   const filteredAppointments = useMemo(
     () =>
-      patientWithRelations?.appointments
-        ?.filter((apt) => {
+      (appointments ?? [])
+        .filter((apt) => {
           const now = new Date();
           const aptDate = new Date(apt.startAt);
           if (appointmentView === RelativeTime.UPCOMING) return aptDate >= now;
@@ -55,14 +76,14 @@ export function PatientDrawer({
         })
         .sort(
           (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
-        ) || [],
-    [ patientWithRelations?.appointments, appointmentView ],
+        ),
+    [ appointments, appointmentView ],
   );
 
   const filteredReminders = useMemo(
     () =>
-      patientWithRelations?.reminders
-        ?.filter((rem) => {
+      (reminders ?? [])
+        .filter((rem) => {
           const now = new Date();
           const remDate = new Date(rem.sendAt);
           if (reminderView === RelativeTime.UPCOMING) return remDate >= now;
@@ -71,8 +92,8 @@ export function PatientDrawer({
         })
         .sort(
           (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime(),
-        ) || [],
-    [ patientWithRelations?.reminders, reminderView ],
+        ),
+    [ reminders, reminderView ],
   );
 
   const locationNameById = useMemo(
@@ -90,13 +111,36 @@ export function PatientDrawer({
     [ appointmentTypes ],
   );
 
+  if (!patient.status) {
+    return (
+      <div className="drawer-overlay" onClick={onClose}>
+        <div className="drawer-backdrop" />
+        <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="patient-drawer-panel">
+          <div className="drawer-header">
+            <div className="drawer-header__top">
+              <h2 className="drawer-header__title">Paciente</h2>
+              <button onClick={onClose} className="btn-close--transparent" data-testid="patient-drawer-close-button">
+                <ACTION_ICONS.close size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="drawer-body">
+            <div className="text-muted">{error ? "No se pudo cargar el paciente" : "Cargando paciente..."}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const s = PATIENT_STATUS_CONFIG[ patient.status ];
+
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
       <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="patient-drawer-panel">
         <div
           className="drawer-header"
-          style={{ background: s.bg, borderBottom: `3px solid ${s.color}` }}
+          style={{ borderBottom: `3px solid ${s.dot}` }}
         >
           <div className="drawer-header__top">
             <div>
@@ -176,7 +220,7 @@ export function PatientDrawer({
               <DETAIL_ICONS.history size={14} /> Ver historia clínica
             </Link>
           </Section>
-          {filteredAppointments && filteredAppointments.length > 0 && (
+          {appointments && appointments.length > 0 && (
             <Section title="Citas Vinculadas">
               <TabNav
                 wrapperClassName="filter-chips"
@@ -188,38 +232,52 @@ export function PatientDrawer({
                 active={appointmentView}
                 onSelect={(key) => setAppointmentView(key as RelativeTime)}
               />
-              <div className="card-list">
-                {filteredAppointments.map((apt) => {
-                  const aptStatus = APPT_STATUS_CFG[ apt.status ];
-                  return (
-                    <div
-                      key={apt.id}
-                      className="linked-card"
-                      style={{ borderLeft: `3px solid ${aptStatus.dot}` }}
-                    >
-                      <div className="linked-card__header">
-                        <div>
-                          <div className="linked-card__title">
-                            {appointmentTypeNameById[ apt.typeId ?? "" ] ||
-                              "Desconocido"}
+              {filteredAppointments.length > 0 ? (
+                <>
+                  <div className="card-list">
+                    {filteredAppointments.map((apt) => {
+                      const aptStatus = APPT_STATUS_CFG[ apt.status ];
+                      return (
+                        <LinkedCard
+                          key={apt.id}
+                          onClick={onViewAppointment ? () => onViewAppointment(apt) : undefined}
+                          style={{ borderLeft: `3px solid ${aptStatus.dot}` }}
+                          testId={`patient-drawer-appointment-card-${apt.id}`}
+                        >
+                          <div className="linked-card__header">
+                            <div>
+                              <div className="linked-card__title">
+                                {appointmentTypeNameById[ apt.typeId ?? "" ] ||
+                                  "Desconocido"}
+                              </div>
+                              <div className="linked-card__meta">
+                                {fmtDateTime(apt.startAt.toString())}
+                              </div>
+                            </div>
+                            <AppointmentStatusPill status={apt.status} />
                           </div>
-                          <div className="linked-card__meta">
-                            {fmtDateTime(apt.startAt.toString())}
+                          <div className="linked-card__footer">
+                            <span>
+                              {locationNameById[ apt.locationId ?? "" ] ||
+                                "Desconocida"}
+                            </span>
+                            {apt.paid && <span>Pagada</span>}
                           </div>
-                        </div>
-                        <AppointmentStatusPill status={apt.status} />
-                      </div>
-                      <div className="linked-card__footer">
-                        <span>
-                          {locationNameById[ apt.locationId ?? "" ] ||
-                            "Desconocida"}
-                        </span>
-                        {apt.paid && <span>Pagada</span>}
-                      </div>
+                        </LinkedCard>
+                      );
+                    })}
+                  </div>
+                  {filteredAppointments.length === DRAWER_PREVIEW_TAKE && (
+                    <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                      Mostrando las {DRAWER_PREVIEW_TAKE} más recientes
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-muted" role="status">
+                  {getEmptyRelationMessage("citas", appointmentView)}
+                </div>
+              )}
               <Link
                 href={`/appointments?patientId=${patient.id}`}
                 className="btn-secondary btn-primary--block"
@@ -227,14 +285,9 @@ export function PatientDrawer({
               >
                 <DETAIL_ICONS.history size={14} /> Ver todas las citas
               </Link>
-              {filteredAppointments.length === DRAWER_PREVIEW_TAKE && (
-                <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
-                  Mostrando las {DRAWER_PREVIEW_TAKE} más recientes
-                </div>
-              )}
             </Section>
           )}
-          {filteredReminders && filteredReminders.length > 0 && (
+          {reminders && reminders.length > 0 && (
             <Section title="Recordatorios Vinculados">
               <TabNav
                 wrapperClassName="filter-chips"
@@ -246,37 +299,51 @@ export function PatientDrawer({
                 active={reminderView}
                 onSelect={(key) => setReminderView(key as RelativeTime)}
               />
-              <div className="card-list">
-                {filteredReminders.map((rem) => {
-                  const remStatus = REMINDER_STATUS_CONFIG[ rem.status ];
-                  const channelLabel =
-                    rem.channel === Channel.WHATSAPP ? "WhatsApp" : "SMS";
-                  return (
-                    <div
-                      key={rem.id}
-                      className="linked-card"
-                      style={{ borderLeft: `3px solid ${remStatus.dot}` }}
-                    >
-                      <div className="linked-card__header">
-                        <div>
-                          <div className="linked-card__title">
-                            {channelLabel}
+              {filteredReminders.length > 0 ? (
+                <>
+                  <div className="card-list">
+                    {filteredReminders.map((rem) => {
+                      const remStatus = REMINDER_STATUS_CONFIG[ rem.status ];
+                      const channelLabel =
+                        rem.channel === Channel.WHATSAPP ? "WhatsApp" : "SMS";
+                      return (
+                        <LinkedCard
+                          key={rem.id}
+                          onClick={onViewReminder ? () => onViewReminder(rem) : undefined}
+                          style={{ borderLeft: `3px solid ${remStatus.dot}` }}
+                          testId={`patient-drawer-reminder-card-${rem.id}`}
+                        >
+                          <div className="linked-card__header">
+                            <div>
+                              <div className="linked-card__title">
+                                {channelLabel}
+                              </div>
+                              <div className="linked-card__meta linked-card__meta">
+                                {rem.sentAt
+                                  ? `Enviado: ${fmtDateTime(rem.sentAt.toString())}`
+                                  : `Programado: ${fmtDateTime(rem.sendAt.toString())}`}
+                              </div>
+                            </div>
+                            <ReminderStatusPill status={rem.status} />
                           </div>
-                          <div className="linked-card__meta linked-card__meta--mono">
-                            {rem.sentAt
-                              ? `Enviado: ${fmtDateTime(rem.sentAt.toString())}`
-                              : `Programado: ${fmtDateTime(rem.sendAt.toString())}`}
-                          </div>
-                        </div>
-                        <ReminderStatusPill status={rem.status} />
-                      </div>
-                      {rem.error && (
-                        <div className="linked-card__error">{rem.error}</div>
-                      )}
+                          {rem.error && (
+                            <div className="linked-card__error">{rem.error}</div>
+                          )}
+                        </LinkedCard>
+                      );
+                    })}
+                  </div>
+                  {filteredReminders.length === DRAWER_PREVIEW_TAKE && (
+                    <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
+                      Mostrando los {DRAWER_PREVIEW_TAKE} más recientes
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-muted" role="status">
+                  {getEmptyRelationMessage("recordatorios", reminderView)}
+                </div>
+              )}
               <Link
                 href={`/reminders?patientId=${patient.id}`}
                 className="btn-secondary btn-primary--block"
@@ -284,11 +351,6 @@ export function PatientDrawer({
               >
                 <DETAIL_ICONS.history size={14} /> Ver todos los recordatorios
               </Link>
-              {filteredReminders.length === DRAWER_PREVIEW_TAKE && (
-                <div className="text-muted" style={{ marginTop: 6, fontSize: 12 }}>
-                  Mostrando los {DRAWER_PREVIEW_TAKE} más recientes
-                </div>
-              )}
             </Section>
           )}
           <Section title="Información del sistema">
@@ -316,23 +378,29 @@ export function PatientDrawer({
             </Link>
           </Section>
         </div>
-        <div className="drawer-footer">
-          <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="patient-drawer-edit-button">
-            <ACTION_ICONS.edit size={14} /> Editar
-          </button>
-          <button
-            onClick={onDelete}
-            className={patient.status === PatientStatus.ACTIVE ? "btn-drawer-delete" : "btn-drawer-activate"}
-            data-testid="patient-drawer-delete-button"
-            title={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}
-          >
-            {patient.status === PatientStatus.ACTIVE ? (
-               <ACTION_ICONS.cancel size={14} />
-            ) : (
-              <ACTION_ICONS.retry size={14} />
+        {(onEdit || onDelete) && (
+          <div className="drawer-footer">
+            {onEdit && (
+              <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="patient-drawer-edit-button">
+                <ACTION_ICONS.edit size={14} /> Editar
+              </button>
             )}
-          </button>
-        </div>
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className={patient.status === PatientStatus.ACTIVE ? "btn-drawer-delete" : "btn-drawer-activate"}
+                data-testid="patient-drawer-delete-button"
+                title={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}
+              >
+                {patient.status === PatientStatus.ACTIVE ? (
+                   <ACTION_ICONS.cancel size={14} />
+                ) : (
+                  <ACTION_ICONS.retry size={14} />
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

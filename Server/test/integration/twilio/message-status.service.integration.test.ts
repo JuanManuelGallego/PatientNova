@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+const dispatchMock = vi.fn();
+vi.mock('../../../src/scheduler/dispatch.js', () => ({
+  dispatchMessage: (...args: unknown[]) => dispatchMock(...args),
+}));
+
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { processMessageStatusCallback } from '../../../src/twilio/message-status.service.js';
 import { createTestUser, createTestPatient } from '../helpers.js';
@@ -30,6 +36,8 @@ describe('processMessageStatusCallback (integration)', () => {
   let patientId: string;
 
   beforeEach(async () => {
+    dispatchMock.mockReset();
+    dispatchMock.mockResolvedValue({ success: true, messageSid: 'SMalert', channel: 'WHATSAPP' });
     userId = (await createTestUser()).id;
     patientId = (await createTestPatient(userId)).id;
   });
@@ -46,6 +54,10 @@ describe('processMessageStatusCallback (integration)', () => {
 
   it('marks a failed message as FAILED and resolves the error', async () => {
     const r = await createQueuedReminder('SMfailed', userId, patientId);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reminderActive: true, whatsappNumber: '+57300123456' },
+    });
 
     await processMessageStatusCallback({
       messageSid: 'SMfailed',
@@ -58,6 +70,22 @@ describe('processMessageStatusCallback (integration)', () => {
     expect(after.status).toBe(ReminderStatus.FAILED);
     expect(typeof after.error).toBe('string');
     expect(after.error!.length).toBeGreaterThan(0);
+    expect(dispatchMock).toHaveBeenCalledWith(Channel.WHATSAPP, expect.objectContaining({
+      to: '+57300123456',
+      contentVariables: { '1': 'Test User', '2': 'Maria Garcia' },
+    }));
+
+    const alertLog = await prisma.auditLog.findFirst({
+      where: { entityType: 'REMINDER', entityId: r.id },
+      orderBy: { eventTimeUtc: 'desc' },
+    });
+    expect(alertLog).toBeTruthy();
+    expect(alertLog!.source).toBe('JOB');
+    expect(alertLog!.fieldsAfter).toMatchObject({
+      failureAlertStatus: 'SENT',
+      failureAlertChannel: Channel.WHATSAPP,
+      failureAlertMessageId: 'SMalert',
+    });
   });
 
   it('ignores an unknown / queued status without mutating', async () => {

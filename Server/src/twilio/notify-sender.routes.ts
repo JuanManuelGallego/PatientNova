@@ -17,6 +17,7 @@ import { apiError } from '../utils/api/api-utils.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { sendReminderFailureAlert } from '../reminders/reminder-failure-alert.js';
 
 export const notifyRouter = Router();
 
@@ -54,6 +55,9 @@ notifyRouter.post(
 
     try {
       const result = await sendWhatsApp(req.body);
+      if (!result.success) {
+        throw new Error(resolveTwilioError(result.errorCode, result.error ?? 'WhatsApp send failed'));
+      }
       await reminderService.update(reminder.id, {
         status: ReminderStatus.QUEUED,
         messageId: result.messageSid ?? undefined,
@@ -66,6 +70,7 @@ notifyRouter.post(
         status: ReminderStatus.FAILED,
         error: resolveTwilioError(twilioCode, err instanceof Error ? err.message : 'Unknown send error'),
       }, req.user!.id);
+      await sendReminderFailureAlert(reminder.id);
       throw err;
     }
   })
@@ -95,6 +100,9 @@ notifyRouter.post(
 
     try {
       const result = await sendSms(req.body);
+      if (!result.success) {
+        throw new Error(resolveTwilioError(result.errorCode, result.error ?? 'SMS send failed'));
+      }
       await reminderService.update(reminder.id, {
         status: ReminderStatus.QUEUED,
         messageId: result.messageSid ?? undefined,
@@ -107,6 +115,7 @@ notifyRouter.post(
         status: ReminderStatus.FAILED,
         error: resolveTwilioError(twilioCode, err instanceof Error ? err.message : 'Unknown send error'),
       }, req.user!.id);
+      await sendReminderFailureAlert(reminder.id);
       throw err;
     }
   })
@@ -280,6 +289,7 @@ notifyRouter.post(
         where: { id: { in: createdReminders.map((r) => r.id) } },
         data: { status: ReminderStatus.FAILED, error: 'Enqueue failed — message was not sent' },
       });
+      await Promise.allSettled(createdReminders.map((reminder) => sendReminderFailureAlert(reminder.id)));
       throw err;
     }
 

@@ -3054,6 +3054,21 @@ tr:hover td {
   border-radius: var(--r-md);
 }
 
+.linked-card--interactive {
+  cursor: pointer;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.linked-card--interactive:hover {
+  background: var(--c-gray-100);
+  box-shadow: var(--shadow-sm);
+}
+
+.linked-card--interactive:focus-visible {
+  outline: 2px solid var(--c-link);
+  outline-offset: 2px;
+}
+
 .linked-card__header {
   display: flex;
   justify-content: space-between;

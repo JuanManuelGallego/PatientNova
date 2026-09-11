@@ -58,6 +58,21 @@ describe('patientRepository (integration)', () => {
     expect(restored.isDeleted).toBe(false);
   });
 
+  it('finds a patient when search contains both name and last name', async () => {
+    await patientRepository.create(
+      { name: 'Maria', lastName: 'Garcia', status: 'ACTIVE' },
+      userId,
+    );
+
+    const page = await patientRepository.findMany(
+      { page: 1, pageSize: 20, orderBy: 'createdAt', order: 'desc', includeDeleted: false, search: 'Maria Garcia' },
+      userId,
+    );
+
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]).toMatchObject({ name: 'Maria', lastName: 'Garcia' });
+  });
+
   it('throws PatientNotFoundError for another user\'s patient', async () => {
     const created = await patientRepository.create(
       { name: 'Sofia', lastName: 'Diaz', status: 'ACTIVE' },

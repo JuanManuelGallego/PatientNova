@@ -101,6 +101,10 @@ describe('completeAppointmentsWorker (integration)', () => {
 
 describe('trackDeliveryWorker (integration)', () => {
   it('fails stale QUEUED reminders whose tracking timed out', async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reminderActive: true, whatsappNumber: '+57300123456' },
+    });
     const stale = await prisma.reminder.create({
       data: {
         channel: Channel.WHATSAPP,
@@ -120,6 +124,10 @@ describe('trackDeliveryWorker (integration)', () => {
     const r = await prisma.reminder.findUnique({ where: { id: stale.id } });
     expect(r!.status).toBe(ReminderStatus.FAILED);
     expect(r!.error).toBeTruthy();
+    expect(dispatchMock).toHaveBeenCalledWith(Channel.WHATSAPP, expect.objectContaining({
+      to: '+57300123456',
+      contentVariables: { '1': 'Test User', '2': 'Maria Garcia' },
+    }));
   });
 
   it('polls Twilio and marks a delivered reminder SENT', async () => {
@@ -147,6 +155,10 @@ describe('trackDeliveryWorker (integration)', () => {
 
   it('polls Twilio and marks a failed reminder FAILED', async () => {
     (getMessageStatus as any).mockResolvedValueOnce({ sid: 'SMpoll2', status: 'failed' });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reminderActive: true, whatsappNumber: '+57300123456' },
+    });
 
     const queued = await prisma.reminder.create({
       data: {
@@ -166,6 +178,10 @@ describe('trackDeliveryWorker (integration)', () => {
     const r = await prisma.reminder.findUnique({ where: { id: queued.id } });
     expect(r!.status).toBe(ReminderStatus.FAILED);
     expect(r!.error).toBeTruthy();
+    expect(dispatchMock).toHaveBeenCalledWith(Channel.WHATSAPP, expect.objectContaining({
+      to: '+57300123456',
+      contentVariables: { '1': 'Test User', '2': 'Maria Garcia' },
+    }));
   });
 });
 

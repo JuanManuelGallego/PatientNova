@@ -9,27 +9,62 @@ import {
 } from "@/src/types/Reminder";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
-import { Section, Row } from "./DrawerUtils";
+import { LinkedCard, Section, Row } from "./DrawerUtils";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import Link from "next/link";
+import { useFetchReminder } from "@/src/api/reminders/useFetchReminder";
 
 export function ReminderDrawer({
-  reminder,
+  reminder: initialReminder,
   onClose,
   onEdit,
   onCancel,
   onRetry,
   retryLoading,
+  onViewPatient,
+  onViewAppointment,
 }: {
   reminder: Reminder;
   onClose: () => void;
-  onEdit: () => void;
-  onCancel: () => void;
-  onRetry: () => void;
+  onEdit?: () => void;
+  onCancel?: () => void;
+  onRetry?: () => void;
   retryLoading?: boolean;
+  onViewPatient?: (patient: NonNullable<Reminder["patient"]>) => void;
+  onViewAppointment?: (appointment: NonNullable<Reminder["appointment"]>) => void;
 }) {
+  const needsDetails = !initialReminder.createdAt ||
+    !initialReminder.updatedAt ||
+    !initialReminder.to ||
+    !initialReminder.sendMode;
+  const { reminder: fetchedReminder, error } = useFetchReminder(
+    needsDetails ? initialReminder.id : null,
+  );
+  const reminder = fetchedReminder ?? initialReminder;
+
+  if (needsDetails && !fetchedReminder) {
+    return (
+      <div className="drawer-overlay" onClick={onClose}>
+        <div className="drawer-backdrop" />
+        <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="reminder-drawer-panel">
+          <div className="drawer-header">
+            <div className="drawer-header__top">
+              <h2 className="drawer-header__title">Recordatorio</h2>
+              <button onClick={onClose} className="btn-close--transparent" data-testid="reminder-drawer-close-button">
+                <ACTION_ICONS.close size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="drawer-body">
+            <div className="text-muted">{error ? "No se pudo cargar el recordatorio" : "Cargando recordatorio..."}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const s = REMINDER_STATUS_CONFIG[ reminder.status ];
   const isActive = reminder.status === ReminderStatus.PENDING || reminder.status === ReminderStatus.QUEUED;
   const isFailed = reminder.status === ReminderStatus.FAILED;
@@ -60,7 +95,18 @@ export function ReminderDrawer({
         <div className="drawer-body">
           {reminder.patient && (
             <Section title="Paciente">
-              <div className="td-identity">
+              <div
+                className={`td-identity${onViewPatient ? " linked-card--interactive" : ""}`}
+                onClick={() => reminder.patient && onViewPatient?.(reminder.patient)}
+                onKeyDown={(event) => {
+                  if (reminder.patient && onViewPatient && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    onViewPatient(reminder.patient);
+                  }
+                }}
+                role={onViewPatient ? "button" : undefined}
+                tabIndex={onViewPatient ? 0 : undefined}
+              >
                 <div
                   className="avatar avatar--lg"
                   style={{ background: getAvatarColor(reminder.patient?.id) }}
@@ -117,12 +163,13 @@ export function ReminderDrawer({
           {reminder.appointment && (
             <Section title="Citas Vinculadas">
               <div className="card-list">
-                <div
+                <LinkedCard
                   key={reminder.appointment.id}
-                  className="linked-card"
+                  onClick={onViewAppointment ? () => onViewAppointment(reminder.appointment!) : undefined}
                   style={{
                     borderLeft: `3px solid ${APPT_STATUS_CFG[ reminder.appointment.status ].dot}`,
                   }}
+                  testId={`reminder-drawer-appointment-card-${reminder.appointment.id}`}
                 >
                   <div className="linked-card__header">
                     <div>
@@ -141,7 +188,7 @@ export function ReminderDrawer({
                     <span>{reminder.appointment.appointmentLocation.name}</span>
                     {reminder.appointment.paid && <span>Pagada</span>}
                   </div>
-                </div>
+                </LinkedCard>
               </div>
             </Section>
           )}
@@ -182,17 +229,21 @@ export function ReminderDrawer({
             </Link>
           </Section>
         </div>
-        {isActive && (
+        {isActive && (onEdit || onCancel) && (
           <div className="drawer-footer">
-            <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="reminder-drawer-reschedule-button">
-              <ACTION_ICONS.edit size={14} /> Reprogramar
-            </button>
-            <button onClick={onCancel} className="btn-drawer-delete" data-testid="reminder-drawer-cancel-button">
-              <ACTION_ICONS.delete size={14} />
-            </button>
+            {onEdit && (
+              <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="reminder-drawer-reschedule-button">
+                <ACTION_ICONS.edit size={14} /> Reprogramar
+              </button>
+            )}
+            {onCancel && (
+              <button onClick={onCancel} className="btn-drawer-delete" data-testid="reminder-drawer-cancel-button">
+                <ACTION_ICONS.delete size={14} />
+              </button>
+            )}
           </div>
         )}
-        {isFailed && (
+        {isFailed && onRetry && (
           <div className="drawer-footer">
             <button
               onClick={onRetry}

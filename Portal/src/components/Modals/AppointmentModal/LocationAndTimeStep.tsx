@@ -103,6 +103,7 @@ export function LocationAndTimeStep({
               data-testid="appointment-reminder-select"
               options={[
                 { value: ReminderType.NONE, label: LBL_NO_REMINDER },
+                { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
                 {
                   value: ReminderType.ONE_HOUR_BEFORE,
                   label: "1 hora antes",

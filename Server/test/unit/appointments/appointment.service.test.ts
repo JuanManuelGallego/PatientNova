@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 
+const schedulerMocks = vi.hoisted(() => ({
+  send: vi.fn(),
+  fromPrisma: vi.fn(() => ({})),
+}));
+
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
   prisma: {
     patient: { findFirst: vi.fn() },
@@ -10,6 +15,11 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
     appointment: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     $transaction: vi.fn(),
   },
+}));
+
+vi.mock('pg-boss', () => ({ fromPrisma: schedulerMocks.fromPrisma }));
+vi.mock('../../../src/scheduler/pg-boss.js', () => ({
+  getBoss: vi.fn(() => ({ send: schedulerMocks.send })),
 }));
 
 vi.mock('../../../src/google-meet/google-meet.service.js', () => ({

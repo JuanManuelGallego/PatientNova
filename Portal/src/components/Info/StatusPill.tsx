@@ -6,6 +6,7 @@ export function PatientStatusPill({ status }: { status: PatientStatus }) {
     const c = PATIENT_STATUS_CONFIG[ status ];
     return (
         <span className="pill" style={{ background: c.bg, color: c.color }}>
+            <span className="pill__dot" style={{ background: c.dot }} />
             {c.label}
         </span>
     );

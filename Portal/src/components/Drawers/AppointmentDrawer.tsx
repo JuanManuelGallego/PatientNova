@@ -7,11 +7,12 @@ import {
   fmtTime,
   getDuration,
 } from "@/src/utils/TimeUtils";
-import { Section, Row } from "./DrawerUtils";
+import { LinkedCard, Section, Row } from "./DrawerUtils";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import Link from "next/link";
+import { useFetchAppointment } from "@/src/api/appointments/useFetchAppointment";
 
 export function AppointmentDrawer({
   appt,
@@ -19,14 +20,45 @@ export function AppointmentDrawer({
   onEdit,
   onPay,
   onDelete,
+  onViewPatient,
+  onViewReminder,
 }: {
   appt: Appointment;
   onClose: () => void;
-  onEdit: () => void;
-  onPay: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onPay?: () => void;
+  onDelete?: () => void;
+  onViewPatient?: (patient: Appointment["patient"]) => void;
+  onViewReminder?: (reminder: NonNullable<Appointment["reminder"]>) => void;
 }) {
-  const s = APPT_STATUS_CFG[ appt.status ];
+  const needsDetails = !appt.patient || !appt.appointmentLocation || !appt.appointmentType;
+  const { appointment: fetchedAppointment, error } = useFetchAppointment(
+    needsDetails ? appt.id : null,
+  );
+  const appointment = fetchedAppointment ?? appt;
+
+  if (needsDetails && !fetchedAppointment) {
+    return (
+      <div className="drawer-overlay" onClick={onClose}>
+        <div className="drawer-backdrop" />
+        <div className="drawer-panel" onClick={(e) => e.stopPropagation()} data-testid="appointment-drawer-panel">
+          <div className="drawer-header">
+            <div className="drawer-header__top">
+              <h2 className="drawer-header__title">Cita</h2>
+              <button onClick={onClose} className="btn-close--transparent" data-testid="appointment-drawer-close-button">
+                <ACTION_ICONS.close size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="drawer-body">
+            <div className="text-muted">{error ? "No se pudo cargar la cita" : "Cargando cita..."}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const s = APPT_STATUS_CFG[ appointment.status ];
   return (
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-backdrop" />
@@ -38,10 +70,10 @@ export function AppointmentDrawer({
           <div className="drawer-header__top">
             <div>
               <h2 className="drawer-header__title" data-testid="appointment-drawer-type-name">
-                {appt.appointmentType.name}
+                {appointment.appointmentType.name}
               </h2>
               <div className="drawer-header__status">
-                <AppointmentStatusPill status={appt.status} />
+                <AppointmentStatusPill status={appointment.status} />
               </div>
             </div>
             <button onClick={onClose} className="btn-close--transparent" data-testid="appointment-drawer-close-button">
@@ -51,18 +83,29 @@ export function AppointmentDrawer({
         </div>
         <div className="drawer-body">
           <Section title="Paciente" testId="appointment-drawer-section-paciente">
-            <div className="td-identity">
+            <div
+              className={`td-identity${onViewPatient ? " linked-card--interactive" : ""}`}
+              onClick={() => onViewPatient?.(appointment.patient)}
+              onKeyDown={(event) => {
+                if (onViewPatient && (event.key === "Enter" || event.key === " ")) {
+                  event.preventDefault();
+                  onViewPatient(appointment.patient);
+                }
+              }}
+              role={onViewPatient ? "button" : undefined}
+              tabIndex={onViewPatient ? 0 : undefined}
+            >
               <div
                 className="avatar avatar--lg"
-                style={{ background: getAvatarColor(appt.patient.id) }}
+                style={{ background: getAvatarColor(appointment.patient.id) }}
               >
-                {getInitials(appt.patient.name, appt.patient.lastName)}
+                {getInitials(appointment.patient.name, appointment.patient.lastName)}
               </div>
               <div>
                 <div className="drawer-patient__name" data-testid="appointment-drawer-patient-name">
-                  {appt.patient.name} {appt.patient.lastName}
+                  {appointment.patient.name} {appointment.patient.lastName}
                 </div>
-                <div className="text-muted" data-testid="appointment-drawer-patient-email">{appt.patient.email}</div>
+                <div className="text-muted" data-testid="appointment-drawer-patient-email">{appointment.patient.email}</div>
               </div>
             </div>
           </Section>
@@ -70,19 +113,19 @@ export function AppointmentDrawer({
             <Row
               icon={DETAIL_ICONS.calendar}
               label="Fecha"
-              value={fmtDate(appt.startAt)}
+              value={fmtDate(appointment.startAt)}
               testId="appointment-drawer-date"
             />
             <Row
               icon={DETAIL_ICONS.clock}
               label="Hora"
-              value={fmtTime(appt.startAt)}
+              value={fmtTime(appointment.startAt)}
               testId="appointment-drawer-time"
             />
             <Row
               icon={DETAIL_ICONS.timer}
               label="Duración"
-              value={getDuration(appt.startAt, appt.endAt)}
+              value={getDuration(appointment.startAt, appointment.endAt)}
               testId="appointment-drawer-duration"
             />
           </Section>
@@ -90,16 +133,16 @@ export function AppointmentDrawer({
             <Row
               icon={DETAIL_ICONS.mapPin}
               label="Ubicación"
-              value={appt.appointmentLocation.name}
+              value={appointment.appointmentLocation.name}
               testId="appointment-drawer-location"
             />
-            {appt.meetingUrl && (
+            {appointment.meetingUrl && (
               <div className="detail-row">
                 <span className="detail-row__icon">
                   <DETAIL_ICONS.link size={14} />
                 </span>
                 <a
-                  href={appt.meetingUrl}
+                  href={appointment.meetingUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="meeting-link"
@@ -114,17 +157,17 @@ export function AppointmentDrawer({
             <Row
               icon={DETAIL_ICONS.dollar}
               label="Precio"
-              value={`$${appt.price}`}
+              value={`$${appointment.price}`}
               testId="appointment-drawer-price"
             />
             <div className="row-between">
               <Row
                 icon={DETAIL_ICONS.creditCard}
                 label="Estado"
-                value={<PayStatusPill paid={appt.paid} />}
+                value={<PayStatusPill paid={appointment.paid} />}
                 testId="appointment-drawer-paid-status"
               />
-              {!appt.paid && appt.status !== AppointmentStatus.CANCELLED && (
+              {!appointment.paid && appointment.status !== AppointmentStatus.CANCELLED && onPay && (
                 <button
                   onClick={onPay}
                   className="btn-primary btn-primary--success"
@@ -139,32 +182,33 @@ export function AppointmentDrawer({
             <Row
               icon={DETAIL_ICONS.note}
               label="Notas"
-              value={`${appt.notes || "Ninguna Nota"}`}
+              value={`${appointment.notes || "Ninguna Nota"}`}
               testId="appointment-drawer-notes"
             />
           </Section>
-          {appt.reminder && (
+          {appointment.reminder && (
             <Section title="Recordatorio Vinculado">
               <div className="card-list">
-                <div
-                  key={appt.reminder.id}
-                  className="linked-card"
+                <LinkedCard
+                  key={appointment.reminder.id}
+                  onClick={onViewReminder ? () => onViewReminder(appointment.reminder!) : undefined}
                   style={{
-                    borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[ appt.reminder.status ].dot}`,
+                    borderLeft: `3px solid ${REMINDER_STATUS_CONFIG[ appointment.reminder.status ].dot}`,
                   }}
+                  testId={`appointment-drawer-reminder-card-${appointment.reminder.id}`}
                 >
                   <div className="linked-card__header">
                     <div>
                       <div className="linked-card__title">
-                        {CHANNEL_CFG[ appt.reminder.channel ].label}
+                        {CHANNEL_CFG[ appointment.reminder.channel ].label}
                       </div>
                       <div className="linked-card__meta">
-                        {fmtDateTime(appt.reminder.sendAt.toString())}
+                        {fmtDateTime(appointment.reminder.sendAt.toString())}
                       </div>
                     </div>
-                    <ReminderStatusPill status={appt.reminder.status} />
+                    <ReminderStatusPill status={appointment.reminder.status} />
                   </div>
-                </div>
+                </LinkedCard>
               </div>
             </Section>
           )}
@@ -172,15 +216,15 @@ export function AppointmentDrawer({
             <Row
               icon={DETAIL_ICONS.id}
               label="ID"
-              value={<span className="mono-sm">{appt.id}</span>}
+              value={<span className="mono-sm">{appointment.id}</span>}
             />
             <Row
               icon={DETAIL_ICONS.calendar}
               label="Creada"
-              value={new Date(appt.createdAt).toLocaleString("es-ES")}
+              value={new Date(appointment.createdAt).toLocaleString("es-ES")}
             />
             <Link
-              href={`/settings?tab=Registro+de+actividad&entityId=${appt.id}`}
+              href={`/settings?tab=Registro+de+actividad&entityId=${appointment.id}`}
               className="btn-secondary btn-primary--block"
               style={{ marginTop: 12, textDecoration: "none" }}
               data-testid="appointment-drawer-audit-link"
@@ -189,14 +233,20 @@ export function AppointmentDrawer({
             </Link>
           </Section>
         </div>
-        <div className="drawer-footer">
-          <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="appointment-drawer-edit-button">
-            <ACTION_ICONS.edit size={14} /> Editar
-          </button>
-          <button onClick={onDelete} className="btn-drawer-delete" data-testid="appointment-drawer-delete-button">
-            <ACTION_ICONS.delete size={14} />
-          </button>
-        </div>
+        {(onEdit || onDelete) && (
+          <div className="drawer-footer">
+            {onEdit && (
+              <button onClick={onEdit} className="btn-primary btn-primary--block" data-testid="appointment-drawer-edit-button">
+                <ACTION_ICONS.edit size={14} /> Editar
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={onDelete} className="btn-drawer-delete" data-testid="appointment-drawer-delete-button">
+                <ACTION_ICONS.delete size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

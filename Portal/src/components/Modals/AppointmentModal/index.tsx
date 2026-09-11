@@ -97,7 +97,9 @@ export function AppointmentModal({
     duration:
       getDuration(appt?.startAt, appt?.endAt) ?? AppointmentDuration.MIN_60,
     reminderType: appt?.reminder
-      ? getReminderType(appt.startAt, appt.reminder.sendAt)
+      ? appt.reminder.sendMode === ReminderMode.IMMEDIATE
+        ? ReminderType.IMMEDIATE
+        : getReminderType(appt.startAt, appt.reminder.sendAt)
       : ReminderType.NONE,
     notes: appt?.notes ?? undefined,
   });
@@ -143,6 +145,9 @@ export function AppointmentModal({
         : channel === Channel.SMS
           ? selectedPatient?.smsNumber || ""
           : selectedPatient?.email || "";
+    const isImmediate = form.reminderType === ReminderType.IMMEDIATE;
+    const sendMode = isImmediate ? ReminderMode.IMMEDIATE : ReminderMode.SCHEDULED;
+    const sendAt = getReminderSendAt(form.startAt, form.reminderType);
 
     if (selectedLocation?.isVirtual) {
       return {
@@ -166,9 +171,9 @@ export function AppointmentModal({
             .replace("{{5}}", form.meetingUrl || "{{5}}"),
         }),
         channel: channel,
-        sendMode: ReminderMode.SCHEDULED,
+        sendMode,
         status: ReminderStatus.PENDING,
-        sendAt: getReminderSendAt(form.startAt, form.reminderType),
+        ...(!isImmediate && { sendAt }),
       };
     }
 
@@ -195,9 +200,9 @@ export function AppointmentModal({
           .replace("{{6}}", selectedLocation?.instructions || "No hay instrucciones registradas",),
       }),
       channel: channel,
-      sendMode: ReminderMode.SCHEDULED,
+      sendMode,
       status: ReminderStatus.PENDING,
-      sendAt: getReminderSendAt(form.startAt, form.reminderType),
+      ...(!isImmediate && { sendAt }),
     };
   }
 

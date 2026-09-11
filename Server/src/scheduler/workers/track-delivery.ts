@@ -8,6 +8,7 @@ import { logger } from '../../utils/api/logger.js';
 import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
+import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 
 const MAX_TRACK_AGE_MS = 30 * 60 * 1000;
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
@@ -42,6 +43,7 @@ export async function trackDeliveryWorker(): Promise<void> {
         userId: r.userId,
       }))
     ));
+    await Promise.allSettled(stale.map((reminder) => sendReminderFailureAlert(reminder.id)));
     logger.warn({ count: stale.length }, 'Dropped stale QUEUED reminders');
   }
 
@@ -88,6 +90,9 @@ export async function trackDeliveryWorker(): Promise<void> {
               fieldsAfter: { status: mappedStatus, error: mappedStatus === ReminderStatus.FAILED ? message.errorMessage : null },
               userId: reminder.userId,
             }));
+            if (mappedStatus === ReminderStatus.FAILED) {
+              await sendReminderFailureAlert(reminder.id);
+            }
           }
         } catch (error) {
           logger.error({ reminderId: reminder.id, error }, 'Failed to poll reminder status');

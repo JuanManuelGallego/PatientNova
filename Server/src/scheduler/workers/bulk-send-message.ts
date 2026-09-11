@@ -8,6 +8,7 @@ import { logger } from '../../utils/api/logger.js';
 import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
+import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 
 const JOB_CTX = { actorId: 'bulk-send-worker', actorDisplayName: 'Bulk Send Worker' };
 
@@ -53,6 +54,7 @@ export async function bulkSendWorker([job]: Array<{
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
       userId: reminder.userId,
     }));
+    await sendReminderFailureAlert(reminderId);
     return;
   }
 
@@ -72,7 +74,7 @@ export async function bulkSendWorker([job]: Array<{
         where: { id: reminderId },
         data: { status: ReminderStatus.FAILED, error: errorMsg },
       });
-      await runInAuditContext(JOB_CTX, () => logAudit({
+    await runInAuditContext(JOB_CTX, () => logAudit({
         entityType: EntityType.REMINDER,
         entityId: reminderId,
         actionType: ActionType.UPDATE,
@@ -83,6 +85,7 @@ export async function bulkSendWorker([job]: Array<{
         fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
         userId: reminder.userId,
       }));
+      await sendReminderFailureAlert(reminderId);
       logger.error({ reminderId, error: errorMsg }, 'Bulk send reminder permanently failed after max retries');
     } else {
       throw err;
@@ -99,7 +102,7 @@ export async function bulkSendWorker([job]: Array<{
         sentAt: result.sentAt ?? null,
       },
     });
-    await runInAuditContext(JOB_CTX, () => logAudit({
+      await runInAuditContext(JOB_CTX, () => logAudit({
       entityType: EntityType.REMINDER,
       entityId: reminderId,
       actionType: ActionType.UPDATE,
@@ -130,6 +133,7 @@ export async function bulkSendWorker([job]: Array<{
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
         userId: reminder.userId,
       }));
+      await sendReminderFailureAlert(reminderId);
       logger.error({ reminderId, error: result.error }, 'Bulk send reminder permanently failed after max retries');
     } else {
       // Not the final attempt: rethrow so pg-boss retries the job.
