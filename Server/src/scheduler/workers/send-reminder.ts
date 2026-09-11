@@ -8,6 +8,7 @@ import { logger } from '../../utils/api/logger.js';
 import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
+import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
@@ -47,6 +48,7 @@ export async function sendReminderWorker([ job ]: Array<{
       fieldsAfter: { status: ReminderStatus.FAILED, error: validation.error },
       userId: reminder.userId,
     }));
+    await sendReminderFailureAlert(reminderId);
     return;
   }
 
@@ -77,6 +79,7 @@ export async function sendReminderWorker([ job ]: Array<{
         fieldsAfter: { status: ReminderStatus.FAILED, error: errorMsg },
         userId: reminder.userId,
       }));
+      await sendReminderFailureAlert(reminderId);
       logger.error({ reminderId, error: errorMsg }, 'Reminder permanently failed after max retries');
     } else {
       throw err;
@@ -124,6 +127,7 @@ export async function sendReminderWorker([ job ]: Array<{
         fieldsAfter: { status: ReminderStatus.FAILED, error: result.error },
         userId: reminder.userId,
       }));
+      await sendReminderFailureAlert(reminderId);
       logger.error({ reminderId, error: result.error }, 'Reminder permanently failed after max retries');
     } else {
       throw new Error(result.error ?? 'Dispatch failed');
