@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
     reminder: { findUnique: vi.fn() },
   },
   dispatchMessage: vi.fn(),
+  logAudit: vi.fn(),
+  runInAuditContext: vi.fn((_: unknown, fn: () => unknown) => fn()),
   logger: {
     debug: vi.fn(),
     error: vi.fn(),
@@ -16,6 +18,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({ prisma: mocks.prisma }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatchMessage }));
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({ logAudit: mocks.logAudit }));
+vi.mock('../../../src/audit-log/audit-log-context.js', () => ({ runInAuditContext: mocks.runInAuditContext }));
 vi.mock('../../../src/utils/config/config.ts', () => ({
   config: { twilio: { reminderFailedSid: 'HXfailed' } },
 }));
@@ -57,6 +61,18 @@ describe('sendReminderFailureAlert', () => {
       contentSid: 'HXfailed',
       contentVariables: { '1': 'Dr. Test User', '2': 'Maria Garcia' },
     });
+    expect(mocks.logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      entityType: 'REMINDER',
+      entityId: 'rem-1',
+      actionType: 'UPDATE',
+      source: 'JOB',
+      userId: 'user-1',
+      fieldsAfter: expect.objectContaining({
+        failureAlertStatus: 'SENT',
+        failureAlertChannel: Channel.WHATSAPP,
+        failureAlertMessageId: 'SMalert',
+      }),
+    }));
   });
 
   it('sends the equivalent SMS when SMS is the configured channel', async () => {
@@ -82,6 +98,9 @@ describe('sendReminderFailureAlert', () => {
     await sendReminderFailureAlert('rem-1');
 
     expect(mocks.dispatchMessage).not.toHaveBeenCalled();
+    expect(mocks.logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      fieldsAfter: expect.objectContaining({ failureAlertStatus: 'SKIPPED' }),
+    }));
   });
 
   it('does not send without a contact number for the configured channel', async () => {
@@ -99,5 +118,29 @@ describe('sendReminderFailureAlert', () => {
     mocks.dispatchMessage.mockRejectedValue(new Error('Twilio unavailable'));
 
     await expect(sendReminderFailureAlert('rem-1')).resolves.toBeUndefined();
+    expect(mocks.logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      fieldsAfter: expect.objectContaining({
+        failureAlertStatus: 'FAILED',
+        failureAlertError: 'Twilio unavailable',
+      }),
+    }));
+  });
+
+  it('audits a failed alert response', async () => {
+    mocks.dispatchMessage.mockResolvedValue({
+      success: false,
+      error: 'Twilio rejected the message',
+      channel: Channel.WHATSAPP,
+      to: '+57300123456',
+    });
+
+    await sendReminderFailureAlert('rem-1');
+
+    expect(mocks.logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      fieldsAfter: expect.objectContaining({
+        failureAlertStatus: 'FAILED',
+        failureAlertError: 'Twilio rejected the message',
+      }),
+    }));
   });
 });

@@ -74,6 +74,18 @@ describe('processMessageStatusCallback (integration)', () => {
       to: '+57300123456',
       contentVariables: { '1': 'Test User', '2': 'Maria Garcia' },
     }));
+
+    const alertLog = await prisma.auditLog.findFirst({
+      where: { entityType: 'REMINDER', entityId: r.id },
+      orderBy: { eventTimeUtc: 'desc' },
+    });
+    expect(alertLog).toBeTruthy();
+    expect(alertLog!.source).toBe('JOB');
+    expect(alertLog!.fieldsAfter).toMatchObject({
+      failureAlertStatus: 'SENT',
+      failureAlertChannel: Channel.WHATSAPP,
+      failureAlertMessageId: 'SMalert',
+    });
   });
 
   it('ignores an unknown / queued status without mutating', async () => {
