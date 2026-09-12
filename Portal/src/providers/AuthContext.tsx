@@ -30,7 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function checkSession() {
             try {
-                const res = await fetchWithAuth(`${API_BASE}/users/me`, { credentials: "include" });
+                const res = await fetchWithAuth(
+                    `${API_BASE}/users/me`,
+                    { credentials: "include" },
+                    { redirectOnUnauthorized: false },
+                );
                 if (res.ok) {
                     const json: ApiResponse = await res.json();
                     if (json.success) setUser(json.data as User);
