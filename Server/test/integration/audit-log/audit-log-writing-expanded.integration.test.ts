@@ -293,7 +293,7 @@ describe('Audit writing: users (integration)', () => {
       status: 'ACTIVE',
       firstName: 'Audit',
       lastName: 'User',
-    }));
+    }, userId));
 
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
@@ -310,9 +310,9 @@ describe('Audit writing: users (integration)', () => {
       status: 'ACTIVE',
       firstName: 'Original',
       lastName: 'Name',
-    }));
+    }, userId));
 
-    await withAuditContext(() => userService.update(user.id, { firstName: 'Changed' }));
+    await withAuditContext(() => userService.update(user.id, { firstName: 'Changed' }, userId));
 
     const logs = await getAuditLogsForEntity('USER', user.id);
     const updateLog = logs.find(l => l.actionType === 'UPDATE');
@@ -330,9 +330,9 @@ describe('Audit writing: users (integration)', () => {
       status: 'ACTIVE',
       firstName: 'Delete',
       lastName: 'Me',
-    }));
+    }, userId));
 
-    await withAuditContext(() => userService.delete(user.id));
+    await withAuditContext(() => userService.delete(user.id, userId));
 
     const logs = await getAuditLogsForEntity('USER', user.id);
     const deleteLog = logs.find(l => l.actionType === 'DELETE');
@@ -348,10 +348,10 @@ describe('Audit writing: users (integration)', () => {
       status: 'ACTIVE',
       firstName: 'Restore',
       lastName: 'Me',
-    }));
+    }, userId));
 
-    await withAuditContext(() => userService.delete(user.id));
-    await withAuditContext(() => userService.restore(user.id));
+    await withAuditContext(() => userService.delete(user.id, userId));
+    await withAuditContext(() => userService.restore(user.id, userId));
 
     const logs = await getAuditLogsForEntity('USER', user.id);
     const restoreLog = logs.find(l => l.actionType === 'RESTORE');
@@ -474,6 +474,7 @@ describe('Audit writing: twilio webhook (integration)', () => {
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
     expect(log!.description).toContain('confirmada via respuesta rápida de WhatsApp');
+    expect(log!.userId).toBe(userId);
     expect(log!.affectedFields).toEqual(['status']);
     expect(log!.fieldsAfter).toMatchObject({ status: AppointmentStatus.CONFIRMED });
   });

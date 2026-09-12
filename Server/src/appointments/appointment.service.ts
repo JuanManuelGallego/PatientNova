@@ -99,6 +99,7 @@ async function handleReminderUpdate(
       await logAudit({
         entityType: EntityType.REMINDER,
         entityId: existing.reminder.id,
+        userId,
         actionType: ActionType.UPDATE,
         description: `Recordatorio cancelado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
         affectedFields: [ 'status' ],
@@ -133,6 +134,7 @@ async function handleReminderUpdate(
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: createdReminder.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
@@ -173,6 +175,7 @@ async function handleReminderUpdate(
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: existing.reminder.id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       ...diff,
@@ -282,9 +285,10 @@ export const appointmentService = {
         }
 
         await logAudit({
-          entityType: EntityType.REMINDER,
-          entityId: createdReminder.id,
-          actionType: ActionType.CREATE,
+           entityType: EntityType.REMINDER,
+           entityId: createdReminder.id,
+           userId,
+           actionType: ActionType.CREATE,
           description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
           affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
           fieldsAfter: {
@@ -323,9 +327,10 @@ export const appointmentService = {
       }
 
       await logAudit({
-        entityType: EntityType.APPOINTMENT,
-        entityId: created.id,
-        actionType: ActionType.CREATE,
+         entityType: EntityType.APPOINTMENT,
+         entityId: created.id,
+         userId,
+         actionType: ActionType.CREATE,
         description: `Cita creada para el paciente ${patient.name} ${patient.lastName}`,
         affectedFields: Object.keys(dto),
         fieldsAfter: {
@@ -350,9 +355,10 @@ export const appointmentService = {
           data: { appointmentId: created.id },
         });
         await logAudit({
-          entityType: EntityType.REMINDER,
-          entityId: createdReminder.id,
-          actionType: ActionType.UPDATE,
+           entityType: EntityType.REMINDER,
+           entityId: createdReminder.id,
+           userId,
+           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
           affectedFields: [ 'appointmentId' ],
           fieldsBefore: { appointmentId: null },
@@ -419,6 +425,7 @@ export const appointmentService = {
       await logAudit({
         entityType: EntityType.APPOINTMENT,
         entityId: id,
+        userId,
         actionType: ActionType.UPDATE,
         description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
         ...diff,
@@ -432,9 +439,10 @@ export const appointmentService = {
         });
 
         await logAudit({
-          entityType: EntityType.REMINDER,
-          entityId: createdReminder.id,
-          actionType: ActionType.UPDATE,
+           entityType: EntityType.REMINDER,
+           entityId: createdReminder.id,
+           userId,
+           actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
           affectedFields: [ 'appointmentId' ],
           fieldsBefore: { appointmentId: null },
@@ -460,6 +468,7 @@ export const appointmentService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
       affectedFields: [ 'status' ],
@@ -483,6 +492,7 @@ export const appointmentService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
       affectedFields: [ 'paid' ],
@@ -497,6 +507,7 @@ export const appointmentService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
       affectedFields: [ 'isDeleted' ],
@@ -513,6 +524,7 @@ export const appointmentService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
       affectedFields: [ 'isDeleted' ],
