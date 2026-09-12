@@ -9,10 +9,13 @@ let refreshPromise: Promise<boolean> | null = null;
  *   1. Call POST /auth/refresh once (deduplicated across concurrent requests)
  *   2. Retry the original request if refresh succeeds
  *   3. Redirect to /login if refresh fails (session fully expired)
+ *
+ * Session probes can disable the redirect so public pages remain accessible.
  */
 export async function fetchWithAuth(
     input: RequestInfo | URL,
     init?: RequestInit,
+    options: { redirectOnUnauthorized?: boolean } = {},
 ): Promise<Response> {
     const res = await fetch(input, { ...init, credentials: "include" });
 
@@ -27,8 +30,10 @@ export async function fetchWithAuth(
     const refreshed = await refreshPromise;
 
     if (!refreshed) {
-        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/") {
-            window.location.replace("/login");
+        if (options.redirectOnUnauthorized !== false) {
+            if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/") {
+                window.location.replace("/login");
+            }
         }
         return res;
     }

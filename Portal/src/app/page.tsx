@@ -194,6 +194,15 @@ export default function LandingPage() {
           <p className="landing-footer__tagline">
             Gestión clínica moderna para profesionales de la salud.
           </p>
+          <div className="landing-footer__links">
+            <a href="/privacy-policy" className="landing-footer__link">
+              Política de privacidad
+            </a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms-of-service" className="landing-footer__link">
+              Términos de servicio
+            </a>
+          </div>
           <p className="landing-footer__copy">
             © {new Date().getFullYear()} Patient Nova. Todos los derechos
             reservados.
