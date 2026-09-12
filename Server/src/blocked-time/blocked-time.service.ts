@@ -31,6 +31,7 @@ export const blockedTimeService = {
     await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: createdBlockedTime.id,
+      userId,
       actionType: ActionType.CREATE,
       description: 'Bloqueo de tiempo creado',
       affectedFields: Object.keys(dto),
@@ -51,6 +52,7 @@ export const blockedTimeService = {
     await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: 'Bloqueo de tiempo actualizado',
       ...diff,
@@ -64,6 +66,7 @@ export const blockedTimeService = {
     await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: 'Bloqueo de tiempo eliminado',
       affectedFields: ['isDeleted'],
@@ -78,6 +81,7 @@ export const blockedTimeService = {
     await logAudit({
       entityType: EntityType.BLOCKED_TIME,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: 'Bloqueo de tiempo restaurado',
       affectedFields: ['isDeleted'],

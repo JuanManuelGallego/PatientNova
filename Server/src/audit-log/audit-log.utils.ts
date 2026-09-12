@@ -39,7 +39,9 @@ export function computeDiff(
  * Build a CreateAuditLogDto from entity metadata, merging in the current
  * audit context (actor info from the request) and the computed diff.
  */
-export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAuditLogDto {
+type AuditEntryOverrides = Omit<Partial<CreateAuditLogDto>, 'userId'> & Pick<CreateAuditLogDto, 'userId'>;
+
+export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogDto {
   const ctx = getAuditContext();
   return {
     actorId: ctx?.actorId ?? 'system',
@@ -52,7 +54,7 @@ export function buildAuditEntry(overrides: Partial<CreateAuditLogDto>): CreateAu
     ...overrides,
     affectedFields: overrides.affectedFields ?? [],
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
-    userId: 'userId' in overrides ? overrides.userId : ctx?.userId ?? 'system',
+    userId: overrides.userId,
   };
 }
 
@@ -66,7 +68,7 @@ export async function logAudit(params: {
   fieldsBefore?: Record<string, unknown> | null;
   fieldsAfter?: Record<string, unknown> | null;
   tx?: TransactionClient;
-  userId?: string;
+  userId: string;
 }): Promise<void> {
   await auditLogService.create(buildAuditEntry(params), params.tx);
 }

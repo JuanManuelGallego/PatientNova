@@ -83,6 +83,7 @@ export const authService = {
     await logAudit({
       entityType: EntityType.USER,
       entityId: user.id,
+      userId: user.id,
       actionType: ActionType.UPDATE,
       description: `Usuario ${user.email} inició sesión`,
       affectedFields: ['lastLoginAt', 'lastLoginIp'],
@@ -113,6 +114,7 @@ export const authService = {
     await logAudit({
       entityType: EntityType.USER,
       entityId: userId,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Usuario ${userId} cerró sesión`,
       affectedFields: ['refreshTokenVersion'],
@@ -177,6 +179,7 @@ export const authService = {
     await logAudit({
       entityType: EntityType.USER,
       entityId: userId,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Usuario ${userId} cambió contraseña`,
       affectedFields: ['passwordHash'],

@@ -109,12 +109,13 @@ describe('computeDiff', () => {
 });
 
 describe('buildAuditEntry', () => {
-  it('uses defaults when no audit context is set', () => {
+  it('uses actor defaults while requiring an explicit userId', () => {
     const entry = buildAuditEntry({
       entityType: 'PATIENT',
       entityId: 'p-1',
       actionType: 'CREATE',
       description: 'Created patient',
+      userId: 'owner-1',
     });
     expect(entry.actorId).toBe('system');
     expect(entry.actorDisplayName).toBe('Sistema');
@@ -123,6 +124,7 @@ describe('buildAuditEntry', () => {
     expect(entry.actionType).toBe('CREATE');
     expect(entry.source).toBe('API');
     expect(entry.description).toBe('Created patient');
+    expect(entry.userId).toBe('owner-1');
     expect(entry.affectedFields).toEqual([]);
   });
 
@@ -131,10 +133,11 @@ describe('buildAuditEntry', () => {
       { actorId: 'user-1', actorDisplayName: 'Test User', ipAddress: '10.0.0.1', userId: 'u-1' },
       () => {
         const entry = buildAuditEntry({
-          entityType: 'APPOINTMENT',
-          entityId: 'a-1',
-          actionType: 'UPDATE',
-          description: 'Updated',
+         entityType: 'APPOINTMENT',
+         entityId: 'a-1',
+         actionType: 'UPDATE',
+         description: 'Updated',
+         userId: 'u-1',
         });
         expect(entry.actorId).toBe('user-1');
         expect(entry.actorDisplayName).toBe('Test User');

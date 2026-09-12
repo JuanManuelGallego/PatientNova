@@ -38,6 +38,7 @@ export const patientService = {
     await logAudit({
       entityType: EntityType.PATIENT,
       entityId: createdPatient.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
       affectedFields: Object.keys(dto),
@@ -53,6 +54,7 @@ export const patientService = {
     await logAudit({
       entityType: EntityType.PATIENT,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
       ...diff,
@@ -65,6 +67,7 @@ export const patientService = {
     await logAudit({
       entityType: EntityType.PATIENT,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Paciente eliminado ${deletedPatient.name} ${deletedPatient.lastName}`,
       affectedFields: ['isDeleted'],
@@ -79,6 +82,7 @@ export const patientService = {
     await logAudit({
       entityType: EntityType.PATIENT,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
       affectedFields: ['isDeleted'],

@@ -23,7 +23,7 @@ userRouter.post(
     requireSuperAdmin,
     validateBody(createUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.create(req.body);
+        const user = await userService.create(req.body, req.user!.id);
         ok(res, user, 201);
     })
 );
@@ -77,7 +77,7 @@ userRouter.patch(
     authenticate,
     validateBody(updateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.update(req.user!.id, req.body);
+        const user = await userService.update(req.user!.id, req.body, req.user!.id);
         ok(res, user);
     })
 );
@@ -94,7 +94,7 @@ userRouter.patch(
     requireSuperAdmin,
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.update(req.params.id as string, req.body);
+        const user = await userService.update(req.params.id as string, req.body, req.user!.id);
         ok(res, user);
     })
 );
@@ -108,7 +108,7 @@ userRouter.post(
   authenticate,
   requireSuperAdmin,
   asyncHandler(async (req: Request, res: Response) => {
-    const user = await userService.delete(req.params.id as string);
+    const user = await userService.delete(req.params.id as string, req.user!.id);
     ok(res, user);
   })
 );
@@ -122,7 +122,7 @@ userRouter.post(
   authenticate,
   requireSuperAdmin,
   asyncHandler(async (req: Request, res: Response) => {
-    const user = await userService.restore(req.params.id as string);
+    const user = await userService.restore(req.params.id as string, req.user!.id);
     ok(res, user);
   })
 );

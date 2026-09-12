@@ -240,6 +240,7 @@ notifyRouter.post(
         await logAudit({
           entityType: EntityType.REMINDER,
           entityId: reminder.id,
+          userId,
           actionType: ActionType.CREATE,
           description: `Envío masivo: recordatorio creado para ${dto.patientName}`,
           affectedFields: ['channel', 'contentSid', 'contentVariables', 'body', 'sendMode', 'sendAt', 'to'],

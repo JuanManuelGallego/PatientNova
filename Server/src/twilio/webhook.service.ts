@@ -112,6 +112,7 @@ export class TwilioWebhookService {
         await logAudit({
             entityType: EntityType.APPOINTMENT,
             entityId: reminder.appointmentId!,
+            userId: reminder.userId,
             actionType: ActionType.UPDATE,
             source: ActionSource.API,
             description: `Cita confirmada via respuesta rápida de WhatsApp`,
@@ -149,6 +150,7 @@ export class TwilioWebhookService {
         await logAudit({
             entityType: EntityType.APPOINTMENT,
             entityId: reminder.appointmentId!,
+            userId: reminder.userId,
             actionType: ActionType.UPDATE,
             source: ActionSource.API,
             description: `Cita cancelada via respuesta rápida de WhatsApp`,

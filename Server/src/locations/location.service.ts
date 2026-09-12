@@ -16,6 +16,7 @@ export const locationService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: createdLocation.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Ubicación creada ${createdLocation.name}`,
       affectedFields: Object.keys(dto),
@@ -31,6 +32,7 @@ export const locationService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Ubicación actualizada ${updatedLocation.name}`,
       ...diff,
@@ -43,6 +45,7 @@ export const locationService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Ubicación eliminada ${deletedLocation.name}`,
       affectedFields: ['isDeleted'],
@@ -57,6 +60,7 @@ export const locationService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_LOCATION,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Ubicación restaurada ${restoredLocation.name}`,
       affectedFields: ['isDeleted'],

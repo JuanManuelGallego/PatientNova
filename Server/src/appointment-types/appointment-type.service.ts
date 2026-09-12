@@ -16,6 +16,7 @@ export const appointmentTypeService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: createdType.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Tipo de cita creado ${createdType.name}`,
       affectedFields: Object.keys(dto),
@@ -31,6 +32,7 @@ export const appointmentTypeService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Tipo de cita actualizado ${updatedType.name}`,
       ...diff,
@@ -43,6 +45,7 @@ export const appointmentTypeService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Tipo de cita eliminado ${deletedType.name}`,
       affectedFields: ['isDeleted'],
@@ -57,6 +60,7 @@ export const appointmentTypeService = {
     await logAudit({
       entityType: EntityType.APPOINTMENT_TYPE,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Tipo de cita restaurado ${restoredType.name}`,
       affectedFields: ['isDeleted'],

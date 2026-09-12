@@ -12,11 +12,12 @@ export const userService = {
   findById: userRepository.findById.bind(userRepository),
   findMany: userRepository.findMany.bind(userRepository),
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, auditUserId: string) {
     const user = await userRepository.create(dto);
     await logAudit({
       entityType: EntityType.USER,
       entityId: user.id,
+      userId: auditUserId,
       actionType: ActionType.CREATE,
       description: `Usuario creado ${user.email}`,
       affectedFields: Object.keys(dto),
@@ -46,13 +47,14 @@ export const userService = {
     return user;
   },
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto, auditUserId: string) {
     const before = await userRepository.findById(id);
     const user = await userRepository.update(id, dto);
     const diff = computeDiff(before as unknown as Record<string, unknown>, user as unknown as Record<string, unknown>, USER_DIFF_FIELDS);
     await logAudit({
       entityType: EntityType.USER,
       entityId: id,
+      userId: auditUserId,
       actionType: ActionType.UPDATE,
       description: `Usuario actualizado ${user.email}`,
       ...diff,
@@ -61,12 +63,13 @@ export const userService = {
     return user;
   },
 
-  async delete(id: string) {
+  async delete(id: string, auditUserId: string) {
     const before = await userRepository.findById(id);
     const user = await userRepository.delete(id);
     await logAudit({
       entityType: EntityType.USER,
       entityId: id,
+      userId: auditUserId,
       actionType: ActionType.DELETE,
       description: `Usuario eliminado ${before.email}`,
       affectedFields: ['isDeleted', 'email', 'firstName', 'lastName', 'displayName', 'role', 'status'],
@@ -93,12 +96,13 @@ export const userService = {
     return user;
   },
 
-  async restore(id: string) {
+  async restore(id: string, auditUserId: string) {
     await userRepository.restore(id);
     const user = await userRepository.findById(id);
     await logAudit({
       entityType: EntityType.USER,
       entityId: id,
+      userId: auditUserId,
       actionType: ActionType.RESTORE,
       description: `Usuario restaurado ${user.email}`,
       affectedFields: ['isDeleted', 'email', 'firstName', 'lastName', 'displayName', 'role', 'status', 'avatar', 'logo', 'altLogo', 'jobTitle', 'phoneNumber', 'whatsappNumber', 'reminderActive', 'reminderChannel', 'timezone', 'bankName', 'accountNumber', 'nationalId', 'bankingKey'],

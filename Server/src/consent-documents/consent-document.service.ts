@@ -18,6 +18,7 @@ export const consentDocumentService = {
     await logAudit({
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
+      userId,
       actionType: ActionType.CREATE,
       description: `Documento de consentimiento creado para el usuario ${userId}`,
       affectedFields: Object.keys(dto),
@@ -41,6 +42,7 @@ export const consentDocumentService = {
     await logAudit({
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Documento de consentimiento actualizado para el usuario ${userId}`,
       ...diff,
@@ -54,6 +56,7 @@ export const consentDocumentService = {
     await logAudit({
       entityType: EntityType.CONSENT_DOCUMENT,
       entityId: userId,
+      userId,
       actionType: ActionType.DELETE,
       description: `Documento de consentimiento eliminado para el usuario ${userId}`,
     });

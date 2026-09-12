@@ -76,6 +76,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: reminder.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Recordatorio creado para el paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
       affectedFields: Object.keys(dto),
@@ -121,6 +122,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Recordatorio actualizado para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
       ...diff,
@@ -141,6 +143,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Recordatorio cancelado para el paciente ${cancelled.patient.name} ${cancelled.patient.lastName}`,
       affectedFields: [ 'status' ],
@@ -160,6 +163,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Recordatorio eliminado para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
       affectedFields: [ 'isDeleted' ],
@@ -183,6 +187,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Recordatorio restaurado para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
       affectedFields: [ 'isDeleted' ],
@@ -227,6 +232,7 @@ export const reminderService = {
     await logAudit({
       entityType: EntityType.REMINDER,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Recordatorio ${id} reintentado (intento ${retried.retryCount})`,
       affectedFields: [ 'status', 'retryCount' ],

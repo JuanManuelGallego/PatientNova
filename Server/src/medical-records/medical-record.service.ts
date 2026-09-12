@@ -19,6 +19,7 @@ export const medicalRecordService = {
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: createdRecord.id,
+      userId,
       actionType: ActionType.CREATE,
       description: `Historia clínica creada para el paciente ${dto.name}`,
       affectedFields: Object.keys(dto),
@@ -34,6 +35,7 @@ export const medicalRecordService = {
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
+      userId,
       actionType: ActionType.UPDATE,
       description: `Historia clínica de ${updatedRecord.name} actualizada`,
       ...diff,
@@ -47,6 +49,7 @@ export const medicalRecordService = {
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
+      userId,
       actionType: ActionType.DELETE,
       description: `Historia clínica de ${deleted.name} eliminada`,
       affectedFields: [ 'isDeleted' ],
@@ -61,6 +64,7 @@ export const medicalRecordService = {
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
       entityId: id,
+      userId,
       actionType: ActionType.RESTORE,
       description: `Historia clínica de ${restoredRecord.name} restaurada`,
       affectedFields: [ 'isDeleted' ],
