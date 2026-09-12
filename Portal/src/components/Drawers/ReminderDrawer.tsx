@@ -15,6 +15,7 @@ import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import Link from "next/link";
 import { useFetchReminder } from "@/src/api/reminders/useFetchReminder";
+import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 
 export function ReminderDrawer({
   reminder: initialReminder,
@@ -196,7 +197,13 @@ export function ReminderDrawer({
             <Row
               icon={DETAIL_ICONS.mail}
               label="Mensaje"
-              value={<span className="mono">{reminder.contentSid}</span>}
+              value={
+                <span className="mono">
+                  {Object.values(TWILIO_CONFIG).find(
+                    (v) => v.contentSid === reminder.contentSid,
+                  )?.label ?? reminder.contentSid}
+                </span>
+              }
             />
           </Section>
           <Section title="Información del sistema">
