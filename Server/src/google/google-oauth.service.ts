@@ -166,7 +166,7 @@ export const googleOAuthService = {
   async getConnectionStatus(userId: string) {
     const conn = await googleConnectionRepository.findByUserId(userId);
 
-    if (!isConnectionActive(conn)) {
+    if (!isConnectionActive(conn) || !conn.grantedScopes.includes(REQUIRED_SCOPE)) {
       return { connected: false, connectedAt: null, lastUsedAt: null };
     }
 

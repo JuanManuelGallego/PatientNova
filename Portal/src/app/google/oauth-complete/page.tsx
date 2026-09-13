@@ -19,6 +19,7 @@ function GoogleOAuthCompleteContent() {
     if (notifiedRef.current) return;
 
     if (success === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("success");
       notifiedRef.current = true;
       const message = {

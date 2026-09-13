@@ -4,8 +4,8 @@ import crypto from 'crypto';
 
 const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/meetings.space.created';
 
-export function isConnectionActive(conn: { refreshToken: string | null; disconnectedAt: Date | null; grantedScopes: string[] } | null): conn is { refreshToken: string; disconnectedAt: null; grantedScopes: string[]; id: string } {
-  return Boolean(conn?.refreshToken && !conn.disconnectedAt && conn.grantedScopes.includes(REQUIRED_SCOPE));
+export function isConnectionActive(conn: { refreshToken: string | null; disconnectedAt: Date | null } | null): conn is { refreshToken: string; disconnectedAt: null; grantedScopes: string[]; id: string } {
+  return Boolean(conn?.refreshToken && !conn.disconnectedAt);
 }
 
 export function hashState(state: string): string {
