@@ -64,8 +64,7 @@ export function useGoogleOAuthPopup(
 
       processedRef.current = true;
       setWaiting(false);
-      // Do not close the popup here — the child window closes itself.
-      // Closing from the opener side can race with the child's postMessage.
+      closePopup();
       void onCompleteRef.current({
         success: event.data.success === true,
         returnPath: event.data.returnPath,
