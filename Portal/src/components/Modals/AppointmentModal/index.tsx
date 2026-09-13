@@ -34,6 +34,7 @@ import {
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useAuthContext } from "@/src/providers/AuthContext";
+import { validateHttpUrl } from "@/src/utils/DataValidator";
 import {
   LBL_SAVE_CHANGES,
   LBL_CREATE_APPOINTMENT,
@@ -134,6 +135,9 @@ export function AppointmentModal({
         ? !!form.locationId &&
         (form.reminderType !== ReminderType.NONE
           ? selectedChannelAvailable
+          : true) 
+          && (locations.find((l) => l.id === form.locationId)?.isVirtual 
+          ? !!form.meetingUrl && validateHttpUrl(form.meetingUrl)
           : true)
         : !!form.price;
 

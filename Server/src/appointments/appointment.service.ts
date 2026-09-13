@@ -1,4 +1,4 @@
-import { AppointmentStatus, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
 import { appointmentRepository } from './appointment.repository.js';
 import {
@@ -22,6 +22,7 @@ import { logAudit, computeDiff } from '../audit-log/audit-log.utils.ts';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { config } from '../utils/config/config.ts';
+import { renderAppointmentReminder } from './appointment-reminder.renderer.ts';
 
 const REMINDER_QUEUE = 'send-reminder';
 
@@ -62,25 +63,102 @@ async function validatePatient(patientId: string, userId: string): Promise<Patie
   return patient;
 }
 
-async function validateLocation(locationId: string): Promise<AppointmentLocation> {
-  const location = await prisma.appointmentLocation.findUnique({ where: { id: locationId } });
+async function validateLocation(locationId: string, userId: string): Promise<AppointmentLocation> {
+  const location = await prisma.appointmentLocation.findFirst({ where: { id: locationId, userId, isDeleted: false } });
   if (!location) throw new LocationNotFoundError(locationId);
   return location as AppointmentLocation;
 }
 
-async function validateType(typeId: string): Promise<AppointmentType> {
-  const type = await prisma.appointmentType.findUnique({ where: { id: typeId } });
+async function validateType(typeId: string, userId: string): Promise<AppointmentType> {
+  const type = await prisma.appointmentType.findFirst({ where: { id: typeId, userId, isDeleted: false } });
   if (!type) throw new AppointmentTypeNotFoundError(typeId);
   return type;
 }
 
-async function validateReminder(reminderId: string | null | undefined): Promise<Reminder | null> {
+async function validateReminder(
+  reminderId: string | null | undefined,
+  userId: string,
+  patientId: string,
+  appointmentId?: string,
+): Promise<Reminder | null> {
   if (reminderId) {
-    const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
+    const reminder = await prisma.reminder.findFirst({
+      where: { id: reminderId, userId, patientId, isDeleted: false },
+    });
     if (!reminder) throw new AppointmentReminderNotFoundError(reminderId);
+    if (reminder.appointmentId && reminder.appointmentId !== appointmentId) {
+      throw new AppointmentReminderNotFoundError(reminderId);
+    }
     return reminder;
   }
   return null;
+}
+
+async function getDoctorName(userId: string): Promise<string> {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { displayName: true, firstName: true, lastName: true },
+  });
+  return user.displayName ?? ([user.firstName, user.lastName].filter(Boolean).join(' ') || 'su profesional de salud');
+}
+
+async function renderLinkedReminder(
+  appointment: AppointmentWithRelations,
+  doctorName: string,
+  tx: TransactionClient,
+): Promise<AppointmentWithRelations> {
+  const payload = renderAppointmentReminder(appointment, doctorName);
+  if (!appointment.reminder || !payload) return appointment;
+  await tx.reminder.update({ where: { id: appointment.reminder.id }, data: payload });
+  return { ...appointment, reminder: { ...appointment.reminder, ...payload } };
+}
+
+async function createLinkedReminder(
+  dto: CreateAppointmentDto['reminder'] & { sendMode: ReminderMode; channel: Channel; to: string },
+  patientId: string,
+  userId: string,
+  patientName: string,
+  auditDescriptionPrefix: string,
+  tx: TransactionClient,
+): Promise<Reminder> {
+  const createdReminder = await tx.reminder.create({
+    data: {
+      channel: dto.channel,
+      to: dto.to,
+      sendMode: dto.sendMode,
+      contentSid: dto.contentSid || null,
+      ...(dto.contentVariables && { contentVariables: dto.contentVariables }),
+      sendAt: dto.sendAt ? new Date(dto.sendAt) : new Date(),
+      status: dto.status ?? ReminderStatus.PENDING,
+      body: dto.body || null,
+      patientId,
+      userId,
+    },
+  });
+
+  await logAudit({
+    entityType: EntityType.REMINDER,
+    entityId: createdReminder.id,
+    userId,
+    actionType: ActionType.CREATE,
+    description: `Recordatorio creado para el paciente ${patientName} via ${auditDescriptionPrefix}`,
+    affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
+    fieldsAfter: {
+      channel: createdReminder.channel,
+      sendMode: createdReminder.sendMode,
+      sendAt: createdReminder.sendAt,
+      to: createdReminder.to,
+      contentSid: createdReminder.contentSid,
+      contentVariables: createdReminder.contentVariables,
+      body: createdReminder.body,
+      patientId: createdReminder.patientId,
+      status: createdReminder.status,
+    },
+    tx,
+  });
+
+  logger.info({ reminderId: createdReminder.id }, 'Reminder created');
+  return createdReminder;
 }
 
 async function handleReminderUpdate(
@@ -116,43 +194,14 @@ async function handleReminderUpdate(
   }
 
   if (dto.reminder && !existing.reminder) {
-    const createdReminder = await tx.reminder.create({
-      data: {
-        channel: dto.reminder.channel,
-        to: dto.reminder.to,
-        sendMode: dto.reminder.sendMode,
-        contentSid: dto.reminder.contentSid || null,
-        ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
-        sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
-        status: dto.reminder.status ?? ReminderStatus.PENDING,
-        body: dto.reminder.body || null,
-        patientId: existing.patientId,
-        userId,
-      },
-    });
-
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: createdReminder.id,
+    const createdReminder = await createLinkedReminder(
+      dto.reminder,
+      existing.patientId,
       userId,
-      actionType: ActionType.CREATE,
-      description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
-      fieldsAfter: {
-        channel: createdReminder.channel,
-        sendMode: createdReminder.sendMode,
-        sendAt: createdReminder.sendAt,
-        to: createdReminder.to,
-        contentSid: createdReminder.contentSid,
-        contentVariables: createdReminder.contentVariables,
-        body: createdReminder.body,
-        patientId: createdReminder.patientId,
-        status: createdReminder.status
-      },
+      `${existing.patient.name} ${existing.patient.lastName}`,
+      'actualización de cita',
       tx,
-    });
-
-    logger.info({ reminderId: createdReminder.id }, 'Reminder created');
+    );
     return { reminderId: createdReminder.id, reminder: createdReminder };
   }
 
@@ -223,7 +272,6 @@ async function checkBlockedTimeConflict(
 
 async function enqueueImmediateReminder(reminderId: string, tx: TransactionClient): Promise<void> {
   if (!config.scheduler.enabled) return;
-
   await getBoss().send(REMINDER_QUEUE, { reminderId }, { db: fromPrisma(tx) });
 }
 
@@ -249,82 +297,49 @@ export const appointmentService = {
   },
 
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
+    const [ existingReminder, patient, location, , doctorName ] = await Promise.all([
+      validateReminder(dto.reminderId, userId, dto.patientId),
+      validatePatient(dto.patientId, userId),
+      validateLocation(dto.locationId, userId),
+      validateType(dto.typeId, userId),
+      getDoctorName(userId),
+    ]);
+    await Promise.all([
+      checkConflict(dto.patientId, dto.startAt, dto.endAt),
+      checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
+    ]);
+    const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+      location,
+      existingUrl: null,
+      desiredUrl: dto.meetingUrl,
+      appointmentId: 'new',
+    });
     return prisma.$transaction(async (tx: TransactionClient) => {
-      const [ existingReminder, patient, location ] = await Promise.all([
-        dto.reminderId ? validateReminder(dto.reminderId) : Promise.resolve(null),
-        validatePatient(dto.patientId, userId),
-        validateLocation(dto.locationId),
-      ]);
-
-      await Promise.all([
-        validateType(dto.typeId),
-        checkConflict(dto.patientId, dto.startAt, dto.endAt),
-        checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
-      ]);
 
       let createdReminder: Reminder | null = null;
 
       if (dto.reminder) {
-        createdReminder = await tx.reminder.create({
-          data: {
-            channel: dto.reminder.channel,
-            to: dto.reminder.to,
-            sendMode: dto.reminder.sendMode,
-            contentSid: dto.reminder.contentSid || null,
-            ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
-            sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
-            status: dto.reminder.status ?? ReminderStatus.PENDING,
-            body: dto.reminder.body || null,
-            patientId: dto.patientId,
-            userId,
-          },
-        });
+        createdReminder = await createLinkedReminder(
+          dto.reminder,
+          dto.patientId,
+          userId,
+          `${patient.name} ${patient.lastName}`,
+          'creación de cita',
+          tx,
+        );
 
         if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
           await enqueueImmediateReminder(createdReminder.id, tx);
         }
-
-        await logAudit({
-           entityType: EntityType.REMINDER,
-           entityId: createdReminder.id,
-           userId,
-           actionType: ActionType.CREATE,
-          description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
-          affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
-          fieldsAfter: {
-            channel: createdReminder.channel,
-            sendMode: createdReminder.sendMode,
-            sendAt: createdReminder.sendAt,
-            to: createdReminder.to,
-            contentSid: createdReminder.contentSid,
-            contentVariables: createdReminder.contentVariables,
-            body: createdReminder.body,
-            patientId: patient.id,
-            status: createdReminder.status
-          },
-          tx,
-        });
-
-        logger.info({ reminderId: createdReminder.id, userId, mode: createdReminder.sendMode }, 'Reminder created (atomic with appointment)');
       }
 
       const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
 
       const created = await appointmentRepository.create(
-        { ...dto, reminderId: reminderId ?? undefined },
+        { ...dto, meetingUrl: meetingUrl ?? null, reminderId: reminderId ?? undefined },
         userId,
         tx,
       );
-
-      const meetingUrl = await appointmentMeetingService.resolveMeetingUrl(
-        { location, existingUrl: created.meetingUrl, desiredUrl: dto.meetingUrl, reminder: createdReminder ?? existingReminder, appointmentId: created.id },
-        tx,
-      );
-
-      let result = created;
-      if (meetingUrl !== created.meetingUrl) {
-        result = await appointmentRepository.update(created.id, { meetingUrl }, tx);
-      }
 
       await logAudit({
          entityType: EntityType.APPOINTMENT,
@@ -349,14 +364,15 @@ export const appointmentService = {
         tx,
       });
 
-      if (createdReminder) {
+      if (createdReminder || existingReminder) {
+        const linkedReminder = createdReminder ?? existingReminder!;
         await tx.reminder.update({
-          where: { id: createdReminder.id },
+          where: { id: linkedReminder.id },
           data: { appointmentId: created.id },
         });
         await logAudit({
            entityType: EntityType.REMINDER,
-           entityId: createdReminder.id,
+           entityId: linkedReminder.id,
            userId,
            actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
@@ -369,8 +385,13 @@ export const appointmentService = {
 
       logger.info({ appointmentId: created.id, patientId: patient.id, userId, startAt: created.startAt }, 'Appointment created');
 
-      return result;
+      return renderLinkedReminder(
+        created,
+        doctorName,
+        tx,
+      );
     }, { timeout: 10000 });
+
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
@@ -391,34 +412,53 @@ export const appointmentService = {
       ]);
     }
 
-    let location: AppointmentLocation | undefined;
-    if (dto.locationId) {
-      location = await validateLocation(dto.locationId);
-    }
+    const [ location, , selectedReminder, doctorName ] = await Promise.all([
+      dto.locationId ? validateLocation(dto.locationId, userId) : Promise.resolve(undefined),
+      dto.typeId ? validateType(dto.typeId, userId) : Promise.resolve(undefined),
+      dto.reminderId !== undefined
+        ? validateReminder(dto.reminderId, userId, existing.patientId, id)
+        : Promise.resolve(null),
+      getDoctorName(userId),
+    ]);
+    const effectiveLocation = location ?? existing.appointmentLocation;
+    const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+      location: effectiveLocation,
+      previousLocation: existing.appointmentLocation,
+      existingUrl: existing.meetingUrl,
+      desiredUrl: dto.meetingUrl,
+      appointmentId: id,
+    });
 
     const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
-
     return prisma.$transaction(async (tx: TransactionClient) => {
       let effectiveReminderId: string | null | undefined;
       let createdReminder: Reminder | null = null;
 
-      if (hasReminderChange) {
+      if (dto.reminderId !== undefined) {
+        effectiveReminderId = dto.reminderId;
+        if (existing.reminder && existing.reminder.id !== dto.reminderId) {
+          if (existing.reminder.status === ReminderStatus.PENDING) {
+            await tx.reminder.update({
+              where: { id: existing.reminder.id },
+              data: { status: ReminderStatus.CANCELLED, appointmentId: null },
+            });
+          } else {
+            await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
+          }
+        }
+      } else if (hasReminderChange) {
         const reminderResult = await handleReminderUpdate(dto, existing, userId, tx);
         effectiveReminderId = reminderResult.reminderId;
         createdReminder = reminderResult.reminder ?? null;
+        if (createdReminder?.sendMode === ReminderMode.IMMEDIATE) {
+          await enqueueImmediateReminder(createdReminder.id, tx);
+        }
       }
-
-      const reminderForUrl = createdReminder ?? existing.reminder;
-      const effectiveLocation = location ?? existing.appointmentLocation;
-      const meetingUrl = await appointmentMeetingService.resolveMeetingUrl(
-        { location: effectiveLocation, existingUrl: existing.meetingUrl, desiredUrl: dto.meetingUrl, reminder: reminderForUrl, appointmentId: id },
-        tx,
-      );
 
       const updated = await appointmentRepository.update(id, {
         ...dto,
         ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
-        ...(meetingUrl !== existing.meetingUrl && { meetingUrl }),
+        ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
       }, tx);
 
       const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
@@ -432,15 +472,16 @@ export const appointmentService = {
         tx,
       });
 
-      if (createdReminder) {
+      const newlyLinkedReminder = createdReminder ?? selectedReminder;
+      if (newlyLinkedReminder && newlyLinkedReminder.id !== existing.reminder?.id) {
         await tx.reminder.update({
-          where: { id: createdReminder.id },
+          where: { id: newlyLinkedReminder.id },
           data: { appointmentId: id },
         });
 
         await logAudit({
            entityType: EntityType.REMINDER,
-           entityId: createdReminder.id,
+           entityId: newlyLinkedReminder.id,
            userId,
            actionType: ActionType.UPDATE,
           description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
@@ -451,8 +492,13 @@ export const appointmentService = {
         });
       }
 
-      return updated;
+      return renderLinkedReminder(
+        updated,
+        doctorName,
+        tx,
+      );
     }, { timeout: 10000 });
+
   },
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {

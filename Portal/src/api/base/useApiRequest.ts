@@ -51,7 +51,7 @@ export function useApiRequest<T, R = unknown>(
     useEffect(() => { errorMessageRef.current = errorMessage; }, [ errorMessage ]);
     useEffect(() => { parseRef.current = parse; }, [ parse ]);
 
-    const fetchData = useCallback(async (signal: AbortSignal) => {
+    const fetchData = useCallback(async (signal: AbortSignal): Promise<T | undefined> => {
         const currentUrl = urlRef.current;
         if (!currentUrl) return;
 
@@ -73,6 +73,7 @@ export function useApiRequest<T, R = unknown>(
             const json = await res.json() as R;
             const payload = parseRef.current(json);
             if (!signal.aborted) dispatch({ type: "FETCH_SUCCESS", payload });
+            return payload;
         } catch (err) {
             if (signal.aborted) return;
             const message = err instanceof Error ? err.message : errorMessageRef.current;
@@ -80,10 +81,9 @@ export function useApiRequest<T, R = unknown>(
         }
     }, []);
 
-    const refetch = useCallback(() => {
+    const refetch = useCallback((): Promise<T | undefined> => {
         const controller = new AbortController();
-        fetchData(controller.signal);
-        return () => controller.abort();
+        return fetchData(controller.signal);
     }, [ fetchData ]);
 
     useEffect(() => {

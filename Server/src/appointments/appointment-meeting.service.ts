@@ -1,76 +1,34 @@
-import { Prisma } from '../../generated/prisma/client.ts';
-import { googleMeetService } from '../google-meet/google-meet.service.ts';
 import { logger } from '../utils/api/logger.ts';
-import type { TransactionClient } from '../utils/prisma/prisma-client.ts';
-
-const MEETING_URL_VAR_KEY = '5';
+import { AppointmentMeetingUrlRequiredError } from './appointment.errors.ts';
 
 export const appointmentMeetingService = {
-  async resolveMeetingUrl(
-    params: {
-      location: { isVirtual: boolean } | null;
-      existingUrl: string | null;
-      desiredUrl?: string | null | undefined;
-      reminder: { id: string; contentVariables: Prisma.JsonValue | null } | null;
-      appointmentId: string;
-    },
-    client: TransactionClient,
-  ): Promise<string | undefined> {
-    const { location, existingUrl, desiredUrl, reminder, appointmentId } = params;
+  resolveMeetingUrl(params: {
+    location: { isVirtual: boolean } | null;
+    previousLocation?: { isVirtual: boolean } | null;
+    existingUrl: string | null;
+    desiredUrl?: string | null | undefined;
+    appointmentId: string;
+  }): string | null | undefined {
+    const { location, previousLocation, existingUrl, desiredUrl, appointmentId } = params;
     const isVirtual = location?.isVirtual ?? false;
 
-    const clearReminderVar = async () => {
-      if (!reminder) return;
-      const vars = { ...(reminder.contentVariables as Record<string, string>) };
-      delete vars[MEETING_URL_VAR_KEY];
-      await client.reminder.update({
-        where: { id: reminder.id },
-        data: { contentVariables: vars },
-      });
-    };
-
-    const setReminderVar = async (url: string) => {
-      if (!reminder) return;
-      await client.reminder.update({
-        where: { id: reminder.id },
-        data: {
-          contentVariables: {
-            ...(reminder.contentVariables as Record<string, string>),
-            [MEETING_URL_VAR_KEY]: url,
-          },
-        },
-      });
-    };
-
-    // Explicit clear requested (empty string from client)
-    if (desiredUrl === '') {
-      logger.info({ appointmentId }, 'Cleared meeting URL (explicit)');
-      await clearReminderVar();
-      return undefined;
+    if (previousLocation?.isVirtual && !isVirtual) {
+      logger.info({ appointmentId }, 'Cleared meeting URL (switched to in-person)');
+      return null;
     }
 
-    // Explicit value provided by client
-    if (desiredUrl) {
-      logger.info({ appointmentId, meetingUrl: desiredUrl }, 'Using provided meeting URL');
-      await setReminderVar(desiredUrl);
+    if (desiredUrl === '' || desiredUrl === null) {
+      if (isVirtual) throw new AppointmentMeetingUrlRequiredError();
+      logger.info({ appointmentId }, 'Cleared meeting URL (explicit)');
+      return null;
+    }
+
+    if (desiredUrl !== undefined) {
+      logger.info({ appointmentId }, 'Using provided meeting URL');
       return desiredUrl;
     }
 
-    // No explicit value: auto behavior
-    if (!existingUrl && isVirtual) {
-      const space = await googleMeetService.createMeetingSpace();
-      const meetingUrl = space.meetingUrl;
-      logger.info({ appointmentId, meetingUrl }, 'Generated meeting URL for virtual appointment');
-      await setReminderVar(meetingUrl);
-      return meetingUrl;
-    }
-
-    if (location && !isVirtual && existingUrl) {
-      logger.info({ appointmentId }, 'Cleared meeting URL (switched to in-person)');
-      await clearReminderVar();
-      return undefined;
-    }
-
+    if (!existingUrl && isVirtual) throw new AppointmentMeetingUrlRequiredError();
     return existingUrl ?? undefined;
   },
 };

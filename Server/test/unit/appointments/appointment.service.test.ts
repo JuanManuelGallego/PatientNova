@@ -9,9 +9,10 @@ const schedulerMocks = vi.hoisted(() => ({
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
   prisma: {
     patient: { findFirst: vi.fn() },
-    appointmentLocation: { findUnique: vi.fn() },
-    appointmentType: { findUnique: vi.fn() },
-    reminder: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    user: { findUniqueOrThrow: vi.fn() },
+    appointmentLocation: { findFirst: vi.fn() },
+    appointmentType: { findFirst: vi.fn() },
+    reminder: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     appointment: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -22,12 +23,6 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({
   getBoss: vi.fn(() => ({ send: schedulerMocks.send })),
 }));
 
-vi.mock('../../../src/google-meet/google-meet.service.js', () => ({
-  googleMeetService: {
-    createMeetingSpace: vi.fn().mockResolvedValue({ meetingUrl: 'https://meet.google.com/abc-defg-hij', spaceName: 'spaces/abc' }),
-  },
-}));
-
 vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
   blockedTimeRepository: {
     hasBlockedTimeOverlap: vi.fn(),
@@ -35,11 +30,9 @@ vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
 }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { googleMeetService } from '../../../src/google-meet/google-meet.service.js';
 import { blockedTimeRepository } from '../../../src/blocked-time/blocked-time.repository.js';
 
 const mockPrisma = vi.mocked(prisma) as any;
-const mockGoogleMeet = vi.mocked(googleMeetService);
 const mockBlockedTimeRepo = vi.mocked(blockedTimeRepository);
 
 function mockTx() {
@@ -49,6 +42,20 @@ function mockTx() {
       update: vi.fn().mockResolvedValue({}),
     },
     appointment: {
+      findFirst: vi.fn().mockResolvedValue({
+        id: 'appt-1',
+        startAt: new Date(),
+        endAt: new Date(),
+        timezone: 'America/Bogota',
+        patientId: 'patient-1',
+        userId: 'user-1',
+        reminderId: null,
+        meetingUrl: null,
+        patient: { id: 'patient-1', name: 'John', lastName: 'Doe', email: 'john@test.com' },
+        reminder: null,
+        appointmentLocation: { id: 'loc-1', name: 'Office', isVirtual: false },
+        appointmentType: { id: 'type-1', name: 'Consult' },
+      }),
       create: vi.fn().mockResolvedValue({
         id: 'appt-1',
         startAt: new Date(),
@@ -94,10 +101,11 @@ const validDto = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockPrisma.appointmentType.findUnique.mockResolvedValue({ id: 'type-1' });
+  mockPrisma.appointmentType.findFirst.mockResolvedValue({ id: 'type-1' });
   mockPrisma.appointment.findFirst.mockResolvedValue(null);
   mockPrisma.patient.findFirst.mockResolvedValue({ id: 'patient-1', userId: 'user-1' });
-  mockPrisma.appointmentLocation.findUnique.mockResolvedValue({ id: 'loc-1', isVirtual: false });
+  mockPrisma.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: false });
+  mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ displayName: 'Dr. Test', firstName: 'Test', lastName: 'Doctor' });
   mockBlockedTimeRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
 });
 
@@ -156,12 +164,11 @@ describe('appointmentService.create', () => {
     }));
   });
 
-  it('generates meeting URL for virtual location and updates reminder', async () => {
+  it('throws when virtual appointment has no meeting URL', async () => {
     const tx = mockTx();
     tx.reminder.create.mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
-    mockPrisma.appointmentLocation.findUnique.mockResolvedValue({ id: 'loc-1', isVirtual: true });
-    mockGoogleMeet.createMeetingSpace.mockResolvedValue({ meetingUrl: 'https://meet.google.com/new-url', spaceName: 'spaces/new' });
+    mockPrisma.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
 
     const dtoWithReminder = {
       ...validDto,
@@ -175,12 +182,55 @@ describe('appointmentService.create', () => {
       },
     };
 
+    await expect(appointmentService.create(dtoWithReminder, 'user-1')).rejects.toThrow('A meeting URL is required for virtual appointments');
+  });
+
+  it('creates virtual appointment with explicit meeting URL', async () => {
+    const tx = mockTx();
+    tx.reminder.create.mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} });
+    tx.appointment.create.mockResolvedValue({
+      id: 'appt-1',
+      reminderId: 'reminder-new-1',
+      patient: { id: 'patient-1', name: 'John', lastName: 'Doe', email: 'john@test.com' },
+      reminder: { id: 'reminder-new-1' },
+      appointmentLocation: { id: 'loc-1', name: 'Virtual', isVirtual: true },
+      appointmentType: { id: 'type-1', name: 'Consult' },
+      meetingUrl: 'https://meet.google.com/manual-url',
+    });
+    tx.appointment.findFirst.mockResolvedValue({
+      id: 'appt-1',
+      startAt: new Date(futureDate),
+      endAt: new Date(validDto.endAt),
+      timezone: 'America/Bogota',
+      patientId: 'patient-1',
+      userId: 'user-1',
+      meetingUrl: 'https://meet.google.com/manual-url',
+      patient: { id: 'patient-1', name: 'John', lastName: 'Doe', email: 'john@test.com' },
+      reminder: { id: 'reminder-new-1', channel: 'WHATSAPP' },
+      appointmentLocation: { id: 'loc-1', name: 'Virtual', isVirtual: true },
+      appointmentType: { id: 'type-1', name: 'Consult' },
+    });
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+    mockPrisma.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
+
+    const dtoWithReminder = {
+      ...validDto,
+      meetingUrl: 'https://meet.google.com/manual-url',
+      reminder: {
+        channel: 'WHATSAPP' as const,
+        to: '+15551234567',
+        sendMode: 'SCHEDULED' as const,
+        status: 'PENDING' as const,
+        sendAt: futureDate,
+        contentVariables: { '1': 'John' },
+      },
+    };
+
     await appointmentService.create(dtoWithReminder, 'user-1');
 
-    expect(mockGoogleMeet.createMeetingSpace).toHaveBeenCalled();
     expect(tx.reminder.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'reminder-new-1' },
-      data: { contentVariables: expect.objectContaining({ '5': 'https://meet.google.com/new-url' }) },
+      data: expect.objectContaining({ contentVariables: expect.objectContaining({ '5': 'https://meet.google.com/manual-url' }) }),
     }));
   });
 
@@ -231,7 +281,7 @@ describe('appointmentService.create', () => {
   });
 
   it('throws when type is not found', async () => {
-    mockPrisma.appointmentType.findUnique.mockResolvedValue(null);
+    mockPrisma.appointmentType.findFirst.mockResolvedValue(null);
 
     await expect(
       appointmentService.create({ ...validDto, typeId: 'bad' }, 'user-1')
@@ -335,7 +385,9 @@ describe('appointmentService.update', () => {
 
     await appointmentService.update('appt-1', { reminder: null } as Parameters<typeof appointmentService.update>[1], 'user-1');
 
-    expect(tx.reminder.update).not.toHaveBeenCalled();
+    expect(tx.reminder.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'CANCELLED' }),
+    }));
     expect(tx.appointment.update).toHaveBeenCalled();
   });
 

@@ -73,9 +73,13 @@ export const config = {
   },
 
   google: {
-    clientId: requireEnv('GOOGLE_CLIENT_ID'),
-    clientSecret: requireEnv('GOOGLE_CLIENT_SECRET'),
-    refreshToken: requireEnv('GOOGLE_REFRESH_TOKEN'),
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+    oauthRedirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI ?? '',
+  },
+
+  portal: {
+    url: process.env.PORTAL_URL ?? 'http://localhost:3000',
   },
 
   encryption: {

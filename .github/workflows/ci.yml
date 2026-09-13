@@ -88,7 +88,8 @@ jobs:
       ADMIN_PASSWORD: dummy-admin-password
       GOOGLE_CLIENT_ID: dummy-google-client-id
       GOOGLE_CLIENT_SECRET: dummy-google-client-secret
-      GOOGLE_REFRESH_TOKEN: dummy-google-refresh-token
+      GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback
+      PORTAL_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

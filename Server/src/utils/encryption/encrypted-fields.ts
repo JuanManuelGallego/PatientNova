@@ -34,6 +34,7 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
   Appointment: new Set([ "notes" ]),
   Reminder: new Set([ "body" ]),
   AuditLog: new Set([ "actorDisplayName", "description", "ipAddress", "fieldsBefore", "fieldsAfter" ]),
+  GoogleConnection: new Set([ "refreshToken" ]),
 };
 
 /**

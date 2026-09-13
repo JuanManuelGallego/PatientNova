@@ -221,11 +221,47 @@ model User {
   appointmentLocations AppointmentLocation[]
   appointmentTypes     AppointmentType[]
   consentDocument      Document?
+  googleConnection     GoogleConnection?
+  googleOAuthStates    GoogleOAuthState[]
 
   @@index([email])
   @@index([status])
   @@index([isDeleted])
   @@map("users")
+}
+
+// ─── Google Connection ──────────────────────────────────────────────────────────
+
+model GoogleConnection {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken     String?  @db.Text
+  grantedScopes    String[]
+  connectedAt      DateTime @default(now())
+  lastUsedAt       DateTime?
+  disconnectedAt   DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("google_connections")
+}
+
+// ─── Google OAuth State ─────────────────────────────────────────────────────────
+
+model GoogleOAuthState {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stateHash   String   @unique
+  returnPath  String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("google_oauth_states")
 }
 
 // ─── Appointment Location ────────────────────────────────────────────────────
@@ -502,6 +538,8 @@ enum EntityType {
   APPOINTMENT_LOCATION
   BLOCKED_TIME
   CONSENT_DOCUMENT
+  GOOGLE_CONNECTION
+  GOOGLE_MEET_SPACE
 }
 
 enum ActionType {

@@ -21,10 +21,11 @@ import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares
 import { twilioWebhookRouter } from './twilio/webhook.routes.js';
 import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
-import { googleRouter } from './google-meet/google-meet.routes.js';
+
 import { consentDocumentRouter } from './consent-documents/consent-document.routes.js';
 import { blockedTimeRouter } from './blocked-time/blocked-time.routes.js';
 import { auditLogRouter } from './audit-log/audit-log.routes.js';
+import { googleRouter } from './google/google.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
 
 const app: Application = express();
@@ -79,6 +80,8 @@ v1.use('/', messageStatusRouter);
 // Public (no auth)
 v1.use('/auth', authRouter);
 v1.use('/consent-document', consentDocumentRouter);
+// Public Google OAuth callback (authenticated via one-time state)
+v1.use('/google', googleRouter);
 
 // Admin-only (read)
 v1.use('/users', authenticate, requireAdmin, userRouter);
@@ -92,7 +95,7 @@ v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
 v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
-v1.use('/google', authenticate, requireAdminForWrites, googleRouter);
+
 v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 
 app.use('/v1', v1);

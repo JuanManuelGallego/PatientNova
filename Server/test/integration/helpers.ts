@@ -1,5 +1,6 @@
 import { prisma } from '../../src/utils/prisma/prisma-client.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { config } from '../../src/utils/config/config.js';
 import {
   Channel,
@@ -86,6 +87,26 @@ export function appointmentTimeRange(offsetMinutes = 60, durationMinutes = 30) {
 
 export { unique };
 
+// Create a test JWT token for authentication
+export function createTestToken(user: { id: string; email: string; role: string; timezone?: string }): string {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role, timezone: user.timezone ?? 'America/Bogota' },
+    config.auth.jwtSecret,
+    { expiresIn: '1h' }
+  );
+}
+
+// Create request with proper authentication cookie
+export function authReq(user: { id: string; email: string; role: string; timezone?: string }, extra: Record<string, unknown> = {}) {
+  const token = createTestToken(user);
+  return {
+    user: { id: user.id, timezone: user.timezone ?? 'America/Bogota', email: user.email, role: user.role },
+    cookies: { token },
+    ip: '127.0.0.1',
+    ...extra,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Minimal Express request/response doubles + route runner for route-layer
 // integration tests. These exercise the full middleware stack (validateBody /
@@ -97,11 +118,13 @@ export { unique };
 
 export interface RouteReq {
   user?: { id: string; timezone?: string; [k: string]: unknown };
+  cookies?: Record<string, string>;
   body?: Record<string, unknown>;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
   ip?: string;
   originalUrl?: string;
+  headers?: Record<string, string>;
   [k: string]: unknown;
 }
 
@@ -129,6 +152,12 @@ export function makeRes() {
       if (payload !== undefined) this.body = payload;
       return this;
     },
+    redirect(url: string) {
+      this.statusCode = 302;
+      this.headers['Location'] = url;
+      this.headers['location'] = url;
+      return this;
+    },
   };
   return res;
 }
@@ -153,6 +182,8 @@ export async function invokeRoute(
 
   const fullReq: any = {
     originalUrl: path,
+    cookies: req.cookies ?? {},
+    headers: req.headers ?? {},
     ...req,
     body: req.body ?? {},
     params: req.params ?? {},

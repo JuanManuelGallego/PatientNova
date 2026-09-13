@@ -220,9 +220,12 @@ PatientNova/
 | `ALLOWED_ORIGINS` | JSON array of allowed CORS origins |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account credentials |
 | `BCRYPT_ROUNDS` | Password hashing rounds (default: `12`) |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Google service account for Meet integration |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Google service account private key |
-| `GOOGLE_MEET_ORGANIZER_EMAIL` | Email to organizer Google Meet links |
+| `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID for Meet link generation |
+| `GOOGLE_CLIENT_SECRET` | Optional Google OAuth web client secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Exact backend callback registered with Google, for example `http://localhost:3001/v1/google/oauth/callback` |
+| `PORTAL_URL` | Exact Portal origin used for the OAuth completion redirect |
+
+Google OAuth settings may be omitted when running in manual-link-only mode. Generated Meet spaces use `OPEN` access, so links must only be shared with the intended patient.
 
 **Frontend** — copy `Portal/.env.example` to `Portal/.env.local`:
 

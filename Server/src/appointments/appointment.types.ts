@@ -3,7 +3,7 @@ import type { Prisma } from '../../generated/prisma/client.ts';
 
 export const appointmentInclude = {
   patient: { select: { id: true, name: true, lastName: true, email: true } },
-  reminder: { select: { id: true, channel: true, status: true, sendMode: true, sendAt: true, contentVariables: true } },
+  reminder: { select: { id: true, channel: true, status: true, sendMode: true, sendAt: true, contentSid: true, contentVariables: true, body: true, patientId: true, userId: true, appointmentId: true } },
   appointmentLocation: { select: { id: true, name: true, address: true, instructions: true, color: true, defaultPrice: true, isVirtual: true } },
   appointmentType: { select: { id: true, name: true, description: true, defaultDuration: true, defaultPrice: true, color: true} },
 } satisfies Prisma.AppointmentInclude;
