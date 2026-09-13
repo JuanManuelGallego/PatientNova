@@ -2,7 +2,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { googleConnectionRepository, googleOAuthStateRepository, hashState, REQUIRED_SCOPE } from './google-connection.repository.js';
+import { googleConnectionRepository, googleOAuthStateRepository, hashState, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { GoogleOAuthError } from './google-errors.js';
@@ -22,13 +22,16 @@ function getOAuthClient(): OAuth2Client {
 
 function validateReturnPath(returnPath: string): void {
   if (!ALLOWED_RETURN_PATHS.includes(returnPath)) {
-    throw new GoogleOAuthError('Invalid return path', 'GOOGLE_AUTH_FAILED', 409);
+    throw new GoogleOAuthError('Invalid return path', 'GOOGLE_AUTH_FAILED', 400);
   }
 }
 
 export const googleOAuthService = {
   async generateAuthUrl(userId: string, returnPath: string, isReconnect: boolean = false) {
     validateReturnPath(returnPath);
+
+    // Best-effort cleanup of expired states (runs on every auth URL generation).
+    googleOAuthStateRepository.cleanupExpired().catch(() => {});
 
     const client = getOAuthClient();
     const scopes = [REQUIRED_SCOPE];
@@ -37,7 +40,7 @@ export const googleOAuthService = {
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
-      ...((isReconnect || !connection?.refreshToken || connection.disconnectedAt) && { prompt: 'consent' }),
+      ...((isReconnect || !isConnectionActive(connection)) && { prompt: 'consent' }),
       include_granted_scopes: true,
     });
 
@@ -163,7 +166,7 @@ export const googleOAuthService = {
   async getConnectionStatus(userId: string) {
     const conn = await googleConnectionRepository.findByUserId(userId);
 
-    if (!conn || !conn.refreshToken || conn.disconnectedAt || !conn.grantedScopes.includes(REQUIRED_SCOPE)) {
+    if (!isConnectionActive(conn)) {
       return { connected: false, connectedAt: null, lastUsedAt: null };
     }
 

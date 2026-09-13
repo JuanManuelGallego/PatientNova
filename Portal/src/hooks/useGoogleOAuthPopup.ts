@@ -63,7 +63,9 @@ export function useGoogleOAuthPopup(
       if (event.data?.type !== "GOOGLE_OAUTH_COMPLETE") return;
 
       processedRef.current = true;
-      closePopup();
+      setWaiting(false);
+      // Do not close the popup here — the child window closes itself.
+      // Closing from the opener side can race with the child's postMessage.
       void onCompleteRef.current({
         success: event.data.success === true,
         returnPath: event.data.returnPath,
@@ -73,7 +75,8 @@ export function useGoogleOAuthPopup(
 
     window.addEventListener("message", handleMessage);
     const closedCheck = window.setInterval(() => {
-      if (popupRef.current?.closed && !processedRef.current) {
+      const popup = popupRef.current;
+      if (popup?.closed && !processedRef.current) {
         popupRef.current = null;
         setWaiting(false);
         setError("La ventana de Google se cerró. Conecta tu cuenta desde Configuración e inténtalo de nuevo.");

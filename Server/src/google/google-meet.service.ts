@@ -2,7 +2,7 @@ import { SpacesServiceClient } from '@google-apps/meet';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
-import { googleConnectionRepository, REQUIRED_SCOPE } from './google-connection.repository.js';
+import { googleConnectionRepository, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { GoogleOAuthError } from './google-errors.js';
@@ -12,6 +12,13 @@ export interface MeetingSpaceResult {
   spaceName: string;
 }
 
+/**
+ * Detect authorization failures from the Google Meet SDK or underlying HTTP/gRPC layer.
+ * The SDK may surface errors as:
+ * - gRPC code 16 (UNAUTHENTICATED)
+ * - HTTP 401 status
+ * - `invalid_grant` in the response body (refresh token revoked/expired)
+ */
 function isAuthorizationFailure(error: unknown): boolean {
   const providerError = error as {
     code?: number | string;
@@ -31,14 +38,14 @@ async function buildMeetClientForUser(userId: string): Promise<{
 }> {
   const conn = await googleConnectionRepository.findByUserId(userId);
 
-  if (!conn || !conn.refreshToken || conn.disconnectedAt) {
+  if (!isConnectionActive(conn)) {
     throw new GoogleOAuthError(
       'Google account not connected. Please connect your Google account first.',
       'GOOGLE_CONNECTION_NOT_FOUND',
       409,
     );
   }
-  if (!conn.grantedScopes.includes(REQUIRED_SCOPE)) {
+  if (!conn!.grantedScopes.includes(REQUIRED_SCOPE)) {
     throw new GoogleOAuthError('Required Google Meet scope was not granted', 'GOOGLE_SCOPE_MISSING', 409);
   }
 
@@ -56,7 +63,7 @@ async function buildMeetClientForUser(userId: string): Promise<{
   oauth2Client.on('tokens', (tokens) => {
     if (tokens.refresh_token) {
       tokenPersistence.push(
-        googleConnectionRepository.rotateRefreshToken(conn.id, conn.refreshToken!, tokens.refresh_token)
+        googleConnectionRepository.rotateRefreshToken(conn!.id, conn!.refreshToken!, tokens.refresh_token)
           .then((result) => {
             if (result.count === 1) logger.info({ userId }, 'Google refresh token rotated');
           })

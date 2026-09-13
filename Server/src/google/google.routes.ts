@@ -19,6 +19,14 @@ const meetCreateLimit = rateLimit({
   handler: (_req, res) => { apiError(res, 'Too many Google Meet requests', 429); },
 });
 
+const oauthCallbackLimit = rateLimit({
+  windowMs: 60_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => { apiError(res, 'Too many OAuth requests', 429); },
+});
+
 const OAUTH_ERROR_REDIRECTS: Record<string, string> = {
   INVALID_OAUTH_STATE: 'invalid_state',
   OAUTH_STATE_CONSUMED: 'state_consumed',
@@ -46,7 +54,7 @@ googleRouter.post('/oauth/start', authenticate, requireAdmin, asyncHandler(async
   ok(res, { authUrl });
 }));
 
-googleRouter.get('/oauth/callback', asyncHandler(async (req: Request, res: Response) => {
+googleRouter.get('/oauth/callback', oauthCallbackLimit, asyncHandler(async (req: Request, res: Response) => {
   const { code, state, error: oauthError } = req.query;
 
   let completionUrl: URL;

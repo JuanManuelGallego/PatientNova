@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { STATUS_ICONS } from "@/src/config/icons";
 
@@ -10,14 +9,18 @@ function GoogleOAuthCompleteContent() {
   const searchParams = useSearchParams();
   const [ status, setStatus ] = useState<"loading" | "success" | "error">("loading");
   const [ errorMessage, setErrorMessage ] = useState<string | null>(null);
+  const notifiedRef = useRef(false);
 
   const success = searchParams.get("success");
   const error = searchParams.get("error");
   const rp = searchParams.get("returnPath");
 
   useEffect(() => {
+    if (notifiedRef.current) return;
+
     if (success === "true") {
       setStatus("success");
+      notifiedRef.current = true;
       const message = {
         type: "GOOGLE_OAUTH_COMPLETE",
         success: true,
@@ -25,10 +28,12 @@ function GoogleOAuthCompleteContent() {
       };
       if (window.opener) {
         window.opener.postMessage(message, window.location.origin);
-        window.close();
+        // Defer close so the parent can process the message first.
+        setTimeout(() => window.close(), 150);
       }
     } else if (success === "false" || error) {
       setStatus("error");
+      notifiedRef.current = true;
       const errorMessages: Record<string, string> = {
         invalid_state: "Invalid or expired authorization state. Please try again.",
         state_consumed: "This authorization has already been used. Please try again.",
@@ -47,7 +52,7 @@ function GoogleOAuthCompleteContent() {
       };
       if (window.opener) {
         window.opener.postMessage(message, window.location.origin);
-        window.close();
+        setTimeout(() => window.close(), 150);
       }
     }
   }, [ success, error, rp ]);

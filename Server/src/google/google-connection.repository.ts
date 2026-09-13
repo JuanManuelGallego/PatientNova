@@ -4,6 +4,10 @@ import crypto from 'crypto';
 
 const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/meetings.space.created';
 
+export function isConnectionActive(conn: { refreshToken: string | null; disconnectedAt: Date | null; grantedScopes: string[] } | null): conn is { refreshToken: string; disconnectedAt: null; grantedScopes: string[]; id: string } {
+  return Boolean(conn?.refreshToken && !conn.disconnectedAt && conn.grantedScopes.includes(REQUIRED_SCOPE));
+}
+
 export function hashState(state: string): string {
   return crypto.createHash('sha256').update(state).digest('hex');
 }
@@ -63,8 +67,8 @@ export const googleConnectionRepository = {
     });
   },
 
-  async rotateRefreshToken(connectionId: string, previousToken: string, refreshToken: string) {
-    return prisma.googleConnection.updateMany({
+  async rotateRefreshToken(connectionId: string, previousToken: string, refreshToken: string, client: TransactionClient = prisma) {
+    return client.googleConnection.updateMany({
       where: {
         id: connectionId,
         refreshToken: previousToken,
@@ -121,6 +125,15 @@ export const googleOAuthStateRepository = {
     if (!state) return null;
     if (state.consumedAt) return { error: 'consumed', state: null };
     return { error: 'expired', state: null };
+  },
+
+  async cleanupExpired(client: TransactionClient = prisma) {
+    const result = await client.googleOAuthState.deleteMany({
+      where: {
+        expiresAt: { lt: new Date() },
+      },
+    });
+    return result.count;
   },
 
 };

@@ -1,4 +1,4 @@
-import { AppointmentStatus, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
 import { appointmentRepository } from './appointment.repository.js';
 import {
@@ -113,6 +113,54 @@ async function renderLinkedReminder(
   return { ...appointment, reminder: { ...appointment.reminder, ...payload } };
 }
 
+async function createLinkedReminder(
+  dto: CreateAppointmentDto['reminder'] & { sendMode: ReminderMode; channel: Channel; to: string },
+  patientId: string,
+  userId: string,
+  patientName: string,
+  auditDescriptionPrefix: string,
+  tx: TransactionClient,
+): Promise<Reminder> {
+  const createdReminder = await tx.reminder.create({
+    data: {
+      channel: dto.channel,
+      to: dto.to,
+      sendMode: dto.sendMode,
+      contentSid: dto.contentSid || null,
+      ...(dto.contentVariables && { contentVariables: dto.contentVariables }),
+      sendAt: dto.sendAt ? new Date(dto.sendAt) : new Date(),
+      status: dto.status ?? ReminderStatus.PENDING,
+      body: dto.body || null,
+      patientId,
+      userId,
+    },
+  });
+
+  await logAudit({
+    entityType: EntityType.REMINDER,
+    entityId: createdReminder.id,
+    userId,
+    actionType: ActionType.CREATE,
+    description: `Recordatorio creado para el paciente ${patientName} via ${auditDescriptionPrefix}`,
+    affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
+    fieldsAfter: {
+      channel: createdReminder.channel,
+      sendMode: createdReminder.sendMode,
+      sendAt: createdReminder.sendAt,
+      to: createdReminder.to,
+      contentSid: createdReminder.contentSid,
+      contentVariables: createdReminder.contentVariables,
+      body: createdReminder.body,
+      patientId: createdReminder.patientId,
+      status: createdReminder.status,
+    },
+    tx,
+  });
+
+  logger.info({ reminderId: createdReminder.id }, 'Reminder created');
+  return createdReminder;
+}
+
 async function handleReminderUpdate(
   dto: UpdateAppointmentDto,
   existing: AppointmentWithRelations,
@@ -146,43 +194,14 @@ async function handleReminderUpdate(
   }
 
   if (dto.reminder && !existing.reminder) {
-    const createdReminder = await tx.reminder.create({
-      data: {
-        channel: dto.reminder.channel,
-        to: dto.reminder.to,
-        sendMode: dto.reminder.sendMode,
-        contentSid: dto.reminder.contentSid || null,
-        ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
-        sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
-        status: dto.reminder.status ?? ReminderStatus.PENDING,
-        body: dto.reminder.body || null,
-        patientId: existing.patientId,
-        userId,
-      },
-    });
-
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: createdReminder.id,
+    const createdReminder = await createLinkedReminder(
+      dto.reminder,
+      existing.patientId,
       userId,
-      actionType: ActionType.CREATE,
-      description: `Recordatorio creado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
-      fieldsAfter: {
-        channel: createdReminder.channel,
-        sendMode: createdReminder.sendMode,
-        sendAt: createdReminder.sendAt,
-        to: createdReminder.to,
-        contentSid: createdReminder.contentSid,
-        contentVariables: createdReminder.contentVariables,
-        body: createdReminder.body,
-        patientId: createdReminder.patientId,
-        status: createdReminder.status
-      },
+      `${existing.patient.name} ${existing.patient.lastName}`,
+      'actualización de cita',
       tx,
-    });
-
-    logger.info({ reminderId: createdReminder.id }, 'Reminder created');
+    );
     return { reminderId: createdReminder.id, reminder: createdReminder };
   }
 
@@ -278,16 +297,16 @@ export const appointmentService = {
   },
 
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    const [ existingReminder, patient, location, , , doctorName ] = await Promise.all([
+    const [ existingReminder, patient, location, , doctorName ] = await Promise.all([
       validateReminder(dto.reminderId, userId, dto.patientId),
       validatePatient(dto.patientId, userId),
       validateLocation(dto.locationId, userId),
       validateType(dto.typeId, userId),
-      Promise.all([
-        checkConflict(dto.patientId, dto.startAt, dto.endAt),
-        checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
-      ]),
       getDoctorName(userId),
+    ]);
+    await Promise.all([
+      checkConflict(dto.patientId, dto.startAt, dto.endAt),
+      checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
     ]);
     const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
       location,
@@ -300,47 +319,18 @@ export const appointmentService = {
       let createdReminder: Reminder | null = null;
 
       if (dto.reminder) {
-        createdReminder = await tx.reminder.create({
-          data: {
-            channel: dto.reminder.channel,
-            to: dto.reminder.to,
-            sendMode: dto.reminder.sendMode,
-            contentSid: dto.reminder.contentSid || null,
-            ...(dto.reminder.contentVariables && { contentVariables: dto.reminder.contentVariables }),
-            sendAt: dto.reminder.sendAt ? new Date(dto.reminder.sendAt) : new Date(),
-            status: dto.reminder.status ?? ReminderStatus.PENDING,
-            body: dto.reminder.body || null,
-            patientId: dto.patientId,
-            userId,
-          },
-        });
+        createdReminder = await createLinkedReminder(
+          dto.reminder,
+          dto.patientId,
+          userId,
+          `${patient.name} ${patient.lastName}`,
+          'creación de cita',
+          tx,
+        );
 
         if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
           await enqueueImmediateReminder(createdReminder.id, tx);
         }
-
-        await logAudit({
-           entityType: EntityType.REMINDER,
-           entityId: createdReminder.id,
-           userId,
-           actionType: ActionType.CREATE,
-          description: `Recordatorio creado para el paciente ${patient.name} ${patient.lastName} via creación de cita`,
-          affectedFields: [ 'channel', 'to', 'sendMode', 'contentSid', 'contentVariables', 'sendAt', 'status', 'body', 'patientId' ],
-          fieldsAfter: {
-            channel: createdReminder.channel,
-            sendMode: createdReminder.sendMode,
-            sendAt: createdReminder.sendAt,
-            to: createdReminder.to,
-            contentSid: createdReminder.contentSid,
-            contentVariables: createdReminder.contentVariables,
-            body: createdReminder.body,
-            patientId: patient.id,
-            status: createdReminder.status
-          },
-          tx,
-        });
-
-        logger.info({ reminderId: createdReminder.id, userId, mode: createdReminder.sendMode }, 'Reminder created (atomic with appointment)');
       }
 
       const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
