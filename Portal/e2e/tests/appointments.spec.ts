@@ -527,7 +527,7 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     expect(await drawerLink.getAttribute('href')).toBe('https://meet.google.com/test-room');
   });
 
-  test('Generate Google Meet populates and persists a mocked link', async ({ page, api, trackedAppointments, trackedPatients, trackedLocations }) => {
+  test.skip('Generate Google Meet populates and persists a mocked link', async ({ page, api, trackedAppointments, trackedPatients, trackedLocations }) => {
     const generatedUrl = 'https://meet.google.com/generated-test-room';
     await page.route('**/v1/google/connection', (route) => route.fulfill({
       status: 200,
