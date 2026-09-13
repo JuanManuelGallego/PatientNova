@@ -8,3 +8,12 @@ export function validatePhoneNumber(phone: string) {
     const e164Regex = /^\+[1-9]\d{1,14}$/;
     return e164Regex.test(phone);
 }
+
+export function validateHttpUrl(value: string) {
+    try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+        return false;
+    }
+}

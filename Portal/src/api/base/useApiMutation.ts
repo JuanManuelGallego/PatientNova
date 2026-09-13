@@ -2,6 +2,17 @@ import { useState, useCallback, useRef } from "react";
 import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 
+export class ApiMutationError extends Error {
+    constructor(
+        message: string,
+        public readonly status: number,
+        public readonly details?: unknown,
+    ) {
+        super(message);
+        this.name = "ApiMutationError";
+    }
+}
+
 /**
  * Generic hook for data mutations (POST, PATCH, PUT, DELETE).
  * Call `mutate(url, body?)` to execute the request.
@@ -27,8 +38,18 @@ export function useApiMutation<TOutput = void>(
                 body: body != null ? JSON.stringify(body) : undefined,
             });
             if (!res.ok) {
-                const json: ApiErrorResponse = await res.json();
-                throw new Error(`Server Error: ${json.error}`);
+                let details: unknown;
+                try {
+                    const json: ApiErrorResponse = await res.json();
+                    details = json.error;
+                } catch {
+                    details = undefined;
+                }
+                throw new ApiMutationError(
+                    details ? `Server Error: ${String(details)}` : `${errorMessage} (${res.status})`,
+                    res.status,
+                    details,
+                );
             }
             const json: ApiResponse<TOutput> = await res.json();
             if (!json.success) throw new Error("API returned an error");

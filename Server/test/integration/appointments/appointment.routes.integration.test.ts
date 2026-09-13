@@ -14,6 +14,7 @@ import { AppointmentStatus } from '../../../generated/prisma/client.ts';
 let userId: string;
 let patientId: string;
 let locationId: string;
+let virtualLocationId: string;
 let typeId: string;
 
 beforeEach(async () => {
@@ -21,8 +22,10 @@ beforeEach(async () => {
   userId = user.id;
   const patient = await createTestPatient(userId);
   patientId = patient.id;
-  // Non-virtual location so the meeting-URL resolver does not call the Google API.
+  // Non-virtual location
   locationId = (await createTestLocation(userId, { name: 'Office' })).id;
+  // Virtual location
+  virtualLocationId = (await createTestLocation(userId, { name: 'Virtual', isVirtual: true })).id;
   typeId = (await createTestAppointmentType(userId)).id;
 });
 
@@ -232,5 +235,91 @@ describe('appointment routes (integration)', () => {
       baseReq({ params: { id: 'not-a-uuid' } }),
     );
     expect(res.statusCode).toBe(400);
+  });
+
+  describe('virtual appointment meeting URL requirements', () => {
+    it('POST / rejects virtual appointment without meetingUrl with 422', async () => {
+      appointmentTimeRange(60, 30);
+      const res = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: undefined }) }),
+      );
+      expect(res.statusCode).toBe(422);
+      expect((res.body as any).error).toMatch(/meeting URL is required/i);
+    });
+
+    it('POST / accepts virtual appointment with explicit meetingUrl', async () => {
+      appointmentTimeRange(60, 30);
+      const res = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: 'https://meet.google.com/manual-url' }) }),
+      );
+      expect(res.statusCode).toBe(201);
+      expect((res.body as any).data.meetingUrl).toBe('https://meet.google.com/manual-url');
+    });
+
+    it.each([null, ''])('PATCH / rejects explicit clearing meetingUrl=%j on virtual appointment with 422', async (meetingUrl) => {
+      const created = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: 'https://meet.google.com/manual-url' }) }),
+      );
+      const id = (created.body as any).data.id;
+
+      const res = await invokeRoute(
+        appointmentRouter,
+        'patch',
+        `/${id}`,
+        baseReq({ params: { id }, body: { meetingUrl } }),
+      );
+      expect(res.statusCode).toBe(422);
+      expect((res.body as any).error).toMatch(/meeting URL is required/i);
+    });
+
+    it('PATCH / clears meetingUrl when switching virtual to in-person', async () => {
+      const created = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: 'https://meet.google.com/manual-url' }) }),
+      );
+      const id = (created.body as any).data.id;
+
+      const res = await invokeRoute(
+        appointmentRouter,
+        'patch',
+        `/${id}`,
+        baseReq({ params: { id }, body: { locationId } }),
+      );
+      expect(res.statusCode).toBe(200);
+      expect((res.body as any).data.meetingUrl).toBeNull();
+
+      const stored = await prisma.appointment.findUnique({ where: { id } });
+      expect(stored!.meetingUrl).toBeNull();
+    });
+
+    it('PATCH / preserves existing meetingUrl on unrelated update to virtual appointment', async () => {
+      const created = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: 'https://meet.google.com/manual-url' }) }),
+      );
+      const id = (created.body as any).data.id;
+
+      const res = await invokeRoute(
+        appointmentRouter,
+        'patch',
+        `/${id}`,
+        baseReq({ params: { id }, body: { price: 99999 } }),
+      );
+      expect(res.statusCode).toBe(200);
+      expect((res.body as any).data.meetingUrl).toBe('https://meet.google.com/manual-url');
+    });
   });
 });

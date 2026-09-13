@@ -527,6 +527,46 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     expect(await drawerLink.getAttribute('href')).toBe('https://meet.google.com/test-room');
   });
 
+  test('Generate Google Meet populates and persists a mocked link', async ({ page, api, trackedAppointments, trackedPatients, trackedLocations }) => {
+    const generatedUrl = 'https://meet.google.com/generated-test-room';
+    await page.route('**/v1/google/connection', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { connected: true, connectedAt: new Date().toISOString(), lastUsedAt: null } }),
+    }));
+    await page.route('**/v1/google/meet', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { meetingUrl: generatedUrl, spaceName: 'spaces/generated-test-room' } }),
+    }));
+
+    const locName = `GeneratedMeetLoc-${Date.now().toString(36)}`;
+    const location = await api.createLocation({ name: locName, isVirtual: true });
+    trackedLocations.track(location.data.id);
+    const patient = await createTestPatient(api);
+    trackedPatients.track(patient.id);
+
+    await page.goto(Routes.APPOINTMENTS);
+    const modal = await new AppointmentsPage(page).openCreateModal();
+    await modal.selectPatient(patient.name);
+    await modal.selectType(Env.apptTypeName);
+    await modal.next();
+    await modal.selectLocation(locName);
+    await modal.dialog.getByTestId('generate-meet-link-button').click();
+    await expect(modal.dialog.getByTestId('appointment-meeting-url-input')).toHaveValue(generatedUrl);
+    await modal.next();
+
+    const responsePromise = page.waitForResponse(
+      (response) => response.request().method() === HttpMethods.POST && response.url().includes('/appointments'),
+    );
+    await modal.submit();
+    const response = await responsePromise;
+    expect(response.status()).toBe(201);
+    const created = (await response.json()) as { data: { id: string; meetingUrl: string } };
+    trackedAppointments.track(created.data.id);
+    expect(created.data.meetingUrl).toBe(generatedUrl);
+  });
+
   test('Server rejects invalid appointment payloads', async ({ api, trackedPatients }) => {
     const patient = await createTestPatient(api);
     trackedPatients.track(patient.id);

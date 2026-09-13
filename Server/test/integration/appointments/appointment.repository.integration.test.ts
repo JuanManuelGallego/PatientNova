@@ -176,6 +176,185 @@ describe('appointmentService (integration)', () => {
     expect(reminder!.userId).toBe(userId);
   });
 
+  it('renders a virtual WhatsApp reminder from final appointment data', async () => {
+    const virtualLocation = await createTestLocation(userId, { name: 'Virtual', isVirtual: true });
+    const created = await appointmentService.create(
+      baseCreateDto({
+        locationId: virtualLocation.id,
+        meetingUrl: 'https://meet.google.com/final-one',
+        reminder: {
+          channel: Channel.WHATSAPP,
+          to: '+10000000000',
+          sendMode: ReminderMode.SCHEDULED,
+          sendAt: appointmentTimeRange(60, 30).start.toISOString(),
+          status: ReminderStatus.PENDING,
+          contentSid: 'HXstale',
+          contentVariables: { '1': 'stale', '5': 'https://old.example.test' },
+        },
+      }),
+      userId,
+    );
+
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id: created.reminder!.id } });
+    expect(reminder.contentSid).toBe('HX4a988ec65d4afaec679c99b3ac218517');
+    expect(reminder.contentVariables).toMatchObject({
+      '1': created.patient.name,
+      '5': 'https://meet.google.com/final-one',
+    });
+    expect(reminder.body).toBeNull();
+  });
+
+  it('replaces a WhatsApp URL and switches to the in-person template without stale variables', async () => {
+    const virtualLocation = await createTestLocation(userId, { name: 'Virtual', isVirtual: true });
+    const created = await appointmentService.create(
+      baseCreateDto({
+        locationId: virtualLocation.id,
+        meetingUrl: 'https://meet.google.com/old-whatsapp-room',
+        reminder: {
+          channel: Channel.WHATSAPP,
+          to: '+10000000000',
+          sendMode: ReminderMode.IMMEDIATE,
+          status: ReminderStatus.PENDING,
+          contentSid: 'HXstale',
+          contentVariables: { '5': 'https://stale.test' },
+        },
+      }),
+      userId,
+    );
+
+    await appointmentService.update(created.id, { meetingUrl: 'https://meet.google.com/new-whatsapp-room' }, userId);
+    let reminder = await prisma.reminder.findUniqueOrThrow({ where: { id: created.reminder!.id } });
+    expect(reminder.contentVariables).toMatchObject({ '5': 'https://meet.google.com/new-whatsapp-room' });
+
+    await appointmentService.update(created.id, { locationId }, userId);
+    reminder = await prisma.reminder.findUniqueOrThrow({ where: { id: created.reminder!.id } });
+    expect(reminder.contentSid).toBe('HX22846eed9e38b750cdc0472e60416b10');
+    expect(reminder.contentVariables).toMatchObject({
+      '5': 'No hay dirección registrada',
+      '6': 'No hay instrucciones registradas',
+    });
+    expect(reminder.contentVariables).not.toMatchObject({ '5': expect.stringContaining('new-whatsapp-room') });
+  });
+
+  it('re-renders SMS after simultaneous reminder and virtual URL updates', async () => {
+    const virtualLocation = await createTestLocation(userId, { name: 'Virtual', isVirtual: true });
+    const created = await appointmentService.create(
+      baseCreateDto({
+        locationId: virtualLocation.id,
+        meetingUrl: 'https://meet.google.com/old-room',
+        reminder: {
+          channel: Channel.SMS,
+          to: '+10000000000',
+          sendMode: ReminderMode.SCHEDULED,
+          sendAt: appointmentTimeRange(60, 30).start.toISOString(),
+          status: ReminderStatus.PENDING,
+          body: 'stale snapshot https://meet.google.com/old-room',
+        },
+      }),
+      userId,
+    );
+
+    await appointmentService.update(created.id, {
+      meetingUrl: 'https://meet.google.com/new-room',
+      reminder: {
+        channel: Channel.SMS,
+        to: '+10000000001',
+        sendMode: ReminderMode.SCHEDULED,
+        sendAt: appointmentTimeRange(90, 30).start.toISOString(),
+        status: ReminderStatus.PENDING,
+        body: 'another stale snapshot',
+      },
+    }, userId);
+
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id: created.reminder!.id } });
+    expect(reminder.to).toBe('+10000000001');
+    expect(reminder.body).toContain('https://meet.google.com/new-room');
+    expect(reminder.body).not.toContain('old-room');
+    expect(reminder.contentSid).toBeNull();
+  });
+
+  it('switching to in-person clears the URL and removes it from the SMS body', async () => {
+    const virtualLocation = await createTestLocation(userId, { name: 'Virtual', isVirtual: true });
+    const created = await appointmentService.create(
+      baseCreateDto({
+        locationId: virtualLocation.id,
+        meetingUrl: 'https://meet.google.com/room-to-remove',
+        reminder: {
+          channel: Channel.SMS,
+          to: '+10000000000',
+          sendMode: ReminderMode.IMMEDIATE,
+          status: ReminderStatus.PENDING,
+          body: 'stale',
+        },
+      }),
+      userId,
+    );
+
+    const updated = await appointmentService.update(created.id, { locationId }, userId);
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { id: created.reminder!.id } });
+    expect(updated.meetingUrl).toBeNull();
+    expect(reminder.body).not.toContain('room-to-remove');
+    expect(reminder.body).toContain('Dirección:');
+  });
+
+  it.each([null, ''])('persists explicit in-person meeting URL clear %j', async (meetingUrl) => {
+    const created = await appointmentService.create(
+      baseCreateDto({ meetingUrl: 'https://example.test/unused-room' }),
+      userId,
+    );
+    const updated = await appointmentService.update(created.id, { meetingUrl }, userId);
+    expect(updated.meetingUrl).toBeNull();
+  });
+
+  it('rejects cross-tenant location, type, and reminder links', async () => {
+    const otherUser = await createTestUser();
+    const otherPatient = await createTestPatient(otherUser.id);
+    const otherLocation = await createTestLocation(otherUser.id);
+    const otherType = await createTestAppointmentType(otherUser.id);
+    const otherReminder = await prisma.reminder.create({
+      data: {
+        channel: Channel.SMS,
+        to: '+10000000000',
+        body: 'other',
+        sendMode: ReminderMode.SCHEDULED,
+        sendAt: appointmentTimeRange(60, 30).start,
+        status: ReminderStatus.PENDING,
+        patientId: otherPatient.id,
+        userId: otherUser.id,
+      },
+    });
+
+    await expect(appointmentService.create(baseCreateDto({ locationId: otherLocation.id }), userId)).rejects.toThrow();
+    await expect(appointmentService.create(baseCreateDto({ typeId: otherType.id }), userId)).rejects.toThrow();
+    await expect(appointmentService.create(baseCreateDto({ reminderId: otherReminder.id }), userId)).rejects.toThrow();
+
+    const owned = await appointmentService.create(baseCreateDto(), userId);
+    await expect(appointmentService.update(owned.id, { locationId: otherLocation.id }, userId)).rejects.toThrow();
+    await expect(appointmentService.update(owned.id, { typeId: otherType.id }, userId)).rejects.toThrow();
+    await expect(appointmentService.update(owned.id, { reminderId: otherReminder.id }, userId)).rejects.toThrow();
+  });
+
+  it('rejects a reminder for another patient or already linked appointment', async () => {
+    const otherPatient = await createTestPatient(userId);
+    const unsafeReminder = await prisma.reminder.create({
+      data: {
+        channel: Channel.SMS,
+        to: '+10000000000',
+        body: 'unsafe',
+        sendMode: ReminderMode.SCHEDULED,
+        sendAt: appointmentTimeRange(60, 30).start,
+        status: ReminderStatus.PENDING,
+        patientId: otherPatient.id,
+        userId,
+      },
+    });
+    await expect(appointmentService.create(baseCreateDto({ reminderId: unsafeReminder.id }), userId)).rejects.toThrow();
+
+    const first = await appointmentService.create(baseCreateDto(), userId);
+    await prisma.reminder.update({ where: { id: unsafeReminder.id }, data: { patientId, appointmentId: first.id } });
+    await expect(appointmentService.create(baseCreateDto({ reminderId: unsafeReminder.id }), userId)).rejects.toThrow();
+  });
+
   it('transitions status and marks paid following the allowed state machine', async () => {
     const { start, end } = appointmentTimeRange(120, 30);
     const created = await appointmentService.create(baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }), userId);

@@ -38,7 +38,7 @@ export const createAppointmentSchema = z.object({
   typeId: z.uuid('typeId must be a valid UUID'),
   reminder: reminderInlineSchema.nullable().optional(),
 }).refine(
-  (d) => !(d.reminderId && d.reminder),
+  (d) => !(d.reminderId !== undefined && d.reminder !== undefined),
   { message: 'Cannot provide both reminderId and reminder', path: ['reminder'] }
 ).refine(
   (d) => new Date(d.endAt) > new Date(d.startAt),
@@ -56,7 +56,7 @@ export const updateAppointmentSchema = z
     price: z.number().min(0, 'Price must be non-negative').optional(),
     currency: z.string().optional(),
     paid: z.boolean().optional(),
-    meetingUrl: z.url('meetingUrl must be a valid URL').max(500).optional().or(z.literal('')),
+    meetingUrl: z.url('meetingUrl must be a valid URL').max(500).nullable().optional().or(z.literal('')),
     notes: z.string().max(1000).optional(),
     typeId: z.uuid('typeId must be a valid UUID').optional(),
     status: z.enum(AppointmentStatus).optional(),
@@ -69,7 +69,7 @@ export const updateAppointmentSchema = z
     { message: 'At least one valid field must be provided for update' }
   )
   .refine(
-    (d) => !(d.reminderId && d.reminder),
+    (d) => !(d.reminderId !== undefined && d.reminder !== undefined),
     { message: 'Cannot provide both reminderId and reminder', path: ['reminder'] }
   )
   .refine(

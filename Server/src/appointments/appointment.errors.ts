@@ -18,6 +18,12 @@ export class AppointmentReminderNotFoundError extends ApiError {
   }
 }
 
+export class AppointmentMeetingUrlRequiredError extends ApiError {
+  constructor() {
+    super('A meeting URL is required for virtual appointments', 422)
+  }
+}
+
 export class AppointmentStatusTransitionError extends ApiError {
   constructor(currentStatus: string, action: string) {
     super(`Cannot ${action} an appointment with status "${currentStatus}"`, 409)

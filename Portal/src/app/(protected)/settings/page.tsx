@@ -8,11 +8,12 @@ import { LocationsTab } from "@/src/components/Settings/LocationsTab";
 import { RemindersTab } from "@/src/components/Settings/RemindersTab";
 import { AppointmentTypesTab } from "@/src/components/Settings/AppointmentTypesTab";
 import { AuditLogsTab } from "@/src/components/Settings/AuditLogsTab";
+import { GoogleIntegrationTab } from "@/src/components/Settings/GoogleIntegrationTab";
 import { TabNav } from "@/src/components/TabNav";
 import { QUERY_PARAMS } from "@/src/utils/listQuery";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios", AuditLogs = "Registro de actividad" }
+enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios", AuditLogs = "Registro de actividad", Integrations = "Integraciones" }
 
 export default function SettingsPage() {
     const [ tab, setTab ] = useQueryState(QUERY_PARAMS.settingsTab, parseAsStringEnum<ActiveTab>(Object.values(ActiveTab)).withDefault(ActiveTab.Profile));
@@ -41,6 +42,7 @@ export default function SettingsPage() {
             {tab === ActiveTab.AppointmentTypes && (<AppointmentTypesTab />)}
             {tab === ActiveTab.Notifications && (<RemindersTab />)}
             {tab === ActiveTab.AuditLogs && (<AuditLogsTab />)}
+            {tab === ActiveTab.Integrations && (<GoogleIntegrationTab />)}
         </PageLayout>
     );
 }

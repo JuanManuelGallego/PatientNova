@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useApiRequest } from "@/src/api/base/useApiRequest";
 
 vi.mock("@/src/api/base/fetchWithAuth", () => ({
@@ -71,8 +71,22 @@ describe("useApiRequest", () => {
 
         await waitFor(() => expect(result.current.data).toBe(1));
 
-        result.current.refetch();
+        act(() => { void result.current.refetch(); });
         await waitFor(() => expect(result.current.data).toBe(2));
         expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("refetch resolves with the fresh payload", async () => {
+        mockFetch
+            .mockResolvedValueOnce(makeOkResponse({ data: 1 }))
+            .mockResolvedValueOnce(makeOkResponse({ data: 2 }));
+        const { result } = renderHook(() =>
+            useApiRequest<number>("/api/x", undefined, (json) => (json as { data: number }).data)
+        );
+        await waitFor(() => expect(result.current.data).toBe(1));
+
+        let payload: number | undefined;
+        await act(async () => { payload = await result.current.refetch(); });
+        expect(payload).toBe(2);
     });
 });
