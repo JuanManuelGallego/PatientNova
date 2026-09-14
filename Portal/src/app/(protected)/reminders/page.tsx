@@ -195,30 +195,23 @@ function RemindersPageContent() {
               (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
               (stats?.byStatus[ ReminderStatus.QUEUED ] || 0)
             }
-            sub="por enviar"
+            sub="este mes"
             accent="var(--c-link)"
             icon={Send}
           />
           <StatCard
             label="Enviados"
             value={stats?.byStatus[ ReminderStatus.SENT ] || 0}
-            sub="entregados"
+            sub="este mes"
             accent="var(--c-success)"
             icon={Megaphone}
           />
           <StatCard
             label="Fallidos"
             value={stats?.byStatus[ ReminderStatus.FAILED ] || 0}
-            sub="requieren atención"
+            sub="este mes"
             accent="var(--c-error)"
             icon={AlertTriangle}
-          />
-          <StatCard
-            label="Cancelados"
-            value={stats?.byStatus[ ReminderStatus.CANCELLED ] || 0}
-            sub="fuera de la cola"
-            accent="var(--c-gray-400)"
-            icon={XCircle}
           />
         </div>
         <ReminderTabs

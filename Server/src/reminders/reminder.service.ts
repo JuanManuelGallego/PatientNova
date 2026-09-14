@@ -25,8 +25,8 @@ export const reminderService = {
     return reminderRepository.findMany(query, userId);
   },
 
-  async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {
-    return reminderRepository.getStats(query, userId);
+  async getStats(query: ReminderStatsQuery, userId: string, timezone = 'UTC'): Promise<ReminderStats> {
+    return reminderRepository.getStats(query, userId, timezone);
   },
 
   async create(dto: CreateReminderDto, userId: string, enqueue = true): Promise<Reminder> {

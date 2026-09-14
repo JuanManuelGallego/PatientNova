@@ -126,10 +126,10 @@ describe('reminderService.findMany', () => {
 });
 
 describe('reminderService.getStats', () => {
-  it('delegates to repository.getStats', async () => {
+  it('delegates to repository.getStats with timezone', async () => {
     const query = { dateFrom: '2024-01-01', dateTo: '2024-12-31', includeDeleted: false };
-    await reminderService.getStats(query, 'user-1');
-    expect(mocks.repo.getStats).toHaveBeenCalledWith(query, 'user-1');
+    await reminderService.getStats(query, 'user-1', 'America/New_York');
+    expect(mocks.repo.getStats).toHaveBeenCalledWith(query, 'user-1', 'America/New_York');
   });
 });
 
