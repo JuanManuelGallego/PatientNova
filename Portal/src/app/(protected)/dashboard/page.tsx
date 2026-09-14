@@ -148,7 +148,7 @@ export default function DashboardPage() {
             <StatCard
               label="Recordatorios"
               value={pendingReminders}
-              sub="por enviar"
+              sub="este mes"
               accent="var(--c-link)"
               icon={Bell}
             />
@@ -251,7 +251,7 @@ export default function DashboardPage() {
           <div className="dash-card__header">
             <div>
               <h2 className="dash-card__title">Recordatorios Activos</h2>
-              <p className="dash-card__sub">{pendingReminders} pendientes</p>
+              <p className="dash-card__sub">{pendingReminders} pendientes este mes</p>
             </div>
             <Link href="/reminders" className="dash-card__link">
               Ver todos →
@@ -346,7 +346,7 @@ export default function DashboardPage() {
               href: "/reminders",
               Icon: Bell,
               label: "Recordatorios",
-              desc: `${reminderStats?.total ?? 0} creados`,
+              desc: `${reminderStats?.total ?? 0} este mes`,
               accent: "var(--c-link)",
             },
             {

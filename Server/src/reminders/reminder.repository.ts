@@ -6,6 +6,7 @@ import { ReminderNotFoundError } from './reminder.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
 import { reminderInclude, type ReminderWithRelations, type ReminderStats } from './reminder.types.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
+import { getCurrentMonthBoundsInTz } from '../utils/time/time-utils.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 export const reminderRepository = {
@@ -133,16 +134,25 @@ export const reminderRepository = {
     });
   },
 
-  async getStats(query: ReminderStatsQuery, userId: string): Promise<ReminderStats> {
+  async getStats(query: ReminderStatsQuery, userId: string, timezone = 'UTC'): Promise<ReminderStats> {
     const { patientId, dateFrom, dateTo } = query;
+
+    // Default to current month in user's timezone when no range specified
+    let effectiveFrom = dateFrom;
+    const effectiveTo = dateTo;
+    if (!dateFrom && !dateTo) {
+      const { start } = getCurrentMonthBoundsInTz(timezone);
+      effectiveFrom = start.toISOString();
+    }
+
     const where: Prisma.ReminderWhereInput = {
       userId,
       ...(patientId && { patientId }),
-      ...(dateFrom || dateTo
+      ...(effectiveFrom || effectiveTo
         ? {
           sendAt: {
-            ...(dateFrom && { gte: new Date(dateFrom) }),
-            ...(dateTo && { lte: new Date(dateTo) }),
+            ...(effectiveFrom && { gte: new Date(effectiveFrom) }),
+            ...(effectiveTo && { lte: new Date(effectiveTo) }),
           },
         }
         : {}),

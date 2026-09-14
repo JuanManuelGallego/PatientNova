@@ -204,7 +204,7 @@ export const appointmentRepository = {
       prisma.appointment.aggregate({
         _sum: { price: true },
         _count: { _all: true },
-        where: { ...where, paid: false, status: { not: AppointmentStatus.CANCELLED } },
+        where: { ...where, paid: false, status: { not: AppointmentStatus.CANCELLED }, startAt: { lte: new Date() } },
       }),
       prisma.appointment.count({
         where: { ...where, startAt: { gte: todayStart, lte: todayEnd }, status: { not: AppointmentStatus.CANCELLED } },
@@ -231,7 +231,7 @@ export const appointmentRepository = {
     const paidRevenueThisMonth = paidAggThisMonth._sum.price ?? 0;
 
     return {
-      total: paidAgg._count._all + unpaidAgg._count._all,
+      total: statusGroups.reduce((sum, g) => sum + (g._count as { id: number }).id, 0),
       todayCount: todayAgg,
       byStatus,
       totalRevenue: paidRevenue + unpaidRevenue,

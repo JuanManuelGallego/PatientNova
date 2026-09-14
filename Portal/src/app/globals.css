@@ -2217,6 +2217,7 @@ tr:hover td {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  white-space: nowrap;
 }
 
 @media (min-width: 768px) {

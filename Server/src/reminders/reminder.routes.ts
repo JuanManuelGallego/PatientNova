@@ -38,7 +38,7 @@ reminderRouter.get<ParamsDictionary, unknown, unknown, ReminderStatsQuery & Pars
   '/stats',
   validateQuery(reminderStatsSchema),
   asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, ReminderStatsQuery & ParsedQs>, res: Response) => {
-    ok(res, await reminderService.getStats(req.query, req.user!.id));
+    ok(res, await reminderService.getStats(req.query, req.user!.id, req.user!.timezone));
   })
 );
 
