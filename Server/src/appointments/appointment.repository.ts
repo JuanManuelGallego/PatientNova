@@ -231,7 +231,7 @@ export const appointmentRepository = {
     const paidRevenueThisMonth = paidAggThisMonth._sum.price ?? 0;
 
     return {
-      total: paidAgg._count._all + unpaidAgg._count._all,
+      total: statusGroups.reduce((sum, g) => sum + (g._count as { id: number }).id, 0),
       todayCount: todayAgg,
       byStatus,
       totalRevenue: paidRevenue + unpaidRevenue,
