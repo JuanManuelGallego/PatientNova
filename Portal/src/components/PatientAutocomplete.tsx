@@ -14,7 +14,7 @@ import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { useDebounceState } from "@/src/hooks/useDebounceState";
 import { getPatientFullName } from "@/src/utils/AvatarHelper";
 import { SELECT_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { Patient } from "@/src/types/Patient";
+import { Patient, PatientStatus } from "@/src/types/Patient";
 
 interface PatientAutocompleteProps {
   value: string;
@@ -49,6 +49,7 @@ export function PatientAutocomplete({
 
   const filters = useMemo(
     () => ({
+      status: PatientStatus.ACTIVE,
       search: debouncedSearch,
       page: 0,
     }),
