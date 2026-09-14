@@ -118,10 +118,10 @@ describe("LocationAndTimeStep Google Meet", () => {
     expect(startOAuth).toHaveBeenCalledWith("/appointments", true);
   });
 
-  it("marks the URL as required and reports malformed manual URLs", async () => {
+  it("allows an empty URL but reports malformed manual URLs", async () => {
     render(<Harness />);
     const input = screen.getByTestId("appointment-meeting-url-input");
-    expect(input).toBeRequired();
+    expect(input).not.toBeRequired();
 
     await userEvent.type(input, "not-a-url");
     expect(input).toHaveAttribute("aria-invalid", "true");

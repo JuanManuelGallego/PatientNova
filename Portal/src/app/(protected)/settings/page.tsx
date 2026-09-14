@@ -13,7 +13,7 @@ import { TabNav } from "@/src/components/TabNav";
 import { QUERY_PARAMS } from "@/src/utils/listQuery";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Notifications = "Recordatorios", AuditLogs = "Registro de actividad", Integrations = "Integraciones" }
+enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Integrations = "Integraciones", Notifications = "Recordatorios", AuditLogs = "Registro de actividad" }
 
 export default function SettingsPage() {
     const [ tab, setTab ] = useQueryState(QUERY_PARAMS.settingsTab, parseAsStringEnum<ActiveTab>(Object.values(ActiveTab)).withDefault(ActiveTab.Profile));
@@ -40,9 +40,9 @@ export default function SettingsPage() {
             {tab === ActiveTab.Security && (<SecurityTab />)}
             {tab === ActiveTab.Locations && (<LocationsTab />)}
             {tab === ActiveTab.AppointmentTypes && (<AppointmentTypesTab />)}
+            {tab === ActiveTab.Integrations && (<GoogleIntegrationTab />)}
             {tab === ActiveTab.Notifications && (<RemindersTab />)}
             {tab === ActiveTab.AuditLogs && (<AuditLogsTab />)}
-            {tab === ActiveTab.Integrations && (<GoogleIntegrationTab />)}
         </PageLayout>
     );
 }

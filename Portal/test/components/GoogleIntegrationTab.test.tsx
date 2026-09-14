@@ -40,13 +40,12 @@ describe("GoogleIntegrationTab", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("No disponible");
   });
 
-  it("shows connected status but hides mutation controls from viewers", () => {
+  it("shows connected status and mutation controls to viewers", () => {
     role = "VIEWER";
     connectionState.data = { connected: true, connectedAt: "2026-09-13T10:00:00.000Z" };
     render(<GoogleIntegrationTab />);
     expect(screen.getByText("Cuenta de Google conectada")).toBeInTheDocument();
-    expect(screen.queryByTestId("google-reconnect-button")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("google-disconnect-button")).not.toBeInTheDocument();
-    expect(screen.getByText(/Solo los administradores/)).toBeInTheDocument();
+    expect(screen.getByTestId("google-reconnect-button")).toBeInTheDocument();
+    expect(screen.getByTestId("google-disconnect-button")).toBeInTheDocument();
   });
 });

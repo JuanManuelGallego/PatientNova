@@ -8,6 +8,8 @@ export enum EntityType {
   APPOINTMENT_LOCATION = "APPOINTMENT_LOCATION",
   BLOCKED_TIME = "BLOCKED_TIME",
   CONSENT_DOCUMENT = "CONSENT_DOCUMENT",
+  GOOGLE_CONNECTION = "GOOGLE_CONNECTION",
+  GOOGLE_MEET_SPACE = "GOOGLE_MEET_SPACE",
 }
 
 export enum ActionType {
@@ -68,6 +70,8 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.APPOINTMENT_LOCATION]: { label: "Ubicacion", color: "#0D9488", bg: "#F0FDFA" }, 
   [EntityType.BLOCKED_TIME]: { label: "Tiempo Bloqueado", color: "#4B5563", bg: "#F9FAFB" },
   [EntityType.CONSENT_DOCUMENT]: { label: "Consentimiento", color: "#475569", bg: "#F8FAFC" },
+  [EntityType.GOOGLE_CONNECTION]: { label: "Conexión Google", color: "#2563EB", bg: "#EFF6FF" },
+  [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
 };
 
 export const ACTION_TYPE_CONFIG: Record<

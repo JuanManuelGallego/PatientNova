@@ -19,8 +19,6 @@ import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
 import { ApiMutationError } from "@/src/api/base/useApiMutation";
-import { useAuthContext } from "@/src/providers/AuthContext";
-import { AdminRole } from "@/src/types/User";
 import { validateHttpUrl } from "@/src/utils/DataValidator";
 
 interface Props {
@@ -59,9 +57,7 @@ export function LocationAndTimeStep({
   const selectedLocation = locations.find((l) => l.id === form.locationId);
   const isVirtual = selectedLocation?.isVirtual ?? false;
 
-  const { user } = useAuthContext();
-  const canManageGoogle = user?.role === AdminRole.ADMIN || user?.role === AdminRole.SUPER_ADMIN;
-  const { data: connection, loading: loadingConnection, error: connectionError } = useFetchGoogleConnection(canManageGoogle && isVirtual);
+  const { data: connection, loading: loadingConnection, error: connectionError } = useFetchGoogleConnection(isVirtual);
   const { createMeet, loading: creatingMeet, error: createMeetError } = useCreateGoogleMeet();
   const { startOAuth, loading: startingOAuth, error: oauthStartError } = useStartGoogleOAuth();
   const [ needsReconnect, setNeedsReconnect ] = useState(false);
@@ -110,6 +106,15 @@ export function LocationAndTimeStep({
   const meetingUrlInvalid = Boolean(form.meetingUrl && !validateHttpUrl(form.meetingUrl));
   const googleError = actionError || popupError || oauthStartError || createMeetError || connectionError;
   const isGoogleBusy = creatingMeet || startingOAuth || waitingForOAuth;
+  const googleMeetActionLabel = isGoogleBusy
+    ? "Generando enlace de Google Meet"
+    : form.meetingUrl
+      ? "Regenerar Google Meet"
+      : isConnected
+        ? "Generar Google Meet"
+        : needsReconnect
+          ? "Reconectar y generar Google Meet"
+          : "Conectar y generar Google Meet";
 
   return (
     <div className="form-stack">
@@ -157,28 +162,23 @@ export function LocationAndTimeStep({
                 style={{ flex: 1 }}
                 value={form.meetingUrl ?? ""}
                 onChange={set("meetingUrl")}
-                placeholder="Ingrese la URL de la videollamada (Google Meet, Zoom, Teams, etc.)"
+                placeholder="Ingrese la URL de la videollamada (Google Meet, Zoom, etc.)"
                 data-testid="appointment-meeting-url-input"
                 aria-invalid={meetingUrlInvalid}
                 aria-describedby={meetingUrlInvalid ? "appointment-meeting-url-error" : undefined}
-                required
               />
-              {canManageGoogle && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={handleGenerateMeet}
-                  disabled={isGoogleBusy || loadingConnection || !isVirtual}
-                  data-testid="generate-meet-link-button"
-                  style={{ height: 40, whiteSpace: "nowrap" }}
-                >
-                  {isGoogleBusy ? (
-                    <><span className="spinner" style={{ width: 16, height: 16, marginRight: 8 }} />Generando…</>
-                  ) : (
-                    <><ACTION_ICONS.link size={16} style={{ marginRight: 6 }} />{form.meetingUrl ? "Regenerar Google Meet" : isConnected ? "Generar Google Meet" : needsReconnect ? "Reconectar y generar" : "Conectar y generar"}</>
-                  )}
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleGenerateMeet}
+                disabled={isGoogleBusy || loadingConnection || !isVirtual}
+                data-testid="generate-meet-link-button"
+                aria-label={googleMeetActionLabel}
+                title={googleMeetActionLabel}
+                style={{ alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {isGoogleBusy ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <ACTION_ICONS.link size={16} />}
+              </button>
             </div>
             {meetingUrlInvalid && (
               <div id="appointment-meeting-url-error" role="alert" className="error-inline" style={{ marginTop: 4 }}>
@@ -187,24 +187,9 @@ export function LocationAndTimeStep({
             )}
             {googleError && (
               <div role="alert" className="error-inline" style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                <STATUS_ICONS.warning size={14} /> {googleError}{" "}
-                <a href="/settings?tab=Integraciones">Ir a Configuración</a>
+                <STATUS_ICONS.warning size={14} /> {googleError}
               </div>
             )}
-            {!loadingConnection && !connectionError && !isConnected && canManageGoogle && isVirtual && !form.meetingUrl && (
-              <p style={{ marginTop: 8, fontSize: 13, color: "var(--c-gray-500)" }}>
-                Para usar Google Meet,{" "}
-                <button
-                  type="button"
-                  onClick={handleGenerateMeet}
-                  style={{ background: "none", border: "none", color: "var(--c-brand)", textDecoration: "underline", cursor: "pointer", fontSize: 13, padding: 0 }}
-                >
-                  conecta tu cuenta de Google
-                </button>
-                o ingresa una URL manual.
-              </p>
-            )}
-            {loadingConnection && canManageGoogle && <p role="status" aria-live="polite" style={{ marginTop: 8, fontSize: 13 }}>Comprobando conexión con Google…</p>}
           </div>
         </div>
       )}
