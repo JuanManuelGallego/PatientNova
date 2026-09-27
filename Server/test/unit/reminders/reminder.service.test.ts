@@ -76,7 +76,6 @@ const scheduledPending = { ...fakeReminder };
 function txStub(overrides = {}) {
   return {
     patient: { findFirst: vi.fn().mockResolvedValue({ id: 'patient-1' }) },
-    reminder: { create: vi.fn().mockResolvedValue(fakeReminder) },
     ...overrides,
   };
 }
@@ -92,6 +91,7 @@ beforeEach(() => {
   mocks.repo.findById.mockResolvedValue(fakeReminder);
   mocks.repo.findMany.mockResolvedValue({ data: [fakeReminder], total: 1, page: 1, pageSize: 20 });
   mocks.repo.getStats.mockResolvedValue({ total: 10, todayCount: 2, byStatus: {}, byChannel: {} });
+  mocks.repo.create.mockResolvedValue(fakeReminder);
   mocks.repo.update.mockImplementation(async (_id: string, dto: Record<string, unknown>) => ({ ...fakeReminder, ...dto }));
   mocks.repo.cancel.mockResolvedValue({ ...fakeReminder, status: 'CANCELLED' });
   mocks.repo.delete.mockResolvedValue(fakeReminder);
@@ -136,15 +136,14 @@ describe('reminderService.getStats', () => {
 describe('reminderService.create', () => {
   it('IMMEDIATE: creates reminder and enqueues a pg-boss job inside the transaction', async () => {
     const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date() };
-    const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txStub()));
     const boss = bossStub();
 
     const result = await reminderService.create(dto, 'user-1');
 
     expect(mocks.prisma.$transaction).toHaveBeenCalled();
-    expect(tx.reminder.create).toHaveBeenCalled();
-    expect(mocks.fromPrisma).toHaveBeenCalledWith(tx);
+    expect(mocks.repo.create).toHaveBeenCalled();
+    expect(mocks.fromPrisma).toHaveBeenCalled();
     expect(boss.send).toHaveBeenCalledWith('send-reminder', { reminderId: fakeReminder.id }, expect.objectContaining({ db: {} }));
     expect(result).toEqual(fakeReminder);
   });
@@ -152,8 +151,7 @@ describe('reminderService.create', () => {
   it('SCHEDULED: enqueues job with startAfter', async () => {
     const future = new Date(Date.now() + 86400000);
     const dto = { channel: 'SMS' as const, to: '+15559876543', sendMode: 'SCHEDULED' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: future };
-    const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txStub()));
     const boss = bossStub();
 
     await reminderService.create(dto, 'user-1');
@@ -172,22 +170,19 @@ describe('reminderService.create', () => {
 
   it('throws PatientNotFoundError when patient does not exist', async () => {
     const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'missing', status: 'PENDING' as const, sendAt: new Date() };
-    const tx = txStub({ patient: { findFirst: vi.fn().mockResolvedValue(null) }, reminder: { create: vi.fn() } });
-    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
-    bossStub();
+    mocks.repo.create.mockRejectedValueOnce(new Error('Patient not found'));
     await expect(reminderService.create(dto, 'user-1')).rejects.toThrow();
-    expect(tx.reminder.create).not.toHaveBeenCalled();
+    expect(mocks.repo.create).toHaveBeenCalled();
   });
 
   it('enqueue:false creates the reminder but does NOT enqueue a pg-boss job (no duplicate send)', async () => {
     const dto = { channel: 'WHATSAPP' as const, to: '+15551234567', sendMode: 'IMMEDIATE' as const, patientId: 'patient-1', status: 'PENDING' as const, sendAt: new Date() };
-    const tx = txStub();
-    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+    mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(txStub()));
     const boss = bossStub();
 
     await reminderService.create(dto, 'user-1', false);
 
-    expect(tx.reminder.create).toHaveBeenCalled();
+    expect(mocks.repo.create).toHaveBeenCalled();
     expect(mocks.fromPrisma).not.toHaveBeenCalled();
     expect(boss.send).not.toHaveBeenCalled();
   });

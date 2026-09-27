@@ -1,4 +1,4 @@
-import { AppointmentStatus, ReminderStatus, Channel, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, Channel, type Reminder } from '../../generated/prisma/client.ts';
 import { sendSms, sendWhatsApp, sendWhatsAppFreeForm } from './client.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { logger } from '../utils/api/logger.js';
@@ -103,10 +103,6 @@ export class TwilioWebhookService {
                 where: { id: reminder.appointmentId! },
                 data: { status: AppointmentStatus.CONFIRMED, confirmedAt: new Date() },
             }),
-            prisma.reminder.update({
-                where: { id: reminder.id },
-                data: { status: ReminderStatus.SENT },
-            }),
         ]);
 
         await logAudit({
@@ -133,17 +129,13 @@ export class TwilioWebhookService {
     }
 
     /**
-     * Cancel an appointment and mark the reminder as cancelled
+     * Cancel an appointment
      */
     async cancelAppointment(reminder: Reminder, phoneNumber: string): Promise<void> {
         await prisma.$transaction([
             prisma.appointment.update({
                 where: { id: reminder.appointmentId! },
                 data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date(), paid: false },
-            }),
-            prisma.reminder.update({
-                where: { id: reminder.id },
-                data: { status: ReminderStatus.CANCELLED },
             }),
         ]);
 

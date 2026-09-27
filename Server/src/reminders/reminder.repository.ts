@@ -1,5 +1,5 @@
 import { Prisma, ReminderStatus, type Reminder, type Channel } from '../../generated/prisma/client.ts';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { ReminderNotFoundError } from './reminder.errors.js';
@@ -10,10 +10,10 @@ import { getCurrentMonthBoundsInTz } from '../utils/time/time-utils.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 
 export const reminderRepository = {
-  async create(dto: CreateReminderDto, userId: string): Promise<Reminder> {
-    const patient = await prisma.patient.findFirst({ where: { id: dto.patientId, userId } });
+  async create(dto: CreateReminderDto, userId: string, tx: TransactionClient = prisma): Promise<ReminderWithRelations> {
+    const patient = await tx.patient.findFirst({ where: { id: dto.patientId, userId } });
     if (!patient) throw new PatientNotFoundError(dto.patientId);
-    return prisma.reminder.create({
+    return tx.reminder.create({
       data: {
         channel: dto.channel,
         contentSid: dto.contentSid || null,
@@ -24,7 +24,7 @@ export const reminderRepository = {
         userId,
         appointmentId: dto.appointmentId || null,
         sendAt: new Date(dto.sendAt),
-        status: dto.status,
+        status: dto.status ?? ReminderStatus.PENDING,
         to: dto.to,
         body: dto.body || null,
       },

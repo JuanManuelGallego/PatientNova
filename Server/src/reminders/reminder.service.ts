@@ -2,10 +2,9 @@ import { ReminderMode, ReminderStatus, type Reminder } from '../../generated/pri
 import { fromPrisma } from 'pg-boss';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { reminderRepository } from './reminder.repository.js';
-import { ReminderNotCancellableError, PatientNotFoundError } from '../utils/errors/errors.js';
+import { ReminderNotCancellableError } from '../utils/errors/errors.js';
 import { ReminderSendAtInPastError, ReminderNotRetryableError } from './reminder.errors.js';
 import { logger } from '../utils/api/logger.js';
-import { reminderInclude } from './reminder.types.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
 import type { Paginated } from '../utils/api/pagination.js';
 import type { ReminderWithRelations, ReminderStats } from './reminder.types.js';
@@ -30,33 +29,12 @@ export const reminderService = {
   },
 
   async create(dto: CreateReminderDto, userId: string, enqueue = true): Promise<Reminder> {
-    if (dto.sendMode === ReminderMode.SCHEDULED) {
-      if (!dto.sendAt || new Date(dto.sendAt) <= new Date()) {
-        throw new ReminderSendAtInPastError();
-      }
+    if (dto.sendMode === ReminderMode.SCHEDULED && (!dto.sendAt || new Date(dto.sendAt) <= new Date())) {
+      throw new ReminderSendAtInPastError();
     }
 
     const reminder = await prisma.$transaction(async (tx) => {
-      const patient = await tx.patient.findFirst({ where: { id: dto.patientId, userId } });
-      if (!patient) throw new PatientNotFoundError(dto.patientId);
-
-      const created = await tx.reminder.create({
-        data: {
-          channel: dto.channel,
-          contentSid: dto.contentSid || null,
-          ...(dto.contentVariables && { contentVariables: dto.contentVariables }),
-          messageId: dto.messageId || null,
-          sendMode: dto.sendMode,
-          patientId: dto.patientId,
-          userId,
-          appointmentId: dto.appointmentId || null,
-          sendAt: new Date(dto.sendAt),
-          status: dto.status ?? ReminderStatus.PENDING,
-          to: dto.to,
-          body: dto.body || null,
-        },
-        include: reminderInclude,
-      });
+      const created = await reminderRepository.create(dto, userId, tx);
 
       if (enqueue && config.scheduler.enabled) {
         const boss = getBoss();
@@ -68,31 +46,32 @@ export const reminderService = {
         }
       }
 
+      await logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: created.id,
+        userId,
+        actionType: ActionType.CREATE,
+        description: `Recordatorio creado para el paciente ${created.patient.name} ${created.patient.lastName}`,
+        affectedFields: Object.keys(dto),
+        fieldsAfter: {
+          channel: created.channel,
+          sendMode: created.sendMode,
+          sendAt: created.sendAt,
+          to: created.to,
+          contentSid: created.contentSid,
+          contentVariables: created.contentVariables,
+          body: created.body,
+          patientId: created.patientId,
+          status: created.status,
+          appointmentId: created.appointmentId,
+        },
+        tx,
+      });
+
       return created;
     });
 
     logger.info({ reminderId: reminder.id, userId, mode: dto.sendMode, enqueued: enqueue }, 'Reminder created');
-
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: reminder.id,
-      userId,
-      actionType: ActionType.CREATE,
-      description: `Recordatorio creado para el paciente ${reminder.patient.name} ${reminder.patient.lastName}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: {
-        channel: reminder.channel,
-        sendMode: reminder.sendMode,
-        sendAt: reminder.sendAt,
-        to: reminder.to,
-        contentSid: reminder.contentSid,
-        contentVariables: reminder.contentVariables,
-        body: reminder.body,
-        patientId: reminder.patientId,
-        status: reminder.status,
-        appointmentId: reminder.appointmentId,
-      },
-    });
 
     return reminder;
   },
