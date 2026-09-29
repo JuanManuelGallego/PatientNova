@@ -92,10 +92,11 @@ export function useCalendarData({
   const hourRange = useMemo(() => {
     if (viewMode === ViewMode.Week) {
       const weekAppts = weekDays.flatMap((d) => apptByDate[ toDateStr(d) ] ?? []);
-      return computeHourRange(weekAppts);
+      const weekBlocked = weekDays.flatMap((d) => blockedByDate[ toDateStr(d) ] ?? []);
+      return computeHourRange(weekAppts, weekBlocked);
     }
     return computeHourRange([]);
-  }, [viewMode, weekDays, apptByDate]);
+  }, [viewMode, weekDays, apptByDate, blockedByDate]);
 
   return {
     daysInMonth,

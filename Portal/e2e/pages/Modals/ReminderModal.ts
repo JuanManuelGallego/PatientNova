@@ -56,9 +56,7 @@ export class ReminderModal {
     const input = this.dialog.locator('input.patient-autocomplete__input');
     await input.click();
     await input.fill(name);
-    const option = this.page.getByRole('option', { name }).first();
-    await option.waitFor();
-    await input.press('Enter');
+    await this.page.getByRole('option', { name }).first().click();
   }
 
   async selectFromDropdown(labelText: string, optionLabel: string) {
@@ -88,11 +86,17 @@ export class ReminderModal {
     const hourRe = new RegExp(`^0?${hourRaw}$`);
     const minuteRe = new RegExp(`^0?${minuteRaw}$`);
 
+    const [currentDay, currentMonth, currentYear] = (await picker.inputValue())
+      .split(' ')[0]
+      .split('/')
+      .map(Number);
     await picker.click();
 
-    const now = new Date();
+    const current = currentYear
+      ? new Date(currentYear, currentMonth - 1, currentDay)
+      : new Date();
     const monthDiff =
-      (iso.getFullYear() - now.getFullYear()) * 12 + (iso.getMonth() - now.getMonth());
+      (iso.getFullYear() - current.getFullYear()) * 12 + (iso.getMonth() - current.getMonth());
     if (monthDiff !== 0) {
       const nextBtn = page.locator('.ant-picker-header-next-btn');
       const prevBtn = page.locator('.ant-picker-header-prev-btn');
@@ -114,6 +118,7 @@ export class ReminderModal {
       .getByText(minuteRe).first().click();
 
     await page.getByRole('button', { name: 'Aceptar' }).click();
+    await expect(page.locator('.ant-picker-dropdown')).toBeHidden();
   }
 
   async fillAllVariablesWithRandomString() {

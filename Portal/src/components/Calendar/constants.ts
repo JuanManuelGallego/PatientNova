@@ -69,13 +69,18 @@ export interface HourRange {
 
 export function computeHourRange(
   appointments: import("@/src/types/Appointment").Appointment[],
+  blockedTimes: BlockedTime[] = [],
 ): HourRange {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
 
-  for (const a of appointments) {
-    const s = new Date(a.startAt);
-    const e = new Date(a.endAt);
+  const ranges = [
+    ...appointments.map((a) => [a.startAt, a.endAt]),
+    ...blockedTimes.map((bt) => [bt.startTimeUtc, bt.endTimeUtc]),
+  ];
+  for (const [start, end] of ranges) {
+    const s = new Date(start);
+    const e = new Date(end);
     const sh = s.getHours();
     const eh = e.getHours() + (e.getMinutes() > 0 ? 1 : 0);
     if (sh < first) first = Math.max(0, sh - 1);

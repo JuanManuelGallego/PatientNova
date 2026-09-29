@@ -46,10 +46,9 @@ export class AuditLogsPage extends BasePage {
     await this.page.getByTestId('audit-date-range-filter-trigger').click();
     await this.page.getByPlaceholder('Desde').click();
     const clickDay = async (value: string) => {
-      const d = value.split('T')[0].split('-')[2];
+      const date = value.split('T')[0];
       await this.page
-        .locator('.ant-picker-cell-in-view')
-        .filter({ hasText: d })
+        .locator(`.ant-picker-cell-in-view[title="${date}"]`)
         .first()
         .click();
     };
