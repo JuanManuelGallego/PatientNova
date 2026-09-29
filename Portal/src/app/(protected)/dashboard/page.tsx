@@ -31,7 +31,7 @@ import {
   DollarSign,
   AlertCircle,
 } from "lucide-react";
-import { CHANNEL_ICONS } from "@/src/config/icons";
+import { CHANNEL_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
 
@@ -228,15 +228,13 @@ export default function DashboardPage() {
                     </div>
                     <div className="dash-list-item__right">
                       <div
-                        className="location-badge"
-                        style={{
-                          background:
-                            a.appointmentLocation.color + "15" || "var(--c-gray-100)",
-                          color:
-                            a.appointmentLocation.color || "var(--c-gray-700)",
-                          fontSize: 11,
-                        }}
+                        className="location-label"
                       >
+                        <DETAIL_ICONS.mapPin
+                          size={13}
+                          style={{ color: a.appointmentLocation.color || "var(--c-gray-400)" }}
+                          aria-hidden="true"
+                        />
                         {a.appointmentLocation.name}
                       </div>
                       <AppointmentStatusPill status={a.status} />
