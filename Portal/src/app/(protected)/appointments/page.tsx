@@ -6,10 +6,9 @@ import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
-import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import {
-  ExternalLink,
-  CalendarCheck,
+CalendarCheck,
   Clock,
   AlertCircle,
   DollarSign,
@@ -59,7 +58,6 @@ import {
   parseAsArrayOf,
   parseAsStringEnum,
 } from "nuqs";
-import { AppointmentTypePill } from "@/src/components/Info/AppointmentTypePill";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 
 enum AppointmentTab {
@@ -80,10 +78,10 @@ const PAID_OPTIONS = [
 ];
 
 const TYPE_OPTIONS = (types: { id: string; name: string }[]) =>
-  withAllOption(types, (t) => t.name);
+  [{ value: "", label: "Todos" }, ...types.map(({ id, name }) => ({ value: id, label: name }))];
 
 const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
-  withAllOption(locations, (l) => l.name);
+  [{ value: "", label: "Todos" }, ...locations.map(({ id, name }) => ({ value: id, label: name }))];
 
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
@@ -212,7 +210,6 @@ function AppointmentsPageContent() {
           triggerTestId: "appointment-date-range-filter-trigger",
         },
       },
-      { label: "Recordatorio" },
       {
         label: "Ubicación",
         filter: {
@@ -227,6 +224,7 @@ function AppointmentsPageContent() {
           triggerTestId: "appointment-location-filter-trigger",
         },
       },
+      { label: "Recordatorio" },
       {
         label: "Estado",
         sortKey: "status",
@@ -409,9 +407,50 @@ function AppointmentsPageContent() {
                 </div>
               </td>
               <td className="td">
-                <AppointmentTypePill appointmentType={a.appointmentType} />
+                <span
+                  className="appointment-type-label"
+                >
+                  <DETAIL_ICONS.calendar
+                    size={14}
+                    style={{ color: a.appointmentType.color || "var(--c-gray-400)" }}
+                    aria-hidden="true"
+                  />
+                  {a.appointmentType.name}
+                </span>
               </td>
               <td className="td td--datetime">{fmtDateTime(a.startAt)}</td>
+              <td className="td td--muted" style={{ maxWidth: 130 }}>
+                <div
+                  className="location-label"
+                >
+                  {a.meetingUrl ? (
+                    <a
+                      href={a.meetingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="location-label__link"
+                      data-testid={`appointment-table-virtual-link-${a.id}`}
+                    >
+                      <DETAIL_ICONS.mapPin
+                        size={14}
+                        style={{ color: a.appointmentLocation.color || "var(--c-gray-400)" }}
+                        aria-hidden="true"
+                      />
+                      {a.appointmentLocation.name}
+                    </a>
+                  ) : (
+                    <>
+                      <DETAIL_ICONS.mapPin
+                        size={14}
+                        style={{ color: a.appointmentLocation.color || "var(--c-gray-400)" }}
+                        aria-hidden="true"
+                      />
+                      {a.appointmentLocation.name}
+                    </>
+                  )}
+                </div>
+              </td>
               <td className="td">
                 {a.reminder ? (
                   <ReminderStatusPill
@@ -421,41 +460,22 @@ function AppointmentsPageContent() {
                   <EmptyStatusPill label="Sin Recordatorio" />
                 )}
               </td>
-              <td className="td td--muted" style={{ maxWidth: 130 }}>
-                <div
-                  className="location-badge"
-                  style={{
-                    background: a.appointmentLocation.color + "15" || "var(--c-gray-100)",
-                    color: a.appointmentLocation.color || "var(--c-gray-700)",
-                  }}
-                >
-                  {a.meetingUrl ? (
-                    <a
-                      href={a.meetingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="location-badge__link"
-                      data-testid={`appointment-table-virtual-link-${a.id}`}
-                    >
-                      <ExternalLink size={12} /> Virtual
-                    </a>
-                  ) : (
-                    a.appointmentLocation.name
-                  )}
-                </div>
-              </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
-                <AppointmentStatusPill status={a.status} />
-                {a.status === AppointmentStatus.SCHEDULED && (
+                <div className="td-actions">
+                  <AppointmentStatusPill status={a.status} />
+                  {a.status === AppointmentStatus.SCHEDULED && (
                     <button
+                      type="button"
                       onClick={() => handleConfirm(a.id)}
-                      className="btn-pay"
+                      className="btn-table-action"
+                      title="Confirmar cita"
+                      aria-label="Confirmar cita"
                       data-testid={`appointment-confirm-button-${a.id}`}
                     >
-                      Confirmó
+                      <STATUS_ICONS.confirmed size={15} aria-hidden="true" />
                     </button>
-                )}
+                  )}
+                </div>
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
@@ -463,8 +483,15 @@ function AppointmentsPageContent() {
                     <>
                       <PayStatusPill paid={a.paid} />
                       {!a.paid && (
-                        <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid={`appointment-pay-button-${a.id}`}>
-                          Pagó
+                        <button
+                          type="button"
+                          onClick={() => handlePay(a.id)}
+                          className="btn-table-action"
+                          title="Marcar como pagada"
+                          aria-label="Marcar como pagada"
+                          data-testid={`appointment-pay-button-${a.id}`}
+                        >
+                          <DETAIL_ICONS.creditCard size={15} aria-hidden="true" />
                         </button>
                       )}
                     </>

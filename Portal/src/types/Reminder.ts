@@ -81,37 +81,32 @@ export const CHANNEL_CFG: Record<
 
 export const REMINDER_STATUS_CONFIG: Record<
   ReminderStatus,
-  { label: string; color: string; bg: string; dot: string }
+  { label: string; color: string; bg: string }
 > = {
   [ReminderStatus.CANCELLED]: {
     label: "Cancelado",
     color: "#6B7280",
     bg: "#F3F4F6",
-    dot: "#9CA3AF",
   },
   [ReminderStatus.FAILED]: {
     label: "Fallido",
     color: "#DC2626",
     bg: "#FEF2F2",
-    dot: "#EF4444",
   },
   [ReminderStatus.PENDING]: {
     label: "Pendiente",
     color: "#D97706",
     bg: "#FFFBEB",
-    dot: "#F59E0B",
   },
   [ReminderStatus.SENT]: {
     label: "Enviado",
     color: "#16A34A",
     bg: "#F0FDF4",
-    dot: "#22C55E",
   },
   [ReminderStatus.QUEUED]: {
     label: "En cola",
     color: "#2563EB",
     bg: "#EFF6FF",
-    dot: "#3B82F6",
   },
 };
 

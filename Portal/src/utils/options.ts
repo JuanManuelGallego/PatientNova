@@ -5,7 +5,7 @@ import { SelectOption } from "@/src/components/CustomSelect";
  * Replaces the repeated `[{ value: "", label: "Todos" }, ...items.map(...)]`
  * pattern used across table column filters.
  */
-export function withAllOption<T>(
+export function withAllOption<T extends string | number>(
   items: readonly T[],
   labelFor: (item: T) => string,
   allLabel = "Todos",

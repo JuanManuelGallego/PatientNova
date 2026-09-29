@@ -33,7 +33,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { Megaphone, Send, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Megaphone, Send, AlertTriangle, RefreshCw } from "lucide-react";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { DateRangeValue } from "@/src/components/DateRangePicker";
@@ -384,7 +384,7 @@ function ActiveRemindersTab({
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
   dateFilter: DateRangeValue;
-  setDateFilter: (v: [string, string]) => void;
+  setDateFilter: (v: DateRangeValue) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
@@ -529,7 +529,7 @@ function HistoryRemindersTab({
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
   dateFilter: DateRangeValue;
-  setDateFilter: (v: [string, string]) => void;
+  setDateFilter: (v: DateRangeValue) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;

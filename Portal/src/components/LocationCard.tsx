@@ -17,7 +17,6 @@ export function LocationCard({
       style={{
         padding: 0,
         overflow: "hidden",
-        borderLeft: `4px solid ${loc.color || "#2563EB"}`,
       }}
     >
       <div
@@ -28,6 +27,9 @@ export function LocationCard({
           gap: 12,
         }}
       >
+        <span className="card-icon-tile" style={{ color: loc.color || "#2563EB" }} aria-hidden="true">
+          <DETAIL_ICONS.mapPin size={17} />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
