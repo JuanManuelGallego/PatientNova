@@ -56,7 +56,7 @@ import {
   Send,
   Flag,
   Filter,
-  CircleDot,
+  Info,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
@@ -95,7 +95,7 @@ export const STATUS_ICONS = {
   success: CheckCircle,
   warning: AlertTriangle,
   danger: XCircle,
-  info: CircleDot,
+  info: Info,
   search: Search,
   calendar: Calendar,
   bell: Bell,

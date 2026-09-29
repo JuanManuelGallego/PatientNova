@@ -13,15 +13,12 @@ export function CalendarLegend() {
       }}
     >
       {Object.values(APPT_STATUS_CFG).map((cfg) => (
-        <div
+        <span
           key={cfg.label}
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
+          style={{ background: cfg.bg, color: cfg.color, padding: "3px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}
         >
-          <span style={{ color: cfg.dot, fontSize: 14, lineHeight: 1 }}>●</span>
-          <span style={{ fontSize: 12, color: "var(--c-gray-600)" }}>
-            {cfg.label}
-          </span>
-        </div>
+          {cfg.label}
+        </span>
       ))}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span

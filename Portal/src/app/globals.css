@@ -30,16 +30,12 @@
   /* Semantic */
   --color-success: #10b981;
   --color-success-bg: #ecfdf5;
-  --color-success-dot: #34d399;
   --color-warning: #f59e0b;
   --color-warning-bg: #fffbeb;
-  --color-warning-dot: #fbbf24;
   --color-danger: #ef4444;
   --color-danger-bg: #fef2f2;
-  --color-danger-dot: #f87171;
   --color-info: #3b82f6;
   --color-info-bg: #eff6ff;
-  --color-info-dot: #60a5fa;
 
   /* Radius */
   --radius-sm: 6px;
@@ -2432,13 +2428,6 @@ tr:hover td {
   white-space: nowrap;
 }
 
-.pill__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 /* ================================================================
    Avatar
    ================================================================ */
@@ -2956,13 +2945,6 @@ tr:hover td {
 .cal-day-panel__appt-item:hover {
   background: var(--c-brand-light);
   border-color: var(--c-brand);
-}
-
-.cal-day-panel__appt-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .cal-day-panel__appt-name {

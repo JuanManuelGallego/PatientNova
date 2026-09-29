@@ -24,7 +24,6 @@ import { TogglePatientModal } from "@/src/components/Modals/TogglePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
-import { PatientStatusPill } from "@/src/components/Info/StatusPill";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
@@ -123,9 +122,6 @@ function PatientsPageContent() {
       { label: "Correo" },
       { label: "WhatsApp" },
       { label: "SMS" },
-      {
-        label: "Estado",
-      },
       {
         label: "Registrado",
         sortKey: "createdAt",
@@ -247,9 +243,6 @@ function PatientsPageContent() {
               </td>
               <td className="td">
                 <ChannelPill type={Channel.SMS} value={p.smsNumber} />
-              </td>
-              <td className="td">
-                <PatientStatusPill status={p.status} />
               </td>
               <td className="td td--muted td--nowrap">
                 {new Date(p.createdAt).toLocaleDateString("es-ES", {

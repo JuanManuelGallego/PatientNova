@@ -37,12 +37,6 @@ export function DayPanel({
                       onClose();
                     }}
                   >
-                    <div
-                      className="cal-day-panel__appt-dot"
-                      style={{
-                        background: a.appointmentLocation.color ?? "var(--c-gray-400)",
-                      }}
-                    />
                     <span className="cal-day-panel__appt-name">
                       {a.patient.name} {a.patient.lastName}
                     </span>
@@ -66,7 +60,6 @@ export function DayPanel({
                         onClose();
                       }}
                     >
-                      <div className="cal-day-panel__blocked-dot" />
                       <span className="cal-day-panel__blocked-time">
                         {fmtTime(bt.startTimeUtc)} - {fmtTime(bt.endTimeUtc)}
                       </span>
