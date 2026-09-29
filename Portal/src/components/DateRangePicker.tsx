@@ -19,13 +19,16 @@ export function DateRangePicker({
   testId,
 }: {
   value: DateRangeValue;
-  onChange: (range: [string, string]) => void;
+  onChange: (range: DateRangeValue) => void;
   popupContainer?: () => HTMLElement | null;
   testId?: string;
 }) {
   const { isDark } = useTheme();
   const handleChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
-    if (!dates || !dates[0] || !dates[1]) return;
+    if (!dates || !dates[0] || !dates[1]) {
+      onChange(null);
+      return;
+    }
     onChange([dates[0].format("YYYY-MM-DD"), dates[1].format("YYYY-MM-DD")]);
   };
 

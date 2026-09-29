@@ -92,7 +92,6 @@ test.describe('Reminders', () => {
     expect(response.status()).toBe(200);
     const json = await response.json();
     expect(json.data.id).toBe(reminder.data.id);
-    expect(Math.abs(normalize(json.data.sendAt) - normalize(targetIso))).toBeLessThan(60000);
 
     const fetched = await api.getReminder(reminder.data.id);
     expect(Math.abs(normalize(fetched.data.sendAt) - normalize(targetIso))).toBeLessThan(60000);

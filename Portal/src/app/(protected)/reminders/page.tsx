@@ -384,7 +384,7 @@ function ActiveRemindersTab({
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
   dateFilter: DateRangeValue;
-  setDateFilter: (v: [string, string]) => void;
+  setDateFilter: (v: DateRangeValue) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
@@ -529,7 +529,7 @@ function HistoryRemindersTab({
   statusFilter: string[];
   setStatusFilter: (v: string[]) => void;
   dateFilter: DateRangeValue;
-  setDateFilter: (v: [string, string]) => void;
+  setDateFilter: (v: DateRangeValue) => void;
   orderBy: string;
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;

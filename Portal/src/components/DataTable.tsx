@@ -28,7 +28,7 @@ export type ColumnFilterConfig =
   | {
       kind: "date-range";
       value: DateRangeValue;
-      onChange: (value: [string, string]) => void;
+      onChange: (value: DateRangeValue) => void;
       testId?: string;
       triggerTestId?: string;
     }

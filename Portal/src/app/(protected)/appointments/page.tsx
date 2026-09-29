@@ -78,10 +78,10 @@ const PAID_OPTIONS = [
 ];
 
 const TYPE_OPTIONS = (types: { id: string; name: string }[]) =>
-  withAllOption(types, (t) => t.name);
+  [{ value: "", label: "Todos" }, ...types.map(({ id, name }) => ({ value: id, label: name }))];
 
 const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
-  withAllOption(locations, (l) => l.name);
+  [{ value: "", label: "Todos" }, ...locations.map(({ id, name }) => ({ value: id, label: name }))];
 
 function AppointmentsPageContent() {
   const { stats, fetchStats } = useFetchAppointmentsStats();
