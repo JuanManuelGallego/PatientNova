@@ -407,7 +407,16 @@ function AppointmentsPageContent() {
                 </div>
               </td>
               <td className="td">
-                {a.appointmentType.name}
+                <span
+                  className="appointment-type-label"
+                >
+                  <DETAIL_ICONS.calendar
+                    size={14}
+                    style={{ color: a.appointmentType.color || "var(--c-gray-400)" }}
+                    aria-hidden="true"
+                  />
+                  {a.appointmentType.name}
+                </span>
               </td>
               <td className="td td--datetime">{fmtDateTime(a.startAt)}</td>
               <td className="td td--muted" style={{ maxWidth: 130 }}>
@@ -452,16 +461,21 @@ function AppointmentsPageContent() {
                 )}
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
-                <AppointmentStatusPill status={a.status} />
-                {a.status === AppointmentStatus.SCHEDULED && (
+                <div className="td-actions">
+                  <AppointmentStatusPill status={a.status} />
+                  {a.status === AppointmentStatus.SCHEDULED && (
                     <button
+                      type="button"
                       onClick={() => handleConfirm(a.id)}
-                      className="btn-pay"
+                      className="btn-table-action"
+                      title="Confirmar cita"
+                      aria-label="Confirmar cita"
                       data-testid={`appointment-confirm-button-${a.id}`}
                     >
-                      Confirmó
+                      <STATUS_ICONS.confirmed size={15} aria-hidden="true" />
                     </button>
-                )}
+                  )}
+                </div>
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
@@ -469,8 +483,15 @@ function AppointmentsPageContent() {
                     <>
                       <PayStatusPill paid={a.paid} />
                       {!a.paid && (
-                        <button onClick={() => handlePay(a.id)} className="btn-pay" data-testid={`appointment-pay-button-${a.id}`}>
-                          Pagó
+                        <button
+                          type="button"
+                          onClick={() => handlePay(a.id)}
+                          className="btn-table-action"
+                          title="Marcar como pagada"
+                          aria-label="Marcar como pagada"
+                          data-testid={`appointment-pay-button-${a.id}`}
+                        >
+                          <DETAIL_ICONS.creditCard size={15} aria-hidden="true" />
                         </button>
                       )}
                     </>

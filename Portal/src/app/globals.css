@@ -829,16 +829,28 @@ body {
   font-size: 12px;
 }
 
-.btn-pay {
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--c-success-light);
-  border: none;
-  border-radius: var(--r-sm);
+.btn-table-action {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--c-gray-200);
+  border-radius: var(--r-md);
   color: var(--c-success);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-table-action:hover {
+  background: var(--c-gray-50);
+  border-color: var(--c-gray-300);
+}
+
+.btn-table-action:focus-visible {
+  outline: 2px solid var(--c-success);
+  outline-offset: 2px;
 }
 
 .btn-primary--block {
@@ -2163,6 +2175,15 @@ tr:hover td {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.appointment-type-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-gray-700);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .td-error__text {
