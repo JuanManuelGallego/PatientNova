@@ -1,10 +1,9 @@
 import Link from "next/link";
 import {
   Appointment,
-  APPT_STATUS_CFG,
   AppointmentStatus,
 } from "@/src/types/Appointment";
-import { CHANNEL_CFG, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
+import { CHANNEL_CFG } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import {
   fmtDate,
@@ -65,7 +64,6 @@ export function AppointmentDrawer({
     );
   }
 
-  const status = APPT_STATUS_CFG[appointment.status];
   const footer = (onEdit || onDelete) ? (
     <>
       {onEdit && (
@@ -98,7 +96,6 @@ export function AppointmentDrawer({
       title={appointment.appointmentType.name}
       eyebrow="Detalles de la cita"
       icon={DETAIL_ICONS.calendar}
-      accent={status.dot}
       status={<AppointmentStatusPill status={appointment.status} />}
       footer={footer}
       onClose={onClose}
@@ -175,7 +172,7 @@ export function AppointmentDrawer({
           <div className="card-list">
             <LinkedCard
               onClick={onViewReminder ? () => onViewReminder(appointment.reminder!) : undefined}
-              accent={REMINDER_STATUS_CONFIG[appointment.reminder.status].dot}
+              icon={DETAIL_ICONS.megaphone}
               testId={`appointment-drawer-reminder-card-${appointment.reminder.id}`}
             >
               <span className="linked-card__header">

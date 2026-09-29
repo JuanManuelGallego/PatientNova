@@ -1,6 +1,6 @@
 import { AppointmentType } from "@/src/types/Appointment";
 
-import { ACTION_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 
 export function AppointmentTypeCard({
   type,
@@ -20,7 +20,6 @@ export function AppointmentTypeCard({
       style={{
         padding: 0,
         overflow: "hidden",
-        borderLeft: `4px solid ${type.color || "#7C3AED"}`,
         opacity: inactive ? 0.6 : 1,
       }}
     >
@@ -32,6 +31,9 @@ export function AppointmentTypeCard({
           gap: 12,
         }}
       >
+        <span className="card-icon-tile" style={{ color: type.color || "#7C3AED" }} aria-hidden="true">
+          <DETAIL_ICONS.calendar size={17} />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{type.name}</div>
           <div

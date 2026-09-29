@@ -90,7 +90,6 @@ export function AuditDrawer({
       title={action.label}
       eyebrow="Registro de actividad"
       icon={DETAIL_ICONS.history}
-      accent={action.color}
       status={<EntityTypePill entityType={log.entityType} />}
       onClose={onClose}
       panelTestId="audit-drawer-panel"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type CSSProperties, type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import {
   ACTION_ICONS,
   PAGINATION_ICONS,
@@ -13,7 +13,6 @@ type DrawerShellProps = {
   title: string;
   eyebrow: string;
   icon: LucideIcon;
-  accent?: string;
   status?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -27,7 +26,6 @@ export function DrawerShell({
   title,
   eyebrow,
   icon: Icon,
-  accent,
   status,
   children,
   footer,
@@ -38,10 +36,6 @@ export function DrawerShell({
 }: DrawerShellProps) {
   const titleId = useId();
   const { ref, handleKeyDown } = useFocusTrap<HTMLElement>(onClose);
-  const style = accent
-    ? ({ "--drawer-accent": accent } as CSSProperties)
-    : undefined;
-
   return (
     <div
       className="drawer-overlay"
@@ -62,7 +56,6 @@ export function DrawerShell({
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={handleKeyDown}
-        style={style}
         data-testid={panelTestId}
       >
         <header className="drawer-header">
@@ -168,30 +161,30 @@ export function Row({
 export function LinkedCard({
   children,
   onClick,
-  accent,
+  icon: Icon,
   testId,
   className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
-  accent?: string;
+  icon?: LucideIcon;
   testId?: string;
   className?: string;
 }) {
   const classes = `linked-card${onClick ? " linked-card--interactive" : ""}${className ? ` ${className}` : ""}`;
-  const style = accent
-    ? ({ "--linked-card-accent": accent } as CSSProperties)
-    : undefined;
-
   if (onClick) {
     return (
       <button
         type="button"
         className={classes}
         onClick={onClick}
-        style={style}
         data-testid={testId}
       >
+        {Icon && (
+          <span className="card-icon-tile" aria-hidden="true">
+            <Icon size={16} />
+          </span>
+        )}
         <span className="linked-card__content">{children}</span>
         <PAGINATION_ICONS.next
           className="linked-card__chevron"
@@ -203,7 +196,12 @@ export function LinkedCard({
   }
 
   return (
-    <div className={classes} style={style} data-testid={testId}>
+    <div className={classes} data-testid={testId}>
+      {Icon && (
+        <span className="card-icon-tile" aria-hidden="true">
+          <Icon size={16} />
+        </span>
+      )}
       <span className="linked-card__content">{children}</span>
     </div>
   );

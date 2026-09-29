@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   Reminder,
-  REMINDER_STATUS_CONFIG,
   ReminderStatus,
   ReminderMode,
   Channel,
@@ -18,7 +17,6 @@ import {
   Row,
 } from "./DrawerUtils";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS, NAV_ICONS } from "@/src/config/icons";
 import { useFetchReminder } from "@/src/api/reminders/useFetchReminder";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
@@ -70,7 +68,6 @@ export function ReminderDrawer({
     );
   }
 
-  const status = REMINDER_STATUS_CONFIG[reminder.status];
   const isActive = reminder.status === ReminderStatus.PENDING || reminder.status === ReminderStatus.QUEUED;
   const isFailed = reminder.status === ReminderStatus.FAILED;
   const retriesExhausted = isFailed && (reminder.retryCount ?? 0) > MAX_RETRIES;
@@ -106,7 +103,6 @@ export function ReminderDrawer({
       title={CHANNEL_CFG[reminder.channel].label}
       eyebrow="Detalle del recordatorio"
       icon={NAV_ICONS.reminders}
-      accent={status.dot}
       status={<ReminderStatusPill status={reminder.status} />}
       footer={footer}
       onClose={onClose}
@@ -155,7 +151,7 @@ export function ReminderDrawer({
           <div className="card-list">
             <LinkedCard
               onClick={onViewAppointment ? () => onViewAppointment(reminder.appointment!) : undefined}
-              accent={APPT_STATUS_CFG[reminder.appointment.status].dot}
+              icon={DETAIL_ICONS.calendar}
               testId={`reminder-drawer-appointment-card-${reminder.appointment.id}`}
             >
               <span className="linked-card__header">

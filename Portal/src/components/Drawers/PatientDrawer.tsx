@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { APPT_STATUS_CFG, Appointment } from "@/src/types/Appointment";
-import { Patient, PATIENT_STATUS_CONFIG, PatientStatus } from "@/src/types/Patient";
-import { Channel, REMINDER_STATUS_CONFIG } from "@/src/types/Reminder";
+import { Appointment } from "@/src/types/Appointment";
+import { Patient, PatientStatus } from "@/src/types/Patient";
+import { Channel } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,
@@ -123,7 +123,6 @@ export function PatientDrawer({
     );
   }
 
-  const status = PATIENT_STATUS_CONFIG[patient.status];
   const footer = (onEdit || onDelete) ? (
     <>
       {onEdit && (
@@ -155,7 +154,6 @@ export function PatientDrawer({
       title={`${patient.name} ${patient.lastName}`}
       eyebrow="Perfil del paciente"
       icon={NAV_ICONS.patients}
-      accent={status.dot}
       status={<PatientStatusPill status={patient.status} />}
       footer={footer}
       onClose={onClose}
@@ -204,7 +202,7 @@ export function PatientDrawer({
                   <LinkedCard
                     key={apt.id}
                     onClick={onViewAppointment ? () => onViewAppointment(apt) : undefined}
-                    accent={APPT_STATUS_CFG[apt.status].dot}
+                    icon={DETAIL_ICONS.calendar}
                     testId={`patient-drawer-appointment-card-${apt.id}`}
                   >
                     <span className="linked-card__header">
@@ -251,7 +249,7 @@ export function PatientDrawer({
                   <LinkedCard
                     key={rem.id}
                     onClick={onViewReminder ? () => onViewReminder(rem) : undefined}
-                    accent={REMINDER_STATUS_CONFIG[rem.status].dot}
+                    icon={NAV_ICONS.reminders}
                     testId={`patient-drawer-reminder-card-${rem.id}`}
                   >
                     <span className="linked-card__header">

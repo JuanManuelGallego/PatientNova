@@ -367,11 +367,11 @@ export default function DashboardPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="dash-nav-card dash-nav-card--accented dash-list-item-link"
-              style={{ "--border-accent": item.accent } as React.CSSProperties}
+              className="dash-nav-card dash-list-item-link"
             >
               <span
-                className="dash-nav-card__icon"
+                className="card-icon-tile dash-nav-card__icon"
+                style={{ color: item.accent }}
                 role="img"
                 aria-label={item.label}
               >
