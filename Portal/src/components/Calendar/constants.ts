@@ -33,31 +33,58 @@ export function apptHour(a: import("@/src/types/Appointment").Appointment): numb
   return new Date(a.startAt).getHours();
 }
 
-export function toStartOfDayISO(d: Date): string {
-  const local = new Date(d);
-  local.setHours(0, 0, 0, 0);
-  return local.toISOString();
+export function toStartOfDayISO(d: Date, timezone?: string): string {
+  return toUtcRangeFromLocalDay(toDateStr(d), timezone).dateFrom;
 }
 
-export function toEndOfDayISO(d: Date): string {
-  const local = new Date(d);
-  local.setHours(23, 59, 59, 999);
-  return local.toISOString();
+export function toEndOfDayISO(d: Date, timezone?: string): string {
+  return toUtcRangeFromLocalDay(toDateStr(d), timezone).dateTo;
 }
 
-export function toUtcRangeFromLocalDay(dateStr: string): {
+function localDateTimeToUtc(dateStr: string, time: string, timezone: string): string {
+  const target = Date.parse(`${dateStr}T${time}Z`);
+  const milliseconds = target % 1000;
+  const wallTime = target - milliseconds;
+  let utc = wallTime;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const parts = Object.fromEntries(
+      formatter.formatToParts(new Date(utc)).map(({ type, value }) => [ type, value ]),
+    );
+    const localAsUtc = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second),
+    );
+    utc += wallTime - localAsUtc;
+  }
+
+  return new Date(utc + milliseconds).toISOString();
+}
+
+export function toUtcRangeFromLocalDay(
+  dateStr: string,
+  timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): {
   dateFrom: string;
   dateTo: string;
 } {
-  const localStart = new Date(`${dateStr}T00:00:00`);
-  localStart.setHours(0, 0, 0, 0);
-
-  const localEnd = new Date(`${dateStr}T00:00:00`);
-  localEnd.setHours(23, 59, 59, 999);
-
   return {
-    dateFrom: localStart.toISOString(),
-    dateTo: localEnd.toISOString(),
+    dateFrom: localDateTimeToUtc(dateStr, "00:00:00.000", timezone),
+    dateTo: localDateTimeToUtc(dateStr, "23:59:59.999", timezone),
   };
 }
 

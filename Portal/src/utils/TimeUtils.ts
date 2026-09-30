@@ -94,9 +94,15 @@ function todayString(): string {
     return new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
-function todayFormattedString(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function todayFormattedString(timezone?: string): string {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(({ type, value }) => [ type, value ]));
+    return `${values.year}-${values.month}-${values.day}`;
 }
 
 const MONTH_NAMES_ES = [
