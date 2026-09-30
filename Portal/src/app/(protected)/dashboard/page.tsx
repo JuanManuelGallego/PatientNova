@@ -13,7 +13,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { PatientStatus } from "@/src/types/Patient";
 import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
-import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
+import { fmtDateTime, fmtRelative, todayFormattedString, todayString } from "@/src/utils/TimeUtils";
 import {
   AppointmentStatusPill,
   ReminderStatusPill,
@@ -34,6 +34,7 @@ import {
 import { CHANNEL_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
+import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 
 export default function DashboardPage() {
   const { stats: patientStats, loading: loadingPatientStats } =
@@ -48,19 +49,17 @@ export default function DashboardPage() {
   const [ showPatientModal, setShowPatientModal ] = useState(false);
 
   const todayFilters = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
+    const timezone = user?.timezone ?? "UTC";
+    const { dateFrom, dateTo } = toUtcRangeFromLocalDay(todayFormattedString(timezone), timezone);
     return {
-      dateFrom: start.toISOString(),
-      dateTo: end.toISOString(),
+      dateFrom,
+      dateTo,
       page: 1,
       pageSize: 5,
       orderBy: "startAt" as const,
       order: "asc" as const,
     };
-  }, []);
+  }, [ user?.timezone ]);
   const { appointments: todayAppts, loading: loadingAppts } =
     useFetchAppointments(todayFilters);
 

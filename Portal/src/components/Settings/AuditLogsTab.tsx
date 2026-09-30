@@ -31,6 +31,8 @@ import {
   SORT_DIRECTION,
   type AuditOrderBy,
 } from "@/src/utils/listQuery";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 
 const ENTITY_OPTIONS: SelectOption[] = withAllOption(
   Object.values(EntityType),
@@ -45,6 +47,7 @@ const ACTION_OPTIONS: SelectOption[] = withAllOption(
 );
 
 export function AuditLogsTab() {
+  const { user } = useAuthContext();
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
   const [entityType, setEntityType] = useQueryState(QUERY_PARAMS.auditEntityType, parseAsArrayOf(parseAsString).withDefault([]));
   const [actionType, setActionType] = useQueryState(QUERY_PARAMS.auditActionType, parseAsArrayOf(parseAsString).withDefault([]));
@@ -67,19 +70,22 @@ export function AuditLogsTab() {
   });
 
   const filters = useMemo<FetchAuditLogsFilters>(
-    () => ({
+    () => {
+      const timezone = user?.timezone ?? "UTC";
+      return {
       entityType: entityType.length ? (entityType as EntityType[]) : undefined,
       entityId: entityId.trim() || undefined,
       actionType: actionType.length ? (actionType as ActionType[]) : undefined,
       search: debouncedSearch.trim() || undefined,
-      dateFrom: dateFilter?.[0] ? `${dateFilter[0]}T00:00:00.000Z` : undefined,
-      dateTo: dateFilter?.[1] ? `${dateFilter[1]}T23:59:59.999Z` : undefined,
+      dateFrom: dateFilter?.[0] ? toUtcRangeFromLocalDay(dateFilter[0], timezone).dateFrom : undefined,
+      dateTo: dateFilter?.[1] ? toUtcRangeFromLocalDay(dateFilter[1], timezone).dateTo : undefined,
       page,
       pageSize: PAGE_SIZE,
       orderBy: orderBy as FetchAuditLogsFilters["orderBy"],
       order,
-    }),
-    [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order],
+      };
+    },
+    [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order, user?.timezone],
   );
 
   const columns = useMemo<ColumnDef[]>(

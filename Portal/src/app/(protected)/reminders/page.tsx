@@ -52,6 +52,8 @@ import {
   parseAsArrayOf,
 } from "nuqs";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 
 enum ActiveTab {
   Active = "Active",
@@ -70,6 +72,7 @@ const STATUS_HISTORY_OPTIONS = withAllOption(
 );
 
 function RemindersPageContent() {
+  const { user } = useAuthContext();
   const { stats, fetchStats } = useFetchRemindersStats();
 
   const [ activeTab, setActiveTab ] = useQueryState(
@@ -131,6 +134,7 @@ function RemindersPageContent() {
 
   const filters = useMemo<FetchRemindersFilters>(
     () => {
+      const timezone = user?.timezone ?? "UTC";
       const tabDefault =
         activeTab === "Active"
           ? [ ReminderStatus.PENDING, ReminderStatus.QUEUED ]
@@ -147,13 +151,13 @@ function RemindersPageContent() {
         page,
         pageSize: PAGE_SIZE,
         search: debouncedSearch.trim() || undefined,
-        dateFrom: dateFilter?.[0] ? `${dateFilter[0]}T00:00:00.000Z` : undefined,
-        dateTo: dateFilter?.[1] ? `${dateFilter[1]}T23:59:59.999Z` : undefined,
+        dateFrom: dateFilter?.[0] ? toUtcRangeFromLocalDay(dateFilter[0], timezone).dateFrom : undefined,
+        dateTo: dateFilter?.[1] ? toUtcRangeFromLocalDay(dateFilter[1], timezone).dateTo : undefined,
         orderBy: orderBy as FetchRemindersFilters["orderBy"],
         order,
       };
     },
-    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, patientId, orderBy, order ],
+    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, patientId, orderBy, order, user?.timezone ],
   );
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =

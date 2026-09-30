@@ -23,8 +23,10 @@ import { MonthView } from "@/src/components/Calendar/MonthView";
 import { WeekView } from "@/src/components/Calendar/WeekView";
 import { DayPanel } from "@/src/components/Calendar/DayPanel";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
+import { useAuthContext } from "@/src/providers/AuthContext";
 
 function CalendarContent() {
+  const { user } = useAuthContext();
   const { updateAppointment } = useUpdateAppointment();
 
   const {
@@ -40,7 +42,7 @@ function CalendarContent() {
     navNext,
     goToday,
     drillToDay,
-  } = useCalendarNavigation();
+  } = useCalendarNavigation(user?.timezone);
 
   const apptFilter: FetchAppointmentsFilters = {
     ...calendarFilters,

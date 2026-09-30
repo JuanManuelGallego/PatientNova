@@ -6,6 +6,7 @@ import { HttpMethods, APPT_TYPE_PRICE, Routes } from '../utils/const';
 import { Env } from '../utils/env';
 import { createTestPatient, createTestAppointment } from '../utils/helpers';
 import { futureDateTime, addHours, futureDate } from '../utils/test-data';
+import { toUtcRangeFromLocalDay } from '../../src/components/Calendar/constants';
 
 test.describe('Appointments', () => {
   test('Create appointment', async ({ page, api, trackedAppointments, trackedPatients }) => {
@@ -368,7 +369,17 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     });
     trackedAppointments.track(otherAppt.data.id);
 
-    const dayStr = startAt.slice(0, 10);
+    const { timezone } = (await api.get('/users/me')).data as unknown as { timezone: string };
+    const dateParts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date(startAt)).map(({ type, value }) => [ type, value ]),
+    );
+    const dayStr = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+    const expectedRange = toUtcRangeFromLocalDay(dayStr, timezone);
 
     await page.goto(Routes.APPOINTMENTS);
     const appts = new AppointmentsPage(page);
@@ -379,8 +390,8 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
 
     const responsePromise = page.waitForResponse((r) =>
       appointmentsEndpointMatches(r.url(), {
-        dateFrom: `${dayStr}T00:00:00.000Z`,
-        dateTo: `${dayStr}T23:59:59.999Z`,
+        dateFrom: expectedRange.dateFrom,
+        dateTo: expectedRange.dateTo,
       }),
     );
     await appts.setDateRange(dayStr, dayStr);

@@ -3,7 +3,7 @@ import { useQueryState, parseAsStringEnum } from "nuqs";
 import { addDays, getWeekStart, toDateStr, toStartOfDayISO, toEndOfDayISO } from "./constants";
 import { ViewMode } from "./types";
 
-export function useCalendarNavigation() {
+export function useCalendarNavigation(timezone?: string) {
   const [ viewMode, setViewMode ] = useQueryState<ViewMode>(
     "view",
     parseAsStringEnum<ViewMode>(Object.values(ViewMode)).withDefault(ViewMode.Week),
@@ -17,13 +17,13 @@ export function useCalendarNavigation() {
   const calendarFilters = (() => {
     if (viewMode === ViewMode.Month) {
       return {
-        dateFrom: toStartOfDayISO(new Date(calYear, calMonth, 1)),
-        dateTo: toEndOfDayISO(new Date(calYear, calMonth + 1, 0)),
+        dateFrom: toStartOfDayISO(new Date(calYear, calMonth, 1), timezone),
+        dateTo: toEndOfDayISO(new Date(calYear, calMonth + 1, 0), timezone),
       };
     } 
       return {
-        dateFrom: toStartOfDayISO(weekStart),
-        dateTo: toEndOfDayISO(addDays(weekStart, 6)),
+        dateFrom: toStartOfDayISO(weekStart, timezone),
+        dateTo: toEndOfDayISO(addDays(weekStart, 6), timezone),
       };
   })();
 
