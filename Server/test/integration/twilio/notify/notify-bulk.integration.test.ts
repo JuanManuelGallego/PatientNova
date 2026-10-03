@@ -215,6 +215,47 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
     expect(bossMocks.send).not.toHaveBeenCalled();
   });
 
+  it('sends EMAIL to patient.email with a per-patient rendered body and subject', async () => {
+    const p1 = await createTestPatient(userId, { email: 'ana@example.com' });
+
+    const res = await invokeBulk(bulkBody({
+      channel: Channel.EMAIL,
+      patientIds: [p1.id],
+      body: 'Asunto: Cita con {{2}}\n\nHola {{1}}',
+      subject: 'Aviso para {{1}}',
+      sharedVariables: { '2': 'Dr. Lopez' },
+    }));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data).toMatchObject({ queuedCount: 1, skippedCount: 0, channel: Channel.EMAIL });
+
+    const reminder = await prisma.reminder.findFirst({ where: { userId } });
+    expect(reminder!.channel).toBe(Channel.EMAIL);
+    expect(reminder!.to).toBe('ana@example.com');
+    expect(reminder!.contentSid).toBeNull();
+    expect(reminder!.body).toBe('Asunto: Cita con Dr. Lopez\n\nHola Maria Garcia');
+    expect(reminder!.subject).toBe('Aviso para Maria Garcia');
+    expect(sendCalls()).toHaveLength(1);
+  });
+
+  it('skips EMAIL patients without an email address', async () => {
+    const noEmail = await createTestPatient(userId);
+    await prisma.patient.update({ where: { id: noEmail.id }, data: { email: null } });
+
+    const res = await invokeBulk(bulkBody({ channel: Channel.EMAIL, patientIds: [noEmail.id], body: 'Hola {{1}}' }));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data).toMatchObject({ queuedCount: 0, skippedCount: 1, skippedPatientIds: [noEmail.id] });
+    expect(await prisma.reminder.count()).toBe(0);
+  });
+
+  it('returns 400 for EMAIL without a body', async () => {
+    const res = await invokeBulk(bulkBody({ channel: Channel.EMAIL }));
+    expect(res.statusCode).toBe(400);
+    expect(await prisma.reminder.count()).toBe(0);
+    expect(bossMocks.send).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when SCHEDULED sendAt is missing', async () => {
     const res = await invokeBulk(bulkBody({ sendMode: ReminderMode.SCHEDULED }));
     expect(res.statusCode).toBe(400);

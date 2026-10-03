@@ -36,6 +36,14 @@ export const config = {
     appointmentMeetingLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID'),
   },
 
+  brevo: {
+    apiKey: requireEnv('BREVO_API_KEY'),
+    apiBaseUrl: process.env.BREVO_API_BASE_URL ?? 'https://api.brevo.com/v3',
+    fromEmail: requireEnv('BREVO_FROM_EMAIL'),
+    fromName: process.env.BREVO_FROM_NAME ?? undefined,
+    webhookSecret: requireEnv('BREVO_WEBHOOK_SECRET'),
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),  // 1 min
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),

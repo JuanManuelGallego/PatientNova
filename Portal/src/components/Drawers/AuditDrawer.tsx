@@ -45,6 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
   status: "Estado",
   type: "Tipo",
   channel: "Canal",
+  subject: "Asunto",
   sendAt: "Programado para",
   sentAt: "Enviado el",
   paid: "Pagado",

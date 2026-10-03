@@ -1,4 +1,4 @@
-import { ReminderStatus } from '../../../generated/prisma/client.ts';
+import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { getMessageStatus } from '../../twilio/client.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
@@ -51,6 +51,8 @@ export async function trackDeliveryWorker(): Promise<void> {
     where: {
       status: ReminderStatus.QUEUED,
       messageId: { not: null },
+      // EMAIL delivery is push-only (Brevo webhook); getMessageStatus only knows Twilio SIDs.
+      channel: { not: Channel.EMAIL },
       updatedAt: { gt: cutoff },
       isDeleted: false,
     },

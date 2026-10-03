@@ -1,4 +1,4 @@
-import { Prisma, ReminderStatus, type Reminder, type Channel } from '../../generated/prisma/client.ts';
+import { Prisma, ReminderStatus, type Reminder, Channel } from '../../generated/prisma/client.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { CreateReminderDto, UpdateReminderDto, ListRemindersQuery, ReminderStatsQuery } from './reminder.schemas.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
@@ -27,6 +27,7 @@ export const reminderRepository = {
         status: dto.status ?? ReminderStatus.PENDING,
         to: dto.to,
         body: dto.body || null,
+        subject: dto.subject || null,
       },
       include: reminderInclude,
     });
@@ -53,7 +54,7 @@ export const reminderRepository = {
       }),
       ...(search && {
         OR: [
-          ...((Object.values({ WHATSAPP: 'WHATSAPP', SMS: 'SMS' }) as Channel[])
+          ...((Object.values(Channel) as Channel[])
             .filter(c => c.toLowerCase().includes(search.toLowerCase()))
             .map(c => ({ channel: c }))),
           { to: { contains: search, mode: 'insensitive' } },
@@ -89,7 +90,7 @@ export const reminderRepository = {
 
     const data = buildUpdateData(
       dto,
-      [ 'channel', 'contentSid', 'contentVariables', 'error', 'messageId', 'sendMode', 'sendAt', 'status', 'body' ],
+      [ 'channel', 'contentSid', 'contentVariables', 'error', 'messageId', 'sendMode', 'sendAt', 'status', 'body', 'subject' ],
     );
 
     // Handle status-based timestamp field
@@ -188,7 +189,9 @@ export const reminderRepository = {
       byStatus[ group.status ] = (group._count as { id: number }).id;
     }
 
-    const byChannel: Record<string, number> = { WHATSAPP: 0, SMS: 0 };
+    const byChannel: Record<string, number> = Object.fromEntries(
+      Object.values(Channel).map(c => [ c, 0 ])
+    );
     for (const group of channelGroups) {
       byChannel[ group.channel ] = (group._count as { id: number }).id;
     }

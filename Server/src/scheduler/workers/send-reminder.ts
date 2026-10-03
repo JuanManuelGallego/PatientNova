@@ -58,6 +58,7 @@ export async function sendReminderWorker([ job ]: Array<{
     result = await dispatchMessage(reminder.channel as Channel, {
       to: reminder.to,
       body: reminder.body,
+      subject: reminder.subject,
       contentSid: reminder.contentSid,
       contentVariables,
     });

@@ -82,6 +82,9 @@ jobs:
       TWILIO_WHATSAPP_USER_REMINDER_FAILED_SID: dummyReminderFailedSid
       TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID: dummyStatusSid
       TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
+      BREVO_API_KEY: xkeysib-dummy
+      BREVO_FROM_EMAIL: no-reply@example.com
+      BREVO_WEBHOOK_SECRET: dummy-brevo-webhook-secret
       AUTH_SECRET: dummy-auth-secret
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: admin@example.com

@@ -72,7 +72,7 @@ export function RemindersTab() {
                   setReminderChannel(channel);
                   updateProfile({ reminderChannel: channel });
                 }}
-                options={Object.values([ Channel.WHATSAPP, Channel.SMS ]).map((ch) => ({
+                options={Object.values(Channel).map((ch) => ({
                   value: ch,
                   label: CHANNEL_CFG[ ch ].label,
                 }))}
@@ -154,6 +154,20 @@ export function RemindersTab() {
                           handleFieldChange({ phoneNumber: value });
                         }}
                       />
+                    </label>
+                    <label className="form-label">
+                      Correo electrónico
+                      <input
+                        className="form-input"
+                        type="email"
+                        value={user?.email ?? ""}
+                        disabled
+                        readOnly
+                        data-testid="reminders-user-email"
+                      />
+                      <span className="form-input-hint">
+                        Se usa el correo de tu cuenta cuando el canal es Email.
+                      </span>
                     </label>
                   </div>
                 </div>

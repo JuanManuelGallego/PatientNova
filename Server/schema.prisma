@@ -61,7 +61,8 @@ model Reminder {
   deletedAt DateTime?
 
   channel Channel
-  to      String  @db.VarChar(30)
+  to      String  @db.VarChar(255)
+  subject String? @db.VarChar(255)
 
   contentSid       String? @db.VarChar(100)
   contentVariables Json?
@@ -96,6 +97,7 @@ model Reminder {
 enum Channel {
   WHATSAPP
   SMS
+  EMAIL
 }
 
 enum ReminderStatus {

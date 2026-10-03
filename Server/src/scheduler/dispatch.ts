@@ -1,11 +1,13 @@
 import { Channel } from "../../generated/prisma/client.ts";
 import { sendSms, sendWhatsApp } from "../twilio/client.js";
+import { sendEmail } from "../twilio/email-client.js";
 import type { NotificationResult } from "../twilio/types.ts";
 import { logger } from "../utils/api/logger.ts";
 
 export interface DispatchOpts {
   to: string;
   body?: string | null;
+  subject?: string | null;
   contentSid?: string | null;
   contentVariables?: Record<string, string> | undefined
 };
@@ -21,6 +23,9 @@ export async function dispatchMessage(channel: Channel, opts: DispatchOpts): Pro
 
     case Channel.SMS:
       return sendSms({ to: opts.to, body: opts.body! });
+
+    case Channel.EMAIL:
+      return sendEmail({ to: opts.to, body: opts.body!, subject: opts.subject ?? null });
 
     default:
       logger.warn({ channel, to: opts.to }, 'Unsupported dispatch channel');

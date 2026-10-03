@@ -4,6 +4,9 @@ import { BULK_SEND_MAX_PATIENTS } from '../config/constants.js';
 
 export const e164Regex = /^\+[1-9]\d{7,14}$/;
 
+// Pragmatic email check (mirrors zod's z.email() default pattern closely enough for recipients).
+export const emailRegex = /^(?!\.)(?!.*\.\.)[A-Za-z0-9_'+\-.]*[A-Za-z0-9_+-]@[A-Za-z0-9][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+
 const e164 = z
   .string()
   .regex(e164Regex, 'Phone must be E.164 format (e.g. +15551234567)');
@@ -32,9 +35,16 @@ export const sendSmsSchema = z.object({
   patientId: z.uuid().optional(),
 });
 
+export const sendEmailSchema = z.object({
+  to: z.email('Must be a valid email address').max(255),
+  subject: z.string().max(255).optional(),
+  body: z.string().min(1, 'body cannot be empty'),
+  patientId: z.uuid().optional(),
+});
+
 export const scheduleSchema = z.object({
   channel: z.enum(Channel),
-  payload: z.union([ sendWhatsAppSchema, sendSmsSchema ]),
+  payload: z.union([ sendWhatsAppSchema, sendSmsSchema, sendEmailSchema ]),
   sentAt: futureIso,
 });
 
@@ -59,13 +69,15 @@ export const bulkSendSchema = z.object({
   sendMode: z.enum(ReminderMode),
   sendAt: futureIso.optional(),
   sharedVariables: contentVariablesRecord.optional(),
-  // Raw message text for SMS with {{N}} placeholders; the server renders it
+  // Raw message text for SMS/EMAIL with {{N}} placeholders; the server renders it
   // per patient (shared variables + patient name). WhatsApp uses templates.
   body: z.string().min(1, 'body cannot be empty').max(1600, 'body exceeds 1600 characters').optional(),
+  // EMAIL only; falls back to DEFAULT_EMAIL_SUBJECT when omitted.
+  subject: z.string().max(255).optional(),
 }).refine(
   (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
   { message: 'sendAt is required when sendMode is SCHEDULED', path: ['sendAt'] }
 ).refine(
-  (d) => d.channel !== Channel.SMS || !!d.body,
-  { message: 'body is required when channel is SMS', path: ['body'] }
+  (d) => (d.channel !== Channel.SMS && d.channel !== Channel.EMAIL) || !!d.body,
+  { message: 'body is required when channel is SMS or EMAIL', path: ['body'] }
 );

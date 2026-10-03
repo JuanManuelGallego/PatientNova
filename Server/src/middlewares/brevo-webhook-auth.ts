@@ -1,0 +1,60 @@
+import { timingSafeEqual } from 'node:crypto';
+import type { Request, Response, NextFunction } from 'express';
+import { config } from '../utils/config/config.js';
+import { logger } from '../utils/api/logger.js';
+
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+/**
+ * Extracts the shared secret from the Authorization header. Brevo webhooks can
+ * be configured with Bearer-token auth, or with Basic auth (credentials in the
+ * webhook URL), in which case the password carries the secret.
+ */
+function extractSecret(header: string | undefined): string | null {
+  if (!header) return null;
+  const [ scheme, value ] = header.split(' ', 2);
+  if (!scheme || !value) return null;
+
+  if (scheme.toLowerCase() === 'bearer') return value.trim();
+
+  if (scheme.toLowerCase() === 'basic') {
+    const decoded = Buffer.from(value, 'base64').toString('utf8');
+    const sep = decoded.indexOf(':');
+    return sep === -1 ? null : decoded.slice(sep + 1);
+  }
+
+  return null;
+}
+
+/**
+ * Brevo does not sign webhook payloads, so requests are authenticated with a
+ * shared secret (BREVO_WEBHOOK_SECRET) compared in constant time.
+ *
+ * Mirrors `twilioWebhookAuth`: skipped in development mode only.
+ */
+export function brevoWebhookAuth(req: Request, res: Response, next: NextFunction): void {
+  if (config.env === 'development') {
+    logger.warn('Brevo webhook authentication SKIPPED (development mode)');
+    return next();
+  }
+
+  const secret = extractSecret(req.headers.authorization);
+
+  if (!secret) {
+    logger.warn({ url: req.originalUrl }, 'Missing Brevo webhook credentials');
+    res.status(403).send('Forbidden');
+    return;
+  }
+
+  if (!safeEqual(secret, config.brevo.webhookSecret)) {
+    logger.warn({ url: req.originalUrl }, 'Invalid Brevo webhook credentials — request rejected');
+    res.status(403).send('Forbidden');
+    return;
+  }
+
+  next();
+}

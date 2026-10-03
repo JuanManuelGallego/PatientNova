@@ -22,6 +22,9 @@ export const REMINDER_SEND_RETRY_LIMIT = 3;
 /** Default locale used for date/time formatting in user-facing messages. */
 export const DEFAULT_LOCALE = 'es-ES';
 
+/** Subject used for EMAIL reminders that don't specify one. */
+export const DEFAULT_EMAIL_SUBJECT = 'Recordatorio';
+
 // ─── Bulk Send ──────────────────────────────────────────────────────────────
 
 /** Max messages processed concurrently by the bulk-send worker. */

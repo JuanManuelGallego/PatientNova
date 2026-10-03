@@ -17,7 +17,7 @@ import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { ERR_MSG_EMPTY } from "@/src/constants/ui";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
-import { validatePhoneNumber } from "@/src/utils/DataValidator";
+import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import {
   computeAutoFilledVariables,
   buildPreview,
@@ -86,7 +86,8 @@ const [ form, setForm ] = useState<ReminderForm>({
 
   const channelAvailable =
     (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-    (channel === Channel.SMS && !!selectedPatient?.smsNumber);
+    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
+    (channel === Channel.EMAIL && !!selectedPatient?.email);
 
   const isValid =
     step === 1
@@ -212,6 +213,22 @@ const [ form, setForm ] = useState<ReminderForm>({
         return false;
       }
     }
+    if (channel === Channel.EMAIL) {
+      if (!form.message.trim()) {
+        setError(ERR_MSG_EMPTY);
+        return false;
+      }
+      if (!selectedPatient.email) {
+        setError(
+          "El paciente no tiene correo electrónico registrado. Agrega el correo o cambia el canal en Configuración.",
+        );
+        return false;
+      }
+      if (!validateEmail(selectedPatient.email)) {
+        setError("El correo electrónico del paciente no es válido");
+        return false;
+      }
+    }
     if (sendMode === ReminderMode.SCHEDULED && !form.sendAt) {
       setError("Selecciona fecha y hora de envío");
       return false;
@@ -235,7 +252,7 @@ const [ form, setForm ] = useState<ReminderForm>({
         contentSid: selectedTemplate.contentSid,
         contentVariables: form.contentVariables,
       }),
-      ...(channel === Channel.SMS && {
+      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
         body: preview,
       }),
       patientId: form.patientId,

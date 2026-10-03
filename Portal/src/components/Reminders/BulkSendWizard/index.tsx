@@ -61,10 +61,13 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
     setSending(true);
     setError(null);
     try {
-      // SMS has no WhatsApp content template: send the raw message text and
-      // let the server render {{N}} placeholders per patient.
+      // SMS/EMAIL have no WhatsApp content template: send the raw message text and
+      // let the server render {{N}} placeholders per patient (for EMAIL the
+      // leading "Asunto:" line becomes the subject).
       const body =
-        channel === Channel.SMS ? TWILIO_CONFIG[selectedTemplate]?.template ?? "" : undefined;
+        channel === Channel.SMS || channel === Channel.EMAIL
+          ? TWILIO_CONFIG[selectedTemplate]?.template ?? ""
+          : undefined;
       await bulkSend({
         channel,
         templateKey: selectedTemplate,

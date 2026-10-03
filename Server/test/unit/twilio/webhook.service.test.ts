@@ -31,13 +31,19 @@ vi.mock('../../../src/twilio/client.js', () => ({
   sendSms: vi.fn(),
 }));
 
+vi.mock('../../../src/twilio/email-client.js', () => ({
+  sendEmail: vi.fn(),
+}));
+
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { sendWhatsAppFreeForm, sendWhatsApp, sendSms } from '../../../src/twilio/client.js';
+import { sendEmail } from '../../../src/twilio/email-client.js';
 
 const mockPrisma = vi.mocked(prisma) as any;
 const mockSendWhatsAppFreeForm = vi.mocked(sendWhatsAppFreeForm);
 const mockSendWhatsApp = vi.mocked(sendWhatsApp);
 const mockSendSms = vi.mocked(sendSms);
+const mockSendEmail = vi.mocked(sendEmail);
 
 // Import after mocks
 import { TwilioWebhookService } from '../../../src/twilio/webhook.service.js';
@@ -209,6 +215,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
       reminderChannel: 'WHATSAPP',
       whatsappNumber: '+15559876543',
       phoneNumber: '+15551112222',
+      email: 'dr.smith@example.com',
     },
   };
 
@@ -235,6 +242,25 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
     await service.notifyUserOfStatusUpdate('appt-1', 'CONFIRMED');
 
     expect(mockSendSms).toHaveBeenCalledWith(expect.objectContaining({ to: '+15551112222' }));
+  });
+
+  it('sends an email notification when user has EMAIL channel', async () => {
+    const emailAppointment = {
+      ...fakeAppointment,
+      user: { ...fakeAppointment.user, reminderChannel: 'EMAIL' },
+    };
+    mockPrisma.appointment.findUnique.mockResolvedValue(emailAppointment);
+    mockSendEmail.mockResolvedValue({} as never);
+
+    await service.notifyUserOfStatusUpdate('appt-1', 'CONFIRMED');
+
+    expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'dr.smith@example.com',
+      subject: expect.stringContaining('John Doe'),
+      body: expect.stringContaining('John Doe'),
+    }));
+    expect(mockSendSms).not.toHaveBeenCalled();
+    expect(mockSendWhatsApp).not.toHaveBeenCalled();
   });
 
   it('skips notification when user has reminderActive=false', async () => {

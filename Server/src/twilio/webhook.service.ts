@@ -1,5 +1,6 @@
 import { AppointmentStatus, Channel, type Reminder } from '../../generated/prisma/client.ts';
 import { sendSms, sendWhatsApp, sendWhatsAppFreeForm } from './client.js';
+import { sendEmail } from './email-client.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { logger } from '../utils/api/logger.js';
 import type { SendWhatsAppRequest } from './types';
@@ -230,10 +231,17 @@ export class TwilioWebhookService {
 
                 const sendSmsRequest: SendSmsRequest = {
                     to: user.phoneNumber,
-                    body: `Hola, ${notificationVars.userDisplayName}. Le informamos que el/la paciente ${notificationVars.patientName} ha ${notificationVars.statusText} su cita programada para el día ${notificationVars.appointmentDate} a las ${notificationVars.appointmentTime}. Feliz dia`
+                    body: this.buildStatusUpdateText(notificationVars),
                 }
 
                 await sendSms(sendSmsRequest);
+            }
+            else if (user.reminderChannel === Channel.EMAIL) {
+                await sendEmail({
+                    to: user.email,
+                    subject: `Cita ${notificationVars.statusText} — ${notificationVars.patientName}`,
+                    body: this.buildStatusUpdateText(notificationVars),
+                });
             }
 
             logger.info(
@@ -244,6 +252,10 @@ export class TwilioWebhookService {
             logger.error({ err, appointmentId }, 'Failed to send appointment status update notification');
             throw err;
         }
+    }
+
+    private buildStatusUpdateText(vars: AppointmentNotificationVars): string {
+        return `Hola, ${vars.userDisplayName}. Le informamos que el/la paciente ${vars.patientName} ha ${vars.statusText} su cita programada para el día ${vars.appointmentDate} a las ${vars.appointmentTime}. Feliz dia`;
     }
 
     /**

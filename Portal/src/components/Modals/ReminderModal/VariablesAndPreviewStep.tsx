@@ -37,7 +37,7 @@ export function VariablesAndPreviewStep({
           {preview.length} / 1600 caracteres
         </span>
       </label>
-      {channel === Channel.SMS && (
+      {(channel === Channel.SMS || channel === Channel.EMAIL) && (
         <label className="form-label">
           <RequiredField label="Mensaje personalizado (opcional)" />
           <textarea

@@ -33,7 +33,8 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   The committed `generated/prisma` client is typechecked, so a stale client surfaces
   as `tsc` errors across many files.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK
-  (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, and `src/scheduler/dispatch.js`.
+  (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, `src/twilio/email-client.js`
+  (Brevo REST API, EMAIL channel; unit tests stub global `fetch`), and `src/scheduler/dispatch.js`.
   Do not add real network calls to integration tests.
 - **`reminderJobManager` is mocked** in tests that exercise `reminderService`
   methods depending on pg-boss (`cancel`, `softDelete`, `restore`, `update`
@@ -48,7 +49,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `36` files, `431` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -70,11 +71,13 @@ Suite: `27` files, `317` tests, all against real Postgres, `tsc --noEmit` clean.
 | Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
 | Twilio status callback (route) | `test/integration/twilio/status-callback.routes.integration.test.ts` | `POST /webhooks/twilio/status`: HMAC auth middleware valid sig → 200 + service; missing/bad/tampered sig → 403; service mocked |
 | Twilio status callback (svc) | `test/integration/twilio/message-status.service.integration.test.ts` | `processMessageStatusCallback`: delivered→SENT, failed→FAILED+resolved error, queued no-op, ghost sid no-op, out-of-order guard (late FAILED wins, stale SENT ignored), tenant isolation by messageId |
-| Notify (routes) | `test/integration/twilio/notify/notify.integration.test.ts` | POST /whatsapp & /sms → create+send+SENT; ownership 404; Twilio-failure → FAILED (jobManager + twilio mocked) |
-| Bulk send (routes) | `test/integration/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, SMS body render per patient (`{{N}}` placeholders) + missing-body 400, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
+| Notify (routes) | `test/integration/twilio/notify/notify.integration.test.ts` | POST /whatsapp, /sms & /email → create+send+QUEUED; email recipient 400; ownership 404; provider failure → FAILED (jobManager + twilio + email-client mocked) |
+| Brevo webhook (route) | `test/integration/twilio/brevo-webhook.routes.integration.test.ts` | `POST /webhooks/brevo/events`: shared secret via Bearer or Basic password → 200 + service (single event or batch array); missing/wrong/unsupported scheme → 403; non-object payload 400; service mocked |
+| Brevo events (svc) | `test/integration/twilio/brevo-events.service.integration.test.ts` | `processBrevoEvents`: delivered→SENT, hard_bounce/blocked/invalid_email/error→FAILED+reason+EMAIL failure alert, request/deferred/soft_bounce/opened/spam no-op, out-of-order guard, ghost id no-op, batch continues past bad events |
+| Bulk send (routes) | `test/integration/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, SMS body render per patient (`{{N}}` placeholders) + missing-body 400, EMAIL to `patient.email` with rendered body+subject / no-email skip / missing-body 400, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
 | Scheduler | `test/integration/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
-| Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered), `dailyReminder` (dispatch mock, `config` hour pin) |
-| Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter (dispatch mock) |
+| Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered, EMAIL not polled), `dailyReminder` (WhatsApp + EMAIL; dispatch mock, `config` hour pin) |
+| Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
 | Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |

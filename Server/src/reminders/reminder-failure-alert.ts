@@ -84,6 +84,7 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
             reminderChannel: true,
             whatsappNumber: true,
             phoneNumber: true,
+            email: true,
           },
         },
         patient: {
@@ -113,7 +114,11 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
     const userName = user.displayName?.trim() || fullName(user.firstName, user.lastName);
     const patientName = fullName(patient.name, patient.lastName);
     const isWhatsApp = user.reminderChannel === Channel.WHATSAPP;
-    const to = isWhatsApp ? user.whatsappNumber : user.phoneNumber;
+    const to = isWhatsApp
+      ? user.whatsappNumber
+      : user.reminderChannel === Channel.EMAIL
+        ? user.email
+        : user.phoneNumber;
 
     if (!to) {
       await logAlertAudit({
@@ -140,6 +145,7 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
         : {
             to,
             body: `Hola, ${userName}.\n\nLe informamos que el recordatorio del paciente ${patientName} falló. Por favor, verifique la información en el sistema.\n\nFeliz día`,
+            ...(user.reminderChannel === Channel.EMAIL && { subject: `Recordatorio fallido — ${patientName}` }),
           });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Alert dispatch threw';

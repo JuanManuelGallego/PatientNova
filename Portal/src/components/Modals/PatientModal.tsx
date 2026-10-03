@@ -69,6 +69,14 @@ export function PatientModal({
     !!user?.nationalId &&
     !!user?.bankingKey &&
     !!user.consentDocument;
+  // Welcome message recipient for the user's reminder channel.
+  const welcomeContact = (p: { whatsappNumber?: string | null; smsNumber?: string | null; email?: string | null }) =>
+    user?.reminderChannel === Channel.WHATSAPP
+      ? p.whatsappNumber
+      : user?.reminderChannel === Channel.SMS
+        ? p.smsNumber
+        : p.email;
+  const hasWelcomeContact = !!welcomeContact(form);
 
   const set =
     (field: keyof typeof form) =>
@@ -111,9 +119,7 @@ export function PatientModal({
           if (user && canSendWelcome) {
             notify(user.reminderChannel, {
               patientId: patient.id,
-              to: user.reminderChannel === Channel.WHATSAPP
-                ? patient.whatsappNumber!
-                : patient.smsNumber!,
+              to: welcomeContact(patient)!,
               sendMode: ReminderMode.IMMEDIATE,
               sendAt: new Date().toISOString(),
               body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
@@ -249,17 +255,17 @@ export function PatientModal({
                     paddingBottom: 4,
                     userSelect: "none",
                     cursor:
-                      !form.whatsappNumber && !form.smsNumber
+                      !hasWelcomeContact
                         ? "not-allowed"
                         : "pointer",
-                    opacity: !form.whatsappNumber && !form.smsNumber ? 0.5 : 1,
+                    opacity: !hasWelcomeContact ? 0.5 : 1,
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={sendWelcomeMessage}
                     onChange={(e) => setSendWelcomeMessage(e.target.checked)}
-                    disabled={!form.whatsappNumber && !form.smsNumber}
+                    disabled={!hasWelcomeContact}
                     style={{ width: 15, height: 15 }}
                     data-testid="patient-welcome-checkbox"
                   />

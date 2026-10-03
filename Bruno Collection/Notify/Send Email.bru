@@ -1,0 +1,23 @@
+meta {
+  name: Send Email
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/notify/email
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "to": "maria@example.com",
+    "subject": "Recordatorio de cita",
+    "body": "Hola Maria, le recordamos su cita del 15 de junio a las 10:00 AM."
+  }
+}

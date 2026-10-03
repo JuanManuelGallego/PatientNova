@@ -15,7 +15,79 @@ export interface MessageStatusCallback {
   errorMessage?: string | null;
 }
 
-const JOB_CTX = { actorId: 'twilio-status-callback', actorDisplayName: 'Twilio Status Callback' };
+export interface DeliveryStatusActor {
+  actorId: string;
+  actorDisplayName: string;
+}
+
+const JOB_CTX: DeliveryStatusActor = { actorId: 'twilio-status-callback', actorDisplayName: 'Twilio Status Callback' };
+
+/**
+ * Applies a provider delivery status (already mapped to a ReminderStatus) to the
+ * reminder identified by `messageId`. Shared by the Twilio status callback and
+ * the Brevo webhook so both channels follow the same rules:
+ * ghost ids are ignored, out-of-order updates never downgrade a status, and a
+ * FAILED transition triggers the failure alert.
+ */
+export async function applyReminderDeliveryStatus(params: {
+  messageId: string;
+  mappedStatus: ReminderStatus;
+  error: string | null;
+  actor: DeliveryStatusActor;
+  /** Spanish label for the audit description, e.g. "callback de Twilio". */
+  sourceLabel: string;
+}): Promise<void> {
+  const { messageId, mappedStatus, actor, sourceLabel } = params;
+
+  const reminder = await prisma.reminder.findFirst({
+    where: { messageId, isDeleted: false },
+    select: { id: true, status: true, userId: true, patient: true },
+  });
+
+  if (!reminder) {
+    logger.debug({ messageId }, 'No active reminder for delivery status — ignoring');
+    return;
+  }
+
+  if (statusRank(mappedStatus) < statusRank(reminder.status)) {
+    logger.debug(
+      { messageId, from: reminder.status, to: mappedStatus },
+      'Ignoring out-of-order status callback',
+    );
+    return;
+  }
+
+  if (mappedStatus === reminder.status) {
+    return;
+  }
+
+  const error = mappedStatus === ReminderStatus.FAILED ? params.error : null;
+
+  await prisma.reminder.update({
+    where: { id: reminder.id },
+    data: { status: mappedStatus, error },
+  });
+
+  await runInAuditContext(actor, () =>
+    logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: reminder.id,
+      actionType: ActionType.UPDATE,
+      source: ActionSource.JOB,
+      description: `Estado de entrega actualizado vía ${sourceLabel} para paciente ${reminder.patient?.name ?? ''} ${reminder.patient?.lastName ?? ''}`,
+      affectedFields: ['status', 'error'],
+      fieldsBefore: { status: reminder.status },
+      fieldsAfter: { status: mappedStatus, error },
+      userId: reminder.userId,
+    }),
+  );
+
+  if (mappedStatus === ReminderStatus.FAILED) {
+    await sendReminderFailureAlert(reminder.id);
+  }
+
+  logger.info({ messageId, reminderId: reminder.id, status: mappedStatus, actor: actor.actorId }, 'Reminder delivery status updated');
+}
 
 export async function processMessageStatusCallback(payload: MessageStatusCallback): Promise<void> {
   const { messageSid, messageStatus } = payload;
@@ -35,52 +107,11 @@ export async function processMessageStatusCallback(payload: MessageStatusCallbac
     return;
   }
 
-  const reminder = await prisma.reminder.findFirst({
-    where: { messageId: messageSid, isDeleted: false },
-    select: { id: true, status: true, userId: true, patient: true },
+  await applyReminderDeliveryStatus({
+    messageId: messageSid,
+    mappedStatus,
+    error: resolveTwilioError(payload.errorCode ? Number(payload.errorCode) : null, payload.errorMessage ?? null),
+    actor: JOB_CTX,
+    sourceLabel: 'callback de Twilio',
   });
-
-  if (!reminder) {
-    logger.debug({ messageSid }, 'No active reminder for status callback — ignoring');
-    return;
-  }
-
-  if (statusRank(mappedStatus) < statusRank(reminder.status)) {
-    logger.debug(
-      { messageSid, from: reminder.status, to: mappedStatus },
-      'Ignoring out-of-order status callback',
-    );
-    return;
-  }
-
-  if (mappedStatus === reminder.status) {
-    return;
-  }
-
-  const error = mappedStatus === ReminderStatus.FAILED ? resolveTwilioError(payload.errorCode ? Number(payload.errorCode) : null, payload.errorMessage ?? null) : null;
-
-  await prisma.reminder.update({
-    where: { id: reminder.id },
-    data: { status: mappedStatus, error },
-  });
-
-  await runInAuditContext(JOB_CTX, () =>
-    logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: reminder.id,
-      actionType: ActionType.UPDATE,
-      source: ActionSource.JOB,
-      description: `Estado de entrega actualizado vía callback de Twilio para paciente ${reminder.patient?.name ?? ''} ${reminder.patient?.lastName ?? ''}`,
-      affectedFields: ['status', 'error'],
-      fieldsBefore: { status: reminder.status },
-      fieldsAfter: { status: mappedStatus, error },
-      userId: reminder.userId,
-    }),
-  );
-
-  if (mappedStatus === ReminderStatus.FAILED) {
-    await sendReminderFailureAlert(reminder.id);
-  }
-
-  logger.info({ messageSid, reminderId: reminder.id, status: mappedStatus }, 'Reminder status updated via Twilio callback');
 }
