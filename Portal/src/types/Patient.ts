@@ -1,6 +1,6 @@
 import { Appointment, AppointmentType } from "./Appointment";
 import { MedicalRecord } from "./MedicalRecord";
-import { Reminder } from "./Reminder";
+import { Channel, Reminder } from "./Reminder";
 
 export enum PatientStatus {
   ACTIVE = "ACTIVE",
@@ -25,6 +25,9 @@ export interface Patient {
   smsNumber?: string | null;
   email?: string | null;
 
+  /** Channel used for every message sent to this patient. */
+  reminderChannel: Channel;
+
   dateOfBirth?: string | null;
   notes?: string | null;
   appointmentTypeId?: string | null;
@@ -37,6 +40,20 @@ export interface Patient {
   reminders?: Reminder[];
   medicalRecord?: MedicalRecord;
   appointmentType?: AppointmentType;
+}
+
+type PatientContacts = Pick<Patient, "whatsappNumber" | "smsNumber" | "email">;
+
+/** The patient's address for a channel (defaults to their reminderChannel). */
+export function getPatientContact(
+  p: PatientContacts & { reminderChannel?: Channel },
+  channel: Channel = p.reminderChannel ?? Channel.WHATSAPP,
+): string | null | undefined {
+  return channel === Channel.WHATSAPP
+    ? p.whatsappNumber
+    : channel === Channel.SMS
+      ? p.smsNumber
+      : p.email;
 }
 
 export interface FetchPatientsFilters {

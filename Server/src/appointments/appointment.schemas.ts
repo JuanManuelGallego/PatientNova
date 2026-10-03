@@ -2,6 +2,7 @@ import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../
 import { z } from 'zod';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
 import { isValidIANATimezone } from '../utils/time/time-utils.ts';
+import { emailRegex } from '../utils/validation/middleware.ts';
 
 const timezoneSchema = z.string().max(50).optional().refine(
   tz => !tz || isValidIANATimezone(tz),
@@ -20,6 +21,9 @@ const reminderInlineSchema = z.object({
 }).refine(
   (d) => d.sendMode === ReminderMode.IMMEDIATE || !!d.sendAt,
   { message: 'sendAt is required when sendMode is SCHEDULED', path: ['sendAt'] }
+).refine(
+  (d) => d.channel !== Channel.EMAIL || emailRegex.test(d.to),
+  { message: 'Must be a valid email address', path: ['to'] }
 );
 
 export const createAppointmentSchema = z.object({

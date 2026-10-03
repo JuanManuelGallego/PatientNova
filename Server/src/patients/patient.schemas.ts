@@ -1,4 +1,4 @@
-import { PatientStatus } from '../../generated/prisma/client.ts';
+import { Channel, PatientStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
 import { e164OrEmpty } from '../utils/validation/middleware.js';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
@@ -9,6 +9,7 @@ export const createPatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.email('Must be a valid email address').nullish(),
+  reminderChannel: z.enum(Channel).optional(),
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).default(PatientStatus.ACTIVE),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
@@ -20,6 +21,7 @@ export const updatePatientSchema = z.object({
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
   email: z.email('Must be a valid email address').nullish(),
+  reminderChannel: z.enum(Channel).optional(),
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).optional(),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),

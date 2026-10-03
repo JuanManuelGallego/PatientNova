@@ -12,6 +12,12 @@ export interface SendSmsRequest {
   body: string;
 }
 
+export interface SendEmailRequest {
+  to: string;
+  body: string;
+  subject?: string | null;
+}
+
 export interface ScheduleRequest {
   channel: Channel;
   payload: SendWhatsAppRequest /*| SendSmsRequest*/;

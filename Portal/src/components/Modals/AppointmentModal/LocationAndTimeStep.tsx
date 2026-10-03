@@ -6,7 +6,7 @@ import {
   AppointmentLocation,
 } from "@/src/types/Appointment";
 import { ReminderType, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
-import { Patient } from "@/src/types/Patient";
+import { Patient, getPatientContact } from "@/src/types/Patient";
 import { CHANNEL_ICONS, STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
@@ -42,11 +42,7 @@ export function LocationAndTimeStep({
     setForm((f) => ({ ...f, [field]: value }));
 
   const patientContact = selectedPatient
-    ? reminderChannel === Channel.WHATSAPP
-      ? selectedPatient.whatsappNumber
-      : reminderChannel === Channel.SMS
-        ? selectedPatient.smsNumber
-        : selectedPatient.email
+    ? getPatientContact(selectedPatient, reminderChannel)
     : undefined;
 
   const hasAnyContact =
@@ -272,9 +268,8 @@ export function LocationAndTimeStep({
                 </div>
               ) : (
                 <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <STATUS_ICONS.warning size={14} /> No tienes un canal de
-                  recordatorio configurado. Ve a{" "}
-                  <strong>Configuración → Recordatorios</strong> para definirlo.
+                  <STATUS_ICONS.warning size={14} /> Selecciona un paciente para
+                  ver su canal de recordatorios.
                 </div>
               )}
               {reminderChannel && !patientContact && (
@@ -285,7 +280,8 @@ export function LocationAndTimeStep({
                     : reminderChannel === Channel.SMS
                       ? "número de SMS"
                       : "correo electrónico"}{" "}
-                  registrado. El recordatorio no podrá enviarse.
+                  registrado. Agrega el dato o cambia el canal de recordatorios
+                  del paciente.
                 </div>
               )}
             </div>

@@ -19,7 +19,9 @@ model Patient {
   smsNumber      String? @db.VarChar(20)
   email          String? @db.VarChar(255)
 
-  notes             String? @db.Text
+  reminderChannel Channel @default(WHATSAPP)
+
+  notes            String? @db.Text
   appointmentTypeId String? @db.Uuid
 
   status    PatientStatus @default(ACTIVE)
@@ -61,7 +63,8 @@ model Reminder {
   deletedAt DateTime?
 
   channel Channel
-  to      String  @db.VarChar(30)
+  to      String  @db.VarChar(255)
+  subject String? @db.VarChar(255)
 
   contentSid       String? @db.VarChar(100)
   contentVariables Json?
@@ -96,6 +99,7 @@ model Reminder {
 enum Channel {
   WHATSAPP
   SMS
+  EMAIL
 }
 
 enum ReminderStatus {

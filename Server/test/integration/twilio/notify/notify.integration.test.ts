@@ -20,9 +20,14 @@ vi.mock('../../../../src/scheduler/reminder-job-manager.js', () => ({
   },
 }));
 
+// Mock the Brevo email boundary for the EMAIL channel.
+vi.mock('../../../../src/twilio/email-client.js', () => ({
+  sendEmail: vi.fn().mockResolvedValue({ success: true, messageSid: '<202610021200.123@smtp-relay.mailin.fr>', channel: 'EMAIL', to: 'maria@example.com' }),
+}));
+
 import { prisma } from '../../../../src/utils/prisma/prisma-client.js';
 import { notifyRouter } from '../../../../src/twilio/notify-sender.routes.js';
-import { createTestUser, createTestPatient } from '../../helpers.js';
+import { createTestUser, createTestPatient, invokeRoute } from '../../helpers.js';
 import { ReminderStatus, Channel } from '../../../../generated/prisma/client.ts';
 
 let userId: string;
@@ -76,7 +81,7 @@ async function invoke(method: 'post', path: string, req: any, res: any) {
   }
   // The async handler chain resolves on the microtask/timer queue; poll until
   // the response is settled (asyncHandler does not surface its promise).
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 300; i++) {
     await new Promise((r) => setTimeout(r, 10));
     if (res.statusCode !== 0) break;
   }
@@ -159,5 +164,79 @@ describe('notify routes (integration, mocked Twilio)', () => {
     expect(reminder).toBeTruthy();
     expect(reminder!.status).toBe(ReminderStatus.FAILED);
     expect(reminder!.error).toBe('Twilio down');
+  });
+
+  it('POST /email creates a reminder, sends, and marks it QUEUED', async () => {
+    const req = {
+      user: { id: userId },
+      body: { to: 'maria@example.com', subject: 'Recordatorio', body: 'Hola Maria', patientId },
+      params: {},
+      ip: '127.0.0.1',
+    };
+    const res = makeRes();
+
+    await invoke('post', '/email', req as any, res);
+
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).data.messageSid).toBe('<202610021200.123@smtp-relay.mailin.fr>');
+
+    const reminder = await prisma.reminder.findFirst({ where: { userId, channel: Channel.EMAIL } });
+    expect(reminder).toBeTruthy();
+    expect(reminder!.status).toBe(ReminderStatus.QUEUED);
+    expect(reminder!.messageId).toBe('<202610021200.123@smtp-relay.mailin.fr>');
+    expect(reminder!.to).toBe('maria@example.com');
+    expect(reminder!.subject).toBe('Recordatorio');
+    expect(reminder!.body).toBe('Hola Maria');
+  });
+
+  it('POST /email rejects a non-email recipient with 400', async () => {
+    // invokeRoute stops at validateBody's 400 like Express does; the local
+    // invoke() would keep running the handler in the background.
+    const res = await invokeRoute(notifyRouter, 'post', '/email', {
+      user: { id: userId },
+      body: { to: '+57300123456', body: 'Hola', patientId },
+      ip: '127.0.0.1',
+    });
+
+    expect(res.statusCode).toBe(400);
+    const reminder = await prisma.reminder.findFirst({ where: { userId, channel: Channel.EMAIL } });
+    expect(reminder).toBeNull();
+  });
+
+  it('POST /email returns 404 when the patient is not owned by the user', async () => {
+    const otherPatient = await createTestPatient((await createTestUser()).id);
+    const req = {
+      user: { id: userId },
+      body: { to: 'maria@example.com', body: 'Hola', patientId: otherPatient.id },
+      params: {},
+      ip: '127.0.0.1',
+    };
+    const res = makeRes();
+
+    await invoke('post', '/email', req as any, res);
+
+    expect(res.statusCode).toBe(404);
+    const reminder = await prisma.reminder.findFirst({ where: { patientId: otherPatient.id } });
+    expect(reminder).toBeNull();
+  });
+
+  it('POST /email marks the reminder FAILED when Brevo rejects the send', async () => {
+    const { sendEmail } = await import('../../../../src/twilio/email-client.js');
+    (sendEmail as any).mockRejectedValueOnce(new Error('Sender is not valid'));
+
+    const req = {
+      user: { id: userId },
+      body: { to: 'maria@example.com', body: 'Hola', patientId },
+      params: {},
+      ip: '127.0.0.1',
+    };
+    const res = makeRes();
+
+    await invoke('post', '/email', req as any, res);
+
+    expect(res.statusCode).toBe(500);
+    const reminder = await prisma.reminder.findFirst({ where: { userId, channel: Channel.EMAIL } });
+    expect(reminder!.status).toBe(ReminderStatus.FAILED);
+    expect(reminder!.error).toBe('Sender is not valid');
   });
 });

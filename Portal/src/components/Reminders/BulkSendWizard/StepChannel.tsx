@@ -1,13 +1,12 @@
 "use client";
 
 import { memo } from "react";
-import { ReminderMode, CHANNEL_CFG } from "@/src/types/Reminder";
+import { ReminderMode } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { StepChannelProps } from "./types";
-import { CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { STATUS_ICONS } from "@/src/config/icons";
 
 export const StepChannel = memo(function StepChannel({
-  channel,
   sendMode,
   setMode,
   sentAt,
@@ -21,38 +20,26 @@ export const StepChannel = memo(function StepChannel({
     >
       <div>
         <div className="wizard-section-title">Canal de notificación</div>
-        {channel ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "12px 16px",
-              borderRadius: 8,
-              background: "var(--c-brand-50, #f0f7ff)",
-              border: "1px solid var(--c-brand-200, #bfdbfe)",
-              fontSize: 14,
-              color: "var(--c-brand)",
-            }}
-          >
-            {(() => {
-              const Icon = CHANNEL_ICONS[channel];
-              return Icon ? <Icon size={20} /> : null;
-            })()}
-            <span>
-              Los mensajes se enviarán por{" "}
-              <strong>{CHANNEL_CFG[channel].label}</strong>. Para cambiarlo, ve
-              a <strong>Configuración → Recordatorios</strong>.
-            </span>
-          </div>
-        ) : (
-          <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <STATUS_ICONS.warning size={14} /> No tienes un canal de
-            recordatorio configurado. Ve a{" "}
-            <strong>Configuración → Recordatorios</strong> para definirlo antes
-            de enviar recordatorios masivos.
-          </div>
-        )}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 16px",
+            borderRadius: 8,
+            background: "var(--c-brand-50, #f0f7ff)",
+            border: "1px solid var(--c-brand-200, #bfdbfe)",
+            fontSize: 14,
+            color: "var(--c-brand)",
+          }}
+        >
+          <STATUS_ICONS.info size={20} />
+          <span>
+            Cada paciente recibe el mensaje por su{" "}
+            <strong>canal de recordatorios</strong> preferido (configurable en
+            su ficha).
+          </span>
+        </div>
       </div>
       <div>
         <div className="wizard-section-title">Tipo de envío</div>
@@ -98,9 +85,7 @@ export const StepChannel = memo(function StepChannel({
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           onClick={onNext}
-          disabled={
-            !channel || (sendMode === ReminderMode.SCHEDULED && !sentAt)
-          }
+          disabled={sendMode === ReminderMode.SCHEDULED && !sentAt}
           className="btn-primary"
           data-testid="bulk-send-next-button"
         >

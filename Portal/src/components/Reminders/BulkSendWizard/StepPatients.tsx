@@ -1,14 +1,14 @@
 "use client";
 
 import { memo } from "react";
-import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { CHANNEL_CFG } from "@/src/types/Reminder";
+import { getPatientContact } from "@/src/types/Patient";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { ACTION_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, CHANNEL_ICONS } from "@/src/config/icons";
 import { StepPatientsProps } from "./types";
 
 export const StepPatients = memo(function StepPatients({
   eligible,
-  channel,
   selected,
   toggleAll,
   toggleOne,
@@ -63,7 +63,8 @@ export const StepPatients = memo(function StepPatients({
               fontSize: 14,
             }}
           >
-            Ningún paciente activo tiene número de {CHANNEL_CFG[channel].label}.
+            Ningún paciente activo tiene datos de contacto para su canal de
+            recordatorios.
           </div>
         )}
         {eligible.map((p) => (
@@ -87,12 +88,16 @@ export const StepPatients = memo(function StepPatients({
               <div className="patient-preview__name">
                 {p.name} {p.lastName}
               </div>
-              <div className="patient-preview__detail">
-                {channel === Channel.WHATSAPP
-                  ? p.whatsappNumber
-                  : channel === Channel.SMS
-                    ? p.smsNumber
-                    : p.email}
+              <div
+                className="patient-preview__detail"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+                title={CHANNEL_CFG[p.reminderChannel].label}
+              >
+                {(() => {
+                  const Icon = CHANNEL_ICONS[p.reminderChannel];
+                  return Icon ? <Icon size={13} /> : null;
+                })()}
+                {getPatientContact(p)}
               </div>
             </div>
           </div>

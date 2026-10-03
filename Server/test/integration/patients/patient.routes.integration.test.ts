@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { patientRouter } from '../../../src/patients/patient.routes.js';
 import { createTestUser, createTestPatient, invokeRoute } from '../helpers.js';
-import { PatientStatus } from '../../../generated/prisma/client.ts';
+import { Channel, PatientStatus } from '../../../generated/prisma/client.ts';
 
 let userId: string;
 
@@ -67,6 +67,34 @@ describe('patient routes (integration)', () => {
       baseReq({ params: { id: otherPatient.id } }),
     );
     expect(res.statusCode).toBe(404);
+  });
+
+  it('POST / defaults reminderChannel to WHATSAPP', async () => {
+    const res = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody() }));
+    expect(res.statusCode).toBe(201);
+    expect((res.body as any).data.reminderChannel).toBe(Channel.WHATSAPP);
+  });
+
+  it('POST / accepts an explicit reminderChannel and PATCH changes it', async () => {
+    const created = await invokeRoute(
+      patientRouter, 'post', '/', baseReq({ body: createBody({ reminderChannel: Channel.SMS }) }),
+    );
+    expect(created.statusCode).toBe(201);
+    const id = (created.body as any).data.id;
+    expect((await prisma.patient.findUnique({ where: { id } }))!.reminderChannel).toBe(Channel.SMS);
+
+    const res = await invokeRoute(
+      patientRouter, 'patch', `/${id}`, baseReq({ params: { id }, body: { reminderChannel: Channel.EMAIL } }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect((await prisma.patient.findUnique({ where: { id } }))!.reminderChannel).toBe(Channel.EMAIL);
+  });
+
+  it('POST / returns 400 for an invalid reminderChannel', async () => {
+    const res = await invokeRoute(
+      patientRouter, 'post', '/', baseReq({ body: createBody({ reminderChannel: 'PIGEON' }) }),
+    );
+    expect(res.statusCode).toBe(400);
   });
 
   it('PATCH /:id updates the patient', async () => {

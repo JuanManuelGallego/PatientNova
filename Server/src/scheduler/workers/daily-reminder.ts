@@ -31,9 +31,18 @@ function buildAppointmentsPayload(appointments: AppointmentWithDetails[], timezo
     });
 }
 
+function buildTextSummary(userName: string, tomorrowDate: string, payload: string[]): string {
+  return [
+    `Buenas tardes, ${userName}:`,
+    `\nLe informamos que a continuación encontrará su horario de citas para mañana el ${tomorrowDate}:\n`,
+    payload.join("\n"),
+    "\nQue tenga un excelente día!",
+  ].join("\n");
+}
+
 function buildDispatchOpts(
   channel: Channel,
-  user: { whatsappNumber: string | null; phoneNumber: string | null },
+  user: { whatsappNumber: string | null; phoneNumber: string | null; email: string },
   userName: string,
   tomorrowDate: string,
   payload: string[]
@@ -51,13 +60,16 @@ function buildDispatchOpts(
 
     case Channel.SMS: {
       if (!user.phoneNumber) return null;
-      const body = [
-        `Buenas tardes, ${userName}:`,
-        `\nLe informamos que a continuación encontrará su horario de citas para mañana el ${tomorrowDate}:\n`,
-        payload.join("\n"),
-        "\nQue tenga un excelente día!",
-      ].join("\n");
-      return { to: user.phoneNumber, body };
+      return { to: user.phoneNumber, body: buildTextSummary(userName, tomorrowDate, payload) };
+    }
+
+    case Channel.EMAIL: {
+      if (!user.email) return null;
+      return {
+        to: user.email,
+        subject: `Citas de mañana — ${tomorrowDate}`,
+        body: buildTextSummary(userName, tomorrowDate, payload),
+      };
     }
 
     default:
@@ -87,6 +99,7 @@ export async function dailyReminderWorker(): Promise<void> {
       reminderChannel: true,
       whatsappNumber: true,
       phoneNumber: true,
+      email: true,
       firstName: true,
       lastName: true,
       displayName: true,

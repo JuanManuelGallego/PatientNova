@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
-import { Channel } from "@/src/types/Reminder";
+import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,
@@ -167,6 +167,7 @@ export function PatientDrawer({
         {!patient.email && !patient.whatsappNumber && !patient.smsNumber && (
           <div className="drawer-empty" role="status">Sin información de contacto registrada</div>
         )}
+        {patient.reminderChannel && <Row icon={CHANNEL_ICONS[ patient.reminderChannel ]} label="Canal de recordatorios" testId="patient-drawer-reminder-channel" value={CHANNEL_CFG[ patient.reminderChannel ].label} />}
       </Section>
 
       <Section title="Información Adicional">
@@ -254,7 +255,7 @@ export function PatientDrawer({
                   >
                     <span className="linked-card__header">
                       <span className="linked-card__copy">
-                        <span className="linked-card__title">{rem.channel === Channel.WHATSAPP ? "WhatsApp" : "SMS"}</span>
+                        <span className="linked-card__title">{CHANNEL_CFG[ rem.channel ]?.label ?? rem.channel}</span>
                         <span className="linked-card__meta">
                           {rem.sentAt ? `Enviado: ${fmtDateTime(rem.sentAt.toString())}` : `Programado: ${fmtDateTime(rem.sendAt.toString())}`}
                         </span>

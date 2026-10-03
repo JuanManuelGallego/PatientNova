@@ -130,6 +130,32 @@ describe('trackDeliveryWorker (integration)', () => {
     }));
   });
 
+  it('gives EMAIL reminders a longer timeout before failing them as stale', async () => {
+    const make = (ageMs: number, messageId: string) => prisma.reminder.create({
+      data: {
+        channel: Channel.EMAIL,
+        to: 'maria@example.com',
+        body: 'Hola',
+        sendMode: 'IMMEDIATE',
+        sendAt: new Date(Date.now() - ageMs),
+        status: ReminderStatus.QUEUED,
+        patientId,
+        userId,
+        messageId,
+        updatedAt: new Date(Date.now() - ageMs),
+      },
+    });
+    const recent = await make(40 * 60 * 1000, 'brevo-recent');
+    const old = await make(25 * 60 * 60 * 1000, 'brevo-old');
+
+    await trackDeliveryWorker();
+
+    const r1 = await prisma.reminder.findUnique({ where: { id: recent.id } });
+    const r2 = await prisma.reminder.findUnique({ where: { id: old.id } });
+    expect(r1!.status).toBe(ReminderStatus.QUEUED);
+    expect(r2!.status).toBe(ReminderStatus.FAILED);
+  });
+
   it('polls Twilio and marks a delivered reminder SENT', async () => {
     (getMessageStatus as any).mockResolvedValueOnce({ sid: 'SMpoll', status: 'delivered' });
 
@@ -151,6 +177,28 @@ describe('trackDeliveryWorker (integration)', () => {
     const r = await prisma.reminder.findUnique({ where: { id: queued.id } });
     expect(r!.status).toBe(ReminderStatus.SENT);
     expect(r!.error).toBeNull();
+  });
+
+  it('does not poll Twilio for EMAIL reminders (Brevo is push-only)', async () => {
+    const queued = await prisma.reminder.create({
+      data: {
+        channel: Channel.EMAIL,
+        to: 'maria@example.com',
+        body: 'Hola',
+        sendMode: 'IMMEDIATE',
+        sendAt: new Date(Date.now() - 1000),
+        status: ReminderStatus.QUEUED,
+        patientId,
+        userId,
+        messageId: 'sgmsg-poll',
+      },
+    });
+
+    await trackDeliveryWorker();
+
+    expect(getMessageStatus).not.toHaveBeenCalled();
+    const r = await prisma.reminder.findUnique({ where: { id: queued.id } });
+    expect(r!.status).toBe(ReminderStatus.QUEUED);
   });
 
   it('polls Twilio and marks a failed reminder FAILED', async () => {
@@ -231,6 +279,45 @@ describe('dailyReminderWorker (integration)', () => {
     await dailyReminderWorker();
 
     expect(dispatchMock).toHaveBeenCalledTimes(1);
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(updated!.lastDailyReminderDate).toBeTruthy();
+  });
+
+  it('sends the daily summary by EMAIL to the account email with a subject', async () => {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        reminderActive: true,
+        reminderChannel: Channel.EMAIL,
+        timezone: tz,
+        lastDailyReminderDate: null,
+      },
+    });
+
+    const { start, end } = tomorrowRange(tz);
+    const location = await createTestLocation(userId);
+    const type = await createTestAppointmentType(userId);
+    await prisma.appointment.create({
+      data: {
+        startAt: start,
+        endAt: end,
+        price: 50000,
+        patientId,
+        userId,
+        locationId: location.id,
+        typeId: type.id,
+        status: AppointmentStatus.CONFIRMED,
+      },
+    });
+
+    await dailyReminderWorker();
+
+    expect(dispatchMock).toHaveBeenCalledTimes(1);
+    expect(dispatchMock).toHaveBeenCalledWith(Channel.EMAIL, expect.objectContaining({
+      to: user.email,
+      subject: expect.stringContaining('Citas de mañana'),
+      body: expect.stringContaining('Maria Garcia'),
+    }));
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated!.lastDailyReminderDate).toBeTruthy();
   });

@@ -64,5 +64,6 @@ export interface ReminderStats {
     byChannel: {
         [ Channel.WHATSAPP ]: number;
         [ Channel.SMS ]: number;
+        [ Channel.EMAIL ]: number;
     };
 }
