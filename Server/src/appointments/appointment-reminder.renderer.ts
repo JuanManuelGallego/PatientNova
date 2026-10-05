@@ -1,6 +1,7 @@
 import { Channel } from '../../generated/prisma/client.ts';
 import { BULK_TEMPLATE_CONFIG } from '../twilio/bulk-template-config.ts';
 import { DEFAULT_LOCALE } from '../utils/config/constants.ts';
+import { splitSubjectLine } from '../twilio/email-subject.ts';
 import type { AppointmentWithRelations } from './appointment.types.ts';
 
 const PRESENTIAL_KEY = 'PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL';
@@ -43,7 +44,7 @@ Quedamos a su disposición para cualquier duda. ¡Feliz día!`;
 export function renderAppointmentReminder(
   appointment: AppointmentWithRelations,
   doctorName: string,
-): { contentSid: string | null; contentVariables: Record<string, string>; body: string | null } | null {
+): { contentSid: string | null; contentVariables: Record<string, string>; body: string | null; subject: string | null } | null {
   const reminder = appointment.reminder;
   if (!reminder) return null;
 
@@ -72,13 +73,23 @@ export function renderAppointmentReminder(
       contentSid: BULK_TEMPLATE_CONFIG[isVirtual ? VIRTUAL_KEY : PRESENTIAL_KEY]!.contentSid,
       contentVariables: variables,
       body: null,
+      subject: null,
     };
   }
 
   const template = isVirtual ? VIRTUAL_TEMPLATE : PRESENTIAL_TEMPLATE;
+  const rendered = template.replace(/\{\{(\d+)\}\}/g, (match, key: string) => variables[key] ?? match);
+
+  if (reminder.channel === Channel.EMAIL) {
+    // The "Asunto: ..." header line becomes the email subject instead of body text.
+    const { subject, body } = splitSubjectLine(rendered);
+    return { contentSid: null, contentVariables: variables, body, subject };
+  }
+
   return {
     contentSid: null,
     contentVariables: variables,
-    body: template.replace(/\{\{(\d+)\}\}/g, (match, key: string) => variables[key] ?? match),
+    body: rendered,
+    subject: null,
   };
 }

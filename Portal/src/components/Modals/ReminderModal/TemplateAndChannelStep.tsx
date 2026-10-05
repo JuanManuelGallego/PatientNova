@@ -25,7 +25,8 @@ export function TemplateAndChannelStep({
 }) {
   const available =
     (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-    (channel === Channel.SMS && !!selectedPatient?.smsNumber);
+    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
+    (channel === Channel.EMAIL && !!selectedPatient?.email);
 
   return (
     <div className="form-stack">
@@ -81,7 +82,9 @@ export function TemplateAndChannelStep({
               {available
                 ? channel === Channel.WHATSAPP
                   ? selectedPatient?.whatsappNumber
-                  : selectedPatient?.smsNumber
+                  : channel === Channel.SMS
+                    ? selectedPatient?.smsNumber
+                    : selectedPatient?.email
                 : "No disponible para este paciente."}
             </div>
           </div>

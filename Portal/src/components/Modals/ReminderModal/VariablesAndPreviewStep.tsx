@@ -1,20 +1,15 @@
-import { ReminderForm, Channel } from "@/src/types/Reminder";
+import { ReminderForm } from "@/src/types/Reminder";
 import { TwilioTemplate } from "@/src/utils/twilioConfig";
 import { RequiredField } from "@/src/components/Info/Required";
-import { SetField } from "./types";
 
 export function VariablesAndPreviewStep({
   form,
   setForm,
-  set,
-  channel,
   selectedTemplate,
   preview,
 }: {
   form: ReminderForm;
   setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
-  set: SetField;
-  channel: Channel;
   selectedTemplate: TwilioTemplate;
   preview: string;
 }) {
@@ -37,21 +32,6 @@ export function VariablesAndPreviewStep({
           {preview.length} / 1600 caracteres
         </span>
       </label>
-      {channel === Channel.SMS && (
-        <label className="form-label">
-          <RequiredField label="Mensaje personalizado (opcional)" />
-          <textarea
-            className="form-input form-input--textarea"
-            style={{ minHeight: 100 }}
-            value={form.message}
-            onChange={set("message")}
-            placeholder="Deja vacío para usar la plantilla seleccionada, o escribe un mensaje personalizado."
-          />
-          <span className="form-input-hint">
-            {form.message.length} / 1600 caracteres
-          </span>
-        </label>
-      )}
       {userEditableVariables.length > 0 && (
         <div>
           <div className="channel-section-label">

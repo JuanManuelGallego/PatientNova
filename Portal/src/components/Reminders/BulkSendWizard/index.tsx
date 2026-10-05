@@ -3,10 +3,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useBulkSend } from "@/src/api/notify/useBulkSend";
-import { Patient } from "@/src/types/Patient";
-import { ReminderMode, Channel } from "@/src/types/Reminder";
+import { Patient, getPatientContact } from "@/src/types/Patient";
+import { ReminderMode } from "@/src/types/Reminder";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { WizardStepper } from "./WizardStepper";
 import { StepChannel } from "./StepChannel";
@@ -15,10 +14,8 @@ import { StepTemplate } from "./StepTemplate";
 
 export function BulkSendWizard({ patients }: { patients: Patient[] }) {
   const { bulkSend } = useBulkSend();
-  const { user } = useAuthContext();
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const channel = user?.reminderChannel;
   const [sendMode, setMode] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
   const [sendAt, setSendAt] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -27,18 +24,11 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [sharedVariables, setSharedVariables] = useState<Record<string, string>>({});
 
-  const eligible = useMemo(() => {
-    if (!channel) return [];
-    return patients.filter(
-      (p) =>
-        p.status === "ACTIVE" &&
-        (channel === Channel.WHATSAPP
-          ? !!p.whatsappNumber
-          : channel === Channel.SMS
-            ? !!p.smsNumber
-            : !!p.email),
-    );
-  }, [patients, channel]);
+  // Each patient is messaged on their own reminder channel.
+  const eligible = useMemo(
+    () => patients.filter((p) => p.status === "ACTIVE" && !!getPatientContact(p)),
+    [patients],
+  );
 
   const toggleAll = useCallback(() => {
     setSelected((prev) => {
@@ -57,22 +47,20 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!channel || !selectedTemplate) return;
+    if (!selectedTemplate) return;
     setSending(true);
     setError(null);
     try {
-      // SMS has no WhatsApp content template: send the raw message text and
-      // let the server render {{N}} placeholders per patient.
-      const body =
-        channel === Channel.SMS ? TWILIO_CONFIG[selectedTemplate]?.template ?? "" : undefined;
+      // Patients on SMS/EMAIL have no WhatsApp content template: always send the
+      // raw message text and let the server render {{N}} placeholders per patient.
+      const body = TWILIO_CONFIG[selectedTemplate]?.template ?? "";
       await bulkSend({
-        channel,
         templateKey: selectedTemplate,
         patientIds: Array.from(selected),
         sendMode,
         ...(sendMode === ReminderMode.SCHEDULED && sendAt ? { sendAt } : {}),
         sharedVariables,
-        ...(body !== undefined ? { body } : {}),
+        body,
       });
       router.push("/reminders");
     } catch (e) {
@@ -80,7 +68,6 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
       setSending(false);
     }
   }, [
-    channel,
     selectedTemplate,
     selected,
     sendMode,
@@ -100,7 +87,6 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
       )}
       {step === 1 && (
         <StepChannel
-          channel={channel}
           sendMode={sendMode}
           setMode={setMode}
           sentAt={sendAt}
@@ -111,7 +97,6 @@ export function BulkSendWizard({ patients }: { patients: Patient[] }) {
       {step === 2 && (
         <StepPatients
           eligible={eligible}
-          channel={channel ?? Channel.WHATSAPP}
           selected={selected}
           toggleAll={toggleAll}
           toggleOne={toggleOne}

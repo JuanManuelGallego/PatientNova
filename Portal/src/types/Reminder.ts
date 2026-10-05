@@ -13,6 +13,7 @@ export interface Reminder {
   contentSid?: string | null;
   contentVariables?: Record<string, string> | null;
   body?: string | null;
+  subject?: string | null;
 
   status: ReminderStatus;
   error?: string | null;
@@ -41,11 +42,11 @@ export type ReminderInlineData = {
   sendAt?: string;
   status?: ReminderStatus;
   body?: string;
+  subject?: string;
 };
 
 export type ReminderForm = {
   patientId: string;
-  channel: Channel;
   message: string;
   sendAt: string;
   selectedTemplate: string;
@@ -64,6 +65,7 @@ export enum ReminderStatus {
 export enum Channel {
   WHATSAPP = "WHATSAPP",
   SMS = "SMS",
+  EMAIL = "EMAIL",
 }
 
 export enum ReminderMode {
@@ -77,6 +79,7 @@ export const CHANNEL_CFG: Record<
 > = {
   [Channel.WHATSAPP]: { label: "WhatsApp"  },
   [Channel.SMS]: { label: "SMS" },
+  [Channel.EMAIL]: { label: "Email" },
 };
 
 export const REMINDER_STATUS_CONFIG: Record<

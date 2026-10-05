@@ -12,18 +12,18 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useState, useMemo } from "react";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
+import { getPatientContact } from "@/src/types/Patient";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { ERR_MSG_EMPTY } from "@/src/constants/ui";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
-import { validatePhoneNumber } from "@/src/utils/DataValidator";
+import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import {
   computeAutoFilledVariables,
   buildPreview,
   selectTemplateForAppointment,
 } from "./utils";
-import { SetField } from "./types";
 import { SendModeAndPatientStep } from "./SendModeAndPatientStep";
 import { TemplateAndChannelStep } from "./TemplateAndChannelStep";
 import { VariablesAndPreviewStep } from "./VariablesAndPreviewStep";
@@ -47,7 +47,6 @@ export function ReminderModal({
   const { notify } = useNotify();
   const { patients } = useFetchPatients();
 
-  const channel = user?.reminderChannel ?? Channel.WHATSAPP;
   const [ step, setStep ] = useState(1);
   const [ sendMode, setMode ] = useState<ReminderMode>(ReminderMode.IMMEDIATE);
   const [ saving, setSaving ] = useState(false);
@@ -57,7 +56,6 @@ export function ReminderModal({
 
 const [ form, setForm ] = useState<ReminderForm>({
     patientId: "",
-    channel: channel ?? Channel.WHATSAPP,
     message: "",
     sendAt: "",
     selectedTemplate: defaultTemplate,
@@ -66,6 +64,8 @@ const [ form, setForm ] = useState<ReminderForm>({
   });
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
+  // Reminders go out on the selected patient's own channel.
+  const channel = selectedPatient?.reminderChannel ?? Channel.WHATSAPP;
   const { patient: fullPatient } = useFetchPatient(form.patientId);
   const selectedTemplate = TWILIO_CONFIG[form.selectedTemplate];
 
@@ -86,7 +86,8 @@ const [ form, setForm ] = useState<ReminderForm>({
 
   const channelAvailable =
     (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-    (channel === Channel.SMS && !!selectedPatient?.smsNumber);
+    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
+    (channel === Channel.EMAIL && !!selectedPatient?.email);
 
   const isValid =
     step === 1
@@ -95,15 +96,10 @@ const [ form, setForm ] = useState<ReminderForm>({
       : step === 2
         ? !!form.selectedTemplate && channelAvailable
         : step === 3
-          ? channel === Channel.WHATSAPP
-            ? selectedTemplate.variables.every(
-              (v) => (form.contentVariables[v.key] || "").trim() !== "",
-            )
-            : !!form.message.trim()
+          ? selectedTemplate.variables.every(
+            (v) => (form.contentVariables[v.key] || "").trim() !== "",
+          ) && (channel === Channel.WHATSAPP || !!preview.trim())
           : true;
-
-  const set: SetField = (field) => (e) =>
-    setForm((f) => ({ ...f, [ field ]: e.target.value }));
 
   function computeAutoFill(
     templateKey: string,
@@ -165,12 +161,6 @@ const [ form, setForm ] = useState<ReminderForm>({
   }
 
   function validateForm() {
-    if (!channel) {
-      setError(
-        "No tienes un canal de recordatorio configurado. Ve a Configuración → Recordatorios para definirlo.",
-      );
-      return false;
-    }
     if (!selectedPatient) {
       setError("Selecciona un paciente");
       return false;
@@ -178,7 +168,7 @@ const [ form, setForm ] = useState<ReminderForm>({
     if (channel === Channel.WHATSAPP) {
       if (!selectedPatient.whatsappNumber) {
         setError(
-          "El paciente no tiene número de WhatsApp registrado. Agrega el número o cambia el canal en Configuración.",
+          "El paciente no tiene número de WhatsApp registrado. Agrega el número o cambia el canal de recordatorios del paciente.",
         );
         return false;
       }
@@ -197,18 +187,34 @@ const [ form, setForm ] = useState<ReminderForm>({
       }
     }
     if (channel === Channel.SMS) {
-      if (!form.message.trim()) {
+      if (!preview.trim()) {
         setError(ERR_MSG_EMPTY);
         return false;
       }
       if (!selectedPatient.smsNumber) {
         setError(
-          "El paciente no tiene número de SMS registrado. Agrega el número o cambia el canal en Configuración.",
+          "El paciente no tiene número de SMS registrado. Agrega el número o cambia el canal de recordatorios del paciente.",
         );
         return false;
       }
       if (!validatePhoneNumber(selectedPatient.smsNumber)) {
         setError("El número de SMS del paciente no es válido");
+        return false;
+      }
+    }
+    if (channel === Channel.EMAIL) {
+      if (!preview.trim()) {
+        setError(ERR_MSG_EMPTY);
+        return false;
+      }
+      if (!selectedPatient.email) {
+        setError(
+          "El paciente no tiene correo electrónico registrado. Agrega el correo o cambia el canal de recordatorios del paciente.",
+        );
+        return false;
+      }
+      if (!validateEmail(selectedPatient.email)) {
+        setError("El correo electrónico del paciente no es válido");
         return false;
       }
     }
@@ -221,11 +227,8 @@ const [ form, setForm ] = useState<ReminderForm>({
   }
 
   function resolveTo(): string {
-    if (!selectedPatient || !channel) return "";
-    if (channel === Channel.WHATSAPP)
-      return selectedPatient.whatsappNumber ?? "";
-    if (channel === Channel.SMS) return selectedPatient.smsNumber ?? "";
-    return selectedPatient.email ?? "";
+    if (!selectedPatient) return "";
+    return getPatientContact(selectedPatient, channel) ?? "";
   }
 
   function buildPayload() {
@@ -235,7 +238,7 @@ const [ form, setForm ] = useState<ReminderForm>({
         contentSid: selectedTemplate.contentSid,
         contentVariables: form.contentVariables,
       }),
-      ...(channel === Channel.SMS && {
+      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
         body: preview,
       }),
       patientId: form.patientId,
@@ -338,8 +341,6 @@ const [ form, setForm ] = useState<ReminderForm>({
           <VariablesAndPreviewStep
             form={form}
             setForm={setForm}
-            set={set}
-            channel={channel}
             selectedTemplate={selectedTemplate}
             preview={preview}
           />

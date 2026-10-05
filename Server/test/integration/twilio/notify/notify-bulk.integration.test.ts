@@ -37,20 +37,24 @@ afterEach(() => {
   delete BULK_TEMPLATE_CONFIG[TEST_TEMPLATE_KEY];
 });
 
-async function patientWithNumber(userIdToUse = userId) {
+async function patientWithNumber(userIdToUse = userId, reminderChannel: Channel = Channel.WHATSAPP) {
   const p = await createTestPatient(userIdToUse);
   return prisma.patient.update({
     where: { id: p.id },
-    data: { whatsappNumber: '+57300123456', smsNumber: '+57300123456' },
+    data: { whatsappNumber: '+57300123456', smsNumber: '+57300123456', reminderChannel },
   });
+}
+
+async function setChannel(id: string, reminderChannel: Channel) {
+  await prisma.patient.update({ where: { id }, data: { reminderChannel } });
 }
 
 function bulkBody(overrides: Record<string, unknown> = {}) {
   return {
-    channel: Channel.WHATSAPP,
     templateKey: TEST_TEMPLATE_KEY,
     patientIds: [patientId],
     sendMode: ReminderMode.IMMEDIATE,
+    body: 'Hola {{1}}',
     ...overrides,
   };
 }
@@ -84,7 +88,6 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
       queuedCount: 2,
       skippedCount: 0,
       skippedPatientIds: [],
-      channel: Channel.WHATSAPP,
       templateKey: TEST_TEMPLATE_KEY,
     });
 
@@ -165,11 +168,10 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
   });
 
   it('renders the SMS body per patient (shared variables + patient name) and enqueues', async () => {
-    const p1 = await patientWithNumber();
-    const p2 = await patientWithNumber();
+    const p1 = await patientWithNumber(userId, Channel.SMS);
+    const p2 = await patientWithNumber(userId, Channel.SMS);
 
     const res = await invokeBulk(bulkBody({
-      channel: Channel.SMS,
       patientIds: [p1.id, p2.id],
       body: 'Hola {{1}}, su cita con {{2}} está confirmada.',
       sharedVariables: { '2': 'Dr. Lopez' },
@@ -180,7 +182,6 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
       totalCount: 2,
       queuedCount: 2,
       skippedCount: 0,
-      channel: Channel.SMS,
     });
 
     const reminders = await prisma.reminder.findMany({ where: { userId } });
@@ -195,10 +196,9 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
   });
 
   it('leaves unresolved SMS placeholders untouched instead of dropping content', async () => {
-    const p = await patientWithNumber();
+    const p = await patientWithNumber(userId, Channel.SMS);
 
     const res = await invokeBulk(bulkBody({
-      channel: Channel.SMS,
       patientIds: [p.id],
       body: 'Hola {{1}}, código {{9}}',
     }));
@@ -208,11 +208,75 @@ describe('POST /notify/bulk (integration, mocked boss)', () => {
     expect(reminder!.body).toBe(`Hola ${p.name} ${p.lastName}, código {{9}}`);
   });
 
-  it('returns 400 for SMS without a body', async () => {
-    const res = await invokeBulk(bulkBody({ channel: Channel.SMS }));
+  it('returns 400 without a body', async () => {
+    const res = await invokeBulk(bulkBody({ body: undefined }));
     expect(res.statusCode).toBe(400);
     expect(await prisma.reminder.count()).toBe(0);
     expect(bossMocks.send).not.toHaveBeenCalled();
+  });
+
+  it('sends EMAIL to patient.email with a per-patient rendered body and subject', async () => {
+    const p1 = await createTestPatient(userId, { email: 'ana@example.com' });
+    await setChannel(p1.id, Channel.EMAIL);
+
+    const res = await invokeBulk(bulkBody({
+      patientIds: [p1.id],
+      body: 'Asunto: Cita con {{2}}\n\nHola {{1}}',
+      subject: 'Aviso para {{1}}',
+      sharedVariables: { '2': 'Dr. Lopez' },
+    }));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data).toMatchObject({ queuedCount: 1, skippedCount: 0 });
+
+    const reminder = await prisma.reminder.findFirst({ where: { userId } });
+    expect(reminder!.channel).toBe(Channel.EMAIL);
+    expect(reminder!.to).toBe('ana@example.com');
+    expect(reminder!.contentSid).toBeNull();
+    expect(reminder!.body).toBe('Asunto: Cita con Dr. Lopez\n\nHola Maria Garcia');
+    expect(reminder!.subject).toBe('Aviso para Maria Garcia');
+    expect(sendCalls()).toHaveLength(1);
+  });
+
+  it('skips EMAIL patients without an email address', async () => {
+    const noEmail = await createTestPatient(userId);
+    await prisma.patient.update({ where: { id: noEmail.id }, data: { email: null, reminderChannel: Channel.EMAIL } });
+
+    const res = await invokeBulk(bulkBody({ patientIds: [noEmail.id] }));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data).toMatchObject({ queuedCount: 0, skippedCount: 1, skippedPatientIds: [noEmail.id] });
+    expect(await prisma.reminder.count()).toBe(0);
+  });
+
+  it("sends each patient on their own reminderChannel in a mixed batch", async () => {
+    const wa = await patientWithNumber(userId, Channel.WHATSAPP);
+    const sms = await patientWithNumber(userId, Channel.SMS);
+    const email = await createTestPatient(userId, { email: 'mixed@example.com' });
+    await setChannel(email.id, Channel.EMAIL);
+
+    const res = await invokeBulk(bulkBody({ patientIds: [wa.id, sms.id, email.id] }));
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.data).toMatchObject({ queuedCount: 3, skippedCount: 0 });
+
+    const byPatient = Object.fromEntries(
+      (await prisma.reminder.findMany({ where: { userId } })).map((r) => [r.patientId, r]),
+    );
+    expect(byPatient[wa.id]).toMatchObject({ channel: Channel.WHATSAPP, to: '+57300123456', contentSid: 'HXbulktest', body: null });
+    expect(byPatient[sms.id]).toMatchObject({ channel: Channel.SMS, to: '+57300123456', contentSid: null, body: 'Hola Maria Garcia' });
+    expect(byPatient[email.id]).toMatchObject({ channel: Channel.EMAIL, to: 'mixed@example.com', contentSid: null, body: 'Hola Maria Garcia' });
+    expect(sendCalls()).toHaveLength(3);
+  });
+
+  it('ignores a legacy channel field and uses the patient channel', async () => {
+    const p = await patientWithNumber(userId, Channel.SMS);
+
+    const res = await invokeBulk(bulkBody({ channel: Channel.WHATSAPP, patientIds: [p.id] }));
+
+    expect(res.statusCode).toBe(201);
+    const reminder = await prisma.reminder.findFirst({ where: { userId } });
+    expect(reminder!.channel).toBe(Channel.SMS);
   });
 
   it('returns 400 when SCHEDULED sendAt is missing', async () => {

@@ -1,4 +1,4 @@
-import { type Patient, type Prisma } from '../../generated/prisma/client.ts';
+import { Channel, type Patient, type Prisma } from '../../generated/prisma/client.ts';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { PatientEmailConflictError } from './patient.errors.js';
@@ -26,6 +26,7 @@ export const patientRepository = {
           whatsappNumber: dto.whatsappNumber ?? null,
           smsNumber: dto.smsNumber ?? null,
           email: dto.email?.toLowerCase() ?? null,
+          reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
           notes: dto.notes ?? null,
           status: dto.status,
           appointmentTypeId: dto.appointmentTypeId ?? null,
@@ -128,7 +129,7 @@ export const patientRepository = {
     try {
       const data = buildUpdateData(
         dto,
-        [ 'name', 'lastName', 'whatsappNumber', 'smsNumber', 'email', 'notes', 'status', 'appointmentTypeId' ],
+        [ 'name', 'lastName', 'whatsappNumber', 'smsNumber', 'email', 'reminderChannel', 'notes', 'status', 'appointmentTypeId' ],
         {
           whatsappNumber: (v: string | null) => v || null,
           smsNumber: (v: string | null) => v || null,

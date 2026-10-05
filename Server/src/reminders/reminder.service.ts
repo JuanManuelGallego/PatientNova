@@ -61,6 +61,7 @@ export const reminderService = {
           contentSid: created.contentSid,
           contentVariables: created.contentVariables,
           body: created.body,
+          subject: created.subject,
           patientId: created.patientId,
           status: created.status,
           appointmentId: created.appointmentId,

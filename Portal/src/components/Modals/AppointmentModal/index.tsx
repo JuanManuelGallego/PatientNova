@@ -47,7 +47,7 @@ import { PatientAndTypeStep } from "./PatientAndTypeStep";
 import { LocationAndTimeStep } from "./LocationAndTimeStep";
 import { PaymentAndStatusStep } from "./PaymentAndStatusStep";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
-import { Patient } from "@/src/types/Patient";
+import { Patient, getPatientContact } from "@/src/types/Patient";
 
 export function AppointmentModal({
   appt,
@@ -82,7 +82,6 @@ export function AppointmentModal({
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
-  const reminderChannel = user?.reminderChannel;
 
   const [ form, setForm ] = useState<AppointmentForm>({
     patientId: appt?.patient.id ?? "",
@@ -120,13 +119,9 @@ export function AppointmentModal({
 
   const selectedLocation = locations.find((l) => l.id === form.locationId);
 
-  const selectedChannelAvailable = reminderChannel
-    ? reminderChannel === Channel.WHATSAPP
-      ? !!selectedPatient?.whatsappNumber
-      : reminderChannel === Channel.SMS
-        ? !!selectedPatient?.smsNumber
-        : !!selectedPatient?.email
-    : false;
+  // Reminders go out on the selected patient's own channel.
+  const reminderChannel = selectedPatient?.reminderChannel;
+  const selectedChannelAvailable = !!selectedPatient && !!getPatientContact(selectedPatient);
 
   const isValid =
     step === 1
@@ -143,12 +138,7 @@ export function AppointmentModal({
 
   function buildReminderPayload(): ReminderInlineData {
     const channel = reminderChannel!;
-    const to =
-      channel === Channel.WHATSAPP
-        ? selectedPatient?.whatsappNumber || ""
-        : channel === Channel.SMS
-          ? selectedPatient?.smsNumber || ""
-          : selectedPatient?.email || "";
+    const to = (selectedPatient && getPatientContact(selectedPatient)) || "";
     const isImmediate = form.reminderType === ReminderType.IMMEDIATE;
     const sendMode = isImmediate ? ReminderMode.IMMEDIATE : ReminderMode.SCHEDULED;
     const sendAt = getReminderSendAt(form.startAt, form.reminderType);
@@ -166,7 +156,7 @@ export function AppointmentModal({
             "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
           }
         }),
-        ...((channel === Channel.SMS) && {
+        ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
           body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.template
             .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
             .replace("{{2}}", getUserName(user) || "su profesional de salud")
@@ -194,7 +184,7 @@ export function AppointmentModal({
           "6": selectedLocation?.instructions || "No hay instrucciones registradas",
         }
       }),
-      ...((channel === Channel.SMS) && {
+      ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
         body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
           .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
           .replace("{{2}}", getUserName(user) || "su profesional de salud")

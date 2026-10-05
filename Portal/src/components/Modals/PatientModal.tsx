@@ -4,6 +4,7 @@ import {
   Patient,
   PatientStatus,
   PATIENT_STATUS_CONFIG,
+  getPatientContact,
 } from "@/src/types/Patient";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import { useState, useEffect } from "react";
@@ -56,6 +57,7 @@ export function PatientModal({
     email: patient?.email,
     whatsappNumber: patient?.whatsappNumber,
     smsNumber: patient?.smsNumber,
+    reminderChannel: patient?.reminderChannel ?? Channel.WHATSAPP,
     dateOfBirth: patient?.dateOfBirth,
     notes: patient?.notes,
     status: patient?.status ?? ("ACTIVE" as PatientStatus),
@@ -69,6 +71,8 @@ export function PatientModal({
     !!user?.nationalId &&
     !!user?.bankingKey &&
     !!user.consentDocument;
+  // Welcome message goes out on the patient's own reminder channel.
+  const hasWelcomeContact = !!getPatientContact(form);
 
   const set =
     (field: keyof typeof form) =>
@@ -109,11 +113,9 @@ export function PatientModal({
         const patient = await createPatient(form);
         if (sendWelcomeMessage && patient) {
           if (user && canSendWelcome) {
-            notify(user.reminderChannel, {
+            notify(patient.reminderChannel, {
               patientId: patient.id,
-              to: user.reminderChannel === Channel.WHATSAPP
-                ? patient.whatsappNumber!
-                : patient.smsNumber!,
+              to: getPatientContact(patient)!,
               sendMode: ReminderMode.IMMEDIATE,
               sendAt: new Date().toISOString(),
               body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
@@ -237,6 +239,20 @@ export function PatientModal({
               />
             </label>
           </div>
+          <label className="form-label">
+            Canal de recordatorios
+            <CustomSelect
+              value={form.reminderChannel}
+              options={Object.values(Channel).map((c) => ({
+                value: c,
+                label: CHANNEL_CFG[ c ].label,
+              }))}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, reminderChannel: v as Channel }))
+              }
+              data-testid="patient-reminder-channel-select"
+            />
+          </label>
           {!isEdit && (
             canSendWelcome ? (
               <div>
@@ -249,21 +265,21 @@ export function PatientModal({
                     paddingBottom: 4,
                     userSelect: "none",
                     cursor:
-                      !form.whatsappNumber && !form.smsNumber
+                      !hasWelcomeContact
                         ? "not-allowed"
                         : "pointer",
-                    opacity: !form.whatsappNumber && !form.smsNumber ? 0.5 : 1,
+                    opacity: !hasWelcomeContact ? 0.5 : 1,
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={sendWelcomeMessage}
                     onChange={(e) => setSendWelcomeMessage(e.target.checked)}
-                    disabled={!form.whatsappNumber && !form.smsNumber}
+                    disabled={!hasWelcomeContact}
                     style={{ width: 15, height: 15 }}
                     data-testid="patient-welcome-checkbox"
                   />
-                  <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ user.reminderChannel ].label}</span>
+                  <span>Mandar mensaje de bienvenida por {CHANNEL_CFG[ form.reminderChannel ].label}</span>
                 </label>
               </div>
             ) : (

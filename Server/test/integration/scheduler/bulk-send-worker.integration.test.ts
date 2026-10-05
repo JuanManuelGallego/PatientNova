@@ -61,6 +61,7 @@ describe('bulkSendWorker (integration, mocked dispatch)', () => {
     expect(dispatchMock).toHaveBeenCalledWith(Channel.WHATSAPP, {
       to: '+57300123456',
       body: null,
+      subject: null,
       contentSid: 'HXbulktest',
       contentVariables: { '1': 'Maria Garcia' },
     });
@@ -69,6 +70,51 @@ describe('bulkSendWorker (integration, mocked dispatch)', () => {
     expect(updated!.status).toBe(ReminderStatus.QUEUED);
     expect(updated!.messageId).toBe('SMbulk1');
     expect(updated!.sentAt).toBeTruthy();
+  });
+
+  it('dispatches an EMAIL reminder with its body and subject', async () => {
+    const reminder = await createReminder({
+      channel: Channel.EMAIL,
+      to: 'maria@example.com',
+      contentSid: null,
+      body: 'Hola Maria',
+      subject: 'Recordatorio de cita',
+    });
+    dispatchMock.mockResolvedValue({
+      success: true,
+      messageSid: 'sgmsg1',
+      channel: Channel.EMAIL,
+      to: 'maria@example.com',
+      sentAt: new Date().toISOString(),
+    });
+
+    await bulkSendWorker([{ data: { reminderId: reminder.id } }]);
+
+    expect(dispatchMock).toHaveBeenCalledWith(Channel.EMAIL, expect.objectContaining({
+      to: 'maria@example.com',
+      body: 'Hola Maria',
+      subject: 'Recordatorio de cita',
+      contentSid: null,
+    }));
+    const updated = await prisma.reminder.findUnique({ where: { id: reminder.id } });
+    expect(updated!.status).toBe(ReminderStatus.QUEUED);
+    expect(updated!.messageId).toBe('sgmsg1');
+  });
+
+  it('marks an EMAIL reminder without body FAILED', async () => {
+    const reminder = await createReminder({
+      channel: Channel.EMAIL,
+      to: 'maria@example.com',
+      contentSid: null,
+      body: null,
+    });
+
+    await bulkSendWorker([{ data: { reminderId: reminder.id } }]);
+
+    expect(dispatchMock).not.toHaveBeenCalled();
+    const updated = await prisma.reminder.findUnique({ where: { id: reminder.id } });
+    expect(updated!.status).toBe(ReminderStatus.FAILED);
+    expect(updated!.error).toContain('Missing body');
   });
 
   it('skips a reminder that does not exist', async () => {

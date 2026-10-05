@@ -131,6 +131,9 @@ export function ReminderDrawer({
           {(reminder.channel === Channel.SMS || reminder.channel === Channel.WHATSAPP) && (
             <Row icon={DETAIL_ICONS.phone} label="Número" value={<span className="mono">{reminder.to}</span>} />
           )}
+          {reminder.channel === Channel.EMAIL && (
+            <Row icon={DETAIL_ICONS.mail} label="Correo" value={<span className="mono">{reminder.to}</span>} />
+          )}
         </Section>
       )}
 

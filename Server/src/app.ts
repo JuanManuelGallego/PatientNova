@@ -19,6 +19,7 @@ import { appointmentTypeRouter } from './appointment-types/appointment-type.rout
 import { medicalRecordRouter } from './medical-records/medical-record.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
 import { twilioWebhookRouter } from './twilio/webhook.routes.js';
+import { brevoWebhookRouter } from './twilio/brevo-webhook.routes.js';
 import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
 
@@ -70,6 +71,7 @@ app.use('/v1/auth/login', authWriteLimit);
 app.use('/', router);
 app.use('/', messageStatusRouter);
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
+app.use('/webhooks/brevo', brevoWebhookRouter);
 
 // Versioned API — all application endpoints live under /v1.
 const v1 = express.Router();

@@ -2,8 +2,9 @@ import { Router, type Request, type Response } from 'express';
 
 import { ok } from '../utils/api/api-utils.js';
 import { sendSms, sendWhatsApp } from './client.js';
+import { sendEmail } from './email-client.js';
 import { resolveTwilioError } from './twilio-errors.js';
-import { sendSmsSchema, sendWhatsAppSchema, bulkSendSchema } from '../utils/validation/middleware.js';
+import { sendSmsSchema, sendWhatsAppSchema, sendEmailSchema, bulkSendSchema } from '../utils/validation/middleware.js';
 import { reminderService } from '../reminders/reminder.service.js';
 import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
 import { validateBody } from '../middlewares/validate.js';
@@ -22,11 +23,11 @@ import { sendReminderFailureAlert } from '../reminders/reminder-failure-alert.js
 export const notifyRouter = Router();
 
 /**
- * Replaces {{N}} placeholders in an SMS body with per-patient values.
+ * Replaces {{N}} placeholders in an SMS/email body with per-patient values.
  * Unresolved placeholders are left as-is (surfaces as an obvious gap in the
  * final message instead of silently dropping content).
  */
-function renderSmsBody(body: string, contentVariables: Record<string, string>): string {
+function renderBody(body: string, contentVariables: Record<string, string>): string {
   return body.replace(/\{\{(\d+)\}\}/g, (match, key: string) => contentVariables[key] ?? match);
 }
 
@@ -122,6 +123,51 @@ notifyRouter.post(
 );
 
 /**
+ * POST /notify/email
+ * Send an immediate email (Brevo).
+ */
+notifyRouter.post(
+  '/email',
+  validateBody(sendEmailSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (req.body.patientId) {
+      await patientService.verifyOwnership(req.body.patientId, req.user!.id);
+    }
+
+    const reminder = await reminderService.create({
+      channel: Channel.EMAIL,
+      body: req.body.body,
+      subject: req.body.subject,
+      sendMode: ReminderMode.IMMEDIATE,
+      patientId: req.body.patientId,
+      sendAt: new Date(),
+      status: ReminderStatus.PENDING,
+      to: req.body.to,
+    }, req.user!.id, false);
+
+    try {
+      const result = await sendEmail(req.body);
+      if (!result.success) {
+        throw new Error(result.error ?? 'Email send failed');
+      }
+      await reminderService.update(reminder.id, {
+        status: ReminderStatus.QUEUED,
+        messageId: result.messageSid ?? undefined,
+      }, req.user!.id);
+      ok(res, result, 201);
+    } catch (err) {
+      logger.error({ reminderId: reminder.id, channel: 'EMAIL', to: req.body.to, error: err instanceof Error ? err.message : err }, 'Email send failed');
+      await reminderService.update(reminder.id, {
+        status: ReminderStatus.FAILED,
+        error: err instanceof Error ? err.message : 'Unknown send error',
+      }, req.user!.id);
+      await sendReminderFailureAlert(reminder.id);
+      throw err;
+    }
+  })
+);
+
+/**
  * POST /notify/bulk
  * Send bulk messages to multiple patients via pg-boss queue with throttling.
  */
@@ -129,7 +175,7 @@ notifyRouter.post(
   '/bulk',
   validateBody(bulkSendSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { channel, templateKey, patientIds, sendMode, sendAt, sharedVariables, body } = req.body;
+    const { templateKey, patientIds, sendMode, sendAt, sharedVariables, body, subject } = req.body;
     const userId = req.user!.id;
 
     const templateConfig = BULK_TEMPLATE_CONFIG[templateKey];
@@ -159,6 +205,7 @@ notifyRouter.post(
       contentSid: string | null;
       contentVariables: Record<string, string>;
       body?: string;
+      subject?: string;
       sendMode: ReminderMode;
       patientId: string;
       sendAt: Date;
@@ -172,7 +219,6 @@ notifyRouter.post(
     // De-duplicate patient IDs (order-preserving) so a single request can
     // never create duplicate reminders for the same patient.
     const uniquePatientIds = [...new Set<string>(patientIds)];
-    const isSms = channel === Channel.SMS;
 
     for (const patientId of uniquePatientIds) {
       let patient;
@@ -184,14 +230,22 @@ notifyRouter.post(
         continue;
       }
 
-      const to = isSms
+      // Each patient is messaged on their own preferred channel.
+      const channel = patient.reminderChannel;
+      // SMS and EMAIL send a rendered body; WhatsApp sends a Content template.
+      const usesBody = channel === Channel.SMS || channel === Channel.EMAIL;
+      const isEmail = channel === Channel.EMAIL;
+
+      const to = channel === Channel.SMS
         ? patient.smsNumber
         : channel === Channel.WHATSAPP
           ? patient.whatsappNumber
-          : null;
+          : isEmail
+            ? patient.email
+            : null;
 
       if (!to) {
-        logger.warn({ patientId, channel }, 'Bulk send skipped — patient has no number for channel');
+        logger.warn({ patientId, channel }, 'Bulk send skipped — patient has no contact for channel');
         skippedPatientIds.push(patientId);
         continue;
       }
@@ -205,9 +259,10 @@ notifyRouter.post(
 
       reminderDtos.push({
         channel,
-        contentSid: isSms ? null : templateConfig.contentSid,
+        contentSid: usesBody ? null : templateConfig.contentSid,
         contentVariables,
-        ...(isSms ? { body: renderSmsBody(body, contentVariables) } : {}),
+        ...(usesBody ? { body: renderBody(body, contentVariables) } : {}),
+        ...(isEmail && subject ? { subject: renderBody(subject, contentVariables) } : {}),
         sendMode,
         patientId,
         sendAt: sendMode === ReminderMode.SCHEDULED ? new Date(sendAt) : new Date(),
@@ -228,6 +283,7 @@ notifyRouter.post(
             contentSid: dto.contentSid,
             contentVariables: dto.contentVariables,
             body: dto.body ?? null,
+            subject: dto.subject ?? null,
             sendMode: dto.sendMode,
             patientId: dto.patientId,
             userId,
@@ -243,12 +299,13 @@ notifyRouter.post(
           userId,
           actionType: ActionType.CREATE,
           description: `Envío masivo: recordatorio creado para ${dto.patientName}`,
-          affectedFields: ['channel', 'contentSid', 'contentVariables', 'body', 'sendMode', 'sendAt', 'to'],
+          affectedFields: ['channel', 'contentSid', 'contentVariables', 'body', 'subject', 'sendMode', 'sendAt', 'to'],
           fieldsAfter: {
             channel: dto.channel,
             contentSid: dto.contentSid,
             contentVariables: dto.contentVariables,
             body: dto.body ?? null,
+            subject: dto.subject ?? null,
             sendMode: dto.sendMode,
             sendAt: dto.sendAt.toISOString(),
             to: dto.to,
@@ -294,14 +351,13 @@ notifyRouter.post(
       throw err;
     }
 
-    logger.info({ userId, channel, templateKey, count: createdReminders.length, skipped: skippedPatientIds.length }, 'Bulk send job enqueued');
+    logger.info({ userId, templateKey, count: createdReminders.length, skipped: skippedPatientIds.length }, 'Bulk send job enqueued');
 
     ok(res, {
       totalCount: uniquePatientIds.length,
       queuedCount: createdReminders.length,
       skippedCount: skippedPatientIds.length,
       skippedPatientIds,
-      channel,
       templateKey,
     }, 201);
   })

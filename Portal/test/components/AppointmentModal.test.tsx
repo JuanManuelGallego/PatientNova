@@ -21,6 +21,7 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     email: "john@example.com",
     whatsappNumber: "+15551234567",
     smsNumber: "+15551234567",
+    reminderChannel: Channel.WHATSAPP,
     status: PatientStatus.ACTIVE,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -150,6 +151,7 @@ vi.mock("@/src/components/Modals/AppointmentModal/PatientAndTypeStep", () => ({
             email: "jane@example.com",
             whatsappNumber: "+15559999999",
             smsNumber: "+15559999999",
+            reminderChannel: Channel.WHATSAPP,
             status: "ACTIVE",
             createdAt: "2026-01-01T00:00:00.000Z",
             updatedAt: "2026-01-01T00:00:00.000Z",
@@ -369,6 +371,19 @@ describe("AppointmentModal", () => {
       expect(screen.getByTestId("step-location")).toBeInTheDocument();
       expect(screen.queryByTestId("step-patient")).not.toBeInTheDocument();
       expect(screen.queryByTestId("step-payment")).not.toBeInTheDocument();
+    });
+
+    it("uses the patient's reminderChannel, not the user's", async () => {
+      const user = userEvent.setup();
+      render(
+        <AppointmentModal
+          appt={makeAppt({ patient: makePatient({ reminderChannel: Channel.SMS }) })}
+          onClose={mockOnClose}
+          onSaved={mockOnSaved}
+        />,
+      );
+      await user.click(screen.getByText("Continuar →"));
+      expect(screen.getByTestId("reminder-channel")).toHaveTextContent(Channel.SMS);
     });
 
     it("renders PaymentAndStatusStep on step 3", async () => {

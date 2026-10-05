@@ -1,11 +1,7 @@
-import {
-  ReminderMode,
-  Channel,
-} from "@/src/types/Reminder";
+import { ReminderMode } from "@/src/types/Reminder";
 import { Patient } from "@/src/types/Patient";
 
 export interface StepChannelProps {
-  channel: Channel | undefined;
   sendMode: ReminderMode;
   setMode: (m: ReminderMode) => void;
   sentAt: string;
@@ -15,7 +11,6 @@ export interface StepChannelProps {
 
 export interface StepPatientsProps {
   eligible: Patient[];
-  channel: Channel;
   selected: Set<string>;
   toggleAll: () => void;
   toggleOne: (id: string) => void;

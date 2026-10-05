@@ -36,6 +36,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
       contentSid: 'HXstale',
       contentVariables: { '5': 'https://old.test' },
       body: 'stale',
+      subject: null,
       patientId: 'patient-1',
       userId: 'user-1',
       appointmentId: 'appointment-1',
@@ -65,6 +66,7 @@ describe('renderAppointmentReminder', () => {
         '5': 'https://meet.google.com/final-room',
       },
       body: null,
+      subject: null,
     });
   });
 
@@ -84,5 +86,26 @@ describe('renderAppointmentReminder', () => {
     expect(rendered?.body).toContain('Dirección: Calle 1');
     expect(rendered?.body).toContain('Instrucciones: Piso 2');
     expect(rendered?.body).not.toContain('final-room');
+  });
+
+  it('renders an EMAIL with the "Asunto" line as subject, not body text', () => {
+    const rendered = renderAppointmentReminder(appointment({
+      reminder: { ...appointment().reminder, channel: 'EMAIL' },
+    }), 'Dra. Rivera');
+
+    expect(rendered?.contentSid).toBeNull();
+    expect(rendered?.subject).toBe('Recordatorio de cita');
+    expect(rendered?.body).not.toContain('Asunto:');
+    expect(rendered?.body?.startsWith('Buen día Ana')).toBe(true);
+    expect(rendered?.body).toContain('https://meet.google.com/final-room');
+  });
+
+  it('keeps the SMS body unchanged and leaves subject null', () => {
+    const rendered = renderAppointmentReminder(appointment({
+      reminder: { ...appointment().reminder, channel: 'SMS' },
+    }), 'Dra. Rivera');
+
+    expect(rendered?.subject).toBeNull();
+    expect(rendered?.body?.startsWith('Asunto: Recordatorio de cita')).toBe(true);
   });
 });

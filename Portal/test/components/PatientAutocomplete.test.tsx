@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { Patient, PatientStatus } from "@/src/types/Patient";
+import { Channel } from "@/src/types/Reminder";
 import { FetchPatientsFilters } from "@/src/types/Patient";
 
 vi.mock("@/src/api/patients/useFetchPatients", () => ({
@@ -21,6 +22,7 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     id: "p-1",
     name: "Juan",
     lastName: "García",
+    reminderChannel: Channel.WHATSAPP,
     status: PatientStatus.ACTIVE,
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",
