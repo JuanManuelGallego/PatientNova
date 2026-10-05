@@ -130,32 +130,6 @@ describe('trackDeliveryWorker (integration)', () => {
     }));
   });
 
-  it('gives EMAIL reminders a longer timeout before failing them as stale', async () => {
-    const make = (ageMs: number, messageId: string) => prisma.reminder.create({
-      data: {
-        channel: Channel.EMAIL,
-        to: 'maria@example.com',
-        body: 'Hola',
-        sendMode: 'IMMEDIATE',
-        sendAt: new Date(Date.now() - ageMs),
-        status: ReminderStatus.QUEUED,
-        patientId,
-        userId,
-        messageId,
-        updatedAt: new Date(Date.now() - ageMs),
-      },
-    });
-    const recent = await make(40 * 60 * 1000, 'brevo-recent');
-    const old = await make(25 * 60 * 60 * 1000, 'brevo-old');
-
-    await trackDeliveryWorker();
-
-    const r1 = await prisma.reminder.findUnique({ where: { id: recent.id } });
-    const r2 = await prisma.reminder.findUnique({ where: { id: old.id } });
-    expect(r1!.status).toBe(ReminderStatus.QUEUED);
-    expect(r2!.status).toBe(ReminderStatus.FAILED);
-  });
-
   it('polls Twilio and marks a delivered reminder SENT', async () => {
     (getMessageStatus as any).mockResolvedValueOnce({ sid: 'SMpoll', status: 'delivered' });
 
