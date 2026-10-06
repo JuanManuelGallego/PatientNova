@@ -8,17 +8,17 @@ import {
 import {
   ReminderType,
   Channel,
-  CHANNEL_CFG,
   REMINDER_TYPE_CONFIG,
   RELATIVE_REMINDER_TYPES,
   CLOCK_REMINDER_TYPES,
 } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
-import { CHANNEL_ICONS, STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
+import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React, { useState, useCallback } from "react";
 import { SetField } from "./types";
@@ -237,61 +237,7 @@ export function LocationAndTimeStep({
           )}
 
           {form.reminderType !== ReminderType.NONE && (
-            <div style={{ marginTop: 10 }}>
-              <div className="channel-section-label">Canal de notificación</div>
-              {reminderChannel ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    background: "var(--c-brand-50, #f0f7ff)",
-                    border: "1px solid var(--c-brand-200, #bfdbfe)",
-                    fontSize: 14,
-                    color: "var(--c-brand)",
-                  }}
-                >
-                  {(() => {
-                    const Icon = CHANNEL_ICONS[reminderChannel];
-                    return Icon ? <Icon size={18} /> : null;
-                  })()}
-                  <span>
-                    Enviando por{" "}
-                    <strong>{CHANNEL_CFG[reminderChannel].label}</strong>
-                    {patientContact && (
-                      <span
-                        style={{
-                          marginLeft: 6,
-                          color: "var(--c-gray-400)",
-                          fontWeight: 400,
-                        }}
-                      >
-                        → {patientContact}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              ) : (
-                <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <STATUS_ICONS.warning size={14} /> Selecciona un paciente para
-                  ver su canal de recordatorios.
-                </div>
-              )}
-              {reminderChannel && !patientContact && (
-                <div className="error-inline" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                  <STATUS_ICONS.warning size={14} /> El paciente no tiene{" "}
-                  {reminderChannel === Channel.WHATSAPP
-                    ? "número de WhatsApp"
-                    : reminderChannel === Channel.SMS
-                      ? "número de SMS"
-                      : "correo electrónico"}{" "}
-                  registrado. Agrega el dato o cambia el canal de recordatorios
-                  del paciente.
-                </div>
-              )}
-            </div>
+            <ChannelBanner channel={reminderChannel} contact={patientContact} />
           )}
         </div>
       ) : (
