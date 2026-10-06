@@ -28,12 +28,15 @@ import { blockedTimeRouter } from './blocked-time/blocked-time.routes.js';
 import { auditLogRouter } from './audit-log/audit-log.routes.js';
 import { googleRouter } from './google/google.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
+import { requestId } from './middlewares/request-id.js';
+import { errorHandler, CorsRejectionError } from './middlewares/error-handler.js';
 
 const app: Application = express();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+app.use(requestId);
 app.use(helmet());
 app.use(cors({
     origin: (origin, callback) => {
@@ -41,7 +44,7 @@ app.use(cors({
             callback(null, true);
         } else {
             logger.warn({ origin }, 'CORS rejection');
-            callback(new Error('Not allowed by CORS'));
+            callback(new CorsRejectionError());
         }
     },
     credentials: true,
@@ -115,23 +118,6 @@ app.use((req: Request, res: Response) => {
     apiError(res, 'Route not found', 404);
 });
 
-app.use((err: Error, req: Request, res: Response) => {
-    logger.error(
-        {
-            err,
-            method: req.method,
-            url: req.originalUrl
-        },
-        'Unhandled error'
-    );
-
-    apiError(
-        res,
-        process.env.NODE_ENV === 'production'
-            ? 'Internal server error'
-            : err.message,
-        500
-    );
-});
+app.use(errorHandler);
 
 export default app;
