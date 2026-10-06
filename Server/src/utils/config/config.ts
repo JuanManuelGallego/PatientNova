@@ -88,6 +88,7 @@ export const config = {
 
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
+    patientEnabled: process.env.ENABLE_PORTAL === 'true',
   },
 
   encryption: {
