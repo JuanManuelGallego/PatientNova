@@ -56,10 +56,11 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `36` files, `435` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `37` files, `443` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
+| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
 | Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
 | Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout |

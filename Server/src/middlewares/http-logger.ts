@@ -11,6 +11,7 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
   const start = Date.now();
 
   const requestLog: Record<string, unknown> = {
+    requestId: req.requestId,
     method: req.method,
     url: req.originalUrl,
     ip: req.ip?.replace('::ffff:', ''),
@@ -29,6 +30,7 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
     const duration = Date.now() - start;
 
     const responseLog: Record<string, unknown> = {
+      requestId: req.requestId,
       method: req.method,
       url: req.originalUrl,
       status: res.statusCode,
