@@ -423,7 +423,7 @@ function AppointmentsPageContent() {
                 </span>
               </td>
               <td className="td td--datetime">{fmtDateTime(a.startAt)}</td>
-              <td className="td td--muted" style={{ maxWidth: 130 }}>
+              <td className="td td--muted">
                 <div
                   className="location-label"
                 >

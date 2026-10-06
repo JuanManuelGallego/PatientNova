@@ -15,6 +15,13 @@ export interface MessageStatusCallback {
   errorMessage?: string | null;
 }
 
+export enum DeliveryStatusOutcome {
+  Updated = 'updated',
+  NotFound = 'not-found',
+  OutOfOrder = 'out-of-order',
+  Unchanged = 'unchanged',
+}
+
 export interface DeliveryStatusActor {
   actorId: string;
   actorDisplayName: string;
@@ -36,7 +43,7 @@ export async function applyReminderDeliveryStatus(params: {
   actor: DeliveryStatusActor;
   /** Spanish label for the audit description, e.g. "callback de Twilio". */
   sourceLabel: string;
-}): Promise<void> {
+}): Promise<DeliveryStatusOutcome> {
   const { messageId, mappedStatus, actor, sourceLabel } = params;
 
   const reminder = await prisma.reminder.findFirst({
@@ -46,7 +53,7 @@ export async function applyReminderDeliveryStatus(params: {
 
   if (!reminder) {
     logger.debug({ messageId }, 'No active reminder for delivery status — ignoring');
-    return;
+    return DeliveryStatusOutcome.NotFound;
   }
 
   if (statusRank(mappedStatus) < statusRank(reminder.status)) {
@@ -54,11 +61,11 @@ export async function applyReminderDeliveryStatus(params: {
       { messageId, from: reminder.status, to: mappedStatus },
       'Ignoring out-of-order status callback',
     );
-    return;
+    return DeliveryStatusOutcome.OutOfOrder;
   }
 
   if (mappedStatus === reminder.status) {
-    return;
+    return DeliveryStatusOutcome.Unchanged;
   }
 
   const error = mappedStatus === ReminderStatus.FAILED ? params.error : null;
@@ -87,6 +94,7 @@ export async function applyReminderDeliveryStatus(params: {
   }
 
   logger.info({ messageId, reminderId: reminder.id, status: mappedStatus, actor: actor.actorId }, 'Reminder delivery status updated');
+  return DeliveryStatusOutcome.Updated;
 }
 
 export async function processMessageStatusCallback(payload: MessageStatusCallback): Promise<void> {

@@ -102,7 +102,16 @@ v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 
 app.use('/v1', v1);
 
-app.use((_req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
+    logger.warn(
+        {
+            method: req.method,
+            url: req.originalUrl,
+            contentType: req.headers['content-type'],
+            userAgent: req.headers['user-agent'],
+        },
+        'Route not found'
+    );
     apiError(res, 'Route not found', 404);
 });
 

@@ -33,26 +33,36 @@ function describeFailure(event: BrevoEvent): string {
 
 export async function processBrevoEvents(events: BrevoEvent[]): Promise<void> {
   for (const event of events) {
+    const messageId = event?.[ 'message-id' ];
     try {
-      const messageId = event[ 'message-id' ];
-      if (!messageId || !event.event) {
-        logger.debug({ event: event.event }, 'Brevo event without message-id/event — ignoring');
+      if (!messageId || !event?.event) {
+        logger.warn(
+          { event: event?.event, hasMessageId: Boolean(messageId), keys: Object.keys(event ?? {}) },
+          'Brevo event without message-id/event — ignoring',
+        );
         continue;
       }
 
       const mappedStatus = BREVO_TO_PRISMA_STATUS[ event.event.toLowerCase() ];
-      if (!mappedStatus) continue;
+      if (!mappedStatus) {
+        logger.info({ messageId, event: event.event }, 'Brevo event not tracked — ignoring');
+        continue;
+      }
 
-      await applyReminderDeliveryStatus({
+      const outcome = await applyReminderDeliveryStatus({
         messageId,
         mappedStatus,
         error: mappedStatus === ReminderStatus.FAILED ? describeFailure(event) : null,
         actor: JOB_CTX,
         sourceLabel: 'webhook de Brevo',
       });
+
+      // 'not-found' usually means the stored messageId format differs from Brevo's "message-id".
+      const log = outcome === 'not-found' ? logger.warn.bind(logger) : logger.info.bind(logger);
+      log({ messageId, event: event.event, mappedStatus, outcome }, 'Brevo event processed');
     } catch (err) {
       // One bad event must not stop the rest of the batch.
-      logger.error({ err, messageId: event[ 'message-id' ], event: event.event }, 'Failed to process Brevo event');
+      logger.error({ err, messageId, event: event?.event }, 'Failed to process Brevo event');
     }
   }
 }
