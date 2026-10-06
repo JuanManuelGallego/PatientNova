@@ -207,16 +207,17 @@ export function LocationAndTimeStep({
               data-testid="appointment-reminder-select"
               options={[
                 { value: ReminderType.NONE, label: LBL_NO_REMINDER },
-                { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
-                ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES].map((type) => ({
-                  value: type,
-                  label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type)}`,
-                  disabled: !isReminderTypeFeasible(form.startAt, type),
-                })),
                 {
                   value: ReminderType.MANUAL,
                   label: REMINDER_TYPE_CONFIG[ReminderType.MANUAL].label,
                 },
+                { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
+                ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES]
+                  .filter((type) => isReminderTypeFeasible(form.startAt, type))
+                  .map((type) => ({
+                    value: type,
+                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type)}`,
+                  })),
               ]}
               onChange={setField("reminderType")}
             />
