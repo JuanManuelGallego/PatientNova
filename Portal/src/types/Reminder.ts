@@ -158,25 +158,25 @@ export const REMINDER_TYPE_CONFIG: Record<
   { label: string; offsetMs: number; clock?: ClockReminder }
 > = {
   [ReminderType.NONE]: { label: "Ninguno", offsetMs: 0 },
+  [ReminderType.MANUAL]: { label: "Manual (elegir fecha y hora)", offsetMs: 0 },
   [ReminderType.IMMEDIATE]: { label: "Enviar ahora", offsetMs: 0 },
   [ReminderType.ONE_HOUR_BEFORE]: { label: "1 hora antes", offsetMs: HOUR_MS },
   [ReminderType.ONE_DAY_BEFORE]: { label: "1 día antes", offsetMs: DAY_MS },
   [ReminderType.SAME_DAY_MORNING]: {
-    label: "Mañana del día de la cita (8:00 a. m.)",
+    label: "Mañana del día de la cita",
     offsetMs: 0,
     clock: { daysBefore: 0, hour: 8, minute: 0 },
   },
   [ReminderType.PREVIOUS_DAY_MORNING]: {
-    label: "Mañana del día anterior (9:00 a. m.)",
+    label: "Mañana del día anterior",
     offsetMs: 0,
     clock: { daysBefore: 1, hour: 9, minute: 0 },
   },
   [ReminderType.PREVIOUS_DAY_EVENING]: {
-    label: "Tarde del día anterior (6:00 p. m.)",
+    label: "Tarde del día anterior",
     offsetMs: 0,
     clock: { daysBefore: 1, hour: 18, minute: 0 },
   },
-  [ReminderType.MANUAL]: { label: "Manual (elegir fecha y hora)", offsetMs: 0 },
 };
 
 /** Presets that send a fixed offset before the appointment, in display order. */
