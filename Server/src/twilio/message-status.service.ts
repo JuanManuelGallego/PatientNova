@@ -29,19 +29,11 @@ export interface DeliveryStatusActor {
 
 const JOB_CTX: DeliveryStatusActor = { actorId: 'twilio-status-callback', actorDisplayName: 'Twilio Status Callback' };
 
-/**
- * Applies a provider delivery status (already mapped to a ReminderStatus) to the
- * reminder identified by `messageId`. Shared by the Twilio status callback and
- * the Brevo webhook so both channels follow the same rules:
- * ghost ids are ignored, out-of-order updates never downgrade a status, and a
- * FAILED transition triggers the failure alert.
- */
 export async function applyReminderDeliveryStatus(params: {
   messageId: string;
   mappedStatus: ReminderStatus;
   error: string | null;
   actor: DeliveryStatusActor;
-  /** Spanish label for the audit description, e.g. "callback de Twilio". */
   sourceLabel: string;
 }): Promise<DeliveryStatusOutcome> {
   const { messageId, mappedStatus, actor, sourceLabel } = params;

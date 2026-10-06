@@ -172,7 +172,6 @@ function getReminderType(startAt: string, sendAt: string): ReminderType {
     const preset = RELATIVE_REMINDER_TYPES.find((t) => REMINDER_TYPE_CONFIG[ t ].offsetMs === diff);
     const clockPreset = CLOCK_REMINDER_TYPES.find((t) => getReminderSendAt(startAt, t) === new Date(sendAt).toISOString());
     if (clockPreset) return clockPreset;
-    // Any other send time was chosen by hand.
     return preset ?? ReminderType.MANUAL;
 }
 
@@ -283,6 +282,13 @@ enum RelativeTime {
     ALL = "all"
 }
 
+function fmtSendTime(startAt: string, type: ReminderType): string {
+  if (!startAt) return "";
+  return new Date(getReminderSendAt(startAt, type)).toLocaleString("es-ES", {
+    weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+  });
+}
+
 export {
     addDays,
     fmtDate,
@@ -293,6 +299,7 @@ export {
     fmtDatePlusOneHour,
     fmtRelative,
     fmtTimestamp,
+    fmtSendTime,
     getDate,
     getAppointmentEndTime,
     getDuration,

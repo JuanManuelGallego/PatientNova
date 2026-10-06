@@ -121,9 +121,6 @@ export function PatientAutocomplete({
   useEffect(() => {
     if (!open) return;
 
-    // On mobile, focusing the input opens the keyboard, which resizes the
-    // viewport and scrolls the input into view. Reposition instead of closing
-    // while the input is still focused.
     function handleScroll(e: Event) {
       if (dropdownRef.current?.contains(e.target as Node)) return;
       if (document.activeElement === inputRef.current) {

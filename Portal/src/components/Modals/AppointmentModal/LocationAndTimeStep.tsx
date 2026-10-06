@@ -16,7 +16,7 @@ import {
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
 import { CHANNEL_ICONS, STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { isReminderTypeFeasible, getReminderSendAt } from "@/src/utils/TimeUtils";
+import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
@@ -36,14 +36,6 @@ interface Props {
   selectedPatient: Patient | undefined;
   reminderChannel: Channel | undefined;
   locations: AppointmentLocation[];
-}
-
-// Shows when the reminder would go out, e.g. "mar, 6 oct, 3:00 p. m."
-function fmtSendTime(startAt: string, type: ReminderType): string {
-  if (!startAt) return "";
-  return new Date(getReminderSendAt(startAt, type)).toLocaleString("es-ES", {
-    weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
-  });
 }
 
 export function LocationAndTimeStep({

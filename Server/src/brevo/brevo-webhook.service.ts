@@ -1,22 +1,15 @@
 import { ReminderStatus } from '../../generated/prisma/client.ts';
 import { logger } from '../utils/api/logger.js';
-import { applyReminderDeliveryStatus, type DeliveryStatusActor } from '../twilio/message-status.service.js';
+import { applyReminderDeliveryStatus, DeliveryStatusOutcome, type DeliveryStatusActor } from '../twilio/message-status.service.js';
 
-/** Subset of a Brevo transactional webhook event we care about. */
 export interface BrevoEvent {
   event?: string;
   email?: string;
-  /** Same value returned as `messageId` by POST /smtp/email, e.g. "<2026...@smtp-relay.mailin.fr>". */
   'message-id'?: string;
   reason?: string;
   ts_event?: number;
 }
 
-/**
- * Brevo event → ReminderStatus. Events not listed here (request, deferred,
- * soft_bounce — Brevo retries those — opened, click, spam, unsubscribed, ...)
- * are informational and leave the reminder unchanged.
- */
 export const BREVO_TO_PRISMA_STATUS: Partial<Record<string, ReminderStatus>> = {
   delivered: ReminderStatus.SENT,
   hard_bounce: ReminderStatus.FAILED,
@@ -57,11 +50,9 @@ export async function processBrevoEvents(events: BrevoEvent[]): Promise<void> {
         sourceLabel: 'webhook de Brevo',
       });
 
-      // 'not-found' usually means the stored messageId format differs from Brevo's "message-id".
-      const log = outcome === 'not-found' ? logger.warn.bind(logger) : logger.info.bind(logger);
+      const log = outcome === DeliveryStatusOutcome.NotFound ? logger.warn.bind(logger) : logger.info.bind(logger);
       log({ messageId, event: event.event, mappedStatus, outcome }, 'Brevo event processed');
     } catch (err) {
-      // One bad event must not stop the rest of the batch.
       logger.error({ err, messageId, event: event?.event }, 'Failed to process Brevo event');
     }
   }

@@ -146,7 +146,6 @@ export enum ReminderType {
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-/** Sends at a fixed local time of day, `daysBefore` days before the appointment's date. */
 export interface ClockReminder {
   daysBefore: number;
   hour: number;
@@ -179,7 +178,6 @@ export const REMINDER_TYPE_CONFIG: Record<
   },
 };
 
-/** Presets that send a fixed offset before the appointment, in display order. */
 export const RELATIVE_REMINDER_TYPES: ReminderType[] = [
   ReminderType.ONE_HOUR_BEFORE,
   ReminderType.ONE_DAY_BEFORE,
@@ -199,7 +197,6 @@ export interface FetchRemindersFilters {
 
 export const MAX_RETRIES = 1
 
-/** Presets that send at a fixed time of day relative to the appointment's date. */
 export const CLOCK_REMINDER_TYPES: ReminderType[] = [
   ReminderType.SAME_DAY_MORNING,
   ReminderType.PREVIOUS_DAY_MORNING,
