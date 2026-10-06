@@ -32,6 +32,13 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 - **Stale generated client:** if you change `schema.prisma`, run `pnpm exec prisma generate`.
   The committed `generated/prisma` client is typechecked, so a stale client surfaces
   as `tsc` errors across many files.
+- **Raw-SQL-only database objects** (not expressible in `schema.prisma`) are invisible to
+  Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
+  migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
+  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_active_key`
+  (`migrations/20260723023603_unique_patient`). Before committing any generated migration,
+  read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
+  raw-only objects (e.g. the appointment exclusion constraint) to this list.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK
   (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, `src/twilio/email-client.js`
   (Brevo REST API, EMAIL channel; unit tests stub global `fetch`), and `src/scheduler/dispatch.js`.
@@ -49,7 +56,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `36` files, `431` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `36` files, `435` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|

@@ -21,6 +21,8 @@ model Patient {
 
   reminderChannel Channel @default(WHATSAPP)
 
+  source RecordSource @default(PROVIDER)
+
   notes            String? @db.Text
   appointmentTypeId String? @db.Uuid
 
@@ -141,6 +143,9 @@ model Appointment {
   isDeleted   Boolean           @default(false)
   deletedAt   DateTime?
 
+  source      RecordSource @default(PROVIDER)
+  cancelledBy CancelledBy?
+
   patientId  String  @db.Uuid
   userId     String
   reminderId String? @db.Uuid
@@ -164,6 +169,18 @@ model Appointment {
   @@index([locationId])
   @@index([typeId])
   @@map("appointments")
+}
+
+/// Where a Patient/Appointment row originated.
+enum RecordSource {
+  PROVIDER
+  PORTAL
+}
+
+/// Who cancelled an appointment (set together with status CANCELLED).
+enum CancelledBy {
+  PROVIDER
+  PATIENT
 }
 
 enum AppointmentStatus {
