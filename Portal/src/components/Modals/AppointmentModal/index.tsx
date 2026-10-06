@@ -101,6 +101,7 @@ export function AppointmentModal({
         ? ReminderType.IMMEDIATE
         : getReminderType(appt.startAt, appt.reminder.sendAt)
       : ReminderType.NONE,
+    reminderSendAt: appt?.reminder?.sendAt ?? undefined,
     notes: appt?.notes ?? undefined,
   });
 
@@ -130,7 +131,10 @@ export function AppointmentModal({
         ? !!form.locationId &&
         (form.reminderType !== ReminderType.NONE
           ? selectedChannelAvailable
-          : true) 
+          : true)
+          && (form.reminderType !== ReminderType.MANUAL
+          || (!!form.reminderSendAt
+            && (form.reminderSendAt === appt?.reminder?.sendAt || new Date(form.reminderSendAt) > new Date())))
           && (locations.find((l) => l.id === form.locationId)?.isVirtual 
           ? !!form.meetingUrl && validateHttpUrl(form.meetingUrl)
           : true)
@@ -141,7 +145,9 @@ export function AppointmentModal({
     const to = (selectedPatient && getPatientContact(selectedPatient)) || "";
     const isImmediate = form.reminderType === ReminderType.IMMEDIATE;
     const sendMode = isImmediate ? ReminderMode.IMMEDIATE : ReminderMode.SCHEDULED;
-    const sendAt = getReminderSendAt(form.startAt, form.reminderType);
+    const sendAt = form.reminderType === ReminderType.MANUAL
+      ? form.reminderSendAt!
+      : getReminderSendAt(form.startAt, form.reminderType);
 
     if (selectedLocation?.isVirtual) {
       return {

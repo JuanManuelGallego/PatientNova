@@ -47,6 +47,8 @@ export interface AppointmentForm {
   patientId: string;
   reminderId?: string;
   reminderType: ReminderType;
+  /** ISO send time; only used when reminderType is MANUAL. */
+  reminderSendAt?: string;
 }
 
 export enum AppointmentDuration {

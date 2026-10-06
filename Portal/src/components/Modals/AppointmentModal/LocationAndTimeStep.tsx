@@ -5,10 +5,18 @@ import {
   AppointmentDuration,
   AppointmentLocation,
 } from "@/src/types/Appointment";
-import { ReminderType, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import {
+  ReminderType,
+  Channel,
+  CHANNEL_CFG,
+  REMINDER_TYPE_CONFIG,
+  RELATIVE_REMINDER_TYPES,
+  CLOCK_REMINDER_TYPES,
+} from "@/src/types/Reminder";
+import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
 import { CHANNEL_ICONS, STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { isReminderTypeFeasible } from "@/src/utils/TimeUtils";
+import { isReminderTypeFeasible, getReminderSendAt } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
@@ -28,6 +36,14 @@ interface Props {
   selectedPatient: Patient | undefined;
   reminderChannel: Channel | undefined;
   locations: AppointmentLocation[];
+}
+
+// Shows when the reminder would go out, e.g. "mar, 6 oct, 3:00 p. m."
+function fmtSendTime(startAt: string, type: ReminderType): string {
+  if (!startAt) return "";
+  return new Date(getReminderSendAt(startAt, type)).toLocaleString("es-ES", {
+    weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+  });
 }
 
 export function LocationAndTimeStep({
@@ -200,34 +216,32 @@ export function LocationAndTimeStep({
               options={[
                 { value: ReminderType.NONE, label: LBL_NO_REMINDER },
                 { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
+                ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES].map((type) => ({
+                  value: type,
+                  label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type)}`,
+                  disabled: !isReminderTypeFeasible(form.startAt, type),
+                })),
                 {
-                  value: ReminderType.ONE_HOUR_BEFORE,
-                  label: "1 hora antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_HOUR_BEFORE,
-                  ),
-                },
-                {
-                  value: ReminderType.ONE_DAY_BEFORE,
-                  label: "1 día antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_DAY_BEFORE,
-                  ),
-                },
-                {
-                  value: ReminderType.ONE_WEEK_BEFORE,
-                  label: "1 semana antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_WEEK_BEFORE,
-                  ),
+                  value: ReminderType.MANUAL,
+                  label: REMINDER_TYPE_CONFIG[ReminderType.MANUAL].label,
                 },
               ]}
               onChange={setField("reminderType")}
             />
           </label>
+
+          {form.reminderType === ReminderType.MANUAL && (
+            <label className="form-label" style={{ marginTop: 10 }}>
+              <RequiredField label="Fecha y hora del recordatorio" />
+              <DateTimePicker
+                isFuture
+                showTime
+                date={form.reminderSendAt}
+                testId="appointment-reminder-sendat-input"
+                onChange={(v) => setForm((f) => ({ ...f, reminderSendAt: v }))}
+              />
+            </label>
+          )}
 
           {form.reminderType !== ReminderType.NONE && (
             <div style={{ marginTop: 10 }}>
