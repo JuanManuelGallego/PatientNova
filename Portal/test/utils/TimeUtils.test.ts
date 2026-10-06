@@ -10,8 +10,10 @@ import {
     getTomorrowSixAm,
     getColombianHolidays,
     isoToLocal,
+    getReminderSendAt,
 } from "@/src/utils/TimeUtils";
 import { AppointmentDuration } from "@/src/types/Appointment";
+import { ReminderType } from "@/src/types/Reminder";
 
 describe("fmtDate / fmtTime / fmtDateTime", () => {
     it("returns 'Invalid Date' for undefined input", () => {
@@ -105,4 +107,23 @@ describe("getColombianHolidays", () => {
         const newYear = holidays.find(h => h.name === "Año Nuevo");
         expect(newYear?.date).toBe("2024-01-01");
     });
+});
+
+describe("getReminderSendAt clock types use the given timezone", () => {
+  // 2030-06-11 15:00 UTC = 10:00 in Bogota (UTC-5), 11:00 in New York (UTC-4)
+  const start = "2030-06-11T15:00:00.000Z";
+
+  it("same-day morning is 8:00 in the user's timezone", () => {
+    expect(getReminderSendAt(start, ReminderType.SAME_DAY_MORNING, "America/Bogota")).toBe("2030-06-11T13:00:00.000Z");
+    expect(getReminderSendAt(start, ReminderType.SAME_DAY_MORNING, "America/New_York")).toBe("2030-06-11T12:00:00.000Z");
+  });
+
+  it("previous-day evening is 18:00 the day before in the user's timezone", () => {
+    expect(getReminderSendAt(start, ReminderType.PREVIOUS_DAY_EVENING, "America/Bogota")).toBe("2030-06-10T23:00:00.000Z");
+  });
+
+  it("uses the appointment's local date, not the UTC date", () => {
+    // 2030-06-12 02:00 UTC is still June 11 at 21:00 in Bogota
+    expect(getReminderSendAt("2030-06-12T02:00:00.000Z", ReminderType.SAME_DAY_MORNING, "America/Bogota")).toBe("2030-06-11T13:00:00.000Z");
+  });
 });

@@ -1,4 +1,4 @@
-import { addDays, todayFormattedString, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { addDays, todayFormattedString, localDateTimeToUtc, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
 import { BlockedTime } from "@/src/types/BlockedTime";
 
 export { DAY_NAMES_ES };
@@ -39,40 +39,6 @@ export function toStartOfDayISO(d: Date, timezone?: string): string {
 
 export function toEndOfDayISO(d: Date, timezone?: string): string {
   return toUtcRangeFromLocalDay(toDateStr(d), timezone).dateTo;
-}
-
-function localDateTimeToUtc(dateStr: string, time: string, timezone: string): string {
-  const target = Date.parse(`${dateStr}T${time}Z`);
-  const milliseconds = target % 1000;
-  const wallTime = target - milliseconds;
-  let utc = wallTime;
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-
-  for (let i = 0; i < 3; i++) {
-    const parts = Object.fromEntries(
-      formatter.formatToParts(new Date(utc)).map(({ type, value }) => [ type, value ]),
-    );
-    const localAsUtc = Date.UTC(
-      Number(parts.year),
-      Number(parts.month) - 1,
-      Number(parts.day),
-      Number(parts.hour),
-      Number(parts.minute),
-      Number(parts.second),
-    );
-    utc += wallTime - localAsUtc;
-  }
-
-  return new Date(utc + milliseconds).toISOString();
 }
 
 export function toUtcRangeFromLocalDay(

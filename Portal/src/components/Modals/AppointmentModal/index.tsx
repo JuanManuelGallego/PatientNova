@@ -99,7 +99,7 @@ export function AppointmentModal({
     reminderType: appt?.reminder
       ? appt.reminder.sendMode === ReminderMode.IMMEDIATE
         ? ReminderType.IMMEDIATE
-        : getReminderType(appt.startAt, appt.reminder.sendAt)
+        : getReminderType(appt.startAt, appt.reminder.sendAt, user?.timezone)
       : ReminderType.NONE,
     reminderSendAt: appt?.reminder?.sendAt ?? undefined,
     notes: appt?.notes ?? undefined,
@@ -147,7 +147,7 @@ export function AppointmentModal({
     const sendMode = isImmediate ? ReminderMode.IMMEDIATE : ReminderMode.SCHEDULED;
     const sendAt = form.reminderType === ReminderType.MANUAL
       ? form.reminderSendAt!
-      : getReminderSendAt(form.startAt, form.reminderType);
+      : getReminderSendAt(form.startAt, form.reminderType, user?.timezone);
 
     if (selectedLocation?.isVirtual) {
       return {

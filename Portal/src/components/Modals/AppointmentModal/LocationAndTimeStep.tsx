@@ -16,6 +16,7 @@ import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
 import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
@@ -46,6 +47,7 @@ export function LocationAndTimeStep({
   reminderChannel,
   locations,
 }: Props) {
+  const { user } = useAuthContext();
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
@@ -213,10 +215,10 @@ export function LocationAndTimeStep({
                 },
                 { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
                 ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES]
-                  .filter((type) => isReminderTypeFeasible(form.startAt, type))
+                  .filter((type) => isReminderTypeFeasible(form.startAt, type, user?.timezone))
                   .map((type) => ({
                     value: type,
-                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type)}`,
+                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type, user?.timezone)}`,
                   })),
               ]}
               onChange={setField("reminderType")}
