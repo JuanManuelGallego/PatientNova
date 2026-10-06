@@ -31,13 +31,13 @@ vi.mock('../../../src/twilio/client.js', () => ({
   sendSms: vi.fn(),
 }));
 
-vi.mock('../../../src/twilio/email-client.js', () => ({
+vi.mock('../../../src/brevo/email-client.js', () => ({
   sendEmail: vi.fn(),
 }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { sendWhatsAppFreeForm, sendWhatsApp, sendSms } from '../../../src/twilio/client.js';
-import { sendEmail } from '../../../src/twilio/email-client.js';
+import { sendEmail } from '../../../src/brevo/email-client.js';
 
 const mockPrisma = vi.mocked(prisma) as any;
 const mockSendWhatsAppFreeForm = vi.mocked(sendWhatsAppFreeForm);

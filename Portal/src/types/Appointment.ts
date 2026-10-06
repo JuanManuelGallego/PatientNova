@@ -47,6 +47,7 @@ export interface AppointmentForm {
   patientId: string;
   reminderId?: string;
   reminderType: ReminderType;
+  reminderSendAt?: string;
 }
 
 export enum AppointmentDuration {

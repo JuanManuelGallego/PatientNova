@@ -19,7 +19,7 @@ import { appointmentTypeRouter } from './appointment-types/appointment-type.rout
 import { medicalRecordRouter } from './medical-records/medical-record.routes.js';
 import { authenticate, requireAdmin, requireAdminForWrites } from './middlewares/authenticate.js';
 import { twilioWebhookRouter } from './twilio/webhook.routes.js';
-import { brevoWebhookRouter } from './twilio/brevo-webhook.routes.js';
+import { brevoWebhookRouter } from './brevo/brevo-webhook.routes.js';
 import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
 
@@ -102,7 +102,16 @@ v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 
 app.use('/v1', v1);
 
-app.use((_req: Request, res: Response) => {
+app.use((req: Request, res: Response) => {
+    logger.warn(
+        {
+            method: req.method,
+            url: req.originalUrl,
+            contentType: req.headers['content-type'],
+            userAgent: req.headers['user-agent'],
+        },
+        'Route not found'
+    );
     apiError(res, 'Route not found', 404);
 });
 

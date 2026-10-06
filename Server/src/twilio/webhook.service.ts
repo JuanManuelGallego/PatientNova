@@ -1,6 +1,6 @@
 import { AppointmentStatus, Channel, type Reminder } from '../../generated/prisma/client.ts';
 import { sendSms, sendWhatsApp, sendWhatsAppFreeForm } from './client.js';
-import { sendEmail } from './email-client.js';
+import { sendEmail } from '../brevo/email-client.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { logger } from '../utils/api/logger.js';
 import type { SendWhatsAppRequest } from './types';

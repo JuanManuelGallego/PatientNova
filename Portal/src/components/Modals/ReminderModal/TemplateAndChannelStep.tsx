@@ -1,12 +1,12 @@
-import { Patient } from "@/src/types/Patient";
-import { ReminderForm, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { Patient, getPatientContact } from "@/src/types/Patient";
+import { ReminderForm, Channel } from "@/src/types/Reminder";
 import {
   getAvatarColor,
   getInitials,
 } from "@/src/utils/AvatarHelper";
-import { CHANNEL_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
+import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import {
   TWILIO_CONFIG,
   TEMPLATE_KEYS,
@@ -23,10 +23,9 @@ export function TemplateAndChannelStep({
   channel: Channel;
   onTemplateChange: (key: string) => void;
 }) {
-  const available =
-    (channel === Channel.WHATSAPP && !!selectedPatient?.whatsappNumber) ||
-    (channel === Channel.SMS && !!selectedPatient?.smsNumber) ||
-    (channel === Channel.EMAIL && !!selectedPatient?.email);
+  const contact = selectedPatient
+    ? getPatientContact(selectedPatient, channel)
+    : undefined;
 
   return (
     <div className="form-stack">
@@ -60,41 +59,13 @@ export function TemplateAndChannelStep({
           onChange={onTemplateChange}
         />
       </label>
-      <div>
-        <div className="channel-section-label">
-          <RequiredField label="Canal de notificación" />
-        </div>
-        <div
-          className={`selection-card selection-card--active${!available ? " selection-card--disabled" : ""}`}
-          style={{ flex: 1 }}
-        >
-          <span style={{ fontSize: 22 }}>
-            {(() => {
-              const Icon = CHANNEL_ICONS[ channel ];
-              return Icon ? <Icon size={22} /> : null;
-            })()}
-          </span>
-          <div>
-            <div className="patient-preview__name">
-              {CHANNEL_CFG[ channel ].label}
-            </div>
-            <div className="patient-preview__detail">
-              {available
-                ? channel === Channel.WHATSAPP
-                  ? selectedPatient?.whatsappNumber
-                  : channel === Channel.SMS
-                    ? selectedPatient?.smsNumber
-                    : selectedPatient?.email
-                : "No disponible para este paciente."}
-            </div>
-          </div>
-          {available && (
-            <span style={{ marginLeft: "auto", color: "var(--c-brand)" }}>
-              <ACTION_ICONS.confirm size={16} />
-            </span>
-          )}
-        </div>
-      </div>
+      <ChannelBanner
+        channel={channel}
+        contact={contact}
+        required
+        marginTop={0}
+        warnMissingContact={!!selectedPatient}
+      />
     </div>
   );
 }

@@ -5,12 +5,21 @@ import {
   AppointmentDuration,
   AppointmentLocation,
 } from "@/src/types/Appointment";
-import { ReminderType, Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import {
+  ReminderType,
+  Channel,
+  REMINDER_TYPE_CONFIG,
+  RELATIVE_REMINDER_TYPES,
+  CLOCK_REMINDER_TYPES,
+} from "@/src/types/Reminder";
+import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
-import { CHANNEL_ICONS, STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { isReminderTypeFeasible } from "@/src/utils/TimeUtils";
+import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
+import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React, { useState, useCallback } from "react";
 import { SetField } from "./types";
@@ -38,6 +47,7 @@ export function LocationAndTimeStep({
   reminderChannel,
   locations,
 }: Props) {
+  const { user } = useAuthContext();
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
@@ -199,92 +209,37 @@ export function LocationAndTimeStep({
               data-testid="appointment-reminder-select"
               options={[
                 { value: ReminderType.NONE, label: LBL_NO_REMINDER },
+                {
+                  value: ReminderType.MANUAL,
+                  label: REMINDER_TYPE_CONFIG[ReminderType.MANUAL].label,
+                },
                 { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
-                {
-                  value: ReminderType.ONE_HOUR_BEFORE,
-                  label: "1 hora antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_HOUR_BEFORE,
-                  ),
-                },
-                {
-                  value: ReminderType.ONE_DAY_BEFORE,
-                  label: "1 día antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_DAY_BEFORE,
-                  ),
-                },
-                {
-                  value: ReminderType.ONE_WEEK_BEFORE,
-                  label: "1 semana antes",
-                  disabled: !isReminderTypeFeasible(
-                    form.startAt,
-                    ReminderType.ONE_WEEK_BEFORE,
-                  ),
-                },
+                ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES]
+                  .filter((type) => isReminderTypeFeasible(form.startAt, type, user?.timezone))
+                  .map((type) => ({
+                    value: type,
+                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type, user?.timezone)}`,
+                  })),
               ]}
               onChange={setField("reminderType")}
             />
           </label>
 
+          {form.reminderType === ReminderType.MANUAL && (
+            <label className="form-label" style={{ marginTop: 10 }}>
+              <RequiredField label="Fecha y hora del recordatorio" />
+              <DateTimePicker
+                isFuture
+                showTime
+                date={form.reminderSendAt}
+                testId="appointment-reminder-sendat-input"
+                onChange={(v) => setForm((f) => ({ ...f, reminderSendAt: v }))}
+              />
+            </label>
+          )}
+
           {form.reminderType !== ReminderType.NONE && (
-            <div style={{ marginTop: 10 }}>
-              <div className="channel-section-label">Canal de notificación</div>
-              {reminderChannel ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    background: "var(--c-brand-50, #f0f7ff)",
-                    border: "1px solid var(--c-brand-200, #bfdbfe)",
-                    fontSize: 14,
-                    color: "var(--c-brand)",
-                  }}
-                >
-                  {(() => {
-                    const Icon = CHANNEL_ICONS[reminderChannel];
-                    return Icon ? <Icon size={18} /> : null;
-                  })()}
-                  <span>
-                    Enviando por{" "}
-                    <strong>{CHANNEL_CFG[reminderChannel].label}</strong>
-                    {patientContact && (
-                      <span
-                        style={{
-                          marginLeft: 6,
-                          color: "var(--c-gray-400)",
-                          fontWeight: 400,
-                        }}
-                      >
-                        → {patientContact}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              ) : (
-                <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <STATUS_ICONS.warning size={14} /> Selecciona un paciente para
-                  ver su canal de recordatorios.
-                </div>
-              )}
-              {reminderChannel && !patientContact && (
-                <div className="error-inline" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                  <STATUS_ICONS.warning size={14} /> El paciente no tiene{" "}
-                  {reminderChannel === Channel.WHATSAPP
-                    ? "número de WhatsApp"
-                    : reminderChannel === Channel.SMS
-                      ? "número de SMS"
-                      : "correo electrónico"}{" "}
-                  registrado. Agrega el dato o cambia el canal de recordatorios
-                  del paciente.
-                </div>
-              )}
-            </div>
+            <ChannelBanner channel={reminderChannel} contact={patientContact} />
           )}
         </div>
       ) : (

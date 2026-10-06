@@ -1,5 +1,5 @@
 import { AppointmentDuration } from "@/src/types/Appointment";
-import { REMINDER_TYPE_CONFIG, ReminderType } from "@/src/types/Reminder";
+import { REMINDER_TYPE_CONFIG, RELATIVE_REMINDER_TYPES, CLOCK_REMINDER_TYPES, ReminderType } from "@/src/types/Reminder";
 
 function fmtTimestamp(iso: string | undefined): string {
     if (!iso) return "Invalid Date"
@@ -94,13 +94,13 @@ function todayString(): string {
     return new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
-function todayFormattedString(timezone?: string): string {
+function todayFormattedString(timezone?: string, at: Date = new Date()): string {
     const parts = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
-    }).formatToParts(new Date());
+    }).formatToParts(at);
     const values = Object.fromEntries(parts.map(({ type, value }) => [ type, value ]));
     return `${values.year}-${values.month}-${values.day}`;
 }
@@ -112,29 +112,67 @@ const MONTH_NAMES_ES = [
 const DAY_NAMES_ES = [ "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" ];
 
 
-function isReminderTypeFeasible(date: string, reminderType: ReminderType): boolean {
-    if (reminderType === ReminderType.NONE || reminderType === ReminderType.IMMEDIATE) return true;
+/** Converts a wall-clock date/time in `timezone` to a UTC ISO string. */
+function localDateTimeToUtc(dateStr: string, time: string, timezone: string): string {
+  const target = Date.parse(`${dateStr}T${time}Z`);
+  const milliseconds = target % 1000;
+  const wallTime = target - milliseconds;
+  let utc = wallTime;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  for (let i = 0; i < 3; i++) {
+    const parts = Object.fromEntries(
+      formatter.formatToParts(new Date(utc)).map(({ type, value }) => [ type, value ]),
+    );
+    const localAsUtc = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second),
+    );
+    utc += wallTime - localAsUtc;
+  }
+
+  return new Date(utc + milliseconds).toISOString();
+}
+
+function isReminderTypeFeasible(date: string, reminderType: ReminderType, timezone?: string): boolean {
+    if (reminderType === ReminderType.NONE || reminderType === ReminderType.IMMEDIATE || reminderType === ReminderType.MANUAL) return true;
     if (!date) return false;
 
-    const now = new Date();
-    const timeUntilAppointment = new Date(date).getTime() - now.getTime();
-
-    const requiredTime = REMINDER_TYPE_CONFIG[ reminderType ].offsetMs;
-    return timeUntilAppointment > requiredTime;
+    const start = new Date(date).getTime();
+    const sendAt = new Date(getReminderSendAt(date, reminderType, timezone)).getTime();
+    // Must still be in the future and go out before the appointment starts.
+    return sendAt > Date.now() && sendAt < start;
 }
 
 
-function getReminderSendAt(date: string, reminderType: ReminderType): string {
-    switch (reminderType) {
-        case ReminderType.ONE_HOUR_BEFORE:
-            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_HOUR_BEFORE ].offsetMs).toISOString();
-        case ReminderType.ONE_DAY_BEFORE:
-            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_DAY_BEFORE ].offsetMs).toISOString();
-        case ReminderType.ONE_WEEK_BEFORE:
-            return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ ReminderType.ONE_WEEK_BEFORE ].offsetMs).toISOString();
-        default:
-            return date;
+function getReminderSendAt(date: string, reminderType: ReminderType, timezone?: string): string {
+    if (RELATIVE_REMINDER_TYPES.includes(reminderType)) {
+        return new Date(new Date(date).getTime() - REMINDER_TYPE_CONFIG[ reminderType ].offsetMs).toISOString();
     }
+    const clock = REMINDER_TYPE_CONFIG[ reminderType ].clock;
+    if (clock) {
+        // Clock times are wall-clock times in the user's timezone, not the browser's.
+        const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const [y, m, day] = todayFormattedString(tz, new Date(date)).split("-").map(Number);
+        const target = new Date(Date.UTC(y, m - 1, day - clock.daysBefore)).toISOString().slice(0, 10);
+        const hh = String(clock.hour).padStart(2, "0");
+        const mm = String(clock.minute).padStart(2, "0");
+        return localDateTimeToUtc(target, `${hh}:${mm}:00.000`, tz);
+    }
+    return date;
 }
 
 
@@ -167,12 +205,12 @@ function getDate(date: string): string {
     return date.slice(0, 10);
 }
 
-function getReminderType(startAt: string, sendAt: string): ReminderType {
+function getReminderType(startAt: string, sendAt: string, timezone?: string): ReminderType {
     const diff = (new Date(startAt).getTime() - new Date(sendAt).getTime());
-    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_HOUR_BEFORE ].offsetMs) return ReminderType.ONE_HOUR_BEFORE;
-    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_DAY_BEFORE ].offsetMs) return ReminderType.ONE_DAY_BEFORE;
-    if (diff === REMINDER_TYPE_CONFIG[ ReminderType.ONE_WEEK_BEFORE ].offsetMs) return ReminderType.ONE_WEEK_BEFORE;
-    return ReminderType.NONE;
+    const preset = RELATIVE_REMINDER_TYPES.find((t) => REMINDER_TYPE_CONFIG[ t ].offsetMs === diff);
+    const clockPreset = CLOCK_REMINDER_TYPES.find((t) => getReminderSendAt(startAt, t, timezone) === new Date(sendAt).toISOString());
+    if (clockPreset) return clockPreset;
+    return preset ?? ReminderType.MANUAL;
 }
 
 function easterSunday(year: number): Date {
@@ -282,6 +320,14 @@ enum RelativeTime {
     ALL = "all"
 }
 
+function fmtSendTime(startAt: string, type: ReminderType, timezone?: string): string {
+  if (!startAt) return "";
+  return new Date(getReminderSendAt(startAt, type, timezone)).toLocaleString("es-ES", {
+    timeZone: timezone,
+    weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+  });
+}
+
 export {
     addDays,
     fmtDate,
@@ -292,6 +338,8 @@ export {
     fmtDatePlusOneHour,
     fmtRelative,
     fmtTimestamp,
+    fmtSendTime,
+    localDateTimeToUtc,
     getDate,
     getAppointmentEndTime,
     getDuration,

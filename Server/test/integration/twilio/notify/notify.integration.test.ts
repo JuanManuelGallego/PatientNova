@@ -21,7 +21,7 @@ vi.mock('../../../../src/scheduler/reminder-job-manager.js', () => ({
 }));
 
 // Mock the Brevo email boundary for the EMAIL channel.
-vi.mock('../../../../src/twilio/email-client.js', () => ({
+vi.mock('../../../../src/brevo/email-client.js', () => ({
   sendEmail: vi.fn().mockResolvedValue({ success: true, messageSid: '<202610021200.123@smtp-relay.mailin.fr>', channel: 'EMAIL', to: 'maria@example.com' }),
 }));
 
@@ -221,7 +221,7 @@ describe('notify routes (integration, mocked Twilio)', () => {
   });
 
   it('POST /email marks the reminder FAILED when Brevo rejects the send', async () => {
-    const { sendEmail } = await import('../../../../src/twilio/email-client.js');
+    const { sendEmail } = await import('../../../../src/brevo/email-client.js');
     (sendEmail as any).mockRejectedValueOnce(new Error('Sender is not valid'));
 
     const req = {

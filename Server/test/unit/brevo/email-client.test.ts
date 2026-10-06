@@ -15,7 +15,7 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { sendEmail, textToHtml } from '../../../src/twilio/email-client.js';
+import { sendEmail, textToHtml } from '../../../src/brevo/email-client.js';
 import { splitSubjectLine } from '../../../src/twilio/email-subject.js';
 
 const fetchMock = vi.fn();

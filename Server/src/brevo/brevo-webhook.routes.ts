@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { brevoWebhookAuth } from '../middlewares/brevo-webhook-auth.js';
+import { brevoWebhookAuth } from './brevo-webhook-auth.js';
 import { processBrevoEvents, type BrevoEvent } from './brevo-webhook.service.js';
 import { logger } from '../utils/api/logger.js';
 

@@ -15,6 +15,13 @@ export interface MessageStatusCallback {
   errorMessage?: string | null;
 }
 
+export enum DeliveryStatusOutcome {
+  Updated = 'updated',
+  NotFound = 'not-found',
+  OutOfOrder = 'out-of-order',
+  Unchanged = 'unchanged',
+}
+
 export interface DeliveryStatusActor {
   actorId: string;
   actorDisplayName: string;
@@ -22,21 +29,13 @@ export interface DeliveryStatusActor {
 
 const JOB_CTX: DeliveryStatusActor = { actorId: 'twilio-status-callback', actorDisplayName: 'Twilio Status Callback' };
 
-/**
- * Applies a provider delivery status (already mapped to a ReminderStatus) to the
- * reminder identified by `messageId`. Shared by the Twilio status callback and
- * the Brevo webhook so both channels follow the same rules:
- * ghost ids are ignored, out-of-order updates never downgrade a status, and a
- * FAILED transition triggers the failure alert.
- */
 export async function applyReminderDeliveryStatus(params: {
   messageId: string;
   mappedStatus: ReminderStatus;
   error: string | null;
   actor: DeliveryStatusActor;
-  /** Spanish label for the audit description, e.g. "callback de Twilio". */
   sourceLabel: string;
-}): Promise<void> {
+}): Promise<DeliveryStatusOutcome> {
   const { messageId, mappedStatus, actor, sourceLabel } = params;
 
   const reminder = await prisma.reminder.findFirst({
@@ -46,7 +45,7 @@ export async function applyReminderDeliveryStatus(params: {
 
   if (!reminder) {
     logger.debug({ messageId }, 'No active reminder for delivery status — ignoring');
-    return;
+    return DeliveryStatusOutcome.NotFound;
   }
 
   if (statusRank(mappedStatus) < statusRank(reminder.status)) {
@@ -54,11 +53,11 @@ export async function applyReminderDeliveryStatus(params: {
       { messageId, from: reminder.status, to: mappedStatus },
       'Ignoring out-of-order status callback',
     );
-    return;
+    return DeliveryStatusOutcome.OutOfOrder;
   }
 
   if (mappedStatus === reminder.status) {
-    return;
+    return DeliveryStatusOutcome.Unchanged;
   }
 
   const error = mappedStatus === ReminderStatus.FAILED ? params.error : null;
@@ -87,6 +86,7 @@ export async function applyReminderDeliveryStatus(params: {
   }
 
   logger.info({ messageId, reminderId: reminder.id, status: mappedStatus, actor: actor.actorId }, 'Reminder delivery status updated');
+  return DeliveryStatusOutcome.Updated;
 }
 
 export async function processMessageStatusCallback(payload: MessageStatusCallback): Promise<void> {

@@ -3,12 +3,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock the events service so this test isolates the auth middleware + routing
 // (status codes, rejection) rather than DB side effects.
 const processMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../../src/twilio/brevo-webhook.service.js', () => ({
+vi.mock('../../../src/brevo/brevo-webhook.service.js', () => ({
   processBrevoEvents: (...args: unknown[]) => processMock(...args),
 }));
 
 import { config } from '../../../src/utils/config/config.js';
-import { brevoWebhookRouter } from '../../../src/twilio/brevo-webhook.routes.js';
+import { brevoWebhookRouter } from '../../../src/brevo/brevo-webhook.routes.js';
 import { invokeRoute } from '../helpers.js';
 
 const PATH = '/events';

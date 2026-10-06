@@ -5,6 +5,7 @@ import { ReminderMode } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { StepChannelProps } from "./types";
 import { STATUS_ICONS } from "@/src/config/icons";
+import { ChannelBox } from "@/src/components/Info/ChannelBanner";
 
 export const StepChannel = memo(function StepChannel({
   sendMode,
@@ -20,26 +21,11 @@ export const StepChannel = memo(function StepChannel({
     >
       <div>
         <div className="wizard-section-title">Canal de notificación</div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 16px",
-            borderRadius: 8,
-            background: "var(--c-brand-50, #f0f7ff)",
-            border: "1px solid var(--c-brand-200, #bfdbfe)",
-            fontSize: 14,
-            color: "var(--c-brand)",
-          }}
-        >
-          <STATUS_ICONS.info size={20} />
-          <span>
-            Cada paciente recibe el mensaje por su{" "}
-            <strong>canal de recordatorios</strong> preferido (configurable en
-            su ficha).
-          </span>
-        </div>
+        <ChannelBox icon={STATUS_ICONS.info} iconSize={20} padding="12px 16px">
+          Cada paciente recibe el mensaje por su{" "}
+          <strong>canal de recordatorios</strong> preferido (configurable en su
+          ficha).
+        </ChannelBox>
       </div>
       <div>
         <div className="wizard-section-title">Tipo de envío</div>

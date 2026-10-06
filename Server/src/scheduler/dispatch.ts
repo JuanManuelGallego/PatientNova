@@ -1,6 +1,6 @@
 import { Channel } from "../../generated/prisma/client.ts";
 import { sendSms, sendWhatsApp } from "../twilio/client.js";
-import { sendEmail } from "../twilio/email-client.js";
+import { sendEmail } from "../brevo/email-client.js";
 import type { NotificationResult } from "../twilio/types.ts";
 import { logger } from "../utils/api/logger.ts";
 

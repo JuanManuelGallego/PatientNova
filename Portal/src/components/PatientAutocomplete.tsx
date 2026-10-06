@@ -123,19 +123,30 @@ export function PatientAutocomplete({
 
     function handleScroll(e: Event) {
       if (dropdownRef.current?.contains(e.target as Node)) return;
+      if (document.activeElement === inputRef.current) {
+        updateDropdownPosition();
+        return;
+      }
       setOpen(false);
     }
     function handleResize() {
+      if (document.activeElement === inputRef.current) {
+        updateDropdownPosition();
+        return;
+      }
       setOpen(false);
     }
 
+    const viewport = window.visualViewport;
     window.addEventListener("scroll", handleScroll, true);
     window.addEventListener("resize", handleResize);
+    viewport?.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("resize", handleResize);
+      viewport?.removeEventListener("resize", handleResize);
     };
-  }, [open]);
+  }, [open, updateDropdownPosition]);
 
   const handleFocus = useCallback(() => {
     if (disabled) return;
