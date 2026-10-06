@@ -6,7 +6,7 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({
 }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { processBrevoEvents } from '../../../src/twilio/brevo-webhook.service.js';
+import { processBrevoEvents } from '../../../src/brevo/brevo-webhook.service.js';
 import { createTestUser, createTestPatient } from '../helpers.js';
 import { Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
 

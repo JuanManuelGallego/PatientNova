@@ -1,6 +1,6 @@
 import { ReminderStatus } from '../../generated/prisma/client.ts';
 import { logger } from '../utils/api/logger.js';
-import { applyReminderDeliveryStatus, type DeliveryStatusActor } from './message-status.service.js';
+import { applyReminderDeliveryStatus, type DeliveryStatusActor } from '../twilio/message-status.service.js';
 
 /** Subset of a Brevo transactional webhook event we care about. */
 export interface BrevoEvent {

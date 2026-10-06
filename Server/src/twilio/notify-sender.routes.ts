@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 
 import { ok } from '../utils/api/api-utils.js';
 import { sendSms, sendWhatsApp } from './client.js';
-import { sendEmail } from './email-client.js';
+import { sendEmail } from '../brevo/email-client.js';
 import { resolveTwilioError } from './twilio-errors.js';
 import { sendSmsSchema, sendWhatsAppSchema, sendEmailSchema, bulkSendSchema } from '../utils/validation/middleware.js';
 import { reminderService } from '../reminders/reminder.service.js';
