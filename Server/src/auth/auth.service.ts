@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
 import { config } from '../utils/config/config.js';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from './tokens.js';
 import { toUserResponse } from '../users/user.dto.js';
 import { logger, maskEmail } from '../utils/api/logger.js';
 import {
@@ -90,17 +91,8 @@ export const authService = {
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
     });
 
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' },
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user.id, type: 'refresh', version: user.refreshTokenVersion },
-      config.auth.jwtSecret,
-      { expiresIn: '7d' },
-    );
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone });
+    const refreshToken = signRefreshToken({ id: user.id, version: user.refreshTokenVersion });
 
     return {
       user: toUserResponse(updatedUser, updatedUser.consentDocument ?? null),
@@ -125,7 +117,7 @@ export const authService = {
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     let payload: unknown;
     try {
-      payload = jwt.verify(refreshToken, config.auth.jwtSecret);
+      payload = verifyRefreshToken(refreshToken);
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
         logger.info('Token refresh failed: refresh token expired');
@@ -153,11 +145,7 @@ export const authService = {
 
     logger.info({ userId: user.id }, 'Token refreshed');
 
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' },
-    );
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone });
 
     return { accessToken };
   },

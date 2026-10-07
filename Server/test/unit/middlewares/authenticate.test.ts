@@ -13,6 +13,7 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
 
 import { authenticate, requireSuperAdmin, requireAdmin, requireAdminForWrites } from '../../../src/middlewares/authenticate.js';
 import { config } from '../../../src/utils/config/config.js';
+import { ACCESS_AUDIENCE, TOKEN_ISSUER } from '../../../src/auth/tokens.js';
 
 function makeReq(overrides: Record<string, any> = {}) {
   return {
@@ -34,7 +35,7 @@ function makeRes() {
 }
 
 function signToken(payload: Record<string, any>) {
-  return jwt.sign(payload, config.auth.jwtSecret);
+  return jwt.sign(payload, config.auth.jwtSecret, { algorithm: 'HS256', issuer: TOKEN_ISSUER, audience: ACCESS_AUDIENCE });
 }
 
 describe('authenticate', () => {
@@ -89,7 +90,7 @@ describe('authenticate', () => {
   });
 
   it('rejects with 401 for expired token', () => {
-    const token = jwt.sign({ id: 'u1', email: 'a@b.com', role: 'ADMIN' }, config.auth.jwtSecret, { expiresIn: '-1s' });
+    const token = jwt.sign({ id: 'u1', email: 'a@b.com', role: 'ADMIN' }, config.auth.jwtSecret, { algorithm: 'HS256', issuer: TOKEN_ISSUER, audience: ACCESS_AUDIENCE, expiresIn: '-1s' });
     const req = makeReq({ cookies: { token } });
     const res = makeRes();
     const next = vi.fn();
@@ -98,6 +99,29 @@ describe('authenticate', () => {
 
     expect(res.statusCode).toBe(401);
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects tokens with the right secret but the wrong audience (refresh/portal tokens)', () => {
+    for (const audience of [ 'patientnova:provider-refresh', 'patientnova:portal' ]) {
+      const token = jwt.sign({ id: 'u1', email: 'a@b.com', role: 'ADMIN' }, config.auth.jwtSecret, { algorithm: 'HS256', issuer: TOKEN_ISSUER, audience });
+      const res = makeRes();
+      const next = vi.fn();
+      authenticate(makeReq({ cookies: { token } }), res, next);
+      expect(res.statusCode).toBe(401);
+      expect(next).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects legacy tokens without audience/issuer and unsigned (alg none) tokens', () => {
+    const legacy = jwt.sign({ id: 'u1', email: 'a@b.com', role: 'ADMIN' }, config.auth.jwtSecret);
+    const unsigned = jwt.sign({ id: 'u1', email: 'a@b.com', role: 'ADMIN' }, '', { algorithm: 'none', issuer: TOKEN_ISSUER, audience: ACCESS_AUDIENCE });
+    for (const token of [ legacy, unsigned ]) {
+      const res = makeRes();
+      const next = vi.fn();
+      authenticate(makeReq({ cookies: { token } }), res, next);
+      expect(res.statusCode).toBe(401);
+      expect(next).not.toHaveBeenCalled();
+    }
   });
 
   it('rejects with 401 for invalid token signature', () => {

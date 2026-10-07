@@ -52,6 +52,8 @@ export const config = {
 
   auth: {
     jwtSecret: requireEnv('AUTH_SECRET'),
+    // Distinct secret for patient portal sessions; only mandatory once the portal is enabled.
+    portalJwtSecret: process.env.ENABLE_PORTAL === 'true' ? requireEnv('PORTAL_AUTH_SECRET') : (process.env.PORTAL_AUTH_SECRET ?? ''),
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
   },
 
