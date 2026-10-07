@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: buildSecurityHeaders({
           apiUrl: process.env.NEXT_PUBLIC_API_URL,
+          sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
           isDev: process.env.NODE_ENV !== "production",
           enforceCsp: process.env.CSP_ENFORCE === "true",
         }),

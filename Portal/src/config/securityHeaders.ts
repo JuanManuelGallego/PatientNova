@@ -17,6 +17,7 @@ export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
 interface CspOptions {
     apiUrl?: string | undefined;
+    sentryDsn?: string | undefined;
     isDev: boolean;
 }
 
@@ -29,7 +30,15 @@ export function buildCsp(options: CspOptions): string {
         }
     })();
 
-    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []) ];
+    const sentryOrigin = (() => {
+        try {
+            return options.sentryDsn ? new URL(options.sentryDsn).origin : undefined;
+        } catch {
+            return undefined;
+        }
+    })();
+
+    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []), ...(sentryOrigin ? [ sentryOrigin ] : []) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
 
     const directives: Record<string, string[]> = {

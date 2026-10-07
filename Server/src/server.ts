@@ -1,3 +1,4 @@
+import { initSentry } from "./utils/observability/sentry.js";
 import app from "./app.js";
 import cron from "node-cron";
 import { config } from "./utils/config/config.js";
@@ -10,6 +11,7 @@ const RECONCILIATION_CRON = '0 */12 * * *';
 let reconciliationTask: ReturnType<typeof cron.schedule> | undefined;
 
 async function start() {
+  initSentry();
   await prisma.$connect();
   logger.info('Database connected');
 
