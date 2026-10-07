@@ -44,6 +44,11 @@ export const config = {
     webhookSecret: requireEnv('BREVO_WEBHOOK_SECRET'),
   },
 
+  publicRateLimit: {
+    windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
+    maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),  // 1 min
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),

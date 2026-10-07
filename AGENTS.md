@@ -59,11 +59,12 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `41` files, `482` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
 | App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook, Postgres shared-store rate limit (hashed keys), real-app provider CORS + dark `/v1/public` |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
@@ -144,3 +145,8 @@ Suite: `41` files, `482` tests, all against real Postgres, `tsc --noEmit` clean.
   (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
   adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
   primary control.
+- Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
+  no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
+  mutations). Both are mounted in `app.ts` BEFORE the provider CORS/15mb parsers/global limiter.
+  Session routes must add `requireCsrf` (except `otp/verify`). Use `createPublicLimiter` (Postgres
+  store, hashed keys) for per-IP/per-email/per-provider limits. `trust proxy` is exactly 1 hop.
