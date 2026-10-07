@@ -6,10 +6,21 @@ import { apiError, ok } from '../utils/api/api-utils.js';
 import { consentDocumentService } from './consent-document.service.js';
 import { createConsentDocumentSchema, updateConsentDocumentSchema } from './consent-document.schemas.js';
 import { logger } from '../utils/api/logger.js';
+import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 
 export const consentDocumentRouter = Router();
 const CUID_RE = /^c[a-z0-9]{24}$/;
 const ALLOWED_MIME_TYPES = new Set([ 'application/pdf', 'image/jpeg', 'image/png' ]);
+
+/** File extensions a link may use for each stored MIME type (the extension must match the content). */
+const EXTENSIONS_BY_MIME: Record<string, string[]> = {
+    'application/pdf': [ 'pdf' ],
+    'image/png': [ 'png' ],
+    'image/jpeg': [ 'jpeg', 'jpg' ],
+};
+
+// Public, unauthenticated download: stricter than the provider API limiter and shared across instances.
+const publicDownloadLimiter = createPublicLimiter({ name: 'consent-download', windowMs: 60_000, max: 20 });
 
 /**
  * POST /consent-document
@@ -111,6 +122,7 @@ consentDocumentRouter.delete(
  */
 consentDocumentRouter.get(
     '/public/download/:userId.:ext',
+    publicDownloadLimiter,
     asyncHandler(async (req: Request, res: Response) => {
         const userId = req.params.userId as string;
         const ext = req.params.ext as string;
@@ -141,7 +153,16 @@ consentDocumentRouter.get(
             return;
         }
 
+        if (!EXTENSIONS_BY_MIME[ document.mimeType ]?.includes(ext.toLowerCase())) {
+            // Same answer as "no document": do not reveal which type is stored.
+            logger.info({ ip, userId, ext, mimeType: document.mimeType }, 'Public download rejected: extension does not match content type');
+            apiError(res, 'Document not found', 404);
+            return;
+        }
+
         res.setHeader('Content-Type', document.mimeType);
+        // Never let the browser sniff uploaded bytes into an executable type (helmet also sets this globally).
+        res.setHeader('X-Content-Type-Options', 'nosniff');
 
         const encoded = encodeURIComponent(document.name);
         res.setHeader(
