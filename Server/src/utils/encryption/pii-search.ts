@@ -1,12 +1,12 @@
 import type { Prisma } from '../../../generated/prisma/client.ts';
-import { emailHash, looksLikePhone, nameTokens, phoneHash } from './blind-index.js';
+import { emailHash, looksLikePhone, nameQueryTokens, phoneHash } from './blind-index.js';
 
 /**
  * Search filters over encrypted patient PII, built on blind indexes (see blind-index.ts):
  *   - text with `@`      -> exact email (case/whitespace-insensitive)
  *   - phone-like text    -> exact phone number (punctuation ignored)
- *   - anything else      -> every word must match a whole word of the name or last name
- *                           (case- and accent-insensitive); partial words do not match.
+ *   - anything else      -> every word must start a word of the name or last name (3+ letters),
+ *                           or equal one (shorter words); case- and accent-insensitive.
  * Returns null when the text has nothing searchable, so callers can return no results.
  */
 export function patientSearchWhere(search: string): Prisma.PatientWhereInput | null {
@@ -22,7 +22,7 @@ export function patientSearchWhere(search: string): Prisma.PatientWhereInput | n
     return hash ? { OR: [ { whatsappHash: hash }, { smsHash: hash } ] } : null;
   }
 
-  const tokens = nameTokens(text);
+  const tokens = nameQueryTokens(text);
   if (tokens.length === 0) return null;
   return {
     AND: tokens.map((token) => ({
@@ -31,9 +31,9 @@ export function patientSearchWhere(search: string): Prisma.PatientWhereInput | n
   };
 }
 
-/** Whole-word name search for the medical record's own (encrypted) name field. */
+/** Name search (same prefix rules) for the medical record's own (encrypted) name field. */
 export function medicalRecordNameWhere(search: string): Prisma.MedicalRecordWhereInput | null {
-  const tokens = nameTokens(search);
+  const tokens = nameQueryTokens(search);
   if (tokens.length === 0) return null;
   return { AND: tokens.map((token) => ({ nameTokens: { has: token } })) };
 }
