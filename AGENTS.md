@@ -36,9 +36,11 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
   migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
   partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_active_key`
-  (`migrations/20260723023603_unique_patient`). Before committing any generated migration,
+  (`migrations/20260723023603_unique_patient`) and exclusion constraint
+  `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
+  the `btree_gist` extension). Before committing any generated migration,
   read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
-  raw-only objects (e.g. the appointment exclusion constraint) to this list.
+  raw-only objects to this list.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK
   (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, `src/twilio/email-client.js`
   (Brevo REST API, EMAIL channel; unit tests stub global `fetch`), and `src/scheduler/dispatch.js`.
@@ -56,11 +58,12 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `37` files, `443` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `38` files, `455` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
 | App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
 | Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
 | Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout |
@@ -114,3 +117,12 @@ Suite: `37` files, `443` tests, all against real Postgres, `tsc --noEmit` clean.
   (validateBody/Query/Params + asyncHandler), replicating short-circuiting
   (e.g. a 400 from `validateBody` stops the chain) and polling until `asyncHandler`
   settles the response.
+
+### Calendar integrity rules
+- Any transaction that creates/moves an appointment or blocked time must call
+  `withProviderLock(tx, userId)` (`src/utils/prisma/provider-lock.ts`) FIRST, then validate and
+  write on `tx`. Use `createWithin(tx, dto, userId)` to compose booking steps atomically.
+- A provider has one calendar: conflicts are checked per provider (not per patient) over
+  SCHEDULED/CONFIRMED, non-deleted appointments, using half-open intervals.
+- The exclusion constraint is only a backstop; its violation maps to a neutral 409
+  (`isAppointmentOverlapViolation` in `src/utils/errors/prisma-errors.ts`).

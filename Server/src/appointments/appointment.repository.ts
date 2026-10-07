@@ -49,8 +49,8 @@ export const appointmentRepository = {
     return appt;
   },
 
-  async findByIdWithRelations(id: string, userId: string): Promise<AppointmentWithRelations> {
-    const appt = await prisma.appointment.findFirst({
+  async findByIdWithRelations(id: string, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    const appt = await (tx ?? prisma).appointment.findFirst({
       where: { id, userId, isDeleted: false },
       include: appointmentInclude,
     });

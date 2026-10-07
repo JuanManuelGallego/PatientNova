@@ -59,8 +59,8 @@ describe('completeAppointmentsWorker (integration)', () => {
     });
     const scheduled = await prisma.appointment.create({
       data: {
-        startAt: start,
-        endAt: new Date(start.getTime() + 60 * 60_000),
+        startAt: new Date(start.getTime() - 3 * 60 * 60_000),
+        endAt: new Date(start.getTime() - 2 * 60 * 60_000),
         price: 50000,
         patientId,
         userId,

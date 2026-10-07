@@ -36,6 +36,13 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
+/** Raised when the DB exclusion constraint rejects an overlapping appointment (race backstop). */
+export class AppointmentOverlapError extends ApiError {
+  constructor() {
+    super('Appointment overlaps with another appointment of this provider', 409)
+  }
+}
+
 export class AppointmentBlockedTimeConflictError extends ApiError {
   constructor(description: string | null, startAt: Date, endAt: Date) {
     const label = description ? `"${description}"` : 'unnamed blocked slot';

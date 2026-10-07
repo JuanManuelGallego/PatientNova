@@ -18,6 +18,7 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
   },
 }));
 
+vi.mock('../../../src/utils/prisma/provider-lock.js', () => ({ withProviderLock: vi.fn() }));
 vi.mock('pg-boss', () => ({ fromPrisma: schedulerMocks.fromPrisma }));
 vi.mock('../../../src/scheduler/pg-boss.js', () => ({
   getBoss: vi.fn(() => ({ send: schedulerMocks.send })),
@@ -35,14 +36,19 @@ import { blockedTimeRepository } from '../../../src/blocked-time/blocked-time.re
 const mockPrisma = vi.mocked(prisma) as any;
 const mockBlockedTimeRepo = vi.mocked(blockedTimeRepository);
 
-function mockTx() {
+function mockTx(existingOverride?: Record<string, unknown>) {
   const tx = {
+    patient: { findFirst: vi.fn().mockResolvedValue({ id: 'patient-1', userId: 'user-1', name: 'John', lastName: 'Doe' }) },
+    user: { findUniqueOrThrow: vi.fn().mockResolvedValue({ displayName: 'Dr. Test', firstName: 'Test', lastName: 'Doctor' }) },
+    appointmentLocation: { findFirst: vi.fn().mockResolvedValue({ id: 'loc-1', isVirtual: false }) },
+    appointmentType: { findFirst: vi.fn().mockResolvedValue({ id: 'type-1' }) },
     reminder: {
+      findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} }),
       update: vi.fn().mockResolvedValue({}),
     },
     appointment: {
-      findFirst: vi.fn().mockResolvedValue({
+      findFirst: vi.fn().mockImplementation(async (args?: { where?: { startAt?: unknown } }) => (args?.where?.startAt ? null : existingOverride ?? {
         id: 'appt-1',
         startAt: new Date(),
         endAt: new Date(),
@@ -55,7 +61,7 @@ function mockTx() {
         reminder: null,
         appointmentLocation: { id: 'loc-1', name: 'Office', isVirtual: false },
         appointmentType: { id: 'type-1', name: 'Consult' },
-      }),
+      })),
       create: vi.fn().mockResolvedValue({
         id: 'appt-1',
         startAt: new Date(),
@@ -168,7 +174,7 @@ describe('appointmentService.create', () => {
     const tx = mockTx();
     tx.reminder.create.mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
-    mockPrisma.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
+    tx.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
 
     const dtoWithReminder = {
       ...validDto,
@@ -197,7 +203,7 @@ describe('appointmentService.create', () => {
       appointmentType: { id: 'type-1', name: 'Consult' },
       meetingUrl: 'https://meet.google.com/manual-url',
     });
-    tx.appointment.findFirst.mockResolvedValue({
+    tx.appointment.findFirst.mockImplementation(async (args?: { where?: { startAt?: unknown } }) => (args?.where?.startAt ? null : {
       id: 'appt-1',
       startAt: new Date(futureDate),
       endAt: new Date(validDto.endAt),
@@ -209,9 +215,9 @@ describe('appointmentService.create', () => {
       reminder: { id: 'reminder-new-1', channel: 'WHATSAPP' },
       appointmentLocation: { id: 'loc-1', name: 'Virtual', isVirtual: true },
       appointmentType: { id: 'type-1', name: 'Consult' },
-    });
+    }));
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
-    mockPrisma.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
+    tx.appointmentLocation.findFirst.mockResolvedValue({ id: 'loc-1', isVirtual: true });
 
     const dtoWithReminder = {
       ...validDto,
@@ -281,7 +287,9 @@ describe('appointmentService.create', () => {
   });
 
   it('throws when type is not found', async () => {
-    mockPrisma.appointmentType.findFirst.mockResolvedValue(null);
+    const tx = mockTx();
+    tx.appointmentType.findFirst.mockResolvedValue(null);
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
     await expect(
       appointmentService.create({ ...validDto, typeId: 'bad' }, 'user-1')
@@ -289,7 +297,9 @@ describe('appointmentService.create', () => {
   });
 
   it('throws when patient is not found', async () => {
-    mockPrisma.patient.findFirst.mockResolvedValue(null);
+    const tx = mockTx();
+    tx.patient.findFirst.mockResolvedValue(null);
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
     await expect(
       appointmentService.create(validDto, 'user-1')
@@ -313,12 +323,8 @@ describe('appointmentService.update', () => {
     appointmentType: { id: 'type-1', name: 'Consult' },
   };
 
-  beforeEach(() => {
-    mockPrisma.appointment.findFirst.mockResolvedValue(existingAppt);
-  });
-
   it('updates appointment without reminder change', async () => {
-    const tx = mockTx();
+    const tx = mockTx(existingAppt);
     const updatedAppt = { ...existingAppt, price: 200 };
     tx.appointment.update.mockResolvedValue(updatedAppt);
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
@@ -330,7 +336,7 @@ describe('appointmentService.update', () => {
   });
 
   it('creates reminder when adding to existing appointment', async () => {
-    const tx = mockTx();
+    const tx = mockTx(existingAppt);
     tx.reminder.create.mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} });
     tx.appointment.update.mockResolvedValue({ ...existingAppt, reminderId: 'reminder-new-1' });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
@@ -356,9 +362,7 @@ describe('appointmentService.update', () => {
       reminderId: 'reminder-1',
       reminder: { id: 'reminder-1', status: 'PENDING', contentVariables: {} },
     };
-    mockPrisma.appointment.findFirst.mockResolvedValue(apptWithReminder);
-
-    const tx = mockTx();
+    const tx = mockTx(apptWithReminder);
     tx.appointment.update.mockResolvedValue({ ...apptWithReminder, reminderId: null });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
@@ -377,9 +381,7 @@ describe('appointmentService.update', () => {
       reminderId: 'reminder-1',
       reminder: { id: 'reminder-1', status: 'SENT', contentVariables: {} },
     };
-    mockPrisma.appointment.findFirst.mockResolvedValue(apptWithSentReminder);
-
-    const tx = mockTx();
+    const tx = mockTx(apptWithSentReminder);
     tx.appointment.update.mockResolvedValue({ ...apptWithSentReminder, reminderId: null });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
@@ -397,9 +399,7 @@ describe('appointmentService.update', () => {
       reminderId: 'reminder-1',
       reminder: { id: 'reminder-1', status: 'PENDING', contentVariables: { '1': 'old' } },
     };
-    mockPrisma.appointment.findFirst.mockResolvedValue(apptWithReminder);
-
-    const tx = mockTx();
+    const tx = mockTx(apptWithReminder);
     tx.appointment.update.mockResolvedValue(apptWithReminder);
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 

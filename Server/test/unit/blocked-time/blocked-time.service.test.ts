@@ -13,6 +13,12 @@ vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
   },
 }));
 
+vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
+  prisma: { $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({ tx: true })) },
+}));
+
+vi.mock('../../../src/utils/prisma/provider-lock.js', () => ({ withProviderLock: vi.fn() }));
+
 vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
   logAudit: vi.fn(),
   computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
@@ -79,8 +85,8 @@ describe('blockedTimeService.create', () => {
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.create.mockResolvedValue(fakeBlockedTime as any);
     const result = await blockedTimeService.create(dto, 'user-1');
-    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date(dto.startTimeUtc), new Date(dto.endTimeUtc), undefined);
-    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
+    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date(dto.startTimeUtc), new Date(dto.endTimeUtc), undefined, expect.anything());
+    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1', expect.anything());
     expect(result).toEqual(fakeBlockedTime);
   });
 
@@ -116,7 +122,7 @@ describe('blockedTimeService.update', () => {
     mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.update.mockResolvedValue({ ...fakeBlockedTime, ...dto } as any);
     const result = await blockedTimeService.update('bt-1', dto, 'user-1');
-    expect(mockRepo.update).toHaveBeenCalledWith('bt-1', dto, 'user-1');
+    expect(mockRepo.update).toHaveBeenCalledWith('bt-1', dto, 'user-1', expect.anything());
     expect(result.description).toBe('Updated break');
   });
 
@@ -133,7 +139,7 @@ describe('blockedTimeService.update', () => {
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.update.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1');
-    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date('2026-07-27T14:00:00.000Z'), fakeBlockedTime.endTimeUtc, 'bt-1');
+    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date('2026-07-27T14:00:00.000Z'), fakeBlockedTime.endTimeUtc, 'bt-1', expect.anything());
   });
 
   it('checks overlap when endTimeUtc is updated', async () => {
@@ -141,7 +147,7 @@ describe('blockedTimeService.update', () => {
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.update.mockResolvedValue(fakeBlockedTime as any);
     await blockedTimeService.update('bt-1', { endTimeUtc: '2026-07-27T15:00:00.000Z' }, 'user-1');
-    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', fakeBlockedTime.startTimeUtc, new Date('2026-07-27T15:00:00.000Z'), 'bt-1');
+    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', fakeBlockedTime.startTimeUtc, new Date('2026-07-27T15:00:00.000Z'), 'bt-1', expect.anything());
   });
 
   it('throws BlockedTimeOverlapError when update causes overlap', async () => {
