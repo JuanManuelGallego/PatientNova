@@ -35,9 +35,9 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 - **Raw-SQL-only database objects** (not expressible in `schema.prisma`) are invisible to
   Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
   migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
-  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_normalized_active_key` on
-  `(userId, lower(btrim(email))) WHERE isDeleted = false`
-  (`migrations/20261008000000_patient_email_normalized`, replaces `patients_userId_email_active_key`) and exclusion constraint
+  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_emailHash_active_key` on
+  `(userId, emailHash) WHERE isDeleted = false`
+  (`migrations/20261011000000_encrypt_patient_pii`, replaces `patients_userId_email_normalized_active_key`) and exclusion constraint
   `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
   the `btree_gist` extension). Before committing any generated migration,
   read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `43` files, `506` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `45` files, `542` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -94,6 +94,7 @@ Suite: `43` files, `506` tests, all against real Postgres, `tsc --noEmit` clean.
 | Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
 | Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
 | Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
+| Patients (PII encryption) | `test/integration/patients/patient.pii-encryption.integration.test.ts` | ciphertext at rest (patient name/last name/email/phones, reminder to/subject, medical record name/birth place), blind indexes on create/update/clear, whole-word accent-insensitive name search + exact email/phone across patient/appointment/reminder/medical-record lists, tenant isolation, in-memory sort by name/email with pagination, `backfillPii` (encrypts legacy rows, keeps `updatedAt`, idempotent, uniqueness after backfill) |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
 | Audit log (required) | `test/integration/audit-log/audit-required.integration.test.ts` | `required` audit mode rolls back the change (patient create/update/delete), best-effort default stays non-fatal, PUBLIC_PORTAL actor + new entity types |
@@ -156,5 +157,13 @@ Suite: `43` files, `506` tests, all against real Postgres, `tsc --noEmit` clean.
   gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
   fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
   nonexistent times. Never hand-roll offset arithmetic.
+- Patient PII is encrypted at rest (`ENCRYPTED_FIELDS`): `Patient.name/lastName/email/whatsappNumber/smsNumber`,
+  `Reminder.to/subject`, `MedicalRecord.name/birthPlace`. Never filter, sort or `contains` on these columns
+  in SQL (it silently matches nothing). Search with `patientSearchWhere`/`medicalRecordNameWhere`
+  (`src/utils/encryption/pii-search.ts`), look up with the blind-index columns (`emailHash`, `toHash`,
+  ...; `src/utils/encryption/blind-index.ts`). The Prisma extension writes those columns from the
+  plaintext (`BLIND_INDEXES`); never set them by hand. Raw SQL bypasses encryption: do not write these
+  columns with `$executeRaw` outside `backfill-pii.ts`. Adding a new PII field: register it in
+  `ENCRYPTED_FIELDS` (+ `BLIND_INDEXES` if searched), widen the column to `TEXT`, and add it to the tests.
 - Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
   and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.

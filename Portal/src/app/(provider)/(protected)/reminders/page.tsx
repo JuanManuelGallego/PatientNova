@@ -226,7 +226,7 @@ function RemindersPageContent() {
         {activeTab !== "Bulk" && (
           <FilterBar
             {...searchProps}
-            placeholder="Buscar por nombre, número, canal…"
+            placeholder="Nombre del paciente, número o correo exactos, canal…"
             testId="reminders-search-input"
           />
         )}

@@ -2,7 +2,9 @@ import { Channel, type Patient, type Prisma } from '../../generated/prisma/clien
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { PatientEmailConflictError } from './patient.errors.js';
-import { paginate, type Paginated } from '../utils/api/pagination.js';
+import { buildPaginatedResult, paginate, type Paginated } from '../utils/api/pagination.js';
+import { emailHash } from '../utils/encryption/blind-index.js';
+import { MATCH_NOTHING, patientSearchWhere } from '../utils/encryption/pii-search.js';
 import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js';
 import { logger, maskEmail } from '../utils/api/logger.js';
 import { normalizeEmail } from '../utils/validation/normalize-email.js';
@@ -16,6 +18,51 @@ type PatientWithRelations = Patient & {
   medicalRecord: { id: string } | null;
   appointmentType: { id: string; name: string; defaultPrice: number | null } | null;
 };
+
+// Name/last name/email are encrypted, so the database cannot sort on them. A provider's matching
+// patients are few enough to sort after decryption; above the cap we fall back to newest first.
+const ENCRYPTED_SORT_FIELDS = new Set([ 'name', 'lastName', 'email' ]);
+type EncryptedSortField = 'name' | 'lastName' | 'email';
+export const IN_MEMORY_SORT_CAP = 5000;
+const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+
+async function sortByDecryptedField(
+  where: Prisma.PatientWhereInput,
+  field: EncryptedSortField,
+  order: 'asc' | 'desc',
+  skip: number,
+  take: number,
+): Promise<{ data: Patient[]; total: number } | null> {
+  const keys = await prisma.patient.findMany({
+    where,
+    select: { id: true, name: true, lastName: true, email: true },
+    take: IN_MEMORY_SORT_CAP + 1,
+  });
+  if (keys.length > IN_MEMORY_SORT_CAP) {
+    logger.warn({ count: keys.length, field }, 'Too many patients to sort by an encrypted field; using createdAt');
+    return null;
+  }
+
+  const sortKey = (p: { name: string; lastName: string; email: string | null }): string[] =>
+    field === 'name' ? [ p.name, p.lastName ] : field === 'lastName' ? [ p.lastName, p.name ] : [ p.email ?? '' ];
+  const direction = order === 'asc' ? 1 : -1;
+  keys.sort((a, b) => {
+    const ka = sortKey(a);
+    const kb = sortKey(b);
+    // Missing emails always go last.
+    if (field === 'email' && !a.email !== !b.email) return a.email ? -1 : 1;
+    for (let i = 0; i < ka.length; i++) {
+      const c = collator.compare(ka[ i ]!, kb[ i ]!);
+      if (c !== 0) return c * direction;
+    }
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+
+  const pageIds = keys.slice(skip, skip + take).map((k) => k.id);
+  const rows = await prisma.patient.findMany({ where: { id: { in: pageIds } } });
+  const byId = new Map(rows.map((r) => [ r.id, r ]));
+  return { data: pageIds.map((id) => byId.get(id)).filter((r): r is Patient => !!r), total: keys.length };
+}
 
 export const patientRepository = {
   async create(dto: CreatePatientDto, userId: string, tx?: TransactionClient): Promise<Patient> {
@@ -62,18 +109,15 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
-  /** Active (non-deleted) patient of this provider with the given email, matched on the normalized form. */
+  /**
+   * Active (non-deleted) patient of this provider with the given email. Emails are encrypted,
+   * so the match is on the blind index of the normalized email (same index as the unique key).
+   */
   async findByEmail(email: string, userId: string): Promise<Patient | null> {
-    const [match] = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT "id" FROM "patients"
-      WHERE "userId" = ${userId} AND "isDeleted" = false
-        AND lower(btrim("email")) = ${normalizeEmail(email)}
-      LIMIT 1
-    `;
-    if (!match) return null;
-    // Read through Prisma so the encryption extension still processes the patient fields.
+    const hash = emailHash(email);
+    if (!hash) return null;
     return prisma.patient.findFirst({
-      where: { id: match.id, userId, isDeleted: false },
+      where: { userId, isDeleted: false, emailHash: hash },
     });
   },
 
@@ -105,7 +149,7 @@ export const patientRepository = {
   async findMany(query: ListPatientsQuery, userId: string): Promise<Paginated<Patient>> {
     const { status, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
-    const searchTerms = search?.trim().split(/\s+/).filter(Boolean) ?? [];
+    const searchWhere = search ? patientSearchWhere(search) ?? MATCH_NOTHING : undefined;
 
     const where: Prisma.PatientWhereInput = {
       userId,
@@ -113,25 +157,20 @@ export const patientRepository = {
       ...(status && {
         status: Array.isArray(status) ? { in: status } : status
       }),
-      ...(searchTerms.length > 0 && {
-        AND: searchTerms.map((term) => ({
-          OR: [
-            { name: { contains: term, mode: 'insensitive' } },
-            { lastName: { contains: term, mode: 'insensitive' } },
-            { email: { contains: term, mode: 'insensitive' } },
-            { whatsappNumber: { contains: term, mode: 'insensitive' } },
-            { smsNumber: { contains: term, mode: 'insensitive' } },
-          ],
-        })),
-      }),
+      ...(searchWhere && { AND: [ searchWhere ] }),
     };
+
+    if (ENCRYPTED_SORT_FIELDS.has(orderBy)) {
+      const sorted = await sortByDecryptedField(where, orderBy as EncryptedSortField, order, skip, pageSize);
+      if (sorted) return buildPaginatedResult(sorted.data, sorted.total, page, pageSize);
+    }
 
     return paginate(
       prisma.patient.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { [ orderBy ]: order },
+        orderBy: ENCRYPTED_SORT_FIELDS.has(orderBy) ? { createdAt: 'desc' } : { [ orderBy ]: order },
       }),
       prisma.patient.count({ where }),
       page,

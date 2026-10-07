@@ -7,7 +7,7 @@
   "scripts": {
     "build": "prisma generate && tsup",
     "typecheck": "tsc --noEmit",
-    "start": "prisma migrate deploy && pnpm run db:seed-admin && node dist/server.js",
+    "start": "prisma migrate deploy && pnpm run pii:backfill && pnpm run db:seed-admin && node dist/server.js",
     "start:app": "node dist/server.js",
     "migrate:deploy": "prisma migrate deploy",
     "dev": "tsx watch src/server.ts",
@@ -21,6 +21,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/utils/prisma/seed-admin.ts",
+    "pii:backfill": "tsx src/utils/prisma/backfill-pii-cli.ts",
     "db:seed-e2e": "tsx src/utils/prisma/seed-e2e.ts",
     "db:format": "pnpm exec prisma db push",
     "db:wipe": "pnpm exec prisma migrate reset --force --skip-seed"

@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "6 de octubre de 2026";
+const lastUpdated = "7 de octubre de 2026";
 
 const sections = [
   {
@@ -36,7 +36,7 @@ const sections = [
     title: "3. Datos sensibles (salud)",
     content: [
       "La información sobre la salud de una persona y los datos de historia clínica son datos sensibles. Su tratamiento requiere autorización previa, expresa e informada del titular, salvo las excepciones previstas en la ley, y ninguna actividad ni servicio puede condicionarse a que el titular responda preguntas sobre datos sensibles.",
-      "Al reservar una cita en el portal, el titular acepta expresamente esta Política mediante una casilla propia que no está premarcada. Los datos de salud se tratan únicamente para las finalidades de la sección 4, y los campos clínicos se almacenan cifrados a nivel de aplicación.",
+      "Al reservar una cita en el portal, el titular acepta expresamente esta Política mediante una casilla propia que no está premarcada. Los datos de salud se tratan únicamente para las finalidades de la sección 4, y tanto los campos clínicos como los datos de identificación y contacto del paciente se almacenan cifrados a nivel de aplicación.",
     ],
   },
   {
@@ -104,7 +104,7 @@ const sections = [
     id: "security",
     title: "11. Seguridad e incidentes",
     content: [
-      "Aplicamos medidas técnicas, humanas y administrativas razonables: contraseñas con hash, tokens de sesión de corta duración con audiencia y emisor verificados, cookies de autenticación HttpOnly y Secure, control de acceso por roles, aislamiento de datos por cuenta, validación de entradas, limitación de solicitudes compartida entre instancias, cabeceras de seguridad, bloqueo tras intentos fallidos, registros de auditoría y cifrado a nivel de aplicación de los campos clínicos, de notas y de ciertos datos bancarios.",
+      "Aplicamos medidas técnicas, humanas y administrativas razonables: contraseñas con hash, tokens de sesión de corta duración con audiencia y emisor verificados, cookies de autenticación HttpOnly y Secure, control de acceso por roles, aislamiento de datos por cuenta, validación de entradas, limitación de solicitudes compartida entre instancias, cabeceras de seguridad, bloqueo tras intentos fallidos, registros de auditoría y cifrado a nivel de aplicación de los campos clínicos, de notas, de los datos de identificación y contacto de los pacientes (nombre, apellidos, correo electrónico y teléfonos, también en los recordatorios) y de ciertos datos bancarios.",
       "El cifrado en tránsito y en reposo de la base de datos y de las copias de seguridad depende también del proveedor de infraestructura. Ningún sistema es completamente seguro.",
       "Si ocurre un incidente que afecte datos personales, lo investigaremos, tomaremos medidas de contención e informaremos a la SIC y a los titulares afectados en los casos y plazos que exija la ley. Si detectas un acceso no autorizado, escríbenos de inmediato a privacidad@patientnova.net.",
     ],

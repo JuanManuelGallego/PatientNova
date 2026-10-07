@@ -5,10 +5,12 @@ step is not actually in place, say so (the privacy policy must never promise mor
 
 ## Deploying the API
 
-`pnpm start` runs `prisma migrate deploy`, seeds the admin and starts the server. That is fine for a
+`pnpm start` runs `prisma migrate deploy`, the PII backfill (`pii:backfill`), seeds the admin and
+starts the server. That is fine for a
 single instance, but a failing migration then crash-loops the service. Preferred setup:
 
-1. Release step (runs once per deploy, before new instances start): `pnpm run migrate:deploy`
+1. Release step (runs once per deploy, before new instances start):
+   `pnpm run migrate:deploy && pnpm run pii:backfill`
 2. Start command: `pnpm run start:app` (just `node dist/server.js`)
 
 Migrations that rely on data assumptions (exclusion constraint on appointments, normalized-email
@@ -18,6 +20,20 @@ restored copy of production.
 Raw-SQL-only database objects (not visible to Prisma) are listed in `AGENTS.md`.
 `CREATE EXTENSION btree_gist` needs a role allowed to create extensions (typically the database
 owner on managed Postgres); verify on the production database before the first deploy.
+
+### Patient PII encryption (first deploy of `20261011000000_encrypt_patient_pii`)
+Design and guarantees: `docs/compliance-patient-data.md` section 3.
+
+1. Generate `BLIND_INDEX_KEY` (`openssl rand -hex 32`), different from `ENCRYPTION_KEY`. Store both in
+   the secret manager and back them up **separately** from the database backups. Losing
+   `ENCRYPTION_KEY` makes patient names and contacts unreadable; losing `BLIND_INDEX_KEY` breaks
+   search and email uniqueness until every row is rehashed. The API refuses to start in production
+   without them.
+2. Take a `pg_dump` (below). After the backfill, older code cannot read the data: rolling back means
+   restoring this dump, so prefer rolling forward.
+3. Deploy. `pii:backfill` prints `scanned / updated / skipped` per model; on later deploys it scans 0.
+   Until it finishes, rows it has not reached are not found by search or by email.
+4. Verify: `SELECT count(*) FROM patients WHERE "piiVersion" IS NULL;` must return 0.
 
 ### Forced re-login
 Token audience/issuer enforcement (`src/auth/tokens.ts`) invalidates every existing provider

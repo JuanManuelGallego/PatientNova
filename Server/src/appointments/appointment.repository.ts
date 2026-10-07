@@ -14,6 +14,7 @@ import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, local
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { MATCH_NOTHING, patientSearchWhere } from '../utils/encryption/pii-search.js';
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>[ 0 ];
 
@@ -96,17 +97,7 @@ export const appointmentRepository = {
       ...(typeId && { typeId }),
       ...(statusFilter && { status: statusFilter }),
       ...(paid !== undefined && { paid }),
-      ...(search && {
-        OR: [
-          {
-            patient: {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } },
-              ]
-            }
-          } ]
-      }),
+      ...(search && { patient: patientSearchWhere(search) ?? MATCH_NOTHING }),
       ...(startAtFilter && { startAt: startAtFilter }),
     };
 

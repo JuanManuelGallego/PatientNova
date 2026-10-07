@@ -7,6 +7,7 @@ import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
+import { MATCH_NOTHING, medicalRecordNameWhere } from '../utils/encryption/pii-search.js';
 
 const subsystemRelationData = (medicalRecordId: string, relations: NonNullable<CreateMedicalRecordDto[ 'subsystemRelations' ]>) =>
   relations.map(({ subsystem, status, observation }) => ({
@@ -125,9 +126,8 @@ export const medicalRecordRepository = {
     const where: Prisma.MedicalRecordWhereInput = { patient: { userId }, ...(includeDeleted ? {} : { isDeleted: false }) };
     if (patientId) where.patientId = patientId;
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-      ];
+      // The record's name is encrypted: whole-word match on its blind-index tokens.
+      where.AND = [ medicalRecordNameWhere(search) ?? MATCH_NOTHING ];
     }
 
     return paginate(

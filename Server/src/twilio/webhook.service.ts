@@ -9,6 +9,7 @@ import { config } from '../utils/config/config.js';
 import type { SendSmsRequest } from './types';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
+import { contactHash } from '../utils/encryption/blind-index.js';
 
 interface WebhookPayload {
     from?: string;
@@ -90,7 +91,8 @@ export class TwilioWebhookService {
     async findActiveReminder(phoneNumber: string): Promise<(Reminder) | null> {
         const reminder = await prisma.reminder.findFirst({
             where: {
-                to: phoneNumber,
+                // `to` is encrypted; match the destination through its blind index.
+                toHash: contactHash(phoneNumber),
                 channel: Channel.WHATSAPP,
                 sentAt: { lte: new Date() },
                 appointmentId: { not: null },
