@@ -63,8 +63,16 @@ export const patientRepository = {
   },
 
   async findByEmail(email: string, userId: string): Promise<Patient | null> {
+    const [match] = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "patients"
+      WHERE "userId" = ${userId} AND "isDeleted" = false
+        AND lower(btrim("email")) = ${normalizeEmail(email)}
+      LIMIT 1
+    `;
+    if (!match) return null;
+    // Read through Prisma so the encryption extension still processes the patient fields.
     return prisma.patient.findFirst({
-      where: { userId, isDeleted: false, email: normalizeEmail(email) },
+      where: { id: match.id, userId, isDeleted: false },
     });
   },
 

@@ -30,11 +30,11 @@ function createPrismaClient() {
   });
 
   baseClient.$on("error", (e) => {
-    logger.error({ message: e.message, target: e.target }, "Prisma error event");
+    logger.error({ target: e.target }, "Prisma error event");
   });
 
   baseClient.$on("warn", (e) => {
-    logger.warn({ message: e.message, target: e.target }, "Prisma warn event");
+    logger.warn({ target: e.target }, "Prisma warn event");
   });
 
   return baseClient.$extends(encryptionExtension).$extends(auditLogGuardExtension);
