@@ -3,12 +3,15 @@ import { z } from 'zod';
 import { e164OrEmpty } from '../utils/validation/middleware.js';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
+// Trim + lower-case BEFORE validating so " Ana@X.com " is stored as "ana@x.com".
+const patientEmail = z.string().trim().toLowerCase().pipe(z.email('Must be a valid email address')).nullish();
+
 export const createPatientSchema = z.object({
   name: z.string().min(1, 'name is required').max(100),
   lastName: z.string().min(1, 'lastName is required').max(100),
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
-  email: z.email('Must be a valid email address').nullish(),
+  email: patientEmail,
   reminderChannel: z.enum(Channel).optional(),
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).default(PatientStatus.ACTIVE),
@@ -20,7 +23,7 @@ export const updatePatientSchema = z.object({
   lastName: z.string().min(1).max(100).optional(),
   whatsappNumber: e164OrEmpty,
   smsNumber: e164OrEmpty,
-  email: z.email('Must be a valid email address').nullish(),
+  email: patientEmail,
   reminderChannel: z.enum(Channel).optional(),
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).optional(),

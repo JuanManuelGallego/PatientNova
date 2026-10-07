@@ -35,8 +35,9 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 - **Raw-SQL-only database objects** (not expressible in `schema.prisma`) are invisible to
   Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
   migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
-  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_active_key`
-  (`migrations/20260723023603_unique_patient`) and exclusion constraint
+  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_normalized_active_key` on
+  `(userId, lower(btrim(email))) WHERE isDeleted = false`
+  (`migrations/20261008000000_patient_email_normalized`, replaces `patients_userId_email_active_key`) and exclusion constraint
   `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
   the `btree_gist` extension). Before committing any generated migration,
   read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
@@ -58,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `39` files, `467` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `40` files, `475` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -91,6 +92,7 @@ Suite: `39` files, `467` tests, all against real Postgres, `tsc --noEmit` clean.
 | Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered, EMAIL not polled), `dailyReminder` (WhatsApp + EMAIL; dispatch mock, `config` hour pin) |
 | Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
 | Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
+| Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
 | Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
