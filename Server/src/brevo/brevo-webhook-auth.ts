@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { loggedPath } from '../utils/api/request-context.js';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { safeEqual } from '../utils/security/safe-equal.js';
@@ -40,13 +41,13 @@ export function brevoWebhookAuth(req: Request, res: Response, next: NextFunction
   const secret = extractSecret(req.headers.authorization);
 
   if (!secret) {
-    logger.warn({ url: req.originalUrl }, 'Missing Brevo webhook credentials');
+    logger.warn({ url: loggedPath(req) }, 'Missing Brevo webhook credentials');
     res.status(403).send('Forbidden');
     return;
   }
 
   if (!safeEqual(secret, config.brevo.webhookSecret)) {
-    logger.warn({ url: req.originalUrl }, 'Invalid Brevo webhook credentials — request rejected');
+    logger.warn({ url: loggedPath(req) }, 'Invalid Brevo webhook credentials — request rejected');
     res.status(403).send('Forbidden');
     return;
   }

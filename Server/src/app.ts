@@ -1,4 +1,5 @@
 import express, { type Application, type Request, type Response } from 'express';
+import { loggedPath } from './utils/api/request-context.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -61,7 +62,7 @@ app.use(
         standardHeaders: true,
         legacyHeaders: false,
         handler: (req, res) => {
-            logger.warn({ ip: req.ip, url: req.originalUrl, method: req.method }, 'Rate limit exceeded');
+            logger.warn({ ip: req.ip, url: loggedPath(req), method: req.method }, 'Rate limit exceeded');
             apiError(res, 'Too many requests — please slow down.', 429);
         }
     }));
@@ -106,10 +107,10 @@ v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 app.use('/v1', v1);
 
 app.use((req: Request, res: Response) => {
-    logger.warn(
+    logger.debug(
         {
             method: req.method,
-            url: req.originalUrl,
+            url: loggedPath(req),
             contentType: req.headers['content-type'],
             userAgent: req.headers['user-agent'],
         },
