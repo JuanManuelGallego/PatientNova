@@ -4,7 +4,8 @@ import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { PatientEmailConflictError } from './patient.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
 import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskEmail } from '../utils/api/logger.js';
+import { normalizeEmail } from '../utils/validation/normalize-email.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
@@ -25,7 +26,7 @@ export const patientRepository = {
           lastName: dto.lastName,
           whatsappNumber: dto.whatsappNumber ?? null,
           smsNumber: dto.smsNumber ?? null,
-          email: dto.email?.toLowerCase() ?? null,
+          email: dto.email ? normalizeEmail(dto.email) : null,
           reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
           notes: dto.notes ?? null,
           status: dto.status,
@@ -35,8 +36,8 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err) && dto.email) {
-        logger.warn({ email: dto.email, operation: 'create' }, 'Patient email conflict');
-        throw new PatientEmailConflictError(dto.email);
+        logger.warn({ email: maskEmail(dto.email), operation: 'create' }, 'Patient email conflict');
+        throw new PatientEmailConflictError();
       }
       throw err;
     }
@@ -59,6 +60,13 @@ export const patientRepository = {
     }
 
     return { total, byStatus };
+  },
+
+  /** Active (non-deleted) patient of this provider with the given email, matched on the normalized form. */
+  async findByEmail(email: string, userId: string): Promise<Patient | null> {
+    return prisma.patient.findFirst({
+      where: { userId, isDeleted: false, email: normalizeEmail(email) },
+    });
   },
 
   async findById(id: string, userId: string): Promise<Patient> {
@@ -133,7 +141,7 @@ export const patientRepository = {
         {
           whatsappNumber: (v: string | null) => v || null,
           smsNumber: (v: string | null) => v || null,
-          email: (v: string | null) => v?.toLowerCase() || null,
+          email: (v: string | null) => (v ? normalizeEmail(v) : null) || null,
           notes: (v: string | null) => v || null,
           appointmentTypeId: (v: string | null) => v || null,
         },
@@ -145,8 +153,8 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
-        logger.warn({ email: dto.email, operation: 'update', patientId: id }, 'Patient email conflict');
-        throw new PatientEmailConflictError(dto.email!);
+        logger.warn({ email: dto.email ? maskEmail(dto.email) : undefined, operation: 'update', patientId: id }, 'Patient email conflict');
+        throw new PatientEmailConflictError();
       }
       throw err;
     }
@@ -159,6 +167,15 @@ export const patientRepository = {
 
   async restore(id: string, userId: string): Promise<Patient> {
     await patientRepository.findById(id, userId);
-    return restore(prisma.patient, id, userId) as Promise<Patient>;
+    try {
+      return await restore(prisma.patient, id, userId) as Patient;
+    } catch (err) {
+      // Restoring a soft-deleted patient whose email is now used by an active one.
+      if (isPrismaUniqueConstraintError(err)) {
+        logger.warn({ operation: 'restore', patientId: id }, 'Patient email conflict');
+        throw new PatientEmailConflictError();
+      }
+      throw err;
+    }
   },
 };
