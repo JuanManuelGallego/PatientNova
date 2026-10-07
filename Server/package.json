@@ -19,6 +19,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/utils/prisma/seed-admin.ts",
+    "db:seed-e2e": "tsx src/utils/prisma/seed-e2e.ts",
     "db:format": "pnpm exec prisma db push",
     "db:wipe": "pnpm exec prisma migrate reset --force --skip-seed"
   },
