@@ -1,7 +1,8 @@
 import pino, { type DestinationStream } from 'pino';
 import { getRequestId } from './request-context.js';
 
-const transport = process.env.NODE_ENV !== 'production'
+// Pretty output only when NODE_ENV is explicitly a non-production value; unset means production.
+const transport = process.env.NODE_ENV && process.env.NODE_ENV !== 'production'
   ? {
     target: 'pino-pretty',
     options: {

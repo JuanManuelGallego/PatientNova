@@ -150,3 +150,5 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   mutations). Both are mounted in `app.ts` BEFORE the provider CORS/15mb parsers/global limiter.
   Session routes must add `requireCsrf` (except `otp/verify`). Use `createPublicLimiter` (Postgres
   store, hashed keys) for per-IP/per-email/per-provider limits. `trust proxy` is exactly 1 hop.
+- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`). Webhook signature
+  checks are skipped only when `NODE_ENV=development` is set explicitly. Local dev must set it (see `.env.example`).

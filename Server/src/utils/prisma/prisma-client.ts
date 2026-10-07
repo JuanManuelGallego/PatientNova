@@ -44,7 +44,7 @@ export const prisma = global.__prisma ?? createPrismaClient();
 
 export type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-if (process.env.NODE_ENV !== "production") {
+if (config.env !== "production") {
   global.__prisma = prisma;
 }
 
