@@ -177,3 +177,7 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.
 - `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`), which requires
   `ENCRYPTION_KEY`. Local dev must set `NODE_ENV=development` explicitly (see `.env.example`).
+- Time math goes through `src/utils/time/time-utils.ts` (luxon). DST conventions: spring-forward
+  gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
+  fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
+  nonexistent times. Never hand-roll offset arithmetic.
