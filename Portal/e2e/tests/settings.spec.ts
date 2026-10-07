@@ -280,24 +280,26 @@ test.describe('Settings', () => {
 
       await auditPage.search(prefix);
       await auditPage.selectEntityFilter('Paciente');
-      await auditPage.selectActionFilter('Creación');
-
-      await page.waitForResponse((r) =>
+      // Register the waiter BEFORE the action that triggers the request (a fast API answers first).
+      const filtered = page.waitForResponse((r) =>
         auditEndpointMatches(r.url(), {
           search: prefix,
           entityType: 'PATIENT',
           actionType: 'CREATE',
         }),
       );
+      await auditPage.selectActionFilter('Creación');
+      await filtered;
 
       const table = page.getByTestId('audit-table');
       await expect(table.locator('tbody tr')).toHaveCount(10);
       await expect(page.getByTestId('audit-pagination-count')).toContainText('de 12 registros');
 
-      await auditPage.goToNextPage();
-      await page.waitForResponse(
+      const nextPage = page.waitForResponse(
         (r) => r.url().includes('/audit-logs') && new URL(r.url()).searchParams.get('page') === '2',
       );
+      await auditPage.goToNextPage();
+      await nextPage;
 
       await expect(table.locator('tbody tr')).toHaveCount(2);
       // Oldest created (index 0) lands on page two due to desc ordering.
@@ -305,10 +307,11 @@ test.describe('Settings', () => {
       // Newest created (index 11) is on page one, not page two.
       await expect(table).not.toContainText(names[11]);
 
-      await auditPage.goToPreviousPage();
-      await page.waitForResponse(
+      const prevPage = page.waitForResponse(
         (r) => r.url().includes('/audit-logs') && new URL(r.url()).searchParams.get('page') === '1',
       );
+      await auditPage.goToPreviousPage();
+      await prevPage;
       await expect(table.locator('tbody tr')).toHaveCount(10);
     });
 
@@ -326,10 +329,13 @@ test.describe('Settings', () => {
 
       await auditPage.search(patientName);
       await auditPage.selectEntityFilter('Paciente');
-      await auditPage.selectActionFilter('Creación');
-      await page.waitForResponse(
-        (r) => r.url().includes('/audit-logs') && new URL(r.url()).searchParams.get('search') === patientName,
+      const filtered = page.waitForResponse(
+        (r) => r.url().includes('/audit-logs')
+          && new URL(r.url()).searchParams.get('search') === patientName
+          && new URL(r.url()).searchParams.get('actionType') === 'CREATE',
       );
+      await auditPage.selectActionFilter('Creación');
+      await filtered;
 
       const drawer = await auditPage.openRowByDescription(patientName);
       await drawer.expectVisible();

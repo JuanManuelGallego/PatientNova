@@ -489,7 +489,8 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     expect(body.error).toContain('conflict');
 
     await modal.waitForOpen();
-    await expect(modal.error).toContainText('conflict');
+    // The UI shows the curated Spanish message (the raw server text stays in the API body above).
+    await expect(modal.error).toContainText('Ya existe una cita en ese horario');
   });
 
   test('Virtual meeting URL is persisted and rendered', async ({ page, api, trackedAppointments, trackedPatients, trackedLocations }) => {
