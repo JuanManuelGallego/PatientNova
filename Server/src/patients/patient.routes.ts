@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import {
@@ -99,11 +100,12 @@ patientRouter.delete(
 );
 
 /**
- * PATCH /patients/:id/restore
- * Restore a soft-deleted patient (sets isDeleted=false).
+ * POST /patients/:id/restore
+ * Restore a soft-deleted patient (sets isDeleted=false); super admin only.
  */
 patientRouter.post(
   '/:id/restore',
+  requireSuperAdmin,
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.restore(req.params.id as string, req.user!.id);

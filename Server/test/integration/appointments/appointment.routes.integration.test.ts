@@ -221,7 +221,7 @@ describe('appointment routes (integration)', () => {
       appointmentRouter,
       'post',
       `/${id}/restore`,
-      baseReq({ params: { id } }),
+      baseReq({ params: { id }, user: { id: userId, role: 'SUPER_ADMIN', timezone: 'America/Bogota' } }),
     );
     expect(restored.statusCode).toBe(200);
     expect((restored.body as any).data.isDeleted).toBe(false);

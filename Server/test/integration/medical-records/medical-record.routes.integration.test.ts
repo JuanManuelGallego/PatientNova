@@ -40,7 +40,7 @@ describe('medical-record routes (integration)', () => {
     const id = (created.body as any).data.id;
     await invokeRoute(medicalRecordRouter, 'delete', `/${id}`, baseReq({ params: { id } }));
 
-    const restored = await invokeRoute(medicalRecordRouter, 'post', `/${id}/restore`, baseReq({ params: { id } }));
+    const restored = await invokeRoute(medicalRecordRouter, 'post', `/${id}/restore`, baseReq({ params: { id }, user: { id: userId, role: 'SUPER_ADMIN', timezone: 'America/Bogota' } }));
     expect(restored.statusCode).toBe(200);
     expect((restored.body as any).data.isDeleted).toBe(false);
   });

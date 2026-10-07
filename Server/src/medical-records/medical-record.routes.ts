@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import { validateBody, validateParams, validateQuery } from '../middlewares/validate.js';
@@ -77,10 +78,11 @@ medicalRecordRouter.delete(
 
 /**
  * POST /medical-records/:id/restore
- * Restore a soft-deleted medical record (sets isDeleted=false).
+ * Restore a soft-deleted medical record (sets isDeleted=false); super admin only.
  */
 medicalRecordRouter.post(
   '/:id/restore',
+  requireSuperAdmin,
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const rec = await medicalRecordService.restore(req.params.id as string, req.user!.id);
