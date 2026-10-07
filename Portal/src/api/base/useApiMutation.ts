@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { toSpanishMessage } from "./errorMessages";
 
 export class ApiMutationError extends Error {
     constructor(
@@ -46,7 +47,8 @@ export function useApiMutation<TOutput = void>(
                     details = undefined;
                 }
                 throw new ApiMutationError(
-                    details ? `Server Error: ${String(details)}` : `${errorMessage} (${res.status})`,
+                    // Curated Spanish text for the UI; the raw server message stays in `details`.
+                    toSpanishMessage(res.status, details),
                     res.status,
                     details,
                 );
