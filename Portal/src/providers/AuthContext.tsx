@@ -5,6 +5,7 @@ import { API_BASE } from "@/src/config/api";
 import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { User } from '@/src/types/User';
 import { fetchWithAuth } from "@/src/api/base/fetchWithAuth";
+import { toSpanishMessage } from "@/src/api/base/errorMessages";
 
 interface AuthContextValue {
     user: User | null;
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (!res.ok) {
                 const json: ApiErrorResponse = await res.json();
-                throw new Error(`Server Error: ${json.error}`);
+                throw new Error(toSpanishMessage(res.status, json.error));
             }
             const json: ApiResponse = await res.json();
             if (!json.success) throw new Error("Login failed");
