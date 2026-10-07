@@ -30,6 +30,7 @@ const PII_KEYS = [
   'to',
   'lastName',
   'phone',
+  'phoneNumber',
   'whatsappNumber',
   'smsNumber',
   'recipient',

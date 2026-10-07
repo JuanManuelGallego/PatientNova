@@ -1,7 +1,7 @@
-> **Status:** Proposal, not yet implemented. **Date:** 2026-10-05
+> **Status:** Phase 0 implemented on `staging`; Phases 1+ not started. **Date:** 2026-10-05
 
-## Phase 0 status (2026-10-07)
-Implemented on stacked local branches (merge in this order; nothing pushed yet). Server: 410 unit + 500 integration tests; Portal: 160 tests; Playwright run locally against a throwaway stack.
+## Phase 0 status (2026-10-06)
+Implemented as one commit per branch below, all on `staging`. Server: unit + integration suites green; Portal: 160 tests; Playwright run locally against a throwaway stack (the CI `e2e` job has not run yet).
 
 | Branch | Items | Notes |
 |---|---|---|

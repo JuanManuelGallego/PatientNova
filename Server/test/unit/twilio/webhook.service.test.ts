@@ -23,6 +23,7 @@ vi.mock('../../../src/utils/config/config.js', () => ({
 
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  maskPhone: (phone: string) => `***${phone.slice(-4)}`,
 }));
 
 vi.mock('../../../src/twilio/client.js', () => ({
@@ -160,7 +161,7 @@ describe('TwilioWebhookService.findActiveReminder', () => {
 
 describe('TwilioWebhookService.confirmAppointment', () => {
   it('confirms appointment and sends WhatsApp reply', async () => {
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
 
     const reminder = { id: 'rem-1', appointmentId: 'appt-1' } as Parameters<typeof service.confirmAppointment>[0];
@@ -171,7 +172,7 @@ describe('TwilioWebhookService.confirmAppointment', () => {
   });
 
   it('succeeds even if WhatsApp reply fails', async () => {
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockRejectedValue(new Error('Twilio error'));
 
     const reminder = { id: 'rem-1', appointmentId: 'appt-1' } as Parameters<typeof service.confirmAppointment>[0];
@@ -181,7 +182,7 @@ describe('TwilioWebhookService.confirmAppointment', () => {
 
 describe('TwilioWebhookService.cancelAppointment', () => {
   it('cancels appointment and sends WhatsApp reply', async () => {
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
 
     const reminder = { id: 'rem-1', appointmentId: 'appt-1' } as Parameters<typeof service.cancelAppointment>[0];
@@ -192,7 +193,7 @@ describe('TwilioWebhookService.cancelAppointment', () => {
   });
 
   it('succeeds even if WhatsApp reply fails', async () => {
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockRejectedValue(new Error('Twilio error'));
 
     const reminder = { id: 'rem-1', appointmentId: 'appt-1' } as Parameters<typeof service.cancelAppointment>[0];
@@ -364,7 +365,7 @@ describe('TwilioWebhookService.processWhatsAppReply', () => {
       id: 'rem-1', appointmentId: 'appt-1', status: 'PENDING',
       appointment: { status: 'SCHEDULED' },
     });
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
     mockPrisma.appointment.findUnique.mockResolvedValue({
       id: 'appt-1', startAt: new Date(), patient: { name: 'J', lastName: 'D', user: { displayName: 'Dr', reminderActive: true, reminderChannel: 'WHATSAPP', whatsappNumber: '+1' } },
@@ -376,6 +377,21 @@ describe('TwilioWebhookService.processWhatsAppReply', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('does not notify and tells the patient when the appointment is no longer modifiable', async () => {
+    mockPrisma.reminder.findFirst.mockResolvedValue({
+      id: 'rem-1', appointmentId: 'appt-1', userId: 'user-1', status: 'SENT',
+      appointment: { status: 'CANCELLED' },
+    });
+    mockPrisma.$transaction.mockResolvedValue(false);
+    mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
+
+    const result = await service.processWhatsAppReply({ from: 'whatsapp:+15551234567', buttonPayload: 'confirm' });
+
+    expect(result).toEqual({ success: false, message: 'Appointment not modifiable' });
+    expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith('+15551234567', expect.stringContaining('ya no se puede modificar'));
+    expect(mockPrisma.appointment.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns failure when payload is invalid', async () => {
@@ -453,7 +469,7 @@ describe('TwilioWebhookService.processWhatsAppReply', () => {
       id: 'rem-1', appointmentId: 'appt-1', status: 'PENDING',
       appointment: { status: 'SCHEDULED' },
     });
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
     mockPrisma.appointment.findUnique.mockRejectedValue(new Error('DB error'));
 
@@ -470,7 +486,7 @@ describe('TwilioWebhookService.processWhatsAppReply', () => {
       id: 'rem-1', appointmentId: 'appt-1', status: 'PENDING',
       appointment: { status: 'SCHEDULED' },
     });
-    mockPrisma.$transaction.mockResolvedValue([]);
+    mockPrisma.$transaction.mockResolvedValue(true);
     mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
     mockPrisma.appointment.findUnique.mockRejectedValue(new Error('DB error'));
 
