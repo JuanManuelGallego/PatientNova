@@ -15,58 +15,83 @@ for the service.
 | Clinical content (medical records, family members, evolution notes) | Encrypted (AES-256-GCM, app level) |
 | Patient / appointment notes, reminder bodies, audit descriptions and diffs | Encrypted |
 | Provider banking and national id | Encrypted |
-| Patient name, last name | **Plaintext** (searchable) |
+| Patient name, last name | **Plaintext** (substring-searchable, sortable) |
 | Patient email, whatsapp, sms numbers | **Plaintext** |
 | `Reminder.to` (destination email/phone) | **Plaintext** |
 
 ## 2. Decision (0.23)
 
-**Encrypt patient contact fields and use blind indexes for the lookups we need. Keep name and last
-name in plaintext for now, as a documented residual risk that the controller must accept in writing.**
+**Encrypt all patient identifying and contact fields: `name`, `lastName`, `email`, `whatsappNumber`,
+`smsNumber` and `Reminder.to`. Keyed blind indexes (HMAC) provide the lookups we need.** (Decided by
+the user on 2026-10-06; supersedes an earlier draft that kept names in plaintext.)
 
 Rationale:
-- Contact fields are the data that lets someone reach a patient; combined with "is a patient of
-  provider X" they reveal a health relationship. Encrypting them is cheap because the only lookups
-  we need are exact: login-style matching by email and "is this phone already used".
-- Names are used for substring search in the provider UI (`contains`, case-insensitive). Encrypting
-  them would remove search or force loading all patients into memory. We keep them readable and rely
-  on access control, tenant isolation and database-level controls, and revisit if counsel disagrees.
-- Residual risk accepted by choosing plaintext names: a database dump exposes names and the
-  fact that they are patients of a provider, but not how to contact them or any clinical content.
+- Name and last name are personal data that identify the patient; combined with "is a patient of
+  provider X" (a psychologist) they reveal a health relationship, i.e. sensitive data under
+  Ley 1581 art. 5. A database dump or backup leak must not expose who the patients are.
+- Contact fields let someone reach the patient; same reasoning.
 
-**Pilot gate (unchanged):** a pilot with real patient data requires the work in section 3 to be
-implemented **or** an explicit written acceptance by the controller of the current plaintext state.
-Until then use synthetic or staff data only.
+Accepted functional cost (see section 3, items 4 and 5):
+- Name search becomes **whole-word**, case- and accent-insensitive ("maria" finds "María José
+  Pérez"; "mar" does not). Substring search is no longer possible.
+- The database can no longer sort patients by name, last name or email.
 
-## 3. Design: encrypted contacts + blind index
+**Pilot gate:** a pilot with real patient data requires section 3 to be implemented. Until then use
+synthetic or staff data only.
+
+## 3. Design: encrypted identity/contact fields + blind indexes
 
 1. **Keys.** New secret `BLIND_INDEX_KEY` (32 bytes, distinct from `ENCRYPTION_KEY`), kept in the
-   secret manager and backed up separately from database backups. `emailHash`/`phoneHash` =
-   `HMAC-SHA256(key, normalizedValue)`, hex. Store a `hashKeyVersion` smallint to allow rotation
-   (rehash job, then bump the active version).
-2. **Schema (Patient).** Add `emailHash`, `whatsappHash`, `smsHash` (nullable) and `hashKeyVersion`.
-   Widen `email`, `whatsappNumber`, `smsNumber` and `Reminder.to` from `VARCHAR(n)` to `TEXT`
-   (ciphertext is longer than the plaintext). Register the fields in `ENCRYPTED_FIELDS`.
+   secret manager and backed up separately from database backups. Every blind index is
+   `HMAC-SHA256(key, "<purpose>:" + normalizedValue)`, hex; the purpose prefix (`email`, `phone`,
+   `name`) keeps equal values in different fields from producing equal hashes. Store a
+   `hashKeyVersion` smallint to allow rotation (rehash job, then bump the active version).
+2. **Schema (Patient).** Add `emailHash`, `whatsappHash`, `smsHash` (nullable), `nameTokens`
+   (`TEXT[]`, GIN index) and `hashKeyVersion`. Widen `name`, `lastName`, `email`, `whatsappNumber`,
+   `smsNumber` and `Reminder.to` from `VARCHAR(n)` to `TEXT` (ciphertext is longer than the plaintext).
+   Register the fields in `ENCRYPTED_FIELDS`. Length limits move from the column to the zod schemas.
 3. **Uniqueness and matching.** Replace the raw-SQL index
    `patients_userId_email_normalized_active_key` with a partial unique index on
    `("userId", "emailHash") WHERE "isDeleted" = false`. `patientRepository.findByEmail` (the single
    matching function) hashes the normalized input and queries by hash. Phone duplicates are warned,
    not enforced.
-4. **Search.** Provider search keeps substring matching on name/last name. Email/phone search becomes
-   exact match through the hash (the UI placeholder text must say so).
-5. **Backfill (one-off, idempotent, batched).** `scripts/encrypt-patient-contacts.ts` reads rows whose
-   `emailHash IS NULL`, encrypts the three fields (and `Reminder.to`), writes the hashes. The field
-   decryptor must accept legacy plaintext until the backfill is complete. Run it as a release step,
-   **not** inside `migrate deploy`. Take a `pg_dump` first (see `docs/operations.md`).
-6. **Cut-over order.** (a) migration adds columns + widens types; (b) deploy code that writes
-   ciphertext + hashes and reads both forms; (c) run backfill; (d) migration creates the hash index
-   and drops the plaintext-email index; (e) remove legacy-plaintext tolerance.
-7. **Rollback.** Until step (e) the plaintext-tolerant reader makes rollback of the code safe; keep
+4. **Search.** One search box, three cases:
+   - *Name:* the stored `name` and `lastName` are normalized (lowercase, accents removed with NFD,
+     punctuation to spaces), split into words, and each word is hashed into `nameTokens`. A query is
+     normalized and tokenized the same way and matches when **all** its words are present
+     (`"nameTokens" @> ARRAY[...]`). So "maria perez" finds "María José Pérez Gómez"; partial words
+     do not match.
+   - *Email / phone:* exact match through the hash.
+   - Applies to the three places that search by patient name today: patient list
+     (`patient.repository.ts`), appointment list (`appointment.repository.ts`) and reminder list
+     (`reminder.repository.ts`, which also searches `Reminder.to` by substring; that becomes exact).
+   - The UI placeholder text must say "nombre completo, correo o teléfono exactos".
+5. **Sorting.** Remove `name`, `lastName` and `email` from the patient list `orderBy` options
+   (`patient.schemas.ts`); keep `createdAt`/`updatedAt`. Alphabetical order, where the UI needs it,
+   is done after decryption on the returned page only.
+6. **Other readers.** Everything that reads names through Prisma (reminder rendering, daily reminder
+   worker, status notifications, audit descriptions) gets plaintext from the encryption extension
+   and needs no change. Raw SQL that reads these columns must be checked during implementation.
+7. **Backfill (one-off, idempotent, batched).** `scripts/encrypt-patient-pii.ts` reads rows whose
+   `hashKeyVersion IS NULL`, encrypts the five patient fields (and `Reminder.to`), writes the hashes
+   and name tokens. The field decryptor must accept legacy plaintext until the backfill is complete.
+   Run it as a release step, **not** inside `migrate deploy`. Take a `pg_dump` first (see
+   `docs/operations.md`).
+8. **Cut-over order.** (a) migration adds columns + widens types; (b) deploy code that writes
+   ciphertext + hashes and reads both forms, with search using the tokens; (c) run backfill;
+   (d) migration creates the hash index and drops the plaintext-email index; (e) remove
+   legacy-plaintext tolerance.
+9. **Rollback.** Until step (e) the plaintext-tolerant reader makes rollback of the code safe; keep
    the pre-backfill dump until the pilot has been stable for a release.
-8. **Tests.** Real-Postgres tests for: ciphertext at rest, equality by hash, case/whitespace
-   normalization, per-provider uniqueness, restore conflicts, backfill idempotency, key-version rotation.
+10. **Tests.** Real-Postgres tests for: ciphertext at rest for every field, equality by hash,
+    case/whitespace/accent normalization, all-words name search, per-provider uniqueness, restore
+    conflicts, removed sort options rejected, backfill idempotency, key-version rotation.
 
-Effort: roughly 2 to 3 engineering days plus a staging rehearsal. It must land before patient
+Residual leakage (documented, accepted): blind indexes are deterministic, so someone who has the
+database but not the key can see which rows share a name word or an email, but not what it is.
+Common words ("maria") produce frequent hashes.
+
+Effort: roughly 3 to 4 engineering days plus a staging rehearsal. It must land before patient
 matching (3.3) is released, because matching is implemented on the hash.
 
 ## 4. Consent model (0.20 to 0.22)
@@ -99,5 +124,5 @@ matching (3.3) is released, because matching is implemented on the hash.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.
 - [ ] Retention table (clinical records vs. appointments vs. logs) and the erasure path; define how
       the immutable audit log is minimized when a patient is erased.
-- [ ] Written acceptance of plaintext names (section 2) **or** a decision to encrypt them.
+- [ ] Encryption of patient identity/contact fields (section 3) implemented and backfilled.
 - [ ] Counsel review of `privacy-policy/page.tsx` and `terms-of-service/page.tsx`.
