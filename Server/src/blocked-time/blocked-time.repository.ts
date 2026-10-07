@@ -77,9 +77,9 @@ export const blockedTimeRepository = {
     return softDelete(prisma.blockedTime, id, userId) as Promise<BlockedTime>;
   },
 
-  async restore(id: string, userId: string): Promise<BlockedTime> {
-    await blockedTimeRepository.findById(id, userId, true);
-    return restore(prisma.blockedTime, id, userId) as Promise<BlockedTime>;
+  async restore(id: string, userId: string, tx?: TransactionClient): Promise<BlockedTime> {
+    await blockedTimeRepository.findById(id, userId, true, tx);
+    return restore((tx ?? prisma).blockedTime, id, userId) as Promise<BlockedTime>;
   },
 
   async hasBlockedTimeOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string, tx?: TransactionClient): Promise<{ id: string; description: string | null; startTimeUtc: Date; endTimeUtc: Date } | null> {

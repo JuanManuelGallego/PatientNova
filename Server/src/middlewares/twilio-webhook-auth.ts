@@ -42,7 +42,7 @@ export function twilioWebhookAuth(req: Request, res: Response, next: NextFunctio
   );
 
   if (!isValid) {
-    logger.warn({ url: fullUrl }, 'Invalid Twilio webhook signature — request rejected');
+    logger.warn({ url: loggedPath(req) }, 'Invalid Twilio webhook signature — request rejected');
     res.status(403).send('Forbidden');
     return;
   }

@@ -60,6 +60,8 @@ async function request<T>(
         throw new ApiClientError(toSpanishMessage(0), 0);
     }
 
+    if (res.status === 204) return undefined as T;
+
     let json: Envelope<T> | undefined;
     try {
         json = (await res.json()) as Envelope<T>;

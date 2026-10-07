@@ -1,9 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { loggedPath } from './request-context.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import { handleError } from './api-utils.js';
-import { logger } from './logger.js';
 
 /**
  * Wraps an async route handler, forwarding any thrown errors to handleError.
@@ -19,7 +17,6 @@ export function asyncHandler<
 ): RequestHandler<P, ResBody, ReqBody, ReqQuery> {
   return (req, res, next) => {
     fn(req as Request<P, ResBody, ReqBody, ReqQuery>, res as Response<ResBody>, next).catch((err: unknown) => {
-      logger.error({ err, method: req.method, url: loggedPath(req), userId: (req as Request & { user?: { id?: string } }).user?.id }, 'Unhandled route error');
       handleError(res, err);
     });
   };
