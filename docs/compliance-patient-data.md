@@ -31,9 +31,9 @@ Rationale:
 - Contact fields let someone reach the patient; same reasoning.
 
 Accepted functional cost (see section 3, items 4 and 5):
-- Name search becomes **whole-word**, case- and accent-insensitive ("maria" finds "María José
-  Pérez"; "mar" does not). Substring search is no longer possible.
-- The database can no longer sort patients by name, last name or email.
+- Name search matches **word prefixes of 3+ letters**, case- and accent-insensitive ("mar" finds
+  "María José Pérez"; "erez" does not). Substring search is no longer possible.
+- The database can no longer sort patients by name, last name or email (done after decryption).
 
 **Pilot gate:** section 3 is implemented; a pilot with real patient data still needs the remaining
 checklist items in section 5.
@@ -62,10 +62,13 @@ checklist items in section 5.
    on `("userId", "emailHash") WHERE "isDeleted" = false` (replaces the old expression index).
    `patientRepository.findByEmail` matches by hash.
 5. **Search** (`pii-search.ts`): text with `@` = exact email; phone-like text = exact phone (either
-   number); anything else = every word must be a whole word of the name or last name, case- and
-   accent-insensitive. "maria perez" finds "María José Pérez Gómez"; "mar" finds nothing. Used by
-   the patient, appointment and reminder lists (reminders also match the exact destination) and
-   the medical-record list (record name). Portal placeholders say "palabras completas" / "exactos".
+   number); anything else = every search word must start a word of the name or last name, case-
+   and accent-insensitive. Each stored word is indexed whole plus its prefixes of 3 to 20 letters
+   ("maria" -> mar, mari, maria), so "mar per" finds "María José Pérez"; query words under 3
+   letters only match an identical word ("de" finds "de la Torre", "ma" finds nothing); substrings
+   ("erez") never match. Used by the patient, appointment and reminder lists (reminders also match
+   the exact destination) and the medical-record list (record name). Portal placeholders say email
+   and phone must be exact. (`PII_VERSION` 2 added the prefixes; the backfill rehashed v1 rows.)
 6. **Sorting.** The patient list still sorts by name, last name or email: matching rows (at most
    5,000, `IN_MEMORY_SORT_CAP`) are decrypted and sorted with a Spanish collator, then paginated;
    above the cap it falls back to newest first and logs a warning. Patients without email sort last.
@@ -83,13 +86,14 @@ checklist items in section 5.
 10. **Rollback.** Older code cannot read the ciphertext (it would show `enc:v1:...` strings), so
     rolling back the code after the backfill means restoring the pre-deploy dump. Roll forward instead.
 11. **Tests:** `test/integration/patients/patient.pii-encryption.integration.test.ts` (ciphertext at
-    rest for every field, indexes on create/update/clear, accent/case/whole-word search across the
+    rest for every field, indexes on create/update/clear, accent/case/prefix search across the
     four lists, exact email/phone, tenant isolation, sorting + pagination, backfill encryption,
     `updatedAt` preserved, idempotency, uniqueness against backfilled rows).
 
 Residual leakage (documented, accepted): blind indexes are deterministic, so someone who has the
-database but not the key can see which rows share a name word, an email or a phone, but not what
-they are. Common words ("maria") produce frequent hashes. Anyone with both keys and the database can
+database but not the key can see which rows share a name word, a name prefix, an email or a phone,
+but not what they are. The number of name tokens reveals the approximate length of each name word,
+and frequent prefixes ("mar") are easier to guess by frequency than whole words. Anyone with both keys and the database can
 read everything; the keys must never be stored with the backups.
 
 ## 4. Consent model (0.20 to 0.22)

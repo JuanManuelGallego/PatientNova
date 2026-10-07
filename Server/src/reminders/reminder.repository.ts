@@ -60,7 +60,7 @@ export const reminderRepository = {
             .filter(c => c.toLowerCase().includes(search.toLowerCase()))
             .map(c => ({ channel: c }))),
           // `to` and patient names are encrypted: exact destination via its blind index,
-          // whole-word patient name/email/phone via the patient's indexes.
+          // patient name (word prefixes) or exact email/phone via the patient's indexes.
           ...(contactHash(search.trim()) ? [ { toHash: contactHash(search.trim()) } ] : []),
           ...(patientSearchWhere(search) ? [ { patient: patientSearchWhere(search)! } ] : []),
           MATCH_NOTHING,

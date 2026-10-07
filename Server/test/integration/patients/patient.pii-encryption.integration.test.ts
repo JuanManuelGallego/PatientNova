@@ -104,15 +104,22 @@ describe('patient PII at rest', () => {
 });
 
 describe('search over encrypted PII', () => {
-  it('matches whole words of the name, ignoring case and accents, requiring every word', async () => {
+  it('matches names by word prefix (3+ letters), ignoring case and accents, requiring every word', async () => {
     const maria = await newPatient();
     await newPatient({ name: 'Mario', lastName: 'Pérez', email: null, whatsappNumber: null });
+    const de = await newPatient({ name: 'Ana', lastName: 'de la Torre', email: null, whatsappNumber: null });
 
     expect((await searchPatients('maria perez')).data.map((x) => x.id)).toEqual([ maria.id ]);
     expect((await searchPatients('  MARÍA   gómez ')).total).toBe(1);
     expect((await searchPatients('perez')).total).toBe(2);
-    expect((await searchPatients('mar')).total).toBe(0); // partial words do not match
+    expect((await searchPatients('mar')).total).toBe(2); // prefix of María and Mario
+    expect((await searchPatients('mari per')).total).toBe(2);
+    expect((await searchPatients('jos gom')).data.map((x) => x.id)).toEqual([ maria.id ]);
+    expect((await searchPatients('marie')).total).toBe(0); // not a prefix of either
+    expect((await searchPatients('ma')).total).toBe(0); // under 3 letters: whole words only
+    expect((await searchPatients('de')).data.map((x) => x.id)).toEqual([ de.id ]);
     expect((await searchPatients('maria lopez')).total).toBe(0);
+    expect((await searchPatients('erez')).total).toBe(0); // prefixes only, not substrings
   });
 
   it('matches an email exactly (case/whitespace-insensitive) and a phone ignoring punctuation', async () => {
@@ -153,7 +160,7 @@ describe('search over encrypted PII', () => {
     });
     await medicalRecordRepository.create({ patientId: p.id, name: 'María José Pérez' } as never, userId);
 
-    const appts = await appointmentRepository.findMany(listAppointmentsSchema.parse({ search: 'pérez' }), userId);
+    const appts = await appointmentRepository.findMany(listAppointmentsSchema.parse({ search: 'pér' }), userId);
     expect(appts.data.map((a) => a.patientId)).toEqual([ p.id ]);
 
     const byName = await reminderRepository.findMany(listRemindersSchema.parse({ search: 'maria' }), userId);
@@ -161,7 +168,7 @@ describe('search over encrypted PII', () => {
     const none = await reminderRepository.findMany(listRemindersSchema.parse({ search: 'dest@' }), userId);
     expect([ byName.total, byDest.total, none.total ]).toEqual([ 1, 1, 0 ]);
 
-    const records = await medicalRecordRepository.findMany(listMedicalRecordsSchema.parse({ search: 'jose' }), userId);
+    const records = await medicalRecordRepository.findMany(listMedicalRecordsSchema.parse({ search: 'jos' }), userId);
     expect(records.total).toBe(1);
   });
 });
@@ -224,6 +231,24 @@ describe('pii backfill', () => {
 
     const second = await backfillPii();
     expect(second.every((r) => r.scanned === 0 && r.updated === 0)).toBe(true);
+  });
+
+  it('rehashes rows written under an older PII_VERSION (prefix tokens added in v2)', async () => {
+    const p = await newPatient({ name: 'Valentina', lastName: 'Ospina', email: null, whatsappNumber: null });
+    const wholeWordOnly = [ 'valentina' ].map((w) => nameTokens(w).at(0)!); // v1 stored only whole words
+    await prisma.$executeRaw`
+      UPDATE "patients" SET "piiVersion" = 1, "nameTokens" = ${wholeWordOnly}::text[], "lastNameTokens" = '{}'
+      WHERE "id" = ${p.id}::uuid`;
+    const before = await prisma.patient.findUniqueOrThrow({ where: { id: p.id } });
+    expect((await searchPatients('val osp')).total).toBe(0);
+
+    await backfillPii();
+
+    const after = await prisma.patient.findUniqueOrThrow({ where: { id: p.id } });
+    expect(after.piiVersion).toBe(PII_VERSION);
+    expect(after.updatedAt).toEqual(before.updatedAt);
+    expect(after.name).toBe('Valentina');
+    expect((await searchPatients('val osp')).data.map((x) => x.id)).toEqual([ p.id ]);
   });
 
   it('enforces email uniqueness against backfilled rows', async () => {

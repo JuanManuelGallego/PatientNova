@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `45` files, `542` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `45` files, `543` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -94,7 +94,7 @@ Suite: `45` files, `542` tests, all against real Postgres, `tsc --noEmit` clean.
 | Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
 | Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
 | Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
-| Patients (PII encryption) | `test/integration/patients/patient.pii-encryption.integration.test.ts` | ciphertext at rest (patient name/last name/email/phones, reminder to/subject, medical record name/birth place), blind indexes on create/update/clear, whole-word accent-insensitive name search + exact email/phone across patient/appointment/reminder/medical-record lists, tenant isolation, in-memory sort by name/email with pagination, `backfillPii` (encrypts legacy rows, keeps `updatedAt`, idempotent, uniqueness after backfill) |
+| Patients (PII encryption) | `test/integration/patients/patient.pii-encryption.integration.test.ts` | ciphertext at rest (patient name/last name/email/phones, reminder to/subject, medical record name/birth place), blind indexes on create/update/clear, 3+ letter prefix accent-insensitive name search, `PII_VERSION` rehash + exact email/phone across patient/appointment/reminder/medical-record lists, tenant isolation, in-memory sort by name/email with pagination, `backfillPii` (encrypts legacy rows, keeps `updatedAt`, idempotent, uniqueness after backfill) |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
 | Audit log (required) | `test/integration/audit-log/audit-required.integration.test.ts` | `required` audit mode rolls back the change (patient create/update/delete), best-effort default stays non-fatal, PUBLIC_PORTAL actor + new entity types |
