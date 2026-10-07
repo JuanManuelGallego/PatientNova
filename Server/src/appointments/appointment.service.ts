@@ -7,6 +7,7 @@ import {
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
   AppointmentBlockedTimeConflictError,
+  AppointmentInvalidTimeRangeError,
   PastAppointmentLockedError,
 } from './appointment.errors.js';
 import { LocationNotFoundError } from '../utils/errors/errors.js';
@@ -426,6 +427,9 @@ export const appointmentService = {
       const existing = await appointmentRepository.findByIdWithRelations(id, userId, tx);
 
       const newStatus = dto.status ?? existing.status;
+      if (dto.status !== undefined && !ALLOWED_STATUS_TRANSITIONS[ existing.status ].includes(dto.status)) {
+        throw new AppointmentStatusTransitionError(existing.status, `change status to ${dto.status}`);
+      }
       const isPast = existing.endAt.getTime() < Date.now();
       if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
         throw new PastAppointmentLockedError(id);
@@ -436,9 +440,14 @@ export const appointmentService = {
       const willBeActive = ACTIVE_STATUSES.has(newStatus);
       const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
       const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
+      // A partial update (only startAt or only endAt) can yield end <= start; the body schema
+      // only validates the pair when both are sent, so re-validate against the stored value.
+      const newStart = dto.startAt ?? existing.startAt;
+      const newEnd = dto.endAt ?? existing.endAt;
+      if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
+        throw new AppointmentInvalidTimeRangeError();
+      }
       if (willBeActive && (timeChanged || becomesActive)) {
-        const newStart = dto.startAt ?? existing.startAt;
-        const newEnd = dto.endAt ?? existing.endAt;
         await checkConflict(tx, userId, newStart, newEnd, id);
         await checkBlockedTimeConflict(tx, userId, newStart, newEnd);
       }
@@ -487,7 +496,7 @@ export const appointmentService = {
         ...dto,
         ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
         ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
-      }, tx);
+      }, userId, tx);
 
       const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
       await logAudit({
@@ -530,82 +539,105 @@ export const appointmentService = {
   },
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {
-    const appt = await appointmentRepository.findById(id, userId);
-    if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
-      throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
-    }
-    const isPast = appt.startAt.getTime() < Date.now();
-    if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
-      throw new PastAppointmentLockedError(id);
-    }
-    const updated = await appointmentRepository.update(id, { status });
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
-      affectedFields: [ 'status' ],
-      fieldsBefore: { status: appt.status },
-      fieldsAfter: { status },
-    });
-    logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
-    return updated;
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      await withProviderLock(tx, userId);
+      const appt = await appointmentRepository.findById(id, userId, false, tx);
+      if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
+        throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
+      }
+      const isPast = appt.startAt.getTime() < Date.now();
+      if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
+        throw new PastAppointmentLockedError(id);
+      }
+      if (ACTIVE_STATUSES.has(status) && !ACTIVE_STATUSES.has(appt.status)) {
+        await checkConflict(tx, userId, appt.startAt, appt.endAt, id);
+        await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
+      }
+      const updated = await appointmentRepository.update(id, { status }, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
+        affectedFields: [ 'status' ],
+        fieldsBefore: { status: appt.status },
+        fieldsAfter: { status },
+        tx,
+      });
+      logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
+      return updated;
+    }, { timeout: 10000 });
   },
 
   async markPaid(id: string, userId: string): Promise<AppointmentWithRelations> {
-    const appt = await appointmentRepository.findById(id, userId);
-    if (appt.paid) {
-      throw new AppointmentStatusTransitionError(appt.status, 'mark as paid (already paid)');
-    }
-    if (!PAYABLE_STATUSES.has(appt.status)) {
-      throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
-    }
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      const appt = await appointmentRepository.findById(id, userId, false, tx);
+      if (appt.paid) {
+        throw new AppointmentStatusTransitionError(appt.status, 'mark as paid (already paid)');
+      }
+      if (!PAYABLE_STATUSES.has(appt.status)) {
+        throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
+      }
 
-    const updated = await appointmentRepository.update(id, { paid: true });
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
-      affectedFields: [ 'paid' ],
-      fieldsBefore: { paid: false },
-      fieldsAfter: { paid: true },
-    });
-    return updated;
+      const updated = await appointmentRepository.update(id, { paid: true }, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
+        affectedFields: [ 'paid' ],
+        fieldsBefore: { paid: false },
+        fieldsAfter: { paid: true },
+        tx,
+      });
+      return updated;
+    }, { timeout: 10000 });
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
-    const deleted = await appointmentRepository.delete(id, userId);
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.DELETE,
-      description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
-      affectedFields: [ 'isDeleted' ],
-      fieldsBefore: { isDeleted: false },
-      fieldsAfter: { isDeleted: true },
-    });
-    logger.info({ appointmentId: id, userId }, 'Appointment deleted');
-    return { id };
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      const deleted = await appointmentRepository.delete(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.DELETE,
+        description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
+        affectedFields: [ 'isDeleted' ],
+        fieldsBefore: { isDeleted: false },
+        fieldsAfter: { isDeleted: true },
+        tx,
+      });
+      logger.info({ appointmentId: id, userId }, 'Appointment deleted');
+      return { id };
+    }, { timeout: 10000 });
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId, true);
-    const restored = await appointmentRepository.restore(id, userId);
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.RESTORE,
-      description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
-      affectedFields: [ 'isDeleted' ],
-      fieldsBefore: { isDeleted: true },
-      fieldsAfter: { isDeleted: false },
-    });
-    logger.info({ appointmentId: id, userId }, 'Appointment restored');
-    return restored;
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      await withProviderLock(tx, userId);
+      const appt = await appointmentRepository.findById(id, userId, true, tx);
+      // A restored active appointment occupies the calendar again, so it must not collide.
+      if (ACTIVE_STATUSES.has(appt.status)) {
+        await checkConflict(tx, userId, appt.startAt, appt.endAt, id);
+        await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
+      }
+      const restored = await appointmentRepository.restore(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.RESTORE,
+        description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
+        affectedFields: [ 'isDeleted' ],
+        fieldsBefore: { isDeleted: true },
+        fieldsAfter: { isDeleted: false },
+        tx,
+      });
+      logger.info({ appointmentId: id, userId }, 'Appointment restored');
+      return restored;
+    }, { timeout: 10000 });
   },
 };
