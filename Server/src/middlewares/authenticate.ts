@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { loggedPath } from '../utils/api/request-context.js';
 import jwt from 'jsonwebtoken';
 import { verifyAccessToken } from '../auth/tokens.js';
 import { apiError } from '../utils/api/api-utils.js';
@@ -52,7 +53,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   if (!token) {
-    logger.debug({ ip: req.ip, url: req.originalUrl, method: req.method }, 'Auth: no token provided');
+    logger.debug({ ip: req.ip, url: loggedPath(req), method: req.method }, 'Auth: no token provided');
     return apiError(res, 'Unauthorized', 401);
   }
 
@@ -91,7 +92,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
  */
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
   if (req.user?.role !== 'SUPER_ADMIN') {
-    logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: req.originalUrl }, 'Permission denied: requires SUPER_ADMIN');
+    logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: loggedPath(req) }, 'Permission denied: requires SUPER_ADMIN');
     apiError(res, 'Insufficient permissions', 403);
     return;
   }
@@ -103,7 +104,7 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
  */
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   if (!req.user || !['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
-    logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: req.originalUrl }, 'Permission denied: requires ADMIN');
+    logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: loggedPath(req) }, 'Permission denied: requires ADMIN');
     apiError(res, 'Insufficient permissions', 403);
     return;
   }
@@ -118,7 +119,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 export function requireAdminForWrites(req: Request, res: Response, next: NextFunction): void {
   if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
     if (!req.user || !['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
-      logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: req.originalUrl }, 'Permission denied: write operation requires ADMIN');
+      logger.warn({ userId: req.user?.id, role: req.user?.role, method: req.method, url: loggedPath(req) }, 'Permission denied: write operation requires ADMIN');
       apiError(res, 'Insufficient permissions', 403);
       return;
     }

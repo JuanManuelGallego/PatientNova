@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { loggedPath } from '../utils/api/request-context.js';
 import twilio from 'twilio';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
@@ -22,7 +23,7 @@ export function twilioWebhookAuth(req: Request, res: Response, next: NextFunctio
   const signature = req.headers['x-twilio-signature'] as string | undefined;
 
   if (!signature) {
-    logger.warn({ url: req.originalUrl }, 'Missing X-Twilio-Signature on webhook request');
+    logger.warn({ url: loggedPath(req) }, 'Missing X-Twilio-Signature on webhook request');
     res.status(403).send('Forbidden');
     return;
   }

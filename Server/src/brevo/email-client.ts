@@ -1,5 +1,5 @@
 import { config } from '../utils/config/config.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskEmail } from '../utils/api/logger.js';
 import { DEFAULT_EMAIL_SUBJECT } from '../utils/config/constants.js';
 import { Channel } from '../../generated/prisma/client.ts';
 import type { NotificationResult, SendEmailRequest } from '../twilio/types.js';
@@ -57,7 +57,7 @@ export async function sendEmail(req: SendEmailRequest): Promise<NotificationResu
     ? { subject: null, body: req.body }
     : splitSubjectLine(req.body);
   const subject = explicitSubject || headerSubject || DEFAULT_EMAIL_SUBJECT;
-  logger.debug({ to: req.to }, 'Sending email');
+  logger.debug({ to: maskEmail(req.to) }, 'Sending email');
 
   const payload = JSON.stringify({
     sender: {
