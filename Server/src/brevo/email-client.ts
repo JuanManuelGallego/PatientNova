@@ -6,6 +6,12 @@ import type { NotificationResult, SendEmailRequest } from '../twilio/types.js';
 import { validateEmail } from '../twilio/validator.js';
 import { splitSubjectLine } from '../twilio/email-subject.js';
 
+const DEFAULT_TIMEOUT_MS = 10_000;
+const RETRY_DELAY_MS = 500;
+// Only statuses where Brevo definitively did NOT process the request are retried (a retry after an
+// ambiguous failure such as a timeout could deliver the email twice).
+const RETRYABLE_STATUSES = new Set([ 429, 503 ]);
+
 /** Brevo transactional email endpoint: https://developers.brevo.com/reference/sendtransacemail */
 function sendEndpoint(): string {
   return `${config.brevo.apiBaseUrl.replace(/\/$/, '')}/smtp/email`;
@@ -53,24 +59,34 @@ export async function sendEmail(req: SendEmailRequest): Promise<NotificationResu
   const subject = explicitSubject || headerSubject || DEFAULT_EMAIL_SUBJECT;
   logger.debug({ to: req.to }, 'Sending email');
 
-  const response = await fetch(sendEndpoint(), {
+  const payload = JSON.stringify({
+    sender: {
+      email: config.brevo.fromEmail,
+      ...(config.brevo.fromName && { name: config.brevo.fromName }),
+    },
+    to: [ { email: req.to } ],
+    subject,
+    textContent: body,
+    htmlContent: textToHtml(body),
+  });
+
+  const post = () => fetch(sendEndpoint(), {
     method: 'POST',
     headers: {
       'api-key': config.brevo.apiKey,
       'content-type': 'application/json',
       accept: 'application/json',
     },
-    body: JSON.stringify({
-      sender: {
-        email: config.brevo.fromEmail,
-        ...(config.brevo.fromName && { name: config.brevo.fromName }),
-      },
-      to: [ { email: req.to } ],
-      subject,
-      textContent: body,
-      htmlContent: textToHtml(body),
-    }),
+    body: payload,
+    signal: AbortSignal.timeout(config.brevo.timeoutMs || DEFAULT_TIMEOUT_MS),
   });
+
+  let response = await post();
+  if (RETRYABLE_STATUSES.has(response.status)) {
+    logger.warn({ status: response.status }, 'Brevo asked us to retry; retrying once');
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    response = await post();
+  }
 
   if (!response.ok) {
     throw await toSendError(response);
