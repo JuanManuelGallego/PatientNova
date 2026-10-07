@@ -12,7 +12,7 @@ export interface SecurityHeader {
     value: string;
 }
 
-export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean }): string {
+export function buildCsp(options: { apiUrl?: string | undefined; sentryDsn?: string | undefined; isDev: boolean }): string {
     const apiOrigin = (() => {
         try {
             return options.apiUrl ? new URL(options.apiUrl).origin : undefined;
@@ -21,7 +21,15 @@ export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean 
         }
     })();
 
-    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []) ];
+    const sentryOrigin = (() => {
+        try {
+            return options.sentryDsn ? new URL(options.sentryDsn).origin : undefined;
+        } catch {
+            return undefined;
+        }
+    })();
+
+    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []), ...(sentryOrigin ? [ sentryOrigin ] : []) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
 
     const directives: Record<string, string[]> = {
@@ -44,6 +52,7 @@ export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean 
 
 export function buildSecurityHeaders(options: {
     apiUrl?: string | undefined;
+    sentryDsn?: string | undefined;
     isDev: boolean;
     enforceCsp: boolean;
 }): SecurityHeader[] {

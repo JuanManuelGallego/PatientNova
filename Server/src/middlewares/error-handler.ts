@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { loggedPath } from '../utils/api/request-context.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
+import { captureServerError } from '../utils/observability/sentry.js';
 import { ApiError } from '../utils/errors/errors.js';
 import { AppointmentOverlapError } from '../appointments/appointment.errors.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
@@ -62,5 +63,6 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     { err, method: req.method, url: loggedPath(req), requestId: req.requestId },
     'Unhandled error',
   );
+  captureServerError(err, { requestId: req.requestId });
   apiError(res, 'Internal server error', 500);
 }

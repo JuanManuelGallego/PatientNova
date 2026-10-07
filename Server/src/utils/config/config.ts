@@ -47,6 +47,11 @@ export const config = {
     timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
+  sentry: {
+    dsn: process.env.SENTRY_DSN ?? '',
+    release: process.env.SENTRY_RELEASE ?? '',
+  },
+
   publicRateLimit: {
     windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
     maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),

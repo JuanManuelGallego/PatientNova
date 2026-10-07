@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/src/utils/observability/sentry";
+
 export default function GlobalError({
     error,
     reset,
@@ -7,6 +10,10 @@ export default function GlobalError({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
+    useEffect(() => {
+        reportClientError(error);
+    }, [ error ]);
+
     return (
         <div style={{
             display: "flex",

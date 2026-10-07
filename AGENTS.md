@@ -156,3 +156,5 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
   fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
   nonexistent times. Never hand-roll offset arithmetic.
+- Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
+  and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.
