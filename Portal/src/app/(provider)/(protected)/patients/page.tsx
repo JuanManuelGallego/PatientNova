@@ -194,7 +194,7 @@ function PatientsPageContent() {
         />
         <FilterBar
           {...searchProps}
-          placeholder="Buscar por nombre, apellido o correo…"
+          placeholder="Nombre o apellido (palabras completas), correo o teléfono exactos…"
         />
         {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
         <DataTable

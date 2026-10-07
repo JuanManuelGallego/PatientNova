@@ -5,7 +5,13 @@ import {
   isEncrypted,
   EncryptionError,
 } from "../encryption/field-encryption.js";
-import { ENCRYPTED_FIELDS, ENCRYPTED_JSON_FIELDS } from "../encryption/encrypted-fields.js";
+import {
+  BLIND_INDEXES,
+  ENCRYPTED_FIELDS,
+  ENCRYPTED_JSON_FIELDS,
+  PII_VERSIONED_MODELS,
+} from "../encryption/encrypted-fields.js";
+import { PII_VERSION } from "../encryption/blind-index.js";
 import { config } from "../config/config.js";
 import { logger } from "../api/logger.js";
 
@@ -18,6 +24,8 @@ const WRITE_OPERATIONS = new Set([
   "updateMany",
   "updateManyAndReturn",
 ]);
+
+const CREATE_OPERATIONS = new Set([ "create", "createMany", "createManyAndReturn" ]);
 
 const READ_OPERATIONS = new Set([
   "findFirst",
@@ -106,15 +114,34 @@ function decryptField(
   }
 }
 
-/** Recursively encrypt fields in a data object for a given model. */
+/**
+ * Encrypt fields in a data object for a given model, after deriving its blind indexes from the
+ * plaintext. `isCreate` marks a new row, which is stamped with the current `piiVersion`.
+ */
 function encryptData(
   data: Record<string, unknown>,
   model: string,
+  isCreate = false,
 ): Record<string, unknown> {
   const fields = ENCRYPTED_FIELDS[model];
   if (!fields) return data;
 
   const result = { ...data };
+
+  const indexes = BLIND_INDEXES[model];
+  if (indexes) {
+    for (const [ field, { column, derive } ] of Object.entries(indexes)) {
+      if (!(field in result)) continue;
+      const value = result[field];
+      if (value === null) result[column] = derive(null);
+      // Ciphertext passed through unchanged: its index is already stored.
+      else if (typeof value === "string" && !isEncrypted(value)) result[column] = derive(value);
+    }
+  }
+  if (isCreate && PII_VERSIONED_MODELS.has(model) && !("piiVersion" in result) && getKey()) {
+    result.piiVersion = PII_VERSION;
+  }
+
   for (const field of fields) {
     if (field in result) {
       result[field] = encryptField(result[field], model, field);
@@ -143,12 +170,13 @@ function encryptNestedWrites(
       const create = nested.create;
       if (Array.isArray(create)) {
         nested.create = create.map((item) =>
-          encryptData(item as Record<string, unknown>, modelName),
+          encryptData(item as Record<string, unknown>, modelName, true),
         );
       } else if (create && typeof create === "object") {
         nested.create = encryptData(
           create as Record<string, unknown>,
           modelName,
+          true,
         );
       }
     }
@@ -162,7 +190,7 @@ function encryptNestedWrites(
       const cm = nested.createMany as Record<string, unknown>;
       if (Array.isArray(cm.data)) {
         cm.data = cm.data.map((item) =>
-          encryptData(item as Record<string, unknown>, modelName),
+          encryptData(item as Record<string, unknown>, modelName, true),
         );
       }
     }
@@ -196,6 +224,7 @@ function encryptNestedWrites(
             i.create = encryptData(
               i.create as Record<string, unknown>,
               modelName,
+              true,
             );
           }
           if ("update" in i && i.update && typeof i.update === "object") {
@@ -212,6 +241,7 @@ function encryptNestedWrites(
           u.create = encryptData(
             u.create as Record<string, unknown>,
             modelName,
+            true,
           );
         }
         if ("update" in u && u.update && typeof u.update === "object") {
@@ -326,6 +356,7 @@ export const encryptionExtension = Prisma.defineExtension({
       // Encrypt on write
       if (WRITE_OPERATIONS.has(operation) && fields && args) {
         const a = args as Record<string, unknown>;
+        const isCreate = CREATE_OPERATIONS.has(operation);
 
         if ("data" in a && a.data && typeof a.data === "object") {
           if (Array.isArray(a.data)) {
@@ -334,12 +365,13 @@ export const encryptionExtension = Prisma.defineExtension({
               let encrypted = encryptData(
                 item as Record<string, unknown>,
                 model,
+                isCreate,
               );
               encrypted = encryptNestedWrites(encrypted);
               return encrypted;
             });
           } else {
-            a.data = encryptData(a.data as Record<string, unknown>, model);
+            a.data = encryptData(a.data as Record<string, unknown>, model, isCreate);
             a.data = encryptNestedWrites(a.data as Record<string, unknown>);
           }
         }
@@ -347,7 +379,7 @@ export const encryptionExtension = Prisma.defineExtension({
         // upsert has create/update at top level
         if (operation === "upsert") {
           if ("create" in a && a.create && typeof a.create === "object") {
-            a.create = encryptData(a.create as Record<string, unknown>, model);
+            a.create = encryptData(a.create as Record<string, unknown>, model, true);
             a.create = encryptNestedWrites(a.create as Record<string, unknown>);
           }
           if ("update" in a && a.update && typeof a.update === "object") {

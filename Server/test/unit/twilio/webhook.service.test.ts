@@ -18,6 +18,7 @@ vi.mock('../../../src/utils/config/config.js', () => ({
   config: {
     twilio: { appointmentStatusUpdateSid: 'status-update-sid' },
     defaults: { timezone: 'America/Bogota' },
+    encryption: { blindIndexKey: '00'.repeat(31) + '02' },
   },
 }));
 
@@ -144,7 +145,8 @@ describe('TwilioWebhookService.findActiveReminder', () => {
     expect(result).toEqual(fakeReminder);
     expect(mockPrisma.reminder.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
-        to: '+15551234567',
+        // `to` is encrypted: the lookup goes through the blind index, never the raw number.
+        toHash: expect.stringMatching(/^[0-9a-f]{64}$/),
         channel: 'WHATSAPP',
       }),
       orderBy: { sendAt: 'desc' },

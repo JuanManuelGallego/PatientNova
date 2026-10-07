@@ -8,6 +8,8 @@ import { reminderInclude, type ReminderWithRelations, type ReminderStats } from 
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { getCurrentMonthBoundsInTz } from '../utils/time/time-utils.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { contactHash } from '../utils/encryption/blind-index.js';
+import { MATCH_NOTHING, patientSearchWhere } from '../utils/encryption/pii-search.js';
 
 export const reminderRepository = {
   async create(dto: CreateReminderDto, userId: string, tx: TransactionClient = prisma): Promise<ReminderWithRelations> {
@@ -57,15 +59,12 @@ export const reminderRepository = {
           ...((Object.values(Channel) as Channel[])
             .filter(c => c.toLowerCase().includes(search.toLowerCase()))
             .map(c => ({ channel: c }))),
-          { to: { contains: search, mode: 'insensitive' } },
-          {
-            patient: {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } }
-              ]
-            }
-          } ]
+          // `to` and patient names are encrypted: exact destination via its blind index,
+          // whole-word patient name/email/phone via the patient's indexes.
+          ...(contactHash(search.trim()) ? [ { toHash: contactHash(search.trim()) } ] : []),
+          ...(patientSearchWhere(search) ? [ { patient: patientSearchWhere(search)! } ] : []),
+          MATCH_NOTHING,
+        ]
       }),
       ...(patientId && { patientId: patientId }),
       ...(dateFrom || dateTo

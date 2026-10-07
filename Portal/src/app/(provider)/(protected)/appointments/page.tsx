@@ -378,7 +378,7 @@ function AppointmentsPageContent() {
         )}
         <FilterBar
           {...searchProps}
-          placeholder="Buscar paciente, tipo, ubicación…"
+          placeholder="Buscar paciente por nombre o apellido (palabras completas)…"
           testId="appointments-search-input"
         />
         <DataTable
