@@ -55,3 +55,9 @@ export class PastAppointmentLockedError extends ApiError {
     super(`Cannot update past appointment "${id}" with status SCHEDULED or CONFIRMED`, 409)
   }
 }
+
+export class AppointmentInvalidTimeRangeError extends ApiError {
+  constructor() {
+    super('endAt must be after startAt', 422)
+  }
+}
