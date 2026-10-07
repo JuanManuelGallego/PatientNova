@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "12 de septiembre de 2026";
+const lastUpdated = "6 de octubre de 2026";
 
 const sections = [
   {
@@ -14,7 +14,7 @@ const sections = [
     title: "1. Aceptación y alcance",
     content: [
       "Estos Términos de Servicio (los «Términos») regulan el acceso y uso de Patient Nova (la «Plataforma» o el «Servicio»). Al acceder o utilizar el Servicio, aceptas estos Términos y la Política de Privacidad. Si actúas en nombre de una clínica, consulta o entidad, declaras que tienes autorización para vincularla.",
-      "El Servicio está diseñado para profesionales y equipos de salud. No es un servicio para pacientes, no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
+      "El Servicio está diseñado para profesionales y equipos de salud. Los pacientes pueden usar únicamente el portal de reservas que el profesional habilite (sección 3.1) y no necesitan una cuenta. La Plataforma no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
       "Si no aceptas estos Términos, no debes utilizar el Servicio.",
     ],
   },
@@ -35,6 +35,15 @@ const sections = [
       "Eres responsable de proteger tus credenciales, de no compartirlas y de todas las actividades realizadas desde tu cuenta. Debes avisarnos sin demora si sospechas de un acceso no autorizado.",
       "Los administradores de la cuenta pueden asignar roles y permisos a otros usuarios. La clínica es responsable de conceder únicamente el acceso necesario y de retirar el acceso cuando una persona deje de estar autorizada.",
       "Patient Nova no realiza actualmente una verificación general de identidad, colegiatura o licencia profesional. No presentes la existencia de una cuenta como certificación de una persona o entidad.",
+    ],
+  },
+  {
+    id: "patient-portal",
+    title: "3.1 Portal de reservas para pacientes",
+    content: [
+      "Si un profesional habilita su página de reservas, los pacientes pueden consultar horarios disponibles y reservar o solicitar citas verificando su correo electrónico con un código de un solo uso. El profesional decide si las citas se confirman automáticamente o requieren su aprobación, y es responsable de la relación con el paciente.",
+      "Quien reserva debe proporcionar datos veraces y es responsable de que el correo electrónico utilizado sea suyo. Para reservar debe aceptar expresamente la Política de Tratamiento de Datos. Un paciente puede cancelar o reprogramar sus citas desde el portal; el profesional puede deshabilitar el acceso de un paciente.",
+      "El portal no es un servicio de urgencias. Si crees que tienes una emergencia, contacta a los servicios de emergencia de tu localidad.",
     ],
   },
   {
