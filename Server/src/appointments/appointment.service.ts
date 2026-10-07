@@ -164,6 +164,7 @@ async function createLinkedReminder(
       status: createdReminder.status,
     },
     tx,
+    required: true,
   });
 
   logger.info({ reminderId: createdReminder.id }, 'Reminder created');
@@ -193,6 +194,7 @@ async function handleReminderUpdate(
         fieldsBefore: { status: existing.reminder.status },
         fieldsAfter: { status: ReminderStatus.CANCELLED },
         tx,
+        required: true,
       });
 
       logger.info({ reminderId: existing.reminder.id }, 'Reminder cancelled');
@@ -238,6 +240,7 @@ async function handleReminderUpdate(
       description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
       ...diff,
       tx,
+      required: true,
     });
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
@@ -366,6 +369,7 @@ export async function createWithin(
         status: created.status ?? AppointmentStatus.SCHEDULED
       },
       tx,
+      required: true,
     });
 
     if (createdReminder || existingReminder) {
@@ -384,6 +388,7 @@ export async function createWithin(
         fieldsBefore: { appointmentId: null },
         fieldsAfter: { appointmentId: created.id },
         tx,
+        required: true,
       });
     }
 
@@ -507,6 +512,7 @@ export const appointmentService = {
         description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
         ...diff,
         tx,
+        required: true,
       });
 
       const newlyLinkedReminder = createdReminder ?? selectedReminder;
@@ -526,6 +532,7 @@ export const appointmentService = {
           fieldsBefore: { appointmentId: null },
           fieldsAfter: { appointmentId: id },
           tx,
+          required: true,
         });
       }
 
@@ -564,6 +571,7 @@ export const appointmentService = {
         fieldsBefore: { status: appt.status },
         fieldsAfter: { status },
         tx,
+        required: true,
       });
       logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
       return updated;
@@ -591,6 +599,7 @@ export const appointmentService = {
         fieldsBefore: { paid: false },
         fieldsAfter: { paid: true },
         tx,
+        required: true,
       });
       return updated;
     }, { timeout: 10000 });
@@ -609,6 +618,7 @@ export const appointmentService = {
         fieldsBefore: { isDeleted: false },
         fieldsAfter: { isDeleted: true },
         tx,
+        required: true,
       });
       logger.info({ appointmentId: id, userId }, 'Appointment deleted');
       return { id };
@@ -635,6 +645,7 @@ export const appointmentService = {
         fieldsBefore: { isDeleted: true },
         fieldsAfter: { isDeleted: false },
         tx,
+        required: true,
       });
       logger.info({ appointmentId: id, userId }, 'Appointment restored');
       return restored;

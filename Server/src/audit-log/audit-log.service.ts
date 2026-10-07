@@ -14,11 +14,17 @@ export const auditLogService = {
     return auditLogRepository.findMany(userId, query);
   },
 
+  /** Writes the audit row and rethrows on failure. Use inside transactions where the audit is part of the change. */
+  async createOrThrow(dto: CreateAuditLogDto, tx?: TransactionClient) {
+    const log = await auditLogRepository.create(dto, tx);
+    logger.info({ auditLogId: log.id, entityType: log.entityType, entityId: log.entityId, actionType: log.actionType }, 'Audit log created');
+    return log;
+  },
+
+  /** Best-effort: logs and swallows failures. Only for non-transactional legacy paths. */
   async create(dto: CreateAuditLogDto, tx?: TransactionClient) {
     try {
-      const log = await auditLogRepository.create(dto, tx);
-      logger.info({ auditLogId: log.id, entityType: log.entityType, entityId: log.entityId, actionType: log.actionType }, 'Audit log created');
-      return log;
+      return await auditLogService.createOrThrow(dto, tx);
     } catch (err) {
       logger.error({ err, entityType: dto.entityType, entityId: dto.entityId, actionType: dto.actionType }, 'Failed to create audit log');
     }

@@ -1,13 +1,8 @@
-import { timingSafeEqual } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
+import { safeEqual } from '../utils/security/safe-equal.js';
 
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a, 'utf8');
-  const right = Buffer.from(b, 'utf8');
-  return left.length === right.length && timingSafeEqual(left, right);
-}
 
 /**
  * Extracts the shared secret from the Authorization header. Brevo webhooks can

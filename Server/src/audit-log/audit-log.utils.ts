@@ -49,7 +49,7 @@ export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogD
     entityType: EntityType.USER,
     entityId: '',
     actionType: ActionType.CREATE,
-    source: ActionSource.API,
+    source: ctx?.source ?? ActionSource.API,
     description: '',
     ...overrides,
     affectedFields: overrides.affectedFields ?? [],
@@ -69,6 +69,17 @@ export async function logAudit(params: {
   fieldsAfter?: Record<string, unknown> | null;
   tx?: TransactionClient;
   userId: string;
+  /**
+   * When true, a failed audit write rethrows so the surrounding transaction rolls back.
+   * Required for portal booking, consent, approvals and other writes where the audit is
+   * part of the legal record. Defaults to best-effort for legacy call sites.
+   */
+  required?: boolean;
 }): Promise<void> {
-  await auditLogService.create(buildAuditEntry(params), params.tx);
+  const { required, ...entry } = params;
+  if (required) {
+    await auditLogService.createOrThrow(buildAuditEntry(entry), params.tx);
+    return;
+  }
+  await auditLogService.create(buildAuditEntry(entry), params.tx);
 }

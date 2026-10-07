@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `40` files, `476` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `41` files, `482` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -95,6 +95,7 @@ Suite: `40` files, `476` tests, all against real Postgres, `tsc --noEmit` clean.
 | Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
+| Audit log (required) | `test/integration/audit-log/audit-required.integration.test.ts` | `required` audit mode rolls back the change (patient create/update/delete), best-effort default stays non-fatal, PUBLIC_PORTAL actor + new entity types |
 | Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
 | Audit log (writing expanded) | `test/integration/audit-log/audit-log-writing-expanded.integration.test.ts` | audit trails for appointments/reminders/users/auth/consent docs/twilio webhooks |
 | Tenant isolation | `test/integration/tenants/tenant-isolation.integration.test.ts` | cross-tenant data isolation across all repositories |
@@ -129,3 +130,12 @@ Suite: `40` files, `476` tests, all against real Postgres, `tsc --noEmit` clean.
   SCHEDULED/CONFIRMED, non-deleted appointments, using half-open intervals.
 - The exclusion constraint is only a backstop; its violation maps to a neutral 409
   (`isAppointmentOverlapViolation` in `src/utils/errors/prisma-errors.ts`).
+- Audit writes that are part of a transaction must pass `tx` AND `required: true`
+  (`logAudit`): a swallowed audit failure would leave the Postgres transaction aborted and
+  surface later as a confusing commit error. Best-effort (default) is only for
+  non-transactional legacy paths. Portal actions run inside
+  `runInAuditContext(portalPatientAuditContext({...}), fn)` so rows carry
+  `ActionSource.PUBLIC_PORTAL` and a hashed actor id.
+- All JWTs go through `src/auth/tokens.ts` (pinned HS256, issuer, per-kind audience; the
+  portal session uses its own `PORTAL_AUTH_SECRET`). Never call `jwt.sign/verify` directly.
+  Deploying the audience change invalidates existing provider sessions (forced re-login).
