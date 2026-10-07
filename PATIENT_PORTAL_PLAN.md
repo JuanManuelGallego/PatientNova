@@ -20,7 +20,7 @@ Implemented as one commit per branch below, all on `staging`. Server: unit + int
 | `e1`..`e4b` | 0.14-0.16, 0.18 | provider route group, API clients + Spanish errors, security headers (CSP report-only), self-contained e2e CI, opt-in Sentry, `docs/operations.md` |
 | `f-legal-compliance` | 0.17, 0.20-0.23 | Colombian privacy policy, `docs/compliance-patient-data.md` |
 
-Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, written acceptance or implementation of the contact-field encryption + blind index (`docs/compliance-patient-data.md` section 3), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
+Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, implementation of the patient name/contact encryption + blind indexes (`docs/compliance-patient-data.md` section 3; decided, not optional), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
 
 # Patient Portal: architecture proposal
 
