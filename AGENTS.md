@@ -152,3 +152,7 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   store, hashed keys) for per-IP/per-email/per-provider limits. `trust proxy` is exactly 1 hop.
 - `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`). Webhook signature
   checks are skipped only when `NODE_ENV=development` is set explicitly. Local dev must set it (see `.env.example`).
+- Time math goes through `src/utils/time/time-utils.ts` (luxon). DST conventions: spring-forward
+  gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
+  fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
+  nonexistent times. Never hand-roll offset arithmetic.
