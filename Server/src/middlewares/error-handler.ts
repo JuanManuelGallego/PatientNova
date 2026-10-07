@@ -3,6 +3,8 @@ import type { NextFunction, Request, Response } from 'express';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
 import { ApiError } from '../utils/errors/errors.js';
+import { AppointmentOverlapError } from '../appointments/appointment.errors.js';
+import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
 
 export class CorsRejectionError extends ApiError {
   constructor() {
@@ -28,6 +30,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
 
   if (err instanceof ApiError) {
     apiError(res, err.message, err.errorCode);
+    return;
+  }
+
+  if (isAppointmentOverlapViolation(err)) {
+    apiError(res, new AppointmentOverlapError().message, 409);
     return;
   }
 

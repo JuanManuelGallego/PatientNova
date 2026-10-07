@@ -43,6 +43,28 @@ describe('errorHandler', () => {
   });
 });
 
+describe('exclusion-constraint violations', () => {
+  const overlapErr = {
+    code: 'P2039',
+    meta: {
+      driverAdapterError: {
+        cause: {
+          originalCode: '23P01',
+          originalMessage: 'conflicting key value violates exclusion constraint "appointments_no_provider_overlap"',
+          detail: 'Key ("userId", ...)=(secret-user-id, ...) conflicts with existing key',
+        },
+      },
+    },
+  };
+
+  it('maps the appointment overlap constraint to a neutral 409 in the error handler', async () => {
+    const res = await request(appThrowing(overlapErr)).get('/boom');
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Appointment overlaps with another appointment of this provider');
+    expect(res.text).not.toContain('secret-user-id');
+  });
+});
+
 describe('handleError', () => {
   it('never echoes internal error text, even outside production', async () => {
     const res = await request(appThrowing(null)).get('/handled');
