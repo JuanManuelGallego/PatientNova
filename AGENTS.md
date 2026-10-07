@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `43` files, `506` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -80,7 +80,7 @@ Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
 | Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
 | Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
 | Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
-| Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | status callback handling (confirm/cancel/unknown intent) |
+| Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
 | Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
 | Twilio status callback (route) | `test/integration/twilio/status-callback.routes.integration.test.ts` | `POST /webhooks/twilio/status`: HMAC auth middleware valid sig → 200 + service; missing/bad/tampered sig → 403; service mocked |

@@ -1,8 +1,9 @@
-import { AppointmentStatus, Channel, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy, Channel, type Reminder } from '../../generated/prisma/client.ts';
 import { sendSms, sendWhatsApp, sendWhatsAppFreeForm } from './client.js';
 import { sendEmail } from '../brevo/email-client.js';
-import { prisma } from '../utils/prisma/prisma-client.js';
-import { logger } from '../utils/api/logger.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { withProviderLock } from '../utils/prisma/provider-lock.js';
+import { logger, maskPhone } from '../utils/api/logger.js';
 import type { SendWhatsAppRequest } from './types';
 import { config } from '../utils/config/config.js';
 import type { SendSmsRequest } from './types';
@@ -14,6 +15,16 @@ interface WebhookPayload {
     buttonPayload?: string;
     body?: string;
 }
+
+// A quick reply may arrive long after the reminder was sent. Only an upcoming, active,
+// non-deleted appointment can still be confirmed or cancelled by the patient; anything else
+// (cancelled, completed, no-show, deleted, already started) is left untouched.
+const PATIENT_MODIFIABLE_STATUSES: ReadonlySet<AppointmentStatus> = new Set([
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+]);
+
+const NOT_MODIFIABLE_REPLY = 'Esta cita ya no se puede modificar desde aquí. Por favor, comunícate con tu profesional de la salud.';
 
 interface ProcessResult {
     success: boolean;
@@ -51,7 +62,7 @@ export class TwilioWebhookService {
         const buttonPayload = (payload.buttonPayload ?? '').toString().toLowerCase().trim();
 
         if (!phoneNumber || !buttonPayload) {
-            logger.warn({ from, buttonPayload }, 'Received Twilio webhook with missing phone number or button payload');
+            logger.warn({ phoneLast4: maskPhone(from), buttonPayload }, 'Received Twilio webhook with missing phone number or button payload');
             return { isValid: false, error: 'Missing phone number or button payload' };
         }
 
@@ -89,33 +100,64 @@ export class TwilioWebhookService {
         });
 
         if (!reminder) {
-            logger.warn({ phoneNumber }, 'No active appointment reminder found for this phone number — ignoring webhook');
+            logger.warn({ phoneLast4: maskPhone(phoneNumber) }, 'No active appointment reminder found for this phone number — ignoring webhook');
         }
 
         return reminder;
     }
 
     /**
-     * Confirm an appointment and mark the reminder as sent
+     * Applies a patient's quick reply under the provider lock, so it serializes with provider edits
+     * and re-reads the appointment inside the transaction. Returns false (no change) when the
+     * appointment can no longer be modified by the patient.
      */
-    async confirmAppointment(reminder: Reminder, phoneNumber: string): Promise<void> {
-        await prisma.$transaction([
-            prisma.appointment.update({
-                where: { id: reminder.appointmentId! },
-                data: { status: AppointmentStatus.CONFIRMED, confirmedAt: new Date() },
-            }),
-        ]);
+    private async applyPatientReply(reminder: Reminder, intent: 'confirm' | 'cancel'): Promise<boolean> {
+        return prisma.$transaction(async (tx: TransactionClient) => {
+            await withProviderLock(tx, reminder.userId);
+            const appt = await tx.appointment.findFirst({
+                where: { id: reminder.appointmentId!, userId: reminder.userId, isDeleted: false },
+                select: { status: true, startAt: true },
+            });
+            if (!appt || !PATIENT_MODIFIABLE_STATUSES.has(appt.status) || appt.startAt.getTime() <= Date.now()) {
+                logger.info(
+                    { appointmentId: reminder.appointmentId, status: appt?.status ?? null, intent },
+                    'WhatsApp quick-reply ignored: appointment no longer modifiable',
+                );
+                return false;
+            }
 
-        await logAudit({
-            entityType: EntityType.APPOINTMENT,
-            entityId: reminder.appointmentId!,
-            userId: reminder.userId,
-            actionType: ActionType.UPDATE,
-            source: ActionSource.API,
-            description: `Cita confirmada via respuesta rápida de WhatsApp`,
-            affectedFields: ['status'],
-            fieldsAfter: { status: AppointmentStatus.CONFIRMED },
-        });
+            const now = new Date();
+            const data = intent === 'confirm'
+                ? { status: AppointmentStatus.CONFIRMED, confirmedAt: now }
+                : { status: AppointmentStatus.CANCELLED, cancelledAt: now, cancelledBy: CancelledBy.PATIENT, paid: false };
+            await tx.appointment.update({ where: { id: reminder.appointmentId! }, data });
+
+            await logAudit({
+                entityType: EntityType.APPOINTMENT,
+                entityId: reminder.appointmentId!,
+                userId: reminder.userId,
+                actionType: ActionType.UPDATE,
+                source: ActionSource.API,
+                description: intent === 'confirm'
+                    ? 'Cita confirmada via respuesta rápida de WhatsApp'
+                    : 'Cita cancelada via respuesta rápida de WhatsApp',
+                affectedFields: intent === 'confirm' ? [ 'status' ] : [ 'status', 'paid', 'cancelledBy' ],
+                fieldsBefore: { status: appt.status },
+                fieldsAfter: intent === 'confirm'
+                    ? { status: AppointmentStatus.CONFIRMED }
+                    : { status: AppointmentStatus.CANCELLED, paid: false, cancelledBy: CancelledBy.PATIENT },
+                tx,
+                required: true,
+            });
+            return true;
+        }, { timeout: 10000 });
+    }
+
+    /**
+     * Confirm an upcoming appointment. Returns false when it can no longer be modified.
+     */
+    async confirmAppointment(reminder: Reminder, phoneNumber: string): Promise<boolean> {
+        if (!(await this.applyPatientReply(reminder, 'confirm'))) return false;
 
         logger.info(
             { appointmentId: reminder.appointmentId, reminderId: reminder.id },
@@ -125,31 +167,16 @@ export class TwilioWebhookService {
         try {
             await sendWhatsAppFreeForm(phoneNumber, '✅ ¡Tu cita ha sido confirmada! Te esperamos.');
         } catch (err) {
-            logger.error({ err, appointmentId: reminder.appointmentId, phoneNumber }, 'Failed to send confirmation reply to patient');
+            logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to send confirmation reply to patient');
         }
+        return true;
     }
 
     /**
-     * Cancel an appointment
+     * Cancel an upcoming appointment. Returns false when it can no longer be modified.
      */
-    async cancelAppointment(reminder: Reminder, phoneNumber: string): Promise<void> {
-        await prisma.$transaction([
-            prisma.appointment.update({
-                where: { id: reminder.appointmentId! },
-                data: { status: AppointmentStatus.CANCELLED, cancelledAt: new Date(), paid: false },
-            }),
-        ]);
-
-        await logAudit({
-            entityType: EntityType.APPOINTMENT,
-            entityId: reminder.appointmentId!,
-            userId: reminder.userId,
-            actionType: ActionType.UPDATE,
-            source: ActionSource.API,
-            description: `Cita cancelada via respuesta rápida de WhatsApp`,
-            affectedFields: ['status', 'paid'],
-            fieldsAfter: { status: AppointmentStatus.CANCELLED, paid: false },
-        });
+    async cancelAppointment(reminder: Reminder, phoneNumber: string): Promise<boolean> {
+        if (!(await this.applyPatientReply(reminder, 'cancel'))) return false;
 
         logger.info(
             { appointmentId: reminder.appointmentId, reminderId: reminder.id },
@@ -162,9 +189,11 @@ export class TwilioWebhookService {
                 '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate tu profesional de la salud.',
             );
         } catch (err) {
-            logger.error({ err, appointmentId: reminder.appointmentId, phoneNumber }, 'Failed to send cancellation reply to patient');
+            logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to send cancellation reply to patient');
         }
+        return true;
     }
+
     /**
      * Notify user of appointment status update (confirmation or cancellation)
      */
@@ -296,7 +325,7 @@ export class TwilioWebhookService {
         try {
             await sendWhatsAppFreeForm(phoneNumber, 'Disculpa, no puedo procesar tu mensaje. Por favor, comunícate con tu profesional de la salud.');
         } catch (err) {
-            logger.error({ err, phoneNumber }, 'Failed to send error reply to patient');
+            logger.error({ err, phoneLast4: maskPhone(phoneNumber) }, 'Failed to send error reply to patient');
         }
     }
 
@@ -330,16 +359,24 @@ export class TwilioWebhookService {
         }
 
         // Process based on intent
+        let applied: boolean;
         try {
-            if (intent === 'confirm') {
-                await this.confirmAppointment(reminder, phoneNumber!);
-            } else {
-                await this.cancelAppointment(reminder, phoneNumber!);
-            }
+            applied = intent === 'confirm'
+                ? await this.confirmAppointment(reminder, phoneNumber!)
+                : await this.cancelAppointment(reminder, phoneNumber!);
         } catch (err) {
             logger.error({ err }, 'Error processing WhatsApp quick-reply');
             await this.sendErrorMessage(phoneNumber!);
             return { success: false, message: 'Internal error' };
+        }
+
+        if (!applied) {
+            try {
+                await sendWhatsAppFreeForm(phoneNumber!, NOT_MODIFIABLE_REPLY);
+            } catch (err) {
+                logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to send not-modifiable reply to patient');
+            }
+            return { success: false, message: 'Appointment not modifiable' };
         }
 
         // Notify user of status update — failure here should not error-message the patient

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "staging"]
   pull_request:
 
 jobs:
@@ -230,15 +230,17 @@ jobs:
         working-directory: Portal
         run: pnpm exec playwright install chromium --with-deps
       - name: Run E2E tests
+        id: e2e
         working-directory: Portal
         run: pnpm exec playwright test -c e2e/playwright.config.ts
 
       # upload-artifact paths are relative to the workspace root (NOT the step's working-directory).
       # The HTML report is written to <cwd>/playwright-report (cwd = Portal) and traces/videos/screenshots
-      # to the config's outputDir (Portal/e2e/test-results). Fail loudly if a path is ever wrong.
+      # to the config's outputDir (Portal/e2e/test-results). Fail loudly if a path is ever wrong,
+      # but only when Playwright actually ran (a broken build must not add a misleading upload error).
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.e2e.outcome != 'skipped' }}
         with:
           name: playwright-report
           path: |
