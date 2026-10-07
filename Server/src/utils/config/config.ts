@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { resolveNodeEnv } from './node-env.js';
+
 function requireEnv(key: string): string {
   const value = process.env[ key ];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
@@ -67,7 +69,7 @@ export const config = {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
   },
 
-  env: process.env.NODE_ENV ?? 'development',
+  env: resolveNodeEnv(process.env.NODE_ENV),
 
   cookieDomain: process.env.COOKIE_DOMAIN ?? undefined,
 
@@ -106,7 +108,7 @@ export const config = {
 
   encryption: {
     key:
-      process.env.NODE_ENV === "production"
+      resolveNodeEnv(process.env.NODE_ENV) === "production"
         ? requireEnv("ENCRYPTION_KEY")
         : (process.env.ENCRYPTION_KEY ?? ""),
   },

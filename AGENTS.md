@@ -163,3 +163,5 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   (`{ headers: { ...csrfHeaders(), origin } }`).
 - Webhook signature checks (Twilio, Brevo) are always enforced; there is no environment bypass.
   Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.
+- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`). Webhook signature
+  checks are skipped only when `NODE_ENV=development` is set explicitly. Local dev must set it (see `.env.example`).
