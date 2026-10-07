@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../utils/config/config.js';
+import { verifyAccessToken } from '../auth/tokens.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
@@ -57,7 +57,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
 
   try {
-    const payload = jwt.verify(token, config.auth.jwtSecret);
+    const payload = verifyAccessToken(token);
     if (!isAuthPayload(payload)) {
       return apiError(res, 'Invalid token payload', 401);
     }

@@ -86,6 +86,7 @@ jobs:
       BREVO_FROM_EMAIL: no-reply@example.com
       BREVO_WEBHOOK_SECRET: dummy-brevo-webhook-secret
       AUTH_SECRET: dummy-auth-secret
+      PORTAL_AUTH_SECRET: dummy-portal-auth-secret
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: dummy-admin-password

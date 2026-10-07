@@ -129,7 +129,7 @@ describe('authService.login', () => {
     expect(mockJwt.sign).toHaveBeenCalledWith(
       { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota' },
       'test-secret-key-for-jwt',
-      { expiresIn: '15m' },
+      { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider', expiresIn: '15m' },
     );
   });
 
@@ -142,9 +142,9 @@ describe('authService.login', () => {
     await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
-      { id: 'user-1', type: 'refresh', version: 1 },
+      { id: 'user-1', version: 1, type: 'refresh' },
       'test-secret-key-for-jwt',
-      { expiresIn: '7d' },
+      { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider-refresh', expiresIn: '7d' },
     );
   });
 
@@ -212,7 +212,11 @@ describe('authService.refreshToken', () => {
 
     const result = await authService.refreshToken('valid-refresh-token');
 
-    expect(mockJwt.verify).toHaveBeenCalledWith('valid-refresh-token', 'test-secret-key-for-jwt');
+    expect(mockJwt.verify).toHaveBeenCalledWith('valid-refresh-token', 'test-secret-key-for-jwt', {
+      algorithms: [ 'HS256' ],
+      issuer: 'patientnova',
+      audience: 'patientnova:provider-refresh',
+    });
     expect(mockRepo.findByIdForAuth).toHaveBeenCalledWith('user-1');
     expect(result.accessToken).toBe('new-access-token');
   });

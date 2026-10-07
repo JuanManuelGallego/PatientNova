@@ -1,6 +1,6 @@
 import { prisma } from '../../src/utils/prisma/prisma-client.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { signAccessToken } from '../../src/auth/tokens.js';
 import { config } from '../../src/utils/config/config.js';
 import {
   Channel,
@@ -89,11 +89,7 @@ export { unique };
 
 // Create a test JWT token for authentication
 export function createTestToken(user: { id: string; email: string; role: string; timezone?: string }): string {
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, timezone: user.timezone ?? 'America/Bogota' },
-    config.auth.jwtSecret,
-    { expiresIn: '1h' }
-  );
+  return signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone ?? 'America/Bogota' });
 }
 
 // Create request with proper authentication cookie
