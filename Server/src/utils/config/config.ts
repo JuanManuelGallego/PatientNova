@@ -51,6 +51,11 @@ export const config = {
     timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
+  publicRateLimit: {
+    windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
+    maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),  // 1 min
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),

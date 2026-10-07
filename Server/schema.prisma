@@ -601,3 +601,15 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([eventTimeUtc])
 }
+
+/// Fixed-window counters for public-route rate limiting (shared across instances).
+/// Keys are hashed before storage, so no email/IP is persisted in clear.
+model RateLimitBucket {
+  key         String   @db.VarChar(100)
+  windowStart DateTime
+  hits        Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit_buckets")
+}

@@ -1,6 +1,5 @@
 import express, { type Application, type Request, type Response } from 'express';
 import { loggedPath } from './utils/api/request-context.js';
-import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
@@ -29,7 +28,9 @@ import { auditLogRouter } from './audit-log/audit-log.routes.js';
 import { googleRouter } from './google/google.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
 import { requestId } from './middlewares/request-id.js';
-import { errorHandler, CorsRejectionError } from './middlewares/error-handler.js';
+import { providerCors } from './middlewares/cors.js';
+import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from './portal/portal-routers.js';
+import { errorHandler } from './middlewares/error-handler.js';
 
 const DEFAULT_BODY_LIMIT = '100kb';
 const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as const;
@@ -37,21 +38,25 @@ const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as co
 const app: Application = express();
 
 app.disable('x-powered-by');
+// Exactly ONE trusted proxy hop (the platform load balancer in front of the API), so req.ip is the
+// real client address that rate limits key on. Adding another proxy/CDN layer requires updating this.
 app.set('trust proxy', 1);
 
 app.use(requestId);
 app.use(helmet());
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || config.allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            logger.warn({ origin }, 'CORS rejection');
-            callback(new CorsRejectionError());
-        }
-    },
-    credentials: true,
-}));
+app.use(httpLogger);
+// Public patient-portal API classes are mounted BEFORE the provider CORS / body parsers / global
+// rate limiter: each class carries its own CORS policy, tiny body limit and shared-store limits.
+// They are dark unless ENABLE_PORTAL=true (then unknown paths fall through like any other 404).
+// Routes are added in Phase 2/3; unmatched paths end in a JSON 404 so they never reach the
+// provider stack.
+if (config.portal.patientEnabled) {
+    app.use('/v1/public', createPublicApiRouter(), portalNotFound);
+    app.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
+}
+
+// Provider (admin) API CORS: credentialed, exact allow-list.
+app.use(providerCors);
 // Rate limits run before body parsing so throttled clients never get their payloads read.
 app.use(
     rateLimit({
@@ -77,7 +82,6 @@ app.use('/webhooks/brevo', express.json({ limit: LARGE_BODY_LIMITS.webhooks }));
 app.use(express.json({ limit: DEFAULT_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: DEFAULT_BODY_LIMIT }));
 app.use(cookieParser())
-app.use(httpLogger);
 
 // Unversioned infra/external routes: health check (root router) and the public webhooks.
 app.use('/', router);
