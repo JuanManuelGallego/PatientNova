@@ -355,6 +355,8 @@ export function AppointmentModal({
             selectedPatient={selectedPatient}
             locations={locations}
             appointmentTypes={appointmentTypes}
+            isEdit={isEdit}
+            currentStatus={appt?.status}
           />
         )}
         <div className="modal-footer">

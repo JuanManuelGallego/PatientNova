@@ -7,6 +7,7 @@ import {
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
   AppointmentBlockedTimeConflictError,
+  AppointmentInvalidTimeRangeError,
   PastAppointmentLockedError,
 } from './appointment.errors.js';
 import { LocationNotFoundError } from '../utils/errors/errors.js';
@@ -14,6 +15,7 @@ import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-t
 import type { CreateAppointmentDto, UpdateAppointmentDto, ListAppointmentsQuery, AppointmentStatsQuery } from './appointment.schemas.ts';
 import { appointmentMeetingService } from './appointment-meeting.service.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.ts';
+import { withProviderLock } from '../utils/prisma/provider-lock.ts';
 import { logger } from '../utils/api/logger.ts';
 import type { AppointmentWithRelations, AppointmentStats } from './appointment.types.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
@@ -25,6 +27,11 @@ import { config } from '../utils/config/config.ts';
 import { renderAppointmentReminder } from './appointment-reminder.renderer.ts';
 
 const REMINDER_QUEUE = 'send-reminder';
+
+const ACTIVE_STATUSES = new Set<AppointmentStatus>([
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+]);
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
@@ -57,32 +64,33 @@ const ALLOWED_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]>
   ],
 };
 
-async function validatePatient(patientId: string, userId: string): Promise<Patient> {
-  const patient = await prisma.patient.findFirst({ where: { id: patientId, userId } });
+async function validatePatient(tx: TransactionClient, patientId: string, userId: string): Promise<Patient> {
+  const patient = await tx.patient.findFirst({ where: { id: patientId, userId } });
   if (!patient) throw new AppointmentPatientNotFoundError(patientId);
   return patient;
 }
 
-async function validateLocation(locationId: string, userId: string): Promise<AppointmentLocation> {
-  const location = await prisma.appointmentLocation.findFirst({ where: { id: locationId, userId, isDeleted: false } });
+async function validateLocation(tx: TransactionClient, locationId: string, userId: string): Promise<AppointmentLocation> {
+  const location = await tx.appointmentLocation.findFirst({ where: { id: locationId, userId, isDeleted: false } });
   if (!location) throw new LocationNotFoundError(locationId);
   return location as AppointmentLocation;
 }
 
-async function validateType(typeId: string, userId: string): Promise<AppointmentType> {
-  const type = await prisma.appointmentType.findFirst({ where: { id: typeId, userId, isDeleted: false } });
+async function validateType(tx: TransactionClient, typeId: string, userId: string): Promise<AppointmentType> {
+  const type = await tx.appointmentType.findFirst({ where: { id: typeId, userId, isDeleted: false } });
   if (!type) throw new AppointmentTypeNotFoundError(typeId);
   return type;
 }
 
 async function validateReminder(
+  tx: TransactionClient,
   reminderId: string | null | undefined,
   userId: string,
   patientId: string,
   appointmentId?: string,
 ): Promise<Reminder | null> {
   if (reminderId) {
-    const reminder = await prisma.reminder.findFirst({
+    const reminder = await tx.reminder.findFirst({
       where: { id: reminderId, userId, patientId, isDeleted: false },
     });
     if (!reminder) throw new AppointmentReminderNotFoundError(reminderId);
@@ -94,8 +102,8 @@ async function validateReminder(
   return null;
 }
 
-async function getDoctorName(userId: string): Promise<string> {
-  const user = await prisma.user.findUniqueOrThrow({
+async function getDoctorName(tx: TransactionClient, userId: string): Promise<string> {
+  const user = await tx.user.findUniqueOrThrow({
     where: { id: userId },
     select: { displayName: true, firstName: true, lastName: true },
   });
@@ -238,16 +246,17 @@ async function handleReminderUpdate(
 }
 
 async function checkConflict(
-  patientId: string,
+  tx: TransactionClient,
+  userId: string,
   startAt: string | Date,
   endAt: string | Date,
   excludeId?: string,
 ): Promise<void> {
-  const conflict = await prisma.appointment.findFirst({
+  const conflict = await tx.appointment.findFirst({
     where: {
-      patientId,
+      userId,
       isDeleted: false,
-      status: { in: [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ] },
+      status: { in: [ ...ACTIVE_STATUSES ] },
       ...(excludeId && { NOT: { id: excludeId } }),
       startAt: { lt: new Date(endAt) },
       endAt: { gt: new Date(startAt) },
@@ -260,11 +269,12 @@ async function checkConflict(
 }
 
 async function checkBlockedTimeConflict(
+  tx: TransactionClient,
   userId: string,
   startAt: string | Date,
   endAt: string | Date,
 ): Promise<void> {
-  const overlap = await blockedTimeRepository.hasBlockedTimeOverlap(userId, new Date(startAt), new Date(endAt));
+  const overlap = await blockedTimeRepository.hasBlockedTimeOverlap(userId, new Date(startAt), new Date(endAt), undefined, tx);
   if (overlap) {
     throw new AppointmentBlockedTimeConflictError(overlap.description, overlap.startTimeUtc, overlap.endTimeUtc);
   }
@@ -273,6 +283,105 @@ async function checkBlockedTimeConflict(
 async function enqueueImmediateReminder(reminderId: string, tx: TransactionClient): Promise<void> {
   if (!config.scheduler.enabled) return;
   await getBoss().send(REMINDER_QUEUE, { reminderId }, { db: fromPrisma(tx) });
+}
+
+export async function createWithin(
+  tx: TransactionClient,
+  dto: CreateAppointmentDto,
+  userId: string,
+): Promise<AppointmentWithRelations> {
+  await withProviderLock(tx, userId);
+
+  const existingReminder = await validateReminder(tx, dto.reminderId, userId, dto.patientId);
+  const patient = await validatePatient(tx, dto.patientId, userId);
+  const location = await validateLocation(tx, dto.locationId, userId);
+  await validateType(tx, dto.typeId, userId);
+  const doctorName = await getDoctorName(tx, userId);
+
+  await checkConflict(tx, userId, dto.startAt, dto.endAt);
+  await checkBlockedTimeConflict(tx, userId, dto.startAt, dto.endAt);
+
+  const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+    location,
+    existingUrl: null,
+    desiredUrl: dto.meetingUrl,
+    appointmentId: 'new',
+  });
+
+    let createdReminder: Reminder | null = null;
+
+    if (dto.reminder) {
+      createdReminder = await createLinkedReminder(
+        dto.reminder,
+        dto.patientId,
+        userId,
+        `${patient.name} ${patient.lastName}`,
+        'creación de cita',
+        tx,
+      );
+
+      if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
+        await enqueueImmediateReminder(createdReminder.id, tx);
+      }
+    }
+
+    const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
+
+    const created = await appointmentRepository.create(
+      { ...dto, meetingUrl: meetingUrl ?? null, reminderId: reminderId ?? undefined },
+      userId,
+      tx,
+    );
+
+    await logAudit({
+       entityType: EntityType.APPOINTMENT,
+       entityId: created.id,
+       userId,
+       actionType: ActionType.CREATE,
+      description: `Cita creada para el paciente ${patient.name} ${patient.lastName}`,
+      affectedFields: Object.keys(dto),
+      fieldsAfter: {
+        patientId: created.patientId,
+        startAt: created.startAt,
+        endAt: created.endAt,
+        typeId: created.typeId,
+        locationId: created.locationId,
+        price: created.price,
+        paid: created.paid ?? false,
+        notes: created.notes ?? null,
+        reminderId: reminderId ?? null,
+        meetingUrl: meetingUrl ?? null,
+        status: created.status ?? AppointmentStatus.SCHEDULED
+      },
+      tx,
+    });
+
+    if (createdReminder || existingReminder) {
+      const linkedReminder = createdReminder ?? existingReminder!;
+      await tx.reminder.update({
+        where: { id: linkedReminder.id },
+        data: { appointmentId: created.id },
+      });
+      await logAudit({
+         entityType: EntityType.REMINDER,
+         entityId: linkedReminder.id,
+         userId,
+         actionType: ActionType.UPDATE,
+        description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
+        affectedFields: [ 'appointmentId' ],
+        fieldsBefore: { appointmentId: null },
+        fieldsAfter: { appointmentId: created.id },
+        tx,
+      });
+    }
+
+    logger.info({ appointmentId: created.id, patientId: patient.id, userId, startAt: created.startAt }, 'Appointment created');
+
+    return renderLinkedReminder(
+      created,
+      doctorName,
+      tx,
+    );
 }
 
 export const appointmentService = {
@@ -297,140 +406,52 @@ export const appointmentService = {
   },
 
   async create(dto: CreateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    const [ existingReminder, patient, location, , doctorName ] = await Promise.all([
-      validateReminder(dto.reminderId, userId, dto.patientId),
-      validatePatient(dto.patientId, userId),
-      validateLocation(dto.locationId, userId),
-      validateType(dto.typeId, userId),
-      getDoctorName(userId),
-    ]);
-    await Promise.all([
-      checkConflict(dto.patientId, dto.startAt, dto.endAt),
-      checkBlockedTimeConflict(userId, dto.startAt, dto.endAt),
-    ]);
-    const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
-      location,
-      existingUrl: null,
-      desiredUrl: dto.meetingUrl,
-      appointmentId: 'new',
-    });
-    return prisma.$transaction(async (tx: TransactionClient) => {
-
-      let createdReminder: Reminder | null = null;
-
-      if (dto.reminder) {
-        createdReminder = await createLinkedReminder(
-          dto.reminder,
-          dto.patientId,
-          userId,
-          `${patient.name} ${patient.lastName}`,
-          'creación de cita',
-          tx,
-        );
-
-        if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
-          await enqueueImmediateReminder(createdReminder.id, tx);
-        }
-      }
-
-      const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
-
-      const created = await appointmentRepository.create(
-        { ...dto, meetingUrl: meetingUrl ?? null, reminderId: reminderId ?? undefined },
-        userId,
-        tx,
-      );
-
-      await logAudit({
-         entityType: EntityType.APPOINTMENT,
-         entityId: created.id,
-         userId,
-         actionType: ActionType.CREATE,
-        description: `Cita creada para el paciente ${patient.name} ${patient.lastName}`,
-        affectedFields: Object.keys(dto),
-        fieldsAfter: {
-          patientId: created.patientId,
-          startAt: created.startAt,
-          endAt: created.endAt,
-          typeId: created.typeId,
-          locationId: created.locationId,
-          price: created.price,
-          paid: created.paid ?? false,
-          notes: created.notes ?? null,
-          reminderId: reminderId ?? null,
-          meetingUrl: meetingUrl ?? null,
-          status: created.status ?? AppointmentStatus.SCHEDULED
-        },
-        tx,
-      });
-
-      if (createdReminder || existingReminder) {
-        const linkedReminder = createdReminder ?? existingReminder!;
-        await tx.reminder.update({
-          where: { id: linkedReminder.id },
-          data: { appointmentId: created.id },
-        });
-        await logAudit({
-           entityType: EntityType.REMINDER,
-           entityId: linkedReminder.id,
-           userId,
-           actionType: ActionType.UPDATE,
-          description: `Recordatorio vinculado a la cita del paciente ${patient.name} ${patient.lastName}`,
-          affectedFields: [ 'appointmentId' ],
-          fieldsBefore: { appointmentId: null },
-          fieldsAfter: { appointmentId: created.id },
-          tx,
-        });
-      }
-
-      logger.info({ appointmentId: created.id, patientId: patient.id, userId, startAt: created.startAt }, 'Appointment created');
-
-      return renderLinkedReminder(
-        created,
-        doctorName,
-        tx,
-      );
-    }, { timeout: 10000 });
-
+    return prisma.$transaction((tx: TransactionClient) => createWithin(tx, dto, userId), { timeout: 10000 });
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    const existing = await appointmentRepository.findByIdWithRelations(id, userId);
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      await withProviderLock(tx, userId);
+      const existing = await appointmentRepository.findByIdWithRelations(id, userId, tx);
 
-    const newStatus = dto.status ?? existing.status;
-    const isPast = existing.endAt.getTime() < Date.now();
-    if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
-      throw new PastAppointmentLockedError(id);
-    }
+      const newStatus = dto.status ?? existing.status;
+      if (dto.status !== undefined && !ALLOWED_STATUS_TRANSITIONS[ existing.status ].includes(dto.status)) {
+        throw new AppointmentStatusTransitionError(existing.status, `change status to ${dto.status}`);
+      }
+      const isPast = existing.endAt.getTime() < Date.now();
+      if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
+        throw new PastAppointmentLockedError(id);
+      }
 
-    if (dto.startAt !== undefined || dto.endAt !== undefined) {
+      const willBeActive = ACTIVE_STATUSES.has(newStatus);
+      const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
+      const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
       const newStart = dto.startAt ?? existing.startAt;
       const newEnd = dto.endAt ?? existing.endAt;
-      await Promise.all([
-        checkConflict(existing.patientId, newStart, newEnd, id),
-        checkBlockedTimeConflict(userId, newStart, newEnd),
-      ]);
-    }
+      if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
+        throw new AppointmentInvalidTimeRangeError();
+      }
+      if (willBeActive && (timeChanged || becomesActive)) {
+        await checkConflict(tx, userId, newStart, newEnd, id);
+        await checkBlockedTimeConflict(tx, userId, newStart, newEnd);
+      }
 
-    const [ location, , selectedReminder, doctorName ] = await Promise.all([
-      dto.locationId ? validateLocation(dto.locationId, userId) : Promise.resolve(undefined),
-      dto.typeId ? validateType(dto.typeId, userId) : Promise.resolve(undefined),
-      dto.reminderId !== undefined
-        ? validateReminder(dto.reminderId, userId, existing.patientId, id)
-        : Promise.resolve(null),
-      getDoctorName(userId),
-    ]);
-    const effectiveLocation = location ?? existing.appointmentLocation;
-    const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
-      location: effectiveLocation,
-      previousLocation: existing.appointmentLocation,
-      existingUrl: existing.meetingUrl,
-      desiredUrl: dto.meetingUrl,
-      appointmentId: id,
-    });
+      const location = dto.locationId ? await validateLocation(tx, dto.locationId, userId) : undefined;
+      if (dto.typeId) await validateType(tx, dto.typeId, userId);
+      const selectedReminder = dto.reminderId !== undefined
+        ? await validateReminder(tx, dto.reminderId, userId, existing.patientId, id)
+        : null;
+      const doctorName = await getDoctorName(tx, userId);
+      const effectiveLocation = location ?? existing.appointmentLocation;
+      const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+        location: effectiveLocation,
+        previousLocation: existing.appointmentLocation,
+        existingUrl: existing.meetingUrl,
+        desiredUrl: dto.meetingUrl,
+        appointmentId: id,
+      });
 
-    const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
-    return prisma.$transaction(async (tx: TransactionClient) => {
+      const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
       let effectiveReminderId: string | null | undefined;
       let createdReminder: Reminder | null = null;
 
@@ -459,7 +480,7 @@ export const appointmentService = {
         ...dto,
         ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
         ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
-      }, tx);
+      }, userId, tx);
 
       const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
       await logAudit({
@@ -502,82 +523,104 @@ export const appointmentService = {
   },
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {
-    const appt = await appointmentRepository.findById(id, userId);
-    if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
-      throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
-    }
-    const isPast = appt.startAt.getTime() < Date.now();
-    if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
-      throw new PastAppointmentLockedError(id);
-    }
-    const updated = await appointmentRepository.update(id, { status });
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
-      affectedFields: [ 'status' ],
-      fieldsBefore: { status: appt.status },
-      fieldsAfter: { status },
-    });
-    logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
-    return updated;
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      await withProviderLock(tx, userId);
+      const appt = await appointmentRepository.findById(id, userId, false, tx);
+      if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
+        throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
+      }
+      const isPast = appt.startAt.getTime() < Date.now();
+      if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
+        throw new PastAppointmentLockedError(id);
+      }
+      if (ACTIVE_STATUSES.has(status) && !ACTIVE_STATUSES.has(appt.status)) {
+        await checkConflict(tx, userId, appt.startAt, appt.endAt, id);
+        await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
+      }
+      const updated = await appointmentRepository.update(id, { status }, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Estado de la cita cambiado de ${appt.status} a ${status} para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
+        affectedFields: [ 'status' ],
+        fieldsBefore: { status: appt.status },
+        fieldsAfter: { status },
+        tx,
+      });
+      logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
+      return updated;
+    }, { timeout: 10000 });
   },
 
   async markPaid(id: string, userId: string): Promise<AppointmentWithRelations> {
-    const appt = await appointmentRepository.findById(id, userId);
-    if (appt.paid) {
-      throw new AppointmentStatusTransitionError(appt.status, 'mark as paid (already paid)');
-    }
-    if (!PAYABLE_STATUSES.has(appt.status)) {
-      throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
-    }
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      const appt = await appointmentRepository.findById(id, userId, false, tx);
+      if (appt.paid) {
+        throw new AppointmentStatusTransitionError(appt.status, 'mark as paid (already paid)');
+      }
+      if (!PAYABLE_STATUSES.has(appt.status)) {
+        throw new AppointmentStatusTransitionError(appt.status, 'mark as paid');
+      }
 
-    const updated = await appointmentRepository.update(id, { paid: true });
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
-      affectedFields: [ 'paid' ],
-      fieldsBefore: { paid: false },
-      fieldsAfter: { paid: true },
-    });
-    return updated;
+      const updated = await appointmentRepository.update(id, { paid: true }, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Cita del paciente ${updated.patient.name} ${updated.patient.lastName} marcada como pagada`,
+        affectedFields: [ 'paid' ],
+        fieldsBefore: { paid: false },
+        fieldsAfter: { paid: true },
+        tx,
+      });
+      return updated;
+    }, { timeout: 10000 });
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
-    const deleted = await appointmentRepository.delete(id, userId);
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.DELETE,
-      description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
-      affectedFields: [ 'isDeleted' ],
-      fieldsBefore: { isDeleted: false },
-      fieldsAfter: { isDeleted: true },
-    });
-    logger.info({ appointmentId: id, userId }, 'Appointment deleted');
-    return { id };
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      const deleted = await appointmentRepository.delete(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.DELETE,
+        description: `Cita eliminada para el paciente ${deleted.patient.name} ${deleted.patient.lastName}`,
+        affectedFields: [ 'isDeleted' ],
+        fieldsBefore: { isDeleted: false },
+        fieldsAfter: { isDeleted: true },
+        tx,
+      });
+      logger.info({ appointmentId: id, userId }, 'Appointment deleted');
+      return { id };
+    }, { timeout: 10000 });
   },
 
   async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId, true);
-    const restored = await appointmentRepository.restore(id, userId);
-    await logAudit({
-      entityType: EntityType.APPOINTMENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.RESTORE,
-      description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
-      affectedFields: [ 'isDeleted' ],
-      fieldsBefore: { isDeleted: true },
-      fieldsAfter: { isDeleted: false },
-    });
-    logger.info({ appointmentId: id, userId }, 'Appointment restored');
-    return restored;
+    return prisma.$transaction(async (tx: TransactionClient) => {
+      await withProviderLock(tx, userId);
+      const appt = await appointmentRepository.findById(id, userId, true, tx);
+      if (ACTIVE_STATUSES.has(appt.status)) {
+        await checkConflict(tx, userId, appt.startAt, appt.endAt, id);
+        await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
+      }
+      const restored = await appointmentRepository.restore(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.APPOINTMENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.RESTORE,
+        description: `Cita restaurada para el paciente ${restored.patient.name} ${restored.patient.lastName}`,
+        affectedFields: [ 'isDeleted' ],
+        fieldsBefore: { isDeleted: true },
+        fieldsAfter: { isDeleted: false },
+        tx,
+      });
+      logger.info({ appointmentId: id, userId }, 'Appointment restored');
+      return restored;
+    }, { timeout: 10000 });
   },
 };

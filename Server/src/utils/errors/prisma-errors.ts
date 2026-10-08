@@ -1,6 +1,3 @@
-/**
- * Returns true if the error is a Prisma unique-constraint violation (P2002).
- */
 export function isPrismaUniqueConstraintError(err: unknown): boolean {
   return (
     typeof err === 'object' &&
@@ -8,4 +5,14 @@ export function isPrismaUniqueConstraintError(err: unknown): boolean {
     'code' in err &&
     (err as Record<string, unknown>).code === 'P2002'
   );
+}
+
+export const APPOINTMENT_OVERLAP_CONSTRAINT = 'appointments_no_provider_overlap';
+
+export function isAppointmentOverlapViolation(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const meta = (err as { meta?: { driverAdapterError?: { cause?: Record<string, unknown> } } }).meta;
+  const cause = meta?.driverAdapterError?.cause;
+  if (!cause || cause.originalCode !== '23P01') return false;
+  return String(cause.originalMessage ?? '').includes(APPOINTMENT_OVERLAP_CONSTRAINT);
 }

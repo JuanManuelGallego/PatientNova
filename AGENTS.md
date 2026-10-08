@@ -32,6 +32,16 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 - **Stale generated client:** if you change `schema.prisma`, run `pnpm exec prisma generate`.
   The committed `generated/prisma` client is typechecked, so a stale client surfaces
   as `tsc` errors across many files.
+- **Raw-SQL-only database objects** (not expressible in `schema.prisma`) are invisible to
+  Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
+  migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
+  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_email_normalized_active_key` on
+  `(userId, lower(btrim(email))) WHERE isDeleted = false`
+  (`migrations/20261008000000_patient_email_normalized`, replaces `patients_userId_email_active_key`) and exclusion constraint
+  `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
+  the `btree_gist` extension). Before committing any generated migration,
+  read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
+  raw-only objects to this list.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK
   (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, `src/twilio/email-client.js`
   (Brevo REST API, EMAIL channel; unit tests stub global `fetch`), and `src/scheduler/dispatch.js`.
@@ -49,10 +59,13 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `36` files, `431` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `40` files, `475` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
+| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
+| Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
 | Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
 | Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout |
@@ -79,6 +92,7 @@ Suite: `36` files, `431` tests, all against real Postgres, `tsc --noEmit` clean.
 | Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered, EMAIL not polled), `dailyReminder` (WhatsApp + EMAIL; dispatch mock, `config` hour pin) |
 | Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
 | Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
+| Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
 | Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
 | Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
 | Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
@@ -106,3 +120,12 @@ Suite: `36` files, `431` tests, all against real Postgres, `tsc --noEmit` clean.
   (validateBody/Query/Params + asyncHandler), replicating short-circuiting
   (e.g. a 400 from `validateBody` stops the chain) and polling until `asyncHandler`
   settles the response.
+
+### Calendar integrity rules
+- Any transaction that creates/moves an appointment or blocked time must call
+  `withProviderLock(tx, userId)` (`src/utils/prisma/provider-lock.ts`) FIRST, then validate and
+  write on `tx`. Use `createWithin(tx, dto, userId)` to compose booking steps atomically.
+- A provider has one calendar: conflicts are checked per provider (not per patient) over
+  SCHEDULED/CONFIRMED, non-deleted appointments, using half-open intervals.
+- The exclusion constraint is only a backstop; its violation maps to a neutral 409
+  (`isAppointmentOverlapViolation` in `src/utils/errors/prisma-errors.ts`).

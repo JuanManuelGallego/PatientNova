@@ -4,6 +4,7 @@ import { appointmentRepository } from '../../../src/appointments/appointment.rep
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { AppointmentNotFoundError, AppointmentConflictError } from '../../../src/appointments/appointment.errors.js';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType, appointmentTimeRange } from '../helpers.js';
+import { isAppointmentOverlapViolation } from '../../../src/utils/errors/prisma-errors.js';
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { AppointmentBlockedTimeConflictError } from '../../../src/appointments/appointment.errors.js';
 
@@ -67,14 +68,16 @@ describe('appointmentRepository (integration)', () => {
     expect(restored.isDeleted).toBe(false);
   });
 
-  it('allows overlapping appointments at the repository layer (conflict is enforced in the service)', async () => {
+  it('rejects overlapping active appointments of one provider at the DB level (constraint backstop)', async () => {
     const { start, end } = appointmentTimeRange(120, 30);
     await appointmentRepository.create(baseCreateDto({ startAt: start.toISOString(), endAt: end.toISOString() }), userId);
 
     const overlapStart = new Date(start.getTime() + 10 * 60_000).toISOString();
     const overlapEnd = new Date(end.getTime() + 10 * 60_000).toISOString();
-    const created = await appointmentRepository.create(baseCreateDto({ startAt: overlapStart, endAt: overlapEnd }), userId);
-    expect(created.id).toBeTruthy();
+    const err = await appointmentRepository
+      .create(baseCreateDto({ startAt: overlapStart, endAt: overlapEnd }), userId)
+      .catch((e: unknown) => e);
+    expect(isAppointmentOverlapViolation(err)).toBe(true);
   });
 
   it('allows non-overlapping appointments', async () => {
@@ -112,8 +115,8 @@ describe('appointmentRepository (integration)', () => {
   });
 
   it('combines status + paid filters without the status filter being dropped', async () => {
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: true }), userId);
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: false }), userId);
+    await appointmentRepository.create(baseCreateDto({ startAt: appointmentTimeRange(120, 30).start.toISOString(), endAt: appointmentTimeRange(120, 30).end.toISOString(), status: AppointmentStatus.SCHEDULED, paid: true }), userId);
+    await appointmentRepository.create(baseCreateDto({ startAt: appointmentTimeRange(180, 30).start.toISOString(), endAt: appointmentTimeRange(180, 30).end.toISOString(), status: AppointmentStatus.SCHEDULED, paid: false }), userId);
     await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: true }), userId);
 
     const page = await appointmentRepository.findMany(
@@ -127,9 +130,9 @@ describe('appointmentRepository (integration)', () => {
   });
 
   it('excludes CANCELLED appointments when filtering by paid status', async () => {
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: true }), userId);
+    await appointmentRepository.create(baseCreateDto({ startAt: appointmentTimeRange(120, 30).start.toISOString(), endAt: appointmentTimeRange(120, 30).end.toISOString(), status: AppointmentStatus.SCHEDULED, paid: true }), userId);
     await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: true }), userId);
-    await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.SCHEDULED, paid: false }), userId);
+    await appointmentRepository.create(baseCreateDto({ startAt: appointmentTimeRange(180, 30).start.toISOString(), endAt: appointmentTimeRange(180, 30).end.toISOString(), status: AppointmentStatus.SCHEDULED, paid: false }), userId);
     await appointmentRepository.create(baseCreateDto({ status: AppointmentStatus.CANCELLED, paid: false }), userId);
 
     const paidPage = await appointmentRepository.findMany(

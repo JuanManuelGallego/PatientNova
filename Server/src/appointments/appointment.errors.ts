@@ -36,6 +36,12 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
+export class AppointmentOverlapError extends ApiError {
+  constructor() {
+    super('Appointment overlaps with another appointment of this provider', 409)
+  }
+}
+
 export class AppointmentBlockedTimeConflictError extends ApiError {
   constructor(description: string | null, startAt: Date, endAt: Date) {
     const label = description ? `"${description}"` : 'unnamed blocked slot';
@@ -46,5 +52,11 @@ export class AppointmentBlockedTimeConflictError extends ApiError {
 export class PastAppointmentLockedError extends ApiError {
   constructor(id: string) {
     super(`Cannot update past appointment "${id}" with status SCHEDULED or CONFIRMED`, 409)
+  }
+}
+
+export class AppointmentInvalidTimeRangeError extends ApiError {
+  constructor() {
+    super('endAt must be after startAt', 422)
   }
 }

@@ -18,6 +18,35 @@ import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React from "react";
 import { SetField } from "./types";
 
+const CREATABLE_STATUSES: AppointmentStatus[] = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+];
+
+const EDITABLE_STATUSES: Record<AppointmentStatus, AppointmentStatus[]> = {
+  [AppointmentStatus.SCHEDULED]: [
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.NO_SHOW,
+  ],
+  [AppointmentStatus.CONFIRMED]: [
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.NO_SHOW,
+    AppointmentStatus.SCHEDULED,
+  ],
+  [AppointmentStatus.CANCELLED]: [AppointmentStatus.CANCELLED, AppointmentStatus.SCHEDULED],
+  [AppointmentStatus.COMPLETED]: [AppointmentStatus.COMPLETED, AppointmentStatus.SCHEDULED],
+  [AppointmentStatus.NO_SHOW]: [
+    AppointmentStatus.NO_SHOW,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.SCHEDULED,
+  ],
+};
+
 interface Props {
   form: AppointmentForm;
   set: SetField;
@@ -26,6 +55,8 @@ interface Props {
   selectedPatient: Patient | undefined;
   locations: AppointmentLocation[];
   appointmentTypes: AppointmentType[];
+  isEdit?: boolean;
+  currentStatus?: AppointmentStatus;
 }
 
 export function PaymentAndStatusStep({
@@ -36,6 +67,8 @@ export function PaymentAndStatusStep({
   selectedPatient,
   locations,
   appointmentTypes,
+  isEdit = false,
+  currentStatus,
 }: Props) {
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [ field ]: value }));
@@ -77,7 +110,13 @@ export function PaymentAndStatusStep({
           <CustomSelect
             value={form.status}
             data-testid="appointment-status-select"
-            options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[]).map(
+            options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[])
+              .filter((s) =>
+                isEdit && currentStatus
+                  ? EDITABLE_STATUSES[currentStatus].includes(s)
+                  : CREATABLE_STATUSES.includes(s),
+              )
+              .map(
               (s) => ({ value: s, label: APPT_STATUS_CFG[ s ].label }),
             )}
             onChange={setField("status")}

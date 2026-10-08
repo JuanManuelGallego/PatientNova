@@ -21,6 +21,8 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     completedAt: null,
     isDeleted: false,
     deletedAt: null,
+    source: 'PROVIDER',
+    cancelledBy: null,
     patientId: 'patient-1',
     userId: 'user-1',
     reminderId: 'reminder-1',

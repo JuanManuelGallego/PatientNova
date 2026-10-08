@@ -1,5 +1,5 @@
 import { type BlockedTime, type Prisma } from '../../generated/prisma/client.ts';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { BlockedTimeNotFoundError } from './blocked-time.errors.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
@@ -8,8 +8,8 @@ import { paginate, type Paginated } from '../utils/api/pagination.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
 
 export const blockedTimeRepository = {
-  async create(dto: CreateBlockedTimeDto, userId: string): Promise<BlockedTime> {
-    return prisma.blockedTime.create({
+  async create(dto: CreateBlockedTimeDto, userId: string, tx?: TransactionClient): Promise<BlockedTime> {
+    return (tx ?? prisma).blockedTime.create({
       data: {
         userId,
         description: dto.description ?? null,
@@ -19,8 +19,8 @@ export const blockedTimeRepository = {
     });
   },
 
-  async findById(id: string, userId: string, includeDeleted = false): Promise<BlockedTime> {
-    const blockedTime = await prisma.blockedTime.findFirst({
+  async findById(id: string, userId: string, includeDeleted = false, tx?: TransactionClient): Promise<BlockedTime> {
+    const blockedTime = await (tx ?? prisma).blockedTime.findFirst({
       where: { id, userId, ...(includeDeleted ? {} : { isDeleted: false }) },
     });
     if (!blockedTime) throw new BlockedTimeNotFoundError(id);
@@ -55,8 +55,8 @@ export const blockedTimeRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateBlockedTimeDto, userId: string): Promise<BlockedTime> {
-    await blockedTimeRepository.findById(id, userId);
+  async update(id: string, dto: UpdateBlockedTimeDto, userId: string, tx?: TransactionClient): Promise<BlockedTime> {
+    await blockedTimeRepository.findById(id, userId, false, tx);
 
     const data = buildUpdateData(
       dto,
@@ -66,7 +66,7 @@ export const blockedTimeRepository = {
       },
     );
 
-    return prisma.blockedTime.update({
+    return (tx ?? prisma).blockedTime.update({
       where: { id },
       data,
     });
@@ -82,8 +82,8 @@ export const blockedTimeRepository = {
     return restore(prisma.blockedTime, id, userId) as Promise<BlockedTime>;
   },
 
-  async hasBlockedTimeOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string): Promise<{ id: string; description: string | null; startTimeUtc: Date; endTimeUtc: Date } | null> {
-    return prisma.blockedTime.findFirst({
+  async hasBlockedTimeOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string, tx?: TransactionClient): Promise<{ id: string; description: string | null; startTimeUtc: Date; endTimeUtc: Date } | null> {
+    return (tx ?? prisma).blockedTime.findFirst({
       where: {
         userId,
         isDeleted: false,

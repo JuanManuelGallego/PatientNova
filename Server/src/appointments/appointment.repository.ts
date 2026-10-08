@@ -41,16 +41,16 @@ export const appointmentRepository = {
     });
   },
 
-  async findById(id: string, userId: string, includeDeleted = false): Promise<Appointment> {
-    const appt = await prisma.appointment.findFirst({
+  async findById(id: string, userId: string, includeDeleted = false, tx?: TransactionClient): Promise<Appointment> {
+    const appt = await (tx ?? prisma).appointment.findFirst({
       where: { id, userId, ...(includeDeleted ? {} : { isDeleted: false }) },
     });
     if (!appt) throw new AppointmentNotFoundError(id);
     return appt;
   },
 
-  async findByIdWithRelations(id: string, userId: string): Promise<AppointmentWithRelations> {
-    const appt = await prisma.appointment.findFirst({
+  async findByIdWithRelations(id: string, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    const appt = await (tx ?? prisma).appointment.findFirst({
       where: { id, userId, isDeleted: false },
       include: appointmentInclude,
     });
@@ -124,7 +124,7 @@ export const appointmentRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateAppointmentDto, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+  async update(id: string, dto: UpdateAppointmentDto, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
     const client = tx ?? prisma;
     const data: Prisma.AppointmentUpdateInput = buildUpdateData(
       dto,
@@ -154,20 +154,20 @@ export const appointmentRepository = {
     }
 
     return client.appointment.update({
-      where: { id },
+      where: { id, userId },
       data,
       include: appointmentInclude,
     });
   },
 
-  async delete(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId);
-    return softDelete(prisma.appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
+  async delete(id: string, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    await appointmentRepository.findById(id, userId, false, tx);
+    return softDelete((tx ?? prisma).appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
   },
 
-  async restore(id: string, userId: string): Promise<AppointmentWithRelations> {
-    await appointmentRepository.findById(id, userId, true);
-    return restore(prisma.appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
+  async restore(id: string, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+    await appointmentRepository.findById(id, userId, true, tx);
+    return restore((tx ?? prisma).appointment, id, userId, appointmentInclude) as Promise<AppointmentWithRelations>;
   },
 
   async getStats(query: AppointmentStatsQuery, userId: string, timezone = 'UTC'): Promise<AppointmentStats> {
