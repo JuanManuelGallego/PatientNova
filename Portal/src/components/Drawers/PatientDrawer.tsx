@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
-import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { CHANNEL_CFG } from "@/src/types/Reminder";
 import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,

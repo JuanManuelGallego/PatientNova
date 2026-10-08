@@ -119,3 +119,53 @@ describe('splitSubjectLine', () => {
     expect(splitSubjectLine('Asunto: Cita\n\nHola')).toEqual({ subject: 'Cita', body: 'Hola' });
   });
 });
+
+describe('sendEmail resilience', () => {
+  it('passes an abort signal so a hung request times out', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(201, { messageId: MESSAGE_ID }));
+    await sendEmail({ to: 'ana@example.com', subject: 'Hola', body: 'x' });
+    const [ , init ] = fetchMock.mock.calls[ 0 ]!;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('retries once when Brevo answers 429 or 503 (request definitively not processed)', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse(429, { message: 'slow down' }))
+        .mockResolvedValueOnce(jsonResponse(201, { messageId: MESSAGE_ID }));
+      const pending = sendEmail({ to: 'ana@example.com', subject: 'Hola', body: 'x' });
+      await vi.advanceTimersByTimeAsync(1000);
+      await expect(pending).resolves.toMatchObject({ success: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up after a single retry', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockResolvedValue(jsonResponse(503, { message: 'down' }));
+      const pending = sendEmail({ to: 'ana@example.com', subject: 'Hola', body: 'x' });
+      const assertion = expect(pending).rejects.toMatchObject({ code: 503 });
+      await vi.advanceTimersByTimeAsync(1000);
+      await assertion;
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry ambiguous or client failures (could duplicate the email)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(400, { message: 'bad' }));
+    await expect(sendEmail({ to: 'ana@example.com', subject: 'Hola', body: 'x' })).rejects.toMatchObject({ code: 400 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockReset();
+    fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+    await expect(sendEmail({ to: 'ana@example.com', subject: 'Hola', body: 'x' })).rejects.toThrow('fetch failed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+

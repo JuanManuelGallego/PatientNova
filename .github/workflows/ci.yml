@@ -93,6 +93,7 @@ jobs:
       GOOGLE_CLIENT_SECRET: dummy-google-client-secret
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback
       PORTAL_URL: http://localhost:3000
+      ENABLE_PORTAL: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -120,6 +121,7 @@ jobs:
       - run: pnpm exec prisma generate
       - run: pnpm exec prisma migrate deploy
       - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm test
       - run: pnpm run test:integration
 

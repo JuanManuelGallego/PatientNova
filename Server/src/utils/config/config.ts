@@ -42,6 +42,7 @@ export const config = {
     fromEmail: requireEnv('BREVO_FROM_EMAIL'),
     fromName: process.env.BREVO_FROM_NAME ?? undefined,
     webhookSecret: requireEnv('BREVO_WEBHOOK_SECRET'),
+    timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
   rateLimit: {
@@ -88,6 +89,7 @@ export const config = {
 
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
+    patientEnabled: process.env.ENABLE_PORTAL === 'true',
   },
 
   encryption: {
