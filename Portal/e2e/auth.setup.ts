@@ -3,7 +3,6 @@ import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { Env } from './utils/env';
 import { LoginPage } from './pages/LoginPage';
-import { Routes } from './utils/const';
 
 const authFile = 'e2e/.auth/user.json';
 
