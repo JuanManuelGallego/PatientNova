@@ -52,12 +52,12 @@ export const authService = {
 
     if (!user || user.status !== 'ACTIVE') {
       await bcrypt.compare(password, await getDummyHash());
-      logger.info({ email: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
+      logger.info({ maskedEmail: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
       throw new AuthInvalidCredentialsError();
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      logger.info({ email: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
+      logger.info({ maskedEmail: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
       throw new AuthAccountLockedError();
     }
 
@@ -74,12 +74,12 @@ export const authService = {
       } catch (err) {
         logger.error({ err, userId: user.id }, 'Failed to record failed login attempt');
       }
-      logger.info({ userId: user.id, email: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
+      logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
       throw new AuthInvalidCredentialsError();
     }
 
     const updatedUser = await authRepository.recordSuccessfulLogin(user.id, ip);
-    logger.info({ userId: user.id, email: maskEmail(email), ip }, 'Login successful');
+    logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip }, 'Login successful');
 
     await logAudit({
       entityType: EntityType.USER,

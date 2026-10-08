@@ -65,7 +65,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', to: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'WhatsApp send failed');
+      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', maskedTo: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'WhatsApp send failed');
       const twilioCode = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : undefined;
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
@@ -110,7 +110,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'SMS', to: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'SMS send failed');
+      logger.error({ reminderId: reminder.id, channel: 'SMS', maskedTo: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'SMS send failed');
       const twilioCode = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : undefined;
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
@@ -156,7 +156,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'EMAIL', to: maskEmail(req.body.to), error: err instanceof Error ? err.message : err }, 'Email send failed');
+      logger.error({ reminderId: reminder.id, channel: 'EMAIL', maskedTo: maskEmail(req.body.to), error: err instanceof Error ? err.message : err }, 'Email send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',

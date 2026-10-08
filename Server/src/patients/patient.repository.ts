@@ -36,7 +36,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err) && dto.email) {
-        logger.warn({ email: maskEmail(dto.email), operation: 'create' }, 'Patient email conflict');
+        logger.warn({ maskedEmail: maskEmail(dto.email), operation: 'create' }, 'Patient email conflict');
         throw new PatientEmailConflictError();
       }
       throw err;
@@ -152,7 +152,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
-        logger.warn({ email: dto.email ? maskEmail(dto.email) : undefined, operation: 'update', patientId: id }, 'Patient email conflict');
+        logger.warn({ maskedEmail: dto.email ? maskEmail(dto.email) : undefined, operation: 'update', patientId: id }, 'Patient email conflict');
         throw new PatientEmailConflictError();
       }
       throw err;

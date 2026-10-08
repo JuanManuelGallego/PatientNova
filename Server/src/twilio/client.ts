@@ -101,7 +101,7 @@ export async function sendWhatsAppFreeForm(to: string, body: string): Promise<No
   const toAddr = `whatsapp:${to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.debug({ to: maskPhone(toAddr), from }, 'Sending free-form WhatsApp reply');
+  logger.debug({ maskedTo: maskPhone(toAddr), from }, 'Sending free-form WhatsApp reply');
 
   const message = await getClient().messages.create({ from, to: toAddr, body });
 
@@ -125,7 +125,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
     throw new Error('"body" is required and cannot be empty');
   }
 
-  logger.debug({ to: maskPhone(req.to) }, 'Sending SMS');
+  logger.debug({ maskedTo: maskPhone(req.to) }, 'Sending SMS');
 
   const message = await getClient().messages.create({
     from: config.twilio.smsFrom,

@@ -52,6 +52,13 @@ describe('logger redaction', () => {
     expect(JSON.stringify(lines[0])).not.toMatch(/hunter2|t0ken|Bearer abc|token=abc/);
   });
 
+  it('keeps masked values logged under maskedEmail/maskedTo', () => {
+    const { lines, log } = capture();
+    log.info({ maskedEmail: maskEmail('ana@example.com'), maskedTo: maskPhone('+573001112233') }, 'x');
+    expect(lines[0]!.maskedEmail).toBe('a***@example.com');
+    expect(lines[0]!.maskedTo).toBe('***2233');
+  });
+
   it('adds the current request id to every line', () => {
     const { lines, log } = capture();
     runInRequestContext({ requestId: 'req-123' }, () => log.info('inside'));

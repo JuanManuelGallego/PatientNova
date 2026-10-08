@@ -43,7 +43,7 @@ export const userService = {
         bankingKey: user.bankingKey,
       },
     });
-    logger.info({ userId: user.id, email: maskEmail(user.email) }, 'User created');
+    logger.info({ userId: user.id, maskedEmail: maskEmail(user.email) }, 'User created');
     return user;
   },
 

@@ -140,7 +140,8 @@ Suite: `41` files, `482` tests, all against real Postgres, `tsc --noEmit` clean.
   portal session uses its own `PORTAL_AUTH_SECRET`). Never call `jwt.sign/verify` directly.
   Deploying the audience change invalidates existing provider sessions (forced re-login).
 - Logging: never log `req.originalUrl` (use `loggedPath(req)`; query strings can carry PII),
-  raw emails or phone numbers (use `maskEmail`/`maskPhone`). The logger redacts PII keys
+  raw emails or phone numbers (log `maskEmail`/`maskPhone` output under `maskedEmail`/`maskedTo`;
+  `email`/`to` keys are redacted outright). The logger redacts PII keys
   (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
   adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
   primary control.

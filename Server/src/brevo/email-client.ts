@@ -57,7 +57,7 @@ export async function sendEmail(req: SendEmailRequest): Promise<NotificationResu
     ? { subject: null, body: req.body }
     : splitSubjectLine(req.body);
   const subject = explicitSubject || headerSubject || DEFAULT_EMAIL_SUBJECT;
-  logger.debug({ to: maskEmail(req.to) }, 'Sending email');
+  logger.debug({ maskedTo: maskEmail(req.to) }, 'Sending email');
 
   const payload = JSON.stringify({
     sender: {
