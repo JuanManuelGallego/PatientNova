@@ -12,3 +12,7 @@ onlyBuiltDependencies:
   - "bcrypt"
   - "esbuild"
   - "protobufjs"
+# Security: patched versions of transitive deps pinned by the Prisma CLI (same major).
+overrides:
+  mysql2: ^3.24.5
+  source-map-js: ^1.2.2

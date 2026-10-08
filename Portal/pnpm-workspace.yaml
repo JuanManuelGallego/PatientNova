@@ -3,3 +3,7 @@ packages:
 
 allowBuilds:
   unrs-resolver: true
+
+# Security: patched version of a transitive dep pinned by Babel (same major).
+overrides:
+  browserslist: ^4.28.7
