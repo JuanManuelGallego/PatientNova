@@ -36,7 +36,6 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
-/** Raised when the DB exclusion constraint rejects an overlapping appointment (race backstop). */
 export class AppointmentOverlapError extends ApiError {
   constructor() {
     super('Appointment overlaps with another appointment of this provider', 409)

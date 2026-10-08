@@ -62,7 +62,6 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
-  /** Active (non-deleted) patient of this provider with the given email, matched on the normalized form. */
   async findByEmail(email: string, userId: string): Promise<Patient | null> {
     return prisma.patient.findFirst({
       where: { userId, isDeleted: false, email: normalizeEmail(email) },
@@ -170,7 +169,6 @@ export const patientRepository = {
     try {
       return await restore(prisma.patient, id, userId) as Patient;
     } catch (err) {
-      // Restoring a soft-deleted patient whose email is now used by an active one.
       if (isPrismaUniqueConstraintError(err)) {
         logger.warn({ operation: 'restore', patientId: id }, 'Patient email conflict');
         throw new PatientEmailConflictError();

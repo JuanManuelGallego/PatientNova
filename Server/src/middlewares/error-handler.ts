@@ -18,10 +18,6 @@ interface HttpLikeError extends Error {
   type?: string;
 }
 
-/**
- * Final Express error handler (must keep 4 parameters or Express treats it as a normal middleware).
- * Always answers with the JSON envelope and never leaks internal error text.
- */
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (res.headersSent) {
     next(err);
@@ -40,7 +36,6 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
 
   const httpErr = err as HttpLikeError;
 
-  // body-parser errors
   if (httpErr?.type === 'entity.parse.failed') {
     apiError(res, 'Invalid JSON body', 400);
     return;
@@ -50,7 +45,6 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     return;
   }
 
-  // Other 4xx raised by middleware (e.g. unsupported charset/encoding)
   const status = httpErr?.status ?? httpErr?.statusCode;
   if (typeof status === 'number' && status >= 400 && status < 500) {
     apiError(res, 'Bad request', status);

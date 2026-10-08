@@ -35,7 +35,6 @@ export const createAppointmentSchema = z.object({
   paid: z.boolean().default(false),
   meetingUrl: z.url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
-  // Only open states can be created; COMPLETED/CANCELLED/NO_SHOW are reached via status changes.
   status: z.enum([ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED ]).default(AppointmentStatus.SCHEDULED),
   patientId: z.uuid('patientId must be a valid UUID'),
   reminderId: z.uuid('reminderId must be a valid UUID').nullable().optional(),

@@ -31,7 +31,6 @@ interface Props {
   selectedPatient: Patient | undefined;
   locations: AppointmentLocation[];
   appointmentTypes: AppointmentType[];
-  /** New appointments can only start as open states (the server rejects the others). */
   isEdit?: boolean;
 }
 

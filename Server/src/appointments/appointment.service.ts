@@ -28,7 +28,6 @@ import { renderAppointmentReminder } from './appointment-reminder.renderer.ts';
 
 const REMINDER_QUEUE = 'send-reminder';
 
-/** Statuses that occupy the provider's calendar (mirrors the DB exclusion constraint predicate). */
 const ACTIVE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
   AppointmentStatus.CONFIRMED,
@@ -246,11 +245,6 @@ async function handleReminderUpdate(
   return {};
 }
 
-/**
- * A provider has one calendar, so any active appointment of theirs overlapping the interval
- * conflicts (not just the same patient's). Half-open intervals: back-to-back is allowed.
- * Must run under `withProviderLock` to be race-free; the DB exclusion constraint is the backstop.
- */
 async function checkConflict(
   tx: TransactionClient,
   userId: string,
@@ -291,12 +285,6 @@ async function enqueueImmediateReminder(reminderId: string, tx: TransactionClien
   await getBoss().send(REMINDER_QUEUE, { reminderId }, { db: fromPrisma(tx) });
 }
 
-/**
- * Creates an appointment inside the caller's transaction. Takes the provider lock first, then
- * validates and checks conflicts on `tx`, so validation and insert see one consistent calendar.
- * Callers needing extra atomic steps (portal booking: patient, consent, audits, email enqueue)
- * compose them in the same `tx`.
- */
 export async function createWithin(
   tx: TransactionClient,
   dto: CreateAppointmentDto,
@@ -435,13 +423,9 @@ export const appointmentService = {
         throw new PastAppointmentLockedError(id);
       }
 
-      // Only active appointments occupy the calendar. Re-check when an active appointment moves
-      // or an inactive one is being reactivated (the DB exclusion constraint is the backstop).
       const willBeActive = ACTIVE_STATUSES.has(newStatus);
       const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
       const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
-      // A partial update (only startAt or only endAt) can yield end <= start; the body schema
-      // only validates the pair when both are sent, so re-validate against the stored value.
       const newStart = dto.startAt ?? existing.startAt;
       const newEnd = dto.endAt ?? existing.endAt;
       if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
@@ -619,7 +603,6 @@ export const appointmentService = {
     return prisma.$transaction(async (tx: TransactionClient) => {
       await withProviderLock(tx, userId);
       const appt = await appointmentRepository.findById(id, userId, true, tx);
-      // A restored active appointment occupies the calendar again, so it must not collide.
       if (ACTIVE_STATUSES.has(appt.status)) {
         await checkConflict(tx, userId, appt.startAt, appt.endAt, id);
         await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
