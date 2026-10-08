@@ -10,7 +10,7 @@ const PROTECTED_PATHS = [
   "/medical-records",
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
