@@ -23,6 +23,30 @@ const CREATABLE_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.CONFIRMED,
 ];
 
+const EDITABLE_STATUSES: Record<AppointmentStatus, AppointmentStatus[]> = {
+  [AppointmentStatus.SCHEDULED]: [
+    AppointmentStatus.SCHEDULED,
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.NO_SHOW,
+  ],
+  [AppointmentStatus.CONFIRMED]: [
+    AppointmentStatus.CONFIRMED,
+    AppointmentStatus.CANCELLED,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.NO_SHOW,
+    AppointmentStatus.SCHEDULED,
+  ],
+  [AppointmentStatus.CANCELLED]: [AppointmentStatus.CANCELLED, AppointmentStatus.SCHEDULED],
+  [AppointmentStatus.COMPLETED]: [AppointmentStatus.COMPLETED, AppointmentStatus.SCHEDULED],
+  [AppointmentStatus.NO_SHOW]: [
+    AppointmentStatus.NO_SHOW,
+    AppointmentStatus.COMPLETED,
+    AppointmentStatus.SCHEDULED,
+  ],
+};
+
 interface Props {
   form: AppointmentForm;
   set: SetField;
@@ -32,6 +56,7 @@ interface Props {
   locations: AppointmentLocation[];
   appointmentTypes: AppointmentType[];
   isEdit?: boolean;
+  currentStatus?: AppointmentStatus;
 }
 
 export function PaymentAndStatusStep({
@@ -43,6 +68,7 @@ export function PaymentAndStatusStep({
   locations,
   appointmentTypes,
   isEdit = false,
+  currentStatus,
 }: Props) {
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [ field ]: value }));
@@ -85,7 +111,11 @@ export function PaymentAndStatusStep({
             value={form.status}
             data-testid="appointment-status-select"
             options={(Object.keys(APPT_STATUS_CFG) as AppointmentStatus[])
-              .filter((s) => isEdit || CREATABLE_STATUSES.includes(s))
+              .filter((s) =>
+                isEdit && currentStatus
+                  ? EDITABLE_STATUSES[currentStatus].includes(s)
+                  : CREATABLE_STATUSES.includes(s),
+              )
               .map(
               (s) => ({ value: s, label: APPT_STATUS_CFG[ s ].label }),
             )}
