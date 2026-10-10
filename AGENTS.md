@@ -155,5 +155,5 @@ Suite: `41` files, `487` tests, all against real Postgres, `tsc --noEmit` clean.
   and `fetchWithAuth` attaches it (memory only). Route tests: `authReq` already sends a valid
   header via `csrfHeaders()`; keep it when overriding `headers`
   (`{ headers: { ...csrfHeaders(), origin } }`).
-- Webhook signature checks (Twilio, Brevo) are skipped only when `NODE_ENV=development` AND
-  `SKIP_WEBHOOK_AUTH=true` (`config.skipWebhookAuth`); an unset `NODE_ENV` never disables them.
+- Webhook signature checks (Twilio, Brevo) are always enforced; there is no environment bypass.
+  Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.

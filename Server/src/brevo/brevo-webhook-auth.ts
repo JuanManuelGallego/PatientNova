@@ -21,11 +21,6 @@ function extractSecret(header: string | undefined): string | null {
 }
 
 export function brevoWebhookAuth(req: Request, res: Response, next: NextFunction): void {
-  if (config.skipWebhookAuth) {
-    logger.warn('Brevo webhook authentication SKIPPED (SKIP_WEBHOOK_AUTH)');
-    return next();
-  }
-
   const secret = extractSecret(req.headers.authorization);
 
   if (!secret) {

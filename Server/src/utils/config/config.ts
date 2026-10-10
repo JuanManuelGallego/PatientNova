@@ -63,9 +63,6 @@ export const config = {
   },
 
   env: process.env.NODE_ENV ?? 'development',
-  // Webhook signature/secret checks are skipped only on explicit opt-in, and only when
-  // NODE_ENV is explicitly "development" (an unset NODE_ENV never disables them).
-  skipWebhookAuth: process.env.NODE_ENV === 'development' && process.env.SKIP_WEBHOOK_AUTH === 'true',
 
   cookieDomain: process.env.COOKIE_DOMAIN ?? undefined,
 

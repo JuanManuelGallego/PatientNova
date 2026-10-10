@@ -53,10 +53,6 @@ export const authRepository = {
     });
   },
 
-  /**
-   * Atomically increments the failed-attempt counter (concurrent wrong guesses each count)
-   * and locks the account once the returned count reaches `maxAttempts`.
-   */
   async recordFailedAttempt(id: string, maxAttempts: number, lockoutDurationMs: number): Promise<{ failedAttempts: number; locked: boolean }> {
     const { failedLoginAttempts } = await prisma.user.update({
       where: { id },

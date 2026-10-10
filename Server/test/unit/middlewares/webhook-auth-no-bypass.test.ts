@@ -1,8 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const configMock = vi.hoisted(() => ({
   config: {
-    skipWebhookAuth: false,
     brevo: { webhookSecret: 'brevo-secret' },
     twilio: { authToken: 'tw-token', webhookBaseUrl: 'https://api.example.com' },
   },
@@ -27,22 +26,16 @@ const unsignedReq = () => ({ headers: {}, body: {}, originalUrl: '/webhooks/x' }
 describe.each([
   [ 'twilioWebhookAuth', twilioWebhookAuth ],
   [ 'brevoWebhookAuth', brevoWebhookAuth ],
-])('%s skip switch', (_name, middleware) => {
-  beforeEach(() => { configMock.config.skipWebhookAuth = false; });
+])('%s has no bypass', (_name, middleware) => {
+  afterEach(() => vi.unstubAllEnvs());
 
-  it('rejects unsigned requests unless the skip is explicitly enabled', () => {
+  it.each([ 'development', 'test', 'production', '' ])('rejects unsigned requests with NODE_ENV=%s', (nodeEnv) => {
+    vi.stubEnv('NODE_ENV', nodeEnv);
+    vi.stubEnv('SKIP_WEBHOOK_AUTH', 'true');
     const res = makeRes();
     const next = vi.fn();
     middleware(unsignedReq(), res, next);
     expect(res.statusCode).toBe(403);
     expect(next).not.toHaveBeenCalled();
-  });
-
-  it('passes through only when skipWebhookAuth is true', () => {
-    configMock.config.skipWebhookAuth = true;
-    const res = makeRes();
-    const next = vi.fn();
-    middleware(unsignedReq(), res, next);
-    expect(next).toHaveBeenCalled();
   });
 });

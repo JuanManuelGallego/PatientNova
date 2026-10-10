@@ -26,18 +26,3 @@ describe('config.auth.portalJwtSecret', () => {
     expect((await loadConfig()).auth.portalJwtSecret).toBe('distinct-portal-secret');
   });
 });
-
-describe('config.skipWebhookAuth', () => {
-  afterEach(() => vi.unstubAllEnvs());
-
-  it.each([
-    [ '', 'true', false ], // unset (empty so dotenv does not refill it from .env)
-    [ 'production', 'true', false ],
-    [ 'development', undefined, false ],
-    [ 'development', 'true', true ],
-  ])('NODE_ENV=%s SKIP_WEBHOOK_AUTH=%s → %s', async (nodeEnv, skip, expected) => {
-    vi.stubEnv('NODE_ENV', nodeEnv);
-    vi.stubEnv('SKIP_WEBHOOK_AUTH', skip);
-    expect((await loadConfig()).skipWebhookAuth).toBe(expected);
-  });
-});
