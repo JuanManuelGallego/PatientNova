@@ -4,12 +4,6 @@ import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { safeEqual } from '../utils/security/safe-equal.js';
 
-
-/**
- * Extracts the shared secret from the Authorization header. Brevo webhooks can
- * be configured with Bearer-token auth, or with Basic auth (credentials in the
- * webhook URL), in which case the password carries the secret.
- */
 function extractSecret(header: string | undefined): string | null {
   if (!header) return null;
   const [ scheme, value ] = header.split(' ', 2);
@@ -26,12 +20,6 @@ function extractSecret(header: string | undefined): string | null {
   return null;
 }
 
-/**
- * Brevo does not sign webhook payloads, so requests are authenticated with a
- * shared secret (BREVO_WEBHOOK_SECRET) compared in constant time.
- *
- * Mirrors `twilioWebhookAuth`: skipped in development mode only.
- */
 export function brevoWebhookAuth(req: Request, res: Response, next: NextFunction): void {
   if (config.env === 'development') {
     logger.warn('Brevo webhook authentication SKIPPED (development mode)');

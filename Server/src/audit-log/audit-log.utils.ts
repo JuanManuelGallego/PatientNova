@@ -4,11 +4,6 @@ import { auditLogService } from './audit-log.service.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 
-/**
- * Compare two objects on the specified fields.
- * Returns affectedFields (field names that changed), fieldsBefore, and fieldsAfter
- * containing only the changed fields.
- */
 export function computeDiff(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
@@ -35,10 +30,6 @@ export function computeDiff(
   };
 }
 
-/**
- * Build a CreateAuditLogDto from entity metadata, merging in the current
- * audit context (actor info from the request) and the computed diff.
- */
 type AuditEntryOverrides = Omit<Partial<CreateAuditLogDto>, 'userId'> & Pick<CreateAuditLogDto, 'userId'>;
 
 export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogDto {
@@ -69,11 +60,6 @@ export async function logAudit(params: {
   fieldsAfter?: Record<string, unknown> | null;
   tx?: TransactionClient;
   userId: string;
-  /**
-   * When true, a failed audit write rethrows so the surrounding transaction rolls back.
-   * Required for portal booking, consent, approvals and other writes where the audit is
-   * part of the legal record. Defaults to best-effort for legacy call sites.
-   */
   required?: boolean;
 }): Promise<void> {
   const { required, ...entry } = params;

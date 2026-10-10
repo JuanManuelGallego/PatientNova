@@ -22,7 +22,6 @@ export interface AccessTokenClaims {
   id: string;
   email: string;
   role: string;
-  /** Null for legacy users without a timezone; the middleware falls back to UTC. */
   timezone: string | null;
 }
 
@@ -32,9 +31,7 @@ export interface RefreshTokenClaims {
 }
 
 export interface PortalTokenClaims {
-  /** Provider (tenant) the visitor is booking with. */
   userId: string;
-  /** Verified, normalized email. */
   email: string;
 }
 
@@ -71,7 +68,6 @@ export function signPortalToken(claims: PortalTokenClaims, expiresInSeconds = 2 
   });
 }
 
-/** Throws jsonwebtoken errors (TokenExpiredError, JsonWebTokenError) on failure. */
 export function verifyAccessToken(token: string): unknown {
   return jwt.verify(token, config.auth.jwtSecret, {
     algorithms: [ ALGORITHM ],

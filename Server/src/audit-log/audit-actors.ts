@@ -3,11 +3,6 @@ import { ActionSource } from '../../generated/prisma/enums.js';
 import { maskEmail } from '../utils/api/logger.js';
 import type { AuditContext } from './audit-log-context.js';
 
-/**
- * Audit actor for a verified-email portal patient. The actor id is a stable hash of
- * (provider, email) so rows can be correlated without storing the raw address, and the display
- * name only carries a masked email.
- */
 export function portalPatientAuditContext(params: {
   userId: string;
   email: string;

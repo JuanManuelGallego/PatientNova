@@ -13,25 +13,17 @@ const transport = process.env.NODE_ENV !== 'production'
   }
   : undefined
 
-/**
- * Mask an email for safe logging: "j***@example.com"
- */
 export function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   if (!local || !domain) return '***';
   return `${local[0]}***@${domain}`;
 }
 
-/**
- * Mask a phone number for safe logging: "***1234"
- */
 export function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.length <= 4 ? '***' : `***${digits.slice(-4)}`;
 }
 
-// Personal data that must never reach logs, at the top level and one level deep
-// (e.g. `{ patient: { email } }`, `{ body: { to } }`).
 const PII_KEYS = [
   'email',
   'to',
@@ -70,7 +62,6 @@ const REDACT_PATHS = [
 export function buildLogger(destination?: DestinationStream) {
   const options = {
     level: process.env.LOG_LEVEL ?? 'info',
-    // Adds the current request id (if any) to every log line.
     mixin: () => {
       const requestId = getRequestId();
       return requestId ? { requestId } : {};

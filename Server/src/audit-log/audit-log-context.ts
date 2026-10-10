@@ -6,7 +6,6 @@ export interface AuditContext {
   actorDisplayName: string;
   ipAddress?: string | undefined;
   userId?: string | undefined;
-  /** Overrides the default ActionSource.API for rows written inside this context. */
   source?: ActionSource | undefined;
 }
 

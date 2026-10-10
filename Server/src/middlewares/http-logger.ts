@@ -2,13 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/api/logger.js';
 import { loggedPath } from '../utils/api/request-context.js';
 
-/**
- * Comprehensive HTTP request/response logger.
- * Logs request details (method, path) at info level. Query strings and params are never
- * logged (they can carry emails/search terms); the body is logged at debug level only and
- * is subject to the logger's PII redaction.
- * Response details (status, duration) are logged at info (or warn for 4xx+).
- */
 export function httpLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
 

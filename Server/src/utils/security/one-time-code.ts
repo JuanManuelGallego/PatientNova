@@ -1,13 +1,6 @@
 import { createHmac, randomInt } from 'node:crypto';
 import { safeEqual } from './safe-equal.js';
 
-/**
- * Primitives for short-lived one-time codes (email OTP for the patient portal).
- * Pure functions only: persistence (hash, attempts, expiry) lives in the caller's table.
- * Codes are never stored: only an HMAC bound to a context (e.g. `${providerId}:${email}`),
- * so a leaked hash cannot be replayed for another provider/email and cannot be brute-forced
- * without the server secret.
- */
 export const ONE_TIME_CODE_DEFAULTS = {
   digits: 6,
   ttlMs: 10 * 60 * 1000,
