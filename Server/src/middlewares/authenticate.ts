@@ -12,9 +12,7 @@ export interface AuthPayload {
   id: string;
   email: string;
   role: string;
-  /** IANA timezone string (e.g. "America/Bogota"). Defaults to "UTC" for legacy tokens. */
   timezone: string;
-  /** Login session id (`sid` claim); binds the CSRF token of cookie sessions. */
   sessionId?: string;
 }
 
@@ -37,23 +35,11 @@ function isAuthPayload(payload: unknown): payload is AuthPayload {
   );
 }
 
-
-/**
- * Cookie sessions must send `X-CSRF-Token` on unsafe methods: the browser attaches the cookie
- * to cross-site requests on its own (SameSite=None). Bearer tokens are never ambient, so
- * those requests need no CSRF token.
- */
 const providerCsrf = requireCsrf({
   sessionIdFrom: (req) => req.user?.sessionId,
   secret: () => config.auth.jwtSecret,
 });
 
-/**
- * Verifies the JWT from the Cookie or Authorization: Bearer <token> header.
- * Attaches the decoded payload to req.user.
- * Rejects with 401 if missing/invalid, and with 403 when a cookie session sends an
- * unsafe request without a valid CSRF token.
- */
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   let token = req.cookies?.token;
   const fromCookie = Boolean(token);

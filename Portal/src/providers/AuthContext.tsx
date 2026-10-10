@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
 
-    // Check for an existing session on mount
     useEffect(() => {
         async function checkSession() {
             try {
@@ -67,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const json: ApiResponse = await res.json();
             if (!json.success) throw new Error("Login failed");
 
-            // New login session: any cached CSRF token belongs to the previous one.
             clearCsrfToken();
             setUser(json.data as User);
         } catch (err) {

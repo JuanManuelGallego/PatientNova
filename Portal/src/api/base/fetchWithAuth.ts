@@ -2,33 +2,16 @@ import { API_BASE } from "@/src/config/api";
 
 let refreshPromise: Promise<boolean> | null = null;
 
-// CSRF token of the current provider login session. The API cookie is not readable from the
-// Portal origin, so the token comes from GET /auth/csrf and is sent back as `X-CSRF-Token` on
-// unsafe requests. Memory only: never localStorage/cookies; refetched after a reload.
 let csrfToken: string | null = null;
 let csrfPromise: Promise<string | null> | null = null;
 
 const UNSAFE_METHODS = new Set([ "POST", "PUT", "PATCH", "DELETE" ]);
 const CSRF_REJECTION = "Invalid CSRF token";
 
-/** Drop the cached CSRF token; call when the login session changes (login / logout). */
 export function clearCsrfToken(): void {
     csrfToken = null;
 }
 
-/**
- * Drop-in replacement for fetch() that handles token expiry transparently.
- *
- * Unsafe requests (POST/PUT/PATCH/DELETE) carry the session's `X-CSRF-Token`; a CSRF rejection
- * (stale token after a re-login in another tab) refetches the token and retries once.
- *
- * On a 401 response it will:
- *   1. Call POST /auth/refresh once (deduplicated across concurrent requests)
- *   2. Retry the original request if refresh succeeds
- *   3. Redirect to /login if refresh fails (session fully expired)
- *
- * Session probes can disable the redirect so public pages remain accessible.
- */
 export async function fetchWithAuth(
     input: RequestInfo | URL,
     init?: RequestInit,
