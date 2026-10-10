@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
+import { runInRequestContext } from '../utils/api/request-context.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -19,5 +20,5 @@ export function requestId(req: Request, res: Response, next: NextFunction): void
   req.requestId = id;
   res.locals.requestId = id;
   res.setHeader('X-Request-Id', id);
-  next();
+  runInRequestContext({ requestId: id }, next);
 }

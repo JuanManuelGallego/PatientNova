@@ -8,6 +8,8 @@ import { authenticate } from '../middlewares/authenticate.js';
 import { validateBody } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
 import { logger } from '../utils/api/logger.js';
+import { createCsrfToken } from '../utils/security/csrf.js';
+import { config } from '../utils/config/config.js';
 import {
   AuthInvalidCredentialsError,
   AuthAccountLockedError,
@@ -102,6 +104,17 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
     logger.error({ err }, 'Token refresh failed');
     return apiError(res, 'Invalid refresh token', 401);
   }
+});
+
+/**
+ * GET /auth/csrf
+ * Requires authentication. Returns the CSRF token for the current login session. The Portal
+ * keeps it in memory and sends it as `X-CSRF-Token` on every unsafe request.
+ */
+authRouter.get('/csrf', authenticate, (req: Request, res: Response) => {
+  const sessionId = req.user!.sessionId;
+  if (!sessionId) return apiError(res, 'Session has no id; log in again', 401);
+  ok(res, { csrfToken: createCsrfToken(sessionId, config.auth.jwtSecret) });
 });
 
 /**

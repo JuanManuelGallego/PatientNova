@@ -53,17 +53,20 @@ export const authRepository = {
     });
   },
 
-  async incrementFailedAttempts(id: string, failedAttempts: number, lockUntil?: Date) {
-    const data: { failedLoginAttempts: number; lockedUntil?: Date } = {
-      failedLoginAttempts: failedAttempts,
-    };
-    if (lockUntil) {
-      data.lockedUntil = lockUntil;
-    }
-    await prisma.user.update({
+  async recordFailedAttempt(id: string, maxAttempts: number, lockoutDurationMs: number): Promise<{ failedAttempts: number; locked: boolean }> {
+    const { failedLoginAttempts } = await prisma.user.update({
       where: { id },
-      data,
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
     });
+    const locked = failedLoginAttempts >= maxAttempts;
+    if (locked) {
+      await prisma.user.update({
+        where: { id },
+        data: { lockedUntil: new Date(Date.now() + lockoutDurationMs) },
+      });
+    }
+    return { failedAttempts: failedLoginAttempts, locked };
   },
 
   async incrementRefreshTokenVersion(id: string) {

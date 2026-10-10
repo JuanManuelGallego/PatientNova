@@ -1,7 +1,8 @@
 import { prisma } from '../../src/utils/prisma/prisma-client.js';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { signAccessToken } from '../../src/auth/tokens.js';
 import { config } from '../../src/utils/config/config.js';
+import { createCsrfToken, CSRF_HEADER } from '../../src/utils/security/csrf.js';
 import {
   Channel,
   PatientStatus,
@@ -87,13 +88,17 @@ export function appointmentTimeRange(offsetMinutes = 60, durationMinutes = 30) {
 
 export { unique };
 
+/** Fixed login-session id for test tokens; `authReq` sends the matching CSRF header. */
+export const TEST_SESSION_ID = 'test-session';
+
 // Create a test JWT token for authentication
 export function createTestToken(user: { id: string; email: string; role: string; timezone?: string }): string {
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, timezone: user.timezone ?? 'America/Bogota' },
-    config.auth.jwtSecret,
-    { expiresIn: '1h' }
-  );
+  return signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone ?? 'America/Bogota', sid: TEST_SESSION_ID });
+}
+
+/** Valid `X-CSRF-Token` header for a cookie session created by `createTestToken`. */
+export function csrfHeaders(): Record<string, string> {
+  return { [ CSRF_HEADER ]: createCsrfToken(TEST_SESSION_ID, config.auth.jwtSecret) };
 }
 
 // Create request with proper authentication cookie
@@ -102,6 +107,7 @@ export function authReq(user: { id: string; email: string; role: string; timezon
   return {
     user: { id: user.id, timezone: user.timezone ?? 'America/Bogota', email: user.email, role: user.role },
     cookies: { token },
+    headers: csrfHeaders(),
     ip: '127.0.0.1',
     ...extra,
   };
@@ -185,9 +191,15 @@ export async function invokeRoute(
     cookies: req.cookies ?? {},
     headers: req.headers ?? {},
     ...req,
+    method: method.toUpperCase(),
     body: req.body ?? {},
     params: req.params ?? {},
     query: req.query ?? {},
+  };
+  // Express's req.get(): case-insensitive header lookup (used by the CSRF check).
+  fullReq.get = (name: string) => {
+    const key = Object.keys(fullReq.headers).find((k) => k.toLowerCase() === name.toLowerCase());
+    return key === undefined ? undefined : fullReq.headers[key];
   };
   const res = makeRes();
   const handlers = layer.route.stack as { handle: (req: any, res: any, next: any) => unknown }[];

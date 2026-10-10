@@ -561,6 +561,8 @@ enum EntityType {
   CONSENT_DOCUMENT
   GOOGLE_CONNECTION
   GOOGLE_MEET_SPACE
+  BOOKING_REQUEST
+  PATIENT_CONSENT
 }
 
 enum ActionType {
@@ -575,6 +577,7 @@ enum ActionSource {
   ADMIN_PANEL
   JOB
   MIGRATION
+  PUBLIC_PORTAL
 }
 
 model AuditLog {

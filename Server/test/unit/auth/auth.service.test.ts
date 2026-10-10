@@ -6,7 +6,7 @@ vi.mock('../../../src/auth/auth.repository.js', () => ({
     findByEmail: vi.fn(),
     findByIdForAuth: vi.fn(),
     recordSuccessfulLogin: vi.fn(),
-    incrementFailedAttempts: vi.fn(),
+    recordFailedAttempt: vi.fn(),
     incrementRefreshTokenVersion: vi.fn(),
     updatePassword: vi.fn(),
   },
@@ -127,10 +127,23 @@ describe('authService.login', () => {
     await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
-      { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota' },
+      { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota', sid: expect.any(String) },
       'test-secret-key-for-jwt',
-      { expiresIn: '15m' },
+      { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider', expiresIn: '15m' },
     );
+  });
+
+  it('binds the access and refresh tokens of one login to the same session id', async () => {
+    mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
+    mockBcrypt.compare.mockResolvedValue(true as any);
+    mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
+    mockJwt.sign.mockReturnValue('token' as any);
+
+    await authService.login('test@example.com', 'password123', '127.0.0.1');
+
+    const [ accessClaims, refreshClaims ] = mockJwt.sign.mock.calls.map((c) => c[0] as { sid: string });
+    expect(accessClaims!.sid).toBeTruthy();
+    expect(refreshClaims!.sid).toBe(accessClaims!.sid);
   });
 
   it('signs JWT with correct payload for refresh token', async () => {
@@ -142,9 +155,9 @@ describe('authService.login', () => {
     await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
-      { id: 'user-1', type: 'refresh', version: 1 },
+      { id: 'user-1', version: 1, sid: expect.any(String), type: 'refresh' },
       'test-secret-key-for-jwt',
-      { expiresIn: '7d' },
+      { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider-refresh', expiresIn: '7d' },
     );
   });
 
@@ -170,27 +183,19 @@ describe('authService.login', () => {
     expect(mockBcrypt.compare).not.toHaveBeenCalled();
   });
 
-  it('increments failed attempts on wrong password', async () => {
+  it('records a failed attempt with the lockout policy on wrong password', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
     mockBcrypt.compare.mockResolvedValue(false as any);
+    mockRepo.recordFailedAttempt.mockResolvedValue({ failedAttempts: 1, locked: false });
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
-    expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 1, undefined);
+    expect(mockRepo.recordFailedAttempt).toHaveBeenCalledWith('user-1', 3, 900000);
   });
 
-  it('locks account after max failed attempts', async () => {
-    const almostLockedUser = { ...fakeUser, failedLoginAttempts: 2 };
-    mockRepo.findByEmail.mockResolvedValue(almostLockedUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
-
-    await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
-    expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 3, expect.any(Date));
-  });
-
-  it('still throws AuthInvalidCredentialsError when incrementFailedAttempts DB fails', async () => {
+  it('still throws AuthInvalidCredentialsError when recordFailedAttempt DB fails', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
     mockBcrypt.compare.mockResolvedValue(false as any);
-    mockRepo.incrementFailedAttempts.mockRejectedValue(new Error('DB connection lost'));
+    mockRepo.recordFailedAttempt.mockRejectedValue(new Error('DB connection lost'));
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
   });
@@ -212,9 +217,23 @@ describe('authService.refreshToken', () => {
 
     const result = await authService.refreshToken('valid-refresh-token');
 
-    expect(mockJwt.verify).toHaveBeenCalledWith('valid-refresh-token', 'test-secret-key-for-jwt');
+    expect(mockJwt.verify).toHaveBeenCalledWith('valid-refresh-token', 'test-secret-key-for-jwt', {
+      algorithms: [ 'HS256' ],
+      issuer: 'patientnova',
+      audience: 'patientnova:provider-refresh',
+    });
     expect(mockRepo.findByIdForAuth).toHaveBeenCalledWith('user-1');
     expect(result.accessToken).toBe('new-access-token');
+  });
+
+  it('keeps the login session id so the CSRF token survives a refresh', async () => {
+    mockJwt.verify.mockReturnValue({ id: 'user-1', type: 'refresh', version: 1, sid: 'session-1' } as any);
+    mockRepo.findByIdForAuth.mockResolvedValue(fakeUser as any);
+    mockJwt.sign.mockReturnValue('new-access-token' as any);
+
+    await authService.refreshToken('valid-refresh-token');
+
+    expect(mockJwt.sign).toHaveBeenCalledWith(expect.objectContaining({ sid: 'session-1' }), expect.anything(), expect.anything());
   });
 
   it('throws AuthRefreshTokenExpiredError when token is expired', async () => {

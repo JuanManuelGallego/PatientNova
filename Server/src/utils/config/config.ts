@@ -7,6 +7,12 @@ function requireEnv(key: string): string {
   return value;
 }
 
+function portalAuthSecret(): string {
+  const secret = process.env.ENABLE_PORTAL === 'true' ? requireEnv('PORTAL_AUTH_SECRET') : (process.env.PORTAL_AUTH_SECRET ?? '');
+  if (secret && secret === process.env.AUTH_SECRET) throw new Error('PORTAL_AUTH_SECRET must differ from AUTH_SECRET');
+  return secret;
+}
+
 export const config = {
   port: parseInt(process.env.PORT ?? '3001', 10),
 
@@ -52,6 +58,7 @@ export const config = {
 
   auth: {
     jwtSecret: requireEnv('AUTH_SECRET'),
+    portalJwtSecret: portalAuthSecret(),
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
   },
 

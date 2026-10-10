@@ -18,6 +18,10 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
   },
 }));
 
+vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
+  logAudit: vi.fn(),
+  computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
+}));
 vi.mock('../../../src/utils/prisma/provider-lock.js', () => ({ withProviderLock: vi.fn() }));
 vi.mock('pg-boss', () => ({ fromPrisma: schedulerMocks.fromPrisma }));
 vi.mock('../../../src/scheduler/pg-boss.js', () => ({

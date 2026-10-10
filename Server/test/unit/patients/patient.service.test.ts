@@ -14,6 +14,10 @@ vi.mock('../../../src/patients/patient.repository.js', () => ({
   },
 }));
 
+vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
+  prisma: { $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({ tx: true })) },
+}));
+
 vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
   logAudit: vi.fn(),
   computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
@@ -117,7 +121,7 @@ describe('patientService.create', () => {
     const dto = { name: 'John', lastName: 'Doe', email: 'john@test.com', status: 'ACTIVE' as const };
     mockRepo.create.mockResolvedValue(fakePatient as any);
     const result = await patientService.create(dto, 'user-1');
-    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1');
+    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1', expect.anything());
     expect(result).toEqual(fakePatient);
   });
 
@@ -144,7 +148,7 @@ describe('patientService.update', () => {
     mockRepo.findById.mockResolvedValue(fakePatient as any);
     mockRepo.update.mockResolvedValue({ ...fakePatient, ...dto } as any);
     const result = await patientService.update('patient-1', dto, 'user-1');
-    expect(mockRepo.update).toHaveBeenCalledWith('patient-1', dto, 'user-1');
+    expect(mockRepo.update).toHaveBeenCalledWith('patient-1', dto, 'user-1', expect.anything());
     expect(result.name).toBe('Updated');
   });
 
@@ -169,7 +173,7 @@ describe('patientService.delete', () => {
   it('delegates to repository.delete and returns { id }', async () => {
     mockRepo.delete.mockResolvedValue(fakePatient as any);
     const result = await patientService.delete('patient-1', 'user-1');
-    expect(mockRepo.delete).toHaveBeenCalledWith('patient-1', 'user-1');
+    expect(mockRepo.delete).toHaveBeenCalledWith('patient-1', 'user-1', expect.anything());
     expect(result).toEqual({ id: 'patient-1' });
   });
 
@@ -196,7 +200,7 @@ describe('patientService.restore', () => {
   it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakePatient as any);
     const result = await patientService.restore('patient-1', 'user-1');
-    expect(mockRepo.restore).toHaveBeenCalledWith('patient-1', 'user-1');
+    expect(mockRepo.restore).toHaveBeenCalledWith('patient-1', 'user-1', expect.anything());
     expect(result).toEqual(fakePatient);
   });
 

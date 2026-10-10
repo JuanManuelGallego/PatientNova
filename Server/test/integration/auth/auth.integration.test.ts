@@ -39,6 +39,17 @@ describe('authService (integration)', () => {
     expect(updated!.failedLoginAttempts).toBe(1);
   });
 
+  it('counts concurrent wrong guesses individually and locks the account', async () => {
+    const attempts = Array.from({ length: 6 }, () => authService.login(user.email, 'wrong-password', '127.0.0.1'));
+    const results = await Promise.allSettled(attempts);
+    expect(results.every((r) => r.status === 'rejected')).toBe(true);
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } });
+    // Old read-modify-write collapsed parallel guesses to a single increment.
+    expect(updated!.failedLoginAttempts).toBeGreaterThanOrEqual(5);
+    expect(updated!.lockedUntil!.getTime()).toBeGreaterThan(Date.now());
+  });
+
   it('locks the account after max failed attempts', async () => {
     const max = config.lockout.maxFailedAttempts;
     for (let i = 0; i < max; i++) {

@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
 import { config } from '../utils/config/config.js';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from './tokens.js';
 import { toUserResponse } from '../users/user.dto.js';
 import { logger, maskEmail } from '../utils/api/logger.js';
 import {
@@ -20,6 +22,7 @@ interface RefreshTokenPayload {
   type: string;
   id: string;
   version: number;
+  sid?: unknown;
 }
 
 function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload {
@@ -51,34 +54,29 @@ export const authService = {
 
     if (!user || user.status !== 'ACTIVE') {
       await bcrypt.compare(password, await getDummyHash());
-      logger.info({ email: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
+      logger.info({ maskedEmail: maskEmail(email), ip }, 'Login failed: invalid credentials or inactive');
       throw new AuthInvalidCredentialsError();
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      logger.info({ email: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
+      logger.info({ maskedEmail: maskEmail(email), ip, lockedUntil: user.lockedUntil }, 'Login failed: account locked');
       throw new AuthAccountLockedError();
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      const failedAttempts = user.failedLoginAttempts + 1;
-      let lockUntil: Date | undefined;
-      const willLock = failedAttempts >= config.lockout.maxFailedAttempts;
-      if (willLock) {
-        lockUntil = new Date(Date.now() + config.lockout.lockoutDurationMs);
-      }
+      let attempt: { failedAttempts: number; locked: boolean } | undefined;
       try {
-        await authRepository.incrementFailedAttempts(user.id, failedAttempts, lockUntil);
+        attempt = await authRepository.recordFailedAttempt(user.id, config.lockout.maxFailedAttempts, config.lockout.lockoutDurationMs);
       } catch (err) {
         logger.error({ err, userId: user.id }, 'Failed to record failed login attempt');
       }
-      logger.info({ userId: user.id, email: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
+      logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip, failedAttempts: attempt?.failedAttempts, willLock: attempt?.locked }, 'Login failed: incorrect password');
       throw new AuthInvalidCredentialsError();
     }
 
     const updatedUser = await authRepository.recordSuccessfulLogin(user.id, ip);
-    logger.info({ userId: user.id, email: maskEmail(email), ip }, 'Login successful');
+    logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip }, 'Login successful');
 
     await logAudit({
       entityType: EntityType.USER,
@@ -90,17 +88,9 @@ export const authService = {
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
     });
 
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' },
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user.id, type: 'refresh', version: user.refreshTokenVersion },
-      config.auth.jwtSecret,
-      { expiresIn: '7d' },
-    );
+    const sid = randomUUID();
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid });
+    const refreshToken = signRefreshToken({ id: user.id, version: user.refreshTokenVersion, sid });
 
     return {
       user: toUserResponse(updatedUser, updatedUser.consentDocument ?? null),
@@ -125,7 +115,7 @@ export const authService = {
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     let payload: unknown;
     try {
-      payload = jwt.verify(refreshToken, config.auth.jwtSecret);
+      payload = verifyRefreshToken(refreshToken);
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
         logger.info('Token refresh failed: refresh token expired');
@@ -153,11 +143,9 @@ export const authService = {
 
     logger.info({ userId: user.id }, 'Token refreshed');
 
-    const accessToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, timezone: user.timezone },
-      config.auth.jwtSecret,
-      { expiresIn: '15m' },
-    );
+    // Refresh tokens issued before session ids existed get a fresh one.
+    const sid = typeof payload.sid === 'string' && payload.sid ? payload.sid : randomUUID();
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid });
 
     return { accessToken };
   },

@@ -1,6 +1,6 @@
 import twilio, { type Twilio } from 'twilio';
 import { config } from '../utils/config/config.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskPhone } from '../utils/api/logger.js';
 import { Channel } from '../../generated/prisma/client.ts';
 import { type SendWhatsAppRequest, type NotificationResult, type SendSmsRequest, type ScheduleRequest } from './types.js';
 import { validateE164 } from './validator.js';
@@ -101,7 +101,7 @@ export async function sendWhatsAppFreeForm(to: string, body: string): Promise<No
   const toAddr = `whatsapp:${to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.debug({ to: toAddr, from }, 'Sending free-form WhatsApp reply');
+  logger.debug({ maskedTo: maskPhone(toAddr), from }, 'Sending free-form WhatsApp reply');
 
   const message = await getClient().messages.create({ from, to: toAddr, body });
 
@@ -125,7 +125,7 @@ export async function sendSms(req: SendSmsRequest): Promise<NotificationResult> 
     throw new Error('"body" is required and cannot be empty');
   }
 
-  logger.debug({ to: req.to }, 'Sending SMS');
+  logger.debug({ maskedTo: maskPhone(req.to) }, 'Sending SMS');
 
   const message = await getClient().messages.create({
     from: config.twilio.smsFrom,
