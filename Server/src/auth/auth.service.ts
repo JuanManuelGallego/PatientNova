@@ -63,18 +63,13 @@ export const authService = {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      const failedAttempts = user.failedLoginAttempts + 1;
-      let lockUntil: Date | undefined;
-      const willLock = failedAttempts >= config.lockout.maxFailedAttempts;
-      if (willLock) {
-        lockUntil = new Date(Date.now() + config.lockout.lockoutDurationMs);
-      }
+      let attempt: { failedAttempts: number; locked: boolean } | undefined;
       try {
-        await authRepository.incrementFailedAttempts(user.id, failedAttempts, lockUntil);
+        attempt = await authRepository.recordFailedAttempt(user.id, config.lockout.maxFailedAttempts, config.lockout.lockoutDurationMs);
       } catch (err) {
         logger.error({ err, userId: user.id }, 'Failed to record failed login attempt');
       }
-      logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip, failedAttempts, willLock }, 'Login failed: incorrect password');
+      logger.info({ userId: user.id, maskedEmail: maskEmail(email), ip, failedAttempts: attempt?.failedAttempts, willLock: attempt?.locked }, 'Login failed: incorrect password');
       throw new AuthInvalidCredentialsError();
     }
 

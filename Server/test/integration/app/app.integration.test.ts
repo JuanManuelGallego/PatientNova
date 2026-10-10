@@ -50,6 +50,28 @@ describe('app layer', () => {
     expect(res.body).toMatchObject({ success: false, error: 'Request body too large' });
   });
 
+  it('applies the small default body limit to ordinary routes', async () => {
+    const res = await request(app)
+      .post('/v1/auth/login')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ email: 'a@b.co', password: 'x'.repeat(200 * 1024) }));
+    expect(res.status).toBe(413);
+  });
+
+  it('still parses large bodies on file-upload routes (reaches auth instead of 413)', async () => {
+    const res = await request(app)
+      .post('/v1/medical-records')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ data: 'x'.repeat(1024 * 1024) }));
+    expect(res.status).toBe(401);
+  });
+
+  it('no longer exposes the unauthenticated message-status endpoint', async () => {
+    const sid = `SM${'a'.repeat(32)}`;
+    expect((await request(app).get(`/messages/${sid}`)).status).toBe(404);
+    expect((await request(app).get(`/v1/messages/${sid}`)).status).toBe(404);
+  });
+
   it('rejects disallowed origins with a JSON 403 and no CORS headers', async () => {
     const res = await request(app).get('/health').set('Origin', 'https://evil.example');
     expect(res.status).toBe(403);

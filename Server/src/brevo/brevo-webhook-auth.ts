@@ -21,8 +21,8 @@ function extractSecret(header: string | undefined): string | null {
 }
 
 export function brevoWebhookAuth(req: Request, res: Response, next: NextFunction): void {
-  if (config.env === 'development') {
-    logger.warn('Brevo webhook authentication SKIPPED (development mode)');
+  if (config.skipWebhookAuth) {
+    logger.warn('Brevo webhook authentication SKIPPED (SKIP_WEBHOOK_AUTH)');
     return next();
   }
 

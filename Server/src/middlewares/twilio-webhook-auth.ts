@@ -11,12 +11,12 @@ import { logger } from '../utils/api/logger.js';
  * POST parameters. The resulting signature is sent in the `X-Twilio-Signature`
  * header. We reproduce that signature locally and compare.
  *
- * In development mode, validation is skipped so you can test with curl / Postman
- * without needing a real ngrok tunnel. Never skip in production.
+ * Validation is skipped only when NODE_ENV=development AND SKIP_WEBHOOK_AUTH=true, so you can
+ * test with curl / Postman without a real ngrok tunnel. Never set either in production.
  */
 export function twilioWebhookAuth(req: Request, res: Response, next: NextFunction): void {
-  if (config.env === 'development') {
-    logger.warn('Twilio webhook signature validation SKIPPED (development mode)');
+  if (config.skipWebhookAuth) {
+    logger.warn('Twilio webhook signature validation SKIPPED (SKIP_WEBHOOK_AUTH)');
     return next();
   }
 

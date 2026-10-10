@@ -6,7 +6,7 @@ vi.mock('../../../src/auth/auth.repository.js', () => ({
     findByEmail: vi.fn(),
     findByIdForAuth: vi.fn(),
     recordSuccessfulLogin: vi.fn(),
-    incrementFailedAttempts: vi.fn(),
+    recordFailedAttempt: vi.fn(),
     incrementRefreshTokenVersion: vi.fn(),
     updatePassword: vi.fn(),
   },
@@ -170,27 +170,19 @@ describe('authService.login', () => {
     expect(mockBcrypt.compare).not.toHaveBeenCalled();
   });
 
-  it('increments failed attempts on wrong password', async () => {
+  it('records a failed attempt with the lockout policy on wrong password', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
     mockBcrypt.compare.mockResolvedValue(false as any);
+    mockRepo.recordFailedAttempt.mockResolvedValue({ failedAttempts: 1, locked: false });
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
-    expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 1, undefined);
+    expect(mockRepo.recordFailedAttempt).toHaveBeenCalledWith('user-1', 3, 900000);
   });
 
-  it('locks account after max failed attempts', async () => {
-    const almostLockedUser = { ...fakeUser, failedLoginAttempts: 2 };
-    mockRepo.findByEmail.mockResolvedValue(almostLockedUser as any);
-    mockBcrypt.compare.mockResolvedValue(false as any);
-
-    await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
-    expect(mockRepo.incrementFailedAttempts).toHaveBeenCalledWith('user-1', 3, expect.any(Date));
-  });
-
-  it('still throws AuthInvalidCredentialsError when incrementFailedAttempts DB fails', async () => {
+  it('still throws AuthInvalidCredentialsError when recordFailedAttempt DB fails', async () => {
     mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
     mockBcrypt.compare.mockResolvedValue(false as any);
-    mockRepo.incrementFailedAttempts.mockRejectedValue(new Error('DB connection lost'));
+    mockRepo.recordFailedAttempt.mockRejectedValue(new Error('DB connection lost'));
 
     await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
   });

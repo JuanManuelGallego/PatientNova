@@ -8,7 +8,6 @@ import { logger } from './utils/api/logger.js';
 import { config } from './utils/config/config.js';
 import { FIFTEEN_MINUTES_MS } from './utils/config/constants.js';
 import { router } from './health.routes.js';
-import { messageStatusRouter } from './twilio/message-status.routes.js';
 import { patientRouter } from './patients/patient.routes.js';
 import { appointmentRouter } from './appointments/appointment.routes.js';
 import { reminderRouter } from './reminders/reminder.routes.js';
@@ -32,6 +31,9 @@ import { httpLogger } from './middlewares/http-logger.js';
 import { requestId } from './middlewares/request-id.js';
 import { errorHandler, CorsRejectionError } from './middlewares/error-handler.js';
 
+const DEFAULT_BODY_LIMIT = '100kb';
+const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as const;
+
 const app: Application = express();
 
 app.disable('x-powered-by');
@@ -50,11 +52,7 @@ app.use(cors({
     },
     credentials: true,
 }));
-app.use(express.json({ limit: "15mb" }));
-app.use(express.urlencoded({ extended: true, limit: "15mb" }));
-app.use(cookieParser())
-app.use(httpLogger);
-
+// Rate limits run before body parsing so throttled clients never get their payloads read.
 app.use(
     rateLimit({
         windowMs: config.rateLimit.windowMs,
@@ -71,9 +69,18 @@ app.use(
 const authWriteLimit = rateLimit({ windowMs: FIFTEEN_MINUTES_MS, max: 50, standardHeaders: true, legacyHeaders: false });
 app.use('/v1/auth/login', authWriteLimit);
 
-// Unversioned infra/external routes: health check (root router), message status, and the public Twilio webhook.
+// Small default body limit; only routes that accept base64 files (avatars/logos, consent
+// documents, medical-record attachments) and batched Brevo webhooks get a larger one. The first parser to run wins.
+app.use('/v1/users', express.json({ limit: LARGE_BODY_LIMITS.users }));
+app.use([ '/v1/consent-document', '/v1/medical-records' ], express.json({ limit: LARGE_BODY_LIMITS.files }));
+app.use('/webhooks/brevo', express.json({ limit: LARGE_BODY_LIMITS.webhooks })); // batched events
+app.use(express.json({ limit: DEFAULT_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: DEFAULT_BODY_LIMIT }));
+app.use(cookieParser())
+app.use(httpLogger);
+
+// Unversioned infra/external routes: health check (root router) and the public webhooks.
 app.use('/', router);
-app.use('/', messageStatusRouter);
 app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
 app.use('/webhooks/brevo', brevoWebhookRouter);
 
@@ -81,7 +88,6 @@ app.use('/webhooks/brevo', brevoWebhookRouter);
 const v1 = express.Router();
 
 v1.use('/', router);
-v1.use('/', messageStatusRouter);
 
 // Public (no auth)
 v1.use('/auth', authRouter);
