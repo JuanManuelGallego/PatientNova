@@ -127,10 +127,23 @@ describe('authService.login', () => {
     await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
-      { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota' },
+      { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota', sid: expect.any(String) },
       'test-secret-key-for-jwt',
       { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider', expiresIn: '15m' },
     );
+  });
+
+  it('binds the access and refresh tokens of one login to the same session id', async () => {
+    mockRepo.findByEmail.mockResolvedValue(fakeUser as any);
+    mockBcrypt.compare.mockResolvedValue(true as any);
+    mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
+    mockJwt.sign.mockReturnValue('token' as any);
+
+    await authService.login('test@example.com', 'password123', '127.0.0.1');
+
+    const [ accessClaims, refreshClaims ] = mockJwt.sign.mock.calls.map((c) => c[0] as { sid: string });
+    expect(accessClaims!.sid).toBeTruthy();
+    expect(refreshClaims!.sid).toBe(accessClaims!.sid);
   });
 
   it('signs JWT with correct payload for refresh token', async () => {
@@ -142,7 +155,7 @@ describe('authService.login', () => {
     await authService.login('test@example.com', 'password123', '127.0.0.1');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
-      { id: 'user-1', version: 1, type: 'refresh' },
+      { id: 'user-1', version: 1, sid: expect.any(String), type: 'refresh' },
       'test-secret-key-for-jwt',
       { algorithm: 'HS256', issuer: 'patientnova', audience: 'patientnova:provider-refresh', expiresIn: '7d' },
     );
@@ -211,6 +224,16 @@ describe('authService.refreshToken', () => {
     });
     expect(mockRepo.findByIdForAuth).toHaveBeenCalledWith('user-1');
     expect(result.accessToken).toBe('new-access-token');
+  });
+
+  it('keeps the login session id so the CSRF token survives a refresh', async () => {
+    mockJwt.verify.mockReturnValue({ id: 'user-1', type: 'refresh', version: 1, sid: 'session-1' } as any);
+    mockRepo.findByIdForAuth.mockResolvedValue(fakeUser as any);
+    mockJwt.sign.mockReturnValue('new-access-token' as any);
+
+    await authService.refreshToken('valid-refresh-token');
+
+    expect(mockJwt.sign).toHaveBeenCalledWith(expect.objectContaining({ sid: 'session-1' }), expect.anything(), expect.anything());
   });
 
   it('throws AuthRefreshTokenExpiredError when token is expired', async () => {

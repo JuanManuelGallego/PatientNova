@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 
 import app from '../../../src/app.js';
+import { signAccessToken } from '../../../src/auth/tokens.js';
+import { config } from '../../../src/utils/config/config.js';
+import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 
 // Exercises the real Express app (CORS, body parsers, error handler, rate limit) that the
 // route-level tests using invokeRoute skip. The rate-limit test must stay last: the global
@@ -70,6 +73,26 @@ describe('app layer', () => {
     const sid = `SM${'a'.repeat(32)}`;
     expect((await request(app).get(`/messages/${sid}`)).status).toBe(404);
     expect((await request(app).get(`/v1/messages/${sid}`)).status).toBe(404);
+  });
+
+  it('requires the session CSRF token on cookie-authenticated writes', async () => {
+    const token = signAccessToken({ id: 'u-csrf', email: 'csrf@example.com', role: 'ADMIN', timezone: 'UTC', sid: 'sess-app' });
+    const cookie = `token=${token}`;
+
+    const csrfRes = await request(app).get('/v1/auth/csrf').set('Cookie', cookie);
+    expect(csrfRes.status).toBe(200);
+    const csrfToken = csrfRes.body.data.csrfToken as string;
+    expect(csrfToken).toBe(createCsrfToken('sess-app', config.auth.jwtSecret));
+
+    const missing = await request(app).post('/v1/patients').set('Cookie', cookie).send({});
+    expect(missing.status).toBe(403);
+    expect(missing.body).toMatchObject({ success: false, error: 'Invalid CSRF token' });
+
+    // With the token (or with a non-ambient Bearer token) the request reaches validation.
+    const withToken = await request(app).post('/v1/patients').set('Cookie', cookie).set('X-CSRF-Token', csrfToken).send({});
+    expect(withToken.status).toBe(400);
+    const bearer = await request(app).post('/v1/patients').set('Authorization', `Bearer ${token}`).send({});
+    expect(bearer.status).toBe(400);
   });
 
   it('rejects disallowed origins with a JSON 403 and no CORS headers', async () => {

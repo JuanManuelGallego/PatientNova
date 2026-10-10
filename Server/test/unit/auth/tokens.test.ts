@@ -14,8 +14,8 @@ import {
   verifyRefreshToken,
 } from '../../../src/auth/tokens.js';
 
-const access = () => signAccessToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC' });
-const refresh = () => signRefreshToken({ id: 'u1', version: 3 });
+const access = () => signAccessToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
+const refresh = () => signRefreshToken({ id: 'u1', version: 3, sid: 's1' });
 const portal = () => signPortalToken({ userId: 'u1', email: 'p@x.com' });
 
 describe('token separation', () => {

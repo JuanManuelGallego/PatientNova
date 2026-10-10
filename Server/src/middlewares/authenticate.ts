@@ -5,6 +5,8 @@ import { verifyAccessToken } from '../auth/tokens.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
+import { requireCsrf } from './csrf.js';
+import { config } from '../utils/config/config.js';
 
 export interface AuthPayload {
   id: string;
@@ -12,6 +14,8 @@ export interface AuthPayload {
   role: string;
   /** IANA timezone string (e.g. "America/Bogota"). Defaults to "UTC" for legacy tokens. */
   timezone: string;
+  /** Login session id (`sid` claim); binds the CSRF token of cookie sessions. */
+  sessionId?: string;
 }
 
 declare global {
@@ -35,12 +39,24 @@ function isAuthPayload(payload: unknown): payload is AuthPayload {
 
 
 /**
+ * Cookie sessions must send `X-CSRF-Token` on unsafe methods: the browser attaches the cookie
+ * to cross-site requests on its own (SameSite=None). Bearer tokens are never ambient, so
+ * those requests need no CSRF token.
+ */
+const providerCsrf = requireCsrf({
+  sessionIdFrom: (req) => req.user?.sessionId,
+  secret: () => config.auth.jwtSecret,
+});
+
+/**
  * Verifies the JWT from the Cookie or Authorization: Bearer <token> header.
  * Attaches the decoded payload to req.user.
- * Rejects with 401 if missing/invalid.
+ * Rejects with 401 if missing/invalid, and with 403 when a cookie session sends an
+ * unsafe request without a valid CSRF token.
  */
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   let token = req.cookies?.token;
+  const fromCookie = Boolean(token);
 
   if (!token) {
     const authHeader = req.headers[ 'authorization' ];
@@ -69,15 +85,22 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       email:    payload.email,
       role:     payload.role,
       timezone: typeof (payload as unknown as Record<string, unknown>).timezone === 'string' ? (payload as unknown as Record<string, unknown>).timezone as string : 'UTC',
+      ...(typeof (payload as unknown as Record<string, unknown>).sid === 'string' && { sessionId: (payload as unknown as Record<string, unknown>).sid as string }),
     };
 
     const ip = req.ip?.replace('::ffff:', '');
-    runInAuditContext({
+    const proceed = () => runInAuditContext({
       actorId: payload.id,
       actorDisplayName: payload.email,
       ...(ip && { ipAddress: ip }),
       userId: payload.id,
     }, () => next());
+
+    if (fromCookie) {
+      providerCsrf(req, res, proceed);
+      return;
+    }
+    proceed();
   } catch (err) {
     logger.warn({ err, ip: req.ip }, 'Auth failure');
     if (err instanceof jwt.TokenExpiredError) {

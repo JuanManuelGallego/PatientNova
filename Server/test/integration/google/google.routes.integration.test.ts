@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { googleRouter } from '../../../src/google/google.routes.js';
 import { googleConnectionRepository, REQUIRED_SCOPE } from '../../../src/google/google-connection.repository.js';
-import { createTestUser, authReq, invokeRoute } from '../helpers.js';
+import { createTestUser, authReq, csrfHeaders, invokeRoute } from '../helpers.js';
 import { EntityType, ActionType } from '../../../generated/prisma/enums.ts';
 
 let userId: string;
@@ -17,7 +17,7 @@ beforeEach(async () => {
 
 function baseReq(overrides: Record<string, unknown> = {}) {
   return authReq({ id: userId, email: userEmail, role: 'ADMIN' }, {
-    headers: { origin: 'http://localhost:3000' },
+    headers: { ...csrfHeaders(), origin: 'http://localhost:3000' },
     ...overrides,
   });
 }
@@ -79,7 +79,7 @@ describe('google routes (integration)', () => {
     });
 
     it('requires valid origin', async () => {
-      const res = await invokeRoute(googleRouter, 'post', '/oauth/start', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { origin: 'http://evil.com' }, body: { returnPath: '/appointments' } }));
+      const res = await invokeRoute(googleRouter, 'post', '/oauth/start', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { ...csrfHeaders(), origin: 'http://evil.com' }, body: { returnPath: '/appointments' } }));
       expect(res.statusCode).toBe(403);
     });
 
@@ -136,7 +136,7 @@ describe('google routes (integration)', () => {
     });
 
     it('requires valid origin', async () => {
-      const res = await invokeRoute(googleRouter, 'delete', '/connection', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { origin: 'http://evil.com' } }));
+      const res = await invokeRoute(googleRouter, 'delete', '/connection', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { ...csrfHeaders(), origin: 'http://evil.com' } }));
       expect(res.statusCode).toBe(403);
     });
 
@@ -172,7 +172,7 @@ describe('google routes (integration)', () => {
     });
 
     it('requires valid origin', async () => {
-      const res = await invokeRoute(googleRouter, 'post', '/meet', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { origin: 'http://evil.com' } }));
+      const res = await invokeRoute(googleRouter, 'post', '/meet', authReq({ id: userId, email: userEmail, role: 'ADMIN' }, { headers: { ...csrfHeaders(), origin: 'http://evil.com' } }));
       expect(res.statusCode).toBe(403);
     });
 

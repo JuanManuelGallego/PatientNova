@@ -14,16 +14,19 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
 import { authenticate, requireSuperAdmin, requireAdmin, requireAdminForWrites } from '../../../src/middlewares/authenticate.js';
 import { config } from '../../../src/utils/config/config.js';
 import { ACCESS_AUDIENCE, TOKEN_ISSUER } from '../../../src/auth/tokens.js';
+import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 
 function makeReq(overrides: Record<string, any> = {}) {
-  return {
+  const req: any = {
     cookies: {},
     headers: {},
     ip: '127.0.0.1',
     originalUrl: '/test',
     method: 'GET',
     ...overrides,
-  } as any;
+  };
+  req.get = (name: string) => req.headers[name.toLowerCase()];
+  return req;
 }
 
 function makeRes() {
@@ -183,6 +186,62 @@ describe('authenticate', () => {
     authenticate(req, res, next);
 
     expect(req.user.id).toBe('cookie-user');
+  });
+});
+
+describe('authenticate CSRF (cookie sessions)', () => {
+  const claims = { id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 'session-1' };
+  const validCsrf = () => createCsrfToken('session-1', config.auth.jwtSecret);
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('rejects an unsafe cookie request without a CSRF token', () => {
+    const req = makeReq({ method: 'POST', cookies: { token: signToken(claims) } });
+    const res = makeRes();
+    const next = vi.fn();
+    authenticate(req, res, next);
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({ success: false, error: 'Invalid CSRF token' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('accepts an unsafe cookie request with the session CSRF token', () => {
+    const req = makeReq({ method: 'PATCH', cookies: { token: signToken(claims) }, headers: { 'x-csrf-token': validCsrf() } });
+    const next = vi.fn();
+    authenticate(req, makeRes(), next);
+    expect(next).toHaveBeenCalled();
+    expect(req.user.sessionId).toBe('session-1');
+  });
+
+  it('rejects a CSRF token minted for another session', () => {
+    const req = makeReq({
+      method: 'DELETE',
+      cookies: { token: signToken(claims) },
+      headers: { 'x-csrf-token': createCsrfToken('other-session', config.auth.jwtSecret) },
+    });
+    const res = makeRes();
+    const next = vi.fn();
+    authenticate(req, res, next);
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsafe cookie request whose token has no session id', () => {
+    const { sid: _sid, ...noSid } = claims;
+    const req = makeReq({ method: 'POST', cookies: { token: signToken(noSid) }, headers: { 'x-csrf-token': validCsrf() } });
+    const res = makeRes();
+    authenticate(req, res, vi.fn());
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('does not require a CSRF token for safe methods or Bearer requests', () => {
+    const getNext = vi.fn();
+    authenticate(makeReq({ method: 'GET', cookies: { token: signToken(claims) } }), makeRes(), getNext);
+    expect(getNext).toHaveBeenCalled();
+
+    const bearerNext = vi.fn();
+    authenticate(makeReq({ method: 'POST', headers: { authorization: `Bearer ${signToken(claims)}` } }), makeRes(), bearerNext);
+    expect(bearerNext).toHaveBeenCalled();
   });
 });
 

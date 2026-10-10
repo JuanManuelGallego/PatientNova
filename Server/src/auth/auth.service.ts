@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
@@ -21,6 +22,7 @@ interface RefreshTokenPayload {
   type: string;
   id: string;
   version: number;
+  sid?: unknown;
 }
 
 function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload {
@@ -86,8 +88,9 @@ export const authService = {
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt, lastLoginIp: ip },
     });
 
-    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone });
-    const refreshToken = signRefreshToken({ id: user.id, version: user.refreshTokenVersion });
+    const sid = randomUUID();
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid });
+    const refreshToken = signRefreshToken({ id: user.id, version: user.refreshTokenVersion, sid });
 
     return {
       user: toUserResponse(updatedUser, updatedUser.consentDocument ?? null),
@@ -140,7 +143,9 @@ export const authService = {
 
     logger.info({ userId: user.id }, 'Token refreshed');
 
-    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone });
+    // Refresh tokens issued before session ids existed get a fresh one.
+    const sid = typeof payload.sid === 'string' && payload.sid ? payload.sid : randomUUID();
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid });
 
     return { accessToken };
   },

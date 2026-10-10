@@ -23,11 +23,15 @@ export interface AccessTokenClaims {
   email: string;
   role: string;
   timezone: string | null;
+  /** Login session id, shared by the access and refresh tokens of one login; binds the CSRF token. */
+  sid: string;
 }
 
 export interface RefreshTokenClaims {
   id: string;
   version: number;
+  /** Login session id, copied into every access token minted from this refresh token. */
+  sid: string;
 }
 
 export interface PortalTokenClaims {
