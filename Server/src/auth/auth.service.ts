@@ -22,7 +22,7 @@ interface RefreshTokenPayload {
   type: string;
   id: string;
   version: number;
-  sid?: unknown;
+  sid: string;
 }
 
 function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload {
@@ -32,7 +32,9 @@ function isRefreshTokenPayload(payload: unknown): payload is RefreshTokenPayload
     'type' in payload &&
     'id' in payload &&
     'version' in payload &&
-    (payload as RefreshTokenPayload).type === 'refresh'
+    (payload as RefreshTokenPayload).type === 'refresh' &&
+    typeof (payload as RefreshTokenPayload).sid === 'string' &&
+    (payload as RefreshTokenPayload).sid !== ''
   );
 }
 
@@ -143,9 +145,7 @@ export const authService = {
 
     logger.info({ userId: user.id }, 'Token refreshed');
 
-    // Refresh tokens issued before session ids existed get a fresh one.
-    const sid = typeof payload.sid === 'string' && payload.sid ? payload.sid : randomUUID();
-    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid });
+    const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, timezone: user.timezone, sid: payload.sid });
 
     return { accessToken };
   },

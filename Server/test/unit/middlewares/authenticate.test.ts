@@ -56,7 +56,7 @@ describe('authenticate', () => {
   });
 
   it('extracts token from cookie', () => {
-    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC' });
+    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
     const req = makeReq({ cookies: { token } });
     const res = makeRes();
     const next = vi.fn();
@@ -69,7 +69,7 @@ describe('authenticate', () => {
   });
 
   it('extracts token from Authorization Bearer header', () => {
-    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC' });
+    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
     const req = makeReq({ headers: { authorization: `Bearer ${token}` } });
     const res = makeRes();
     const next = vi.fn();
@@ -81,7 +81,7 @@ describe('authenticate', () => {
   });
 
   it('rejects malformed Authorization header', () => {
-    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC' });
+    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
     const req = makeReq({ headers: { authorization: `Token ${token}` } });
     const res = makeRes();
     const next = vi.fn();
@@ -152,7 +152,7 @@ describe('authenticate', () => {
   });
 
   it('defaults timezone to UTC for legacy tokens', () => {
-    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN' });
+    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', sid: 's1' });
     const req = makeReq({ cookies: { token } });
     const res = makeRes();
     const next = vi.fn();
@@ -163,7 +163,7 @@ describe('authenticate', () => {
   });
 
   it('uses timezone from token when present', () => {
-    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'America/Bogota' });
+    const token = signToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'America/Bogota', sid: 's1' });
     const req = makeReq({ cookies: { token } });
     const res = makeRes();
     const next = vi.fn();
@@ -174,8 +174,8 @@ describe('authenticate', () => {
   });
 
   it('cookie takes precedence over Authorization header', () => {
-    const cookieToken = signToken({ id: 'cookie-user', email: 'c@b.com', role: 'ADMIN', timezone: 'UTC' });
-    const headerToken = signToken({ id: 'header-user', email: 'h@b.com', role: 'ADMIN', timezone: 'UTC' });
+    const cookieToken = signToken({ id: 'cookie-user', email: 'c@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
+    const headerToken = signToken({ id: 'header-user', email: 'h@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's2' });
     const req = makeReq({
       cookies: { token: cookieToken },
       headers: { authorization: `Bearer ${headerToken}` },
@@ -226,12 +226,14 @@ describe('authenticate CSRF (cookie sessions)', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('rejects an unsafe cookie request whose token has no session id', () => {
+  it('rejects a token without a session id as an invalid payload', () => {
     const { sid: _sid, ...noSid } = claims;
     const req = makeReq({ method: 'POST', cookies: { token: signToken(noSid) }, headers: { 'x-csrf-token': validCsrf() } });
     const res = makeRes();
-    authenticate(req, res, vi.fn());
-    expect(res.statusCode).toBe(403);
+    const next = vi.fn();
+    authenticate(req, res, next);
+    expect(res.statusCode).toBe(401);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('does not require a CSRF token for safe methods or Bearer requests', () => {

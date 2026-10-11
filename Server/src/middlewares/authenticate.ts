@@ -13,7 +13,7 @@ export interface AuthPayload {
   email: string;
   role: string;
   timezone: string;
-  sessionId?: string;
+  sessionId: string;
 }
 
 declare global {
@@ -31,10 +31,12 @@ function isAuthPayload(payload: unknown): payload is AuthPayload {
     payload !== null &&
     typeof (payload as Record<string, unknown>).id === 'string' &&
     typeof (payload as Record<string, unknown>).email === 'string' &&
-    typeof (payload as Record<string, unknown>).role === 'string'
+    typeof (payload as Record<string, unknown>).role === 'string' &&
+    typeof (payload as Record<string, unknown>).sid === 'string'
   );
 }
 
+// Cookies are ambient (SameSite=None), so cookie sessions need the CSRF check; Bearer tokens are not.
 const providerCsrf = requireCsrf({
   sessionIdFrom: (req) => req.user?.sessionId,
   secret: () => config.auth.jwtSecret,
@@ -71,7 +73,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       email:    payload.email,
       role:     payload.role,
       timezone: typeof (payload as unknown as Record<string, unknown>).timezone === 'string' ? (payload as unknown as Record<string, unknown>).timezone as string : 'UTC',
-      ...(typeof (payload as unknown as Record<string, unknown>).sid === 'string' && { sessionId: (payload as unknown as Record<string, unknown>).sid as string }),
+      sessionId: (payload as unknown as Record<string, unknown>).sid as string,
     };
 
     const ip = req.ip?.replace('::ffff:', '');

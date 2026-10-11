@@ -1,11 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const configMock = vi.hoisted(() => ({
-  config: {
-    brevo: { webhookSecret: 'brevo-secret' },
-    twilio: { authToken: 'tw-token', webhookBaseUrl: 'https://api.example.com' },
-  },
-}));
+// Any config key the middlewares read beyond the real secrets resolves to `true`, so a
+// reintroduced config flag (e.g. `skipWebhookAuth`) turns on and this test fails.
+const configMock = vi.hoisted(() => {
+  const withFlagsOn = <T extends object>(target: T): T =>
+    new Proxy(target, { get: (obj, key) => (key in obj ? (obj as any)[key] : true) });
+  return {
+    config: withFlagsOn({
+      env: 'development',
+      brevo: withFlagsOn({ webhookSecret: 'brevo-secret' }),
+      twilio: withFlagsOn({ authToken: 'tw-token', webhookBaseUrl: 'https://api.example.com' }),
+    }),
+  };
+});
 vi.mock('../../../src/utils/config/config.js', () => configMock);
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() },

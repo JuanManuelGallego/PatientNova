@@ -112,9 +112,7 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
  * keeps it in memory and sends it as `X-CSRF-Token` on every unsafe request.
  */
 authRouter.get('/csrf', authenticate, (req: Request, res: Response) => {
-  const sessionId = req.user!.sessionId;
-  if (!sessionId) return apiError(res, 'Session has no id; log in again', 401);
-  ok(res, { csrfToken: createCsrfToken(sessionId, config.auth.jwtSecret) });
+  ok(res, { csrfToken: createCsrfToken(req.user!.sessionId, config.auth.jwtSecret) });
 });
 
 /**

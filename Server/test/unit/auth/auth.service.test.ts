@@ -211,7 +211,7 @@ describe('authService.logout', () => {
 
 describe('authService.refreshToken', () => {
   it('returns new access token on valid refresh token', async () => {
-    mockJwt.verify.mockReturnValue({ id: 'user-1', type: 'refresh', version: 1 } as any);
+    mockJwt.verify.mockReturnValue({ id: 'user-1', type: 'refresh', version: 1, sid: 'session-1' } as any);
     mockRepo.findByIdForAuth.mockResolvedValue(fakeUser as any);
     mockJwt.sign.mockReturnValue('new-access-token' as any);
 
@@ -234,6 +234,13 @@ describe('authService.refreshToken', () => {
     await authService.refreshToken('valid-refresh-token');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(expect.objectContaining({ sid: 'session-1' }), expect.anything(), expect.anything());
+  });
+
+  it('rejects a refresh token without a session id', async () => {
+    mockJwt.verify.mockReturnValue({ id: 'user-1', type: 'refresh', version: 1 } as any);
+
+    await expect(authService.refreshToken('legacy-refresh-token')).rejects.toThrow();
+    expect(mockJwt.sign).not.toHaveBeenCalled();
   });
 
   it('throws AuthRefreshTokenExpiredError when token is expired', async () => {

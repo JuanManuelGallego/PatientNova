@@ -150,7 +150,7 @@ Suite: `41` files, `487` tests, all against real Postgres, `tsc --noEmit` clean.
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first
   parser to run wins). Rate limiters run before body parsing.
 - Provider CSRF: access/refresh tokens carry a login-session `sid`; `authenticate` requires
-  `X-CSRF-Token` = `createCsrfToken(sid, AUTH_SECRET)` on POST/PUT/PATCH/DELETE when the token
+  `X-CSRF-Token` = `createCsrfToken(sid, AUTH_SECRET)` on every method except GET/HEAD/OPTIONS when the token
   came from the cookie (Bearer requests are exempt). The Portal gets it from `GET /v1/auth/csrf`
   and `fetchWithAuth` attaches it (memory only). Route tests: `authReq` already sends a valid
   header via `csrfHeaders()`; keep it when overriding `headers`

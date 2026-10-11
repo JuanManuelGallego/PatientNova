@@ -85,4 +85,59 @@ describe("fetchWithAuth CSRF", () => {
         expect(res.status).toBe(403);
         expect(fetchMock).toHaveBeenCalledTimes(2);
     });
+
+    it("refetches the token after a refresh and still retries a CSRF rejection", async () => {
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(csrfResponse("sid-a"))
+            .mockResolvedValueOnce(new Response(null, { status: 401 }))
+            .mockResolvedValueOnce(json({ success: true }))
+            .mockResolvedValueOnce(csrfResponse("sid-b-stale"))
+            .mockResolvedValueOnce(json({ success: false, error: "Invalid CSRF token" }, 403))
+            .mockResolvedValueOnce(csrfResponse("sid-b"))
+            .mockResolvedValueOnce(json({ success: true }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        const res = await fetchWithAuth("/api/items", { method: "POST" });
+
+        expect(res.status).toBe(200);
+        expect(fetchMock.mock.calls[2]![0]).toMatch(/\/auth\/refresh$/);
+        expect(fetchMock.mock.calls[3]![0]).toMatch(/\/auth\/csrf$/);
+        expect(sentCsrf(fetchMock.mock.calls[6]!)).toBe("sid-b");
+        expect(fetchMock).toHaveBeenCalledTimes(7);
+    });
+
+    it("sends the token for a Request object with an unsafe method", async () => {
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(csrfResponse("tok"))
+            .mockResolvedValue(json({ success: true }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        await fetchWithAuth(new Request("http://localhost/api/items/1", { method: "DELETE", headers: { "X-Trace": "1" } }));
+
+        const headers = new Headers((fetchMock.mock.calls[1]![1] as RequestInit).headers);
+        expect(headers.get("X-CSRF-Token")).toBe("tok");
+        expect(headers.get("X-Trace")).toBe("1");
+    });
+
+    it("ignores a token fetch that resolves after the token was cleared", async () => {
+        let resolveStale!: (res: Response) => void;
+        const fetchMock = vi.fn()
+            .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveStale = resolve; }))
+            .mockResolvedValueOnce(csrfResponse("new-session"))
+            .mockResolvedValue(json({ success: true }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        const stale = fetchWithAuth("/api/items", { method: "POST" });
+        await Promise.resolve();
+        clearCsrfToken();
+        await fetchWithAuth("/api/items", { method: "POST" });
+        resolveStale(csrfResponse("old-session"));
+        await stale;
+        await fetchWithAuth("/api/items", { method: "POST" });
+
+        const csrfSent = fetchMock.mock.calls
+            .filter((call) => !String(call[0]).endsWith("/auth/csrf"))
+            .map(sentCsrf);
+        expect(csrfSent.at(-1)).toBe("new-session");
+    });
 });
