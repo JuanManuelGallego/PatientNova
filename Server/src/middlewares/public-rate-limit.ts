@@ -7,19 +7,12 @@ import { loggedPath } from '../utils/api/request-context.js';
 import { PgRateLimitStore } from './pg-rate-limit-store.js';
 
 interface PublicLimiterOptions {
-  /** Unique name; namespaces the counters so limiters never share buckets. */
   name: string;
   windowMs?: number;
   max?: number;
-  /** Defaults to the client IP. Use for per-email / per-provider limits (the key is hashed in storage). */
   keyGenerator?: (req: Request) => string;
 }
 
-/**
- * Rate limiter for public (unauthenticated or portal-session) endpoints, backed by Postgres so
- * limits are shared across instances. `trust proxy` is set to 1 in app.ts, so `req.ip` is the
- * client address as seen by the single trusted proxy hop in front of the API.
- */
 export function createPublicLimiter(opts: PublicLimiterOptions) {
   return rateLimit({
     windowMs: opts.windowMs ?? config.publicRateLimit.windowMs,

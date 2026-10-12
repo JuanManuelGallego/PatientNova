@@ -5,11 +5,6 @@ import { prisma } from '../utils/prisma/prisma-client.js';
 const PURGE_AFTER_MS = 24 * 60 * 60 * 1000;
 const PURGE_PROBABILITY = 1 / 200;
 
-/**
- * Fixed-window rate-limit counters in Postgres, so limits hold across processes and restarts
- * (the in-memory store resets per instance). One atomic upsert per hit. Keys are hashed, so
- * emails and IPs are never stored in clear. Old windows are purged opportunistically.
- */
 export class PgRateLimitStore implements Store {
   localKeys = false;
   private windowMs = 60_000;

@@ -38,18 +38,11 @@ const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as co
 const app: Application = express();
 
 app.disable('x-powered-by');
-// Exactly ONE trusted proxy hop (the platform load balancer in front of the API), so req.ip is the
-// real client address that rate limits key on. Adding another proxy/CDN layer requires updating this.
 app.set('trust proxy', 1);
 
 app.use(requestId);
 app.use(helmet());
 app.use(httpLogger);
-// Public patient-portal API classes are mounted BEFORE the provider CORS / body parsers / global
-// rate limiter: each class carries its own CORS policy, tiny body limit and shared-store limits.
-// They are dark unless ENABLE_PORTAL=true (then unknown paths fall through like any other 404).
-// Routes are added in Phase 2/3; unmatched paths end in a JSON 404 so they never reach the
-// provider stack.
 if (config.portal.patientEnabled) {
     app.use('/v1/public', createPublicApiRouter(), portalNotFound);
     app.use('/v1/portal', createPortalSessionRouter(), portalNotFound);

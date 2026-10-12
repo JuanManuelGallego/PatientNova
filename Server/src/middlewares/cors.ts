@@ -6,7 +6,6 @@ import { logger } from '../utils/api/logger.js';
 import { CorsRejectionError } from './error-handler.js';
 
 function allowListOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void {
-  // No Origin header = not a browser cross-origin request (curl, server-to-server): allow.
   if (!origin || config.allowedOrigins.includes(origin)) {
     callback(null, true);
     return;
@@ -15,13 +14,8 @@ function allowListOrigin(origin: string | undefined, callback: (err: Error | nul
   callback(new CorsRejectionError());
 }
 
-/** Provider (admin) API: credentialed, exact allow-list. */
 export const providerCors = cors({ origin: allowListOrigin, credentials: true });
 
-/**
- * Anonymous public API class: no cookies are ever read or set, so credentials stay OFF
- * (no Access-Control-Allow-Credentials) and clients must use `credentials: 'omit'`.
- */
 export const anonymousCors = cors({
   origin: allowListOrigin,
   credentials: false,
@@ -30,7 +24,6 @@ export const anonymousCors = cors({
   maxAge: 600,
 });
 
-/** Credentialed patient-session class: exact-origin allow-list, cookies + CSRF header allowed. */
 export const sessionCors = cors({
   origin: allowListOrigin,
   credentials: true,
@@ -41,10 +34,6 @@ export const sessionCors = cors({
 
 const SAFE_METHODS = new Set([ 'GET', 'HEAD', 'OPTIONS' ]);
 
-/**
- * Cookie-authenticated mutations must come from an allow-listed browser origin: the Origin
- * header has to be present AND exactly match. (CORS alone does not stop a cross-site form POST.)
- */
 export function requireExactOrigin(req: Request, res: Response, next: NextFunction): void {
   if (SAFE_METHODS.has(req.method)) {
     next();

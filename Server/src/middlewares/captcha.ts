@@ -2,7 +2,6 @@ import type { NextFunction, Request, Response } from 'express';
 import { apiError } from '../utils/api/api-utils.js';
 import { logger } from '../utils/api/logger.js';
 
-/** Integration point for a CAPTCHA provider (Turnstile, hCaptcha, reCAPTCHA...). */
 export interface CaptchaVerifier {
   verify(token: string | undefined, ip: string | undefined): Promise<boolean>;
 }
@@ -12,7 +11,6 @@ export const noopCaptchaVerifier: CaptchaVerifier = {
   verify: async () => true,
 };
 
-/** Rejects the request unless the verifier accepts the `captchaToken` body field. */
 export function requireCaptcha(verifier: CaptchaVerifier) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
