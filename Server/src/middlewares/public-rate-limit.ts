@@ -4,7 +4,6 @@ import { apiError } from '../utils/api/api-utils.js';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { loggedPath } from '../utils/api/request-context.js';
-import { PgRateLimitStore } from './pg-rate-limit-store.js';
 
 interface PublicLimiterOptions {
   name: string;
@@ -19,7 +18,6 @@ export function createPublicLimiter(opts: PublicLimiterOptions) {
     limit: opts.max ?? config.publicRateLimit.maxRequests,
     standardHeaders: true,
     legacyHeaders: false,
-    store: new PgRateLimitStore(`${opts.name}:`),
     keyGenerator: opts.keyGenerator ?? ((req) => ipKeyGenerator(req.ip ?? 'unknown')),
     handler: (req, res) => {
       logger.warn({ limiter: opts.name, url: loggedPath(req), method: req.method }, 'Public rate limit exceeded');

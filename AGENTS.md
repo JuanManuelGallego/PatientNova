@@ -64,7 +64,7 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
 | Area | File | Covers |
 |------|------|--------|
 | App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
-| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook, Postgres shared-store rate limit (hashed keys), real-app provider CORS + dark `/v1/public` |
+| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook, public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
@@ -149,8 +149,11 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
 - Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
   no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
   mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.
-  Session routes must add `requireCsrf` (except `otp/verify`). Use `createPublicLimiter` (Postgres
-  store, hashed keys) for per-IP/per-email/per-provider limits. `trust proxy` is exactly 1 hop.
+  Session routes must add `requireCsrf` (except `otp/verify`). `createPublicLimiter` is a coarse
+  in-memory per-IP throttle (resets on restart, per instance), mounted before the router's body
+  parser. Brute-force-sensitive limits (OTP verify attempts, resend cooldown, per-email sends) must
+  be enforced on the domain record in the same transaction (see `src/utils/security/one-time-code.ts`),
+  never by an HTTP limiter. `trust proxy` is exactly 1 hop.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first

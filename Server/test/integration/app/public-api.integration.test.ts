@@ -3,7 +3,6 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import app from '../../../src/app.js';
-import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { requestId } from '../../../src/middlewares/request-id.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';
 import { requireCsrf } from '../../../src/middlewares/csrf.js';
@@ -159,7 +158,7 @@ describe('credentialed patient-session class', () => {
   });
 });
 
-describe('shared-store public rate limiting', () => {
+describe('public rate limiting', () => {
   function limitedApp(name: string, max: number, keyHeader?: string) {
     const a = express();
     a.set('trust proxy', 1);
@@ -175,32 +174,21 @@ describe('shared-store public rate limiting', () => {
     return a;
   }
 
-  it('returns a JSON 429 once the limit is exceeded and keeps counting across limiter instances', async () => {
-    const name = unique('ip');
-    const first = limitedApp(name, 3);
-    for (let i = 0; i < 3; i++) expect((await request(first).get('/x')).status).toBe(200);
-    const blocked = await request(first).get('/x');
+  it('returns a JSON 429 once the limit is exceeded', async () => {
+    const a = limitedApp(unique('ip'), 3);
+    for (let i = 0; i < 3; i++) expect((await request(a).get('/x')).status).toBe(200);
+    const blocked = await request(a).get('/x');
     expect(blocked.status).toBe(429);
     expect(blocked.body).toMatchObject({ success: false });
     expect(blocked.headers['ratelimit-limit'] ?? blocked.headers['ratelimit']).toBeDefined();
-
-    // A second "instance" (new limiter, same name, same DB) sees the same counters.
-    const second = limitedApp(name, 3);
-    expect((await request(second).get('/x')).status).toBe(429);
   });
 
-  it('limits per key independently and never stores keys in clear', async () => {
-    const name = unique('email');
-    const a = limitedApp(name, 2, 'x-email');
+  it('limits per key independently', async () => {
+    const a = limitedApp(unique('email'), 2, 'x-email');
     const email = `${unique('victim')}@example.com`;
     for (let i = 0; i < 2; i++) expect((await request(a).get('/x').set('x-email', email)).status).toBe(200);
     expect((await request(a).get('/x').set('x-email', email)).status).toBe(429);
     expect((await request(a).get('/x').set('x-email', 'someone-else@example.com')).status).toBe(200);
-
-    const rows = await prisma.rateLimitBucket.findMany({ where: { key: { startsWith: `${name}:` } } });
-    expect(rows).toHaveLength(2);
-    expect(JSON.stringify(rows)).not.toContain('example.com');
-    expect(JSON.stringify(rows)).not.toContain('victim');
   });
 });
 
