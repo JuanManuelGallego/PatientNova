@@ -148,7 +148,7 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   primary control.
 - Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
   no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
-  mutations). Both are mounted in `app.ts` BEFORE the provider CORS/15mb parsers/global limiter.
+  mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.
   Session routes must add `requireCsrf` (except `otp/verify`). Use `createPublicLimiter` (Postgres
   store, hashed keys) for per-IP/per-email/per-provider limits. `trust proxy` is exactly 1 hop.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
@@ -163,5 +163,5 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   (`{ headers: { ...csrfHeaders(), origin } }`).
 - Webhook signature checks (Twilio, Brevo) are always enforced; there is no environment bypass.
   Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.
-- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`). Webhook signature
-  checks are skipped only when `NODE_ENV=development` is set explicitly. Local dev must set it (see `.env.example`).
+- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`), which requires
+  `ENCRYPTION_KEY`. Local dev must set `NODE_ENV=development` explicitly (see `.env.example`).

@@ -26,8 +26,8 @@ const req = (headers: Record<string, string> = {}) => ({ headers, originalUrl: '
 describe('webhook authentication fails closed', () => {
   beforeEach(() => { cfg.env = 'production'; });
 
-  it('rejects unauthenticated Brevo webhooks unless NODE_ENV is explicitly development', () => {
-    for (const env of [ 'production', 'test', 'staging' ]) {
+  it('rejects unauthenticated Brevo webhooks in every environment, including development', () => {
+    for (const env of [ 'production', 'test', 'staging', 'development' ]) {
       cfg.env = env;
       const next = vi.fn();
       const r = res();
@@ -35,14 +35,10 @@ describe('webhook authentication fails closed', () => {
       expect(r.statusCode, env).toBe(403);
       expect(next, env).not.toHaveBeenCalled();
     }
-    cfg.env = 'development';
-    const next = vi.fn();
-    brevoWebhookAuth(req(), res(), next);
-    expect(next).toHaveBeenCalled();
   });
 
-  it('rejects Twilio webhooks without a signature unless explicitly development', () => {
-    for (const env of [ 'production', 'test' ]) {
+  it('rejects Twilio webhooks without a signature in every environment, including development', () => {
+    for (const env of [ 'production', 'test', 'development' ]) {
       cfg.env = env;
       const next = vi.fn();
       const r = res();
