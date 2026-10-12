@@ -8,6 +8,7 @@ import { errorHandler } from '../../../src/middlewares/error-handler.js';
 import { requireCsrf } from '../../../src/middlewares/csrf.js';
 import { createPublicLimiter } from '../../../src/middlewares/public-rate-limit.js';
 import { requireCaptcha } from '../../../src/middlewares/captcha.js';
+import type { CaptchaVerifier } from '../../../src/captcha/captcha-verifier.js';
 import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from '../../../src/portal/portal-routers.js';
 import { PORTAL_COOKIE_NAME, portalCookieOptions } from '../../../src/auth/portal-cookie.js';
 import { createCsrfToken } from '../../../src/utils/security/csrf.js';
@@ -26,7 +27,16 @@ function buildPublicApp() {
   const pub = createPublicApiRouter();
   pub.get('/ping', (_req, res) => { res.json({ ok: true }); });
   pub.post('/echo', (req, res) => { res.json({ got: req.body }); });
-  pub.post('/captcha', requireCaptcha({ verify: async (t) => t === 'good' }), (_req, res) => { res.json({ ok: true }); });
+  const verifier: CaptchaVerifier = {
+    verify: async ({ token, action }) => {
+      if (action !== 'test-action') return { ok: false, reason: 'action-mismatch' };
+      if (token === 'good') return { ok: true };
+      if (token === 'outage') return { ok: false, reason: 'unavailable' };
+      if (token === 'throws') throw new Error('boom');
+      return { ok: false, reason: token ? 'invalid' : 'missing' };
+    },
+  };
+  pub.post('/captcha', requireCaptcha(verifier, 'test-action'), (_req, res) => { res.json({ ok: true }); });
   a.use('/v1/public', pub, portalNotFound);
 
   const portal = createPortalSessionRouter();
@@ -98,6 +108,9 @@ describe('anonymous public API class', () => {
     expect((await request(pubApp).post('/v1/public/captcha').send({ captchaToken: 'bad' })).status).toBe(400);
     expect((await request(pubApp).post('/v1/public/captcha').send({})).status).toBe(400);
     expect((await request(pubApp).post('/v1/public/captcha').send({ captchaToken: 'good' })).status).toBe(200);
+    // provider trouble is a 503, never a pass
+    expect((await request(pubApp).post('/v1/public/captcha').send({ captchaToken: 'outage' })).status).toBe(503);
+    expect((await request(pubApp).post('/v1/public/captcha').send({ captchaToken: 'throws' })).status).toBe(503);
   });
 });
 

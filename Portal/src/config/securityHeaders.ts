@@ -5,6 +5,8 @@
  * 'unsafe-inline' unless nonces are introduced (which forces dynamic rendering). Everything else is
  * locked down: no objects, no framing, same-origin forms, and network access limited to this origin
  * and the API. No third-party analytics/scripts are allowed (the privacy policy promises none).
+ * The only exception is Cloudflare Turnstile (bot protection, not analytics), allowed solely when
+ * `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set, and scoped to its single origin.
  * The policy ships as Report-Only until CSP_ENFORCE=true so violations can be reviewed first.
  */
 export interface SecurityHeader {
@@ -12,7 +14,15 @@ export interface SecurityHeader {
     value: string;
 }
 
-export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean }): string {
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
+interface CspOptions {
+    apiUrl?: string | undefined;
+    isDev: boolean;
+    turnstile?: boolean;
+}
+
+export function buildCsp(options: CspOptions): string {
     const apiOrigin = (() => {
         try {
             return options.apiUrl ? new URL(options.apiUrl).origin : undefined;
@@ -23,18 +33,20 @@ export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean 
 
     const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
+    const turnstile = options.turnstile ? [ TURNSTILE_ORIGIN ] : [];
 
     const directives: Record<string, string[]> = {
         "default-src": [ "'self'" ],
-        "script-src": [ "'self'", "'unsafe-inline'", ...(options.isDev ? [ "'unsafe-eval'" ] : []) ],
+        "script-src": [ "'self'", "'unsafe-inline'", ...(options.isDev ? [ "'unsafe-eval'" ] : []), ...turnstile ],
         "style-src": [ "'self'", "'unsafe-inline'" ],
         "img-src": [ "'self'", "data:", "blob:", "https://flagcdn.com" ],
         "font-src": [ "'self'", "data:" ],
-        "connect-src": connect,
+        "connect-src": [ ...connect, ...turnstile ],
         "object-src": [ "'none'" ],
         "base-uri": [ "'self'" ],
         "form-action": [ "'self'" ],
         "frame-ancestors": [ "'none'" ],
+        ...(options.turnstile && { "frame-src": [ "'self'", TURNSTILE_ORIGIN ] }),
     };
 
     return Object.entries(directives)
@@ -42,11 +54,7 @@ export function buildCsp(options: { apiUrl?: string | undefined; isDev: boolean 
         .join("; ");
 }
 
-export function buildSecurityHeaders(options: {
-    apiUrl?: string | undefined;
-    isDev: boolean;
-    enforceCsp: boolean;
-}): SecurityHeader[] {
+export function buildSecurityHeaders(options: CspOptions & { enforceCsp: boolean }): SecurityHeader[] {
     return [
         {
             key: options.enforceCsp ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only",

@@ -1,0 +1,124 @@
+"use client";
+
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { TURNSTILE_ORIGIN } from "@/src/config/securityHeaders";
+
+/**
+ * Cloudflare Turnstile widget for public portal forms. The token goes in the request body as
+ * `captchaToken`; the server verifies it against the same `action`. Tokens are single-use, so call
+ * `reset()` after every submit (successful or not).
+ */
+const SCRIPT_SRC = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
+const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+/** Accepted only by the server's development bypass verifier (rejected in production). */
+export const DEV_BYPASS_TOKEN = "dev-bypass-token";
+
+interface TurnstileApi {
+    render: (container: HTMLElement, options: Record<string, unknown>) => string;
+    reset: (widgetId: string) => void;
+    remove: (widgetId: string) => void;
+}
+
+declare global {
+    interface Window {
+        turnstile?: TurnstileApi;
+    }
+}
+
+let scriptPromise: Promise<TurnstileApi> | null = null;
+
+function loadTurnstile(): Promise<TurnstileApi> {
+    if (window.turnstile) return Promise.resolve(window.turnstile);
+    scriptPromise ??= new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = SCRIPT_SRC;
+        script.async = true;
+        script.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error("Turnstile unavailable")));
+        script.onerror = () => {
+            scriptPromise = null;
+            reject(new Error("Turnstile script failed to load"));
+        };
+        document.head.appendChild(script);
+    });
+    return scriptPromise;
+}
+
+export interface TurnstileHandle {
+    reset: () => void;
+}
+
+interface TurnstileWidgetProps {
+    action: string;
+    onToken: (token: string | null) => void;
+    siteKey?: string;
+    ref?: Ref<TurnstileHandle>;
+}
+
+export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, ref }: TurnstileWidgetProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const widgetIdRef = useRef<string | null>(null);
+    const onTokenRef = useRef(onToken);
+    const [ failed, setFailed ] = useState(false);
+
+    useEffect(() => {
+        onTokenRef.current = onToken;
+    }, [ onToken ]);
+
+    useImperativeHandle(ref, () => ({
+        reset: () => {
+            onTokenRef.current(siteKey ? null : devToken());
+            if (widgetIdRef.current && window.turnstile) window.turnstile.reset(widgetIdRef.current);
+        },
+    }), [ siteKey ]);
+
+    useEffect(() => {
+        if (!siteKey) {
+            onTokenRef.current(devToken());
+            return;
+        }
+        let cancelled = false;
+        loadTurnstile()
+            .then((turnstile) => {
+                if (cancelled || !containerRef.current) return;
+                widgetIdRef.current = turnstile.render(containerRef.current, {
+                    sitekey: siteKey,
+                    action,
+                    language: "es",
+                    appearance: "interaction-only",
+                    callback: (token: string) => {
+                        setFailed(false);
+                        onTokenRef.current(token);
+                    },
+                    "expired-callback": () => onTokenRef.current(null),
+                    "error-callback": () => {
+                        setFailed(true);
+                        onTokenRef.current(null);
+                    },
+                });
+            })
+            .catch(() => {
+                if (!cancelled) setFailed(true);
+            });
+        return () => {
+            cancelled = true;
+            if (widgetIdRef.current && window.turnstile) window.turnstile.remove(widgetIdRef.current);
+            widgetIdRef.current = null;
+        };
+    }, [ siteKey, action ]);
+
+    if (!siteKey) return null;
+    return (
+        <div>
+            <div ref={containerRef} data-testid="turnstile-container" />
+            {failed && (
+                <p role="alert" className="form-input-hint">
+                    No pudimos verificar que eres una persona. Recarga la página e inténtalo de nuevo.
+                </p>
+            )}
+        </div>
+    );
+}
+
+function devToken(): string | null {
+    return process.env.NODE_ENV === "production" ? null : DEV_BYPASS_TOKEN;
+}

@@ -64,7 +64,7 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
 | Area | File | Covers |
 |------|------|--------|
 | App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
-| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook, public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
+| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook (400 on failure, 503 on provider outage), public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
@@ -154,6 +154,14 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   parser. Brute-force-sensitive limits (OTP verify attempts, resend cooldown, per-email sends) must
   be enforced on the domain record in the same transaction (see `src/utils/security/one-time-code.ts`),
   never by an HTTP limiter. `trust proxy` is exactly 1 hop.
+- CAPTCHA (Cloudflare Turnstile): public endpoints that send messages or create records
+  (OTP request/resend, anonymous booking) use `requireCaptcha(createCaptchaVerifier(), '<action>')`
+  after the limiter and body parser; the Portal renders `<TurnstileWidget action="<action>">` with the
+  same action and sends `captchaToken` in the body. Not on `otp/verify` (attempt counter) or session
+  routes. The verifier checks hostname, action and `challenge_ts`, and fails closed (provider outage →
+  503). `CAPTCHA_PROVIDER=none` is a dev-only bypass: config refuses it when `ENABLE_PORTAL=true` in
+  production. Unit tests stub global `fetch`; never call siteverify from tests. The Portal CSP allows
+  `https://challenges.cloudflare.com` only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first

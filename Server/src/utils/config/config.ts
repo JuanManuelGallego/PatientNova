@@ -9,6 +9,28 @@ function requireEnv(key: string): string {
   return value;
 }
 
+const nodeEnv = resolveNodeEnv(process.env.NODE_ENV);
+
+const CAPTCHA_PROVIDERS = [ 'none', 'turnstile' ] as const;
+type CaptchaProvider = (typeof CAPTCHA_PROVIDERS)[number];
+
+function captchaConfig() {
+  const provider = (process.env.CAPTCHA_PROVIDER?.trim() || 'none') as CaptchaProvider;
+  if (!CAPTCHA_PROVIDERS.includes(provider)) throw new Error(`Unsupported CAPTCHA_PROVIDER: ${provider}`);
+  if (provider === 'none' && process.env.ENABLE_PORTAL === 'true' && nodeEnv === 'production') {
+    throw new Error('CAPTCHA_PROVIDER is required when ENABLE_PORTAL=true in production');
+  }
+  const portalHostname = new URL(process.env.PORTAL_URL ?? 'http://localhost:3000').hostname;
+  return {
+    provider,
+    secret: provider === 'none' ? '' : requireEnv('CAPTCHA_SECRET'),
+    // Hostnames the widget may be solved on; a token minted on any other site is rejected.
+    expectedHostnames: (process.env.CAPTCHA_EXPECTED_HOSTNAMES?.trim() || portalHostname)
+      .split(',').map((h) => h.trim()).filter(Boolean),
+    timeoutMs: parseInt(process.env.CAPTCHA_TIMEOUT_MS ?? '3000', 10),
+  };
+}
+
 function portalAuthSecret(): string {
   const secret = process.env.ENABLE_PORTAL === 'true' ? requireEnv('PORTAL_AUTH_SECRET') : (process.env.PORTAL_AUTH_SECRET ?? '');
   if (secret && secret === process.env.AUTH_SECRET) throw new Error('PORTAL_AUTH_SECRET must differ from AUTH_SECRET');
@@ -69,7 +91,7 @@ export const config = {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
   },
 
-  env: resolveNodeEnv(process.env.NODE_ENV),
+  env: nodeEnv,
 
   cookieDomain: process.env.COOKIE_DOMAIN ?? undefined,
 
@@ -106,9 +128,11 @@ export const config = {
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
   },
 
+  captcha: captchaConfig(),
+
   encryption: {
     key:
-      resolveNodeEnv(process.env.NODE_ENV) === "production"
+      nodeEnv === "production"
         ? requireEnv("ENCRYPTION_KEY")
         : (process.env.ENCRYPTION_KEY ?? ""),
   },
