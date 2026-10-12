@@ -4,11 +4,6 @@ import { auditLogService } from './audit-log.service.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 
-/**
- * Compare two objects on the specified fields.
- * Returns affectedFields (field names that changed), fieldsBefore, and fieldsAfter
- * containing only the changed fields.
- */
 export function computeDiff(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
@@ -35,10 +30,6 @@ export function computeDiff(
   };
 }
 
-/**
- * Build a CreateAuditLogDto from entity metadata, merging in the current
- * audit context (actor info from the request) and the computed diff.
- */
 type AuditEntryOverrides = Omit<Partial<CreateAuditLogDto>, 'userId'> & Pick<CreateAuditLogDto, 'userId'>;
 
 export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogDto {
@@ -49,7 +40,7 @@ export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogD
     entityType: EntityType.USER,
     entityId: '',
     actionType: ActionType.CREATE,
-    source: ActionSource.API,
+    source: ctx?.source ?? ActionSource.API,
     description: '',
     ...overrides,
     affectedFields: overrides.affectedFields ?? [],
@@ -69,6 +60,12 @@ export async function logAudit(params: {
   fieldsAfter?: Record<string, unknown> | null;
   tx?: TransactionClient;
   userId: string;
+  required?: boolean;
 }): Promise<void> {
-  await auditLogService.create(buildAuditEntry(params), params.tx);
+  const { required, ...entry } = params;
+  if (required) {
+    await auditLogService.createOrThrow(buildAuditEntry(entry), params.tx);
+    return;
+  }
+  await auditLogService.create(buildAuditEntry(entry), params.tx);
 }

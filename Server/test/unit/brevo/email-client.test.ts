@@ -13,6 +13,7 @@ vi.mock('../../../src/utils/config/config.js', () => ({
 
 vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+  maskEmail: (e: string) => e,
 }));
 
 import { sendEmail, textToHtml } from '../../../src/brevo/email-client.js';

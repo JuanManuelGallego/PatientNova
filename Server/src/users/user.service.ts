@@ -1,5 +1,5 @@
 import { userRepository } from './user.repository.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskEmail } from '../utils/api/logger.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateUserDto, UpdateUserDto } from './user.schemas.js';
 import { updateUserSchema } from './user.schemas.js';
@@ -43,7 +43,7 @@ export const userService = {
         bankingKey: user.bankingKey,
       },
     });
-    logger.info({ userId: user.id, email: user.email }, 'User created');
+    logger.info({ userId: user.id, maskedEmail: maskEmail(user.email) }, 'User created');
     return user;
   },
 

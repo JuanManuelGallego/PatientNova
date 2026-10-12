@@ -12,7 +12,7 @@ export async function sendTransactionalEmail(to: string, email: RenderedEmail): 
     return { sent: true };
   } catch (err) {
     const code = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: unknown }).code : undefined;
-    logger.error({ to: maskEmail(to), code, name: err instanceof Error ? err.name : undefined }, 'Transactional email failed');
+    logger.error({ maskedTo: maskEmail(to), code, name: err instanceof Error ? err.name : undefined }, 'Transactional email failed');
     return { sent: false };
   }
 }

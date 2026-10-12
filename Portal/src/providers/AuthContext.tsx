@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { API_BASE } from "@/src/config/api";
 import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { User } from '@/src/types/User';
-import { fetchWithAuth } from "@/src/api/base/fetchWithAuth";
+import { clearCsrfToken, fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 
 interface AuthContextValue {
     user: User | null;
@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
 
-    // Check for an existing session on mount
     useEffect(() => {
         async function checkSession() {
             try {
@@ -67,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const json: ApiResponse = await res.json();
             if (!json.success) throw new Error("Login failed");
 
+            clearCsrfToken();
             setUser(json.data as User);
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Failed to login";
@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 credentials: "include",
             });
         } finally {
+            clearCsrfToken();
             setUser(null);
             setLoading(false);
         }

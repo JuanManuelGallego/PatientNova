@@ -28,7 +28,7 @@ export async function dispatchMessage(channel: Channel, opts: DispatchOpts): Pro
       return sendEmail({ to: opts.to, body: opts.body!, subject: opts.subject ?? null });
 
     default:
-      logger.warn({ channel, to: opts.to }, 'Unsupported dispatch channel');
+      logger.warn({ channel }, 'Unsupported dispatch channel');
       return { success: false, error: `Unsupported channel: ${channel}`, messageSid: "N/A", channel: channel, to: opts.to, sentAt: new Date().toISOString() };
   }
 }

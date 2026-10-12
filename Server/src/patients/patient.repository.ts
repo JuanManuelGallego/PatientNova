@@ -1,5 +1,5 @@
 import { Channel, type Patient, type Prisma } from '../../generated/prisma/client.ts';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { PatientEmailConflictError } from './patient.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
@@ -18,9 +18,9 @@ type PatientWithRelations = Patient & {
 };
 
 export const patientRepository = {
-  async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
+  async create(dto: CreatePatientDto, userId: string, tx?: TransactionClient): Promise<Patient> {
     try {
-      return await prisma.patient.create({
+      return await (tx ?? prisma).patient.create({
         data: {
           name: dto.name,
           lastName: dto.lastName,
@@ -36,7 +36,7 @@ export const patientRepository = {
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err) && dto.email) {
-        logger.warn({ email: maskEmail(dto.email), operation: 'create' }, 'Patient email conflict');
+        logger.warn({ maskedEmail: maskEmail(dto.email), operation: 'create' }, 'Patient email conflict');
         throw new PatientEmailConflictError();
       }
       throw err;
@@ -68,8 +68,8 @@ export const patientRepository = {
     });
   },
 
-  async findById(id: string, userId: string): Promise<Patient> {
-    const patient = await prisma.patient.findFirst({ where: { id, userId } });
+  async findById(id: string, userId: string, tx?: TransactionClient): Promise<Patient> {
+    const patient = await (tx ?? prisma).patient.findFirst({ where: { id, userId } });
     if (!patient) throw new PatientNotFoundError(id);
     return patient;
   },
@@ -130,8 +130,8 @@ export const patientRepository = {
     );
   },
 
-  async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
-    await patientRepository.findById(id, userId);
+  async update(id: string, dto: UpdatePatientDto, userId: string, tx?: TransactionClient): Promise<Patient> {
+    await patientRepository.findById(id, userId, tx);
 
     try {
       const data = buildUpdateData(
@@ -146,28 +146,28 @@ export const patientRepository = {
         },
       );
 
-      return await prisma.patient.update({
+      return await (tx ?? prisma).patient.update({
         where: { id },
         data,
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
-        logger.warn({ email: dto.email ? maskEmail(dto.email) : undefined, operation: 'update', patientId: id }, 'Patient email conflict');
+        logger.warn({ maskedEmail: dto.email ? maskEmail(dto.email) : undefined, operation: 'update', patientId: id }, 'Patient email conflict');
         throw new PatientEmailConflictError();
       }
       throw err;
     }
   },
 
-  async delete(id: string, userId: string): Promise<Patient> {
-    await patientRepository.findById(id, userId);
-    return softDelete(prisma.patient, id, userId) as Promise<Patient>;
+  async delete(id: string, userId: string, tx?: TransactionClient): Promise<Patient> {
+    await patientRepository.findById(id, userId, tx);
+    return softDelete((tx ?? prisma).patient, id, userId) as Promise<Patient>;
   },
 
-  async restore(id: string, userId: string): Promise<Patient> {
-    await patientRepository.findById(id, userId);
+  async restore(id: string, userId: string, tx?: TransactionClient): Promise<Patient> {
+    await patientRepository.findById(id, userId, tx);
     try {
-      return await restore(prisma.patient, id, userId) as Patient;
+      return await restore((tx ?? prisma).patient, id, userId) as Patient;
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {
         logger.warn({ operation: 'restore', patientId: id }, 'Patient email conflict');

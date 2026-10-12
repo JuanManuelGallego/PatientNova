@@ -14,11 +14,15 @@ export const auditLogService = {
     return auditLogRepository.findMany(userId, query);
   },
 
+  async createOrThrow(dto: CreateAuditLogDto, tx?: TransactionClient) {
+    const log = await auditLogRepository.create(dto, tx);
+    logger.info({ auditLogId: log.id, entityType: log.entityType, entityId: log.entityId, actionType: log.actionType }, 'Audit log created');
+    return log;
+  },
+
   async create(dto: CreateAuditLogDto, tx?: TransactionClient) {
     try {
-      const log = await auditLogRepository.create(dto, tx);
-      logger.info({ auditLogId: log.id, entityType: log.entityType, entityId: log.entityId, actionType: log.actionType }, 'Audit log created');
-      return log;
+      return await auditLogService.createOrThrow(dto, tx);
     } catch (err) {
       logger.error({ err, entityType: dto.entityType, entityId: dto.entityId, actionType: dto.actionType }, 'Failed to create audit log');
     }

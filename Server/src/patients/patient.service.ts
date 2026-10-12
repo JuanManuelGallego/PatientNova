@@ -6,6 +6,7 @@ import type { Paginated } from '../utils/api/pagination.ts';
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
@@ -34,62 +35,78 @@ export const patientService = {
   },
 
   async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
-    const createdPatient = await patientRepository.create(dto, userId);
-    await logAudit({
-      entityType: EntityType.PATIENT,
-      entityId: createdPatient.id,
-      userId,
-      actionType: ActionType.CREATE,
-      description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
+    return prisma.$transaction(async (tx) => {
+      const createdPatient = await patientRepository.create(dto, userId, tx);
+      await logAudit({
+        entityType: EntityType.PATIENT,
+        entityId: createdPatient.id,
+        userId,
+        actionType: ActionType.CREATE,
+        description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
+        affectedFields: Object.keys(dto),
+        fieldsAfter: dto as unknown as Record<string, unknown>,
+        tx,
+        required: true,
+      });
+      return createdPatient;
     });
-    return createdPatient;
   },
 
   async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
-    const existingPatient = await patientRepository.findById(id, userId);
-    const updatedPatient = await patientRepository.update(id, dto, userId);
-    const diff = computeDiff(existingPatient as unknown as Record<string, unknown>, updatedPatient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
-    await logAudit({
-      entityType: EntityType.PATIENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
-      ...diff,
+    return prisma.$transaction(async (tx) => {
+      const existingPatient = await patientRepository.findById(id, userId, tx);
+      const updatedPatient = await patientRepository.update(id, dto, userId, tx);
+      const diff = computeDiff(existingPatient as unknown as Record<string, unknown>, updatedPatient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
+      await logAudit({
+        entityType: EntityType.PATIENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
+        ...diff,
+        tx,
+        required: true,
+      });
+      return updatedPatient;
     });
-    return updatedPatient;
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
-    const deletedPatient = await patientRepository.delete(id, userId);
-    await logAudit({
-      entityType: EntityType.PATIENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.DELETE,
-      description: `Paciente eliminado ${deletedPatient.name} ${deletedPatient.lastName}`,
-      affectedFields: ['isDeleted'],
-      fieldsBefore: { isDeleted: false },
-      fieldsAfter: { isDeleted: true },
+    return prisma.$transaction(async (tx) => {
+      const deletedPatient = await patientRepository.delete(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.PATIENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.DELETE,
+        description: `Paciente eliminado ${deletedPatient.name} ${deletedPatient.lastName}`,
+        affectedFields: ['isDeleted'],
+        fieldsBefore: { isDeleted: false },
+        fieldsAfter: { isDeleted: true },
+        tx,
+        required: true,
+      });
+      return { id };
     });
-    return { id };
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
-    const restoredPatient = await patientRepository.restore(id, userId);
-    await logAudit({
-      entityType: EntityType.PATIENT,
-      entityId: id,
-      userId,
-      actionType: ActionType.RESTORE,
-      description: `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
-      affectedFields: ['isDeleted'],
-      fieldsBefore: { isDeleted: true },
-      fieldsAfter: { isDeleted: false },
+    return prisma.$transaction(async (tx) => {
+      const restoredPatient = await patientRepository.restore(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.PATIENT,
+        entityId: id,
+        userId,
+        actionType: ActionType.RESTORE,
+        description: `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
+        affectedFields: ['isDeleted'],
+        fieldsBefore: { isDeleted: true },
+        fieldsAfter: { isDeleted: false },
+        tx,
+        required: true,
+      });
+      return restoredPatient;
     });
-    return restoredPatient;
   },
 
   async verifyOwnership(patientId: string, userId: string): Promise<void> {

@@ -10,7 +10,7 @@ import { Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/cl
 import { validateBody } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
 import { patientService } from '../patients/patient.service.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskEmail, maskPhone } from '../utils/api/logger.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { BULK_TEMPLATE_CONFIG } from './bulk-template-config.js';
 import { BULK_SEND_STAGGER_MS, BULK_SEND_CHUNK_SIZE } from '../utils/config/constants.js';
@@ -65,7 +65,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', to: req.body.to, error: err instanceof Error ? err.message : err }, 'WhatsApp send failed');
+      logger.error({ reminderId: reminder.id, channel: 'WHATSAPP', maskedTo: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'WhatsApp send failed');
       const twilioCode = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : undefined;
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
@@ -110,7 +110,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'SMS', to: req.body.to, error: err instanceof Error ? err.message : err }, 'SMS send failed');
+      logger.error({ reminderId: reminder.id, channel: 'SMS', maskedTo: maskPhone(req.body.to), error: err instanceof Error ? err.message : err }, 'SMS send failed');
       const twilioCode = typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : undefined;
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
@@ -156,7 +156,7 @@ notifyRouter.post(
       }, req.user!.id);
       ok(res, result, 201);
     } catch (err) {
-      logger.error({ reminderId: reminder.id, channel: 'EMAIL', to: req.body.to, error: err instanceof Error ? err.message : err }, 'Email send failed');
+      logger.error({ reminderId: reminder.id, channel: 'EMAIL', maskedTo: maskEmail(req.body.to), error: err instanceof Error ? err.message : err }, 'Email send failed');
       await reminderService.update(reminder.id, {
         status: ReminderStatus.FAILED,
         error: err instanceof Error ? err.message : 'Unknown send error',
