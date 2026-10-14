@@ -11,12 +11,10 @@ function requireEnv(key: string): string {
 
 const nodeEnv = resolveNodeEnv(process.env.NODE_ENV);
 
-/** Cloudflare Turnstile, in every environment (no bypass). */
 function captchaConfig() {
   const portalHostname = new URL(process.env.PORTAL_URL ?? 'http://localhost:3000').hostname;
   return {
     secret: requireEnv('CAPTCHA_SECRET'),
-    // Hostnames the widget may be solved on; a token minted on any other site is rejected.
     expectedHostnames: (process.env.CAPTCHA_EXPECTED_HOSTNAMES?.trim() || portalHostname)
       .split(',').map((h) => h.trim()).filter(Boolean),
     timeoutMs: parseInt(process.env.CAPTCHA_TIMEOUT_MS ?? '3000', 10),

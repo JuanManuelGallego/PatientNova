@@ -1,12 +1,9 @@
 import { logger } from '../utils/api/logger.js';
 import type { CaptchaFailure, CaptchaResult, CaptchaVerifier } from './captcha-verifier.js';
 
-/** Cloudflare Turnstile server-side validation: https://developers.cloudflare.com/turnstile/get-started/server-side-validation/ */
 export const TURNSTILE_SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
-/** Turnstile tokens are at most 2048 characters; anything longer is rejected without a network call. */
 const MAX_TOKEN_LENGTH = 2048;
-/** Tokens expire after 300s on Cloudflare's side; this is a local backstop on `challenge_ts`. */
 const MAX_TOKEN_AGE_MS = 5 * 60 * 1000;
 
 interface SiteverifyResponse {
@@ -26,7 +23,6 @@ interface TurnstileOptions {
 
 const fail = (reason: CaptchaFailure): CaptchaResult => ({ ok: false, reason });
 
-/** Maps siteverify error codes: secret/server problems are ours (`unavailable`), the rest the client's. */
 function reasonFor(errorCodes: string[]): CaptchaFailure {
   if (errorCodes.some((c) => c === 'missing-input-secret' || c === 'invalid-input-secret' || c === 'internal-error')) {
     return 'unavailable';

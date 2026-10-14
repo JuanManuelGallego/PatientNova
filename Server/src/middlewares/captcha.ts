@@ -4,11 +4,6 @@ import { logger } from '../utils/api/logger.js';
 import { loggedPath } from '../utils/api/request-context.js';
 import type { CaptchaVerifier } from '../captcha/captcha-verifier.js';
 
-/**
- * Requires a solved CAPTCHA (`captchaToken` in the JSON body) bound to `action`.
- * Mount after the rate limiter (so floods never reach the provider) and the body parser.
- * Fails closed: a provider outage answers 503 rather than letting the request through.
- */
 export function requireCaptcha(verifier: CaptchaVerifier, action: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

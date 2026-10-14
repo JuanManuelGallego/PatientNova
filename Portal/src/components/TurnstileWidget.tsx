@@ -3,11 +3,6 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { TURNSTILE_ORIGIN } from "@/src/config/securityHeaders";
 
-/**
- * Cloudflare Turnstile widget for public portal forms. The token goes in the request body as
- * `captchaToken`; the server verifies it against the same `action`. Tokens are single-use, so call
- * `reset()` after every submit (successful or not).
- */
 const SCRIPT_SRC = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
 const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 

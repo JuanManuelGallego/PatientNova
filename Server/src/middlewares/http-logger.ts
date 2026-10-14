@@ -12,7 +12,6 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
     ip: req.ip?.replace('::ffff:', ''),
   };
 
-  // Runs before any body parser, and bodies may carry clinical data: never log them.
   logger.info(requestLog, 'REQUEST');
 
   const originalEnd = res.end;
