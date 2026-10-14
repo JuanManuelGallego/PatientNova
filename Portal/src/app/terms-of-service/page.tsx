@@ -2,19 +2,19 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Términos de Servicio | Patient Nova",
-  description: "Términos que regulan el uso de Patient Nova por profesionales y equipos de salud.",
+  description: "Términos que regulan el uso de Patient Nova por profesionales, equipos de salud y sus pacientes.",
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "12 de septiembre de 2026";
+const lastUpdated = "13 de octubre de 2026";
 
 const sections = [
   {
     id: "acceptance",
     title: "1. Aceptación y alcance",
     content: [
-      "Estos Términos de Servicio (los «Términos») regulan el acceso y uso de Patient Nova (la «Plataforma» o el «Servicio»). Al acceder o utilizar el Servicio, aceptas estos Términos y la Política de Privacidad. Si actúas en nombre de una clínica, consulta o entidad, declaras que tienes autorización para vincularla.",
-      "El Servicio está diseñado para profesionales y equipos de salud. No es un servicio para pacientes, no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
+      "Estos Términos de Servicio (los «Términos») regulan el acceso y uso de Patient Nova (la «Plataforma» o el «Servicio»), prestado por Juan Manuel Gallego, persona natural (el «Proveedor»). Al acceder o utilizar el Servicio, aceptas estos Términos y la Política de Privacidad. Si actúas en nombre de una clínica, consulta o entidad, declaras que tienes autorización para vincularla.",
+      "El Servicio está diseñado para profesionales y equipos de salud. Cuando una clínica habilite el portal de pacientes, sus pacientes podrán acceder con un código enviado por correo electrónico para consultar, reservar o cancelar citas con esa clínica; ese uso se rige también por la Política de Privacidad y por las condiciones que fije la clínica. El Servicio no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
       "Si no aceptas estos Términos, no debes utilizar el Servicio.",
     ],
   },
@@ -22,9 +22,9 @@ const sections = [
     id: "service-description",
     title: "2. Descripción y límites del Servicio",
     content: [
-      "Patient Nova ofrece herramientas administrativas para gestionar usuarios de una clínica, pacientes, citas, calendario, bloqueos de agenda, tipos de cita, historiales y documentos clínicos, recordatorios por SMS o WhatsApp, reuniones mediante Google Meet y registros de actividad.",
+      "Patient Nova ofrece herramientas administrativas para gestionar usuarios de una clínica, pacientes, citas, calendario, bloqueos de agenda, tipos de cita, historiales y documentos clínicos, recordatorios por SMS, WhatsApp o correo electrónico, reuniones mediante Google Meet, registros de actividad y, cuando la clínica lo habilite, un portal de pacientes para la gestión de sus citas.",
       "Las funcionalidades pueden cambiar, quedar temporalmente no disponibles o depender de servicios externos. Salvo que exista un acuerdo escrito distinto, el Servicio se presta sin un nivel de servicio garantizado y no prometemos que sea ininterrumpido, completamente seguro o libre de errores.",
-      "La entrega de SMS y WhatsApp depende de Twilio, operadores de telecomunicaciones y del dispositivo del destinatario. No garantizamos la entrega, el momento de entrega ni la disponibilidad de esos servicios externos.",
+      "La entrega de SMS y WhatsApp depende de Twilio, de los operadores de telecomunicaciones y del dispositivo del destinatario, y la de correos electrónicos depende de Brevo y del proveedor de correo del destinatario. No garantizamos la entrega, el momento de entrega ni la disponibilidad de esos servicios externos.",
     ],
   },
   {
@@ -42,16 +42,16 @@ const sections = [
     title: "4. Datos que introduces en el Servicio",
     content: [
       "Conservas los derechos que tengas sobre los datos que introduces, incluidos los datos de pacientes, historiales, citas, documentos, mensajes y configuraciones. Nos concedes el permiso limitado necesario para alojar, organizar, respaldar, procesar y transmitir esos datos únicamente para operar, proteger y mantener el Servicio.",
-      "Cuando la legislación de protección de datos distingue entre responsable y encargado, la clínica o entidad que decide para qué y cómo se tratan los datos de sus pacientes normalmente actúa como responsable, y Patient Nova actúa como proveedor o encargado en la medida aplicable. Las partes deben formalizar los acuerdos adicionales que exija la ley antes de cargar datos regulados.",
-      "Tú eres responsable de tener una base legal para introducir datos de pacientes, informar a las personas afectadas, obtener los consentimientos necesarios, respetar sus solicitudes y utilizar los canales de mensajería conforme a la ley. Patient Nova no proporciona asesoría legal sobre esas obligaciones.",
+      "Conforme a la Ley 1581 de 2012, la clínica o entidad que decide para qué y cómo se tratan los datos de sus pacientes actúa como responsable del tratamiento, y el Proveedor actúa como encargado, tratándolos por cuenta de ella y según sus instrucciones. Al aceptar estos Términos, la clínica instruye al Proveedor para tratar esos datos con las finalidades descritas en la Política de Privacidad; las partes deben formalizar los acuerdos adicionales que exija la ley antes de cargar datos regulados.",
+      "Tú eres responsable de obtener la autorización previa, expresa e informada de tus pacientes (explícita en el caso de datos sensibles como los de salud, y de su representante legal en el caso de menores), conservar prueba de ella, informar a las personas afectadas, respetar sus solicitudes y utilizar los canales de mensajería conforme a la ley. Patient Nova no proporciona asesoría legal sobre esas obligaciones.",
     ],
   },
   {
     id: "third-parties",
     title: "5. Servicios de terceros y comunicaciones",
     content: [
-      "El Servicio puede utilizar proveedores externos, entre ellos Twilio para SMS, WhatsApp y estados de entrega, Google para determinadas funciones de Google Meet, y proveedores de alojamiento y base de datos. El uso de esas funciones puede implicar que los datos necesarios se transmitan a dichos proveedores conforme a sus propias condiciones y políticas.",
-      "Antes de enviar un mensaje, debes asegurarte de que el destinatario ha proporcionado el número correcto y de que tienes autorización, consentimiento o cualquier otra base legal necesaria. No utilices Patient Nova para spam, mensajes engañosos o comunicaciones no solicitadas.",
+      "El Servicio puede utilizar proveedores externos, entre ellos Twilio para SMS, WhatsApp y estados de entrega, Brevo para correos electrónicos y sus estados de entrega, Google para determinadas funciones de Google Meet, Cloudflare para la verificación anti-bots (Turnstile) en formularios públicos cuando esté habilitada, y proveedores de alojamiento y base de datos. El uso de esas funciones puede implicar que los datos necesarios se transmitan a dichos proveedores conforme a sus propias condiciones y políticas.",
+      "Antes de enviar un mensaje, debes asegurarte de que el destinatario ha proporcionado el número o la dirección de correo correctos y de que tienes autorización, consentimiento o cualquier otra base legal necesaria. No utilices Patient Nova para spam, mensajes engañosos o comunicaciones no solicitadas.",
       "Debes atender las solicitudes de no recibir comunicaciones y mantener tus propios procedimientos de consentimiento, oposición y exclusión. La Plataforma no garantiza que un canal externo ofrezca una función de baja para cada tipo de mensaje.",
     ],
   },
@@ -62,8 +62,8 @@ const sections = [
       "No debes:",
       "• utilizar el Servicio para fines ilegales, fraudulentos, discriminatorios o perjudiciales;",
       "• acceder o intentar acceder a cuentas, datos, documentos o sistemas ajenos;",
-      "• introducir malware, realizar ingeniería inversa, escanear, explotar vulnerabilidades, hacer scraping abusivo, realizar fuerza bruta o provocar una denegación de servicio;",
-      "• enviar comunicaciones masivas no solicitadas o incumplir las reglas de Twilio, WhatsApp, Google u otros proveedores;",
+      "• introducir malware, realizar ingeniería inversa, escanear, explotar vulnerabilidades, hacer scraping abusivo, realizar fuerza bruta, eludir la verificación anti-bots o los límites de solicitudes, o provocar una denegación de servicio;",
+      "• enviar comunicaciones masivas no solicitadas o incumplir las reglas de Twilio, WhatsApp, Brevo, Google, Cloudflare u otros proveedores;",
       "• suplantar a una persona o entidad, falsear una autorización o cargar datos sin una base legal; ni",
       "• exportar, divulgar o utilizar datos de pacientes fuera de lo permitido por la ley, tus instrucciones internas y los derechos de las personas afectadas.",
       "Podemos investigar y restringir actividades que razonablemente consideremos abusivas, ilegales o que pongan en riesgo a usuarios, pacientes, proveedores o al Servicio.",
@@ -89,7 +89,7 @@ const sections = [
     id: "suspension",
     title: "9. Suspensión y terminación",
     content: [
-      "Puedes dejar de utilizar el Servicio y solicitar el cierre de tu cuenta escribiendo a un contacto de soporte o legal. No existe actualmente una promesa de eliminación instantánea ni un periodo de gracia automático desde la interfaz.",
+      "Puedes dejar de utilizar el Servicio y solicitar el cierre de tu cuenta escribiendo a legal@patientnova.net. No existe actualmente una promesa de eliminación instantánea ni un periodo de gracia automático desde la interfaz.",
       "Podemos suspender o terminar el acceso cuando sea razonablemente necesario para evitar fraude, abuso, riesgos de seguridad, incumplimientos legales o daños al Servicio, o cuando incumplas materialmente estos Términos. Cuando sea razonable y legalmente posible, te avisaremos y te daremos la oportunidad de corregir el incumplimiento.",
       "La terminación no elimina automáticamente todos los datos. La conservación, eliminación, copias de seguridad y obligaciones legales se rigen por la Política de Privacidad y por cualquier acuerdo aplicable. Debes exportar los datos que necesites antes de cerrar la cuenta.",
     ],
@@ -122,7 +122,7 @@ const sections = [
     id: "governing-law",
     title: "13. Ley aplicable y jurisdicción",
     content: [
-      "La ley aplicable y los tribunales competentes deben completarse con la identidad legal y la jurisdicción real del proveedor antes de publicar estos Términos como versión definitiva. Hasta entonces, se aplicarán las normas imperativas que correspondan y nada de estos Términos limita los derechos que no puedan excluirse por ley.",
+      "Estos Términos se rigen por las leyes de la República de Colombia. Las controversias relacionadas con el Servicio se someterán a los jueces de la República de Colombia competentes según las reglas generales. Nada de estos Términos limita los derechos que no puedan excluirse por ley, incluidos, cuando resulten aplicables, los previstos en la Ley 1480 de 2011 (Estatuto del Consumidor) y en la Ley 1581 de 2012.",
       "Si una disposición resulta inválida o inaplicable, se modificará en la medida mínima necesaria y las demás disposiciones continuarán vigentes.",
     ],
   },
@@ -130,10 +130,11 @@ const sections = [
     id: "contact",
     title: "14. Contacto",
     content: [
-      "Juan Manuel Gallego. 402-1595 rue Lalemant, Sherbrooke, Canada.",
+      "Juan Manuel Gallego, persona natural. 402-1595 rue Lalemant, Sherbrooke (Québec), Canadá.",
+      "Teléfono: +57 304 487 3415",
       "Contacto legal: legal@patientnova.net",
       "Contacto de privacidad: privacidad@patientnova.net",
-      "Para preguntas sobre estos Términos, solicitudes de cierre o reclamaciones, utiliza el contacto legal. Estos buzones deben estar activos y supervisados antes de publicar esta página.",
+      "Para preguntas sobre estos Términos, solicitudes de cierre o reclamaciones, utiliza el contacto legal. Para consultas y reclamos sobre datos personales, utiliza el contacto de privacidad.",
     ],
   },
 ];
