@@ -159,9 +159,10 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   after the limiter and body parser; the Portal renders `<TurnstileWidget action="<action>">` with the
   same action and sends `captchaToken` in the body. Not on `otp/verify` (attempt counter) or session
   routes. The verifier checks hostname, action and `challenge_ts`, and fails closed (provider outage →
-  503). `CAPTCHA_PROVIDER=none` is a dev-only bypass: config refuses it when `ENABLE_PORTAL=true` in
-  production. Unit tests stub global `fetch`; never call siteverify from tests. The Portal CSP allows
-  `https://challenges.cloudflare.com` only when `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is set.
+  503). Turnstile is used in every environment, with no bypass: `CAPTCHA_SECRET` is always required
+  (`.env.test`/CI use Cloudflare's always-pass test secret). Unit tests stub global `fetch`; never call
+  siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
+  without `NEXT_PUBLIC_TURNSTILE_SITE_KEY` shows the widget error instead of submitting.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first

@@ -95,7 +95,7 @@ jobs:
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback
       PORTAL_URL: http://localhost:3000
       ENABLE_PORTAL: "false"
-      CAPTCHA_PROVIDER: none
+      CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

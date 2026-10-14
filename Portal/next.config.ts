@@ -18,7 +18,6 @@ const nextConfig: NextConfig = {
           apiUrl: process.env.NEXT_PUBLIC_API_URL,
           isDev: process.env.NODE_ENV !== "production",
           enforceCsp: process.env.CSP_ENFORCE === "true",
-          turnstile: Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
         }),
       },
     ];

@@ -10,8 +10,6 @@ import { TURNSTILE_ORIGIN } from "@/src/config/securityHeaders";
  */
 const SCRIPT_SRC = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
 const DEFAULT_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-/** Accepted only by the server's development bypass verifier (rejected in production). */
-export const DEV_BYPASS_TOKEN = "dev-bypass-token";
 
 interface TurnstileApi {
     render: (container: HTMLElement, options: Record<string, unknown>) => string;
@@ -66,14 +64,15 @@ export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, r
 
     useImperativeHandle(ref, () => ({
         reset: () => {
-            onTokenRef.current(siteKey ? null : devToken());
+            onTokenRef.current(null);
             if (widgetIdRef.current && window.turnstile) window.turnstile.reset(widgetIdRef.current);
         },
-    }), [ siteKey ]);
+    }), []);
 
     useEffect(() => {
         if (!siteKey) {
-            onTokenRef.current(devToken());
+            // Misconfigured build: there is no bypass, so the form cannot be submitted.
+            onTokenRef.current(null);
             return;
         }
         let cancelled = false;
@@ -106,19 +105,14 @@ export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, r
         };
     }, [ siteKey, action ]);
 
-    if (!siteKey) return null;
     return (
         <div>
             <div ref={containerRef} data-testid="turnstile-container" />
-            {failed && (
+            {(failed || !siteKey) && (
                 <p role="alert" className="form-input-hint">
                     No pudimos verificar que eres una persona. Recarga la página e inténtalo de nuevo.
                 </p>
             )}
         </div>
     );
-}
-
-function devToken(): string | null {
-    return process.env.NODE_ENV === "production" ? null : DEV_BYPASS_TOKEN;
 }

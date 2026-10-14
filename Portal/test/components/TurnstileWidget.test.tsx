@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEV_BYPASS_TOKEN, TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
+import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
 
 type Callback = (arg?: string) => void;
 
@@ -61,11 +61,12 @@ describe("TurnstileWidget", () => {
         expect(turnstile.remove).toHaveBeenCalledWith("widget-1");
     });
 
-    it("without a site key renders nothing and hands out the dev bypass token outside production", () => {
+    it("without a site key shows an error and never yields a token (no bypass)", () => {
         const onToken = vi.fn();
-        const { container } = render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} />);
-        expect(container).toBeEmptyDOMElement();
+        render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} />);
+        expect(screen.getByRole("alert")).toHaveTextContent("No pudimos verificar");
         expect(turnstile.render).not.toHaveBeenCalled();
-        expect(onToken).toHaveBeenCalledWith(DEV_BYPASS_TOKEN);
+        expect(onToken).toHaveBeenCalledWith(null);
+        expect(onToken).not.toHaveBeenCalledWith(expect.any(String));
     });
 });

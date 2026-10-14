@@ -11,19 +11,11 @@ function requireEnv(key: string): string {
 
 const nodeEnv = resolveNodeEnv(process.env.NODE_ENV);
 
-const CAPTCHA_PROVIDERS = [ 'none', 'turnstile' ] as const;
-type CaptchaProvider = (typeof CAPTCHA_PROVIDERS)[number];
-
+/** Cloudflare Turnstile, in every environment (no bypass). */
 function captchaConfig() {
-  const provider = (process.env.CAPTCHA_PROVIDER?.trim() || 'none') as CaptchaProvider;
-  if (!CAPTCHA_PROVIDERS.includes(provider)) throw new Error(`Unsupported CAPTCHA_PROVIDER: ${provider}`);
-  if (provider === 'none' && process.env.ENABLE_PORTAL === 'true' && nodeEnv === 'production') {
-    throw new Error('CAPTCHA_PROVIDER is required when ENABLE_PORTAL=true in production');
-  }
   const portalHostname = new URL(process.env.PORTAL_URL ?? 'http://localhost:3000').hostname;
   return {
-    provider,
-    secret: provider === 'none' ? '' : requireEnv('CAPTCHA_SECRET'),
+    secret: requireEnv('CAPTCHA_SECRET'),
     // Hostnames the widget may be solved on; a token minted on any other site is rejected.
     expectedHostnames: (process.env.CAPTCHA_EXPECTED_HOSTNAMES?.trim() || portalHostname)
       .split(',').map((h) => h.trim()).filter(Boolean),

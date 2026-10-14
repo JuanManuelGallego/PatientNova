@@ -4,25 +4,22 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { createCaptchaVerifier, devBypassCaptchaVerifier } from '../../../src/captcha/captcha-verifier.js';
-
-const none = { provider: 'none' as const, secret: '', expectedHostnames: [ 'localhost' ], timeoutMs: 3000 };
+import { createCaptchaVerifier } from '../../../src/captcha/captcha-verifier.js';
+import { TURNSTILE_SITEVERIFY_URL } from '../../../src/captcha/turnstile.js';
 
 describe('createCaptchaVerifier', () => {
-  it('refuses to fall back to the bypass verifier in production', () => {
-    expect(() => createCaptchaVerifier(none, 'production')).toThrow('CAPTCHA provider');
-  });
+  afterEach(() => vi.unstubAllGlobals());
 
-  it('uses the bypass verifier outside production, which still requires a token', async () => {
-    const verifier = createCaptchaVerifier(none, 'development');
-    expect(verifier).toBe(devBypassCaptchaVerifier);
-    expect(await verifier.verify({ token: undefined, ip: undefined, action: 'a' })).toEqual({ ok: false, reason: 'missing' });
-    expect(await verifier.verify({ token: 'anything', ip: undefined, action: 'a' })).toEqual({ ok: true });
-  });
+  it('always verifies with Turnstile using the configured secret (no bypass)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: false, 'error-codes': [ 'invalid-input-response' ] })));
+    vi.stubGlobal('fetch', fetchMock);
 
-  it('builds a Turnstile verifier when configured, even in production', () => {
-    const verifier = createCaptchaVerifier({ ...none, provider: 'turnstile', secret: 's' }, 'production');
-    expect(verifier).not.toBe(devBypassCaptchaVerifier);
+    const verifier = createCaptchaVerifier({ secret: 's3cret', expectedHostnames: [ 'localhost' ], timeoutMs: 3000 });
+    expect(await verifier.verify({ token: 'anything', ip: undefined, action: 'a' })).toEqual({ ok: false, reason: 'invalid' });
+
+    const [ url, init ] = fetchMock.mock.calls[ 0 ]!;
+    expect(url).toBe(TURNSTILE_SITEVERIFY_URL);
+    expect(JSON.parse(init.body as string)).toMatchObject({ secret: 's3cret', response: 'anything' });
   });
 });
 
@@ -34,23 +31,10 @@ describe('config.captcha', () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
-  it('requires a provider when the portal is enabled in production', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('ENCRYPTION_KEY', 'a'.repeat(64));
-    vi.stubEnv('ENABLE_PORTAL', 'true');
-    vi.stubEnv('CAPTCHA_PROVIDER', '');
-    await expect(loadConfig()).rejects.toThrow('CAPTCHA_PROVIDER is required');
-  });
-
-  it('requires CAPTCHA_SECRET once a provider is chosen', async () => {
-    vi.stubEnv('CAPTCHA_PROVIDER', 'turnstile');
+  it('requires CAPTCHA_SECRET in every environment', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('CAPTCHA_SECRET', '');
     await expect(loadConfig()).rejects.toThrow('CAPTCHA_SECRET');
-  });
-
-  it('rejects unknown providers', async () => {
-    vi.stubEnv('CAPTCHA_PROVIDER', 'recaptcha');
-    await expect(loadConfig()).rejects.toThrow('Unsupported CAPTCHA_PROVIDER');
   });
 
   it('defaults the expected hostname to the portal URL and accepts an explicit list', async () => {
