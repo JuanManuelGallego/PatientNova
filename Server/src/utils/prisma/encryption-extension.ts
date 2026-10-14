@@ -35,7 +35,7 @@ const READ_OPERATIONS = new Set([
 function getKey(): string {
   const key = config.encryption.key;
   if (!key) {
-    if (process.env.NODE_ENV === "production") {
+    if (config.env === "production") {
       throw new EncryptionError("ENCRYPTION_KEY is required in production");
     }
     return "";

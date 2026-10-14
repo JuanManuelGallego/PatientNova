@@ -14,10 +14,6 @@ export function httpLogger(req: Request, res: Response, next: NextFunction): voi
 
   logger.info(requestLog, 'REQUEST');
 
-  if (req.body && Object.keys(req.body).length > 0) {
-    logger.debug({ body: req.body }, 'REQUEST BODY');
-  }
-
   const originalEnd = res.end;
   res.end = function (this: Response, ...args: unknown[]) {
     const duration = Date.now() - start;

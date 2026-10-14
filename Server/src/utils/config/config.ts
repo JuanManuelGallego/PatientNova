@@ -1,10 +1,24 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { resolveNodeEnv } from './node-env.js';
+
 function requireEnv(key: string): string {
   const value = process.env[ key ];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
   return value;
+}
+
+const nodeEnv = resolveNodeEnv(process.env.NODE_ENV);
+
+function captchaConfig() {
+  const portalHostname = new URL(process.env.PORTAL_URL ?? 'http://localhost:3000').hostname;
+  return {
+    secret: requireEnv('CAPTCHA_SECRET'),
+    expectedHostnames: (process.env.CAPTCHA_EXPECTED_HOSTNAMES?.trim() || portalHostname)
+      .split(',').map((h) => h.trim()).filter(Boolean),
+    timeoutMs: parseInt(process.env.CAPTCHA_TIMEOUT_MS ?? '3000', 10),
+  };
 }
 
 function portalAuthSecret(): string {
@@ -51,6 +65,11 @@ export const config = {
     timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
+  publicRateLimit: {
+    windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
+    maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),  // 1 min
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),
@@ -62,7 +81,7 @@ export const config = {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
   },
 
-  env: process.env.NODE_ENV ?? 'development',
+  env: nodeEnv,
 
   cookieDomain: process.env.COOKIE_DOMAIN ?? undefined,
 
@@ -99,9 +118,11 @@ export const config = {
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
   },
 
+  captcha: captchaConfig(),
+
   encryption: {
     key:
-      process.env.NODE_ENV === "production"
+      nodeEnv === "production"
         ? requireEnv("ENCRYPTION_KEY")
         : (process.env.ENCRYPTION_KEY ?? ""),
   },

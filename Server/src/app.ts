@@ -1,6 +1,5 @@
 import express, { type Application, type Request, type Response } from 'express';
 import { loggedPath } from './utils/api/request-context.js';
-import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
@@ -29,7 +28,9 @@ import { auditLogRouter } from './audit-log/audit-log.routes.js';
 import { googleRouter } from './google/google.routes.js';
 import { httpLogger } from './middlewares/http-logger.js';
 import { requestId } from './middlewares/request-id.js';
-import { errorHandler, CorsRejectionError } from './middlewares/error-handler.js';
+import { providerCors } from './middlewares/cors.js';
+import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from './portal/portal-routers.js';
+import { errorHandler } from './middlewares/error-handler.js';
 
 const DEFAULT_BODY_LIMIT = '100kb';
 const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as const;
@@ -41,17 +42,14 @@ app.set('trust proxy', 1);
 
 app.use(requestId);
 app.use(helmet());
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || config.allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            logger.warn({ origin }, 'CORS rejection');
-            callback(new CorsRejectionError());
-        }
-    },
-    credentials: true,
-}));
+app.use(httpLogger);
+if (config.portal.patientEnabled) {
+    app.use('/v1/public', createPublicApiRouter(), portalNotFound);
+    app.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
+}
+
+// Provider (admin) API CORS: credentialed, exact allow-list.
+app.use(providerCors);
 // Rate limits run before body parsing so throttled clients never get their payloads read.
 app.use(
     rateLimit({
@@ -77,7 +75,6 @@ app.use('/webhooks/brevo', express.json({ limit: LARGE_BODY_LIMITS.webhooks }));
 app.use(express.json({ limit: DEFAULT_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: DEFAULT_BODY_LIMIT }));
 app.use(cookieParser())
-app.use(httpLogger);
 
 // Unversioned infra/external routes: health check (root router) and the public webhooks.
 app.use('/', router);

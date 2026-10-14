@@ -1,7 +1,8 @@
 import pino, { type DestinationStream } from 'pino';
 import { getRequestId } from './request-context.js';
+import { resolveNodeEnv } from '../config/node-env.js';
 
-const transport = process.env.NODE_ENV !== 'production'
+const transport = resolveNodeEnv(process.env.NODE_ENV) !== 'production'
   ? {
     target: 'pino-pretty',
     options: {

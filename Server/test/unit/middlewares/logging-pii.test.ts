@@ -102,4 +102,15 @@ describe('request logging never includes query strings', () => {
     expect(logged).not.toContain('search=');
     expect(getRequestId()).toBeUndefined();
   });
+
+  it('httpLogger never logs request bodies', () => {
+    loggerMock.info.mockClear();
+    loggerMock.debug.mockClear();
+    const res = { end: vi.fn(), statusCode: 200 } as any;
+    const req = { method: 'POST', originalUrl: '/v1/patients', ip: '10.0.0.1', body: { notes: 'diagnóstico' } } as any;
+    httpLogger(req, res, vi.fn());
+    res.end();
+    const logged = JSON.stringify([ loggerMock.info.mock.calls, loggerMock.debug.mock.calls ]);
+    expect(logged).not.toContain('diagnóstico');
+  });
 });

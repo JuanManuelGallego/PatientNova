@@ -59,11 +59,12 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `41` files, `487` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
-| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF (cookie writes need `X-CSRF-Token`, Bearer exempt), CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF on cookie-authenticated writes, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook (400 on failure, 503 on provider outage), public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
@@ -145,6 +146,23 @@ Suite: `41` files, `487` tests, all against real Postgres, `tsc --noEmit` clean.
   (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
   adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
   primary control.
+- Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
+  no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
+  mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.
+  Session routes must add `requireCsrf` (except `otp/verify`). `createPublicLimiter` is a coarse
+  in-memory per-IP throttle (resets on restart, per instance), mounted before the router's body
+  parser. Brute-force-sensitive limits (OTP verify attempts, resend cooldown, per-email sends) must
+  be enforced on the domain record in the same transaction (see `src/utils/security/one-time-code.ts`),
+  never by an HTTP limiter. `trust proxy` is exactly 1 hop.
+- CAPTCHA (Cloudflare Turnstile): public endpoints that send messages or create records
+  (OTP request/resend, anonymous booking) use `requireCaptcha(createCaptchaVerifier(), '<action>')`
+  after the limiter and body parser; the Portal renders `<TurnstileWidget action="<action>">` with the
+  same action and sends `captchaToken` in the body. Not on `otp/verify` (attempt counter) or session
+  routes. The verifier checks hostname, action and `challenge_ts`, and fails closed (provider outage →
+  503). Turnstile is used in every environment, with no bypass: `CAPTCHA_SECRET` is always required
+  (`.env.test`/CI use Cloudflare's always-pass test secret). Unit tests stub global `fetch`; never call
+  siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
+  without `NEXT_PUBLIC_TURNSTILE_SITE_KEY` shows the widget error instead of submitting.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first
@@ -157,3 +175,5 @@ Suite: `41` files, `487` tests, all against real Postgres, `tsc --noEmit` clean.
   (`{ headers: { ...csrfHeaders(), origin } }`).
 - Webhook signature checks (Twilio, Brevo) are always enforced; there is no environment bypass.
   Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.
+- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`), which requires
+  `ENCRYPTION_KEY`. Local dev must set `NODE_ENV=development` explicitly (see `.env.example`).
