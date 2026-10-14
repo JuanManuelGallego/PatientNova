@@ -6,8 +6,6 @@ import { apiError } from '../utils/api/api-utils.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
 
-const routeNotFound = (_req: Request, res: Response) => apiError(res, 'Route not found', 404);
-
 export function createPublicApiRouter(): Router {
   const router = Router();
   router.use(anonymousCors);
@@ -22,8 +20,9 @@ export function createPortalSessionRouter(): Router {
   router.use(requireExactOrigin);
   router.use(createPublicLimiter({ name: 'portal-ip' }));
   router.use(express.json({ limit: PUBLIC_BODY_LIMIT }));
+  // Scoped here, not app-wide: the anonymous /v1/public class must never read cookies.
   router.use(cookieParser());
   return router;
 }
 
-export const portalNotFound = routeNotFound;
+export const portalNotFound = (_req: Request, res: Response) => apiError(res, 'Route not found', 404);
