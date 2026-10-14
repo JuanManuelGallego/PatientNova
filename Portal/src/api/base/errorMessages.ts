@@ -9,7 +9,7 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /blocked time/i, "Ese horario está bloqueado en la agenda." ],
     [ /patient with this email already exists/i, "Ya existe un paciente con este correo electrónico." ],
     [ /invalid credentials/i, "Correo o contraseña incorrectos." ],
-    [ /account.*locked|locked/i, "La cuenta está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." ],
+    [ /account (is )?(temporarily )?locked/i, "La cuenta está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." ],
     [ /endAt must be after startAt/i, "La hora de fin debe ser posterior a la hora de inicio." ],
     [ /cannot .* an appointment with status/i, "Esa acción no está permitida para el estado actual de la cita." ],
     [ /cannot update past appointment/i, "No se puede reactivar una cita que ya pasó." ],

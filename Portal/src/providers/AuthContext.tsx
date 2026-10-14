@@ -61,7 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
             if (!res.ok) {
-                const json: ApiErrorResponse = await res.json();
+                // Rate-limit and proxy errors can be plain text; never let a parse error hide the status.
+                const json: Partial<ApiErrorResponse> = await res.json().catch(() => ({}));
                 throw new Error(toSpanishMessage(res.status, json.error));
             }
             const json: ApiResponse = await res.json();

@@ -60,9 +60,13 @@ async function request<T>(
         throw new ApiClientError(toSpanishMessage(0), 0);
     }
 
+    // Read as text first: a 204 / empty body is a success with no data, not a parse failure.
+    const text = await res.text().catch(() => "");
+    if (res.ok && text.trim() === "") return undefined as T;
+
     let json: Envelope<T> | undefined;
     try {
-        json = (await res.json()) as Envelope<T>;
+        json = JSON.parse(text) as Envelope<T>;
     } catch {
         json = undefined;
     }

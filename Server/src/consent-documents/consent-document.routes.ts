@@ -19,7 +19,8 @@ const EXTENSIONS_BY_MIME: Record<string, string[]> = {
     'image/jpeg': [ 'jpeg', 'jpg' ],
 };
 
-// Public, unauthenticated download: stricter than the provider API limiter and shared across instances.
+// Public, unauthenticated download: stricter than the provider API limiter. In-memory, so the limit
+// is per instance and resets on restart (see AGENTS.md).
 const publicDownloadLimiter = createPublicLimiter({ name: 'consent-download', windowMs: 60_000, max: 20 });
 
 /**

@@ -68,6 +68,18 @@ describe("portalApi (patient session)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("treats a 204 / empty success body as success with no data", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(portalApi.delete("/appointments/1")).resolves.toBeUndefined();
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 200 }));
+    await expect(portalApi.post("/bookings", {})).resolves.toBeUndefined();
+  });
+
+  it("maps a plain-text error body by status", async () => {
+    fetchMock.mockResolvedValue(new Response("Too many requests, please try again later.", { status: 429 }));
+    await expect(portalApi.get("/session")).rejects.toMatchObject({ status: 429, message: expect.stringMatching(/Demasiadas solicitudes/) });
+  });
+
   it("reports network failures in Spanish", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
     await expect(portalApi.get("/session")).rejects.toMatchObject({
@@ -82,6 +94,8 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(409, "Appointment overlaps with another appointment of this provider")).toBe("Ya existe una cita en ese horario.");
     expect(toSpanishMessage(409, "Appointment overlaps with blocked time \"Lunch\" (x)")).toBe("Ese horario está bloqueado en la agenda.");
     expect(toSpanishMessage(401, "Invalid credentials")).toBe("Correo o contraseña incorrectos.");
+    expect(toSpanishMessage(423, "Account temporarily locked. Try again later.")).toMatch(/cuenta está bloqueada/);
+    expect(toSpanishMessage(409, "Recipient is blocked")).not.toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(409, undefined)).toMatch(/conflicto/);
     expect(toSpanishMessage(429)).toMatch(/Demasiadas solicitudes/);
     expect(toSpanishMessage(500, "PrismaClientKnownRequestError: secret details")).toBe(
