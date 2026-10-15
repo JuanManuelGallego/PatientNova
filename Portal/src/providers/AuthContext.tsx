@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { API_BASE } from "@/src/config/api";
-import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
+import { ApiResponse } from "@/src/types/API";
 import { User } from '@/src/types/User';
 import { clearCsrfToken, fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 import { toSpanishMessage } from "@/src/api/base/errorMessages";
+import { ApiClientError, parseEnvelope } from "@/src/api/base/apiClients";
 
 interface AuthContextValue {
     user: User | null;
@@ -60,18 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ email, password }),
             });
 
-            if (!res.ok) {
-                // Rate-limit and proxy errors can be plain text; never let a parse error hide the status.
-                const json: Partial<ApiErrorResponse> = await res.json().catch(() => ({}));
-                throw new Error(toSpanishMessage(res.status, json.error));
-            }
-            const json: ApiResponse = await res.json();
-            if (!json.success) throw new Error("Login failed");
+            // On the login form a bare 401 means bad credentials, not an expired session.
+            const loggedIn = await parseEnvelope<User>(res, { 401: "Correo o contraseña incorrectos." });
 
             clearCsrfToken();
-            setUser(json.data as User);
+            setUser(loggedIn);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : "Failed to login";
+            // Only ApiClientError carries a curated Spanish message; anything else (fetch TypeError) is a connection failure.
+            const msg = err instanceof ApiClientError ? err.message : toSpanishMessage(0);
             setError(msg);
             throw err;
         } finally {

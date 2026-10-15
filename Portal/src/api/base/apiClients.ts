@@ -60,9 +60,40 @@ async function request<T>(
         throw new ApiClientError(toSpanishMessage(0), 0);
     }
 
-    // Read as text first: a 204 / empty body is a success with no data, not a parse failure.
-    const text = await res.text().catch(() => "");
-    if (res.ok && text.trim() === "") return undefined as T;
+    let data: T;
+    try {
+        data = await parseEnvelope<T>(res);
+    } catch (err) {
+        if (res.status === 401 && withCsrf) csrfStore.clear();
+        throw err;
+    }
+
+    // Session-creating responses carry the CSRF token; keep it in memory only.
+    const maybeToken = (data as { csrfToken?: unknown } | undefined)?.csrfToken;
+    if (withCsrf && typeof maybeToken === "string") csrfStore.set(maybeToken);
+
+    return data;
+}
+
+/**
+ * Unwraps the `{ success, data }` envelope or throws an `ApiClientError` with a Spanish message.
+ * Only an explicit 204 is a success without data; an unreadable or empty body on any other status
+ * is a failure (e.g. the timeout firing mid-download must not look like success).
+ * `statusMessages` overrides the status fallback for callers whose context differs (login: 401).
+ */
+export async function parseEnvelope<T>(
+    res: Response,
+    statusMessages: Partial<Record<number, string>> = {},
+): Promise<T> {
+    if (res.status === 204) return undefined as T;
+
+    let text: string;
+    try {
+        text = await res.text();
+    } catch {
+        // Body never arrived (timeout/connection drop mid-download): a connection failure, not success.
+        throw new ApiClientError(toSpanishMessage(0), res.status);
+    }
 
     let json: Envelope<T> | undefined;
     try {
@@ -72,14 +103,8 @@ async function request<T>(
     }
 
     if (!res.ok || !json?.success) {
-        if (res.status === 401 && withCsrf) csrfStore.clear();
-        throw new ApiClientError(toSpanishMessage(res.status, json?.error), res.status, json?.error);
+        throw new ApiClientError(toSpanishMessage(res.status, json?.error, statusMessages), res.status, json?.error);
     }
-
-    // Session-creating responses carry the CSRF token; keep it in memory only.
-    const maybeToken = (json.data as { csrfToken?: unknown } | undefined)?.csrfToken;
-    if (withCsrf && typeof maybeToken === "string") csrfStore.set(maybeToken);
-
     return json.data as T;
 }
 

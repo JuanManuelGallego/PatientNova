@@ -1,18 +1,10 @@
 import { useState, useCallback, useRef } from "react";
-import { ApiErrorResponse, ApiResponse } from "@/src/types/API";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { toSpanishMessage } from "./errorMessages";
+import { ApiClientError, parseEnvelope } from "./apiClients";
 
-export class ApiMutationError extends Error {
-    constructor(
-        message: string,
-        public readonly status: number,
-        public readonly details?: unknown,
-    ) {
-        super(message);
-        this.name = "ApiMutationError";
-    }
-}
+/** Same error as the patient-facing clients: Spanish `message`, raw server text in `details`. */
+export { ApiClientError as ApiMutationError };
 
 /**
  * Generic hook for data mutations (POST, PATCH, PUT, DELETE).
@@ -21,7 +13,7 @@ export class ApiMutationError extends Error {
  */
 export function useApiMutation<TOutput = void>(
     method: "POST" | "PATCH" | "PUT" | "DELETE",
-    errorMessage = "Operation failed"
+    errorMessage = "No pudimos completar la acción. Inténtalo de nuevo."
 ) {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
@@ -38,26 +30,12 @@ export function useApiMutation<TOutput = void>(
                 headers: body != null ? { "Content-Type": "application/json" } : undefined,
                 body: body != null ? JSON.stringify(body) : undefined,
             });
-            if (!res.ok) {
-                let details: unknown;
-                try {
-                    const json: ApiErrorResponse = await res.json();
-                    details = json.error;
-                } catch {
-                    details = undefined;
-                }
-                throw new ApiMutationError(
-                    // Curated Spanish text for the UI; the raw server message stays in `details`.
-                    toSpanishMessage(res.status, details),
-                    res.status,
-                    details,
-                );
-            }
-            const json: ApiResponse<TOutput> = await res.json();
-            if (!json.success) throw new Error("API returned an error");
-            return json.data;
+            return await parseEnvelope<TOutput>(res);
         } catch (err) {
-            const msg = err instanceof Error ? err.message : errorMessage;
+            // Only ApiClientError carries curated Spanish; a fetch TypeError / abort is a connection failure.
+            const msg = err instanceof ApiClientError ? err.message
+                : err instanceof Error ? toSpanishMessage(0)
+                : errorMessage;
             setError(msg);
             throw err;
         } finally {

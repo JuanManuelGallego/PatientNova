@@ -18,15 +18,8 @@ describe('getTodayBoundsInTz', () => {
     expect(end.getTime() - start.getTime()).toBe(86_400_000 - 1);
   });
 
-  it('falls back to UTC for an invalid timezone', () => {
-    const { start: utcStart, end: utcEnd } = getTodayBoundsInTz('UTC');
-    const { start: badStart, end: badEnd } = getTodayBoundsInTz('Not/ATimezone');
-
-    // Both should produce the same 24-hour-wide range
-    expect(badEnd.getTime() - badStart.getTime()).toBe(86_400_000 - 1);
-    // And it should match UTC
-    expect(badStart.getTime()).toBe(utcStart.getTime());
-    expect(badEnd.getTime()).toBe(utcEnd.getTime());
+  it('throws for an invalid timezone instead of silently using UTC', () => {
+    expect(() => getTodayBoundsInTz('Not/ATimezone')).toThrow(RangeError);
   });
 
   it('UTC start time is midnight local time in the given timezone', () => {
@@ -44,6 +37,8 @@ describe('getTodayBoundsInTz', () => {
 import { DateTime } from 'luxon';
 import {
   getCurrentMonthBoundsInTz,
+  getDayBoundsInTz,
+  getLocalDateString,
   getLocalTimeParts,
   getTomorrowUTCRange,
   isValidIANATimezone,
@@ -103,6 +98,11 @@ describe('localToUtc / resolveLocalTime across DST', () => {
 
   it('throws on an invalid time zone', () => {
     expect(() => localToUtc(2026, 1, 1, 0, 0, 0, 'Not/AZone')).toThrow(RangeError);
+    // Every helper agrees on invalid input: no silent UTC fallback anywhere.
+    expect(() => getLocalTimeParts('Not/AZone')).toThrow(RangeError);
+    expect(() => getTomorrowUTCRange('Not/AZone')).toThrow(RangeError);
+    expect(() => getCurrentMonthBoundsInTz('Not/AZone')).toThrow(RangeError);
+    expect(() => getLocalDateString('Not/AZone')).toThrow(RangeError);
     expect(isValidIANATimezone('America/Bogota')).toBe(true);
     expect(isValidIANATimezone('Not/AZone')).toBe(false);
   });
@@ -130,7 +130,24 @@ describe('day / month bounds across DST', () => {
   it('tomorrow range is computed in local time, also across the DST jump', () => {
     const t = getTomorrowUTCRange(NY, new Date('2026-03-07T18:00:00Z')); // Sat -> tomorrow is the 23h Sunday
     expect(iso(t.start)).toBe('2026-03-08T05:00:00.000Z');
-    expect(iso(t.end)).toBe('2026-03-09T03:59:59.000Z');
+    expect(iso(t.end)).toBe('2026-03-09T03:59:59.999Z');
+  });
+
+  it('day bounds include the last millisecond of the local day', () => {
+    const d = getDayBoundsInTz('America/Bogota', new Date('2026-10-07T04:59:59.500Z')); // 23:59:59.5 local
+    expect(iso(d.end)).toBe('2026-10-07T04:59:59.999Z');
+  });
+
+  it('getLocalDateString does calendar math in the local zone', () => {
+    const now = new Date('2026-10-07T03:00:00Z'); // still Oct 6 in Bogota
+    expect(getLocalDateString('America/Bogota', now)).toBe('2026-10-06');
+    expect(getLocalDateString('America/Bogota', now, 1)).toBe('2026-10-07');
+  });
+
+  it('resolveLocalTime handles fractional historical (LMT) offsets', () => {
+    const r = resolveLocalTime(1880, 1, 1, 12, 0, 0, 'Europe/Amsterdam');
+    expect(r.exists).toBe(true);
+    expect(DateTime.fromJSDate(r.utc, { zone: 'Europe/Amsterdam' }).toFormat('yyyy-MM-dd HH:mm')).toBe('1880-01-01 12:00');
   });
 
   it('getLocalTimeParts reports hour 0 at midnight (never 24)', () => {

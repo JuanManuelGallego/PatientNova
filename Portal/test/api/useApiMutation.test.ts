@@ -12,18 +12,11 @@ const mockFetch = vi.mocked(fetchWithAuth);
 afterEach(() => vi.resetAllMocks());
 
 function makeOkResponse<T>(data: T) {
-    return {
-        ok: true,
-        json: async () => ({ success: true, data }),
-    } as unknown as Response;
+    return new Response(JSON.stringify({ success: true, data }), { status: 200 });
 }
 
 function makeErrorResponse(status = 500, errorMsg = "Server Error") {
-    return {
-        ok: false,
-        status,
-        json: async () => ({ success: false, error: errorMsg }),
-    } as unknown as Response;
+    return new Response(JSON.stringify({ success: false, error: errorMsg }), { status });
 }
 
 describe("useApiMutation", () => {
@@ -80,10 +73,7 @@ describe("useApiMutation", () => {
     });
 
     it("sets error when API success is false", async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ success: false, error: "Validation failed" }),
-        } as unknown as Response);
+        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false, error: "Validation failed" }), { status: 200 }));
 
         const { result } = renderHook(() => useApiMutation<{ id: number }>("PATCH"));
 
@@ -91,7 +81,33 @@ describe("useApiMutation", () => {
             await expect(result.current.mutate("/api/items/1")).rejects.toThrow();
         });
 
-        expect(result.current.error).toBeTruthy();
+        expect(result.current.error).toBe("No pudimos completar la acción. Inténtalo de nuevo.");
+    });
+
+    it("maps known server messages to Spanish and keeps the raw text in details", async () => {
+        mockFetch.mockResolvedValueOnce(makeErrorResponse(409, 'An appointment type named "Terapia" already exists'));
+
+        const { result } = renderHook(() => useApiMutation<{ id: number }>("POST"));
+
+        await act(async () => {
+            await expect(result.current.mutate("/api/items")).rejects.toMatchObject({
+                status: 409,
+                details: 'An appointment type named "Terapia" already exists',
+            });
+        });
+
+        expect(result.current.error).toBe("Ya existe un registro con ese nombre. Usa un nombre diferente.");
+    });
+
+    it("treats a 204 as success with no data", async () => {
+        mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+        const { result } = renderHook(() => useApiMutation<void>("DELETE"));
+
+        await act(async () => {
+            await expect(result.current.mutate("/api/items/1")).resolves.toBeUndefined();
+        });
+        expect(result.current.error).toBeNull();
     });
 
     it("sends request without body for DELETE", async () => {
@@ -148,8 +164,8 @@ describe("useApiMutation", () => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it("uses Error.message as error when exception is an Error instance", async () => {
-        mockFetch.mockRejectedValueOnce(new Error("Network error"));
+    it("shows the Spanish connection message for network failures, never the raw error text", async () => {
+        mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
         const { result } = renderHook(() => useApiMutation<{ id: number }>("POST", "Fallback message"));
 
@@ -157,7 +173,7 @@ describe("useApiMutation", () => {
             await expect(result.current.mutate("/api/items")).rejects.toThrow();
         });
 
-        expect(result.current.error).toBe("Network error");
+        expect(result.current.error).toBe("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
     });
 
     it("uses fallback message when exception is not an Error", async () => {

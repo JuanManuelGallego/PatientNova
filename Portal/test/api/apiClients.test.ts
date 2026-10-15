@@ -68,11 +68,25 @@ describe("portalApi (patient session)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("treats a 204 / empty success body as success with no data", async () => {
+  it("treats only an explicit 204 as success with no data", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     await expect(portalApi.delete("/appointments/1")).resolves.toBeUndefined();
+  });
+
+  it("rejects a 200 with an empty or non-envelope body instead of resolving undefined", async () => {
     fetchMock.mockResolvedValueOnce(new Response("", { status: 200 }));
-    await expect(portalApi.post("/bookings", {})).resolves.toBeUndefined();
+    await expect(portalApi.post("/bookings", {})).rejects.toBeInstanceOf(ApiClientError);
+    fetchMock.mockResolvedValueOnce(new Response("<html>proxy</html>", { status: 200 }));
+    await expect(portalApi.get("/session")).rejects.toMatchObject({ status: 200, message: expect.stringMatching(/No pudimos completar/) });
+  });
+
+  it("rejects when a 2xx body fails to arrive (e.g. timeout mid-download)", async () => {
+    const res = new Response("{}", { status: 200 });
+    vi.spyOn(res, "text").mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    fetchMock.mockResolvedValueOnce(res);
+    await expect(portalApi.post("/bookings", {})).rejects.toMatchObject({
+      message: "No pudimos conectar con el servidor. Revisa tu conexión a internet.",
+    });
   });
 
   it("maps a plain-text error body by status", async () => {
@@ -97,10 +111,19 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(423, "Account temporarily locked. Try again later.")).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(409, "Recipient is blocked")).not.toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(409, undefined)).toMatch(/conflicto/);
+    expect(toSpanishMessage(404, 'Blocked time with id "x" not found')).toBe("No encontramos lo que buscas.");
+    expect(toSpanishMessage(409, "Blocked time overlaps with an existing blocked slot (a – b)")).toBe("Ya existe un bloqueo en ese horario.");
+    expect(toSpanishMessage(409, 'Cannot update past appointment "1" with status SCHEDULED or CONFIRMED')).toBe("No se puede modificar una cita que ya pasó.");
+    expect(toSpanishMessage(409, 'An appointment location named "Sede" already exists')).toMatch(/Ya existe un registro con ese nombre/);
+    expect(toSpanishMessage(422, "A meeting URL is required for virtual appointments")).toMatch(/enlace de reunión/);
+    expect(toSpanishMessage(422, 'Patient with id "p1" does not exist')).toMatch(/paciente seleccionado no existe/);
     expect(toSpanishMessage(429)).toMatch(/Demasiadas solicitudes/);
     expect(toSpanishMessage(500, "PrismaClientKnownRequestError: secret details")).toBe(
       "Ocurrió un error en el servidor. Inténtalo de nuevo más tarde.",
     );
+    expect(toSpanishMessage(423, "Account has been locked")).toMatch(/cuenta está bloqueada/);
+    expect(toSpanishMessage(401, undefined, { 401: "Correo o contraseña incorrectos." })).toBe("Correo o contraseña incorrectos.");
+    expect(toSpanishMessage(401, "Account temporarily locked", { 401: "x" })).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(418)).toBe("No pudimos completar la acción. Inténtalo de nuevo.");
   });
 
@@ -115,5 +138,7 @@ describe("resolveApiHost", () => {
     expect(resolveApiHost(undefined, "development", true)).toBe("http://localhost:3001");
     expect(resolveApiHost(undefined, "production", false)).toBe("http://localhost:3001"); // build / SSR
     expect(() => resolveApiHost(undefined, "production", true)).toThrow(/NEXT_PUBLIC_API_URL/);
+    expect(() => resolveApiHost("  ", "production", true)).toThrow(/NEXT_PUBLIC_API_URL/);
+    expect(resolveApiHost(" https://api.patientnova.net ", "production", true)).toBe("https://api.patientnova.net");
   });
 });

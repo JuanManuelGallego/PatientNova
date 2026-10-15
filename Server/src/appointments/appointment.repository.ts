@@ -10,7 +10,7 @@ import { AppointmentNotFoundError } from './appointment.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
 import { config } from '../utils/config/config.js';
 import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from './appointment.types.js';
-import { getCurrentMonthBoundsInTz, getLocalTimeParts, getTodayBoundsInTz, localToUtc } from '../utils/time/time-utils.js';
+import { getCurrentMonthBoundsInTz, getDayBoundsInTz, getTodayBoundsInTz } from '../utils/time/time-utils.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
 import { softDelete, restore } from '../utils/prisma/softDelete.js';
@@ -64,10 +64,8 @@ export const appointmentRepository = {
 
     const startAtFilter: Prisma.DateTimeFilter | undefined = (() => {
       if (startAt) {
-        const parts = getLocalTimeParts(timezone, new Date(startAt));
-        const dayStart = localToUtc(parts.year, parts.month, parts.day, 0, 0, 0, timezone);
-        const dayEnd = localToUtc(parts.year, parts.month, parts.day, 23, 59, 59, timezone);
-        return { gte: dayStart, lte: dayEnd };
+        const { start, end } = getDayBoundsInTz(timezone, new Date(startAt));
+        return { gte: start, lte: end };
       }
       if (dateFrom || dateTo) {
         return {

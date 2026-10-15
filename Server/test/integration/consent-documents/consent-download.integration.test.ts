@@ -7,12 +7,18 @@ import { createTestUser } from '../helpers.js';
 
 const B64 = Buffer.from('%PDF-1.4 fake consent').toString('base64');
 let userId: string;
+let clientIp: string;
+let ipSeq = 0;
 
 beforeEach(async () => {
   userId = (await createTestUser()).id;
+  // The download limiter is in-memory and keyed by client IP (trust proxy = 1 hop), so each test
+  // gets its own IP: no test can drain another's budget, regardless of order or count.
+  clientIp = `203.0.113.${++ipSeq}`;
 });
 
-const download = (id: string, ext: string) => request(app).get(`/v1/consent-document/public/download/${id}.${ext}`);
+const download = (id: string, ext: string) =>
+  request(app).get(`/v1/consent-document/public/download/${id}.${ext}`).set('X-Forwarded-For', clientIp);
 
 describe('public consent download', () => {
   it('serves the document inline with nosniff and the stored content type', async () => {
@@ -43,13 +49,15 @@ describe('public consent download', () => {
     expect((await download('c' + 'x'.repeat(24), 'pdf')).status).toBe(404);
   });
 
-  it('has its own shared-store rate limit (20 per minute per client)', async () => {
+  it('has its own per-client rate limit (20 per minute per IP, in-memory per instance)', async () => {
     await consentDocumentService.create({ name: 'Consent.pdf', content: B64, mimeType: 'application/pdf' }, userId);
-    let limited = 0;
-    for (let i = 0; i < 24; i++) {
-      const res = await download(userId, 'pdf');
-      if (res.status === 429) limited++;
-    }
-    expect(limited).toBeGreaterThan(0);
+    const statuses: number[] = [];
+    for (let i = 0; i < 21; i++) statuses.push((await download(userId, 'pdf')).status);
+    expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(statuses[ 20 ]).toBe(429);
+
+    // Another client is unaffected.
+    clientIp = '198.51.100.7';
+    expect((await download(userId, 'pdf')).status).toBe(200);
   });
 });
