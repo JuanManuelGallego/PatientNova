@@ -60,8 +60,45 @@ const REDACT_PATHS = [
   ...PII_KEYS.map((k) => `*.${k}`),
 ];
 
+/** Receives every error/fatal log line (the error, if one was logged, and the message). */
+export type ErrorReporter = (report: { err?: unknown; msg?: string; requestId?: string }) => void;
+
+let errorReporter: ErrorReporter | undefined;
+
+/** Error tracking hooks in here, so HTTP, worker, cron and startup failures are all reported. */
+export function setErrorReporter(reporter: ErrorReporter | undefined): void {
+  errorReporter = reporter;
+}
+
+const PINO_ERROR_LEVEL = 50;
+
+function reportLogged(args: unknown[]): void {
+  const [first, second] = args;
+  const obj = first !== null && typeof first === 'object' && !(first instanceof Error)
+    ? first as Record<string, unknown>
+    : undefined;
+  const err = first instanceof Error ? first : obj?.err ?? obj?.error;
+  const msg = typeof first === 'string' ? first : typeof second === 'string' ? second : undefined;
+  const requestId = typeof obj?.requestId === 'string' ? obj.requestId : getRequestId();
+  try {
+    errorReporter?.({
+      ...(err !== undefined && { err }),
+      ...(msg !== undefined && { msg }),
+      ...(requestId !== undefined && { requestId }),
+    });
+  } catch {
+    // Error tracking must never break logging.
+  }
+}
+
 export function buildLogger(destination?: DestinationStream) {
   const options = {
+    hooks: {
+      logMethod(this: pino.Logger, args: Parameters<pino.LogFn>, method: pino.LogFn, level: number) {
+        if (level >= PINO_ERROR_LEVEL && errorReporter) reportLogged(args);
+        return method.apply(this, args);
+      },
+    },
     level: process.env.LOG_LEVEL ?? 'info',
     mixin: () => {
       const requestId = getRequestId();

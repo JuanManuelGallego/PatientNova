@@ -52,11 +52,15 @@ access, delete scratch copies after the rehearsal.
 
 ## Error tracking (Sentry, optional)
 
-- API: set `SENTRY_DSN` (and optionally `SENTRY_RELEASE`). Only 5xx/unexpected errors are reported.
-- Portal: set `NEXT_PUBLIC_SENTRY_DSN` at build time. The CSP `connect-src` is extended automatically.
+- API: set `SENTRY_DSN` (and optionally `SENTRY_RELEASE`). Every `logger.error`/`logger.fatal` line is
+  reported (HTTP 5xx, pg-boss workers, cron, startup), plus uncaught exceptions. Unhandled rejections
+  still crash the process (strict mode), as they do without a DSN.
+- Portal: set `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (e.g. `staging`,
+  `production`) at build time; without the latter every build reports as `production`. The CSP
+  `connect-src` is extended automatically.
 - Both sides disable every automatic data collector and scrub events (`scrub.ts`): no request bodies,
   cookies, headers, query strings, breadcrumbs or user details; emails/phone numbers in messages are
-  masked. Do not add integrations that re-enable request capture.
+  masked, and Prisma invocation errors are cut to the operation name (they render argument values). Do not add integrations that re-enable request capture.
 - Sentry is a third-party processor: list it in the privacy policy before enabling it in production.
 
 ## CSP rollout (Portal)

@@ -21,24 +21,17 @@ interface CspOptions {
     isDev: boolean;
 }
 
+function originOf(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    try {
+        return new URL(url).origin;
+    } catch {
+        return undefined;
+    }
+}
+
 export function buildCsp(options: CspOptions): string {
-    const apiOrigin = (() => {
-        try {
-            return options.apiUrl ? new URL(options.apiUrl).origin : undefined;
-        } catch {
-            return undefined;
-        }
-    })();
-
-    const sentryOrigin = (() => {
-        try {
-            return options.sentryDsn ? new URL(options.sentryDsn).origin : undefined;
-        } catch {
-            return undefined;
-        }
-    })();
-
-    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []), ...(sentryOrigin ? [ sentryOrigin ] : []) ];
+    const connect = [ "'self'", ...[ originOf(options.apiUrl), originOf(options.sentryDsn) ].filter((o): o is string => !!o) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
 
     const directives: Record<string, string[]> = {

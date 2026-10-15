@@ -1,11 +1,13 @@
 import * as Sentry from '@sentry/node';
 import { config } from '../config/config.js';
-import { logger } from '../api/logger.js';
-import { scrubEvent } from './scrub.js';
+import { logger, setErrorReporter, type ErrorReporter } from '../api/logger.js';
+import { scrubEvent, scrubText } from './scrub.js';
 
-let enabled = false;
-
-/** No-op unless SENTRY_DSN is set. Manual capture only: no tracing, no breadcrumbs, no default PII. */
+/**
+ * No-op unless SENTRY_DSN is set. No tracing, no breadcrumbs, no default PII. Every `logger.error`/
+ * `logger.fatal` line is reported (HTTP 5xx, pg-boss workers, cron, startup), so there are no
+ * per-call-site capture calls.
+ */
 export function initSentry(): boolean {
   if (!config.sentry.dsn) return false;
   Sentry.init({
@@ -25,20 +27,24 @@ export function initSentry(): boolean {
       graphQL: { document: false, variables: false },
       genAI: { inputs: false, outputs: false },
     },
+    // Sentry's default handler only warns, which would keep a broken process alive once a DSN is
+    // set. Strict mirrors Node's default (crash), so enabling error tracking never changes failure mode.
+    integrations: [Sentry.onUnhandledRejectionIntegration({ mode: 'strict' })],
     tracesSampleRate: 0,
     maxBreadcrumbs: 0,
     beforeSend: (event) => scrubEvent(event),
   });
-  enabled = true;
+  setErrorReporter(reportToSentry);
   logger.info('Sentry error reporting enabled');
   return true;
 }
 
-/** Reports an unexpected (5xx) error. Safe to call when Sentry is disabled. */
-export function captureServerError(err: unknown, context: { requestId?: string | undefined } = {}): void {
-  if (!enabled) return;
+const reportToSentry: ErrorReporter = ({ err, msg, requestId }) => {
   Sentry.withScope((scope) => {
-    if (context.requestId) scope.setTag('requestId', context.requestId);
-    Sentry.captureException(err);
+    if (requestId) scope.setTag('requestId', requestId);
+    // Tags bypass beforeSend, so the message is scrubbed here.
+    if (msg) scope.setTag('logMessage', scrubText(msg).slice(0, 200));
+    if (err !== undefined) Sentry.captureException(err);
+    else if (msg) Sentry.captureMessage(msg, 'error');
   });
-}
+};

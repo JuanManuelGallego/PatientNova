@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { prisma } from './prisma-client.js';
+import { maskEmail } from '../api/logger.js';
 import { config } from '../config/config.js';
 import { AdminRole, AdminStatus, Channel } from '../../../generated/prisma/client.ts';
 
@@ -24,16 +25,25 @@ const profile = {
   bankingKey: 'e2e-banking-key',
 } as const;
 
+/** The database name only: user, password and host must not be able to satisfy the guard. */
+function databaseName(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname.replace(/^\//, ''));
+  } catch {
+    return '';
+  }
+}
+
 async function seedE2e() {
-  if (!/(test|e2e)/i.test(config.databaseUrl)) {
-    throw new Error('Refusing to seed e2e data: DATABASE_URL must contain "test" or "e2e".');
+  if (!/(test|e2e)/i.test(databaseName(config.databaseUrl))) {
+    throw new Error('Refusing to seed e2e data: the DATABASE_URL database name must contain "test" or "e2e".');
   }
 
   const email = config.admin.email;
   const passwordHash = await bcrypt.hash(config.admin.password, config.auth.bcryptRounds);
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash, status: AdminStatus.ACTIVE, ...profile },
+    update: { passwordHash, status: AdminStatus.ACTIVE, failedLoginAttempts: 0, lockedUntil: null, ...profile },
     create: {
       email,
       passwordHash,
@@ -64,7 +74,7 @@ async function seedE2e() {
     create: { userId: user.id, name: 'Consentimiento E2E.pdf', content, mimeType: 'application/pdf', sizeBytes: content.length },
   });
 
-  console.log(`E2E seed ready for ${email}`);
+  console.log(`E2E seed ready for ${maskEmail(email)}`);
 }
 
 seedE2e()

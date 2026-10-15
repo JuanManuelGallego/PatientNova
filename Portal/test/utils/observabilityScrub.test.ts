@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { scrubBrowserEvent, scrubText } from "@/src/utils/observability/scrub";
 import { buildCsp } from "@/src/config/securityHeaders";
+import { scrubText as serverScrubText } from "../../../Server/src/utils/observability/scrub";
 
 describe("error-tracking scrubbing (browser)", () => {
   it("masks personal data and drops user, extra, breadcrumbs and request details", () => {
@@ -22,6 +23,17 @@ describe("error-tracking scrubbing (browser)", () => {
 
   it("scrubText leaves harmless text alone", () => {
     expect(scrubText("Network request failed (503)")).toBe("Network request failed (503)");
+  });
+
+  it("scrubText matches the server implementation", () => {
+    const corpus = [
+      "Error saving ana@example.com",
+      "call 300.111.2233 or (300) 111-2233 or +57 300 111 2233",
+      "at 2026-10-14T10:30:00.000Z, id 00000000-0000-4000-8000-0000000000a1",
+      "Invalid `prisma.patient.update()` invocation: data { firstName: \"Ana\" }",
+      "Network request failed (503)",
+    ];
+    for (const text of corpus) expect(scrubText(text), text).toBe(serverScrubText(text));
   });
 });
 

@@ -4,7 +4,6 @@ import { ApiError } from '../errors/errors.js';
 import { AppointmentOverlapError } from '../../appointments/appointment.errors.js';
 import { isAppointmentOverlapViolation } from '../errors/prisma-errors.js';
 import { logger } from './logger.js';
-import { captureServerError } from '../observability/sentry.js';
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -23,7 +22,6 @@ export function handleError(res: Response, err: unknown) {
   }
   // Never echo internal error text to clients, in any environment.
   logger.error({ err, requestId: res.locals?.requestId }, 'Unhandled route error');
-  captureServerError(err, { requestId: res.locals?.requestId });
   return apiError(res, 'Internal server error', 500);
 }
 

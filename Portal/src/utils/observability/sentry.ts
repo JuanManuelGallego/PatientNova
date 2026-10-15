@@ -11,7 +11,9 @@ export function initBrowserSentry(): boolean {
     if (!dsn || initialized || typeof window === "undefined") return initialized;
     Sentry.init({
         dsn,
-        environment: process.env.NODE_ENV,
+        // `next build` inlines NODE_ENV as "production" for every deployed build (staging included),
+        // so the deployment names itself.
+        environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NODE_ENV,
         // Sentry 11 collects request data by default; switch every collector off (defense in depth,
         // `beforeSend` also scrubs). Nothing about patients or providers may leave our infrastructure.
         dataCollection: {
