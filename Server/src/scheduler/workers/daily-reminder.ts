@@ -3,7 +3,7 @@ import { prisma } from "../../utils/prisma/prisma-client.js";
 import { APPT_SID_MAP, config } from "../../utils/config/config.ts";
 import { DEFAULT_LOCALE } from "../../utils/config/constants.ts";
 import { logger } from "../../utils/api/logger.ts";
-import { getLocalTimeParts, getTomorrowUTCRange } from "../../utils/time/time-utils.ts";
+import { getLocalDateString, getLocalTimeParts, getTomorrowUTCRange } from "../../utils/time/time-utils.ts";
 import { dispatchMessage, type DispatchOpts } from "../dispatch.js";
 import type { AppointmentWithDetails } from "../../appointments/appointment.types.ts";
 import { logAudit } from "../../audit-log/audit-log.utils.js";
@@ -77,18 +77,6 @@ function buildDispatchOpts(
   }
 }
 
-/** Returns the local calendar date string (YYYY-MM-DD) for a given timezone. */
-function getTodayLocalDate(timezone: string): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: timezone }).format(new Date());
-}
-
-/** Returns the local calendar date string (YYYY-MM-DD) for tomorrow in a given timezone. */
-function getTomorrowLocalDate(timezone: string): string {
-  const { year, month, day } = getLocalTimeParts(timezone);
-  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "UTC" }).format(tomorrow);
-}
-
 export async function dailyReminderWorker(): Promise<void> {
 
   const users = await prisma.user.findMany({
@@ -113,7 +101,7 @@ export async function dailyReminderWorker(): Promise<void> {
       if (hour !== config.scheduler.dailyReminderHour) continue;
       logger.info("Running daily reminder worker...");
 
-      const todayLocal = getTodayLocalDate(user.timezone);
+      const todayLocal = getLocalDateString(user.timezone);
       if (user.lastDailyReminderDate) {
         const lastSentDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "UTC" })
           .format(user.lastDailyReminderDate);
@@ -142,8 +130,8 @@ export async function dailyReminderWorker(): Promise<void> {
 
       const userName = user.displayName ?? `${user.firstName} ${user.lastName}`;
 
-      // Use calendar arithmetic for tomorrow's date string — safe across DST
-      const tomorrowLocalDate = getTomorrowLocalDate(user.timezone);
+      // Calendar arithmetic in the user's zone (luxon) — safe across DST
+      const tomorrowLocalDate = getLocalDateString(user.timezone, new Date(), 1);
       const tomorrowDate = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
         timeZone: user.timezone,
         weekday: "long",
