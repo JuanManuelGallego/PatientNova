@@ -125,11 +125,32 @@ async function authHeaders(page: Page): Promise<Record<string, string>> {
   return headers;
 }
 
+const SAFE_METHODS = new Set([ 'GET', 'HEAD', 'OPTIONS' ]);
+
 export function createApiClient(page: Page): ApiClient {
   const base = () => apiBase();
+  let csrfToken: string | undefined;
+
+  // page.request sends the context's `token` cookie, which the API prefers over the Bearer header,
+  // so unsafe requests need the session's X-CSRF-Token just like the Portal's fetchWithAuth.
+  async function csrfHeader(method: string): Promise<Record<string, string>> {
+    if (SAFE_METHODS.has(method.toUpperCase())) return {};
+    if (!csrfToken) {
+      const resp = await page.request.fetch(`${base()}/auth/csrf`, { headers: await authHeaders(page) });
+      if (!resp.ok()) {
+        throw new Error(`API GET /auth/csrf failed (${resp.status()}): ${await resp.text()}`);
+      }
+      csrfToken = ((await resp.json()) as ApiResponse<{ csrfToken: string }>).data.csrfToken;
+    }
+    return { 'X-CSRF-Token': csrfToken };
+  }
+
+  async function requestHeaders(method: string): Promise<Record<string, string>> {
+    return { ...(await authHeaders(page)), ...(await csrfHeader(method)) };
+  }
 
   async function request<T = { id: string }>(method: string, path: string, body?: unknown): Promise<ApiResponse<T>> {
-    const headers = await authHeaders(page);
+    const headers = await requestHeaders(method);
     const resp = await page.request.fetch(`${base()}${path}`, {
       method,
       headers,
@@ -251,7 +272,7 @@ export function createApiClient(page: Page): ApiClient {
 
     // ── Non-throwing request for expected negative responses ────────────────────
     async requestRaw(method: string, path: string, body?: unknown) {
-      const headers = await authHeaders(page);
+      const headers = await requestHeaders(method);
       const resp = await page.request.fetch(`${base()}${path}`, {
         method,
         headers,

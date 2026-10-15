@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode, type ErrorInfo } from "react";
+import { reportClientError } from "@/src/utils/observability/sentry";
 
 interface Props {
     children: ReactNode;
@@ -24,6 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     componentDidCatch(error: Error, info: ErrorInfo) {
         console.error("ErrorBoundary caught:", error, info.componentStack);
+        reportClientError(error);
     }
 
     render() {
