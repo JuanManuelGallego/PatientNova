@@ -65,6 +65,14 @@ export const config = {
     timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
+  sentry: {
+    dsn: process.env.SENTRY_DSN ?? '',
+    // Railway injects the commit SHA and environment name; explicit values win.
+    release: process.env.SENTRY_RELEASE
+      || (process.env.RAILWAY_GIT_COMMIT_SHA ? `patientnova-server@${process.env.RAILWAY_GIT_COMMIT_SHA}` : ''),
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_NAME || nodeEnv,
+  },
+
   publicRateLimit: {
     windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
     maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),

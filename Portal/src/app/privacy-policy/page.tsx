@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "13 de octubre de 2026";
+const lastUpdated = "18 de octubre de 2026";
 
 const sections = [
   {
@@ -60,10 +60,10 @@ const sections = [
     id: "sharing",
     title: "5. Encargados, transmisiones y transferencias",
     content: [
-      "Compartimos los datos necesarios con proveedores que actúan como encargados o subencargados para operar el Servicio: Twilio, para SMS, WhatsApp y estados de entrega; Brevo, para el envío de correos electrónicos (recordatorios, códigos de acceso y avisos) y sus eventos de entrega; Google, para funciones de Google Meet; Cloudflare, para la verificación anti-bots (Turnstile) en formularios públicos; y proveedores de alojamiento, base de datos, registro, seguridad y soporte que el operador configure. Sus ubicaciones, subencargados y condiciones pueden cambiar.",
+      "Compartimos los datos necesarios con proveedores que actúan como encargados o subencargados para operar el Servicio: Twilio, para SMS, WhatsApp y estados de entrega; Brevo, para el envío de correos electrónicos (recordatorios, códigos de acceso y avisos) y sus eventos de entrega; Google, para funciones de Google Meet; Cloudflare, para la verificación anti-bots (Turnstile) en formularios públicos; Sentry, para el registro de errores técnicos del servidor y del navegador (tipo de error, traza de código, versión y entorno), configurado para no enviar contenido de solicitudes, cookies, encabezados ni datos de usuario y para enmascarar correos electrónicos y teléfonos; y proveedores de alojamiento, base de datos, registro, seguridad y soporte que el operador configure. Sus ubicaciones, subencargados y condiciones pueden cambiar.",
       "Varios de estos proveedores, y el propio Proveedor, que se encuentra en Canadá, pueden tratar los datos fuera de Colombia, por ejemplo en Estados Unidos, Canadá o la Unión Europea. Estas transmisiones y transferencias internacionales se realizan conforme al artículo 26 de la Ley 1581 de 2012 y a las normas que lo reglamentan, mediante contratos u otros mecanismos que garanticen un nivel adecuado de protección.",
       "Podemos divulgar información cuando sea necesario para cumplir una obligación legal, responder a una orden válida de autoridad competente, proteger derechos y seguridad o investigar fraude. También podemos transferir información como parte de una reorganización, adquisición o venta, sujeto a las garantías y avisos que exija la ley.",
-      "No vendemos datos personales. Los datos enviados a Twilio, Brevo, Google, Cloudflare u otros proveedores quedan sujetos también a las políticas y condiciones de esos proveedores.",
+      "No vendemos datos personales. Los datos enviados a Twilio, Brevo, Google, Cloudflare, Sentry u otros proveedores quedan sujetos también a las políticas y condiciones de esos proveedores.",
     ],
   },
   {

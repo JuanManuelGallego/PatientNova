@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -145,7 +145,8 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   `email`/`to` keys are redacted outright). The logger redacts PII keys
   (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
   adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
-  primary control.
+  primary control. Error messages (`new Error(...)`) reach Sentry and must not interpolate names,
+  notes, emails or phone numbers: `scrubText` only masks well-formed emails and phone-like numbers.
 - Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
   no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
   mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.
@@ -181,3 +182,5 @@ Suite: `42` files, `496` tests, all against real Postgres, `tsc --noEmit` clean.
   gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
   fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
   nonexistent times. Never hand-roll offset arithmetic.
+- Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
+  and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.

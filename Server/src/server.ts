@@ -1,3 +1,4 @@
+import { flushSentry, initSentry } from "./utils/observability/sentry.js";
 import app from "./app.js";
 import cron from "node-cron";
 import { config } from "./utils/config/config.js";
@@ -10,6 +11,7 @@ const RECONCILIATION_CRON = '0 */12 * * *';
 let reconciliationTask: ReturnType<typeof cron.schedule> | undefined;
 
 async function start() {
+  initSentry();
   await prisma.$connect();
   logger.info('Database connected');
 
@@ -48,8 +50,9 @@ async function start() {
       process.exit(0);
     });
 
-    setTimeout(() => {
+    setTimeout(async () => {
       logger.error('Forced shutdown due to timeout');
+      await flushSentry();
       process.exit(1);
     }, 10000);
   }
@@ -58,7 +61,8 @@ async function start() {
   process.on('SIGINT', gracefulShutdown);
 }
 
-start().catch((err) => {
+start().catch(async (err) => {
   logger.error({ err }, 'Failed to start server');
+  await flushSentry();
   process.exit(1);
 });

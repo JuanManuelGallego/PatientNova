@@ -17,19 +17,21 @@ export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
 interface CspOptions {
     apiUrl?: string | undefined;
+    sentryDsn?: string | undefined;
     isDev: boolean;
 }
 
-export function buildCsp(options: CspOptions): string {
-    const apiOrigin = (() => {
-        try {
-            return options.apiUrl ? new URL(options.apiUrl).origin : undefined;
-        } catch {
-            return undefined;
-        }
-    })();
+function originOf(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    try {
+        return new URL(url).origin;
+    } catch {
+        return undefined;
+    }
+}
 
-    const connect = [ "'self'", ...(apiOrigin ? [ apiOrigin ] : []) ];
+export function buildCsp(options: CspOptions): string {
+    const connect = [ "'self'", ...[ originOf(options.apiUrl), originOf(options.sentryDsn) ].filter((o): o is string => !!o) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
 
     const directives: Record<string, string[]> = {

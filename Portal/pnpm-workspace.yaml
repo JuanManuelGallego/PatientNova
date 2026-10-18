@@ -2,4 +2,5 @@ packages:
   - '.'
 
 allowBuilds:
+  '@sentry/cli': false
   unrs-resolver: true
