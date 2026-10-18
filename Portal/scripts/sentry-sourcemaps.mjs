@@ -1,12 +1,14 @@
-// Runs after `next build`: injects Debug IDs into the client chunks, uploads their source maps to
-// Sentry, then deletes every .map file so the maps are never served publicly.
+// Called from next.config.ts (`compiler.runAfterProductionCompile`), i.e. inside `next build` and
+// before Vercel collects the output: uploads the client source maps to Sentry, then deletes every
+// .map file so the maps are never served publicly.
+// Debug IDs come from Turbopack (`turbopack.debugIds`), so they are part of each chunk's content
+// hash; never rewrite chunks here (e.g. `sentry-cli sourcemaps inject`): the file name would stay the
+// same and the CDN would keep serving the previously cached, unmodified copy.
 // Without SENTRY_AUTH_TOKEN the upload is skipped locally but fails a Vercel production build, so a
 // missing secret cannot silently ship unreadable stack traces.
 import { execFileSync } from "node:child_process";
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-
-const STATIC_DIR = ".next/static";
 
 function sentryCli(...args) {
     execFileSync("sentry-cli", args, { stdio: "inherit", shell: process.platform === "win32" });
@@ -23,16 +25,17 @@ function deleteMaps(dir) {
     return count;
 }
 
-if (process.env.SENTRY_AUTH_TOKEN) {
-    process.env.SENTRY_ORG ||= "juanmanuelgallego";
-    process.env.SENTRY_PROJECT ||= "patientnova-portal";
-    sentryCli("sourcemaps", "inject", STATIC_DIR);
-    sentryCli("sourcemaps", "upload", STATIC_DIR);
-} else if (process.env.VERCEL_ENV === "production") {
-    console.error("SENTRY_AUTH_TOKEN is not set: refusing a production build without source maps in Sentry.");
-    process.exit(1);
-} else {
-    console.warn("SENTRY_AUTH_TOKEN not set: skipping Sentry source map upload.");
+/** @param {string} distDir Next's build output directory (`.next`). */
+export function uploadSourceMaps(distDir) {
+    const staticDir = join(distDir, "static");
+    if (process.env.SENTRY_AUTH_TOKEN) {
+        process.env.SENTRY_ORG ||= "juanmanuelgallego";
+        process.env.SENTRY_PROJECT ||= "patientnova-portal";
+        sentryCli("sourcemaps", "upload", staticDir);
+    } else if (process.env.VERCEL_ENV === "production") {
+        throw new Error("SENTRY_AUTH_TOKEN is not set: refusing a production build without source maps in Sentry.");
+    } else {
+        console.warn("SENTRY_AUTH_TOKEN not set: skipping Sentry source map upload.");
+    }
+    console.log(`Deleted ${deleteMaps(staticDir)} source map files from ${staticDir}.`);
 }
-
-console.log(`Deleted ${deleteMaps(STATIC_DIR)} source map files from ${STATIC_DIR}.`);

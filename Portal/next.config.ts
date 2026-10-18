@@ -1,9 +1,16 @@
 import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "./src/config/securityHeaders";
+import { uploadSourceMaps } from "./scripts/sentry-sourcemaps.mjs";
 
 const nextConfig: NextConfig = {
   // Uploaded to Sentry and then deleted by scripts/sentry-sourcemaps.mjs (never served).
   productionBrowserSourceMaps: true,
+  // Compile-time debug IDs (read by the Sentry SDK from `globalThis._debugIds`) match events to the
+  // uploaded maps and change the chunk hashes, unlike rewriting chunks after the build.
+  turbopack: { debugIds: true },
+  compiler: {
+    runAfterProductionCompile: async ({ distDir }) => uploadSourceMaps(distDir),
+  },
   images: {
     remotePatterns: [
       {
