@@ -12,7 +12,7 @@ export function initSentry(): boolean {
   if (!config.sentry.dsn) return false;
   Sentry.init({
     dsn: config.sentry.dsn,
-    environment: config.env,
+    environment: config.sentry.environment,
     ...(config.sentry.release && { release: config.sentry.release }),
     // Sentry 11 collects request data by default; switch every collector off (defense in depth,
     // `beforeSend` also scrubs). Nothing about patients or providers may leave our infrastructure.
@@ -37,6 +37,12 @@ export function initSentry(): boolean {
   setErrorReporter(reportToSentry);
   logger.info('Sentry error reporting enabled');
   return true;
+}
+
+/** Delivers queued events before an explicit `process.exit`, which would otherwise drop them. */
+export async function flushSentry(timeoutMs = 2000): Promise<void> {
+  if (!config.sentry.dsn) return;
+  await Sentry.flush(timeoutMs);
 }
 
 const reportToSentry: ErrorReporter = ({ err, msg, requestId }) => {

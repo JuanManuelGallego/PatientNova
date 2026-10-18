@@ -12,8 +12,14 @@ export function initBrowserSentry(): boolean {
     Sentry.init({
         dsn,
         // `next build` inlines NODE_ENV as "production" for every deployed build (staging included),
-        // so the deployment names itself.
-        environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NODE_ENV,
+        // so prefer an explicit name, then Vercel's (production/preview).
+        environment:
+            process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ||
+            process.env.NEXT_PUBLIC_VERCEL_ENV ||
+            process.env.NODE_ENV,
+        ...(process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && {
+            release: `patientnova-portal@${process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA}`,
+        }),
         // Sentry 11 collects request data by default; switch every collector off (defense in depth,
         // `beforeSend` also scrubs). Nothing about patients or providers may leave our infrastructure.
         dataCollection: {

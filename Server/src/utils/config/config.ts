@@ -67,7 +67,10 @@ export const config = {
 
   sentry: {
     dsn: process.env.SENTRY_DSN ?? '',
-    release: process.env.SENTRY_RELEASE ?? '',
+    // Railway injects the commit SHA and environment name; explicit values win.
+    release: process.env.SENTRY_RELEASE
+      || (process.env.RAILWAY_GIT_COMMIT_SHA ? `patientnova-server@${process.env.RAILWAY_GIT_COMMIT_SHA}` : ''),
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_NAME || nodeEnv,
   },
 
   publicRateLimit: {

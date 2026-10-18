@@ -93,7 +93,8 @@ matching (3.3) is released, because matching is implemented on the hash.
       (the controller is currently an individual in Canada; counsel to advise).
 - [ ] Decide whether the **RNBD** registration (Registro Nacional de Bases de Datos) applies and file it.
 - [ ] Data processing / transmission contracts with each processor (Twilio, Brevo, Google, hosting,
-      Sentry if enabled) and a list of them in the policy (done in text; contracts pending).
+      Sentry, named in the policy on 2026-10-18) and a list of them in the policy (done in text; contracts
+      pending; for Sentry, review and accept its DPA in the organization's legal settings).
 - [ ] International transfer basis per processor (adequacy list, authorization, or contract).
 - [ ] The `privacidad@` mailbox is monitored; internal runbook for the 10/15 business-day deadlines.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.

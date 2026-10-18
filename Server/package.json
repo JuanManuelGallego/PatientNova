@@ -7,8 +7,8 @@
   "scripts": {
     "build": "prisma generate && tsup",
     "typecheck": "tsc --noEmit",
-    "start": "prisma migrate deploy && pnpm run db:seed-admin && node dist/server.js",
-    "start:app": "node dist/server.js",
+    "start": "prisma migrate deploy && pnpm run db:seed-admin && node --enable-source-maps dist/server.js",
+    "start:app": "node --enable-source-maps dist/server.js",
     "migrate:deploy": "prisma migrate deploy",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint . --ext .ts",

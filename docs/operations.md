@@ -52,12 +52,21 @@ access, delete scratch copies after the rehearsal.
 
 ## Error tracking (Sentry, optional)
 
-- API: set `SENTRY_DSN` (and optionally `SENTRY_RELEASE`). Every `logger.error`/`logger.fatal` line is
-  reported (HTTP 5xx, pg-boss workers, cron, startup), plus uncaught exceptions. Unhandled rejections
-  still crash the process (strict mode), as they do without a DSN.
-- Portal: set `NEXT_PUBLIC_SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (e.g. `staging`,
-  `production`) at build time; without the latter every build reports as `production`. The CSP
-  `connect-src` is extended automatically.
+- Sentry org `juanmanuelgallego`, projects `patientnova-server` and `patientnova-portal`.
+- API (Railway): set `SENTRY_DSN`. Every `logger.error`/`logger.fatal` line is
+  reported (HTTP 5xx, pg-boss workers, cron, startup), plus uncaught exceptions; startup failures are
+  flushed before `process.exit`. Unhandled rejections still crash the process (strict mode), as they
+  do without a DSN. Release defaults to `patientnova-server@$RAILWAY_GIT_COMMIT_SHA` and environment to
+  `$RAILWAY_ENVIRONMENT_NAME` (override with `SENTRY_RELEASE`/`SENTRY_ENVIRONMENT`). Stack traces are
+  readable without an upload: `start` runs `node --enable-source-maps` against tsup's maps.
+- Portal (Vercel): set `NEXT_PUBLIC_SENTRY_DSN` at build time. Environment defaults to
+  `NEXT_PUBLIC_VERCEL_ENV` (`production`/`preview`; override with `NEXT_PUBLIC_SENTRY_ENVIRONMENT`) and
+  release to `patientnova-portal@$NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` (needs Vercel's "Automatically expose
+  System Environment Variables", on by default). The CSP `connect-src` is extended automatically.
+- Portal source maps: `pnpm build` runs `scripts/sentry-sourcemaps.mjs`, which injects Debug IDs,
+  uploads `.next/static` maps with `SENTRY_AUTH_TOKEN` (an organization auth token, set in Vercel), and
+  then deletes every `.map` so none are served. A Vercel production build without the token fails;
+  elsewhere the upload is skipped with a warning.
 - Both sides disable every automatic data collector and scrub events (`scrub.ts`): no request bodies,
   cookies, headers, query strings, breadcrumbs or user details; emails/phone numbers in messages are
   masked, and Prisma invocation errors are cut to the operation name (they render argument values). Do not add integrations that re-enable request capture.

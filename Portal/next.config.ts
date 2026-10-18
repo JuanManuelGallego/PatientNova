@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "./src/config/securityHeaders";
 
 const nextConfig: NextConfig = {
+  // Uploaded to Sentry and then deleted by scripts/sentry-sourcemaps.mjs (never served).
+  productionBrowserSourceMaps: true,
   images: {
     remotePatterns: [
       {
