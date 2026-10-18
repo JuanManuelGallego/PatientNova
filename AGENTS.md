@@ -145,7 +145,8 @@ Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
   `email`/`to` keys are redacted outright). The logger redacts PII keys
   (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
   adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
-  primary control.
+  primary control. Error messages (`new Error(...)`) reach Sentry and must not interpolate names,
+  notes, emails or phone numbers: `scrubText` only masks well-formed emails and phone-like numbers.
 - Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
   no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
   mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.

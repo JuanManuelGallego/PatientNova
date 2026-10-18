@@ -5,8 +5,10 @@ const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const PHONE_CANDIDATE_RE = /(?<![\w-])\+?\(?\d[\d\s().-]{5,}\d(?![\w-])/g;
 const ISO_DATE_PREFIX_RE = /^\d{4}-\d{2}-\d{2}(?!\d)/;
 // Prisma errors render the failing call, including its argument values (names, notes, ids), after
-// "Invalid `prisma.x.y()` invocation". Only the operation itself is kept.
-const PRISMA_INVOCATION_RE = /Invalid `prisma\.[\w.]+\(\)` invocation/;
+// "Invalid `<call>()` invocation" ("It occurred in the `<call>()` invocation" for panics). Outside
+// production Prisma reads <call> from the source line (`tx.patient.create`), so any receiver must
+// match. Only the operation itself is kept.
+const PRISMA_INVOCATION_RE = /(?:Invalid|It occurred in the) `[\w$.]+\(\)` invocation/;
 
 function maskNumbers(text: string): string {
   return text.replace(PHONE_CANDIDATE_RE, (match) => {
@@ -16,6 +18,10 @@ function maskNumbers(text: string): string {
   });
 }
 
+/**
+ * Masks emails, phone-like numbers and Prisma call arguments. Names and free text (clinical notes)
+ * cannot be recognized, so error messages must never interpolate them in the first place.
+ */
 export function scrubText(text: string): string {
   const prisma = PRISMA_INVOCATION_RE.exec(text);
   if (prisma) return `${prisma[0]} [details removed]`;
@@ -23,7 +29,7 @@ export function scrubText(text: string): string {
 }
 
 function stripQuery(url: string): string {
-  const i = url.indexOf('?');
+  const i = url.search(/[?#]/);
   return i === -1 ? url : url.slice(0, i);
 }
 

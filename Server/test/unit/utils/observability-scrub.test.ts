@@ -30,6 +30,16 @@ describe('error-tracking scrubbing (server)', () => {
     expect(scrubText(message)).toBe('Invalid `prisma.patient.create()` invocation [details removed]');
   });
 
+  it('drops Prisma arguments whatever the receiver is named (source-derived call names outside production)', () => {
+    const args = ' in\n/app/dist/server.js:12:3\n\n→ 12 data: { firstName: "Ana", notes: "ansiedad" }';
+    expect(scrubText(`Invalid \`tx.patient.create()\` invocation${args}`))
+      .toBe('Invalid `tx.patient.create()` invocation [details removed]');
+    expect(scrubText(`Invalid \`this.db.appointment.update()\` invocation${args}`))
+      .toBe('Invalid `this.db.appointment.update()` invocation [details removed]');
+    expect(scrubText(`Oops, an unknown error occurred!\nIt occurred in the \`tx.patient.update()\` invocation${args}`))
+      .toBe('It occurred in the `tx.patient.update()` invocation [details removed]');
+  });
+
   it('removes request bodies, cookies, headers and query strings, and reduces the user to an id', () => {
     const event = {
       message: 'Boom for ana@example.com',
@@ -54,6 +64,11 @@ describe('error-tracking scrubbing (server)', () => {
     for (const leaked of [ 'ana@example.com', 'dr@example.com', '3001112233', 'secret', 'Bearer', '1.2.3.4', 'Ana' ]) {
       expect(json, leaked).not.toContain(leaked);
     }
+  });
+
+  it('drops the URL fragment as well as the query string', () => {
+    expect(scrubEvent({ request: { url: 'https://api.patientnova.net/v1/x#ana' } }).request)
+      .toEqual({ url: 'https://api.patientnova.net/v1/x' });
   });
 
   it('handles minimal events', () => {

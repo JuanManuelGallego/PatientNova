@@ -31,9 +31,17 @@ describe("error-tracking scrubbing (browser)", () => {
       "call 300.111.2233 or (300) 111-2233 or +57 300 111 2233",
       "at 2026-10-14T10:30:00.000Z, id 00000000-0000-4000-8000-0000000000a1",
       "Invalid `prisma.patient.update()` invocation: data { firstName: \"Ana\" }",
+      "Invalid `tx.patient.create()` invocation in\n/app/x.js:1:1\n data { firstName: \"Ana\" }",
+      "It occurred in the `tx.patient.update()` invocation: data { notes: \"x\" }",
       "Network request failed (503)",
     ];
     for (const text of corpus) expect(scrubText(text), text).toBe(serverScrubText(text));
+    expect(scrubText(corpus[4]!)).toBe("Invalid `tx.patient.create()` invocation [details removed]");
+  });
+
+  it("drops the URL fragment as well as the query string", () => {
+    const out = scrubBrowserEvent({ request: { url: "https://patientnova.net/patients#Ana" } });
+    expect(out.request).toEqual({ url: "https://patientnova.net/patients" });
   });
 });
 
