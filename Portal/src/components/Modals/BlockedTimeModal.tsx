@@ -14,37 +14,23 @@ import {
 } from "@/src/constants/ui";
 import { RequiredField } from "../Info/Required";
 import { DateTimePicker } from "../DateTimePicker";
+import { localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { useDeleteBlockedTime } from "@/src/api/blocked-time/useDeleteBlockedTime";
 
-function toLocalISOString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}T${h}:${min}`;
+const HOUR_MS = 60 * 60 * 1000;
+
+function shiftHours(iso: string, hours: number): string {
+  return new Date(new Date(iso).getTime() + hours * HOUR_MS).toISOString();
 }
 
-function getDefaultStartTime(prefillDate?: string | null): string {
+// Defaults are wall-clock times in the provider's timezone: a prefilled calendar day starts at
+// `prefillHour`, otherwise the block starts `hoursFromNow` top-of-hours from now.
+function getDefaultTime(prefillDate: string | null | undefined, prefillHour: number, hoursFromNow: number): string {
   if (prefillDate) {
-    const d = new Date(`${prefillDate}T09:00:00`);
-    return toLocalISOString(d);
+    return localDateTimeToUtc(prefillDate, `${String(prefillHour).padStart(2, "0")}:00:00`);
   }
-  const now = new Date();
-  now.setMinutes(0, 0, 0);
-  now.setHours(now.getHours() + 1);
-  return toLocalISOString(now);
-}
-
-function getDefaultEndTime(prefillDate?: string | null): string {
-  if (prefillDate) {
-    const d = new Date(`${prefillDate}T10:00:00`);
-    return toLocalISOString(d);
-  }
-  const now = new Date();
-  now.setMinutes(0, 0, 0);
-  now.setHours(now.getHours() + 2);
-  return toLocalISOString(now);
+  const { dateStr, hour } = zonedDateTimeParts(new Date());
+  return shiftHours(localDateTimeToUtc(dateStr, `${String(hour).padStart(2, "0")}:00:00`), hoursFromNow);
 }
 
 export function BlockedTimeModal({
@@ -71,12 +57,8 @@ export function BlockedTimeModal({
 
   const [ form, setForm ] = useState<BlockedTimeForm>({
     description: blockedTime?.description || "",
-    startTimeUtc: blockedTime
-      ? toLocalISOString(new Date(blockedTime.startTimeUtc))
-      : getDefaultStartTime(prefillDate),
-    endTimeUtc: blockedTime
-      ? toLocalISOString(new Date(blockedTime.endTimeUtc))
-      : getDefaultEndTime(prefillDate),
+    startTimeUtc: blockedTime?.startTimeUtc ?? getDefaultTime(prefillDate, 9, 1),
+    endTimeUtc: blockedTime?.endTimeUtc ?? getDefaultTime(prefillDate, 10, 2),
   });
 
   useEffect(() => {
@@ -195,11 +177,8 @@ export function BlockedTimeModal({
               testId="blocked-time-start-input"
               onChange={(v) =>
                 setForm((f) => {
-                  const newStart = new Date(v);
-                  const currentEnd = new Date(f.endTimeUtc);
-                  if (newStart >= currentEnd) {
-                    newStart.setHours(newStart.getHours() + 1);
-                    return { ...f, startTimeUtc: v, endTimeUtc: toLocalISOString(newStart) };
+                  if (new Date(v) >= new Date(f.endTimeUtc)) {
+                    return { ...f, startTimeUtc: v, endTimeUtc: shiftHours(v, 1) };
                   }
                   return { ...f, startTimeUtc: v };
                 })
@@ -215,11 +194,8 @@ export function BlockedTimeModal({
               testId="blocked-time-end-input"
               onChange={(v) =>
                 setForm((f) => {
-                  const newEnd = new Date(v);
-                  const currentStart = new Date(f.startTimeUtc);
-                  if (newEnd <= currentStart) {
-                    newEnd.setHours(newEnd.getHours() - 1);
-                    return { ...f, endTimeUtc: v, startTimeUtc: toLocalISOString(newEnd) };
+                  if (new Date(v) <= new Date(f.startTimeUtc)) {
+                    return { ...f, endTimeUtc: v, startTimeUtc: shiftHours(v, -1) };
                   }
                   return { ...f, endTimeUtc: v };
                 })

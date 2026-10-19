@@ -2,6 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 import { Env } from './utils/env';
 
 const authState = 'e2e/.auth/user.json';
+
+// The seeded provider's timezone (Server `DEFAULT_TIMEZONE`). The browser and the test runner both use
+// it, so wall-clock times picked in the UI, computed in specs and rendered by the calendar agree.
+// Set before workers spawn so they inherit it.
+const E2E_TIMEZONE = 'America/Bogota';
+process.env.TZ = E2E_TIMEZONE;
 const publicSpecs = /tests\/public\/.*\.spec\.ts/;
 const mobileSpecs = /tests\/mobile\/.*\.spec\.ts/;
 
@@ -26,6 +32,7 @@ export default defineConfig({
     actionTimeout: 15 * 1000,
     navigationTimeout: 15 * 1000,
     locale: 'en-US',
+    timezoneId: E2E_TIMEZONE,
     // Only needed when testing a Vercel deployment that has protection enabled.
     ...(Env.vercelAutomationBypassSecret && {
       extraHTTPHeaders: {

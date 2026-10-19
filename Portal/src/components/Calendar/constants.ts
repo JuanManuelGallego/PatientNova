@@ -1,4 +1,4 @@
-import { addDays, todayFormattedString, localDateTimeToUtc, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { addDays, todayFormattedString, localDateTimeToUtc, zonedDateTimeParts, getDisplayTimezone, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
 import { BlockedTime } from "@/src/types/BlockedTime";
 
 export { DAY_NAMES_ES };
@@ -12,7 +12,22 @@ export const MIN_CHIP_PX = 20;
 export const DEFAULT_FIRST_HOUR = 7;
 export const DEFAULT_LAST_HOUR = 20;
 
-export const TODAY_STR = todayFormattedString();
+/** Today's date (YYYY-MM-DD) in the provider's timezone. */
+export function todayStr(timezone?: string): string {
+  return todayFormattedString(timezone);
+}
+
+/** Today in the provider's timezone, as a local-midnight Date for calendar navigation. */
+export function todayDate(timezone?: string): Date {
+  const [ y, m, d ] = todayStr(timezone).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Minutes since midnight of an instant, in the provider's timezone. */
+function minuteOfDay(iso: string, timezone?: string): number {
+  const { hour, minute } = zonedDateTimeParts(iso, timezone);
+  return hour * 60 + minute;
+}
 
 export function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -29,8 +44,8 @@ export function toDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function apptHour(a: import("@/src/types/Appointment").Appointment): number {
-  return new Date(a.startAt).getHours();
+export function apptHour(a: import("@/src/types/Appointment").Appointment, timezone?: string): number {
+  return zonedDateTimeParts(a.startAt, timezone).hour;
 }
 
 export function toStartOfDayISO(d: Date, timezone?: string): string {
@@ -43,7 +58,7 @@ export function toEndOfDayISO(d: Date, timezone?: string): string {
 
 export function toUtcRangeFromLocalDay(
   dateStr: string,
-  timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  timezone = getDisplayTimezone(),
 ): {
   dateFrom: string;
   dateTo: string;
@@ -63,6 +78,7 @@ export interface HourRange {
 export function computeHourRange(
   appointments: import("@/src/types/Appointment").Appointment[],
   blockedTimes: BlockedTime[] = [],
+  timezone?: string,
 ): HourRange {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
@@ -72,10 +88,10 @@ export function computeHourRange(
     ...blockedTimes.map((bt) => [bt.startTimeUtc, bt.endTimeUtc]),
   ];
   for (const [start, end] of ranges) {
-    const s = new Date(start);
-    const e = new Date(end);
-    const sh = s.getHours();
-    const eh = e.getHours() + (e.getMinutes() > 0 ? 1 : 0);
+    const s = zonedDateTimeParts(start, timezone);
+    const e = zonedDateTimeParts(end, timezone);
+    const sh = s.hour;
+    const eh = e.hour + (e.minute > 0 ? 1 : 0);
     if (sh < first) first = Math.max(0, sh - 1);
     if (eh > last) last = Math.min(23, eh + 1);
   }
@@ -98,6 +114,7 @@ export interface PositionedAppt {
 export function layoutDayAppointments(
   appts: import("@/src/types/Appointment").Appointment[],
   firstHour: number,
+  timezone?: string,
 ): PositionedAppt[] {
   if (appts.length === 0) return [];
 
@@ -109,10 +126,8 @@ export function layoutDayAppointments(
   let maxCol = 1;
 
   const columns = sorted.map((a) => {
-    const s = new Date(a.startAt);
-    const e = new Date(a.endAt);
-    const startMin = s.getHours() * 60 + s.getMinutes();
-    const endMin = e.getHours() * 60 + e.getMinutes();
+    const startMin = minuteOfDay(a.startAt, timezone);
+    const endMin = minuteOfDay(a.endAt, timezone);
 
     let col = 0;
 
@@ -144,12 +159,11 @@ export interface PositionedBlockedTime {
 export function layoutBlockedTimes(
   blockedTimes: BlockedTime[],
   firstHour: number,
+  timezone?: string,
 ): PositionedBlockedTime[] {
   return blockedTimes.map((bt) => {
-    const s = new Date(bt.startTimeUtc);
-    const e = new Date(bt.endTimeUtc);
-    const startMin = s.getHours() * 60 + s.getMinutes();
-    const endMin = e.getHours() * 60 + e.getMinutes();
+    const startMin = minuteOfDay(bt.startTimeUtc, timezone);
+    const endMin = minuteOfDay(bt.endTimeUtc, timezone);
     return {
       bt,
       top: ((startMin - firstHour * 60) / 60) * HOUR_HEIGHT,

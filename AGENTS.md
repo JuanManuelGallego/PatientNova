@@ -182,5 +182,11 @@ Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
   gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
   fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
   nonexistent times. Never hand-roll offset arithmetic.
+- Portal (provider side) shows every date/time in the provider's timezone (`user.timezone`), never the
+  browser's. `AuthContext` calls `setDisplayTimezone`, and the `src/utils/TimeUtils.ts` helpers (`fmt*`,
+  `todayFormattedString`, `zonedDateTimeParts`, `localDateTimeToUtc`, ...) default to it. Do not use `Date`
+  getters/setters (`getHours`, `setDate`, ...) or bare `toLocale*String` on instants. antd/dayjs pickers hold
+  the provider's wall-clock time via `toWallClock`/`fromWallClock` (see `DateTimePicker`). A date-only
+  `YYYY-MM-DD` is a calendar day, not UTC midnight. The patient portal will need its own rule.
 - Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
   and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.

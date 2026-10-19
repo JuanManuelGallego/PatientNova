@@ -63,6 +63,7 @@ function CalendarContent() {
       viewMode,
       appointments,
       blockedTimes,
+      timezone: user?.timezone,
     });
 
   const [ showCreate, setShowCreate ] = useState(false);

@@ -249,7 +249,7 @@ export const createEmptyMember = (): FamilyMember => ({
 
 export const createEmptyNote = (): EvolutionNote => ({
     id: crypto.randomUUID(),
-    date: today().slice(0, 10),
+    date: today(),
     text: "",
 });
 

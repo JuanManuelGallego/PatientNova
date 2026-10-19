@@ -1,5 +1,6 @@
 "use client";
 import { MedicalDocument } from "@/src/types/MedicalRecord";
+import { getDisplayTimezone } from "@/src/utils/TimeUtils";
 import { useRef, useState } from "react";
 import {
   FILE_ICONS,
@@ -24,6 +25,7 @@ function formatBytes(bytes: number) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-ES", {
+    timeZone: getDisplayTimezone(),
     day: "2-digit",
     month: "short",
     year: "numeric",

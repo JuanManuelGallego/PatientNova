@@ -2,7 +2,7 @@ import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeChip } from "./BlockedTimeChip";
-import { DAY_NAMES_ES, TODAY_STR } from "./constants";
+import { DAY_NAMES_ES, todayStr } from "./constants";
 import { MonthViewProps } from "./types";
 import { Appointment } from "@/src/types/Appointment";
 
@@ -18,6 +18,7 @@ export function MonthView({
   onViewAppt,
   onSelectBlockedTime,
 }: MonthViewProps) {
+  const today = todayStr();
   return (
     <div className="table-scroll" style={{ position: "relative" }}>
       <div className="cal-day-headers">
@@ -37,8 +38,8 @@ export function MonthView({
         <div className="cal-grid">
           {Array.from({ length: rows * 7 }).map((_, i) => {
             const date = cellDate(i);
-            const isToday = date === TODAY_STR;
-            const isPast = date !== null && date < TODAY_STR;
+            const isToday = date === today;
+            const isPast = date !== null && date < today;
             const appts = date ? (apptByDate[ date ] ?? []) : [];
             const blocked = date ? (blockedByDate[ date ] ?? []) : [];
             const holiday = date ? holidayMap[ date ] : undefined;

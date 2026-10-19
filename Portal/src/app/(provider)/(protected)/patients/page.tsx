@@ -29,7 +29,7 @@ import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
-import { todayString } from "@/src/utils/TimeUtils";
+import { getDisplayTimezone, todayString } from "@/src/utils/TimeUtils";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import {
   PAGE_SIZE,
@@ -246,6 +246,7 @@ function PatientsPageContent() {
               </td>
               <td className="td td--muted td--nowrap">
                 {new Date(p.createdAt).toLocaleDateString("es-ES", {
+                  timeZone: getDisplayTimezone(),
                   day: "numeric",
                   month: "short",
                   year: "numeric",

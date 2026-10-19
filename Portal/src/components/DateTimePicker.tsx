@@ -6,6 +6,7 @@ import esEs from "antd/locale/es_ES";
 dayjs.locale("es");
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
+import { browserTimezone, fmtTimezoneLabel, fromWallClock, getDisplayTimezone, toWallClock } from "@/src/utils/TimeUtils";
 
 // responsive: popup uses full viewport width on mobile to prevent clipping
 const mobilePopupStyle: React.CSSProperties = {
@@ -30,18 +31,22 @@ export function DateTimePicker({
   testId?: string;
 }) {
   const { isDark } = useTheme();
+  // antd/dayjs only know the browser zone: the picker holds the provider's wall-clock time as a
+  // browser-local dayjs, converted from/to UTC at the edges.
+  const now = () => dayjs(toWallClock(new Date()));
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
     const selectedIso = emitLocalDate
       ? selectedDate.format("YYYY-MM-DD")
-      : selectedDate.toISOString();
+      : fromWallClock(selectedDate.format("YYYY-MM-DDTHH:mm:ss"));
     onChange(selectedIso);
   };
+  const showZone = showTime && getDisplayTimezone() !== browserTimezone();
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
       <DatePicker
-        value={date ? dayjs(date) : null}
+        value={date ? dayjs(toWallClock(date)) : null}
         onChange={handleChange}
         showTime={
           showTime
@@ -56,21 +61,21 @@ export function DateTimePicker({
         placeholder={showTime ? "Selecciona fecha y hora" : "Selecciona fecha"}
         disabledDate={(current) =>
           isFuture
-            ? current && current.isBefore(dayjs(), "day")
-            : current && current.isAfter(dayjs(), "day")
+            ? current && current.isBefore(now(), "day")
+            : current && current.isAfter(now(), "day")
         }
         disabledTime={
           isFuture
             ? (current) => {
-                if (!current || !current.isSame(dayjs(), "day")) return {};
-                const now = dayjs();
+                const nowInZone = now();
+                if (!current || !current.isSame(nowInZone, "day")) return {};
                 return {
                   disabledHours: () =>
-                    Array.from({ length: now.hour() }, (_, i) => i),
+                    Array.from({ length: nowInZone.hour() }, (_, i) => i),
                   disabledMinutes: (hour: number) => {
-                    if (hour !== now.hour()) return [];
+                    if (hour !== nowInZone.hour()) return [];
                     const minutes = [];
-                    for (let i = 0; i < now.minute(); i += 5) minutes.push(i);
+                    for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
                     return minutes;
                   },
                   disabledSeconds: () => [],
@@ -78,6 +83,7 @@ export function DateTimePicker({
               }
             : undefined
         }
+        renderExtraFooter={showZone ? () => <TimezoneFooter /> : undefined}
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}
         getPopupContainer={
@@ -86,5 +92,14 @@ export function DateTimePicker({
         data-testid={testId}
       />
     </ConfigProvider>
+  );
+}
+
+/** Shown in pickers only when the device's timezone differs from the provider's. */
+export function TimezoneFooter() {
+  return (
+    <span style={{ fontSize: 12, color: "var(--c-gray-500, #6b7280)" }}>
+      Hora de {fmtTimezoneLabel()}
+    </span>
   );
 }

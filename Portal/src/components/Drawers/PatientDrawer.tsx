@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
 import { CHANNEL_CFG } from "@/src/types/Reminder";
-import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
+import { fmtDate, fmtDateTime, getDisplayTimezone, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,
   AppointmentStatusPill,
@@ -279,8 +279,8 @@ export function PatientDrawer({
 
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{patient.id}</span>} />
-        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES")} />
-        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES")} />
+        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES", { timeZone: getDisplayTimezone() })} />
+        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES", { timeZone: getDisplayTimezone() })} />
         <Link href={`/settings?tab=Registro+de+actividad&entityId=${patient.id}`} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>

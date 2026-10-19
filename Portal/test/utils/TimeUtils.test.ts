@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import {
     fmtDate,
     fmtTime,
@@ -11,6 +11,10 @@ import {
     getColombianHolidays,
     isoToLocal,
     getReminderSendAt,
+    setDisplayTimezone,
+    toWallClock,
+    fromWallClock,
+    fmtTimezoneLabel,
 } from "@/src/utils/TimeUtils";
 import { AppointmentDuration } from "@/src/types/Appointment";
 import { ReminderType } from "@/src/types/Reminder";
@@ -126,4 +130,47 @@ describe("getReminderSendAt clock types use the given timezone", () => {
     // 2030-06-12 02:00 UTC is still June 11 at 21:00 in Bogota
     expect(getReminderSendAt("2030-06-12T02:00:00.000Z", ReminderType.SAME_DAY_MORNING, "America/Bogota")).toBe("2030-06-11T13:00:00.000Z");
   });
+});
+
+describe("display timezone (provider's, not the browser's)", () => {
+    afterEach(() => setDisplayTimezone(undefined));
+
+    it("formats instants in the display timezone", () => {
+        setDisplayTimezone("America/Bogota");
+        // 00:30Z on the 19th is still the 18th, 19:30 in Bogotá.
+        expect(fmtDate("2026-10-19T00:30:00.000Z")).toBe(fmtDate("2026-10-18T12:00:00.000Z", "UTC"));
+        expect(fmtTime("2026-10-19T00:30:00.000Z")).toBe(fmtTime("2026-10-18T19:30:00.000Z", "UTC"));
+    });
+
+    it("an explicit timezone overrides the display timezone", () => {
+        setDisplayTimezone("America/Bogota");
+        // 00:30 in UTC is what 05:30Z reads as in Bogotá.
+        expect(fmtTime("2026-10-19T00:30:00.000Z", "UTC")).toBe(fmtTime("2026-10-19T05:30:00.000Z"));
+    });
+
+    it("treats date-only values as calendar days, never shifting them", () => {
+        setDisplayTimezone("America/Bogota");
+        expect(fmtDate("1990-05-01")).toBe(fmtDate("1990-05-01T12:00:00.000Z", "UTC"));
+        setDisplayTimezone("Asia/Tokyo");
+        expect(fmtDate("1990-05-01")).toBe(fmtDate("1990-05-01T12:00:00.000Z", "UTC"));
+    });
+
+    it("round-trips picker wall-clock values through the display timezone", () => {
+        setDisplayTimezone("America/Bogota");
+        expect(toWallClock("2026-10-19T14:05:00.000Z")).toBe("2026-10-19T09:05:00");
+        expect(fromWallClock("2026-10-19T09:05:00")).toBe("2026-10-19T14:05:00.000Z");
+        expect(fromWallClock("2026-10-19T09:05")).toBe("2026-10-19T14:05:00.000Z");
+        expect(toWallClock("2026-10-19")).toBe("2026-10-19T00:00:00");
+        expect(isoToLocal("2026-10-19T14:05:00.000Z")).toBe("2026-10-19T09:05");
+    });
+
+    it("getTomorrowSixAm is 06:00 tomorrow in the display timezone", () => {
+        setDisplayTimezone("America/Bogota");
+        const iso = getTomorrowSixAm();
+        expect(toWallClock(iso).slice(11)).toBe("06:00:00");
+    });
+
+    it("labels the timezone with its offset", () => {
+        expect(fmtTimezoneLabel("America/Bogota")).toBe("Bogota (GMT-5)");
+    });
 });

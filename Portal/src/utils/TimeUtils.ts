@@ -1,16 +1,47 @@
 import { AppointmentDuration } from "@/src/types/Appointment";
 import { REMINDER_TYPE_CONFIG, RELATIVE_REMINDER_TYPES, CLOCK_REMINDER_TYPES, ReminderType } from "@/src/types/Reminder";
 
-function fmtTimestamp(iso: string | undefined): string {
+/*
+ * Provider-side times are shown in the provider's timezone (`user.timezone`), not the browser's, so the
+ * Portal agrees with the server (reminders, day filters) wherever the provider's device happens to be.
+ * AuthContext sets it whenever the user loads or changes; every helper below defaults to it, and an explicit
+ * `timezone` argument overrides it. Until it is set (login page, unit tests) the browser's zone is used.
+ */
+let displayTimezone: string | undefined;
+
+function setDisplayTimezone(timezone: string | null | undefined): void {
+    displayTimezone = timezone || undefined;
+}
+
+function browserTimezone(): string {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+function getDisplayTimezone(): string {
+    return displayTimezone ?? browserTimezone();
+}
+
+/** Short label for a timezone, e.g. "Bogota (GMT-5)". */
+function fmtTimezoneLabel(timezone: string = getDisplayTimezone()): string {
+    const city = timezone.split("/").pop()?.replace(/_/g, " ") ?? timezone;
+    const offset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "shortOffset" })
+        .formatToParts(new Date())
+        .find((p) => p.type === "timeZoneName")?.value;
+    return offset ? `${city} (${offset})` : city;
+}
+
+function fmtTimestamp(iso: string | undefined, timezone?: string): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
         day: "numeric", month: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true, second: "numeric",
     });
 }
 
-function fmtDateTime(iso: string | undefined): string {
+function fmtDateTime(iso: string | undefined, timezone?: string): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
         day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
     });
 }
@@ -21,28 +52,31 @@ const fmtDatePlusOneHour = (isoStr: string): string => {
   return date.toISOString();
 };
 
-function fmtDate(d: string | undefined): string {
+function fmtDate(d: string | undefined, timezone?: string): string {
     if (!d) return "Invalid Date"
 
-    return new Date(d).toLocaleDateString("es-ES", {
+    return new Date(toInstant(d, timezone)).toLocaleDateString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
         day: "numeric", month: "long", year: "numeric",
     });
 }
 
-function fmtDatePlusOneDay(d: string | undefined): string {
+function fmtDatePlusOneDay(d: string | undefined, timezone?: string): string {
     if (!d) return "Invalid Date"
 
-    const date = new Date(d);
-    date.setDate(date.getDate() + 1);
+    const [ y, m, day ] = todayFormattedString(timezone, new Date(toInstant(d, timezone))).split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, day + 1, 12));
 
-    return date.toLocaleDateString("es-ES", {
+    return next.toLocaleDateString("es-ES", {
+        timeZone: "UTC",
         day: "numeric", month: "long", year: "numeric",
     });
 }
 
-function fmtTime(d: string | undefined): string {
+function fmtTime(d: string | undefined, timezone?: string): string {
     if (!d) return "Invalid Date"
     return new Date(d).toLocaleTimeString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
         hour: "2-digit",
         minute: "2-digit",
         hour12: true,
@@ -61,18 +95,18 @@ function getAge(birthDate: string | undefined | null): number | null {
     return age;
 }
 
-function fmtDateWeekDay(d: string | undefined): string {
+function fmtDateWeekDay(d: string | undefined, timezone?: string): string {
     if (!d) return "Invalid Date"
-    return new Date(d).toLocaleDateString("es-ES", {
+    return new Date(toInstant(d, timezone)).toLocaleDateString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
         weekday: "short", day: "numeric", month: "short", year: "numeric",
     });
 }
 
 
-function isoToLocal(iso: string): string {
-    const date = new Date(iso);
-    const tzOffset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+/** UTC instant as a wall-clock "YYYY-MM-DDTHH:mm" string in the display timezone. */
+function isoToLocal(iso: string, timezone?: string): string {
+    return toWallClock(iso, timezone).slice(0, 16);
 }
 
 function fmtRelative(d: string | undefined): string {
@@ -86,23 +120,79 @@ function fmtRelative(d: string | undefined): string {
     return days === 1 ? "1 día" : `${days} días`;
 }
 
-function today(): string {
-    return new Date().toLocaleDateString();
+/** Today as YYYY-MM-DD in the display timezone. */
+function today(timezone?: string): string {
+    return todayFormattedString(timezone);
 }
 
-function todayString(): string {
-    return new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+function todayString(timezone?: string): string {
+    return new Date().toLocaleDateString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
 }
 
 function todayFormattedString(timezone?: string, at: Date = new Date()): string {
-    const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).formatToParts(at);
+    return zonedDateTimeParts(at, timezone).dateStr;
+}
+
+const zonedFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function zonedFormatter(timezone: string): Intl.DateTimeFormat {
+    let formatter = zonedFormatters.get(timezone);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en-US", {
+            timeZone: timezone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hourCycle: "h23",
+        });
+        zonedFormatters.set(timezone, formatter);
+    }
+    return formatter;
+}
+
+/** Wall-clock date (YYYY-MM-DD), hour, minute and second of an instant in `timezone` (display zone if omitted). */
+function zonedDateTimeParts(
+    at: Date | string,
+    timezone?: string,
+): { dateStr: string; hour: number; minute: number; second: number } {
+    const parts = zonedFormatter(timezone ?? getDisplayTimezone()).formatToParts(new Date(at));
     const values = Object.fromEntries(parts.map(({ type, value }) => [ type, value ]));
-    return `${values.year}-${values.month}-${values.day}`;
+    return {
+        dateStr: `${values.year}-${values.month}-${values.day}`,
+        hour: Number(values.hour),
+        minute: Number(values.minute),
+        second: Number(values.second),
+    };
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Wall-clock "YYYY-MM-DDTHH:mm:ss" of a value in the display timezone. A date-only "YYYY-MM-DD" is already a
+ * wall date and is returned at midnight. Used to feed antd/dayjs pickers, which only work in the browser zone.
+ */
+function toWallClock(value: string | Date, timezone?: string): string {
+    if (typeof value === "string" && DATE_ONLY.test(value)) return `${value}T00:00:00`;
+    const { dateStr, hour, minute, second } = zonedDateTimeParts(value, timezone);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${dateStr}T${pad(hour)}:${pad(minute)}:${pad(second)}`;
+}
+
+/** Inverse of `toWallClock`: a wall-clock "YYYY-MM-DDTHH:mm[:ss]" in the display timezone to a UTC ISO string. */
+function fromWallClock(wall: string, timezone?: string): string {
+    const [ dateStr, time = "00:00:00" ] = wall.split("T");
+    return localDateTimeToUtc(dateStr, time.length === 5 ? `${time}:00` : time, timezone ?? getDisplayTimezone());
+}
+
+/** A date-only "YYYY-MM-DD" means midnight in the display timezone; anything else is already an instant. */
+function toInstant(value: string, timezone?: string): string {
+    return DATE_ONLY.test(value) ? fromWallClock(value, timezone) : value;
 }
 
 const MONTH_NAMES_ES = [
@@ -113,7 +203,7 @@ const DAY_NAMES_ES = [ "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" ];
 
 
 /** Converts a wall-clock date/time in `timezone` to a UTC ISO string. */
-function localDateTimeToUtc(dateStr: string, time: string, timezone: string): string {
+function localDateTimeToUtc(dateStr: string, time: string, timezone: string = getDisplayTimezone()): string {
   const target = Date.parse(`${dateStr}T${time}Z`);
   const milliseconds = target % 1000;
   const wallTime = target - milliseconds;
@@ -165,7 +255,7 @@ function getReminderSendAt(date: string, reminderType: ReminderType, timezone?: 
     const clock = REMINDER_TYPE_CONFIG[ reminderType ].clock;
     if (clock) {
         // Clock times are wall-clock times in the user's timezone, not the browser's.
-        const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tz = timezone ?? getDisplayTimezone();
         const [y, m, day] = todayFormattedString(tz, new Date(date)).split("-").map(Number);
         const target = new Date(Date.UTC(y, m - 1, day - clock.daysBefore)).toISOString().slice(0, 10);
         const hh = String(clock.hour).padStart(2, "0");
@@ -194,11 +284,11 @@ function getAppointmentEndTime(startAt: string, duration: AppointmentDuration): 
     return new Date(start.getTime() + dur * 60000).toISOString();
 }
 
-function getTomorrowSixAm(): string {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(6, 0, 0, 0);
-    return tomorrow.toISOString();
+/** 06:00 tomorrow in the display timezone. */
+function getTomorrowSixAm(timezone?: string): string {
+    const [ y, m, d ] = todayFormattedString(timezone).split("-").map(Number);
+    const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    return localDateTimeToUtc(tomorrow, "06:00:00", timezone ?? getDisplayTimezone());
 }
 
 function getDate(date: string): string {
@@ -351,6 +441,13 @@ export {
     today,
     todayString,
     todayFormattedString,
+    zonedDateTimeParts,
+    toWallClock,
+    fromWallClock,
+    setDisplayTimezone,
+    getDisplayTimezone,
+    browserTimezone,
+    fmtTimezoneLabel,
     getColombianHolidays,
     getAge,
     MONTH_NAMES_ES,

@@ -6,6 +6,8 @@ import esEs from "antd/locale/es_ES";
 
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
+import { TimezoneFooter } from "@/src/components/DateTimePicker";
+import { browserTimezone, fromWallClock, getDisplayTimezone, toWallClock } from "@/src/utils/TimeUtils";
 
 dayjs.locale("es");
 
@@ -58,11 +60,16 @@ export function AppointmentDateTimePicker({
     [blockedSlots]
   );
 
+  // antd/dayjs only know the browser zone: the picker holds the provider's wall-clock time (business
+  // hours are wall-clock hours there) as a browser-local dayjs, converted from/to UTC at the edges.
+  const now = () => dayjs(toWallClock(new Date()));
+  const showZone = getDisplayTimezone() !== browserTimezone();
+
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
 
-    const normalized = selectedDate.second(0).millisecond(0);
-    const ts = normalized.valueOf();
+    const iso = fromWallClock(selectedDate.second(0).millisecond(0).format("YYYY-MM-DDTHH:mm:ss"));
+    const ts = new Date(iso).getTime();
 
     if (bookedSet.has(ts)) {
       onError("Este horario ya está reservado");
@@ -77,13 +84,13 @@ export function AppointmentDateTimePicker({
       }
     }
 
-    onChange(normalized.toISOString());
+    onChange(iso);
   };
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
       <DatePicker
-        value={date ? dayjs(date) : null}
+        value={date ? dayjs(toWallClock(date)) : null}
         onChange={handleChange}
         showTime={{
           format: "HH:mm",
@@ -93,22 +100,22 @@ export function AppointmentDateTimePicker({
         showNow={false}
         format="DD/MM/YYYY HH:mm"
         placeholder="Selecciona fecha y hora"
-        disabledDate={(current) => !!current && current.isBefore(dayjs(), "day")}
+        disabledDate={(current) => !!current && current.isBefore(now(), "day")}
         disabledTime={(currentDate) => {
-          const now = dayjs();
+          const nowInZone = now();
           const selected =
             currentDate && currentDate.isValid()
               ? currentDate
               : date
-                ? dayjs(date)
+                ? dayjs(toWallClock(date))
                 : null;
-          const isToday = !!selected && selected.isSame(now, "day");
+          const isToday = !!selected && selected.isSame(nowInZone, "day");
 
           return {
             disabledHours: () => {
               const hours = [...OUT_OF_HOURS];
               if (isToday) {
-                for (let i = 0; i < now.hour(); i++) hours.push(i);
+                for (let i = 0; i < nowInZone.hour(); i++) hours.push(i);
               }
               return hours;
             },
@@ -120,8 +127,8 @@ export function AppointmentDateTimePicker({
                 for (let i = 5; i < 60; i += 5) minutes.push(i);
               }
 
-              if (isToday && hour === now.hour()) {
-                for (let i = 0; i < now.minute(); i += 5) minutes.push(i);
+              if (isToday && hour === nowInZone.hour()) {
+                for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
               }
 
               return minutes;
@@ -129,6 +136,7 @@ export function AppointmentDateTimePicker({
             disabledSeconds: () => [],
           };
         }}
+        renderExtraFooter={showZone ? () => <TimezoneFooter /> : undefined}
         style={{ width: "100%" }}
       />
     </ConfigProvider>

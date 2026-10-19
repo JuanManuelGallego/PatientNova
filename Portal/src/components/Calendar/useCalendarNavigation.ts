@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQueryState, parseAsStringEnum } from "nuqs";
-import { addDays, getWeekStart, toDateStr, toStartOfDayISO, toEndOfDayISO } from "./constants";
+import { addDays, getWeekStart, toDateStr, toStartOfDayISO, toEndOfDayISO, todayDate } from "./constants";
 import { ViewMode } from "./types";
 
 export function useCalendarNavigation(timezone?: string) {
@@ -8,10 +8,10 @@ export function useCalendarNavigation(timezone?: string) {
     "view",
     parseAsStringEnum<ViewMode>(Object.values(ViewMode)).withDefault(ViewMode.Week),
   );
-  const [ calYear, setCalYear ] = useState(new Date().getFullYear());
-  const [ calMonth, setCalMonth ] = useState(new Date().getMonth());
-  const [ weekStart, setWeekStart ] = useState<Date>(() => getWeekStart(new Date()));
-  const [ dayDate, setDayDate ] = useState<string>(toDateStr(new Date()));
+  const [ calYear, setCalYear ] = useState(() => todayDate(timezone).getFullYear());
+  const [ calMonth, setCalMonth ] = useState(() => todayDate(timezone).getMonth());
+  const [ weekStart, setWeekStart ] = useState<Date>(() => getWeekStart(todayDate(timezone)));
+  const [ dayDate, setDayDate ] = useState<string>(() => toDateStr(todayDate(timezone)));
   const [ selectedDay, setSelectedDay ] = useState<string | null>(null);
 
   const calendarFilters = (() => {
@@ -46,12 +46,12 @@ export function useCalendarNavigation(timezone?: string) {
 
 
   const goToday = useCallback(() => {
-    const now = new Date();
+    const now = todayDate(timezone);
     setCalYear(now.getFullYear());
     setCalMonth(now.getMonth());
     setWeekStart(getWeekStart(now));
     setDayDate(toDateStr(now));
-  }, []);
+  }, [ timezone ]);
 
   const navPrev = useCallback(() => {
     if (viewMode === ViewMode.Month) prevMonth();

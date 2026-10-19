@@ -13,7 +13,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { PatientStatus } from "@/src/types/Patient";
 import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
-import { fmtDateTime, fmtRelative, todayFormattedString, todayString } from "@/src/utils/TimeUtils";
+import { fmtDateTime, fmtRelative, todayFormattedString, todayString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import {
   AppointmentStatusPill,
   ReminderStatusPill,
@@ -89,7 +89,7 @@ export default function DashboardPage() {
         <div className="dash-welcome__text">
           <span className="dash-welcome__greeting">
             {(() => {
-              const h = new Date().getHours();
+              const h = zonedDateTimeParts(new Date()).hour;
               return h < 12
                 ? "Buenos días"
                 : h < 19
