@@ -1,4 +1,4 @@
-import { today } from "@/src/utils/TimeUtils";
+import { calendarDayToIso, todayFormattedString } from "@/src/utils/TimeUtils";
 
 // ─── Subsystem enums ──────────────────────────────────────────────────────────
 
@@ -249,7 +249,7 @@ export const createEmptyMember = (): FamilyMember => ({
 
 export const createEmptyNote = (): EvolutionNote => ({
     id: crypto.randomUUID(),
-    date: today(),
+    date: calendarDayToIso(todayFormattedString()),
     text: "",
 });
 

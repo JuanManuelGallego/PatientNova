@@ -1,7 +1,9 @@
 import { fmtTime } from "@/src/utils/TimeUtils";
 import { BlockedTimeChipProps } from "./types";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function BlockedTimeChip({ bt, onSelectBlockedTime, style }: BlockedTimeChipProps) {
+  const timezone = useDisplayTimezone();
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onSelectBlockedTime(bt); }}
@@ -27,7 +29,7 @@ export function BlockedTimeChip({ bt, onSelectBlockedTime, style }: BlockedTimeC
         title="Horario bloqueado"
       />
       {" "}
-      {fmtTime(bt.startTimeUtc)} {bt.description?.trim() || "Bloqueado"}
+      {fmtTime(bt.startTimeUtc, timezone)} {bt.description?.trim() || "Bloqueado"}
     </div>
   );
 }

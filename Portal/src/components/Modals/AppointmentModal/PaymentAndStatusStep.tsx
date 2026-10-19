@@ -17,6 +17,7 @@ import { RequiredField } from "@/src/components/Info/Required";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React from "react";
 import { SetField } from "./types";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 const CREATABLE_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.SCHEDULED,
@@ -70,6 +71,7 @@ export function PaymentAndStatusStep({
   isEdit = false,
   currentStatus,
 }: Props) {
+  const timezone = useDisplayTimezone();
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [ field ]: value }));
 
@@ -137,7 +139,7 @@ export function PaymentAndStatusStep({
             "Tipo",
             appointmentTypes.find((t) => t.id === form.typeId)?.name || "—",
           ],
-          [ "Fecha", `${fmtDate(form.startAt)} a las ${fmtTime(form.startAt)}` ],
+          [ "Fecha", `${fmtDate(form.startAt, timezone)} a las ${fmtTime(form.startAt, timezone)}` ],
           [ "Duración", form.duration ],
           [
             "Ubicación",

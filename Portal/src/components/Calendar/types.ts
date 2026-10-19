@@ -34,6 +34,7 @@ export interface CalendarToolbarProps {
 }
 
 export interface MonthViewProps {
+  timezone: string;
   rows: number;
   cellDate: (cell: number) => string | null;
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
@@ -47,6 +48,7 @@ export interface MonthViewProps {
 }
 
 export interface WeekViewProps {
+  timezone: string;
   weekDays: Date[];
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
   blockedByDate: Record<string, BlockedTime[]>;
@@ -60,6 +62,7 @@ export interface WeekViewProps {
 }
 
 export interface DayViewProps {
+  timezone: string;
   dayDate: string;
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
   blockedByDate: Record<string, BlockedTime[]>;

@@ -29,8 +29,10 @@ import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSectio
 import { useFetchMedicalRecords } from "@/src/api/medical-records/useFetchMedicalRecords";
 import { useAutoSaveMedicalRecords } from "@/src/hooks/useAutoSaveMedicalRecords";
 import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpecificSection";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 function MedicalRecordsPageContent() {
+  const timezone = useDisplayTimezone();
   const { user } = useAuthContext();
   const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState(QUERY_PARAMS.recordPatientId, parseAsString.withDefault(""));
@@ -106,7 +108,7 @@ function MedicalRecordsPageContent() {
     <PageLayout>
       <PageHeader
         title="Historias clínicas"
-        subtitle={todayString()}
+        subtitle={todayString(timezone)}
         actions={
           medicalRecord && (
             <button type="button" className="btn-primary" onClick={() => downloadMedicalRecordPDF(user, form)} data-testid="medical-records-download-pdf-button">

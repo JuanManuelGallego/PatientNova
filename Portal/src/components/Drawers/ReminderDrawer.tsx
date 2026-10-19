@@ -20,6 +20,7 @@ import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { ACTION_ICONS, DETAIL_ICONS, NAV_ICONS } from "@/src/config/icons";
 import { useFetchReminder } from "@/src/api/reminders/useFetchReminder";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function ReminderDrawer({
   reminder: initialReminder,
@@ -40,6 +41,7 @@ export function ReminderDrawer({
   onViewPatient?: (patient: NonNullable<Reminder["patient"]>) => void;
   onViewAppointment?: (appointment: NonNullable<Reminder["appointment"]>) => void;
 }) {
+  const timezone = useDisplayTimezone();
   const needsDetails =
     !initialReminder.createdAt ||
     !initialReminder.updatedAt ||
@@ -139,8 +141,8 @@ export function ReminderDrawer({
 
       <Section title="Programación">
         <Row icon={DETAIL_ICONS.megaphone} label="Modo" value={reminder.sendMode === ReminderMode.IMMEDIATE ? "Inmediato" : "Programado"} />
-        <Row icon={DETAIL_ICONS.clock} label={isActive ? "Se envia el" : "Enviado el"} value={fmtDateTime(reminder.sendAt)} />
-        {reminder.sendAt && <Row icon={DETAIL_ICONS.calendar} label="Programado" value={fmtDateTime(reminder.createdAt)} />}
+        <Row icon={DETAIL_ICONS.clock} label={isActive ? "Se envia el" : "Enviado el"} value={fmtDateTime(reminder.sendAt, timezone)} />
+        {reminder.sendAt && <Row icon={DETAIL_ICONS.calendar} label="Programado" value={fmtDateTime(reminder.createdAt, timezone)} />}
       </Section>
 
       {reminder.error && (
@@ -160,7 +162,7 @@ export function ReminderDrawer({
               <span className="linked-card__header">
                 <span className="linked-card__copy">
                   <span className="linked-card__title">{reminder.appointment.appointmentType.name}</span>
-                  <span className="linked-card__meta">{fmtDateTime(reminder.appointment.startAt.toString())}</span>
+                  <span className="linked-card__meta">{fmtDateTime(reminder.appointment.startAt.toString(), timezone)}</span>
                 </span>
                 <AppointmentStatusPill status={reminder.appointment.status} />
               </span>
@@ -187,8 +189,8 @@ export function ReminderDrawer({
 
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{reminder.id}</span>} />
-        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={fmtDateTime(reminder.createdAt)} />
-        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={fmtDateTime(reminder.updatedAt)} />
+        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={fmtDateTime(reminder.createdAt, timezone)} />
+        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={fmtDateTime(reminder.updatedAt, timezone)} />
         <Row icon={DETAIL_ICONS.id} label="Twilio ID" value={<span className="mono">{reminder.messageId ?? "-"}</span>} />
         <Link href={`/settings?tab=Registro+de+actividad&entityId=${reminder.id}`} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad

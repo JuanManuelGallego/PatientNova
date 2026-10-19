@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `44` files, `507` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -72,6 +72,7 @@ Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
 | Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout (atomic counter: concurrent wrong guesses all count) |
 | Users (repo) | `test/integration/users/user.repository.integration.test.ts` | CRUD, scoping |
 | Medical records (repo) | `test/integration/medical-records/medical-record.repository.integration.test.ts` | create/read/delete |
+| Medical records (calendar-day migration) | `test/integration/medical-records/calendar-day-migration.integration.test.ts` | `20261018000000_calendar_day_utc_midnight`: local midnights (west/east of UTC) and save times → UTC midnight of the provider-zone day; UTC-midnight values untouched; idempotent |
 | Reminders (repo) | `test/integration/reminders/reminder.repository.integration.test.ts` | create/findById/update/cancel/findMany/getStats/softDelete+restore |
 | Reminders (svc) | `test/integration/reminders/reminder.service.integration.test.ts` | cancel/softDelete/restore, sendAt reschedule (pg-boss mocked) |
 | Reminders (routes) | `test/integration/reminders/reminder.routes.integration.test.ts` | POST/GET/PATCH/cancel/delete/restore/stats; validation 400, ownership 404 (`getBoss` + jobManager mocked) |
@@ -183,10 +184,18 @@ Suite: `43` files, `500` tests, all against real Postgres, `tsc --noEmit` clean.
   fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
   nonexistent times. Never hand-roll offset arithmetic.
 - Portal (provider side) shows every date/time in the provider's timezone (`user.timezone`), never the
-  browser's. `AuthContext` calls `setDisplayTimezone`, and the `src/utils/TimeUtils.ts` helpers (`fmt*`,
-  `todayFormattedString`, `zonedDateTimeParts`, `localDateTimeToUtc`, ...) default to it. Do not use `Date`
-  getters/setters (`getHours`, `setDate`, ...) or bare `toLocale*String` on instants. antd/dayjs pickers hold
-  the provider's wall-clock time via `toWallClock`/`fromWallClock` (see `DateTimePicker`). A date-only
-  `YYYY-MM-DD` is a calendar day, not UTC midnight. The patient portal will need its own rule.
+  browser's. `AuthContext` calls `setDisplayTimezone` (an invalid zone falls back to the browser's and is
+  reported to Sentry). React components read it with `useDisplayTimezone()` (`src/hooks`) and pass it
+  explicitly to the `src/utils/TimeUtils.ts` helpers (`fmt*`, `todayFormattedString`, `zonedDateTimeParts`,
+  `localDateTimeToUtc`, ...), so a timezone change re-renders in place (no remount). The helpers' implicit
+  default is only for non-React callers. Do not use `Date` getters/setters (`getHours`, `setDate`, ...) or bare
+  `toLocale*String` on instants. Pickers use `ZonedDatePicker`, which holds the provider's wall-clock time as a
+  UTC-mode dayjs (no DST gaps on the device), converted at the edges with `toPickerValue`/`fromPickerValue`.
+  The calendar takes one `timezone` from its page and passes it to its hooks and views.
+- Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
+  (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
+  `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,
+  `mode="localDate"`) is also a calendar day. Migration `20261018000000_calendar_day_utc_midnight`
+  converted legacy rows using the provider's timezone. The patient portal will need its own rule.
 - Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
   and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.

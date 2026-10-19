@@ -52,8 +52,8 @@ import {
   parseAsArrayOf,
 } from "nuqs";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 enum ActiveTab {
   Active = "Active",
@@ -72,7 +72,7 @@ const STATUS_HISTORY_OPTIONS = withAllOption(
 );
 
 function RemindersPageContent() {
-  const { user } = useAuthContext();
+  const timezone = useDisplayTimezone();
   const { stats, fetchStats } = useFetchRemindersStats();
 
   const [ activeTab, setActiveTab ] = useQueryState(
@@ -134,7 +134,6 @@ function RemindersPageContent() {
 
   const filters = useMemo<FetchRemindersFilters>(
     () => {
-      const timezone = user?.timezone ?? "UTC";
       const tabDefault =
         activeTab === "Active"
           ? [ ReminderStatus.PENDING, ReminderStatus.QUEUED ]
@@ -157,7 +156,7 @@ function RemindersPageContent() {
         order,
       };
     },
-    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, patientId, orderBy, order, user?.timezone ],
+    [ page, debouncedSearch, activeTab, statusFilter, dateFilter, patientId, orderBy, order, timezone ],
   );
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
@@ -170,7 +169,7 @@ function RemindersPageContent() {
       <PageLayout>
         <PageHeader
           title="Recordatorios"
-          subtitle={todayString()}
+          subtitle={todayString(timezone)}
           actions={
             <>
               <button
@@ -393,6 +392,7 @@ function ActiveRemindersTab({
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
 }) {
+  const timezone = useDisplayTimezone();
   const columns = useMemo<ColumnDef[]>(
     () => [
       { label: "Destinatario" },
@@ -461,9 +461,9 @@ function ActiveRemindersTab({
           <td className="td">
             <ReminderStatusPill status={reminder.status} />
           </td>
-          <td className="td td--date">{fmtDateTime(reminder.sendAt)}</td>
+          <td className="td td--date">{fmtDateTime(reminder.sendAt, timezone)}</td>
           <td className="td td--date">{fmtRelative(reminder.sendAt)}</td>
-          <td className="td td--subtle">{fmtDateTime(reminder.sendAt)}</td>
+          <td className="td td--subtle">{fmtDateTime(reminder.sendAt, timezone)}</td>
           <td className="td" onClick={(e) => e.stopPropagation()}>
             <div className="td-actions">
               <button
@@ -538,6 +538,7 @@ function HistoryRemindersTab({
   order: "asc" | "desc";
   onSort: (sortKey: string) => void;
 }) {
+  const timezone = useDisplayTimezone();
   const columns = useMemo<ColumnDef[]>(
     () => [
       { label: "Destinatario" },
@@ -610,8 +611,8 @@ function HistoryRemindersTab({
           <td className="td">
             <ReminderStatusPill status={reminder.status} />
           </td>
-          <td className="td td--muted">{fmtDateTime(reminder.sendAt)}</td>
-          <td className="td td--muted">{fmtDateTime(reminder.updatedAt)}</td>
+          <td className="td td--muted">{fmtDateTime(reminder.sendAt, timezone)}</td>
+          <td className="td td--muted">{fmtDateTime(reminder.updatedAt, timezone)}</td>
           <td className="td td--mono">
             {reminder.messageId ? (
               <span title={reminder.messageId}>{reminder.messageId}</span>

@@ -1,6 +1,6 @@
 "use client";
 import { MedicalDocument } from "@/src/types/MedicalRecord";
-import { getDisplayTimezone } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useRef, useState } from "react";
 import {
   FILE_ICONS,
@@ -23,9 +23,9 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, timezone: string) {
   return new Date(iso).toLocaleDateString("es-ES", {
-    timeZone: getDisplayTimezone(),
+    timeZone: timezone,
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -47,6 +47,7 @@ interface Props {
 }
 
 export function DocumentsSection({ documents, onChange }: Props) {
+  const timezone = useDisplayTimezone();
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -284,7 +285,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
                     color: "var(--c-gray-400)",
                   }}
                 >
-                  {formatBytes(doc.sizeBytes)} · {formatDate(doc.uploadedAt)}
+                  {formatBytes(doc.sizeBytes)} · {formatDate(doc.uploadedAt, timezone)}
                 </p>
               </div>
 

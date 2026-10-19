@@ -7,6 +7,7 @@ import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { RequiredField } from "@/src/components/Info/Required";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function SendModeAndPatientStep({
   sendMode,
@@ -27,6 +28,7 @@ export function SendModeAndPatientStep({
   onPatientChange: (patientId: string) => void;
   onAppointmentChange: (appointmentId: string) => void;
 }) {
+  const timezone = useDisplayTimezone();
   return (
     <div className="form-stack">
       <div>
@@ -110,7 +112,7 @@ export function SendModeAndPatientStep({
                   { value: "", label: "Sin cita asociada" },
                   ...patientAppointments.map((a) => ({
                     value: a.id,
-                    label: `${fmtDate(a.startAt)} — ${a.appointmentType?.name ?? "Cita"}`,
+                    label: `${fmtDate(a.startAt, timezone)} — ${a.appointmentType?.name ?? "Cita"}`,
                   })),
                 ]
                 : [ { value: "", label: "No hay citas disponibles" } ]

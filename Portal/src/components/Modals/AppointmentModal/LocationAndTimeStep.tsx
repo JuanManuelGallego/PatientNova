@@ -16,7 +16,6 @@ import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
 import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
@@ -29,6 +28,7 @@ import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnect
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
 import { ApiMutationError } from "@/src/api/base/useApiMutation";
 import { validateHttpUrl } from "@/src/utils/DataValidator";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 interface Props {
   form: AppointmentForm;
@@ -47,7 +47,7 @@ export function LocationAndTimeStep({
   reminderChannel,
   locations,
 }: Props) {
-  const { user } = useAuthContext();
+  const timezone = useDisplayTimezone();
   const setField = (field: keyof AppointmentForm) => (value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
@@ -215,10 +215,10 @@ export function LocationAndTimeStep({
                 },
                 { value: ReminderType.IMMEDIATE, label: "Enviar ahora" },
                 ...[...RELATIVE_REMINDER_TYPES, ...CLOCK_REMINDER_TYPES]
-                  .filter((type) => isReminderTypeFeasible(form.startAt, type, user?.timezone))
+                  .filter((type) => isReminderTypeFeasible(form.startAt, type, timezone))
                   .map((type) => ({
                     value: type,
-                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type, user?.timezone)}`,
+                    label: `${REMINDER_TYPE_CONFIG[type].label} · ${fmtSendTime(form.startAt, type, timezone)}`,
                   })),
               ]}
               onChange={setField("reminderType")}

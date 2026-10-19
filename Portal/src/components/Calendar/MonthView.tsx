@@ -2,11 +2,13 @@ import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeChip } from "./BlockedTimeChip";
-import { DAY_NAMES_ES, todayStr } from "./constants";
+import { DAY_NAMES_ES } from "./constants";
+import { todayFormattedString } from "@/src/utils/TimeUtils";
 import { MonthViewProps } from "./types";
 import { Appointment } from "@/src/types/Appointment";
 
 export function MonthView({
+  timezone,
   rows,
   cellDate,
   apptByDate,
@@ -18,7 +20,7 @@ export function MonthView({
   onViewAppt,
   onSelectBlockedTime,
 }: MonthViewProps) {
-  const today = todayStr();
+  const today = todayFormattedString(timezone);
   return (
     <div className="table-scroll" style={{ position: "relative" }}>
       <div className="cal-day-headers">

@@ -2,12 +2,13 @@ import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeBlock } from "./BlockedTimeBlock";
-import { todayStr, HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
-import { getDisplayTimezone, localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { DayViewProps } from "./types";
 
 export function DayView({
+  timezone,
   dayDate,
   apptByDate,
   blockedByDate,
@@ -20,8 +21,7 @@ export function DayView({
 }: DayViewProps) {
   const dayAppts = apptByDate[ dayDate ] ?? [];
   const holiday = holidayMap[ dayDate ];
-  const timezone = getDisplayTimezone();
-  const isToday = dayDate === todayStr(timezone);
+  const isToday = dayDate === todayFormattedString(timezone);
   const { hours, firstHour, lastHour } = hourRange;
 
   const now = zonedDateTimeParts(new Date(), timezone);
@@ -29,7 +29,7 @@ export function DayView({
   const showNow = isToday && nowMin >= firstHour * 60 && nowMin <= (lastHour + 1) * 60;
   const nowTop = ((nowMin - firstHour * 60) / 60) * HOUR_HEIGHT;
 
-  const positioned = layoutDayAppointments(dayAppts, firstHour, timezone);
+  const positioned = layoutDayAppointments(dayAppts, firstHour, timezone, dayDate);
 
   return (
     <div style={{ overflowX: "hidden", position: "relative" }}>
@@ -114,7 +114,7 @@ export function DayView({
               }}
             />
           ))}
-          {layoutBlockedTimes(blockedByDate[ dayDate ] ?? [], firstHour, timezone).map((p) => (
+          {layoutBlockedTimes(blockedByDate[ dayDate ] ?? [], firstHour, timezone, dayDate).map((p) => (
             <BlockedTimeBlock
               key={p.bt.id}
               bt={p.bt}

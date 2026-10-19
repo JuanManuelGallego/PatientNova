@@ -1,5 +1,5 @@
-import { HOUR_HEIGHT, toDateStr, todayStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
-import { getDisplayTimezone, localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { HOUR_HEIGHT, toDateStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
@@ -8,6 +8,7 @@ import Image from "next/image";
 import { flagUrl } from "../CountryCodeInput";
 
 export function WeekView({
+  timezone,
   weekDays,
   apptByDate,
   blockedByDate,
@@ -20,8 +21,7 @@ export function WeekView({
   onSelectBlockedTime,
 }: WeekViewProps) {
   const { hours, firstHour, lastHour } = hourRange;
-  const timezone = getDisplayTimezone();
-  const today = todayStr(timezone);
+  const today = todayFormattedString(timezone);
 
   const now = zonedDateTimeParts(new Date(), timezone);
   const nowMin = now.hour * 60 + now.minute;
@@ -118,6 +118,7 @@ export function WeekView({
                 apptByDate[ ds ] ?? [],
                 firstHour,
                 timezone,
+                ds,
               );
               return (
                 <div
@@ -170,7 +171,7 @@ export function WeekView({
                       }}
                     />
                   ))}
-                  {layoutBlockedTimes(blockedByDate[ ds ] ?? [], firstHour, timezone).map((p) => (
+                  {layoutBlockedTimes(blockedByDate[ ds ] ?? [], firstHour, timezone, ds).map((p) => (
                     <BlockedTimeBlock
                       key={p.bt.id}
                       bt={p.bt}

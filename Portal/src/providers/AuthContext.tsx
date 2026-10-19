@@ -8,6 +8,7 @@ import { clearCsrfToken, fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 import { toSpanishMessage } from "@/src/api/base/errorMessages";
 import { ApiClientError, parseEnvelope } from "@/src/api/base/apiClients";
 import { setDisplayTimezone } from "@/src/utils/TimeUtils";
+import { reportClientError } from "@/src/utils/observability/sentry";
 
 interface AuthContextValue {
     user: User | null;
@@ -26,9 +27,10 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [ user, setUserState ] = useState<User | null>(null);
     // Provider-side times render in the user's timezone; set it before the state update so the
-    // re-render (and AuthGuard's remount on change) already formats with it.
+    // re-render already formats with it (components subscribe via `useDisplayTimezone`).
     const setUser = useCallback((next: User | null) => {
-        setDisplayTimezone(next?.timezone);
+        setDisplayTimezone(next?.timezone, (invalid) =>
+            reportClientError(new Error(`Invalid user timezone "${invalid}", using the browser's`)));
         setUserState(next);
     }, []);
     const [ initializing, setInitializing ] = useState(true);

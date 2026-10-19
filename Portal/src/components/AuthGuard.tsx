@@ -1,12 +1,12 @@
 "use client";
 
-import { Fragment, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { LoadingSpinner } from "@/src/components/LoadingSpinner";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-    const { user, isAuthenticated, initializing } = useAuthContext();
+    const { isAuthenticated, initializing } = useAuthContext();
     const router = useRouter();
 
     useEffect(() => {
@@ -35,6 +35,5 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         return null;
     }
 
-    // Remount when the provider changes timezone (Settings) so memoized dates/times are recomputed in it.
-    return <Fragment key={user?.timezone}>{children}</Fragment>;
+    return <>{children}</>;
 }

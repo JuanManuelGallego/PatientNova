@@ -15,6 +15,7 @@ import {
 import { RequiredField } from "../Info/Required";
 import { DateTimePicker } from "../DateTimePicker";
 import { localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useDeleteBlockedTime } from "@/src/api/blocked-time/useDeleteBlockedTime";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -25,12 +26,12 @@ function shiftHours(iso: string, hours: number): string {
 
 // Defaults are wall-clock times in the provider's timezone: a prefilled calendar day starts at
 // `prefillHour`, otherwise the block starts `hoursFromNow` top-of-hours from now.
-function getDefaultTime(prefillDate: string | null | undefined, prefillHour: number, hoursFromNow: number): string {
+function getDefaultTime(prefillDate: string | null | undefined, prefillHour: number, hoursFromNow: number, timezone: string): string {
   if (prefillDate) {
-    return localDateTimeToUtc(prefillDate, `${String(prefillHour).padStart(2, "0")}:00:00`);
+    return localDateTimeToUtc(prefillDate, `${String(prefillHour).padStart(2, "0")}:00:00`, timezone);
   }
-  const { dateStr, hour } = zonedDateTimeParts(new Date());
-  return shiftHours(localDateTimeToUtc(dateStr, `${String(hour).padStart(2, "0")}:00:00`), hoursFromNow);
+  const { dateStr, hour } = zonedDateTimeParts(new Date(), timezone);
+  return shiftHours(localDateTimeToUtc(dateStr, `${String(hour).padStart(2, "0")}:00:00`, timezone), hoursFromNow);
 }
 
 export function BlockedTimeModal({
@@ -44,6 +45,7 @@ export function BlockedTimeModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const timezone = useDisplayTimezone();
   const isEdit = !!blockedTime;
   const { ref: trapRef, handleKeyDown: trapKeyDown } =
     useFocusTrap<HTMLDivElement>(onClose);
@@ -57,8 +59,8 @@ export function BlockedTimeModal({
 
   const [ form, setForm ] = useState<BlockedTimeForm>({
     description: blockedTime?.description || "",
-    startTimeUtc: blockedTime?.startTimeUtc ?? getDefaultTime(prefillDate, 9, 1),
-    endTimeUtc: blockedTime?.endTimeUtc ?? getDefaultTime(prefillDate, 10, 2),
+    startTimeUtc: blockedTime?.startTimeUtc ?? getDefaultTime(prefillDate, 9, 1, timezone),
+    endTimeUtc: blockedTime?.endTimeUtc ?? getDefaultTime(prefillDate, 10, 2, timezone),
   });
 
   useEffect(() => {

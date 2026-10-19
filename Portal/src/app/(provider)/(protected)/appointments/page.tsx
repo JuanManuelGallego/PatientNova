@@ -59,8 +59,8 @@ import {
   parseAsStringEnum,
 } from "nuqs";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 enum AppointmentTab {
   Upcoming = "upcoming",
@@ -86,7 +86,7 @@ const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
   [{ value: "", label: "Todos" }, ...locations.map(({ id, name }) => ({ value: id, label: name }))];
 
 function AppointmentsPageContent() {
-  const { user } = useAuthContext();
+  const timezone = useDisplayTimezone();
   const { stats, fetchStats } = useFetchAppointmentsStats();
   const { updateAppointment } = useUpdateAppointment();
   const { appointmentTypes } = useFetchAppointmentTypes();
@@ -163,7 +163,6 @@ function AppointmentsPageContent() {
   const filters = useMemo<FetchAppointmentsFilters>(
     () => {
       const tabDefault = tabStatuses(activeTab);
-      const timezone = user?.timezone ?? "UTC";
       return {
         patientId: patientId || undefined,
         status: status.length ? (status as AppointmentStatus[]) : patientId ? undefined : tabDefault,
@@ -180,7 +179,7 @@ function AppointmentsPageContent() {
         order,
       };
     },
-    [ status, paid, debouncedSearch, dateRange, typeId, locationId, patientId, activeTab, page, orderBy, order, user?.timezone ],
+    [ status, paid, debouncedSearch, dateRange, typeId, locationId, patientId, activeTab, page, orderBy, order, timezone ],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -298,7 +297,7 @@ function AppointmentsPageContent() {
       <PageLayout>
         <PageHeader
           title="Citas"
-          subtitle={todayString()}
+          subtitle={todayString(timezone)}
           actions={
             <>
               <button
@@ -422,7 +421,7 @@ function AppointmentsPageContent() {
                   {a.appointmentType.name}
                 </span>
               </td>
-              <td className="td td--datetime">{fmtDateTime(a.startAt)}</td>
+              <td className="td td--datetime">{fmtDateTime(a.startAt, timezone)}</td>
               <td className="td td--muted">
                 <div
                   className="location-label"

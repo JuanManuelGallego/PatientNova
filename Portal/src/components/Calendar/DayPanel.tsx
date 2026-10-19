@@ -1,6 +1,7 @@
 import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { DayPanelProps } from "./types";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function DayPanel({
   selectedDay,
@@ -13,11 +14,12 @@ export function DayPanel({
   onSelectBlockedTime,
   onCreateBlockedTime,
 }: DayPanelProps) {
+  const timezone = useDisplayTimezone();
   return (
     <div className="cal-day-panel-overlay" onClick={onClose}>
       <div className="cal-day-panel" onClick={(e) => e.stopPropagation()}>
         <div className="cal-day-panel__header">
-          <span className="cal-day-panel__title">{fmtDate(selectedDay)}</span>
+          <span className="cal-day-panel__title">{fmtDate(selectedDay, timezone)}</span>
           <button className="btn-close" onClick={onClose}>
             <ACTION_ICONS.close size={16} />
           </button>
@@ -41,7 +43,7 @@ export function DayPanel({
                       {a.patient.name} {a.patient.lastName}
                     </span>
                     <span className="cal-day-panel__appt-time">
-                      {fmtTime(a.startAt)}
+                      {fmtTime(a.startAt, timezone)}
                     </span>
                   </div>
                 ))}
@@ -61,7 +63,7 @@ export function DayPanel({
                       }}
                     >
                       <span className="cal-day-panel__blocked-time">
-                        {fmtTime(bt.startTimeUtc)} - {fmtTime(bt.endTimeUtc)}
+                        {fmtTime(bt.startTimeUtc, timezone)} - {fmtTime(bt.endTimeUtc, timezone)}
                       </span>
                       <span className="cal-day-panel__blocked-desc">
                         {bt.description || "Bloqueado"}

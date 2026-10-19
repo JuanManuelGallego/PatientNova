@@ -8,10 +8,11 @@ import { User } from "@/src/types/User";
 import { getInitials } from "@/src/utils/AvatarHelper";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Upload, FileText, ClipboardList } from "lucide-react";
-import { COMMON_TIMEZONES, getDisplayTimezone } from "@/src/utils/TimeUtils";
+import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 // ─── Editable text fields ──────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ function AvatarFallback({ initials }: { initials: string }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ProfileTab() {
+  const displayTimezone = useDisplayTimezone();
   const { user } = useAuthContext();
 
   const [ fields, setFields ] = useState<EditableFields>(() => ({
@@ -408,7 +410,7 @@ export function ProfileTab() {
                       }}
                     >
                       {(document.sizeBytes / 1024).toFixed(2)} KB · Actualizado{" "}
-                      {new Date(document.updatedAt).toLocaleDateString(undefined, { timeZone: getDisplayTimezone() })}
+                      {new Date(document.updatedAt).toLocaleDateString(undefined, { timeZone: displayTimezone })}
                     </div>
                   </div>
                 </div>

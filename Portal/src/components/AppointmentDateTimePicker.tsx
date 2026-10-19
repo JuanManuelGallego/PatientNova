@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ConfigProvider, DatePicker } from "antd";
+import { ConfigProvider } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
@@ -7,7 +7,9 @@ import esEs from "antd/locale/es_ES";
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
 import { TimezoneFooter } from "@/src/components/DateTimePicker";
-import { browserTimezone, fromWallClock, getDisplayTimezone, toWallClock } from "@/src/utils/TimeUtils";
+import { browserTimezone } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
 
 dayjs.locale("es");
 
@@ -42,6 +44,7 @@ export function AppointmentDateTimePicker({
   bookedSlots = [],
   blockedSlots = [],
 }: AppointmentDateTimePickerProps) {
+  const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
   const bookedSet = useMemo(
     () =>
@@ -60,15 +63,14 @@ export function AppointmentDateTimePicker({
     [blockedSlots]
   );
 
-  // antd/dayjs only know the browser zone: the picker holds the provider's wall-clock time (business
-  // hours are wall-clock hours there) as a browser-local dayjs, converted from/to UTC at the edges.
-  const now = () => dayjs(toWallClock(new Date()));
-  const showZone = getDisplayTimezone() !== browserTimezone();
+  // Business hours are wall-clock hours in the provider's timezone (see ZonedDatePicker).
+  const now = () => nowInZone(timezone);
+  const showZone = timezone !== browserTimezone();
 
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
 
-    const iso = fromWallClock(selectedDate.second(0).millisecond(0).format("YYYY-MM-DDTHH:mm:ss"));
+    const iso = fromPickerValue(selectedDate.second(0).millisecond(0), timezone);
     const ts = new Date(iso).getTime();
 
     if (bookedSet.has(ts)) {
@@ -89,8 +91,8 @@ export function AppointmentDateTimePicker({
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-      <DatePicker
-        value={date ? dayjs(toWallClock(date)) : null}
+      <ZonedDatePicker
+        value={date ? toPickerValue(date, timezone) : null}
         onChange={handleChange}
         showTime={{
           format: "HH:mm",
@@ -107,7 +109,7 @@ export function AppointmentDateTimePicker({
             currentDate && currentDate.isValid()
               ? currentDate
               : date
-                ? dayjs(toWallClock(date))
+                ? toPickerValue(date, timezone)
                 : null;
           const isToday = !!selected && selected.isSame(nowInZone, "day");
 
@@ -136,7 +138,7 @@ export function AppointmentDateTimePicker({
             disabledSeconds: () => [],
           };
         }}
-        renderExtraFooter={showZone ? () => <TimezoneFooter /> : undefined}
+        renderExtraFooter={showZone ? () => <TimezoneFooter timezone={timezone} /> : undefined}
         style={{ width: "100%" }}
       />
     </ConfigProvider>

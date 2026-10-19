@@ -1,6 +1,7 @@
 import {
   computeHourRange,
   layoutBlockedTimes,
+  eventDays,
   toUtcRangeFromLocalDay,
   HOUR_HEIGHT,
 } from "@/src/components/Calendar/constants";
@@ -62,5 +63,31 @@ describe("toUtcRangeFromLocalDay", () => {
       dateFrom: "2026-07-01T04:00:00.000Z",
       dateTo: "2026-07-02T03:59:59.999Z",
     });
+  });
+});
+
+describe("events crossing midnight", () => {
+  // 22:00–02:00 in Bogotá (UTC-5), 2026-10-19 → 2026-10-20.
+  const blockedTime = {
+    startTimeUtc: "2026-10-20T03:00:00.000Z",
+    endTimeUtc: "2026-10-20T07:00:00.000Z",
+  } as BlockedTime;
+
+  it("covers every day the event touches; an end at midnight is exclusive", () => {
+    expect(eventDays(blockedTime.startTimeUtc, blockedTime.endTimeUtc, "America/Bogota")).toEqual([ "2026-10-19", "2026-10-20" ]);
+    expect(eventDays("2026-10-20T03:00:00.000Z", "2026-10-20T05:00:00.000Z", "America/Bogota")).toEqual([ "2026-10-19" ]);
+  });
+
+  it("is drawn on both days with positive heights", () => {
+    const [ first ] = layoutBlockedTimes([ blockedTime ], 0, "America/Bogota", "2026-10-19");
+    expect(first.top).toBe(22 * HOUR_HEIGHT);
+    expect(first.height).toBe(2 * HOUR_HEIGHT);
+    const [ second ] = layoutBlockedTimes([ blockedTime ], 0, "America/Bogota", "2026-10-20");
+    expect(second.top).toBe(0);
+    expect(second.height).toBe(2 * HOUR_HEIGHT);
+  });
+
+  it("opens the hour range to the whole span", () => {
+    expect(computeHourRange([], [ blockedTime ], "America/Bogota")).toMatchObject({ firstHour: 0, lastHour: 23 });
   });
 });

@@ -7,8 +7,10 @@ import { useDisconnectGoogle } from "@/src/api/google/useDisconnectGoogle";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function GoogleIntegrationTab() {
+  const timezone = useDisplayTimezone();
   const { fetchConnection, loading: loadingConnection, error: connectionError, data } = useFetchGoogleConnection();
   const { startOAuth, loading: startingOAuth, error: oauthStartError } = useStartGoogleOAuth();
   const { disconnect, loading: disconnecting, error: disconnectError } = useDisconnectGoogle();
@@ -87,7 +89,7 @@ export function GoogleIntegrationTab() {
               {isUnknown
                 ? "Espera mientras consultamos el estado de la integración."
                 : isConnected && connectedAt
-                  ? `Conectado el ${fmtDate(connectedAt)} a las ${fmtTime(connectedAt)}`
+                  ? `Conectado el ${fmtDate(connectedAt, timezone)} a las ${fmtTime(connectedAt, timezone)}`
                   : isConnected
                     ? "La cuenta está conectada."
                     : "En espera de activación."}
@@ -100,7 +102,7 @@ export function GoogleIntegrationTab() {
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
               <div>
                 <span style={{ color: "var(--c-gray-500)" }}>Último uso: </span>
-                <strong>{lastUsedAt ? `${fmtDate(lastUsedAt)} a las ${fmtTime(lastUsedAt)}` : "Nunca"}</strong>
+                <strong>{lastUsedAt ? `${fmtDate(lastUsedAt, timezone)} a las ${fmtTime(lastUsedAt, timezone)}` : "Nunca"}</strong>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React from "react";
-import { browserTimezone, fmtTimezoneLabel, getDisplayTimezone } from "@/src/utils/TimeUtils";
+import { browserTimezone, fmtTimezoneLabel } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 interface PageHeaderProps {
     title: string;
@@ -9,8 +10,9 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, actions, style }: PageHeaderProps) {
+  const timezone = useDisplayTimezone();
     // Times are shown in the provider's timezone; say so when the device is elsewhere.
-    const zoneNote = getDisplayTimezone() !== browserTimezone() ? `Hora de ${fmtTimezoneLabel()}` : null;
+    const zoneNote = timezone !== browserTimezone() ? `Hora de ${fmtTimezoneLabel(timezone)}` : null;
     return (
         <div className="page-header" style={style}>
             <div>

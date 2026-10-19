@@ -29,7 +29,7 @@ import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
 import { FilterBar } from "@/src/components/FilterBar";
-import { getDisplayTimezone, todayString } from "@/src/utils/TimeUtils";
+import { todayString } from "@/src/utils/TimeUtils";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import {
   PAGE_SIZE,
@@ -39,6 +39,7 @@ import {
   type PatientOrderBy,
 } from "@/src/utils/listQuery";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 enum PatientTab {
   Active = "active",
@@ -46,6 +47,7 @@ enum PatientTab {
 }
 
 function PatientsPageContent() {
+  const timezone = useDisplayTimezone();
   const { stats, fetchStats } = useFetchPatientsStats();
 
   const [activeTab, setActiveTab] = useQueryState(
@@ -136,7 +138,7 @@ function PatientsPageContent() {
       <PageLayout>
         <PageHeader
           title="Pacientes"
-          subtitle={todayString()}
+          subtitle={todayString(timezone)}
           actions={
             <>
               <button
@@ -246,7 +248,7 @@ function PatientsPageContent() {
               </td>
               <td className="td td--muted td--nowrap">
                 {new Date(p.createdAt).toLocaleDateString("es-ES", {
-                  timeZone: getDisplayTimezone(),
+                  timeZone: timezone,
                   day: "numeric",
                   month: "short",
                   year: "numeric",

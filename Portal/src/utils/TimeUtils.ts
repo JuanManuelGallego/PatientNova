@@ -4,13 +4,40 @@ import { REMINDER_TYPE_CONFIG, RELATIVE_REMINDER_TYPES, CLOCK_REMINDER_TYPES, Re
 /*
  * Provider-side times are shown in the provider's timezone (`user.timezone`), not the browser's, so the
  * Portal agrees with the server (reminders, day filters) wherever the provider's device happens to be.
- * AuthContext sets it whenever the user loads or changes; every helper below defaults to it, and an explicit
- * `timezone` argument overrides it. Until it is set (login page, unit tests) the browser's zone is used.
+ * AuthContext sets it whenever the user loads or changes. React components read it with
+ * `useDisplayTimezone()` (re-renders on change) and pass it explicitly; the helpers below only default to it
+ * for non-React callers. Until it is set (login page, unit tests) the browser's zone is used.
  */
 let displayTimezone: string | undefined;
+const displayTimezoneListeners = new Set<() => void>();
 
-function setDisplayTimezone(timezone: string | null | undefined): void {
-    displayTimezone = timezone || undefined;
+function isValidTimezone(timezone: string): boolean {
+    try {
+        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Sets the display timezone. An invalid identifier (legacy row, typo) falls back to the browser's zone instead
+ * of making every formatter throw `RangeError`; `onInvalid` lets the caller report it.
+ */
+function setDisplayTimezone(timezone: string | null | undefined, onInvalid?: (timezone: string) => void): void {
+    let next = timezone || undefined;
+    if (next && !isValidTimezone(next)) {
+        onInvalid?.(next);
+        next = undefined;
+    }
+    if (next === displayTimezone) return;
+    displayTimezone = next;
+    displayTimezoneListeners.forEach((listener) => listener());
+}
+
+function subscribeDisplayTimezone(listener: () => void): () => void {
+    displayTimezoneListeners.add(listener);
+    return () => displayTimezoneListeners.delete(listener);
 }
 
 function browserTimezone(): string {
@@ -83,15 +110,17 @@ function fmtTime(d: string | undefined, timezone?: string): string {
     });
 }
 
-/** Computes age in whole years from an ISO birth date. Returns null if invalid. */
-function getAge(birthDate: string | undefined | null): number | null {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    if (Number.isNaN(birth.getTime())) return null;
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const m = now.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+/**
+ * Age in whole years on today's date in the display timezone. The birth date is a calendar day (see
+ * `calendarDayOf`), so it is compared as Y/M/D parts, never through `Date` getters. Returns null if invalid.
+ */
+function getAge(birthDate: string | undefined | null, timezone?: string): number | null {
+    const birth = calendarDayOf(birthDate);
+    if (!birth) return null;
+    const [ by, bm, bd ] = birth.split("-").map(Number);
+    const [ ty, tm, td ] = todayFormattedString(timezone).split("-").map(Number);
+    let age = ty - by;
+    if (tm < bm || (tm === bm && td < bd)) age--;
     return age;
 }
 
@@ -118,11 +147,6 @@ function fmtRelative(d: string | undefined): string {
     if (abs < 86_400_000) return `${Math.round(abs / 3_600_000)} h`;
     const days = Math.round(abs / 86_400_000);
     return days === 1 ? "1 día" : `${days} días`;
-}
-
-/** Today as YYYY-MM-DD in the display timezone. */
-function today(timezone?: string): string {
-    return todayFormattedString(timezone);
 }
 
 function todayString(timezone?: string): string {
@@ -195,6 +219,40 @@ function toInstant(value: string, timezone?: string): string {
     return DATE_ONLY.test(value) ? fromWallClock(value, timezone) : value;
 }
 
+/*
+ * Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
+ * ("YYYY-MM-DDT00:00:00.000Z", the Server only accepts ISO datetimes) and read back by their UTC date, never
+ * through a timezone.
+ */
+
+/** A "YYYY-MM-DD" calendar day as the stored UTC-midnight ISO string. */
+function calendarDayToIso(day: string): string {
+    return `${day}T00:00:00.000Z`;
+}
+
+/** The "YYYY-MM-DD" calendar day of a stored value ("YYYY-MM-DD" or UTC-midnight ISO), or null if invalid. */
+function calendarDayOf(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const day = value.slice(0, 10);
+    return DATE_ONLY.test(day) && !Number.isNaN(Date.parse(`${day}T00:00:00Z`)) ? day : null;
+}
+
+/** Formats a calendar day, e.g. "1 de mayo de 1990", independent of any timezone. */
+function fmtCalendarDay(value: string | null | undefined): string {
+    const day = calendarDayOf(value);
+    if (!day) return "Invalid Date";
+    return new Date(`${day}T00:00:00Z`).toLocaleDateString("es-ES", {
+        timeZone: "UTC",
+        day: "numeric", month: "long", year: "numeric",
+    });
+}
+
+/** The calendar day after a "YYYY-MM-DD" day. */
+function nextCalendarDay(day: string): string {
+    const [ y, m, d ] = day.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
 const MONTH_NAMES_ES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
@@ -208,16 +266,7 @@ function localDateTimeToUtc(dateStr: string, time: string, timezone: string = ge
   const milliseconds = target % 1000;
   const wallTime = target - milliseconds;
   let utc = wallTime;
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
+  const formatter = zonedFormatter(timezone);
 
   for (let i = 0; i < 3; i++) {
     const parts = Object.fromEntries(
@@ -413,7 +462,7 @@ enum RelativeTime {
 function fmtSendTime(startAt: string, type: ReminderType, timezone?: string): string {
   if (!startAt) return "";
   return new Date(getReminderSendAt(startAt, type, timezone)).toLocaleString("es-ES", {
-    timeZone: timezone,
+    timeZone: timezone ?? getDisplayTimezone(),
     weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
   });
 }
@@ -438,13 +487,18 @@ export {
     getTomorrowSixAm,
     isoToLocal,
     isReminderTypeFeasible,
-    today,
     todayString,
     todayFormattedString,
     zonedDateTimeParts,
     toWallClock,
     fromWallClock,
     setDisplayTimezone,
+    subscribeDisplayTimezone,
+    isValidTimezone,
+    calendarDayToIso,
+    calendarDayOf,
+    fmtCalendarDay,
+    nextCalendarDay,
     getDisplayTimezone,
     browserTimezone,
     fmtTimezoneLabel,

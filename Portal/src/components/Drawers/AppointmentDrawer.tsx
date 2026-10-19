@@ -9,7 +9,6 @@ import {
   fmtDate,
   fmtDateTime,
   fmtTime,
-  getDisplayTimezone,
   getDuration,
 } from "@/src/utils/TimeUtils";
 import {
@@ -23,6 +22,7 @@ import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { useFetchAppointment } from "@/src/api/appointments/useFetchAppointment";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function AppointmentDrawer({
   appt,
@@ -41,6 +41,7 @@ export function AppointmentDrawer({
   onViewPatient?: (patient: Appointment["patient"]) => void;
   onViewReminder?: (reminder: NonNullable<Appointment["reminder"]>) => void;
 }) {
+  const timezone = useDisplayTimezone();
   const needsDetails = !appt.patient || !appt.appointmentLocation || !appt.appointmentType;
   const { appointment: fetchedAppointment, error } = useFetchAppointment(
     needsDetails ? appt.id : null,
@@ -131,8 +132,8 @@ export function AppointmentDrawer({
       </Section>
 
       <Section title="Fecha y Hora" testId="appointment-drawer-section-fecha-hora">
-        <Row icon={DETAIL_ICONS.calendar} label="Fecha" value={fmtDate(appointment.startAt)} testId="appointment-drawer-date" />
-        <Row icon={DETAIL_ICONS.clock} label="Hora" value={fmtTime(appointment.startAt)} testId="appointment-drawer-time" />
+        <Row icon={DETAIL_ICONS.calendar} label="Fecha" value={fmtDate(appointment.startAt, timezone)} testId="appointment-drawer-date" />
+        <Row icon={DETAIL_ICONS.clock} label="Hora" value={fmtTime(appointment.startAt, timezone)} testId="appointment-drawer-time" />
         <Row icon={DETAIL_ICONS.timer} label="Duración" value={getDuration(appointment.startAt, appointment.endAt)} testId="appointment-drawer-duration" />
       </Section>
 
@@ -179,7 +180,7 @@ export function AppointmentDrawer({
               <span className="linked-card__header">
                 <span className="linked-card__copy">
                   <span className="linked-card__title">{CHANNEL_CFG[appointment.reminder.channel].label}</span>
-                  <span className="linked-card__meta">{fmtDateTime(appointment.reminder.sendAt.toString())}</span>
+                  <span className="linked-card__meta">{fmtDateTime(appointment.reminder.sendAt.toString(), timezone)}</span>
                 </span>
                 <ReminderStatusPill status={appointment.reminder.status} />
               </span>
@@ -190,7 +191,7 @@ export function AppointmentDrawer({
 
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{appointment.id}</span>} />
-        <Row icon={DETAIL_ICONS.calendar} label="Creada" value={new Date(appointment.createdAt).toLocaleString("es-ES", { timeZone: getDisplayTimezone() })} />
+        <Row icon={DETAIL_ICONS.calendar} label="Creada" value={new Date(appointment.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
         <Link href={`/settings?tab=Registro+de+actividad&entityId=${appointment.id}`} className="drawer-link" data-testid="appointment-drawer-audit-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>

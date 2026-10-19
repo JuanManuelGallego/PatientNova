@@ -3,12 +3,11 @@ import {
   MONTH_NAMES_ES,
   getColombianHolidays,
   addDays,
-  zonedDateTimeParts,
 } from "@/src/utils/TimeUtils";
 import { Appointment } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { ViewMode } from "./types";
-import { computeHourRange, toDateStr } from "./constants";
+import { computeHourRange, eventDays, toDateStr } from "./constants";
 
 interface UseCalendarDataArgs {
   calYear: number;
@@ -56,9 +55,9 @@ export function useCalendarData({
   const apptByDate = useMemo(() => {
     const map: Record<string, Appointment[]> = {};
     for (const a of appointments) {
-      const date = zonedDateTimeParts(a.startAt, timezone).dateStr;
-      if (!map[ date ]) map[ date ] = [];
-      map[ date ].push(a);
+      for (const date of eventDays(a.startAt, a.endAt, timezone)) {
+        (map[ date ] ??= []).push(a);
+      }
     }
     return map;
   }, [ appointments, timezone ]);
@@ -66,9 +65,9 @@ export function useCalendarData({
   const blockedByDate = useMemo(() => {
     const map: Record<string, BlockedTime[]> = {};
     for (const bt of blockedTimes) {
-      const date = zonedDateTimeParts(bt.startTimeUtc, timezone).dateStr;
-      if (!map[ date ]) map[ date ] = [];
-      map[ date ].push(bt);
+      for (const date of eventDays(bt.startTimeUtc, bt.endTimeUtc, timezone)) {
+        (map[ date ] ??= []).push(bt);
+      }
     }
     return map;
   }, [ blockedTimes, timezone ]);
