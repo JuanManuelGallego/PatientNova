@@ -1,4 +1,5 @@
-import { HOUR_HEIGHT, toDateStr, TODAY_STR, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { HOUR_HEIGHT, toDateStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
@@ -7,6 +8,7 @@ import Image from "next/image";
 import { flagUrl } from "../CountryCodeInput";
 
 export function WeekView({
+  timezone,
   weekDays,
   apptByDate,
   blockedByDate,
@@ -19,9 +21,10 @@ export function WeekView({
   onSelectBlockedTime,
 }: WeekViewProps) {
   const { hours, firstHour, lastHour } = hourRange;
+  const today = todayFormattedString(timezone);
 
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const now = zonedDateTimeParts(new Date(), timezone);
+  const nowMin = now.hour * 60 + now.minute;
   const showNow = nowMin >= firstHour * 60 && nowMin <= (lastHour + 1) * 60;
   const nowTop = ((nowMin - firstHour * 60) / 60) * HOUR_HEIGHT;
 
@@ -39,7 +42,7 @@ export function WeekView({
           <div style={calendarStyles.weekGutter} />
           {weekDays.map((day, di) => {
             const ds = toDateStr(day);
-            const isToday = ds === TODAY_STR;
+            const isToday = ds === today;
             const holiday = holidayMap[ ds ];
             const dayAppts = apptByDate[ ds ] ?? [];
             return (
@@ -109,11 +112,13 @@ export function WeekView({
           <div style={{ display: "flex", flex: 1, position: "relative" }}>
             {weekDays.map((day, di) => {
               const ds = toDateStr(day);
-              const isToday = ds === TODAY_STR;
+              const isToday = ds === today;
               const holiday = holidayMap[ ds ];
               const positioned = layoutDayAppointments(
                 apptByDate[ ds ] ?? [],
                 firstHour,
+                timezone,
+                ds,
               );
               return (
                 <div
@@ -146,8 +151,7 @@ export function WeekView({
                     onClick={(e) => {
                       const y = e.nativeEvent.offsetY;
                       const hour = firstHour + Math.floor(y / HOUR_HEIGHT);
-                      const d = new Date(ds + "T" + String(hour).padStart(2, "0") + ":00:00");
-                      onCreateAt(d.toISOString());
+                      onCreateAt(localDateTimeToUtc(ds, `${String(hour).padStart(2, "0")}:00:00`, timezone));
                     }}
                     title="Nueva cita"
                   />
@@ -167,7 +171,7 @@ export function WeekView({
                       }}
                     />
                   ))}
-                  {layoutBlockedTimes(blockedByDate[ ds ] ?? [], firstHour).map((p) => (
+                  {layoutBlockedTimes(blockedByDate[ ds ] ?? [], firstHour, timezone, ds).map((p) => (
                     <BlockedTimeBlock
                       key={p.bt.id}
                       bt={p.bt}

@@ -7,6 +7,8 @@ import { User } from '@/src/types/User';
 import { clearCsrfToken, fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 import { toSpanishMessage } from "@/src/api/base/errorMessages";
 import { ApiClientError, parseEnvelope } from "@/src/api/base/apiClients";
+import { setDisplayTimezone } from "@/src/utils/TimeUtils";
+import { reportClientError } from "@/src/utils/observability/sentry";
 
 interface AuthContextValue {
     user: User | null;
@@ -23,7 +25,14 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [ user, setUser ] = useState<User | null>(null);
+    const [ user, setUserState ] = useState<User | null>(null);
+    // Provider-side times render in the user's timezone; set it before the state update so the
+    // re-render already formats with it (components subscribe via `useDisplayTimezone`).
+    const setUser = useCallback((next: User | null) => {
+        setDisplayTimezone(next?.timezone, (invalid) =>
+            reportClientError(new Error(`Invalid user timezone "${invalid}", using the browser's`)));
+        setUserState(next);
+    }, []);
     const [ initializing, setInitializing ] = useState(true);
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
@@ -48,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         checkSession();
-    }, []);
+    }, [ setUser ]);
 
     const login = useCallback(async (email: string, password: string) => {
         setLoading(true); setError(null);
@@ -74,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [ setUser ]);
 
     const logout = useCallback(async () => {
         setLoading(true); setError(null);
@@ -88,11 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             setLoading(false);
         }
-    }, []);
+    }, [ setUser ]);
 
     const updateUser = useCallback((updated: User) => {
         setUser(updated);
-    }, []);
+    }, [ setUser ]);
 
     const refreshUser = useCallback(async () => {
         try {
@@ -104,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
             // Silently ignore — user data stays as-is
         }
-    }, []);
+    }, [ setUser ]);
 
     return (
         <AuthContext.Provider value={{ user, isAuthenticated: user !== null, initializing, loading, error, login, logout, updateUser, refreshUser }}>

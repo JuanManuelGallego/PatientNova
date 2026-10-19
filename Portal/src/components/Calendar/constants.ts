@@ -1,4 +1,4 @@
-import { addDays, todayFormattedString, localDateTimeToUtc, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { addDays, todayFormattedString, localDateTimeToUtc, zonedDateTimeParts, getDisplayTimezone, nextCalendarDay, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
 import { BlockedTime } from "@/src/types/BlockedTime";
 
 export { DAY_NAMES_ES };
@@ -12,7 +12,37 @@ export const MIN_CHIP_PX = 20;
 export const DEFAULT_FIRST_HOUR = 7;
 export const DEFAULT_LAST_HOUR = 20;
 
-export const TODAY_STR = todayFormattedString();
+/** Today in the provider's timezone, as a local-midnight Date for calendar navigation. */
+export function todayDate(timezone?: string): Date {
+  const [ y, m, d ] = todayFormattedString(timezone).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+const MINUTES_PER_DAY = 24 * 60;
+
+/**
+ * Minutes since midnight of an instant on calendar day `day` (provider's timezone), clamped to that day:
+ * an instant on an earlier day is 0 and one on a later day is 24:00, so an event that crosses midnight is
+ * drawn up to the end of its first day and from the start of the next.
+ */
+function minuteOfDay(iso: string, timezone: string | undefined, day: string): number {
+  const { dateStr, hour, minute } = zonedDateTimeParts(iso, timezone);
+  if (dateStr < day) return 0;
+  if (dateStr > day) return MINUTES_PER_DAY;
+  return hour * 60 + minute;
+}
+
+/** Calendar days (YYYY-MM-DD, provider's timezone) an event covers; an end exactly at midnight is exclusive. */
+export function eventDays(startIso: string, endIso: string, timezone?: string): string[] {
+  const first = zonedDateTimeParts(startIso, timezone).dateStr;
+  const end = zonedDateTimeParts(endIso, timezone);
+  const endsAtMidnight = end.hour === 0 && end.minute === 0 && end.second === 0;
+  const days = [ first ];
+  for (let day = nextCalendarDay(first); day < end.dateStr || (day === end.dateStr && !endsAtMidnight); day = nextCalendarDay(day)) {
+    days.push(day);
+  }
+  return days;
+}
 
 export function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -29,8 +59,8 @@ export function toDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function apptHour(a: import("@/src/types/Appointment").Appointment): number {
-  return new Date(a.startAt).getHours();
+export function apptHour(a: import("@/src/types/Appointment").Appointment, timezone?: string): number {
+  return zonedDateTimeParts(a.startAt, timezone).hour;
 }
 
 export function toStartOfDayISO(d: Date, timezone?: string): string {
@@ -43,7 +73,7 @@ export function toEndOfDayISO(d: Date, timezone?: string): string {
 
 export function toUtcRangeFromLocalDay(
   dateStr: string,
-  timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  timezone = getDisplayTimezone(),
 ): {
   dateFrom: string;
   dateTo: string;
@@ -63,6 +93,7 @@ export interface HourRange {
 export function computeHourRange(
   appointments: import("@/src/types/Appointment").Appointment[],
   blockedTimes: BlockedTime[] = [],
+  timezone?: string,
 ): HourRange {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
@@ -72,12 +103,12 @@ export function computeHourRange(
     ...blockedTimes.map((bt) => [bt.startTimeUtc, bt.endTimeUtc]),
   ];
   for (const [start, end] of ranges) {
-    const s = new Date(start);
-    const e = new Date(end);
-    const sh = s.getHours();
-    const eh = e.getHours() + (e.getMinutes() > 0 ? 1 : 0);
-    if (sh < first) first = Math.max(0, sh - 1);
-    if (eh > last) last = Math.min(23, eh + 1);
+    for (const day of eventDays(start, end, timezone)) {
+      const sh = Math.floor(minuteOfDay(start, timezone, day) / 60);
+      const eh = Math.ceil(minuteOfDay(end, timezone, day) / 60);
+      if (sh < first) first = Math.max(0, sh - 1);
+      if (eh > last) last = Math.min(23, eh + 1);
+    }
   }
 
   return {
@@ -98,6 +129,9 @@ export interface PositionedAppt {
 export function layoutDayAppointments(
   appts: import("@/src/types/Appointment").Appointment[],
   firstHour: number,
+  timezone?: string,
+  /** The calendar day being drawn; defaults to each appointment's start day. */
+  day?: string,
 ): PositionedAppt[] {
   if (appts.length === 0) return [];
 
@@ -109,10 +143,9 @@ export function layoutDayAppointments(
   let maxCol = 1;
 
   const columns = sorted.map((a) => {
-    const s = new Date(a.startAt);
-    const e = new Date(a.endAt);
-    const startMin = s.getHours() * 60 + s.getMinutes();
-    const endMin = e.getHours() * 60 + e.getMinutes();
+    const d = day ?? zonedDateTimeParts(a.startAt, timezone).dateStr;
+    const startMin = minuteOfDay(a.startAt, timezone, d);
+    const endMin = minuteOfDay(a.endAt, timezone, d);
 
     let col = 0;
 
@@ -144,12 +177,14 @@ export interface PositionedBlockedTime {
 export function layoutBlockedTimes(
   blockedTimes: BlockedTime[],
   firstHour: number,
+  timezone?: string,
+  /** The calendar day being drawn; defaults to each block's start day. */
+  day?: string,
 ): PositionedBlockedTime[] {
   return blockedTimes.map((bt) => {
-    const s = new Date(bt.startTimeUtc);
-    const e = new Date(bt.endTimeUtc);
-    const startMin = s.getHours() * 60 + s.getMinutes();
-    const endMin = e.getHours() * 60 + e.getMinutes();
+    const d = day ?? zonedDateTimeParts(bt.startTimeUtc, timezone).dateStr;
+    const startMin = minuteOfDay(bt.startTimeUtc, timezone, d);
+    const endMin = minuteOfDay(bt.endTimeUtc, timezone, d);
     return {
       bt,
       top: ((startMin - firstHour * 60) / 60) * HOUR_HEIGHT,

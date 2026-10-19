@@ -91,6 +91,8 @@ export class ReminderModal {
       .split('/')
       .map(Number);
     await picker.click();
+    // antd keeps closed popups in the DOM; scope to the open one so forms with several pickers work.
+    const dropdown = page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)');
 
     const current = currentYear
       ? new Date(currentYear, currentMonth - 1, currentDay)
@@ -98,27 +100,27 @@ export class ReminderModal {
     const monthDiff =
       (iso.getFullYear() - current.getFullYear()) * 12 + (iso.getMonth() - current.getMonth());
     if (monthDiff !== 0) {
-      const nextBtn = page.locator('.ant-picker-header-next-btn');
-      const prevBtn = page.locator('.ant-picker-header-prev-btn');
+      const nextBtn = dropdown.locator('.ant-picker-header-next-btn');
+      const prevBtn = dropdown.locator('.ant-picker-header-prev-btn');
       const btn = monthDiff > 0 ? nextBtn : prevBtn;
       for (let i = 0; i < Math.abs(monthDiff); i++) {
         await btn.click();
       }
     }
 
-    const dayCell = page
+    const dayCell = dropdown
       .locator('.ant-picker-cell-in-view')
       .filter({ hasText: new RegExp(`^${dayNumber}$`) })
       .first();
     await dayCell.click();
 
-    await page.locator('.ant-picker-time-panel-column').first()
+    await dropdown.locator('.ant-picker-time-panel-column').first()
       .getByText(hourRe).first().click();
-    await page.locator('.ant-picker-time-panel-column').nth(1)
+    await dropdown.locator('.ant-picker-time-panel-column').nth(1)
       .getByText(minuteRe).first().click();
 
-    await page.getByRole('button', { name: 'Aceptar' }).click();
-    await expect(page.locator('.ant-picker-dropdown')).toBeHidden();
+    await dropdown.getByRole('button', { name: 'Aceptar' }).click();
+    await expect(dropdown).toBeHidden();
   }
 
   async fillAllVariablesWithRandomString() {

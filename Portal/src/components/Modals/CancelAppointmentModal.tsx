@@ -6,6 +6,7 @@ import { Appointment, AppointmentStatus } from "@/src/types/Appointment";
 import { ReminderStatus } from "@/src/types/Reminder";
 import { fmtDate } from "@/src/utils/TimeUtils";
 import { useState } from "react";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function CancelAppointmentModal({
   appt,
@@ -16,6 +17,7 @@ export function CancelAppointmentModal({
   onClose: () => void;
   onCanceled: () => void;
 }) {
+  const timezone = useDisplayTimezone();
   const { updateAppointment, loading: cancelingAppt } = useUpdateAppointment();
   const { updateReminder, loading: cancelingReminder } = useUpdateReminder();
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function CancelAppointmentModal({
         <strong>
           {appt.patient.name} {appt.patient.lastName}
         </strong>{" "}
-        del <strong>{fmtDate(appt.startAt)}</strong>?
+        del <strong>{fmtDate(appt.startAt, timezone)}</strong>?
       </p>
     </ConfirmDialog>
   );

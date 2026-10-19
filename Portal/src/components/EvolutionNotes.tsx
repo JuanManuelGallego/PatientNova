@@ -1,7 +1,7 @@
 import { sectionGridStyle } from "@/src/config/antTheme";
 import { createEmptyNote, EvolutionNote } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
-import { fmtDate } from "@/src/utils/TimeUtils";
+import { fmtCalendarDay } from "@/src/utils/TimeUtils";
 
 type EvolutionNotesProps = {
   evolutionNotes: EvolutionNote[];
@@ -41,7 +41,7 @@ export function EvolutionNotes({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <div style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>
-                Nota de evolución - {note.date ? fmtDate(note.date) : `#${index + 1}`}
+                Nota de evolución - {note.date ? fmtCalendarDay(note.date) : `#${index + 1}`}
               </div>
               <button
                 type="button"
@@ -57,6 +57,7 @@ export function EvolutionNotes({
                 Fecha
                 <DateTimePicker
                   date={note.date || undefined}
+                  mode="calendarDay"
                   onChange={(date) => updateMember(index, "date", date)}
                   testId={`evolution-note-date-${note.id}`}
                 />

@@ -7,7 +7,7 @@ import {
 import { Appointment } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { ViewMode } from "./types";
-import { computeHourRange, toDateStr } from "./constants";
+import { computeHourRange, eventDays, toDateStr } from "./constants";
 
 interface UseCalendarDataArgs {
   calYear: number;
@@ -16,6 +16,8 @@ interface UseCalendarDataArgs {
   viewMode: ViewMode;
   appointments: Appointment[];
   blockedTimes: BlockedTime[];
+  /** Provider timezone: events are placed on the day/hour they fall on there, matching the fetch window. */
+  timezone?: string;
 }
 
 export function useCalendarData({
@@ -25,6 +27,7 @@ export function useCalendarData({
   viewMode,
   appointments,
   blockedTimes,
+  timezone,
 }: UseCalendarDataArgs) {
   const { daysInMonth, startOffset, rows } = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1);
@@ -52,24 +55,22 @@ export function useCalendarData({
   const apptByDate = useMemo(() => {
     const map: Record<string, Appointment[]> = {};
     for (const a of appointments) {
-      const local = new Date(a.startAt);
-      const date = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(local.getDate()).padStart(2, "0")}`;
-      if (!map[ date ]) map[ date ] = [];
-      map[ date ].push(a);
+      for (const date of eventDays(a.startAt, a.endAt, timezone)) {
+        (map[ date ] ??= []).push(a);
+      }
     }
     return map;
-  }, [ appointments ]);
+  }, [ appointments, timezone ]);
 
   const blockedByDate = useMemo(() => {
     const map: Record<string, BlockedTime[]> = {};
     for (const bt of blockedTimes) {
-      const local = new Date(bt.startTimeUtc);
-      const date = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(local.getDate()).padStart(2, "0")}`;
-      if (!map[ date ]) map[ date ] = [];
-      map[ date ].push(bt);
+      for (const date of eventDays(bt.startTimeUtc, bt.endTimeUtc, timezone)) {
+        (map[ date ] ??= []).push(bt);
+      }
     }
     return map;
-  }, [ blockedTimes ]);
+  }, [ blockedTimes, timezone ]);
 
   const holidayMap = useMemo(() => {
     const holidays = getColombianHolidays(calYear);
@@ -93,10 +94,10 @@ export function useCalendarData({
     if (viewMode === ViewMode.Week) {
       const weekAppts = weekDays.flatMap((d) => apptByDate[ toDateStr(d) ] ?? []);
       const weekBlocked = weekDays.flatMap((d) => blockedByDate[ toDateStr(d) ] ?? []);
-      return computeHourRange(weekAppts, weekBlocked);
+      return computeHourRange(weekAppts, weekBlocked, timezone);
     }
     return computeHourRange([]);
-  }, [viewMode, weekDays, apptByDate, blockedByDate]);
+  }, [viewMode, weekDays, apptByDate, blockedByDate, timezone]);
 
   return {
     daysInMonth,

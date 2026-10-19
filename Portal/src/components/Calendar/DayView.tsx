@@ -2,11 +2,13 @@ import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeBlock } from "./BlockedTimeBlock";
-import { TODAY_STR, HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { DayViewProps } from "./types";
 
 export function DayView({
+  timezone,
   dayDate,
   apptByDate,
   blockedByDate,
@@ -19,15 +21,15 @@ export function DayView({
 }: DayViewProps) {
   const dayAppts = apptByDate[ dayDate ] ?? [];
   const holiday = holidayMap[ dayDate ];
-  const isToday = dayDate === TODAY_STR;
+  const isToday = dayDate === todayFormattedString(timezone);
   const { hours, firstHour, lastHour } = hourRange;
 
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const now = zonedDateTimeParts(new Date(), timezone);
+  const nowMin = now.hour * 60 + now.minute;
   const showNow = isToday && nowMin >= firstHour * 60 && nowMin <= (lastHour + 1) * 60;
   const nowTop = ((nowMin - firstHour * 60) / 60) * HOUR_HEIGHT;
 
-  const positioned = layoutDayAppointments(dayAppts, firstHour);
+  const positioned = layoutDayAppointments(dayAppts, firstHour, timezone, dayDate);
 
   return (
     <div style={{ overflowX: "hidden", position: "relative" }}>
@@ -93,8 +95,7 @@ export function DayView({
             onClick={(e) => {
               const y = e.nativeEvent.offsetY;
               const hour = firstHour + Math.floor(y / HOUR_HEIGHT);
-              const d = new Date(dayDate + "T" + String(hour).padStart(2, "0") + ":00:00");
-              onCreateAt(d.toISOString());
+              onCreateAt(localDateTimeToUtc(dayDate, `${String(hour).padStart(2, "0")}:00:00`, timezone));
             }}
             title="Nueva cita"
           />
@@ -113,7 +114,7 @@ export function DayView({
               }}
             />
           ))}
-          {layoutBlockedTimes(blockedByDate[ dayDate ] ?? [], firstHour).map((p) => (
+          {layoutBlockedTimes(blockedByDate[ dayDate ] ?? [], firstHour, timezone, dayDate).map((p) => (
             <BlockedTimeBlock
               key={p.bt.id}
               bt={p.bt}

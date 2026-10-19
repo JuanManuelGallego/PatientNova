@@ -7,6 +7,7 @@ import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { DrawerShell, Section, Row } from "./DrawerUtils";
 import { DETAIL_ICONS } from "@/src/config/icons";
 import { EntityTypePill } from "../Info/EntityTypePill";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -85,6 +86,7 @@ export function AuditDrawer({
   log: AuditLog;
   onClose: () => void;
 }) {
+  const timezone = useDisplayTimezone();
   const action = ACTION_TYPE_CONFIG[log.actionType];
 
   return (
@@ -166,7 +168,7 @@ export function AuditDrawer({
       </Section>
 
       <Section title="Información del sistema" quiet>
-        <Row icon={DETAIL_ICONS.clock} label="Fecha" value={<span className="td--dateTime">{fmtDateTime(log.eventTimeUtc)}</span>} />
+        <Row icon={DETAIL_ICONS.clock} label="Fecha" value={<span className="td--dateTime">{fmtDateTime(log.eventTimeUtc, timezone)}</span>} />
       </Section>
     </DrawerShell>
   );

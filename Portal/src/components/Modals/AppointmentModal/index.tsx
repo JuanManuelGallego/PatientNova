@@ -48,6 +48,7 @@ import { LocationAndTimeStep } from "./LocationAndTimeStep";
 import { PaymentAndStatusStep } from "./PaymentAndStatusStep";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import { Patient, getPatientContact } from "@/src/types/Patient";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function AppointmentModal({
   appt,
@@ -60,6 +61,7 @@ export function AppointmentModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const timezone = useDisplayTimezone();
   const isEdit = !!appt;
   const { user } = useAuthContext();
   const { ref: trapRef, handleKeyDown: trapKeyDown } =
@@ -70,14 +72,14 @@ export function AppointmentModal({
   const selectedPatient = isEdit ? (fetchedPatient ?? appt?.patient) : userSelectedPatient;
 
   const { appointments } = useFetchAppointments({
-    dateFrom: getTomorrowSixAm(),
+    dateFrom: getTomorrowSixAm(timezone),
     status: DEFAULT_APPT_STATUS,
   });
   const { createAppointment } = useCreateAppointment();
   const { updateAppointment } = useUpdateAppointment();
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
-  const { blockedTimes } = useFetchBlockedTimes({ dateFrom: getTomorrowSixAm() });
+  const { blockedTimes } = useFetchBlockedTimes({ dateFrom: getTomorrowSixAm(timezone) });
 
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
@@ -85,7 +87,7 @@ export function AppointmentModal({
 
   const [ form, setForm ] = useState<AppointmentForm>({
     patientId: appt?.patient.id ?? "",
-    startAt: appt?.startAt ?? prefillDate ?? getTomorrowSixAm(),
+    startAt: appt?.startAt ?? prefillDate ?? getTomorrowSixAm(timezone),
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
     typeId: appt?.appointmentType.id ?? "",
     locationId: appt?.appointmentLocation.id ?? "",
@@ -99,7 +101,7 @@ export function AppointmentModal({
     reminderType: appt?.reminder
       ? appt.reminder.sendMode === ReminderMode.IMMEDIATE
         ? ReminderType.IMMEDIATE
-        : getReminderType(appt.startAt, appt.reminder.sendAt, user?.timezone)
+        : getReminderType(appt.startAt, appt.reminder.sendAt, timezone)
       : ReminderType.NONE,
     reminderSendAt: appt?.reminder?.sendAt ?? undefined,
     notes: appt?.notes ?? undefined,
@@ -147,7 +149,7 @@ export function AppointmentModal({
     const sendMode = isImmediate ? ReminderMode.IMMEDIATE : ReminderMode.SCHEDULED;
     const sendAt = form.reminderType === ReminderType.MANUAL
       ? form.reminderSendAt!
-      : getReminderSendAt(form.startAt, form.reminderType, user?.timezone);
+      : getReminderSendAt(form.startAt, form.reminderType, timezone);
 
     if (selectedLocation?.isVirtual) {
       return {
@@ -157,8 +159,8 @@ export function AppointmentModal({
           contentVariables: {
             "1": selectedPatient ? `${selectedPatient.name}` : "",
             "2": getUserName(user) || "su profesional de salud",
-            "3": fmtDate(form.startAt),
-            "4": fmtTime(form.startAt),
+            "3": fmtDate(form.startAt, timezone),
+            "4": fmtTime(form.startAt, timezone),
             "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
           }
         }),
@@ -166,8 +168,8 @@ export function AppointmentModal({
           body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_VIRTUAL.template
             .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
             .replace("{{2}}", getUserName(user) || "su profesional de salud")
-            .replace("{{3}}", fmtDate(form.startAt))
-            .replace("{{4}}", fmtTime(form.startAt))
+            .replace("{{3}}", fmtDate(form.startAt, timezone))
+            .replace("{{4}}", fmtTime(form.startAt, timezone))
             .replace("{{5}}", form.meetingUrl || "{{5}}"),
         }),
         channel: channel,
@@ -184,8 +186,8 @@ export function AppointmentModal({
         contentVariables: {
           "1": selectedPatient ? `${selectedPatient.name}` : "",
           "2": getUserName(user) || "su profesional de salud",
-          "3": fmtDate(form.startAt),
-          "4": fmtTime(form.startAt),
+          "3": fmtDate(form.startAt, timezone),
+          "4": fmtTime(form.startAt, timezone),
           "5": selectedLocation?.address || "No hay dirección registrada",
           "6": selectedLocation?.instructions || "No hay instrucciones registradas",
         }
@@ -194,8 +196,8 @@ export function AppointmentModal({
         body: TWILIO_CONFIG.PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL.template
           .replace("{{1}}", selectedPatient ? `${selectedPatient.name}` : "")
           .replace("{{2}}", getUserName(user) || "su profesional de salud")
-          .replace("{{3}}", fmtDate(form.startAt))
-          .replace("{{4}}", fmtTime(form.startAt))
+          .replace("{{3}}", fmtDate(form.startAt, timezone))
+          .replace("{{4}}", fmtTime(form.startAt, timezone))
           .replace("{{5}}", selectedLocation?.address || "No hay dirección registrada",)
           .replace("{{6}}", selectedLocation?.instructions || "No hay instrucciones registradas",),
       }),

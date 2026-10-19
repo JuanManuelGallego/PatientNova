@@ -1,11 +1,15 @@
 import { useMemo } from "react";
-import { ConfigProvider, DatePicker } from "antd";
+import { ConfigProvider } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
 
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
+import { TimezoneFooter } from "@/src/components/DateTimePicker";
+import { browserTimezone } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
 
 dayjs.locale("es");
 
@@ -40,6 +44,7 @@ export function AppointmentDateTimePicker({
   bookedSlots = [],
   blockedSlots = [],
 }: AppointmentDateTimePickerProps) {
+  const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
   const bookedSet = useMemo(
     () =>
@@ -58,11 +63,15 @@ export function AppointmentDateTimePicker({
     [blockedSlots]
   );
 
+  // Business hours are wall-clock hours in the provider's timezone (see ZonedDatePicker).
+  const now = () => nowInZone(timezone);
+  const showZone = timezone !== browserTimezone();
+
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
 
-    const normalized = selectedDate.second(0).millisecond(0);
-    const ts = normalized.valueOf();
+    const iso = fromPickerValue(selectedDate.second(0).millisecond(0), timezone);
+    const ts = new Date(iso).getTime();
 
     if (bookedSet.has(ts)) {
       onError("Este horario ya está reservado");
@@ -77,13 +86,13 @@ export function AppointmentDateTimePicker({
       }
     }
 
-    onChange(normalized.toISOString());
+    onChange(iso);
   };
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-      <DatePicker
-        value={date ? dayjs(date) : null}
+      <ZonedDatePicker
+        value={date ? toPickerValue(date, timezone) : null}
         onChange={handleChange}
         showTime={{
           format: "HH:mm",
@@ -93,22 +102,22 @@ export function AppointmentDateTimePicker({
         showNow={false}
         format="DD/MM/YYYY HH:mm"
         placeholder="Selecciona fecha y hora"
-        disabledDate={(current) => !!current && current.isBefore(dayjs(), "day")}
+        disabledDate={(current) => !!current && current.isBefore(now(), "day")}
         disabledTime={(currentDate) => {
-          const now = dayjs();
+          const nowInZone = now();
           const selected =
             currentDate && currentDate.isValid()
               ? currentDate
               : date
-                ? dayjs(date)
+                ? toPickerValue(date, timezone)
                 : null;
-          const isToday = !!selected && selected.isSame(now, "day");
+          const isToday = !!selected && selected.isSame(nowInZone, "day");
 
           return {
             disabledHours: () => {
               const hours = [...OUT_OF_HOURS];
               if (isToday) {
-                for (let i = 0; i < now.hour(); i++) hours.push(i);
+                for (let i = 0; i < nowInZone.hour(); i++) hours.push(i);
               }
               return hours;
             },
@@ -120,8 +129,8 @@ export function AppointmentDateTimePicker({
                 for (let i = 5; i < 60; i += 5) minutes.push(i);
               }
 
-              if (isToday && hour === now.hour()) {
-                for (let i = 0; i < now.minute(); i += 5) minutes.push(i);
+              if (isToday && hour === nowInZone.hour()) {
+                for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
               }
 
               return minutes;
@@ -129,6 +138,7 @@ export function AppointmentDateTimePicker({
             disabledSeconds: () => [],
           };
         }}
+        renderExtraFooter={showZone ? () => <TimezoneFooter timezone={timezone} /> : undefined}
         style={{ width: "100%" }}
       />
     </ConfigProvider>

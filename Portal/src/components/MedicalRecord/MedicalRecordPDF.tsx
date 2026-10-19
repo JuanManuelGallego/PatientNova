@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Text, View, pdf } from "@react-pdf/renderer";
 import { FormValues, RELATIONSHIP_CFG, SEX_CFG, SUBSYSTEM_CFG, RelationshipStatus, SubsystemType } from "@/src/types/MedicalRecord";
-import { fmtDate, getAge, todayString } from "@/src/utils/TimeUtils";
+import { fmtCalendarDay, getAge, todayString } from "@/src/utils/TimeUtils";
 import { S } from "@/src/styles/medicalRecordsPDFStyle";
 import { User } from "@/src/types/User";
 
@@ -124,7 +124,7 @@ function EvolutionNotes(form: FormValues) {
           style={[ S.noteCard, i === arr.length - 1 ? S.noteCardLast : {} ]}
         >
           <Text style={S.noteDate}>
-            Nota de evolución — {note.date ? fmtDate(note.date) : `#${i + 1}`}
+            Nota de evolución — {note.date ? fmtCalendarDay(note.date) : `#${i + 1}`}
           </Text>
           <Text style={S.noteText}>{val(note.text, "Sin contenido.")}</Text>
           {i < arr.length - 1 && <View style={S.divider} />}
@@ -353,7 +353,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
             <View style={S.col}>
               <Field
                 label="Fecha de Nacimiento"
-                value={form.birthDate ? fmtDate(form.birthDate) : "—"}
+                value={form.birthDate ? fmtCalendarDay(form.birthDate) : "—"}
               />
             </View>
             <View style={S.col}>

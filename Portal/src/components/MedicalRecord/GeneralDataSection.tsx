@@ -3,6 +3,7 @@ import { FormValues, SEX_CFG } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
 import { getAge } from "@/src/utils/TimeUtils";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 type GeneralDataSectionProps = {
   form: FormValues;
@@ -10,6 +11,7 @@ type GeneralDataSectionProps = {
 };
 
 export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) {
+  const timezone = useDisplayTimezone();
   return (
     <div style={sectionGridStyle}>
       <label className="form-label">
@@ -48,6 +50,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
         Fecha de nacimiento
         <DateTimePicker
           date={form.birthDate || undefined}
+          mode="calendarDay"
           onChange={(date) => onChange("birthDate", date)}
           data-testid="general-data-birth-date-input"
         />
@@ -57,7 +60,7 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
         <input
           className="form-input"
           type="text"
-          value={form.birthDate ? (getAge(form.birthDate) ?? "—") : "—"}
+          value={form.birthDate ? (getAge(form.birthDate, timezone) ?? "—") : "—"}
           readOnly
           disabled
           placeholder="Edad"

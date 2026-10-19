@@ -31,8 +31,8 @@ import {
   SORT_DIRECTION,
   type AuditOrderBy,
 } from "@/src/utils/listQuery";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 const ENTITY_OPTIONS: SelectOption[] = withAllOption(
   Object.values(EntityType),
@@ -47,7 +47,7 @@ const ACTION_OPTIONS: SelectOption[] = withAllOption(
 );
 
 export function AuditLogsTab() {
-  const { user } = useAuthContext();
+  const timezone = useDisplayTimezone();
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
   const [entityType, setEntityType] = useQueryState(QUERY_PARAMS.auditEntityType, parseAsArrayOf(parseAsString).withDefault([]));
   const [actionType, setActionType] = useQueryState(QUERY_PARAMS.auditActionType, parseAsArrayOf(parseAsString).withDefault([]));
@@ -71,7 +71,6 @@ export function AuditLogsTab() {
 
   const filters = useMemo<FetchAuditLogsFilters>(
     () => {
-      const timezone = user?.timezone ?? "UTC";
       return {
       entityType: entityType.length ? (entityType as EntityType[]) : undefined,
       entityId: entityId.trim() || undefined,
@@ -85,7 +84,7 @@ export function AuditLogsTab() {
       order,
       };
     },
-    [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order, user?.timezone],
+    [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order, timezone],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -209,7 +208,7 @@ export function AuditLogsTab() {
               <EntityTypePill entityType={log.entityType} />
             </td>
             <td className="td td--date" >{log.description}</td>
-            <td className="td td--date">{fmtTimestamp(log.eventTimeUtc)}</td>
+            <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
         )}
         emptyState={

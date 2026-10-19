@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
 import { CHANNEL_CFG } from "@/src/types/Reminder";
-import { fmtDate, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
+import { fmtCalendarDay, fmtDateTime, RelativeTime } from "@/src/utils/TimeUtils";
 import {
   PatientStatusPill,
   AppointmentStatusPill,
@@ -26,6 +26,7 @@ import {
   CHANNEL_ICONS,
   NAV_ICONS,
 } from "@/src/config/icons";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 const DRAWER_PREVIEW_TAKE = 10;
 
@@ -59,6 +60,7 @@ export function PatientDrawer({
   onViewAppointment?: (appointment: Appointment) => void;
   onViewReminder?: (reminder: NonNullable<Patient["reminders"]>[number]) => void;
 }) {
+  const timezone = useDisplayTimezone();
   const { patient: patientWithRelations, error } = useFetchPatient(initialPatient.id, {
     take: DRAWER_PREVIEW_TAKE,
   });
@@ -171,7 +173,7 @@ export function PatientDrawer({
       </Section>
 
       <Section title="Información Adicional">
-        {patient.dateOfBirth && <Row icon={DETAIL_ICONS.calendar} label="Fecha de Nacimiento" value={fmtDate(patient.dateOfBirth)} />}
+        {patient.dateOfBirth && <Row icon={DETAIL_ICONS.calendar} label="Fecha de Nacimiento" value={fmtCalendarDay(patient.dateOfBirth)} />}
         {patient.notes && (
           <div className="drawer-notes">
             <div className="notes-label">Notas</div>
@@ -209,7 +211,7 @@ export function PatientDrawer({
                     <span className="linked-card__header">
                       <span className="linked-card__copy">
                         <span className="linked-card__title">{appointmentTypeNameById[apt.typeId ?? ""] || "Desconocido"}</span>
-                        <span className="linked-card__meta">{fmtDateTime(apt.startAt.toString())}</span>
+                        <span className="linked-card__meta">{fmtDateTime(apt.startAt.toString(), timezone)}</span>
                       </span>
                       <AppointmentStatusPill status={apt.status} />
                     </span>
@@ -257,7 +259,7 @@ export function PatientDrawer({
                       <span className="linked-card__copy">
                         <span className="linked-card__title">{CHANNEL_CFG[ rem.channel ]?.label ?? rem.channel}</span>
                         <span className="linked-card__meta">
-                          {rem.sentAt ? `Enviado: ${fmtDateTime(rem.sentAt.toString())}` : `Programado: ${fmtDateTime(rem.sendAt.toString())}`}
+                          {rem.sentAt ? `Enviado: ${fmtDateTime(rem.sentAt.toString(), timezone)}` : `Programado: ${fmtDateTime(rem.sendAt.toString(), timezone)}`}
                         </span>
                       </span>
                       <ReminderStatusPill status={rem.status} />
@@ -279,8 +281,8 @@ export function PatientDrawer({
 
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{patient.id}</span>} />
-        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES")} />
-        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES")} />
+        <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
+        <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES", { timeZone: timezone })} />
         <Link href={`/settings?tab=Registro+de+actividad&entityId=${patient.id}`} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>

@@ -23,10 +23,11 @@ import { MonthView } from "@/src/components/Calendar/MonthView";
 import { WeekView } from "@/src/components/Calendar/WeekView";
 import { DayPanel } from "@/src/components/Calendar/DayPanel";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
-import { useAuthContext } from "@/src/providers/AuthContext";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 function CalendarContent() {
-  const { user } = useAuthContext();
+  // One timezone for the whole calendar: fetch window, day buckets, "today" and click-to-create.
+  const timezone = useDisplayTimezone();
   const { updateAppointment } = useUpdateAppointment();
 
   const {
@@ -42,7 +43,7 @@ function CalendarContent() {
     navNext,
     goToday,
     drillToDay,
-  } = useCalendarNavigation(user?.timezone);
+  } = useCalendarNavigation(timezone);
 
   const apptFilter: FetchAppointmentsFilters = {
     ...calendarFilters,
@@ -63,6 +64,7 @@ function CalendarContent() {
       viewMode,
       appointments,
       blockedTimes,
+      timezone,
     });
 
   const [ showCreate, setShowCreate ] = useState(false);
@@ -102,7 +104,7 @@ function CalendarContent() {
       <PageLayout>
         <PageHeader
           title="Agenda"
-          subtitle={todayString()}
+          subtitle={todayString(timezone)}
           actions={
             <div style={{ display: "flex", gap: 8 }}>
               <button
@@ -136,6 +138,7 @@ function CalendarContent() {
           />
           {viewMode === ViewMode.Month && (
             <MonthView
+              timezone={timezone}
               rows={rows}
               cellDate={cellDate}
               apptByDate={apptByDate}
@@ -150,6 +153,7 @@ function CalendarContent() {
           )}
           {viewMode === ViewMode.Week && (
             <WeekView
+              timezone={timezone}
               weekDays={weekDays}
               apptByDate={apptByDate}
               blockedByDate={blockedByDate}

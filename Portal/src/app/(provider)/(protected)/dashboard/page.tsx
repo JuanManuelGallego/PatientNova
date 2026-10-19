@@ -13,7 +13,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { PatientStatus } from "@/src/types/Patient";
 import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
-import { fmtDateTime, fmtRelative, todayFormattedString, todayString } from "@/src/utils/TimeUtils";
+import { fmtDateTime, fmtRelative, todayFormattedString, todayString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import {
   AppointmentStatusPill,
   ReminderStatusPill,
@@ -35,8 +35,10 @@ import { CHANNEL_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export default function DashboardPage() {
+  const timezone = useDisplayTimezone();
   const { stats: patientStats, loading: loadingPatientStats } =
     useFetchPatientsStats();
   const { stats: apptStats, loading: loadingApptStats } =
@@ -49,7 +51,6 @@ export default function DashboardPage() {
   const [ showPatientModal, setShowPatientModal ] = useState(false);
 
   const todayFilters = useMemo(() => {
-    const timezone = user?.timezone ?? "UTC";
     const { dateFrom, dateTo } = toUtcRangeFromLocalDay(todayFormattedString(timezone), timezone);
     return {
       dateFrom,
@@ -59,7 +60,7 @@ export default function DashboardPage() {
       orderBy: "startAt" as const,
       order: "asc" as const,
     };
-  }, [ user?.timezone ]);
+  }, [ timezone ]);
   const { appointments: todayAppts, loading: loadingAppts } =
     useFetchAppointments(todayFilters);
 
@@ -84,12 +85,12 @@ export default function DashboardPage() {
 
   return (
     <PageLayout>
-      <PageHeader title="Vista General" subtitle={todayString()} />
+      <PageHeader title="Vista General" subtitle={todayString(timezone)} />
       <div className="dash-welcome fade-in">
         <div className="dash-welcome__text">
           <span className="dash-welcome__greeting">
             {(() => {
-              const h = new Date().getHours();
+              const h = zonedDateTimeParts(new Date(), timezone).hour;
               return h < 12
                 ? "Buenos días"
                 : h < 19
@@ -221,7 +222,7 @@ export default function DashboardPage() {
                           {a.patient.name} {a.patient.lastName}
                         </div>
                         <div className="dash-list-item__meta">
-                          {a.appointmentType?.name} · {fmtDateTime(a.startAt)}
+                          {a.appointmentType?.name} · {fmtDateTime(a.startAt, timezone)}
                         </div>
                       </div>
                     </div>

@@ -8,6 +8,7 @@ import {
 import { Appointment } from "@/src/types/Appointment";
 import { fmtDateTime, fmtDate } from "@/src/utils/TimeUtils";
 import { TwilioTemplate } from "@/src/utils/twilioConfig";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function SummaryStep({
   form,
@@ -26,6 +27,7 @@ export function SummaryStep({
   preview: string;
   selectedAppointment: Appointment | null | undefined;
 }) {
+  const timezone = useDisplayTimezone();
   const resolvedTo =
     channel === Channel.WHATSAPP
       ? (selectedPatient?.whatsappNumber ?? "—")
@@ -49,7 +51,7 @@ export function SummaryStep({
           {
             k: "Cita asociada",
             v: selectedAppointment
-              ? `${fmtDate(selectedAppointment.startAt)} — ${selectedAppointment.appointmentType?.name ?? "Cita"}`
+              ? `${fmtDate(selectedAppointment.startAt, timezone)} — ${selectedAppointment.appointmentType?.name ?? "Cita"}`
               : "Ninguna",
           },
           {
@@ -62,7 +64,7 @@ export function SummaryStep({
               sendMode === ReminderMode.IMMEDIATE
                 ? "Inmediatamente"
                 : form.sendAt
-                  ? fmtDateTime(form.sendAt)
+                  ? fmtDateTime(form.sendAt, timezone)
                   : "—",
           },
         ].map(({ k, v }) => (

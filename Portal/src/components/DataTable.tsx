@@ -300,7 +300,7 @@ export function HeaderFilterPopover({
         <>
           <DateTimePicker
             date={config.value}
-            emitLocalDate
+            mode="localDate"
             popupContainer={() => popoverRef.current}
             onChange={(iso) => {
               config.onChange(iso);
