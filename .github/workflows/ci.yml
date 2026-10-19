@@ -16,6 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Portal/package.json
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -97,6 +99,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Server/package.json
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -168,6 +172,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Server/package.json
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
