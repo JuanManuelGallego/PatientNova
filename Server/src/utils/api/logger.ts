@@ -30,6 +30,7 @@ const PII_KEYS = [
   'to',
   'lastName',
   'phone',
+  'phoneNumber',
   'whatsappNumber',
   'smsNumber',
   'recipient',
@@ -91,6 +92,17 @@ function reportLogged(args: unknown[]): void {
   }
 }
 
+// Error messages, stacks and SDK metadata can contain patient data or SQL arguments.
+// Keep only the error class and machine-readable code in logs.
+function serializeError(err: unknown) {
+  const code = typeof err === 'object' && err !== null && 'code' in err ? err.code : undefined;
+  return {
+    type: err instanceof Error ? err.constructor.name : 'Error',
+    ...((typeof code === 'number' && Number.isInteger(code)) ||
+      (typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,31}$/.test(code)) ? { code } : {}),
+  };
+}
+
 export function buildLogger(destination?: DestinationStream) {
   const options = {
     hooks: {
@@ -100,6 +112,7 @@ export function buildLogger(destination?: DestinationStream) {
       },
     },
     level: process.env.LOG_LEVEL ?? 'info',
+    serializers: { err: serializeError, error: serializeError, auditError: serializeError },
     mixin: () => {
       const requestId = getRequestId();
       return requestId ? { requestId } : {};

@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import {
@@ -124,11 +125,12 @@ reminderRouter.delete(
 );
 
 /**
- * PATCH /reminders/:id/restore
- * Restore a soft-deleted reminder.
+ * POST /reminders/:id/restore
+ * Restore a soft-deleted reminder; super admin only.
  */
 reminderRouter.post(
   '/:id/restore',
+  requireSuperAdmin,
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const reminder = await reminderService.restore(req.params.id as string, req.user!.id);

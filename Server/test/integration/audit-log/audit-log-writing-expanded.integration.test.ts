@@ -503,8 +503,8 @@ describe('Audit writing: twilio webhook (integration)', () => {
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
     expect(log!.description).toContain('cancelada via respuesta rápida de WhatsApp');
-    expect(log!.affectedFields).toEqual(['status', 'paid']);
-    expect(log!.fieldsAfter).toMatchObject({ status: AppointmentStatus.CANCELLED, paid: false });
+    expect(log!.affectedFields).toEqual(['status', 'paid', 'cancelledBy']);
+    expect(log!.fieldsAfter).toMatchObject({ status: AppointmentStatus.CANCELLED, paid: false, cancelledBy: 'PATIENT' });
   });
 });
 

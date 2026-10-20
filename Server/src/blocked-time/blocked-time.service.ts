@@ -86,17 +86,24 @@ export const blockedTimeService = {
   },
 
   async restore(id: string, userId: string) {
-    const restoredBlockedTime = await blockedTimeRepository.restore(id, userId);
-    await logAudit({
-      entityType: EntityType.BLOCKED_TIME,
-      entityId: id,
-      userId,
-      actionType: ActionType.RESTORE,
-      description: 'Bloqueo de tiempo restaurado',
-      affectedFields: ['isDeleted'],
-      fieldsBefore: { isDeleted: true },
-      fieldsAfter: { isDeleted: false },
+    return prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, userId);
+      const existing = await blockedTimeRepository.findById(id, userId, true, tx);
+      await checkOverlap(tx, userId, existing.startTimeUtc.toISOString(), existing.endTimeUtc.toISOString(), id);
+      const restoredBlockedTime = await blockedTimeRepository.restore(id, userId, tx);
+      await logAudit({
+        entityType: EntityType.BLOCKED_TIME,
+        entityId: id,
+        userId,
+        actionType: ActionType.RESTORE,
+        description: 'Bloqueo de tiempo restaurado',
+        affectedFields: ['isDeleted'],
+        fieldsBefore: { isDeleted: true },
+        fieldsAfter: { isDeleted: false },
+        tx,
+        required: true,
+      });
+      return restoredBlockedTime;
     });
-    return restoredBlockedTime;
   },
 };
