@@ -17,9 +17,6 @@ interface WebhookPayload {
     body?: string;
 }
 
-// A quick reply may arrive long after the reminder was sent. Only an upcoming, active,
-// non-deleted appointment can still be confirmed or cancelled by the patient; anything else
-// (cancelled, completed, no-show, deleted, already started) is left untouched.
 const PATIENT_MODIFIABLE_STATUSES: ReadonlySet<AppointmentStatus> = new Set([
     AppointmentStatus.SCHEDULED,
     AppointmentStatus.CONFIRMED,
@@ -91,7 +88,6 @@ export class TwilioWebhookService {
     async findActiveReminder(phoneNumber: string): Promise<(Reminder) | null> {
         const reminder = await prisma.reminder.findFirst({
             where: {
-                // `to` is encrypted; match the destination through its blind index.
                 toHash: contactHash(phoneNumber),
                 channel: Channel.WHATSAPP,
                 sentAt: { lte: new Date() },
@@ -108,11 +104,6 @@ export class TwilioWebhookService {
         return reminder;
     }
 
-    /**
-     * Applies a patient's quick reply under the provider lock, so it serializes with provider edits
-     * and re-reads the appointment inside the transaction. Returns false (no change) when the
-     * appointment can no longer be modified by the patient.
-     */
     private async applyPatientReply(reminder: Reminder, intent: 'confirm' | 'cancel'): Promise<boolean> {
         return prisma.$transaction(async (tx: TransactionClient) => {
             await withProviderLock(tx, reminder.userId);
@@ -155,9 +146,6 @@ export class TwilioWebhookService {
         }, { timeout: 10000 });
     }
 
-    /**
-     * Confirm an upcoming appointment. Returns false when it can no longer be modified.
-     */
     async confirmAppointment(reminder: Reminder, phoneNumber: string): Promise<boolean> {
         if (!(await this.applyPatientReply(reminder, 'confirm'))) return false;
 

@@ -133,8 +133,6 @@ export const config = {
       nodeEnv === "production"
         ? requireEnv("ENCRYPTION_KEY")
         : (process.env.ENCRYPTION_KEY ?? ""),
-    // HMAC key for blind indexes (search/uniqueness over encrypted PII). Must differ from
-    // ENCRYPTION_KEY. Changing it invalidates every stored hash (rehash with `pii:backfill`).
     blindIndexKey:
       resolveNodeEnv(process.env.NODE_ENV) === "production"
         ? requireEnv("BLIND_INDEX_KEY")

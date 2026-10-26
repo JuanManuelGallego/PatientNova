@@ -134,7 +134,6 @@ function encryptData(
       if (!(field in result)) continue;
       const value = result[field];
       if (value === null) result[column] = derive(null);
-      // Ciphertext passed through unchanged: its index is already stored.
       else if (typeof value === "string" && !isEncrypted(value)) result[column] = derive(value);
     }
   }

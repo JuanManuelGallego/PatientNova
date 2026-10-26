@@ -19,8 +19,6 @@ type PatientWithRelations = Patient & {
   appointmentType: { id: string; name: string; defaultPrice: number | null } | null;
 };
 
-// Name/last name/email are encrypted, so the database cannot sort on them. A provider's matching
-// patients are few enough to sort after decryption; above the cap we fall back to newest first.
 const ENCRYPTED_SORT_FIELDS = new Set([ 'name', 'lastName', 'email' ]);
 type EncryptedSortField = 'name' | 'lastName' | 'email';
 export const IN_MEMORY_SORT_CAP = 5000;
@@ -49,7 +47,7 @@ async function sortByDecryptedField(
   keys.sort((a, b) => {
     const ka = sortKey(a);
     const kb = sortKey(b);
-    // Missing emails always go last.
+
     if (field === 'email' && !a.email !== !b.email) return a.email ? -1 : 1;
     for (let i = 0; i < ka.length; i++) {
       const c = collator.compare(ka[ i ]!, kb[ i ]!);
@@ -109,10 +107,6 @@ export const patientRepository = {
     return { total, byStatus };
   },
 
-  /**
-   * Active (non-deleted) patient of this provider with the given email. Emails are encrypted,
-   * so the match is on the blind index of the normalized email (same index as the unique key).
-   */
   async findByEmail(email: string, userId: string): Promise<Patient | null> {
     const hash = emailHash(email);
     if (!hash) return null;

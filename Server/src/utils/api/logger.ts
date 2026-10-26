@@ -92,8 +92,6 @@ function reportLogged(args: unknown[]): void {
   }
 }
 
-// Error messages, stacks and SDK metadata can contain patient data or SQL arguments.
-// Keep only the error class and machine-readable code in logs.
 function serializeError(err: unknown) {
   const code = typeof err === 'object' && err !== null && 'code' in err ? err.code : undefined;
   return {

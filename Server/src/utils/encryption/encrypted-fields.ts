@@ -49,11 +49,6 @@ export const ENCRYPTED_JSON_FIELDS: Record<string, Set<string>> = {
   AuditLog: new Set([ "fieldsBefore", "fieldsAfter" ]),
 };
 
-/**
- * Blind indexes derived from encrypted fields. On every write that sets a source field, the
- * encryption extension computes the index column from the plaintext before encrypting it, so
- * the hash can never drift from the stored value. Never write these columns by hand.
- */
 export const BLIND_INDEXES: Record<string, Record<string, { column: string; derive: (value: string | null) => string | string[] | null }>> = {
   Patient: {
     name: { column: "nameTokens", derive: nameTokens },
@@ -70,8 +65,4 @@ export const BLIND_INDEXES: Record<string, Record<string, { column: string; deri
   },
 };
 
-/**
- * Models with a `piiVersion` column: set on create when the row is written encrypted and hashed,
- * null for legacy plaintext rows that `pii:backfill` still has to process.
- */
 export const PII_VERSIONED_MODELS = new Set([ "Patient", "Reminder", "MedicalRecord" ]);

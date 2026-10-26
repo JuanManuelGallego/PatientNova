@@ -5,16 +5,6 @@ import { decrypt, encrypt, isEncrypted } from '../encryption/field-encryption.js
 import { BLIND_INDEXES, ENCRYPTED_FIELDS } from '../encryption/encrypted-fields.js';
 import { PII_VERSION } from '../encryption/blind-index.js';
 
-/**
- * Encrypts legacy plaintext PII and writes its blind indexes, for rows whose `piiVersion` is
- * missing or older than PII_VERSION (also the rehash path after a key/normalization change).
- *
- * - Idempotent and resumable: already-encrypted values are kept, rows are walked by id.
- * - Raw SQL, so `updatedAt` is preserved and no audit rows are produced.
- * - Optimistic: a row changed by the app since it was read (different `updatedAt`) is skipped;
- *   the app's own write already encrypted and indexed it, or the next run will.
- * - Without ENCRYPTION_KEY (local dev) only the blind indexes are written and rows stay unversioned.
- */
 const TABLES = [
   { model: 'Patient', table: 'patients' },
   { model: 'Reminder', table: 'reminders' },

@@ -126,7 +126,6 @@ export const medicalRecordRepository = {
     const where: Prisma.MedicalRecordWhereInput = { patient: { userId }, ...(includeDeleted ? {} : { isDeleted: false }) };
     if (patientId) where.patientId = patientId;
     if (search) {
-      // The record's name is encrypted: 3+ letter prefix match on its blind-index tokens.
       where.AND = [ medicalRecordNameWhere(search) ?? MATCH_NOTHING ];
     }
 
