@@ -10,7 +10,6 @@ export interface RenderedEmail {
 
 export function renderOtpEmail(params: { code: string; providerName: string; ttlMinutes: number }): RenderedEmail {
   return {
-    // Never in the subject: it would show in lock-screen notification previews.
     subject: 'Tu código de verificación',
     body: [
       'Hola,',

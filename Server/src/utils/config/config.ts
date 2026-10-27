@@ -28,10 +28,8 @@ function portalAuthSecret(): string {
 }
 
 const HEX_256 = /^[0-9a-f]{64}$/i;
-// hex of "dev-only-blind-index-key-not-sec" (32 bytes); never used in production, where the key is required.
 const DEV_BLIND_INDEX_KEY = '6465762d6f6e6c792d626c696e642d696e6465782d6b65792d6e6f742d736563';
 
-/** Fails at boot (not on the first PII read) on a malformed key or one key reused for both purposes. */
 function encryptionConfig() {
   const key = nodeEnv === 'production' ? requireEnv('ENCRYPTION_KEY') : (process.env.ENCRYPTION_KEY ?? '');
   const blindIndexKey = nodeEnv === 'production'

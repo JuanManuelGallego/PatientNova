@@ -123,7 +123,6 @@ export const appointmentRepository = {
       },
     );
 
-    // Provider-side writes only: patient cancellations (WhatsApp replies) set cancelledBy themselves.
     if (dto.status === AppointmentStatus.SCHEDULED) {
       data.confirmedAt = null;
       data.cancelledAt = null;

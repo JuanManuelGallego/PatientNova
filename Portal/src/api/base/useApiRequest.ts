@@ -78,7 +78,6 @@ export function useApiRequest<T, R = unknown>(
             return payload;
         } catch (err) {
             if (signal.aborted) return;
-            // Same rule as useApiMutation: curated Spanish for API errors, a connection message for fetch failures.
             const message = err instanceof ApiClientError ? err.message
                 : err instanceof TypeError ? toSpanishMessage(0)
                 : err instanceof Error ? err.message

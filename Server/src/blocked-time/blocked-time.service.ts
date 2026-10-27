@@ -52,7 +52,6 @@ export const blockedTimeService = {
       await withProviderLock(tx, userId);
       const existing = await blockedTimeRepository.findById(id, userId, false, tx);
       if (dto.startTimeUtc || dto.endTimeUtc) {
-        // The schema only compares the bounds when both are sent; check a lone one against the stored other.
         const startAt = dto.startTimeUtc ?? existing.startTimeUtc.toISOString();
         const endAt = dto.endTimeUtc ?? existing.endTimeUtc.toISOString();
         if (new Date(endAt).getTime() <= new Date(startAt).getTime()) throw new BlockedTimeInvalidRangeError();

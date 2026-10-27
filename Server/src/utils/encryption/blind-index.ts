@@ -37,7 +37,6 @@ export function emailHash(email: string | null | undefined): string | null {
   return normalized ? hmac('email', normalized) : null;
 }
 
-/** Stable, keyed audit actor id for a portal patient (an unkeyed hash would let anyone test a guessed email). */
 export function portalActorHash(userId: string, email: string): string {
   return hmac('portal-actor', `${userId}:${normalizeEmail(email)}`);
 }

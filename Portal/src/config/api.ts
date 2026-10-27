@@ -19,7 +19,6 @@ export function resolveApiHost(
     return "http://localhost:3001";
 }
 
-/** Production builds inline NEXT_PUBLIC_API_URL, so a build without it would ship a broken app. */
 export function assertApiUrlForBuild(value: string | undefined): void {
     if (!value?.trim()) {
         throw new Error("NEXT_PUBLIC_API_URL must be set for a production build (e.g. https://api.example.com).");

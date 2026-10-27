@@ -20,7 +20,6 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /account (is |has been )?(temporarily )?locked/i, "La cuenta está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." ],
     [ /end(At|TimeUtc) must be after start(At|TimeUtc)/i, "La hora de fin debe ser posterior a la hora de inicio." ],
     [ /cannot .* an appointment with status/i, "Esa acción no está permitida para el estado actual de la cita." ],
-    // Moving, reactivating or confirming an appointment into the past.
     [ /cannot schedule or confirm appointment .* in the past/i, "No se puede programar ni confirmar una cita en el pasado." ],
     [ /patient limit reached/i, "Alcanzaste el límite de pacientes de tu cuenta." ],
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],

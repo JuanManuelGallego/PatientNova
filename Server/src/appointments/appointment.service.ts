@@ -432,8 +432,6 @@ export const appointmentService = {
       if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
         throw new AppointmentInvalidTimeRangeError();
       }
-      // Only moving, reactivating or re-confirming into the past is locked; plain edits (notes, price, paid)
-      // of a past appointment the completion job has not reached yet are allowed.
       if (willBeActive && (timeChanged || statusChanged) && new Date(newEnd).getTime() <= Date.now()) {
         throw new PastAppointmentLockedError(id);
       }
