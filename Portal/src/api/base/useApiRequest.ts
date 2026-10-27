@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useReducer, useRef } from "react";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { toSpanishMessage } from "./errorMessages";
+import { ApiClientError } from "./apiClients";
 
 type State<T> = {
     data: T | undefined;
@@ -59,16 +61,16 @@ export function useApiRequest<T, R = unknown>(
         try {
             const res = await fetchWithAuth(currentUrl, { signal });
             if (!res.ok) {
-                let errMsg = `Server Error: ${res.status}`;
+                let serverError: string | undefined;
                 try {
                     if (typeof res.json === "function") {
                         const json = await res.json() as { error?: unknown };
-                        if (json && json.error) errMsg = `Server Error: ${String(json.error)}`;
+                        if (json?.error != null) serverError = String(json.error);
                     }
                 } catch {
-                    // ignore and keep status-based message
+                    // unreadable body: fall back to the status-based message
                 }
-                throw new Error(errMsg);
+                throw new ApiClientError(toSpanishMessage(res.status, serverError), res.status, serverError);
             }
             const json = await res.json() as R;
             const payload = parseRef.current(json);
@@ -76,7 +78,11 @@ export function useApiRequest<T, R = unknown>(
             return payload;
         } catch (err) {
             if (signal.aborted) return;
-            const message = err instanceof Error ? err.message : errorMessageRef.current;
+            // Same rule as useApiMutation: curated Spanish for API errors, a connection message for fetch failures.
+            const message = err instanceof ApiClientError ? err.message
+                : err instanceof TypeError ? toSpanishMessage(0)
+                : err instanceof Error ? err.message
+                : errorMessageRef.current;
             dispatch({ type: "FETCH_ERROR", payload: message });
         }
     }, []);
