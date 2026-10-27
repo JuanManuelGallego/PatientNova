@@ -423,18 +423,19 @@ export const appointmentService = {
       if (dto.status !== undefined && !ALLOWED_STATUS_TRANSITIONS[ existing.status ].includes(dto.status)) {
         throw new AppointmentStatusTransitionError(existing.status, `change status to ${dto.status}`);
       }
-      const isPast = existing.endAt.getTime() < Date.now();
-      if (isPast && (newStatus === AppointmentStatus.SCHEDULED || newStatus === AppointmentStatus.CONFIRMED)) {
-        throw new PastAppointmentLockedError(id);
-      }
-
       const willBeActive = ACTIVE_STATUSES.has(newStatus);
       const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
       const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
+      const statusChanged = dto.status !== undefined && dto.status !== existing.status;
       const newStart = dto.startAt ?? existing.startAt;
       const newEnd = dto.endAt ?? existing.endAt;
       if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
         throw new AppointmentInvalidTimeRangeError();
+      }
+      // Only moving, reactivating or re-confirming into the past is locked; plain edits (notes, price, paid)
+      // of a past appointment the completion job has not reached yet are allowed.
+      if (willBeActive && (timeChanged || statusChanged) && new Date(newEnd).getTime() <= Date.now()) {
+        throw new PastAppointmentLockedError(id);
       }
       if (willBeActive && (timeChanged || becomesActive)) {
         await checkConflict(tx, userId, newStart, newEnd, id);
@@ -536,7 +537,7 @@ export const appointmentService = {
       if (!ALLOWED_STATUS_TRANSITIONS[ appt.status ].includes(status)) {
         throw new AppointmentStatusTransitionError(appt.status, `change status to ${status}`);
       }
-      const isPast = appt.startAt.getTime() < Date.now();
+      const isPast = appt.endAt.getTime() <= Date.now();
       if (isPast && (status === AppointmentStatus.SCHEDULED || status === AppointmentStatus.CONFIRMED)) {
         throw new PastAppointmentLockedError(id);
       }

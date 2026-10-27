@@ -1,4 +1,4 @@
-import { AppointmentStatus, Prisma, type Appointment } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy, Prisma, type Appointment } from '../../generated/prisma/client.ts';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import {
   type CreateAppointmentDto,
@@ -123,14 +123,17 @@ export const appointmentRepository = {
       },
     );
 
+    // Provider-side writes only: patient cancellations (WhatsApp replies) set cancelledBy themselves.
     if (dto.status === AppointmentStatus.SCHEDULED) {
       data.confirmedAt = null;
       data.cancelledAt = null;
+      data.cancelledBy = null;
       data.completedAt = null;
     } else if (dto.status === AppointmentStatus.CONFIRMED) {
       data.confirmedAt = new Date();
     } else if (dto.status === AppointmentStatus.CANCELLED) {
       data.cancelledAt = new Date();
+      data.cancelledBy = CancelledBy.PROVIDER;
       data.paid = false;
     } else if (dto.status === AppointmentStatus.COMPLETED) {
       data.completedAt = new Date();
