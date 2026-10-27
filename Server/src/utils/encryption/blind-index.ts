@@ -6,7 +6,7 @@ export const PII_VERSION = 2;
 export const MIN_PREFIX_LENGTH = 3;
 const MAX_PREFIX_LENGTH = 20;
 
-type Purpose = 'email' | 'phone' | 'name';
+type Purpose = 'email' | 'phone' | 'name' | 'portal-actor';
 
 function keyBuffer(): Buffer {
   const key = config.encryption.blindIndexKey;
@@ -35,6 +35,11 @@ export function emailHash(email: string | null | undefined): string | null {
   if (!email) return null;
   const normalized = normalizeEmail(email);
   return normalized ? hmac('email', normalized) : null;
+}
+
+/** Stable, keyed audit actor id for a portal patient (an unkeyed hash would let anyone test a guessed email). */
+export function portalActorHash(userId: string, email: string): string {
+  return hmac('portal-actor', `${userId}:${normalizeEmail(email)}`);
 }
 
 export function phoneHash(phone: string | null | undefined): string | null {

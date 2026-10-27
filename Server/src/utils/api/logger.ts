@@ -28,6 +28,7 @@ export function maskPhone(phone: string): string {
 const PII_KEYS = [
   'email',
   'to',
+  'name',
   'lastName',
   'phone',
   'phoneNumber',
@@ -55,8 +56,6 @@ const REDACT_PATHS = [
   'secret',
   'authToken',
   'contentVariables',
-  'body.name',
-  'patient.name',
   ...PII_KEYS,
   ...PII_KEYS.map((k) => `*.${k}`),
 ];

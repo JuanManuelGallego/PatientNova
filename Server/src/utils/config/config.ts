@@ -27,6 +27,22 @@ function portalAuthSecret(): string {
   return secret;
 }
 
+const HEX_256 = /^[0-9a-f]{64}$/i;
+// hex of "dev-only-blind-index-key-not-sec" (32 bytes); never used in production, where the key is required.
+const DEV_BLIND_INDEX_KEY = '6465762d6f6e6c792d626c696e642d696e6465782d6b65792d6e6f742d736563';
+
+/** Fails at boot (not on the first PII read) on a malformed key or one key reused for both purposes. */
+function encryptionConfig() {
+  const key = nodeEnv === 'production' ? requireEnv('ENCRYPTION_KEY') : (process.env.ENCRYPTION_KEY ?? '');
+  const blindIndexKey = nodeEnv === 'production'
+    ? requireEnv('BLIND_INDEX_KEY')
+    : (process.env.BLIND_INDEX_KEY || DEV_BLIND_INDEX_KEY);
+  if (key && !HEX_256.test(key)) throw new Error('ENCRYPTION_KEY must be a 64-character hex string (256 bits)');
+  if (!HEX_256.test(blindIndexKey)) throw new Error('BLIND_INDEX_KEY must be a 64-character hex string (256 bits)');
+  if (key && key.toLowerCase() === blindIndexKey.toLowerCase()) throw new Error('BLIND_INDEX_KEY must differ from ENCRYPTION_KEY');
+  return { key, blindIndexKey };
+}
+
 export const config = {
   port: parseInt(process.env.PORT ?? '3001', 10),
 
@@ -128,16 +144,7 @@ export const config = {
 
   captcha: captchaConfig(),
 
-  encryption: {
-    key:
-      nodeEnv === "production"
-        ? requireEnv("ENCRYPTION_KEY")
-        : (process.env.ENCRYPTION_KEY ?? ""),
-    blindIndexKey:
-      nodeEnv === "production"
-        ? requireEnv("BLIND_INDEX_KEY")
-        : (process.env.BLIND_INDEX_KEY || "6465762d6f6e6c792d626c696e642d696e6465782d6b65792d6e6f742d73656372"),
-  },
+  encryption: encryptionConfig(),
 
 } as const;
 

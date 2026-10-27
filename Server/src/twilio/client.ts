@@ -28,7 +28,7 @@ export async function sendWhatsApp(
   const to = `whatsapp:${req.to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.debug({ to, from }, 'Sending WhatsApp message');
+  logger.debug({ maskedTo: maskPhone(to), from }, 'Sending WhatsApp message');
 
   const messageParams: Parameters<Twilio[ 'messages' ][ 'create' ]>[ 0 ] =
   {
@@ -66,7 +66,7 @@ export async function scheduleWhatsApp(
   const to = `whatsapp:${req.payload.to}`;
   const from = config.twilio.whatsappFrom;
 
-  logger.debug({ to, from }, 'Sending scheduled WhatsApp message');
+  logger.debug({ maskedTo: maskPhone(to), from }, 'Sending scheduled WhatsApp message');
 
   const messageParams: Parameters<Twilio[ 'messages' ][ 'create' ]>[ 0 ] =
   {

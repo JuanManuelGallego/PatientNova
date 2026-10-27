@@ -20,7 +20,7 @@ export class EncryptionError extends Error {
 }
 
 function getKeyBuffer(key: string): Buffer {
-  if (!key || key.length !== 64) {
+  if (!key || !/^[0-9a-f]{64}$/i.test(key)) {
     throw new EncryptionError(
       "ENCRYPTION_KEY must be a 64-character hex string (256 bits)",
     );

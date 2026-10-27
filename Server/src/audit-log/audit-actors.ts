@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
 import { ActionSource } from '../../generated/prisma/enums.js';
 import { maskEmail } from '../utils/api/logger.js';
+import { portalActorHash } from '../utils/encryption/blind-index.js';
 import type { AuditContext } from './audit-log-context.js';
 
 export function portalPatientAuditContext(params: {
@@ -8,7 +8,7 @@ export function portalPatientAuditContext(params: {
   email: string;
   ipAddress?: string | undefined;
 }): AuditContext {
-  const actorId = `portal:${createHash('sha256').update(`${params.userId}:${params.email}`).digest('hex').slice(0, 24)}`;
+  const actorId = `portal:${portalActorHash(params.userId, params.email).slice(0, 24)}`;
   return {
     actorId,
     actorDisplayName: `Paciente (portal) ${maskEmail(params.email)}`,
