@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import {
@@ -80,11 +81,12 @@ locationRouter.delete(
 );
 
 /**
- * PATCH /locations/:id/restore
- * Restore a soft-deleted appointment location.
+ * POST /locations/:id/restore
+ * Restore a soft-deleted appointment location; super admin only.
  */
 locationRouter.post(
   '/:id/restore',
+  requireSuperAdmin,
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const location = await locationService.restore(req.params.id as string, req.user!.id);

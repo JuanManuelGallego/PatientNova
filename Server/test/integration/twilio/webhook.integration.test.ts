@@ -12,7 +12,7 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { twilioWebhookService } from '../../../src/twilio/webhook.service.js';
 import { appointmentRepository } from '../../../src/appointments/appointment.repository.js';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType, appointmentTimeRange } from '../helpers.js';
-import { AppointmentStatus, ReminderStatus, Channel } from '../../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy, ReminderStatus, Channel } from '../../../generated/prisma/client.ts';
 
 let userId: string;
 let patientId: string;
@@ -76,6 +76,65 @@ describe('twilioWebhookService (integration)', () => {
     const appt = await prisma.appointment.findUnique({ where: { id: apptId } });
     expect(appt!.status).toBe(AppointmentStatus.CANCELLED);
     expect(appt!.cancelledAt).toBeInstanceOf(Date);
+  });
+
+  it('records the patient as the canceller and audits in the same transaction', async () => {
+    await twilioWebhookService.processWhatsAppReply({ from: `whatsapp:${PHONE}`, buttonPayload: 'cancel' });
+
+    const appt = await prisma.appointment.findUnique({ where: { id: apptId } });
+    expect(appt!.cancelledBy).toBe(CancelledBy.PATIENT);
+    const audits = await prisma.auditLog.count({ where: { entityId: apptId } });
+    expect(audits).toBe(1);
+  });
+
+  it.each([
+    [ 'cancelled', { status: AppointmentStatus.CANCELLED } ],
+    [ 'completed', { status: AppointmentStatus.COMPLETED } ],
+    [ 'deleted', { isDeleted: true } ],
+  ])('a stale confirm does not touch a %s appointment', async (_label, data) => {
+    await prisma.appointment.update({ where: { id: apptId }, data });
+    const before = await prisma.appointment.findUnique({ where: { id: apptId } });
+
+    const result = await twilioWebhookService.processWhatsAppReply({ from: `whatsapp:${PHONE}`, buttonPayload: 'confirm' });
+
+    expect(result).toEqual({ success: false, message: 'Appointment not modifiable' });
+    const after = await prisma.appointment.findUnique({ where: { id: apptId } });
+    expect(after!.status).toBe(before!.status);
+    expect(after!.confirmedAt).toBeNull();
+  });
+
+  it('a stale cancel does not touch a completed, paid appointment', async () => {
+    await prisma.appointment.update({ where: { id: apptId }, data: { status: AppointmentStatus.COMPLETED, paid: true } });
+
+    const result = await twilioWebhookService.processWhatsAppReply({ from: `whatsapp:${PHONE}`, buttonPayload: 'cancel' });
+
+    expect(result.success).toBe(false);
+    const appt = await prisma.appointment.findUnique({ where: { id: apptId } });
+    expect(appt!.status).toBe(AppointmentStatus.COMPLETED);
+    expect(appt!.paid).toBe(true);
+  });
+
+  it('does not reactivate a cancelled appointment whose slot was rebooked', async () => {
+    const original = await prisma.appointment.update({ where: { id: apptId }, data: { status: AppointmentStatus.CANCELLED } });
+    await appointmentRepository.create(
+      {
+        startAt: original.startAt.toISOString(),
+        endAt: original.endAt.toISOString(),
+        price: 0,
+        paid: false,
+        status: AppointmentStatus.SCHEDULED,
+        patientId,
+        locationId: original.locationId!,
+        typeId: original.typeId!,
+      },
+      userId,
+    );
+
+    const result = await twilioWebhookService.processWhatsAppReply({ from: `whatsapp:${PHONE}`, buttonPayload: 'confirm' });
+
+    expect(result.message).toBe('Appointment not modifiable');
+    const appt = await prisma.appointment.findUnique({ where: { id: apptId } });
+    expect(appt!.status).toBe(AppointmentStatus.CANCELLED);
   });
 
   it('ignores an unknown intent', async () => {

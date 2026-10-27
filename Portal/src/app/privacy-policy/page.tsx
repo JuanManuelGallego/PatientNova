@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "18 de octubre de 2026";
+const lastUpdated = "19 de octubre de 2026";
 
 const sections = [
   {
@@ -90,7 +90,7 @@ const sections = [
     title: "8. Seguridad",
     content: [
       "Aplicamos controles de seguridad que incluyen contraseñas con hash, tokens de sesión con expiración, cookies de autenticación HttpOnly y Secure, protección contra falsificación de solicitudes (CSRF), control de acceso por roles, aislamiento de datos por cuenta, validación de entradas, limitación de solicitudes, verificación anti-bots en formularios públicos, códigos de acceso de un solo uso con número máximo de intentos, cabeceras de seguridad, bloqueo tras intentos fallidos y registros de auditoría.",
-      "En producción, la aplicación requiere una clave para cifrar determinados campos sensibles, incluidos algunos datos bancarios y partes de historiales. Esto no significa que todos los campos, archivos, copias de seguridad o sistemas de los proveedores estén cifrados con el mismo mecanismo.",
+      "En producción, la aplicación requiere una clave para cifrar determinados campos sensibles, incluidos algunos datos bancarios, partes de historiales y los datos de identificación y contacto de los pacientes (nombre, apellidos, correo electrónico y teléfonos, también en los recordatorios). Esto no significa que todos los campos, archivos, copias de seguridad o sistemas de los proveedores estén cifrados con el mismo mecanismo.",
       "El cifrado de la conexión y el cifrado de la base de datos en reposo dependen también de la infraestructura de despliegue y del proveedor de alojamiento. No afirmamos que ninguna transmisión o sistema sea completamente seguro.",
       "Si detectas un acceso no autorizado o un incidente relacionado con tus datos, notifícalo inmediatamente en privacidad@patientnova.net. Cuando corresponda, informaremos los incidentes de seguridad a la clínica responsable y a la Superintendencia de Industria y Comercio.",
     ],

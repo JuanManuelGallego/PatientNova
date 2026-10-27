@@ -12,12 +12,23 @@ datasource db {
 model Patient {
   id String @id @default(uuid()) @db.Uuid
 
-  name     String @db.VarChar(100)
-  lastName String @db.VarChar(100)
+  // Encrypted at rest (AES-256-GCM, see ENCRYPTED_FIELDS). Never filter or sort on these
+  // columns in SQL: use the blind indexes below (src/utils/encryption/blind-index.ts).
+  name     String @db.Text
+  lastName String @db.Text
 
-  whatsappNumber String? @db.VarChar(20)
-  smsNumber      String? @db.VarChar(20)
-  email          String? @db.VarChar(255)
+  whatsappNumber String? @db.Text
+  smsNumber      String? @db.Text
+  email          String? @db.Text
+
+  // Blind indexes, written by the encryption extension from the plaintext values.
+  emailHash      String?  @db.VarChar(64)
+  whatsappHash   String?  @db.VarChar(64)
+  smsHash        String?  @db.VarChar(64)
+  nameTokens     String[] @default([])
+  lastNameTokens String[] @default([])
+  // Null = legacy plaintext row not yet processed by `pii:backfill`.
+  piiVersion     Int?     @db.SmallInt
 
   reminderChannel Channel @default(WHATSAPP)
 
@@ -43,9 +54,11 @@ model Patient {
   @@index([userId])
   @@index([userId, status])
   @@index([userId, isDeleted])
-  @@index([name])
-  @@index([lastName])
   @@index([status])
+  @@index([userId, whatsappHash])
+  @@index([userId, smsHash])
+  @@index([nameTokens], type: Gin)
+  @@index([lastNameTokens], type: Gin)
   @@map("patients")
 }
 
@@ -65,8 +78,11 @@ model Reminder {
   deletedAt DateTime?
 
   channel Channel
-  to      String  @db.VarChar(255)
-  subject String? @db.VarChar(255)
+  // Encrypted at rest; look up by `toHash` (src/utils/encryption/blind-index.ts contactHash).
+  to         String  @db.Text
+  subject    String? @db.Text
+  toHash     String? @db.VarChar(64)
+  piiVersion Int?    @db.SmallInt
 
   contentSid       String? @db.VarChar(100)
   contentVariables Json?
@@ -95,6 +111,7 @@ model Reminder {
   @@index([userId])
   @@index([status, sendAt])
   @@index([userId, status])
+  @@index([toHash])
   @@map("reminders")
 }
 
@@ -372,12 +389,14 @@ enum RelationshipStatus {
 model MedicalRecord {
   id String @id @default(uuid()) @db.Uuid
 
-  // Personal data
+  // Personal data (name, nationalId, birthPlace encrypted at rest; search via nameTokens)
   name       String?
   nationalId String?
   sex        Sex?
   birthDate  DateTime?
   birthPlace String?
+  nameTokens String[] @default([])
+  piiVersion Int?     @db.SmallInt
 
   // Clinical history
   consultationReason      String? @db.Text
@@ -421,6 +440,7 @@ model MedicalRecord {
 
   @@index([patientId])
   @@index([isDeleted])
+  @@index([nameTokens], type: Gin)
   @@map("medical_records")
 }
 

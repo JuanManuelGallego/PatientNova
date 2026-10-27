@@ -203,10 +203,15 @@ describe('blockedTimeService.delete', () => {
 });
 
 describe('blockedTimeService.restore', () => {
+  beforeEach(() => {
+    mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
+    mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
+  });
+
   it('delegates to repository.restore', async () => {
     mockRepo.restore.mockResolvedValue(fakeBlockedTime as any);
     const result = await blockedTimeService.restore('bt-1', 'user-1');
-    expect(mockRepo.restore).toHaveBeenCalledWith('bt-1', 'user-1');
+    expect(mockRepo.restore).toHaveBeenCalledWith('bt-1', 'user-1', expect.anything());
     expect(result).toEqual(fakeBlockedTime);
   });
 

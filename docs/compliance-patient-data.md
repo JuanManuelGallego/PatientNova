@@ -15,59 +15,86 @@ for the service.
 | Clinical content (medical records, family members, evolution notes) | Encrypted (AES-256-GCM, app level) |
 | Patient / appointment notes, reminder bodies, audit descriptions and diffs | Encrypted |
 | Provider banking and national id | Encrypted |
-| Patient name, last name | **Plaintext** (searchable) |
-| Patient email, whatsapp, sms numbers | **Plaintext** |
-| `Reminder.to` (destination email/phone) | **Plaintext** |
+| Patient name, last name, email, whatsapp, sms numbers | Encrypted, searchable through blind indexes (section 3) |
+| `Reminder.to` and `subject`, medical record name and birth place | Encrypted |
 
 ## 2. Decision (0.23)
 
-**Encrypt patient contact fields and use blind indexes for the lookups we need. Keep name and last
-name in plaintext for now, as a documented residual risk that the controller must accept in writing.**
+**Encrypt all patient identifying and contact fields: `name`, `lastName`, `email`, `whatsappNumber`,
+`smsNumber` and `Reminder.to`. Keyed blind indexes (HMAC) provide the lookups we need.** (Decided by
+the user on 2026-10-06; supersedes an earlier draft that kept names in plaintext.)
 
 Rationale:
-- Contact fields are the data that lets someone reach a patient; combined with "is a patient of
-  provider X" they reveal a health relationship. Encrypting them is cheap because the only lookups
-  we need are exact: login-style matching by email and "is this phone already used".
-- Names are used for substring search in the provider UI (`contains`, case-insensitive). Encrypting
-  them would remove search or force loading all patients into memory. We keep them readable and rely
-  on access control, tenant isolation and database-level controls, and revisit if counsel disagrees.
-- Residual risk accepted by choosing plaintext names: a database dump exposes names and the
-  fact that they are patients of a provider, but not how to contact them or any clinical content.
+- Name and last name are personal data that identify the patient; combined with "is a patient of
+  provider X" (a psychologist) they reveal a health relationship, i.e. sensitive data under
+  Ley 1581 art. 5. A database dump or backup leak must not expose who the patients are.
+- Contact fields let someone reach the patient; same reasoning.
 
-**Pilot gate (unchanged):** a pilot with real patient data requires the work in section 3 to be
-implemented **or** an explicit written acceptance by the controller of the current plaintext state.
-Until then use synthetic or staff data only.
+Accepted functional cost (see section 3, items 4 and 5):
+- Name search matches **word prefixes of 3+ letters**, case- and accent-insensitive ("mar" finds
+  "María José Pérez"; "erez" does not). Substring search is no longer possible.
+- The database can no longer sort patients by name, last name or email (done after decryption).
 
-## 3. Design: encrypted contacts + blind index
+**Pilot gate:** section 3 is implemented; a pilot with real patient data still needs the remaining
+checklist items in section 5.
 
-1. **Keys.** New secret `BLIND_INDEX_KEY` (32 bytes, distinct from `ENCRYPTION_KEY`), kept in the
-   secret manager and backed up separately from database backups. `emailHash`/`phoneHash` =
-   `HMAC-SHA256(key, normalizedValue)`, hex. Store a `hashKeyVersion` smallint to allow rotation
-   (rehash job, then bump the active version).
-2. **Schema (Patient).** Add `emailHash`, `whatsappHash`, `smsHash` (nullable) and `hashKeyVersion`.
-   Widen `email`, `whatsappNumber`, `smsNumber` and `Reminder.to` from `VARCHAR(n)` to `TEXT`
-   (ciphertext is longer than the plaintext). Register the fields in `ENCRYPTED_FIELDS`.
-3. **Uniqueness and matching.** Replace the raw-SQL index
-   `patients_userId_email_normalized_active_key` with a partial unique index on
-   `("userId", "emailHash") WHERE "isDeleted" = false`. `patientRepository.findByEmail` (the single
-   matching function) hashes the normalized input and queries by hash. Phone duplicates are warned,
-   not enforced.
-4. **Search.** Provider search keeps substring matching on name/last name. Email/phone search becomes
-   exact match through the hash (the UI placeholder text must say so).
-5. **Backfill (one-off, idempotent, batched).** `scripts/encrypt-patient-contacts.ts` reads rows whose
-   `emailHash IS NULL`, encrypts the three fields (and `Reminder.to`), writes the hashes. The field
-   decryptor must accept legacy plaintext until the backfill is complete. Run it as a release step,
-   **not** inside `migrate deploy`. Take a `pg_dump` first (see `docs/operations.md`).
-6. **Cut-over order.** (a) migration adds columns + widens types; (b) deploy code that writes
-   ciphertext + hashes and reads both forms; (c) run backfill; (d) migration creates the hash index
-   and drops the plaintext-email index; (e) remove legacy-plaintext tolerance.
-7. **Rollback.** Until step (e) the plaintext-tolerant reader makes rollback of the code safe; keep
-   the pre-backfill dump until the pilot has been stable for a release.
-8. **Tests.** Real-Postgres tests for: ciphertext at rest, equality by hash, case/whitespace
-   normalization, per-provider uniqueness, restore conflicts, backfill idempotency, key-version rotation.
+## 3. Implementation: encrypted identity/contact fields + blind indexes
 
-Effort: roughly 2 to 3 engineering days plus a staging rehearsal. It must land before patient
-matching (3.3) is released, because matching is implemented on the hash.
+**Status: implemented** (migration `20261019000000_encrypt_patient_pii`). Code:
+`Server/src/utils/encryption/{encrypted-fields,blind-index,pii-search}.ts`,
+`Server/src/utils/prisma/{encryption-extension,backfill-pii}.ts`.
+
+1. **What is encrypted** (AES-256-GCM, `ENCRYPTION_KEY`, random IV): `Patient.name`, `lastName`,
+   `email`, `whatsappNumber`, `smsNumber`; `Reminder.to`, `subject` (it can carry the patient's
+   name); `MedicalRecord.name`, `birthPlace` (the record's own copy of the patient's identity).
+   The columns became `TEXT`; length limits live in the zod schemas.
+2. **Keys.** `BLIND_INDEX_KEY` (32 bytes hex, distinct from `ENCRYPTION_KEY`, required in production)
+   is kept in the secret manager and backed up separately from database backups. Every blind index
+   is `HMAC-SHA256(key, "<purpose>:" + normalizedValue)`, hex, purpose `email`, `phone` or `name`.
+   Phone and email hashes are shared across models on purpose: `Reminder.toHash` equals the
+   patient's `whatsappHash` for the same number, which is how the WhatsApp webhook finds a reminder.
+3. **Index columns, written only by the Prisma extension** from the plaintext on every write that
+   sets the source field (so they cannot drift): `Patient.emailHash`, `whatsappHash`, `smsHash`,
+   `nameTokens`, `lastNameTokens`; `Reminder.toHash`; `MedicalRecord.nameTokens`. Normalization:
+   email trimmed + lower-cased; phone digits only (drops `whatsapp:`, `+`, spaces, punctuation);
+   names lower-cased, accents removed (NFD), split on anything that is not a letter or digit.
+4. **Uniqueness and matching.** Raw-SQL partial unique index `patients_userId_emailHash_active_key`
+   on `("userId", "emailHash") WHERE "isDeleted" = false` (replaces the old expression index).
+   `patientRepository.findByEmail` matches by hash.
+5. **Search** (`pii-search.ts`): text with `@` = exact email; phone-like text = exact phone (either
+   number); anything else = every search word must start a word of the name or last name, case-
+   and accent-insensitive. Each stored word is indexed whole plus its prefixes of 3 to 20 letters
+   ("maria" -> mar, mari, maria), so "mar per" finds "María José Pérez"; query words under 3
+   letters only match an identical word ("de" finds "de la Torre", "ma" finds nothing); substrings
+   ("erez") never match. Used by the patient, appointment and reminder lists (reminders also match
+   the exact destination) and the medical-record list (record name). Portal placeholders say email
+   and phone must be exact. (`PII_VERSION` 2 added the prefixes; the backfill rehashed v1 rows.)
+6. **Sorting.** The patient list still sorts by name, last name or email: matching rows (at most
+   5,000, `IN_MEMORY_SORT_CAP`) are decrypted and sorted with a Spanish collator, then paginated;
+   above the cap it falls back to newest first and logs a warning. Patients without email sort last.
+7. **Other readers** read through Prisma and get plaintext from the extension; there is no raw SQL
+   over these columns besides the backfill.
+8. **Backfill** (`pnpm run pii:backfill`, runs in `pnpm start` right after `migrate deploy`). Walks
+   rows with `piiVersion` null or older than `PII_VERSION`, encrypts plaintext values, writes the
+   indexes and stamps `piiVersion`. Raw SQL: `updatedAt` is kept and no audit rows are written.
+   Idempotent, resumable, and optimistic (a row the app changed meanwhile is skipped). Without
+   `ENCRYPTION_KEY` (local dev) it only writes indexes. Take a `pg_dump` before the first deploy
+   that runs it (`docs/operations.md`).
+9. **Rotation.** Changing `BLIND_INDEX_KEY` or a normalization rule: bump `PII_VERSION`, deploy;
+   the backfill rehashes every row. Searches miss rows that are not rehashed yet, so do it in a
+   quiet window.
+10. **Rollback.** Older code cannot read the ciphertext (it would show `enc:v1:...` strings), so
+    rolling back the code after the backfill means restoring the pre-deploy dump. Roll forward instead.
+11. **Tests:** `test/integration/patients/patient.pii-encryption.integration.test.ts` (ciphertext at
+    rest for every field, indexes on create/update/clear, accent/case/prefix search across the
+    four lists, exact email/phone, tenant isolation, sorting + pagination, backfill encryption,
+    `updatedAt` preserved, idempotency, uniqueness against backfilled rows).
+
+Residual leakage (documented, accepted): blind indexes are deterministic, so someone who has the
+database but not the key can see which rows share a name word, a name prefix, an email or a phone,
+but not what they are. The number of name tokens reveals the approximate length of each name word,
+and frequent prefixes ("mar") are easier to guess by frequency than whole words. Anyone with both keys and the database can
+read everything; the keys must never be stored with the backups.
 
 ## 4. Consent model (0.20 to 0.22)
 
@@ -76,7 +103,7 @@ matching (3.3) is released, because matching is implemented on the hash.
 - Immutable rows; revocation sets `revokedAt` and writes an audit entry (`EntityType.PATIENT_CONSENT`).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
-- `policyVersion` = the policy's last-updated date (`2026-10-06` for the current text). Changing the
+- `policyVersion` = the policy's last-updated date (`2026-10-19` for the current text). Changing the
   privacy policy requires bumping it and re-asking consent at the patient's next booking (7.2).
 - Approval-mode requests carry the same evidence on `BookingRequest` and copy it to `PatientConsent`
   on approval, preserving the original acceptance time.
@@ -100,5 +127,6 @@ matching (3.3) is released, because matching is implemented on the hash.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.
 - [ ] Retention table (clinical records vs. appointments vs. logs) and the erasure path; define how
       the immutable audit log is minimized when a patient is erased.
-- [ ] Written acceptance of plaintext names (section 2) **or** a decision to encrypt them.
+- [x] Encryption of patient identity/contact fields (section 3) implemented; backfill runs on start.
+- [ ] `BLIND_INDEX_KEY` generated, stored in the secret manager and backed up apart from the database.
 - [ ] Counsel review of `privacy-policy/page.tsx` and `terms-of-service/page.tsx`.

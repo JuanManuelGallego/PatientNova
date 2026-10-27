@@ -133,6 +133,10 @@ export const config = {
       nodeEnv === "production"
         ? requireEnv("ENCRYPTION_KEY")
         : (process.env.ENCRYPTION_KEY ?? ""),
+    blindIndexKey:
+      nodeEnv === "production"
+        ? requireEnv("BLIND_INDEX_KEY")
+        : (process.env.BLIND_INDEX_KEY || "6465762d6f6e6c792d626c696e642d696e6465782d6b65792d6e6f742d73656372"),
   },
 
 } as const;

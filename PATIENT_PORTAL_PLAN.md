@@ -1,7 +1,7 @@
-> **Status:** Proposal, not yet implemented. **Date:** 2026-10-05
+> **Status:** Phase 0 implemented on `staging`; Phases 1+ not started. **Date:** 2026-10-05
 
-## Phase 0 status (2026-10-07)
-Implemented on stacked local branches (merge in this order; nothing pushed yet). Server: 410 unit + 500 integration tests; Portal: 160 tests; Playwright run locally against a throwaway stack.
+## Phase 0 status (2026-10-06)
+Implemented as one commit per branch below, all on `staging`. Server: unit + integration suites green; Portal: 160 tests; Playwright run locally against a throwaway stack (the CI `e2e` job has not run yet).
 
 | Branch | Items | Notes |
 |---|---|---|
@@ -9,7 +9,7 @@ Implemented on stacked local branches (merge in this order; nothing pushed yet).
 | `b1-error-handling` | 0.1 | 4-arg error handler, request id, supertest app tests |
 | `b2-provider-lock` | 0.2 | `withProviderLock`, `createWithin`, `appointments_no_provider_overlap` |
 | `b3-appointment-integrity` | 0.3 | transitions, partial-time validation, atomic audits, reactivation checks |
-| `b4-patient-integrity` | 0.4 | normalized email index, 409 on restore; **blind-index swap pending (see compliance doc)** |
+| `b4-patient-integrity` | 0.4 | normalized email, 409 on restore; uniqueness now on the email blind index |
 | `c1-auth-separation` | 0.5 | `src/auth/tokens.ts`; forces re-login on deploy |
 | `c2-primitives-audit` | 0.7 | OTP/CSRF/safeEqual helpers, `required` audits, portal audit actor |
 | `c3-logging-pii` | 0.8 | redaction, request-id mixin, no query strings |
@@ -19,8 +19,9 @@ Implemented on stacked local branches (merge in this order; nothing pushed yet).
 | `d1-timezone`, `d2-consent-download` | 0.11, 0.19 | luxon DST-correct utils; hardened public download |
 | `e1`..`e4b` | 0.14-0.16, 0.18 | provider route group, API clients + Spanish errors, security headers (CSP report-only), self-contained e2e CI, opt-in Sentry, `docs/operations.md` |
 | `f-legal-compliance` | 0.17, 0.20-0.23 | Colombian privacy policy, `docs/compliance-patient-data.md` |
+| (on `staging`) | 0.23 | patient name/contact encryption + blind indexes, whole-word search, backfill on start |
 
-Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, written acceptance or implementation of the contact-field encryption + blind index (`docs/compliance-patient-data.md` section 3), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
+Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
 
 # Patient Portal: architecture proposal
 

@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import {
@@ -97,8 +98,10 @@ appointmentRouter.delete(
   }),
 );
 
+/** Restore a soft-deleted appointment; super admin only. */
 appointmentRouter.post(
   '/:id/restore',
+  requireSuperAdmin,
   validateParams(uuidParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const appt = await appointmentService.restore(req.params.id as string, req.user!.id);

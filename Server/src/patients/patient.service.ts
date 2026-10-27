@@ -1,4 +1,6 @@
-import { patientRepository } from './patient.repository.js';
+import { MAX_PATIENTS_PER_PROVIDER, patientRepository } from './patient.repository.js';
+import { PatientLimitReachedError } from './patient.errors.js';
+import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 import { updatePatientSchema } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
@@ -36,6 +38,10 @@ export const patientService = {
 
   async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
     return prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, userId);
+      if (await patientRepository.countActive(userId, tx) >= MAX_PATIENTS_PER_PROVIDER) {
+        throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
+      }
       const createdPatient = await patientRepository.create(dto, userId, tx);
       await logAudit({
         entityType: EntityType.PATIENT,
@@ -92,7 +98,11 @@ export const patientService = {
 
   async restore(id: string, userId: string): Promise<Patient> {
     return prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, userId);
       const restoredPatient = await patientRepository.restore(id, userId, tx);
+      if (await patientRepository.countActive(userId, tx) > MAX_PATIENTS_PER_PROVIDER) {
+        throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
+      }
       await logAudit({
         entityType: EntityType.PATIENT,
         entityId: id,
