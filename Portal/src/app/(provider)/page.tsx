@@ -170,7 +170,7 @@ export default function LandingPage() {
           <p className="landing-cta-banner__subtitle">
             Contacta
             <a
-              href={`mailto:juan.gallego.developer@gmail.com`}
+              href={`mailto:support@patientnova.net`}
               className="landing-cta-link"
             >
              {" soporte "}
