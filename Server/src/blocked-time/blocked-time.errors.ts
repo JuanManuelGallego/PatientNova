@@ -11,3 +11,9 @@ export class BlockedTimeOverlapError extends ApiError {
     super(`Blocked time overlaps with an existing blocked slot (${startAt.toISOString()} – ${endAt.toISOString()})`, 409)
   }
 }
+
+export class BlockedTimeInvalidRangeError extends ApiError {
+  constructor() {
+    super('endTimeUtc must be after startTimeUtc', 400)
+  }
+}
