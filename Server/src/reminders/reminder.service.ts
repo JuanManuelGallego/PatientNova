@@ -67,6 +67,7 @@ export const reminderService = {
           appointmentId: created.appointmentId,
         },
         tx,
+        required: true,
       });
 
       return created;
