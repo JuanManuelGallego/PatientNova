@@ -21,7 +21,8 @@ type PatientWithRelations = Patient & {
 
 const ENCRYPTED_SORT_FIELDS = new Set([ 'name', 'lastName', 'email' ]);
 type EncryptedSortField = 'name' | 'lastName' | 'email';
-export const IN_MEMORY_SORT_CAP = 5000;
+export const MAX_PATIENTS_PER_PROVIDER = 5000;
+export const IN_MEMORY_SORT_CAP = MAX_PATIENTS_PER_PROVIDER;
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
 
 async function sortByDecryptedField(
@@ -86,6 +87,10 @@ export const patientRepository = {
       }
       throw err;
     }
+  },
+
+  async countActive(userId: string, tx?: TransactionClient): Promise<number> {
+    return (tx ?? prisma).patient.count({ where: { userId, isDeleted: false } });
   },
 
   async getStats(userId: string, query?: PatientStatsQuery): Promise<{ total: number; byStatus: Record<string, number> }> {

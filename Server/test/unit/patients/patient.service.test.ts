@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { patientService } from '../../../src/patients/patient.service.js';
 
 vi.mock('../../../src/patients/patient.repository.js', () => ({
+  MAX_PATIENTS_PER_PROVIDER: 5000,
   patientRepository: {
+    countActive: vi.fn(async () => 0),
     findById: vi.fn(),
     findByIdWithRelations: vi.fn(),
     findMany: vi.fn(),
@@ -18,6 +20,10 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
   prisma: { $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({ tx: true })) },
 }));
 
+vi.mock('../../../src/utils/prisma/provider-lock.js', () => ({
+  withProviderLock: vi.fn(),
+}));
+
 vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({
   logAudit: vi.fn(),
   computeDiff: vi.fn(() => ({ affectedFields: [], fieldsBefore: null, fieldsAfter: null })),
@@ -29,9 +35,11 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
 
 import { patientRepository } from '../../../src/patients/patient.repository.js';
 import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
+import { withProviderLock } from '../../../src/utils/prisma/provider-lock.js';
 
 const mockRepo = vi.mocked(patientRepository);
 const mockLogAudit = vi.mocked(logAudit);
+const mockWithProviderLock = vi.mocked(withProviderLock);
 
 const fakePatient = {
   id: 'patient-1',
@@ -140,6 +148,26 @@ describe('patientService.create', () => {
     await expect(patientService.create({ name: 'X', lastName: 'Y', email: 'dup', status: 'ACTIVE' as const }, 'user-1')).rejects.toThrow('Email conflict');
     expect(mockLogAudit).not.toHaveBeenCalled();
   });
+
+  it('takes the provider lock before counting', async () => {
+    mockRepo.create.mockResolvedValue(fakePatient as any);
+    await patientService.create({ name: 'John', lastName: 'Doe', status: 'ACTIVE' as const }, 'user-1');
+    expect(mockWithProviderLock).toHaveBeenCalledWith(expect.anything(), 'user-1');
+    expect(mockWithProviderLock.mock.invocationCallOrder[0]).toBeLessThan(mockRepo.countActive.mock.invocationCallOrder[0]!);
+  });
+
+  it('rejects with 409 once the provider has 5000 patients', async () => {
+    mockRepo.countActive.mockResolvedValueOnce(5000);
+    await expect(patientService.create({ name: 'John', lastName: 'Doe', status: 'ACTIVE' as const }, 'user-1'))
+      .rejects.toMatchObject({ name: 'PatientLimitReachedError', errorCode: 409 });
+    expect(mockRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('allows the 5000th patient', async () => {
+    mockRepo.countActive.mockResolvedValueOnce(4999);
+    mockRepo.create.mockResolvedValue(fakePatient as any);
+    await expect(patientService.create({ name: 'John', lastName: 'Doe', status: 'ACTIVE' as const }, 'user-1')).resolves.toEqual(fakePatient);
+  });
 });
 
 describe('patientService.update', () => {
@@ -220,6 +248,20 @@ describe('patientService.restore', () => {
   it('propagates repository errors', async () => {
     mockRepo.restore.mockRejectedValue(new Error('Not found'));
     await expect(patientService.restore('bad', 'user-1')).rejects.toThrow('Not found');
+  });
+
+  it('rejects with 409 when the restore would exceed 5000 active patients', async () => {
+    mockRepo.restore.mockResolvedValue(fakePatient as any);
+    mockRepo.countActive.mockResolvedValueOnce(5001);
+    await expect(patientService.restore('patient-1', 'user-1'))
+      .rejects.toMatchObject({ name: 'PatientLimitReachedError', errorCode: 409 });
+    expect(mockLogAudit).not.toHaveBeenCalled();
+  });
+
+  it('allows a restore that reaches exactly 5000 active patients', async () => {
+    mockRepo.restore.mockResolvedValue(fakePatient as any);
+    mockRepo.countActive.mockResolvedValueOnce(5000);
+    await expect(patientService.restore('patient-1', 'user-1')).resolves.toEqual(fakePatient);
   });
 });
 

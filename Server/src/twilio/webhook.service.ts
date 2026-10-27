@@ -86,16 +86,18 @@ export class TwilioWebhookService {
      * Find the most recent active reminder for a phone number
      */
     async findActiveReminder(phoneNumber: string): Promise<(Reminder) | null> {
-        const reminder = await prisma.reminder.findFirst({
+        // A null hash would match reminders not yet backfilled (`toHash IS NULL`).
+        const toHash = contactHash(phoneNumber);
+        const reminder = toHash ? await prisma.reminder.findFirst({
             where: {
-                toHash: contactHash(phoneNumber),
+                toHash,
                 channel: Channel.WHATSAPP,
                 sentAt: { lte: new Date() },
                 appointmentId: { not: null },
             },
             orderBy: { sendAt: 'desc' },
             include: { appointment: true },
-        });
+        }) : null;
 
         if (!reminder) {
             logger.warn({ phoneLast4: maskPhone(phoneNumber) }, 'No active appointment reminder found for this phone number — ignoring webhook');

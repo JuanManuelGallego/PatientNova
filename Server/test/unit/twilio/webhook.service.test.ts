@@ -159,6 +159,12 @@ describe('TwilioWebhookService.findActiveReminder', () => {
     const result = await service.findActiveReminder('+15551234567');
     expect(result).toBeNull();
   });
+
+  it('does not query when the sender has no digits (null hash would match unbackfilled rows)', async () => {
+    const result = await service.findActiveReminder('not-a-number');
+    expect(result).toBeNull();
+    expect(mockPrisma.reminder.findFirst).not.toHaveBeenCalled();
+  });
 });
 
 describe('TwilioWebhookService.confirmAppointment', () => {
