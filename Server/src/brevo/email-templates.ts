@@ -10,7 +10,7 @@ export interface RenderedEmail {
 
 export function renderOtpEmail(params: { code: string; providerName: string; ttlMinutes: number }): RenderedEmail {
   return {
-    subject: `Tu código de verificación: ${params.code}`,
+    subject: 'Tu código de verificación',
     body: [
       'Hola,',
       '',

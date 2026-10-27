@@ -51,7 +51,7 @@ export class AppointmentBlockedTimeConflictError extends ApiError {
 
 export class PastAppointmentLockedError extends ApiError {
   constructor(id: string) {
-    super(`Cannot update past appointment "${id}" with status SCHEDULED or CONFIRMED`, 409)
+    super(`Cannot schedule or confirm appointment "${id}" in the past`, 409)
   }
 }
 

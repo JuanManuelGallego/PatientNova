@@ -34,9 +34,10 @@ describe('sendTransactionalEmail', () => {
 });
 
 describe('Spanish templates', () => {
-  it('OTP email carries the code and expiry but no link', () => {
+  it('OTP email carries the code (body only, never the subject) and expiry but no link', () => {
     const e = renderOtpEmail({ code: '123456', providerName: 'Dra. Pérez', ttlMinutes: 10 });
-    expect(e.subject).toContain('123456');
+    expect(e.subject).not.toContain('123456');
+    expect(e.body).toContain('123456');
     expect(e.body).toContain('Dra. Pérez');
     expect(e.body).toContain('10 minutos');
     expect(e.body).not.toMatch(/https?:\/\//);

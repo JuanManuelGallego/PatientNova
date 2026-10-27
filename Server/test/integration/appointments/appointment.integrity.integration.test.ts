@@ -10,8 +10,9 @@ import {
   AppointmentInvalidTimeRangeError,
   AppointmentNotFoundError,
   AppointmentStatusTransitionError,
+  PastAppointmentLockedError,
 } from '../../../src/appointments/appointment.errors.js';
-import { AppointmentStatus } from '../../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy } from '../../../generated/prisma/client.ts';
 import { ActionType, EntityType } from '../../../generated/prisma/enums.ts';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType } from '../helpers.js';
 
@@ -128,6 +129,74 @@ describe('reactivation and restore re-check conflicts (integration)', () => {
     await appointmentService.create(dto(0, 30), userId);
     const restored = await appointmentService.restore(first.id, userId);
     expect(restored.isDeleted).toBe(false);
+  });
+});
+
+describe('cancelledBy (integration)', () => {
+  it('records PROVIDER for provider cancels (setStatus and update) and clears it on reactivation', async () => {
+    const viaStatus = await appointmentService.create(dto(0, 30), userId);
+    expect((await appointmentService.setStatus(viaStatus.id, userId, AppointmentStatus.CANCELLED)).cancelledBy)
+      .toBe(CancelledBy.PROVIDER);
+
+    const viaUpdate = await appointmentService.create(dto(60, 90), userId);
+    expect((await appointmentService.update(viaUpdate.id, { status: AppointmentStatus.CANCELLED }, userId)).cancelledBy)
+      .toBe(CancelledBy.PROVIDER);
+
+    // A patient cancellation (WhatsApp reply) later reactivated by the provider must not keep PATIENT.
+    await prisma.appointment.update({ where: { id: viaUpdate.id }, data: { cancelledBy: CancelledBy.PATIENT } });
+    const reactivated = await appointmentService.update(viaUpdate.id, { status: AppointmentStatus.SCHEDULED }, userId);
+    expect(reactivated.cancelledBy).toBeNull();
+    expect(reactivated.cancelledAt).toBeNull();
+  });
+});
+
+describe('past appointments (integration)', () => {
+  const HOUR = 3_600_000;
+  async function pastAppointment(status: AppointmentStatus) {
+    const appt = await appointmentService.create(dto(0, 30), userId);
+    // Move it into the past directly: the service (rightly) refuses to.
+    await prisma.appointment.update({
+      where: { id: appt.id },
+      data: { startAt: new Date(Date.now() - 2 * HOUR), endAt: new Date(Date.now() - HOUR), status },
+    });
+    return appt.id;
+  }
+
+  it('allows plain edits of a past SCHEDULED appointment the completion job has not reached', async () => {
+    const id = await pastAppointment(AppointmentStatus.SCHEDULED);
+    const updated = await appointmentService.update(id, { notes: 'Llegó tarde', paid: true }, userId);
+    expect(updated.notes).toBe('Llegó tarde');
+    expect(updated.paid).toBe(true);
+  });
+
+  it('reschedules a cancelled past appointment to a future slot in one update', async () => {
+    const id = await pastAppointment(AppointmentStatus.CANCELLED);
+    const updated = await appointmentService.update(
+      id,
+      { status: AppointmentStatus.SCHEDULED, startAt: at(120).toISOString(), endAt: at(150).toISOString() },
+      userId,
+    );
+    expect(updated.status).toBe(AppointmentStatus.SCHEDULED);
+    expect(updated.startAt).toEqual(at(120));
+  });
+
+  it('refuses to reactivate, confirm or move an active appointment into the past', async () => {
+    const cancelled = await pastAppointment(AppointmentStatus.CANCELLED);
+    await expect(appointmentService.update(cancelled, { status: AppointmentStatus.SCHEDULED }, userId))
+      .rejects.toBeInstanceOf(PastAppointmentLockedError);
+    await expect(appointmentService.setStatus(cancelled, userId, AppointmentStatus.SCHEDULED))
+      .rejects.toBeInstanceOf(PastAppointmentLockedError);
+
+    const scheduled = await pastAppointment(AppointmentStatus.SCHEDULED);
+    await expect(appointmentService.update(scheduled, { status: AppointmentStatus.CONFIRMED }, userId))
+      .rejects.toBeInstanceOf(PastAppointmentLockedError);
+
+    const future = await appointmentService.create(dto(200, 230), userId);
+    await expect(appointmentService.update(
+      future.id,
+      { startAt: new Date(Date.now() - 2 * HOUR).toISOString(), endAt: new Date(Date.now() - HOUR).toISOString() },
+      userId,
+    )).rejects.toBeInstanceOf(PastAppointmentLockedError);
   });
 });
 

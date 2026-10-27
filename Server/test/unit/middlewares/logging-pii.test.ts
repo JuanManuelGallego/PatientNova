@@ -34,12 +34,14 @@ describe('logger redaction', () => {
     log.info({
       email: 'ana@example.com',
       to: '+573001112233',
+      name: 'Beatriz',
+      reminder: { name: 'Carolina' },
       patient: { name: 'Ana', lastName: 'Lopez', email: 'ana@example.com', whatsappNumber: '+573001112233' },
       body: { email: 'x@y.co', to: '+1', name: 'Ana' },
       requestId: 'keep-me',
     }, 'event');
     const out = JSON.stringify(lines[0]);
-    for (const secret of [ 'ana@example.com', '573001112233', 'Lopez', 'x@y.co', '"Ana"' ]) {
+    for (const secret of [ 'ana@example.com', '573001112233', 'Lopez', 'x@y.co', '"Ana"', 'Beatriz', 'Carolina' ]) {
       expect(out).not.toContain(secret);
     }
     expect(out).toContain('[REDACTED]');

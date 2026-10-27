@@ -26,3 +26,33 @@ describe('config.auth.portalJwtSecret', () => {
     expect((await loadConfig()).auth.portalJwtSecret).toBe('distinct-portal-secret');
   });
 });
+
+describe('config.encryption', () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const HEX_A = 'a'.repeat(64);
+  const HEX_B = 'b'.repeat(64);
+
+  it('rejects a malformed ENCRYPTION_KEY at boot', async () => {
+    vi.stubEnv('ENCRYPTION_KEY', 'z'.repeat(64));
+    vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+    await expect(loadConfig()).rejects.toThrow('ENCRYPTION_KEY must be a 64-character hex string');
+  });
+
+  it('rejects a malformed BLIND_INDEX_KEY at boot', async () => {
+    vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+    vi.stubEnv('BLIND_INDEX_KEY', 'short');
+    await expect(loadConfig()).rejects.toThrow('BLIND_INDEX_KEY must be a 64-character hex string');
+  });
+
+  it('rejects the same key for encryption and blind indexes', async () => {
+    vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+    vi.stubEnv('BLIND_INDEX_KEY', HEX_A.toUpperCase());
+    await expect(loadConfig()).rejects.toThrow('BLIND_INDEX_KEY must differ from ENCRYPTION_KEY');
+  });
+
+  it('accepts two distinct hex keys', async () => {
+    vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+    vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+    expect((await loadConfig()).encryption).toEqual({ key: HEX_A, blindIndexKey: HEX_B });
+  });
+});

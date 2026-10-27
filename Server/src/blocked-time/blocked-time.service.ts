@@ -1,5 +1,5 @@
 import { blockedTimeRepository } from './blocked-time.repository.js';
-import { BlockedTimeOverlapError } from './blocked-time.errors.js';
+import { BlockedTimeInvalidRangeError, BlockedTimeOverlapError } from './blocked-time.errors.js';
 import { logger } from '../utils/api/logger.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
@@ -28,43 +28,48 @@ export const blockedTimeService = {
   },
 
   async create(dto: CreateBlockedTimeDto, userId: string) {
-    const createdBlockedTime = await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       await checkOverlap(tx, userId, dto.startTimeUtc, dto.endTimeUtc);
-      return blockedTimeRepository.create(dto, userId, tx);
+      const createdBlockedTime = await blockedTimeRepository.create(dto, userId, tx);
+      await logAudit({
+        entityType: EntityType.BLOCKED_TIME,
+        entityId: createdBlockedTime.id,
+        userId,
+        actionType: ActionType.CREATE,
+        description: 'Bloqueo de tiempo creado',
+        affectedFields: Object.keys(dto),
+        fieldsAfter: dto as unknown as Record<string, unknown>,
+        tx,
+        required: true,
+      });
+      return createdBlockedTime;
     });
-    await logAudit({
-      entityType: EntityType.BLOCKED_TIME,
-      entityId: createdBlockedTime.id,
-      userId,
-      actionType: ActionType.CREATE,
-      description: 'Bloqueo de tiempo creado',
-      affectedFields: Object.keys(dto),
-      fieldsAfter: dto as unknown as Record<string, unknown>,
-    });
-    return createdBlockedTime;
   },
 
   async update(id: string, dto: UpdateBlockedTimeDto, userId: string): Promise<BlockedTime> {
-    const { existingBlockedTime, updatedBlockedTime } = await prisma.$transaction(async (tx) => {
+    const updatedBlockedTime = await prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       const existing = await blockedTimeRepository.findById(id, userId, false, tx);
       if (dto.startTimeUtc || dto.endTimeUtc) {
         const startAt = dto.startTimeUtc ?? existing.startTimeUtc.toISOString();
         const endAt = dto.endTimeUtc ?? existing.endTimeUtc.toISOString();
+        if (new Date(endAt).getTime() <= new Date(startAt).getTime()) throw new BlockedTimeInvalidRangeError();
         await checkOverlap(tx, userId, startAt, endAt, id);
       }
       const updated = await blockedTimeRepository.update(id, dto, userId, tx);
-      return { existingBlockedTime: existing, updatedBlockedTime: updated };
-    });
-    const diff = computeDiff(existingBlockedTime as unknown as Record<string, unknown>, updatedBlockedTime as unknown as Record<string, unknown>, BLOCKED_TIME_DIFF_FIELDS);
-    await logAudit({
-      entityType: EntityType.BLOCKED_TIME,
-      entityId: id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: 'Bloqueo de tiempo actualizado',
-      ...diff,
+      const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, BLOCKED_TIME_DIFF_FIELDS);
+      await logAudit({
+        entityType: EntityType.BLOCKED_TIME,
+        entityId: id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: 'Bloqueo de tiempo actualizado',
+        ...diff,
+        tx,
+        required: true,
+      });
+      return updated;
     });
     logger.info({ blockedTimeId: id, userId, fields: Object.keys(dto) }, 'Blocked time updated');
     return updatedBlockedTime;

@@ -59,14 +59,14 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `46` files, `550` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `46` files, `558` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
-| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF on cookie-authenticated writes, CORS allow/reject, rate limit (stays last: limiter is process-wide per IP) |
+| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF on cookie-authenticated writes, CORS allow/reject, rate limit + webhooks exempt from it (stay last: limiter is process-wide per IP) |
 | Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook (400 on failure, 503 on provider outage), public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
-| Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
+| Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, `cancelledBy` set/cleared, past-appointment lock (plain edits OK, no move/reactivate into the past), create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
 | Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
 | Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout (atomic counter: concurrent wrong guesses all count) |
@@ -169,7 +169,8 @@ Suite: `46` files, `550` tests, all against real Postgres, `tsc --noEmit` clean.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
   `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first
-  parser to run wins). Rate limiters run before body parsing.
+  parser to run wins). Rate limiters run before body parsing. The global per-IP limiter skips `/webhooks/*`
+  (signature-authenticated, few sender IPs).
 - Provider CSRF: access/refresh tokens carry a login-session `sid`; `authenticate` requires
   `X-CSRF-Token` = `createCsrfToken(sid, AUTH_SECRET)` on every method except GET/HEAD/OPTIONS when the token
   came from the cookie (Bearer requests are exempt). The Portal gets it from `GET /v1/auth/csrf`

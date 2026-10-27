@@ -183,6 +183,23 @@ describe('blocked-time routes (integration)', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('PATCH /:id returns 400 when a lone bound would invert the stored range', async () => {
+    const body = createBody();
+    const created = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body }));
+    const id = (created.body as any).data.id;
+    const afterEnd = new Date(new Date(body.endTimeUtc as string).getTime() + 60_000).toISOString();
+
+    const res = await invokeRoute(
+      blockedTimeRouter,
+      'patch',
+      `/${id}`,
+      baseReq({ params: { id }, body: { startTimeUtc: afterEnd } }),
+    );
+    expect(res.statusCode).toBe(400);
+    const stored = await prisma.blockedTime.findUniqueOrThrow({ where: { id } });
+    expect(stored.startTimeUtc.toISOString()).toBe(body.startTimeUtc);
+  });
+
   it('PATCH /:id returns 404 for non-owned blocked time slot', async () => {
     const other = await createTestUser();
     const { start, end } = appointmentTimeRange(120, 60);

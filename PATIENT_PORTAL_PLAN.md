@@ -23,6 +23,8 @@ Implemented as one commit per branch below, all on `staging`. Server: unit + int
 
 Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
 
+Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (0.24).
+
 # Patient Portal: architecture proposal
 
 ## Context
@@ -194,6 +196,7 @@ Work:
 
 **0F. Compliance decision gate**
 - **0.23 Compliance decision record.** Decide, in writing, whether `Patient` name, lastName, email, phone fields and `Reminder.to` get encryption plus a blind index (HMAC of the normalized email) before the portal stores patient data. This must come **before** 3.1/3.3 because a blind index changes the unique index (0.4), `findByEmail` and the matching function. Output: a short decision doc, and if "encrypt", the design for the index swap. **Pilot gate:** a pilot with real patient data requires this decision implemented, or an explicit written acceptance by the controller; until then any pilot uses only synthetic or staff data.
+- **0.24 Encryption key rotation (not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away.
 
 **Phase 0 exit criteria:** concurrent double-booking impossible (lock plus constraint) and `createWithin` in place; patient and provider tokens mutually rejected; the two CORS classes enforced with Origin and CSRF checks; no PII or secrets in default logs or URLs; normalized-email index in place; unauthenticated Portal pages make no provider API calls; e2e runs against a self-contained stack; legal text updated; consent design agreed with legal (0.20 to 0.22); compliance decision recorded (0.23).
 

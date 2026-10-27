@@ -104,4 +104,12 @@ describe('portal audit actor and enum values', () => {
     expect(a.actorId).toBe(b.actorId);
     expect(a.actorId).not.toBe(c.actorId);
   });
+
+  it('keys the actor id (an unkeyed sha256 of provider:email would be guessable) and normalizes the email', async () => {
+    const { createHash } = await import('node:crypto');
+    const ctx = portalPatientAuditContext({ userId: 'u1', email: 'x@y.co' });
+    const unkeyed = createHash('sha256').update('u1:x@y.co').digest('hex').slice(0, 24);
+    expect(ctx.actorId).not.toBe(`portal:${unkeyed}`);
+    expect(portalPatientAuditContext({ userId: 'u1', email: ' X@Y.co ' }).actorId).toBe(ctx.actorId);
+  });
 });

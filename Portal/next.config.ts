@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { buildSecurityHeaders } from "./src/config/securityHeaders";
+import { assertApiUrlForBuild } from "./src/config/api";
 import { uploadSourceMaps } from "./scripts/sentry-sourcemaps.mjs";
 
 const nextConfig: NextConfig = {
@@ -34,4 +36,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default function config(phase: string): NextConfig {
+  if (phase === PHASE_PRODUCTION_BUILD) assertApiUrlForBuild(process.env.NEXT_PUBLIC_API_URL);
+  return nextConfig;
+}

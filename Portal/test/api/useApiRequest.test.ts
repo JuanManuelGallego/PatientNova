@@ -21,7 +21,7 @@ describe("useApiRequest", () => {
         expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it("uses default error message when none provided", async () => {
+    it("maps a failed status to the Spanish fallback, never raw server text", async () => {
         mockFetch.mockResolvedValueOnce({ ok: false, status: 500 } as unknown as Response);
 
         const { result } = renderHook(() =>
@@ -29,10 +29,25 @@ describe("useApiRequest", () => {
         );
 
         await waitFor(() => expect(result.current.loading).toBe(false));
-        expect(result.current.error).toMatch(/Server Error: 500/);
+        expect(result.current.error).toBe("Ocurrió un error en el servidor. Inténtalo de nuevo más tarde.");
     });
 
-    it("reads error payload from json when present", async () => {
+    it("maps a known server message to its Spanish text", async () => {
+        mockFetch.mockResolvedValueOnce({
+            ok: false,
+            status: 409,
+            json: async () => ({ error: "Patient limit reached (5000 per provider)" }),
+        } as unknown as Response);
+
+        const { result } = renderHook(() =>
+            useApiRequest<number>("/api/x", "fallback", (j) => j as number)
+        );
+
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(result.current.error).toBe("Alcanzaste el límite de pacientes de tu cuenta.");
+    });
+
+    it("uses the status fallback for an unknown server message", async () => {
         mockFetch.mockResolvedValueOnce({
             ok: false,
             status: 400,
@@ -44,7 +59,18 @@ describe("useApiRequest", () => {
         );
 
         await waitFor(() => expect(result.current.loading).toBe(false));
-        expect(result.current.error).toMatch(/Bad input/);
+        expect(result.current.error).toBe("Revisa los datos ingresados e inténtalo de nuevo.");
+    });
+
+    it("reports a fetch failure as a connection problem", async () => {
+        mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+        const { result } = renderHook(() =>
+            useApiRequest<number>("/api/x", "fallback", (j) => j as number)
+        );
+
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(result.current.error).toBe("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
     });
 
     it("throws from parse on success:false and surfaces the message", async () => {

@@ -137,6 +137,7 @@ export const googleOAuthService = {
           fieldsBefore: existing ? { connected: Boolean(existing.refreshToken && !existing.disconnectedAt) } : null,
           fieldsAfter: { connected: true, grantedScopes },
           tx,
+          required: true,
         });
       });
 

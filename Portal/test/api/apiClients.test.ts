@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError, portalApi, publicApi } from "@/src/api/base/apiClients";
 import { csrfStore } from "@/src/api/base/csrfStore";
 import { toSpanishMessage } from "@/src/api/base/errorMessages";
-import { resolveApiHost } from "@/src/config/api";
+import { assertApiUrlForBuild, resolveApiHost } from "@/src/config/api";
 
 const fetchMock = vi.fn();
 
@@ -113,7 +113,7 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(409, undefined)).toMatch(/conflicto/);
     expect(toSpanishMessage(404, 'Blocked time with id "x" not found')).toBe("No encontramos lo que buscas.");
     expect(toSpanishMessage(409, "Blocked time overlaps with an existing blocked slot (a – b)")).toBe("Ya existe un bloqueo en ese horario.");
-    expect(toSpanishMessage(409, 'Cannot update past appointment "1" with status SCHEDULED or CONFIRMED')).toBe("No se puede modificar una cita que ya pasó.");
+    expect(toSpanishMessage(409, 'Cannot schedule or confirm appointment "1" in the past')).toBe("No se puede programar ni confirmar una cita en el pasado.");
     expect(toSpanishMessage(409, 'An appointment location named "Sede" already exists')).toMatch(/Ya existe un registro con ese nombre/);
     expect(toSpanishMessage(422, "A meeting URL is required for virtual appointments")).toMatch(/enlace de reunión/);
     expect(toSpanishMessage(422, 'Patient with id "p1" does not exist')).toMatch(/paciente seleccionado no existe/);
@@ -141,4 +141,15 @@ describe("resolveApiHost", () => {
     expect(() => resolveApiHost("  ", "production", true)).toThrow(/NEXT_PUBLIC_API_URL/);
     expect(resolveApiHost(" https://api.patientnova.net ", "production", true)).toBe("https://api.patientnova.net");
   });
+});
+
+describe("assertApiUrlForBuild", () => {
+    it("accepts a configured URL", () => {
+        expect(() => assertApiUrlForBuild("https://api.patientnova.net")).not.toThrow();
+    });
+
+    it("fails the build when the URL is missing or blank", () => {
+        expect(() => assertApiUrlForBuild(undefined)).toThrow(/NEXT_PUBLIC_API_URL/);
+        expect(() => assertApiUrlForBuild("  ")).toThrow(/NEXT_PUBLIC_API_URL/);
+    });
 });

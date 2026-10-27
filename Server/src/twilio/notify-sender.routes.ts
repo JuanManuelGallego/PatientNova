@@ -311,6 +311,7 @@ notifyRouter.post(
             to: dto.to,
           },
           tx,
+          required: true,
         });
         results.push({ id: reminder.id, sendAt: reminder.sendAt });
       }

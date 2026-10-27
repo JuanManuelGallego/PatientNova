@@ -138,8 +138,8 @@ describe('blockedTimeService.update', () => {
     mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.update.mockResolvedValue(fakeBlockedTime as any);
-    await blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1');
-    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date('2026-07-27T14:00:00.000Z'), fakeBlockedTime.endTimeUtc, 'bt-1', expect.anything());
+    await blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T12:30:00.000Z' }, 'user-1');
+    expect(mockRepo.hasBlockedTimeOverlap).toHaveBeenCalledWith('user-1', new Date('2026-07-27T12:30:00.000Z'), fakeBlockedTime.endTimeUtc, 'bt-1', expect.anything());
   });
 
   it('checks overlap when endTimeUtc is updated', async () => {
@@ -153,7 +153,15 @@ describe('blockedTimeService.update', () => {
   it('throws BlockedTimeOverlapError when update causes overlap', async () => {
     mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue({ id: 'other', description: 'Conflict', startTimeUtc: new Date('2026-07-27T11:00:00Z'), endTimeUtc: new Date('2026-07-27T16:00:00Z') });
-    await expect(blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1')).rejects.toThrow('overlaps');
+    await expect(blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T12:30:00.000Z' }, 'user-1')).rejects.toThrow('overlaps');
+    expect(mockRepo.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a lone bound that would invert the stored range, before any overlap check or write', async () => {
+    mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
+    await expect(blockedTimeService.update('bt-1', { startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1'))
+      .rejects.toThrow('endTimeUtc must be after startTimeUtc');
+    expect(mockRepo.hasBlockedTimeOverlap).not.toHaveBeenCalled();
     expect(mockRepo.update).not.toHaveBeenCalled();
   });
 
@@ -161,7 +169,7 @@ describe('blockedTimeService.update', () => {
     mockRepo.findById.mockResolvedValue(fakeBlockedTime as any);
     mockRepo.hasBlockedTimeOverlap.mockResolvedValue(null);
     mockRepo.update.mockResolvedValue(fakeBlockedTime as any);
-    await blockedTimeService.update('bt-1', { description: 'New', startTimeUtc: '2026-07-27T14:00:00.000Z' }, 'user-1');
+    await blockedTimeService.update('bt-1', { description: 'New', startTimeUtc: '2026-07-27T12:30:00.000Z' }, 'user-1');
     expect(mockLogAudit).toHaveBeenCalledWith(expect.objectContaining({
       entityType: 'BLOCKED_TIME',
       entityId: 'bt-1',
