@@ -10,8 +10,8 @@ import { suggestSlug } from './slug.js';
 import { logger } from '../utils/api/logger.js';
 import { config } from '../utils/config/config.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
-import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { EntityType, ActionType, AdminStatus } from '../../generated/prisma/enums.ts';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
@@ -31,14 +31,25 @@ export function bookingUrl(slug: string | null): string | null {
   return slug ? `${config.portal.url.replace(/\/+$/, '')}/book/${slug}` : null;
 }
 
-function toResponse(settings: Settings, readiness: BookingReadiness) {
-  return { ...settings, bookingUrl: bookingUrl(settings.bookingSlug), readiness };
-}
-
 function missingFrom(readiness: BookingReadiness): BookingReadinessKey[] {
   return (Object.keys(READINESS_KEYS) as (keyof BookingReadiness)[])
     .filter((k) => !readiness[k])
     .map((k) => READINESS_KEYS[k]);
+}
+
+function isReady(readiness: BookingReadiness): boolean {
+  return missingFrom(readiness).length === 0;
+}
+
+// `live` is what the public link does right now: readiness can lapse after enabling
+// (e.g. the last bookable location is deleted), and the Portal warns when enabled but not live.
+function toResponse(settings: Settings, readiness: BookingReadiness) {
+  return {
+    ...settings,
+    bookingUrl: bookingUrl(settings.bookingSlug),
+    readiness,
+    live: settings.bookingEnabled && isReady(readiness),
+  };
 }
 
 function toRuleView(r: { weekday: number; startMinute: number; endMinute: number }) {
@@ -54,7 +65,8 @@ export const bookingSettingsService = {
 
   async updateSettings(userId: string, dto: UpdateBookingSettingsDto) {
     const result = await prisma.$transaction(async (tx) => {
-      // Serializes with availability replacement so "enabled implies ready" can't be raced.
+      // Serializes with availability replacement. Readiness is only enforced when enabling: deleting or
+      // un-marking the last bookable type/location later doesn't disable booking (see isBookingLive).
       await withProviderLock(tx, userId);
       const existing = await bookingSettingsRepository.getSettings(userId, tx);
 
@@ -94,6 +106,18 @@ export const bookingSettingsService = {
     });
     logger.info({ userId, fields: Object.keys(dto) }, 'Booking settings updated');
     return result;
+  },
+
+  /**
+   * Whether the provider's public booking link accepts bookings right now. The single check for every
+   * public slot/booking endpoint: call it inside the booking transaction after `withProviderLock`, and
+   * answer as for an unknown slug when it is false.
+   */
+  async isBookingLive(userId: string, tx?: TransactionClient): Promise<boolean> {
+    if (!config.portal.patientEnabled) return false;
+    const state = await bookingSettingsRepository.getBookingState(userId, tx);
+    if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || !state.bookingEnabled) return false;
+    return isReady(await bookingSettingsRepository.getReadiness(userId, state.bookingSlug, tx));
   },
 
   async suggestSlug(userId: string): Promise<{ slug: string | null }> {

@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { bookingSettingsRouter } from '../../../src/booking-settings/booking-settings.routes.js';
+import { bookingSettingsService } from '../../../src/booking-settings/booking-settings.service.js';
 import { locationRouter } from '../../../src/locations/location.routes.js';
 import { appointmentTypeRouter } from '../../../src/appointment-types/appointment-type.routes.js';
 import { EntityType } from '../../../generated/prisma/enums.ts';
+import { config } from '../../../src/utils/config/config.js';
 import {
   createTestUser,
   createTestLocation,
@@ -53,6 +55,7 @@ describe('booking settings routes (integration)', () => {
       minLeadMinutes: 120,
       maxHorizonDays: 60,
       readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
+      live: false,
     });
   });
 
@@ -92,7 +95,29 @@ describe('booking settings routes (integration)', () => {
     await makeReady();
     const res = await patchSettings({ bookingEnabled: true });
     expect(res.statusCode).toBe(200);
-    expect((res.body as any).data.bookingEnabled).toBe(true);
+    expect((res.body as any).data).toMatchObject({ bookingEnabled: true, live: true });
+  });
+
+  it('readiness is advisory after enabling: deleting the last bookable location keeps booking enabled but not live', async () => {
+    // .env.test runs with ENABLE_PORTAL=false, which alone would make isBookingLive false.
+    const portal = config.portal as { patientEnabled: boolean };
+    const portalWas = portal.patientEnabled;
+    portal.patientEnabled = true;
+    try {
+      await makeReady();
+      await patchSettings({ bookingEnabled: true });
+      await expect(bookingSettingsService.isBookingLive(userId)).resolves.toBe(true);
+
+      const location = await prisma.appointmentLocation.findFirstOrThrow({ where: { userId, bookableOnline: true } });
+      expect((await invokeRoute(locationRouter, 'delete', `/${location.id}`, reqFor(userId, { params: { id: location.id } }))).statusCode).toBe(200);
+
+      const res = await invokeRoute(bookingSettingsRouter, 'get', '/settings', reqFor(userId));
+      expect((res.body as any).data).toMatchObject({ bookingEnabled: true, live: false });
+      expect((res.body as any).data.readiness.hasBookableLocation).toBe(false);
+      await expect(bookingSettingsService.isBookingLive(userId)).resolves.toBe(false);
+    } finally {
+      portal.patientEnabled = portalWas;
+    }
   });
 
   it('virtual, inactive or deleted locations and types do not count as bookable', async () => {

@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `47` files, `573` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `47` files, `574` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -81,7 +81,7 @@ Suite: `47` files, `573` tests, all against real Postgres, `tsc --noEmit` clean.
 | Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
 | Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
 | Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
-| Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, enable needs slug + availability + bookable type + in-person location 422, clearing slug disables), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
+| Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
 | Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
 | Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
@@ -199,7 +199,12 @@ Suite: `47` files, `573` tests, all against real Postgres, `tsc --noEmit` clean.
   `ENABLE_PORTAL` is off; `GET /users/me` returns `portalEnabled`). `AvailabilityRule` stores ISO weekday (1=Mon) and
   `startMinute`/`endMinute` as wall-clock minutes in `User.timezone` (half-open, 5-minute grid, no midnight crossing);
   resolve them per date with `resolveLocalTime`, never as fixed UTC offsets. The week is replaced atomically under
-  `withProviderLock`. Until 5.4 a location cannot be both `isVirtual` and `bookableOnline`.
+  `withProviderLock`. Until 5.4 a location cannot be both `isVirtual` and `bookableOnline`. Readiness (slug,
+  availability, bookable type, in-person bookable location) is enforced only when enabling; later edits (deleting the
+  last bookable type/location) leave `bookingEnabled` on, and `GET /booking/settings` reports `live: false`. Public
+  slot and booking endpoints must gate on `bookingSettingsService.isBookingLive(userId, tx)` (portal on, provider
+  active and not deleted, enabled, ready) inside the booking transaction after `withProviderLock`, and answer as for
+  an unknown slug when it is false. Never re-derive that check elsewhere.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
   `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,

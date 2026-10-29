@@ -37,6 +37,14 @@ export const bookingSettingsRepository = {
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });
   },
 
+  /** The account fields `isBookingLive` needs; null when the user doesn't exist. */
+  async getBookingState(userId: string, tx?: TransactionClient) {
+    return (tx ?? prisma).user.findUnique({
+      where: { id: userId },
+      select: { status: true, deletedAt: true, bookingEnabled: true, bookingSlug: true },
+    });
+  },
+
   async getSlugSources(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },

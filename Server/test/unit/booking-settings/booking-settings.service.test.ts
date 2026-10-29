@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { bookingSettingsService } from '../../../src/booking-settings/booking-settings.service.js';
 import { BookingAvailabilityRequiredError, BookingNotReadyError, BookingSlugTakenError } from '../../../src/booking-settings/booking-settings.errors.js';
 
+const portal = vi.hoisted(() => ({ url: 'https://portal.test', patientEnabled: true }));
+vi.mock('../../../src/utils/config/config.js', () => ({ config: { portal } }));
+
 vi.mock('../../../src/booking-settings/booking-settings.repository.js', () => ({
   bookingSettingsRepository: {
     getSettings: vi.fn(),
+    getBookingState: vi.fn(),
     updateSettings: vi.fn(),
     getSlugSources: vi.fn(),
     isSlugTakenByOther: vi.fn(),
@@ -50,6 +54,7 @@ const ready = { hasSlug: true, hasAvailability: true, hasBookableType: true, has
 
 beforeEach(() => {
   vi.clearAllMocks();
+  portal.patientEnabled = true;
   repo.getSettings.mockResolvedValue({ ...settings });
   repo.getReadiness.mockResolvedValue({ ...ready });
   repo.updateSettings.mockImplementation(async (_u, dto) => ({ ...settings, ...dto }) as any);
@@ -60,6 +65,14 @@ describe('bookingSettingsService.getSettings', () => {
     const r = await bookingSettingsService.getSettings('user-1');
     expect(r.bookingUrl).toMatch(/\/book\/dra-maria$/);
     expect(r.readiness).toEqual(ready);
+  });
+
+  it('is live only when enabled and every readiness check passes', async () => {
+    expect((await bookingSettingsService.getSettings('user-1')).live).toBe(false);
+    repo.getSettings.mockResolvedValue({ ...settings, bookingEnabled: true });
+    expect((await bookingSettingsService.getSettings('user-1')).live).toBe(true);
+    repo.getReadiness.mockResolvedValue({ ...ready, hasBookableLocation: false });
+    expect((await bookingSettingsService.getSettings('user-1')).live).toBe(false);
   });
 
   it('has no URL without a slug', async () => {
@@ -114,6 +127,42 @@ describe('bookingSettingsService.updateSettings', () => {
   it('maps a unique violation to a neutral 409', async () => {
     repo.updateSettings.mockRejectedValue(Object.assign(new Error('unique'), { code: 'P2002' }));
     await expect(bookingSettingsService.updateSettings('user-1', { bookingSlug: 'otro' })).rejects.toBeInstanceOf(BookingSlugTakenError);
+  });
+});
+
+describe('bookingSettingsService.isBookingLive', () => {
+  const state = { status: 'ACTIVE' as const, deletedAt: null as Date | null, bookingEnabled: true, bookingSlug: 'dra-maria' };
+
+  beforeEach(() => {
+    repo.getBookingState.mockResolvedValue({ ...state });
+  });
+
+  it('is live for an active, enabled and ready provider, checking on the given transaction', async () => {
+    await expect(bookingSettingsService.isBookingLive('user-1', { tx: true } as any)).resolves.toBe(true);
+    expect(repo.getBookingState).toHaveBeenCalledWith('user-1', { tx: true });
+    expect(repo.getReadiness).toHaveBeenCalledWith('user-1', 'dra-maria', { tx: true });
+  });
+
+  it('is not live when readiness lapsed after enabling', async () => {
+    repo.getReadiness.mockResolvedValue({ ...ready, hasBookableType: false });
+    await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
+  });
+
+  it.each([
+    [ 'disabled', { bookingEnabled: false } ],
+    [ 'inactive', { status: 'SUSPENDED' } ],
+    [ 'deleted', { deletedAt: new Date() } ],
+  ])('is not live for a %s provider', async (_label, override) => {
+    repo.getBookingState.mockResolvedValue({ ...state, ...override } as any);
+    await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
+  });
+
+  it('is not live for an unknown provider or with ENABLE_PORTAL off', async () => {
+    repo.getBookingState.mockResolvedValue(null);
+    await expect(bookingSettingsService.isBookingLive('nope')).resolves.toBe(false);
+    repo.getBookingState.mockResolvedValue({ ...state });
+    portal.patientEnabled = false;
+    await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
   });
 });
 
