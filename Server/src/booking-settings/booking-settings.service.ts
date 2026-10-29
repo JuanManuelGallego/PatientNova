@@ -41,8 +41,6 @@ function isReady(readiness: BookingReadiness): boolean {
   return missingFrom(readiness).length === 0;
 }
 
-// `live` is what the public link does right now: readiness can lapse after enabling
-// (e.g. the last bookable location is deleted), and the Portal warns when enabled but not live.
 function toResponse(settings: Settings, readiness: BookingReadiness) {
   return {
     ...settings,
@@ -65,13 +63,10 @@ export const bookingSettingsService = {
 
   async updateSettings(userId: string, dto: UpdateBookingSettingsDto) {
     const result = await prisma.$transaction(async (tx) => {
-      // Serializes with availability replacement. Readiness is only enforced when enabling: deleting or
-      // un-marking the last bookable type/location later doesn't disable booking (see isBookingLive).
       await withProviderLock(tx, userId);
       const existing = await bookingSettingsRepository.getSettings(userId, tx);
 
       const changes: UpdateBookingSettingsDto = { ...dto };
-      // A cleared slug leaves no link to book through.
       if (changes.bookingSlug === null) changes.bookingEnabled = false;
 
       const slug = changes.bookingSlug !== undefined ? changes.bookingSlug : existing.bookingSlug;
@@ -108,11 +103,6 @@ export const bookingSettingsService = {
     return result;
   },
 
-  /**
-   * Whether the provider's public booking link accepts bookings right now. The single check for every
-   * public slot/booking endpoint: call it inside the booking transaction after `withProviderLock`, and
-   * answer as for an unknown slug when it is false.
-   */
   async isBookingLive(userId: string, tx?: TransactionClient): Promise<boolean> {
     if (!config.portal.patientEnabled) return false;
     const state = await bookingSettingsRepository.getBookingState(userId, tx);

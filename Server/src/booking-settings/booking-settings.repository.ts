@@ -37,7 +37,6 @@ export const bookingSettingsRepository = {
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });
   },
 
-  /** The account fields `isBookingLive` needs; null when the user doesn't exist. */
   async getBookingState(userId: string, tx?: TransactionClient) {
     return (tx ?? prisma).user.findUnique({
       where: { id: userId },
@@ -59,7 +58,6 @@ export const bookingSettingsRepository = {
     return owner !== null && owner.id !== userId;
   },
 
-  /** What enabling online booking requires; virtual locations don't count until Phase 5.4. */
   async getReadiness(userId: string, slug: string | null, tx?: TransactionClient): Promise<BookingReadiness> {
     const client = tx ?? prisma;
     const [ rules, types, locations ] = await Promise.all([

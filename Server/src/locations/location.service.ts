@@ -28,7 +28,6 @@ export const locationService = {
 
   async update(id: string, dto: UpdateLocationDto, userId: string) {
     const existingLocation = await locationRepository.findById(id, userId);
-    // The schema only sees the patch; check the merged state (e.g. making a bookable location virtual).
     if ((dto.isVirtual ?? existingLocation.isVirtual) && (dto.bookableOnline ?? existingLocation.bookableOnline)) {
       throw new VirtualLocationNotBookableError();
     }
