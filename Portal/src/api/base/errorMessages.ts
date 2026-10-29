@@ -22,6 +22,13 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /cannot .* an appointment with status/i, "Esa acción no está permitida para el estado actual de la cita." ],
     [ /cannot schedule or confirm appointment .* in the past/i, "No se puede programar ni confirmar una cita en el pasado." ],
     [ /patient limit reached/i, "Alcanzaste el límite de pacientes de tu cuenta." ],
+    [ /booking link is not available/i, "Ese enlace ya está en uso. Elige otro." ],
+    [ /slug is reserved/i, "Ese enlace está reservado. Elige otro." ],
+    [ /slug may only contain/i, "El enlace solo puede tener letras minúsculas, números y guiones." ],
+    [ /online booking cannot be enabled yet/i, "Completa la configuración antes de activar la reserva en línea." ],
+    [ /availability cannot be empty while online booking is enabled/i, "Desactiva la reserva en línea antes de quitar toda la disponibilidad." ],
+    [ /availability windows overlap/i, "Hay franjas de disponibilidad que se superponen el mismo día." ],
+    [ /virtual locations cannot be bookable online/i, "Las ubicaciones virtuales aún no pueden reservarse en línea." ],
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],
 ];
 

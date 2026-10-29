@@ -17,6 +17,8 @@ import {
   ERR_SAVE,
 } from "@/src/constants/ui";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { BookableOnlineCheckbox } from "@/src/components/Form/BookableOnlineCheckbox";
 
 export function LocationModal({
   onClose,
@@ -28,6 +30,8 @@ export function LocationModal({
   location?: AppointmentLocation | null;
 }) {
   const isEdit = !!location;
+  const { user } = useAuthContext();
+  const portalEnabled = !!user?.portalEnabled;
   const { createLocation } = useCreateLocation();
   const { updateLocation } = useUpdateLocation();
   const [saving, setSaving] = useState(false);
@@ -40,6 +44,7 @@ export function LocationModal({
     color: location?.color ?? "#2563EB",
     isVirtual: location?.isVirtual ?? false,
     instructions: location?.instructions ?? "",
+    bookableOnline: location?.bookableOnline ?? false,
   });
 
   const setField =
@@ -58,6 +63,8 @@ export function LocationModal({
         color: form.color,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
+        // Only sent when the portal is on, so saving never touches the flag otherwise.
+        ...(portalEnabled && { bookableOnline: !form.isVirtual && form.bookableOnline }),
       };
       if (isEdit) {
         await updateLocation(location!.id, data);
@@ -159,6 +166,8 @@ export function LocationModal({
                     ...f,
                     isVirtual: e.target.checked,
                     address: e.target.checked ? "" : f.address,
+                    // Virtual locations can't be booked online yet (meeting links are not provisioned).
+                    bookableOnline: e.target.checked ? false : f.bookableOnline,
                   }))
                 }
                 style={{ width: 15, height: 15 }}
@@ -204,6 +213,18 @@ export function LocationModal({
                 />
               </label>
             </>
+          )}
+
+          {portalEnabled && (
+            <BookableOnlineCheckbox
+              checked={form.bookableOnline}
+              onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
+              disabled={form.isVirtual}
+              hint={form.isVirtual
+                ? "Las ubicaciones virtuales estarán disponibles más adelante."
+                : "Los pacientes podrán elegir esta ubicación al reservar desde tu enlace."}
+              testId="location-bookable-online-checkbox"
+            />
           )}
 
           <div className="modal-footer">

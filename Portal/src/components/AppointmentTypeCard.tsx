@@ -35,7 +35,26 @@ export function AppointmentTypeCard({
           <DETAIL_ICONS.calendar size={17} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{type.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14 }}>
+            {type.name}
+            {type.bookableOnline && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  background: "var(--c-success-light)",
+                  color: "var(--c-success)",
+                  borderRadius: "var(--r-full)",
+                  padding: "2px 8px",
+                  letterSpacing: "0.03em",
+                  flexShrink: 0,
+                }}
+                data-testid={`appointment-type-online-badge-${type.id}`}
+              >
+                En línea
+              </span>
+            )}
+          </div>
           <div
             style={{
               fontSize: 12,
