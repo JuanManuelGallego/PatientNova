@@ -23,6 +23,7 @@ export const appointmentTypeRepository = {
         defaultDuration: dto.defaultDuration ?? 60,
         defaultPrice: dto.defaultPrice ?? null,
         color: dto.color ?? null,
+        bookableOnline: dto.bookableOnline ?? false,
         userId,
       },
     });
@@ -60,7 +61,7 @@ export const appointmentTypeRepository = {
 
     const data = buildUpdateData(
       dto,
-      [ 'name', 'description', 'defaultDuration', 'defaultPrice', 'color' ],
+      [ 'name', 'description', 'defaultDuration', 'defaultPrice', 'color', 'bookableOnline' ],
     );
 
     return prisma.appointmentType.update({

@@ -1,6 +1,7 @@
 import { locationRepository } from './location.repository.js';
 import type { CreateLocationDto, UpdateLocationDto } from './location.schemas.js';
 import { updateLocationSchema } from './location.schemas.js';
+import { VirtualLocationNotBookableError } from './location.errors.js';
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
@@ -27,6 +28,10 @@ export const locationService = {
 
   async update(id: string, dto: UpdateLocationDto, userId: string) {
     const existingLocation = await locationRepository.findById(id, userId);
+    // The schema only sees the patch; check the merged state (e.g. making a bookable location virtual).
+    if ((dto.isVirtual ?? existingLocation.isVirtual) && (dto.bookableOnline ?? existingLocation.bookableOnline)) {
+      throw new VirtualLocationNotBookableError();
+    }
     const updatedLocation = await locationRepository.update(id, dto, userId);
     const diff = computeDiff(existingLocation as unknown as Record<string, unknown>, updatedLocation as unknown as Record<string, unknown>, LOCATION_DIFF_FIELDS);
     await logAudit({

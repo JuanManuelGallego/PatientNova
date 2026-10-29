@@ -10,6 +10,7 @@ import { validateBody } from '../middlewares/validate.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
 import { consentDocumentRouter } from '../consent-documents/consent-document.routes.js';
+import { config } from '../utils/config/config.js';
 
 export const userRouter = Router();
 
@@ -51,7 +52,8 @@ userRouter.get(
     '/me',
     authenticate,
     asyncHandler(async (req: Request, res: Response) => {
-        ok(res, await userService.findById(req.user!.id));
+        // portalEnabled lets the Portal hide online-booking settings while ENABLE_PORTAL is off.
+        ok(res, { ...(await userService.findById(req.user!.id)), portalEnabled: config.portal.patientEnabled });
     })
 );
 

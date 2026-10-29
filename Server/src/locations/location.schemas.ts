@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
 
+// Until portal virtual bookings exist (meeting-link provisioning), only in-person locations are bookable online.
+export const VIRTUAL_NOT_BOOKABLE_MESSAGE = 'virtual locations cannot be bookable online yet';
+
 export const createLocationSchema = z
   .object({
     name: z.string().min(1, 'name is required').max(100),
@@ -9,8 +12,12 @@ export const createLocationSchema = z
     color: z.string().max(20).nullable().optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().default(false),
+    bookableOnline: z.boolean().optional(),
   })
   .superRefine((d, ctx) => {
+    if (d.isVirtual && d.bookableOnline) {
+      ctx.addIssue({ code: "custom", message: VIRTUAL_NOT_BOOKABLE_MESSAGE, path: [ 'bookableOnline' ] });
+    }
     if (!d.isVirtual) {
       if (!d.address) {
         ctx.addIssue({
@@ -37,8 +44,12 @@ export const updateLocationSchema = z
     color: z.string().max(20).nullable().optional(),
     defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().optional(),
+    bookableOnline: z.boolean().optional(),
   })
   .superRefine((d, ctx) => {
+    if (d.isVirtual === true && d.bookableOnline === true) {
+      ctx.addIssue({ code: "custom", message: VIRTUAL_NOT_BOOKABLE_MESSAGE, path: [ 'bookableOnline' ] });
+    }
     if (Object.keys(d).length === 0) {
       ctx.addIssue({
         code: "custom",
