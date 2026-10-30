@@ -53,7 +53,6 @@ export function OnlineBookingTab() {
     const { settings, loading, error, fetchSettings } = useFetchBookingSettings();
     const { updateSettings } = useUpdateBookingSettings();
 
-    // Sections hand back the server's answer so readiness and the link refresh without a refetch.
     const [ latest, setCurrent ] = useState<BookingSettings | undefined>(undefined);
     const current = latest ?? settings;
 
@@ -81,7 +80,6 @@ export function OnlineBookingTab() {
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <AvailabilitySection
                 timezone={current.timezone}
-                // Readiness depends on availability; take the fresh settings or `latest` would shadow them.
                 onSaved={async () => {
                     const fresh = await fetchSettings();
                     if (fresh) setCurrent(fresh);
@@ -100,7 +98,6 @@ function StatusSection({ settings, onToggle, error }: {
 }) {
     const [ toggling, setToggling ] = useState(false);
     const ready = READINESS_ITEMS.every((i) => settings.readiness[ i.key ]);
-    // Disabling is always allowed; enabling needs every readiness item.
     const canToggle = settings.bookingEnabled || ready;
 
     async function handleToggle(enabled: boolean) {
@@ -167,7 +164,6 @@ function LinkSection({ settings, save, onSaved }: {
     onSaved: (s: BookingSettings) => void;
 }) {
     const { suggestion } = useFetchSlugSuggestion(!settings.bookingSlug);
-    // null until the provider types: shows the saved slug, else the server's suggestion.
     const [ typed, setSlug ] = useState<string | null>(null);
     const touched = typed !== null;
     const slug = typed ?? settings.bookingSlug ?? suggestion ?? "";
@@ -217,7 +213,6 @@ function LinkSection({ settings, save, onSaved }: {
         a.href = url;
         a.download = `reserva-${settings.bookingSlug}.svg`;
         a.click();
-        // Revoking synchronously can cancel the download in some browsers.
         setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
@@ -296,7 +291,6 @@ function LinkSection({ settings, save, onSaved }: {
 function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved: () => void }) {
     const { availability, loading, error: loadError } = useFetchAvailability();
     const { saveAvailability } = useSaveAvailability();
-    // Unsaved edits; null means "show what the server has".
     const [ draft, setDraft ] = useState<AvailabilityRule[] | null>(null);
     const [ savedRules, setSavedRules ] = useState<AvailabilityRule[] | null>(null);
     const dirty = draft !== null;
@@ -318,7 +312,6 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
         const sameDay = sortRules(current.filter((r) => r.weekday === weekday));
         const last = sameDay[ sameDay.length - 1 ];
         if (last && last.endMinute >= MINUTES_PER_DAY) return;
-        // Start one hour after the last window when that fits in the day, else right where it ends (never overlapping).
         const startMinute = !last ? DEFAULT_WINDOW.startMinute
             : last.endMinute + 60 < MINUTES_PER_DAY ? last.endMinute + 60
             : last.endMinute;
@@ -393,7 +386,6 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                             step={300}
                                             className="form-input"
                                             style={{ width: 120 }}
-                                            // 24:00 isn't a valid <input type="time"> value; midnight end shows as 00:00.
                                             value={r.endMinute === MINUTES_PER_DAY ? "00:00" : minutesToTime(r.endMinute)}
                                             onChange={(e) => setTime(r, "endMinute", e.target.value)}
                                             aria-label={`${label}: hora de fin`}

@@ -63,7 +63,6 @@ export function LocationModal({
         color: form.color,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
-        // Only sent when the portal is on (or virtual, which must clear a stored flag the server would reject).
         ...((portalEnabled || form.isVirtual) && { bookableOnline: !form.isVirtual && form.bookableOnline }),
       };
       if (isEdit) {
@@ -166,7 +165,6 @@ export function LocationModal({
                     ...f,
                     isVirtual: e.target.checked,
                     address: e.target.checked ? "" : f.address,
-                    // Virtual locations can't be booked online yet (meeting links are not provisioned).
                     bookableOnline: e.target.checked ? false : f.bookableOnline,
                   }))
                 }

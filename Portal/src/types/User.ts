@@ -22,7 +22,6 @@ export interface User {
     nationalId?: string | null
     bankingKey?: string | null
     consentDocument?: Document | null
-    /** From GET /users/me: whether the server has ENABLE_PORTAL on (online-booking settings are hidden otherwise). */
     portalEnabled?: boolean
 }
 

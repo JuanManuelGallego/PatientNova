@@ -113,7 +113,6 @@ describe("OnlineBookingTab: status", () => {
 
     it("refreshes readiness after saving availability, even after another section saved", async () => {
         render(<OnlineBookingTab />);
-        // Saving the link stores the server's answer locally.
         await userEvent.click(screen.getByTestId("online-booking-slug-save"));
         fetchSettings.mockResolvedValue(makeSettings({
             bookingSlug: "test-user",
@@ -197,7 +196,6 @@ describe("OnlineBookingTab: availability", () => {
         rules = [ { weekday: 2, startMinute: 540, endMinute: 720 } ];
         render(<OnlineBookingTab />);
         await userEvent.click(screen.getByTestId("availability-add-2"));
-        // jsdom's time input mangles key-by-key typing; set the value like a picker does.
         fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
         expect(screen.getByRole("alert")).toHaveTextContent(/superponen el martes/);
         expect(screen.getByTestId("availability-save")).toBeDisabled();

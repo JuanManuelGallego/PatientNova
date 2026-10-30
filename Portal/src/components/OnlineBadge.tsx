@@ -1,4 +1,3 @@
-/** Pill shown on locations and appointment types patients can book from the public link. */
 export function OnlineBadge({ testId }: { testId: string }) {
   return (
     <span

@@ -19,7 +19,6 @@ enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicac
 
 export default function SettingsPage() {
     const { user } = useAuthContext();
-    // Online booking stays hidden until the server runs with ENABLE_PORTAL.
     const tabs = (Object.values(ActiveTab) as ActiveTab[]).filter((t) => t !== ActiveTab.OnlineBooking || user?.portalEnabled);
     const [ tab, setTab ] = useQueryState(QUERY_PARAMS.settingsTab, parseAsStringEnum<ActiveTab>(tabs).withDefault(ActiveTab.Profile));
 
