@@ -31,6 +31,8 @@ import { requestId } from './middlewares/request-id.js';
 import { providerCors } from './middlewares/cors.js';
 import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from './portal/portal-routers.js';
 import { errorHandler } from './middlewares/error-handler.js';
+import { requirePortalEnabled } from './middlewares/require-portal-enabled.js';
+import { bookingSettingsRouter } from './booking-settings/booking-settings.routes.js';
 
 const DEFAULT_BODY_LIMIT = '100kb';
 const LARGE_BODY_LIMITS = { users: '2mb', files: '15mb', webhooks: '1mb' } as const;
@@ -104,6 +106,7 @@ v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
 v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
+v1.use('/booking', authenticate, requirePortalEnabled, requireAdminForWrites, bookingSettingsRouter);
 
 v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 

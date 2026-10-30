@@ -1,7 +1,7 @@
-> **Status:** Phase 0 implemented on `staging`; Phases 1+ not started. **Date:** 2026-10-05
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phases 1+ not started (no portal schema, the `/v1/public` and `/v1/portal` routers are mounted behind `ENABLE_PORTAL` with no endpoints). **Updated:** 2026-10-26
 
-## Phase 0 status (2026-10-06)
-Implemented as one commit per branch below, all on `staging`. Server: unit + integration suites green; Portal: 160 tests; Playwright run locally against a throwaway stack (the CI `e2e` job has not run yet).
+## Phase 0 status (2026-10-26)
+Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
 
 | Branch | Items | Notes |
 |---|---|---|
@@ -13,17 +13,21 @@ Implemented as one commit per branch below, all on `staging`. Server: unit + int
 | `c1-auth-separation` | 0.5 | `src/auth/tokens.ts`; forces re-login on deploy |
 | `c2-primitives-audit` | 0.7 | OTP/CSRF/safeEqual helpers, `required` audits, portal audit actor |
 | `c3-logging-pii` | 0.8 | redaction, request-id mixin, no query strings |
-| `c4-abuse-cors` | 0.6 | public/session router classes, Postgres rate limiter, CSRF/Origin, CAPTCHA hook |
-| `c5-fail-closed` | 0.9 | unset `NODE_ENV` = production |
-| `c6-email-client` | 0.10 | timeout, safe retry, Spanish templates, transactional helper |
+| `c4-abuse-cors` | 0.6 | public/session router classes, CSRF/Origin, coarse in-memory per-IP limiter (the Postgres store was dropped, see 0.6), Cloudflare Turnstile CAPTCHA (fails closed, no bypass) |
+| `c5-fail-closed` | 0.9 | unset `NODE_ENV` = production; webhook signature checks always on (no environment bypass) |
+| `c6-email-client` | 0.10 | timeout, safe retry, Spanish templates, transactional helper (OTP code kept out of the subject) |
+| C6 (#61) | — | provider CSRF: cookie-authenticated provider writes need `X-CSRF-Token` bound to the login `sid` (not in the original plan) |
 | `d1-timezone`, `d2-consent-download` | 0.11, 0.19 | luxon DST-correct utils; hardened public download |
-| `e1`..`e4b` | 0.14-0.16, 0.18 | provider route group, API clients + Spanish errors, security headers (CSP report-only), self-contained e2e CI, opt-in Sentry, `docs/operations.md` |
-| `f-legal-compliance` | 0.17, 0.20-0.23 | Colombian privacy policy, `docs/compliance-patient-data.md` |
-| (on `staging`) | 0.23 | patient name/contact encryption + blind indexes, whole-word search, backfill on start |
+| #63, #65 | 0.11 | Spanish user messages; the provider Portal renders every time in `user.timezone`; calendar days stored as UTC midnight (migration `20261018000000_calendar_day_utc_midnight`) |
+| `e1`..`e4b`, #64 | 0.14-0.16, 0.18 | provider route group, API clients + Spanish errors (reads and mutations), build fails without `NEXT_PUBLIC_API_URL`, security headers (CSP report-only until `CSP_ENFORCE=true`), self-contained e2e CI, PII-scrubbed Sentry for Server and Portal, `docs/operations.md` |
+| `f-legal-compliance` | 0.17, 0.20-0.22 | Colombian privacy policy, `docs/compliance-patient-data.md` |
+| #67, #68 | 0.23 | AES-256-GCM encryption of patient PII + keyed blind indexes, 3+ letter prefix name search, backfill on start, email uniqueness on `emailHash`; boot validation of both keys; portal audit actor = HMAC with `BLIND_INDEX_KEY` |
 
-Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement after a staging soak.
+Also landed outside the numbered items: 5000-patient cap per provider, `cancelledBy=PROVIDER` on provider cancels, past-appointment lock narrowed to moves/reactivations/confirms, every `tx` audit made `required`, Renovate + pnpm 12.
 
-Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (0.24).
+Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` and `ENCRYPTION_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement (`CSP_ENFORCE=true`) after a staging soak.
+
+Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (8.1, not started).
 
 # Patient Portal: architecture proposal
 
@@ -37,7 +41,7 @@ Patients should be able to self-book with a specific provider. Today `User` is t
 - **Provider's own consent form is out of scope** for the portal (provider handles it offline). The portal collects only acceptance of its own privacy/data-processing text.
 - **Matching is email only**, no name or phone check.
 - No cancellation cutoff. Guardians/dependents out of scope.
-- **Compliance (encryption/blind index of patient contact fields):** decision record required before building patient matching and before any pilot with real patients (0.23).
+- **Compliance (encryption/blind index of patient contact fields):** decided and implemented (0.23). Matching uses the `emailHash` blind index.
 
 ## Review round 3 (five smaller findings, all verified against the code and accepted)
 1. Range type: columns are `TIMESTAMP(3)`, so the exclusion constraint uses `tsrange(...,'[)')` (0.2).
@@ -81,8 +85,8 @@ All eight findings were checked against the code and accepted.
 ## Session and matching
 **Stage 1: verified-email session (no Patient involved).** `otp` then `otp/verify` issue a short-lived session (about 2 hours) with claims `{typ:'portal', aud:'portal', userId, email}`. Nothing is created or looked up, and responses don't depend on whether a patient exists.
 
-**Stage 2: patient resolved per request** from `(userId, normalized email)`. Matching lives in one function (so a blind index can be swapped in, 0.23):
-1. Active (non-deleted) `Patient` with that email → that patient. (The partial unique index guarantees at most one.) If `portalAccessEnabled=false` (provider revoked) or `status` is inactive: treated like "unavailable" and answered with the same generic response; inactive routes to review once 6.6 exists.
+**Stage 2: patient resolved per request** from `(userId, emailHash)` (blind index of the normalized email, 0.23; `email` is ciphertext and can't be queried). Matching lives in one function:
+1. Active (non-deleted) `Patient` with that email → that patient. (The partial unique index `patients_userId_emailHash_active_key` guarantees at most one.) If `portalAccessEnabled=false` (provider revoked) or `status` is inactive: treated like "unavailable" and answered with the same generic response; inactive routes to review once 6.6 exists.
 2. No patient with that email at all (deleted or not) → none yet; one is created inside the booking transaction.
 3. Only soft-deleted patients with that email → **possibly several** (the index excludes deleted rows). No single candidate id is stored. Until 6.6 the booking gets the same generic failure as case 1's unavailable case. From 6.6 the booking becomes a `BookingRequest`, and the inbox lists all deleted patients with that normalized email for the provider to restore one or create a new patient.
 - **The portal never updates an existing Patient from typed input.** Typed name/phone apply only when creating a new Patient.
@@ -141,7 +145,7 @@ All eight findings were checked against the code and accepted.
 
 ## Hardening
 - Overlap checks and lock include active `BookingRequest` holds, not just appointments.
-- OTP: per-email and per-provider limits on top of the global 30/min/IP, attempt cap per code, short expiry. Cron purges expired `PortalOtp` and old `BookingRequest` rows.
+- OTP: per-email and per-provider limits, attempt cap per code, resend cooldown and short expiry, all enforced on the `PortalOtp` record inside the transaction (`src/utils/security/one-time-code.ts`), not by the in-memory per-IP limiter, which is only a coarse throttle. Cron purges expired `PortalOtp` and old `BookingRequest` rows.
 - Patient cancel/reschedule has no cutoff, and must call `reminderJobManager.cancel` so no reminder fires for a cancelled appointment.
 - Booking flow presents the privacy/data-processing text and records a `PatientConsent` row for the current policy version (0.20 to 0.22).
 - **No secrets in URLs** (paths or query strings) anywhere in the portal; add a test that no public route reads tokens from path/query.
@@ -161,7 +165,7 @@ Every item is an existing weakness the public portal would amplify. Items are in
 
 **0B. Server: security baseline for public routes**
 - **0.5 Auth separation.** Pin JWT `algorithms`, add `aud`/`iss`, make `authenticate` reject refresh and portal token types explicitly, use a separate secret (or at least `aud`) and cookie name for the portal session. Today one `AUTH_SECRET` signs everything and `isAuthPayload` only checks that `id`, `email` and `role` are strings.
-- **0.6 Abuse protection and CORS split.** Shared-store rate limiter (Postgres, since in-memory resets per process and per instance) with separate public limits keyed by IP and by email/provider; public routers with a small body limit (about 10kb) mounted before the global 15mb parsers; restructure `app.ts` so the global credentialed CORS applies only to provider routes, with the two public classes configured as in "Public API surface" (anonymous: no credentials; patient session: exact-origin credentialed, mandatory `Origin` check and CSRF header); document `trust proxy: 1` hop assumptions; CAPTCHA integration point. Confirm the deployed Portal and API domains to decide `SameSite=Lax` vs `None`. Tests via `supertest`: cross-origin preflight for each class, missing/mismatched Origin rejected, cookie attributes.
+- **0.6 Abuse protection and CORS split.** *(Done, with one change: the Postgres limiter store was removed. `createPublicLimiter` is an in-memory per-IP throttle that resets on restart and is per instance; brute-force-sensitive limits live on the domain record instead. CAPTCHA is Cloudflare Turnstile, required in every environment.)* Originally: shared-store rate limiter (Postgres, since in-memory resets per process and per instance) with separate public limits keyed by IP and by email/provider; public routers with a small body limit (about 10kb) mounted before the global 15mb parsers; restructure `app.ts` so the global credentialed CORS applies only to provider routes, with the two public classes configured as in "Public API surface" (anonymous: no credentials; patient session: exact-origin credentialed, mandatory `Origin` check and CSRF header); document `trust proxy: 1` hop assumptions; CAPTCHA integration point. Confirm the deployed Portal and API domains to decide `SameSite=Lax` vs `None`. Tests via `supertest`: cross-origin preflight for each class, missing/mismatched Origin rejected, cookie attributes.
 - **0.7 Token and actor primitives.** Generic hashed one-time code helper (template: `GoogleOAuthState` in `src/google/google-connection.repository.ts`), shared `timingSafeEqual`, attempt counters and cooldowns, HMAC CSRF helper. Audit: add `ActionSource.PUBLIC_PORTAL`, and `EntityType.BOOKING_REQUEST` and `EntityType.PATIENT_CONSENT` (the enum at `schema.prisma:535` has neither) in one DB enum migration; support a patient actor via `runInAuditContext`; make patient/appointment audit writes use the same transaction (today `setStatus`, `markPaid`, delete, restore and patient writes audit non-atomically); and add a `required` audit mode that rethrows, because `audit-log.service.ts:17-25` swallows failures (see "Booking transaction").
 - **0.8 Logging and PII.** `http-logger.ts` logs `originalUrl` and the full query at info level. Extend the pino `redact` list (email, `to`, name, phone, whatsapp/sms numbers), use `maskEmail` in `patient.repository.ts` and the send clients, stop logging query strings, add request-id child loggers, quiet the unknown-route warning. Enforce "no secrets in URLs" for portal routes with a test.
 - **0.9 Fail-closed defaults.** `config.env` defaults to `development`, which makes Brevo/Twilio webhook auth skip verification when `NODE_ENV` is unset; default to production behavior or require it. Audit the already-public `/v1/consent-document` and `/v1/google` routers for exposure.
@@ -195,10 +199,10 @@ Work:
 - **0.22 Consent gate (decided):** before a first booking the patient accepts the privacy/data-processing text (one checkbox). Still to confirm with legal: that this satisfies Ley 1581 for this flow.
 
 **0F. Compliance decision gate**
-- **0.23 Compliance decision record.** Decide, in writing, whether `Patient` name, lastName, email, phone fields and `Reminder.to` get encryption plus a blind index (HMAC of the normalized email) before the portal stores patient data. This must come **before** 3.1/3.3 because a blind index changes the unique index (0.4), `findByEmail` and the matching function. Output: a short decision doc, and if "encrypt", the design for the index swap. **Pilot gate:** a pilot with real patient data requires this decision implemented, or an explicit written acceptance by the controller; until then any pilot uses only synthetic or staff data.
-- **0.24 Encryption key rotation (not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away.
+- **0.23 Compliance decision record.** *(Done: decision in `docs/compliance-patient-data.md`; implemented for `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`, with blind indexes per AGENTS.md. The pilot gate is satisfied on the code side; key custody remains in the open list above.)* Decide, in writing, whether `Patient` name, lastName, email, phone fields and `Reminder.to` get encryption plus a blind index (HMAC of the normalized email) before the portal stores patient data. This must come **before** 3.1/3.3 because a blind index changes the unique index (0.4), `findByEmail` and the matching function. Output: a short decision doc, and if "encrypt", the design for the index swap. **Pilot gate:** a pilot with real patient data requires this decision implemented, or an explicit written acceptance by the controller; until then any pilot uses only synthetic or staff data.
+- **0.24 Encryption key rotation:** moved to 8.1.
 
-**Phase 0 exit criteria:** concurrent double-booking impossible (lock plus constraint) and `createWithin` in place; patient and provider tokens mutually rejected; the two CORS classes enforced with Origin and CSRF checks; no PII or secrets in default logs or URLs; normalized-email index in place; unauthenticated Portal pages make no provider API calls; e2e runs against a self-contained stack; legal text updated; consent design agreed with legal (0.20 to 0.22); compliance decision recorded (0.23).
+**Phase 0 exit criteria** (all met as of 2026-10-26, pending counsel sign-off on the legal text and consent design): concurrent double-booking impossible (lock plus constraint) and `createWithin` in place; patient and provider tokens mutually rejected; the two CORS classes enforced with Origin and CSRF checks; no PII or secrets in default logs or URLs; normalized-email index in place; unauthenticated Portal pages make no provider API calls; e2e runs against a self-contained stack; legal text updated; consent design agreed with legal (0.20 to 0.22); compliance decision recorded (0.23).
 
 **Suggested order inside Phase 0:** 0.1 → 0.2 → 0.3/0.4 (parallel) → 0.5 → 0.6/0.7/0.8 (parallel) → 0.9–0.13; 0.14–0.16 can run in parallel with all server work; 0.17, 0.18 and 0.23 start immediately because they have lead time.
 
@@ -246,8 +250,19 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **7.3 Audit view** for portal-originated actions.
 - **7.4 Quality gates.** Playwright e2e for booking, cancel and review flows in `Portal/e2e`, and abuse and rate-limit tests.
 
+### Phase 8: Operational follow-ups (not portal features; can start any time)
+- **8.1 Encryption key rotation (was 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **8.2 Google Meet connection UX.** Today the connection expires silently. The refresh token's death (`invalid_grant`, `src/google/google-meet.service.ts:28`) is only discovered when the provider clicks "Generar Google Meet": then the connection is marked disconnected and the modal switches to "Reconectar". Until that moment `GET /v1/google/connection` reports `connected: true` from the stored row, so Settings and the appointment modal show a healthy connection that isn't. Build:
+  - (a) **Find the cause first.** If the OAuth consent screen is in "Testing" publishing status, Google expires refresh tokens after 7 days; moving it to "In production" (with verification for the Meet scope if required) fixes the root cause. Also check password changes, the 50-token-per-client limit and user revocation. Record the finding in `docs/operations.md`.
+  - (b) **Check validity proactively.** A daily pg-boss job (and an optional `?verify=true` on the status endpoint, rate-limited) refreshes the access token for each active connection. On `invalid_grant` it reuses the existing mark-disconnected + audit path. Requires `ENABLE_SCHEDULER`; without it the status endpoint check is the only signal.
+  - (c) **Tell the provider before they need it.** A persistent banner in the provider layout ("Tu conexión con Google expiró. Reconéctala para generar enlaces de Meet.") with a one-click reconnect, an outbound notice on the provider's `reminderChannel` when a connection is lost, and a status in Settings that distinguishes "connected", "expired, reconnect" and "never connected" (with `lastUsedAt`/last checked time).
+  - (d) **Flag affected appointments.** Upcoming virtual appointments with no `meetingUrl` (or created while disconnected) are listed in the banner/dashboard so the provider can add links before reminders go out.
+  - (e) In the appointment modal, show the expired state up front instead of after a failed click, and keep the manual URL field usable either way.
+  - Tests: `invalid_grant` from the check job marks the connection disconnected and audits once; status endpoint returns the expired state; the banner renders from that state; reconnect clears it. Google is mocked at `src/google/google-meet.service.js`; no network calls.
+  - **Dependency:** 5.4 (portal virtual bookings) relies on the same signal for its `FAILED` fallback and provider notification, so build 8.2 (b)–(c) before 5.4.
+
 ### Dependency summary
-`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; 7.1 depends on 3; 7.2 depends on 4. Phases 5 and 6 can run in parallel after the MVP. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
+`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; 7.1 depends on 3; 7.2 depends on 4. Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) should land before 5.4. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
 
 ## Verification
 - Integration tests per `AGENTS.md` (real Postgres, mocked Twilio/Brevo/dispatch), including the concurrent-booking race, admin vs portal vs blocked-time races, cross-tenant slug isolation, portal vs provider token rejection, uniform responses regardless of patient existence, and email-normalization collisions.

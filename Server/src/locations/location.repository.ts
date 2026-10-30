@@ -26,6 +26,7 @@ export const locationRepository = {
         color: dto.color ?? null,
         defaultPrice: dto.defaultPrice ?? null,
         isVirtual: dto.isVirtual ?? false,
+        bookableOnline: dto.bookableOnline ?? false,
         userId,
       },
     });
@@ -63,7 +64,7 @@ export const locationRepository = {
 
     const data = buildUpdateData(
       dto,
-      [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual' ],
+      [ 'name', 'address', 'instructions', 'color', 'defaultPrice', 'isVirtual', 'bookableOnline' ],
       {
         address: emptyToNull,
         instructions: emptyToNull,

@@ -243,6 +243,15 @@ model User {
 
   timezone String @default("America/Bogota") @db.VarChar(50)
 
+  // Online booking (patient portal). Inert unless ENABLE_PORTAL and bookingEnabled.
+  bookingSlug         String?             @unique @db.VarChar(40)
+  bookingEnabled      Boolean             @default(false)
+  bookingApprovalMode BookingApprovalMode @default(AUTO_CONFIRM)
+  slotIntervalMinutes Int                 @default(30)
+  bufferMinutes       Int                 @default(0)
+  minLeadMinutes      Int                 @default(120)
+  maxHorizonDays      Int                 @default(60)
+
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
@@ -261,11 +270,41 @@ model User {
   consentDocument      Document?
   googleConnection     GoogleConnection?
   googleOAuthStates    GoogleOAuthState[]
+  availabilityRules    AvailabilityRule[]
 
   @@index([email])
   @@index([status])
   @@index([isDeleted])
   @@map("users")
+}
+
+/// Whether portal bookings are confirmed immediately or wait for provider approval (Phase 6).
+enum BookingApprovalMode {
+  AUTO_CONFIRM
+  REQUIRE_APPROVAL
+}
+
+// ─── Availability Rule ──────────────────────────────────────────────────────────
+
+/// One weekly availability window in the provider's wall-clock time (User.timezone,
+/// resolved per date when slots are generated). Half-open [startMinute, endMinute).
+model AvailabilityRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// ISO weekday: 1 = Monday ... 7 = Sunday.
+  weekday     Int
+  /// Minutes since local midnight, 0..1435.
+  startMinute Int
+  /// Minutes since local midnight, 5..1440 (1440 = end of day).
+  endMinute   Int
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, weekday])
+  @@map("availability_rules")
 }
 
 // ─── Google Connection ──────────────────────────────────────────────────────────
@@ -315,6 +354,7 @@ model AppointmentLocation {
   color        String?   @db.VarChar(20)
   defaultPrice Int?
   isVirtual    Boolean   @default(false)
+  bookableOnline Boolean @default(false)
   isActive     Boolean   @default(true)
   isDeleted    Boolean   @default(false)
   deletedAt    DateTime?
@@ -340,6 +380,7 @@ model AppointmentType {
   defaultDuration Int       @default(60)
   defaultPrice    Int?
   color           String?   @db.VarChar(20)
+  bookableOnline  Boolean   @default(false)
   isActive        Boolean   @default(true)
   isDeleted       Boolean   @default(false)
   deletedAt       DateTime?
