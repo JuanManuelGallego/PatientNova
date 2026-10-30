@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OnlineBookingTab } from "@/src/components/Settings/OnlineBookingTab";
@@ -39,6 +39,7 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         minLeadMinutes: 120,
         maxHorizonDays: 60,
         readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
+        live: false,
         ...overrides,
     };
 }
@@ -84,6 +85,45 @@ describe("OnlineBookingTab: status", () => {
         await userEvent.click(screen.getByTestId("online-booking-enabled-toggle"));
         expect(await screen.findByRole("alert")).toHaveTextContent("Completa la configuración");
     });
+
+    it("disables the toggle while the request is in flight", async () => {
+        settings = makeSettings({ readiness: READY });
+        let resolve!: (s: BookingSettings) => void;
+        updateSettings.mockImplementation(() => new Promise((r) => { resolve = r; }));
+        render(<OnlineBookingTab />);
+        const toggle = screen.getByTestId("online-booking-enabled-toggle");
+        await userEvent.click(toggle);
+        expect(toggle).toBeDisabled();
+        await act(async () => resolve({ ...settings, bookingEnabled: true, live: true }));
+        expect(toggle).not.toBeDisabled();
+        expect(updateSettings).toHaveBeenCalledTimes(1);
+    });
+
+    it("warns when booking is enabled but not live", () => {
+        settings = makeSettings({ bookingEnabled: true, live: false, readiness: { ...READY, hasBookableLocation: false } });
+        render(<OnlineBookingTab />);
+        expect(screen.getByTestId("online-booking-not-live")).toHaveTextContent(/no recibe reservas/);
+    });
+
+    it("does not warn when booking is live", () => {
+        settings = makeSettings({ bookingEnabled: true, live: true, readiness: READY });
+        render(<OnlineBookingTab />);
+        expect(screen.queryByTestId("online-booking-not-live")).not.toBeInTheDocument();
+    });
+
+    it("refreshes readiness after saving availability, even after another section saved", async () => {
+        render(<OnlineBookingTab />);
+        // Saving the link stores the server's answer locally.
+        await userEvent.click(screen.getByTestId("online-booking-slug-save"));
+        fetchSettings.mockResolvedValue(makeSettings({
+            bookingSlug: "test-user",
+            readiness: { ...READY, hasBookableType: false },
+        }));
+        await userEvent.click(screen.getByTestId("availability-add-1"));
+        await userEvent.click(screen.getByTestId("availability-save"));
+        const readiness = screen.getByTestId("online-booking-readiness");
+        expect(await within(readiness).findAllByText("(listo)")).toHaveLength(3);
+    });
 });
 
 describe("OnlineBookingTab: link", () => {
@@ -109,6 +149,15 @@ describe("OnlineBookingTab: link", () => {
         expect(screen.queryByTestId("online-booking-slug-warning")).not.toBeInTheDocument();
         await userEvent.type(screen.getByTestId("online-booking-slug-input"), "-nueva");
         expect(screen.getByTestId("online-booking-slug-warning")).toHaveTextContent(/dejarán de funcionar/);
+    });
+
+    it("warns that clearing the slug disables booking", async () => {
+        settings = makeSettings({ bookingSlug: "dra", bookingUrl: "https://app.test/book/dra" });
+        render(<OnlineBookingTab />);
+        expect(screen.queryByTestId("online-booking-slug-clear-warning")).not.toBeInTheDocument();
+        await userEvent.clear(screen.getByTestId("online-booking-slug-input"));
+        expect(screen.getByTestId("online-booking-slug-clear-warning")).toHaveTextContent(/se desactivará/);
+        expect(screen.queryByTestId("online-booking-slug-warning")).not.toBeInTheDocument();
     });
 
     it("shows the URL, QR and copies the link", async () => {
@@ -144,6 +193,16 @@ describe("OnlineBookingTab: availability", () => {
         fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
         expect(screen.getByRole("alert")).toHaveTextContent(/superponen el martes/);
         expect(screen.getByTestId("availability-save")).toBeDisabled();
+    });
+
+    it("adds a non-overlapping window late in the day", async () => {
+        rules = [ { weekday: 3, startMinute: 1200, endMinute: 1410 } ];
+        render(<OnlineBookingTab />);
+        await userEvent.click(screen.getByTestId("availability-add-3"));
+        expect(screen.getByTestId("availability-start-3-1")).toHaveValue("23:30");
+        expect(screen.getByTestId("availability-end-3-1")).toHaveValue("00:00");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+        expect(screen.getByTestId("availability-add-3")).toBeDisabled();
     });
 
     it("removes a window", async () => {

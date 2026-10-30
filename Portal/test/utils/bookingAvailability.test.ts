@@ -45,6 +45,12 @@ describe("availabilityError", () => {
         expect(availabilityError([ rule(1, 600, 540) ])).not.toBeNull();
         expect(availabilityError([ rule(1, 541, 600) ])).not.toBeNull();
     });
+
+    it("caps the week at the server's rule limit", () => {
+        const many = Array.from({ length: 51 }, (_, i) => rule((i % 7) + 1, (Math.floor(i / 7)) * 60, (Math.floor(i / 7)) * 60 + 30));
+        expect(availabilityError(many.slice(0, 50))).toBeNull();
+        expect(availabilityError(many)).toMatch(/máximo 50/);
+    });
 });
 
 describe("sortRules", () => {

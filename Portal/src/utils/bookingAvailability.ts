@@ -1,4 +1,4 @@
-import { AvailabilityRule } from "@/src/types/Booking";
+import { AvailabilityRule, MAX_AVAILABILITY_RULES } from "@/src/types/Booking";
 
 /** Mirrors the server's slug rule (`Server/src/booking-settings/slug.ts`). */
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -51,6 +51,9 @@ export function sortRules(rules: AvailabilityRule[]): AvailabilityRule[] {
 
 /** Spanish message for the first invalid window (same rules as the server), or null. */
 export function availabilityError(rules: AvailabilityRule[]): string | null {
+    if (rules.length > MAX_AVAILABILITY_RULES) {
+        return `Puedes tener máximo ${MAX_AVAILABILITY_RULES} franjas en la semana.`;
+    }
     for (const r of rules) {
         if (r.startMinute % MINUTE_STEP !== 0 || r.endMinute % MINUTE_STEP !== 0) {
             return "Las horas deben ir en intervalos de 5 minutos.";

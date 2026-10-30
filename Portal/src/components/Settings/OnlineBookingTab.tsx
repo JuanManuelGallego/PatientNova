@@ -23,6 +23,7 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
 
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
+const MINUTES_PER_DAY = 1440;
 
 const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string }> = [
     { key: "hasSlug", label: "Enlace de reserva definido" },
@@ -69,7 +70,14 @@ export function OnlineBookingTab() {
                 error={statusError}
             />
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
-            <AvailabilitySection timezone={current.timezone} onSaved={() => fetchSettings()} />
+            <AvailabilitySection
+                timezone={current.timezone}
+                // Readiness depends on availability; take the fresh settings or `latest` would shadow them.
+                onSaved={async () => {
+                    const fresh = await fetchSettings();
+                    if (fresh) setCurrent(fresh);
+                }}
+            />
             <RulesSection settings={current} save={updateSettings} onSaved={setCurrent} />
         </div>
     );
@@ -77,12 +85,22 @@ export function OnlineBookingTab() {
 
 function StatusSection({ settings, onToggle, error }: {
     settings: BookingSettings;
-    onToggle: (enabled: boolean) => void;
+    onToggle: (enabled: boolean) => Promise<void>;
     error: string | null;
 }) {
+    const [ toggling, setToggling ] = useState(false);
     const ready = READINESS_ITEMS.every((i) => settings.readiness[ i.key ]);
     // Disabling is always allowed; enabling needs every readiness item.
     const canToggle = settings.bookingEnabled || ready;
+
+    async function handleToggle(enabled: boolean) {
+        setToggling(true);
+        try {
+            await onToggle(enabled);
+        } finally {
+            setToggling(false);
+        }
+    }
 
     return (
         <div className="dash-card">
@@ -113,14 +131,20 @@ function StatusSection({ settings, onToggle, error }: {
                     <input
                         type="checkbox"
                         checked={settings.bookingEnabled}
-                        disabled={!canToggle}
-                        onChange={(e) => onToggle(e.target.checked)}
+                        disabled={!canToggle || toggling}
+                        onChange={(e) => handleToggle(e.target.checked)}
                         data-testid="online-booking-enabled-toggle"
                     />
                     Activar reserva en línea
                 </label>
                 {!canToggle && (
                     <span className="form-input-hint">Completa los puntos pendientes para poder activarla.</span>
+                )}
+                {settings.bookingEnabled && !settings.live && (
+                    <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-not-live">
+                        <STATUS_ICONS.warning size={14} />
+                        Está activada, pero tu enlace no recibe reservas: completa los puntos pendientes.
+                    </div>
                 )}
                 {error && <ErrorLine message={error} />}
             </div>
@@ -148,6 +172,7 @@ function LinkSection({ settings, save, onSaved }: {
     const validation = normalized ? slugError(normalized) : null;
     const changed = normalized !== (settings.bookingSlug ?? "");
     const isRename = !!settings.bookingSlug && changed && !!normalized;
+    const isClear = !!settings.bookingSlug && !normalized;
 
     async function handleSave() {
         setError(null);
@@ -183,7 +208,8 @@ function LinkSection({ settings, save, onSaved }: {
         a.href = url;
         a.download = `reserva-${settings.bookingSlug}.svg`;
         a.click();
-        URL.revokeObjectURL(url);
+        // Revoking synchronously can cancel the download in some browsers.
+        setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
     return (
@@ -212,6 +238,12 @@ function LinkSection({ settings, save, onSaved }: {
                     <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-slug-warning">
                         <STATUS_ICONS.warning size={14} />
                         Si cambias el enlace, los enlaces y códigos QR que ya compartiste dejarán de funcionar.
+                    </div>
+                )}
+                {isClear && (
+                    <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-slug-clear-warning">
+                        <STATUS_ICONS.warning size={14} />
+                        Si quitas el enlace, la reserva en línea se desactivará y los enlaces y códigos QR que ya compartiste dejarán de funcionar.
                     </div>
                 )}
                 {error && <ErrorLine message={error} />}
@@ -278,9 +310,12 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
         const current = rules ?? [];
         const sameDay = sortRules(current.filter((r) => r.weekday === weekday));
         const last = sameDay[ sameDay.length - 1 ];
-        // Start the new window one hour after the last one, when it fits in the day.
-        const startMinute = last ? Math.min(last.endMinute + 60, 23 * 60) : DEFAULT_WINDOW.startMinute;
-        const endMinute = last ? Math.min(startMinute + 180, 1440) : DEFAULT_WINDOW.endMinute;
+        if (last && last.endMinute >= MINUTES_PER_DAY) return;
+        // Start one hour after the last window when that fits in the day, else right where it ends (never overlapping).
+        const startMinute = !last ? DEFAULT_WINDOW.startMinute
+            : last.endMinute + 60 < MINUTES_PER_DAY ? last.endMinute + 60
+            : last.endMinute;
+        const endMinute = last ? Math.min(startMinute + 180, MINUTES_PER_DAY) : DEFAULT_WINDOW.endMinute;
         update([ ...current, { weekday, startMinute, endMinute } ]);
     }
 
@@ -321,6 +356,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                 {!rules && loading && <p className="form-input-hint">{LBL_LOADING}</p>}
                 {rules && WEEKDAYS_ES.map(({ weekday, label }) => {
                     const dayRules = rules.filter((r) => r.weekday === weekday);
+                    const dayFull = dayRules.some((r) => r.endMinute >= MINUTES_PER_DAY);
                     return (
                         <div
                             key={weekday}
@@ -373,6 +409,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                         type="button"
                                         className="btn-action-edit"
                                         onClick={() => addWindow(weekday)}
+                                        disabled={dayFull}
                                         data-testid={`availability-add-${weekday}`}
                                     >
                                         <ACTION_ICONS.plus size={14} /> Agregar franja

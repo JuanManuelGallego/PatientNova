@@ -1,6 +1,7 @@
 import { AppointmentType } from "@/src/types/Appointment";
 
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { OnlineBadge } from "@/src/components/OnlineBadge";
 
 export function AppointmentTypeCard({
   type,
@@ -37,23 +38,7 @@ export function AppointmentTypeCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14 }}>
             {type.name}
-            {type.bookableOnline && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  background: "var(--c-success-light)",
-                  color: "var(--c-success)",
-                  borderRadius: "var(--r-full)",
-                  padding: "2px 8px",
-                  letterSpacing: "0.03em",
-                  flexShrink: 0,
-                }}
-                data-testid={`appointment-type-online-badge-${type.id}`}
-              >
-                En línea
-              </span>
-            )}
+            {type.bookableOnline && <OnlineBadge testId={`appointment-type-online-badge-${type.id}`} />}
           </div>
           <div
             style={{

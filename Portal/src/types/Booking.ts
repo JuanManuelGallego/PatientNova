@@ -18,6 +18,8 @@ export interface BookingSettings {
     minLeadMinutes: number;
     maxHorizonDays: number;
     readiness: BookingReadiness;
+    /** Enabled and ready: the public link accepts bookings. Enabled-but-not-live happens when setup is undone later. */
+    live: boolean;
 }
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
@@ -36,4 +38,8 @@ export interface Availability {
     rules: AvailabilityRule[];
 }
 
+/** Mirrors the server (`Server/src/booking-settings/booking-settings.schemas.ts`). */
+export const MAX_AVAILABILITY_RULES = 50;
+
+/** Mirrors the server (`Server/src/booking-settings/booking-settings.schemas.ts`). */
 export const SLOT_INTERVAL_OPTIONS = [ 5, 10, 15, 20, 30, 45, 60, 90, 120 ] as const;
