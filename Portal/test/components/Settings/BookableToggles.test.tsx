@@ -28,10 +28,18 @@ beforeEach(() => {
 describe("LocationModal bookable toggle", () => {
     it("is hidden and never sent when the portal is off", async () => {
         portalEnabled = false;
-        render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Centro", isVirtual: true }} />);
+        render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Centro", isVirtual: false, address: "x", instructions: "y" }} />);
         expect(screen.queryByTestId("location-bookable-online-checkbox")).not.toBeInTheDocument();
         await userEvent.click(screen.getByTestId("location-modal-submit-button"));
         expect(updateLocation.mock.calls[ 0 ][ 1 ]).not.toHaveProperty("bookableOnline");
+    });
+
+    it("clears a stored flag when made virtual with the portal off", async () => {
+        portalEnabled = false;
+        render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Sala", isVirtual: false, address: "x", instructions: "y", bookableOnline: true }} />);
+        await userEvent.click(screen.getByTestId("location-virtual-checkbox"));
+        await userEvent.click(screen.getByTestId("location-modal-submit-button"));
+        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true, bookableOnline: false }));
     });
 
     it("sends bookableOnline for an in-person location", async () => {

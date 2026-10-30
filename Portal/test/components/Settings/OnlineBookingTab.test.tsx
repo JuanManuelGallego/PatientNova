@@ -124,6 +124,14 @@ describe("OnlineBookingTab: status", () => {
         const readiness = screen.getByTestId("online-booking-readiness");
         expect(await within(readiness).findAllByText("(listo)")).toHaveLength(3);
     });
+
+    it("says so when readiness can't be refreshed after saving availability", async () => {
+        fetchSettings.mockResolvedValue(undefined);
+        render(<OnlineBookingTab />);
+        await userEvent.click(screen.getByTestId("availability-add-1"));
+        await userEvent.click(screen.getByTestId("availability-save"));
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+    });
 });
 
 describe("OnlineBookingTab: link", () => {

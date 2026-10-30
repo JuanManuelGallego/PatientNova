@@ -16,7 +16,7 @@ export const WEEKDAYS_ES: ReadonlyArray<{ weekday: number; label: string }> = [
     { weekday: 7, label: "Domingo" },
 ];
 
-const MINUTES_PER_DAY = 1440;
+export const MINUTES_PER_DAY = 1440;
 const MINUTE_STEP = 5;
 
 /** Spanish validation message for a slug, or null when it's acceptable to send. */

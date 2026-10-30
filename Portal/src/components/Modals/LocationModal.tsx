@@ -63,8 +63,8 @@ export function LocationModal({
         color: form.color,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
-        // Only sent when the portal is on, so saving never touches the flag otherwise.
-        ...(portalEnabled && { bookableOnline: !form.isVirtual && form.bookableOnline }),
+        // Only sent when the portal is on (or virtual, which must clear a stored flag the server would reject).
+        ...((portalEnabled || form.isVirtual) && { bookableOnline: !form.isVirtual && form.bookableOnline }),
       };
       if (isEdit) {
         await updateLocation(location!.id, data);

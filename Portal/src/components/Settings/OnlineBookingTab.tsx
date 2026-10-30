@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useFetchBookingSettings } from "@/src/api/booking/useFetchBookingSettings";
 import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSettings";
@@ -9,6 +9,7 @@ import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
 import { AvailabilityRule, BookingSettings, BookingSettingsUpdate, SLOT_INTERVAL_OPTIONS } from "@/src/types/Booking";
 import {
+    MINUTES_PER_DAY,
     WEEKDAYS_ES,
     availabilityError,
     minutesToTime,
@@ -23,7 +24,6 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
 
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
-const MINUTES_PER_DAY = 1440;
 
 const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string }> = [
     { key: "hasSlug", label: "Enlace de reserva definido" },
@@ -36,6 +36,15 @@ function ErrorLine({ message }: { message: string }) {
     return (
         <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <STATUS_ICONS.warning size={14} /> {message}
+        </div>
+    );
+}
+
+function WarningHint({ testId, children }: { testId: string; children: ReactNode }) {
+    return (
+        <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid={testId}>
+            <STATUS_ICONS.warning size={14} />
+            {children}
         </div>
     );
 }
@@ -76,6 +85,7 @@ export function OnlineBookingTab() {
                 onSaved={async () => {
                     const fresh = await fetchSettings();
                     if (fresh) setCurrent(fresh);
+                    else setStatusError(ERR_LOAD);
                 }}
             />
             <RulesSection settings={current} save={updateSettings} onSaved={setCurrent} />
@@ -141,10 +151,9 @@ function StatusSection({ settings, onToggle, error }: {
                     <span className="form-input-hint">Completa los puntos pendientes para poder activarla.</span>
                 )}
                 {settings.bookingEnabled && !settings.live && (
-                    <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-not-live">
-                        <STATUS_ICONS.warning size={14} />
+                    <WarningHint testId="online-booking-not-live">
                         Está activada, pero tu enlace no recibe reservas: completa los puntos pendientes.
-                    </div>
+                    </WarningHint>
                 )}
                 {error && <ErrorLine message={error} />}
             </div>
@@ -235,16 +244,14 @@ function LinkSection({ settings, save, onSaved }: {
                 </label>
                 {touched && validation && <ErrorLine message={validation} />}
                 {isRename && (
-                    <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-slug-warning">
-                        <STATUS_ICONS.warning size={14} />
+                    <WarningHint testId="online-booking-slug-warning">
                         Si cambias el enlace, los enlaces y códigos QR que ya compartiste dejarán de funcionar.
-                    </div>
+                    </WarningHint>
                 )}
                 {isClear && (
-                    <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid="online-booking-slug-clear-warning">
-                        <STATUS_ICONS.warning size={14} />
+                    <WarningHint testId="online-booking-slug-clear-warning">
                         Si quitas el enlace, la reserva en línea se desactivará y los enlaces y códigos QR que ya compartiste dejarán de funcionar.
-                    </div>
+                    </WarningHint>
                 )}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Enlace actualizado." />}
@@ -387,7 +394,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                             className="form-input"
                                             style={{ width: 120 }}
                                             // 24:00 isn't a valid <input type="time"> value; midnight end shows as 00:00.
-                                            value={r.endMinute === 1440 ? "00:00" : minutesToTime(r.endMinute)}
+                                            value={r.endMinute === MINUTES_PER_DAY ? "00:00" : minutesToTime(r.endMinute)}
                                             onChange={(e) => setTime(r, "endMinute", e.target.value)}
                                             aria-label={`${label}: hora de fin`}
                                             data-testid={`availability-end-${weekday}-${i}`}
