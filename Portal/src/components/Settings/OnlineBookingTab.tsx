@@ -61,15 +61,6 @@ function WarningHint({ testId, children }: { testId: string; children: ReactNode
     );
 }
 
-function SaveRow({ dirty, children }: { dirty: boolean; children: ReactNode }) {
-    return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {children}
-            {dirty && <span style={{ fontSize: 12, color: "var(--c-gray-500)" }}>Cambios sin guardar</span>}
-        </div>
-    );
-}
-
 export function OnlineBookingTab() {
     const { settings, loading, error, fetchSettings } = useFetchBookingSettings();
     const { updateSettings } = useUpdateBookingSettings();
@@ -324,7 +315,7 @@ function LinkSection({ settings, save, onSaved }: {
                 )}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Enlace actualizado." />}
-                <SaveRow dirty={touched && changed}>
+                <div>
                     <button
                         type="button"
                         className={settings.bookingUrl ? "btn-secondary" : "btn-primary"}
@@ -334,7 +325,7 @@ function LinkSection({ settings, save, onSaved }: {
                     >
                         {saving ? LBL_SAVING : "Guardar enlace"}
                     </button>
-                </SaveRow>
+                </div>
             </div>
         </div>
     );
@@ -504,7 +495,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                 {validation && dirty && !anyDayError && <ErrorLine message={validation} />}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Disponibilidad actualizada." />}
-                <SaveRow dirty={dirty}>
+                <div>
                     <button
                         type="button"
                         className="btn-primary"
@@ -514,7 +505,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                     >
                         {saving ? LBL_SAVING : "Guardar disponibilidad"}
                     </button>
-                </SaveRow>
+                </div>
             </div>
         </div>
     );
@@ -618,7 +609,7 @@ function RulesSection({ settings, save, onSaved }: {
                 </div>
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Reglas de reserva actualizadas." />}
-                <SaveRow dirty={changed}>
+                <div>
                     <button
                         type="button"
                         className="btn-primary"
@@ -628,7 +619,7 @@ function RulesSection({ settings, save, onSaved }: {
                     >
                         {saving ? LBL_SAVING : LBL_SAVE}
                     </button>
-                </SaveRow>
+                </div>
             </div>
         </div>
     );
