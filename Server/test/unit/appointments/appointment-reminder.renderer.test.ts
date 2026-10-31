@@ -45,7 +45,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     },
     appointmentLocation: {
       id: 'location-1', name: 'Virtual', address: null, instructions: null,
-      color: null, defaultPrice: null, isVirtual: true,
+      color: null, isVirtual: true,
     },
     appointmentType: {
       id: 'type-1', name: 'Consulta', description: null, defaultDuration: 60,

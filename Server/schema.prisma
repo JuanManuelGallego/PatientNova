@@ -352,7 +352,6 @@ model AppointmentLocation {
   address      String?   @db.VarChar(255)
   instructions String?   @db.VarChar(500)
   color        String?   @db.VarChar(20)
-  defaultPrice Int?
   isVirtual    Boolean   @default(false)
   bookableOnline Boolean @default(false)
   isActive     Boolean   @default(true)
