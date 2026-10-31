@@ -1,0 +1,25 @@
+meta {
+  name: Replace Availability
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/booking/availability
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "rules": [
+      { "weekday": 1, "startMinute": 540, "endMinute": 720 },
+      { "weekday": 1, "startMinute": 840, "endMinute": 1080 },
+      { "weekday": 3, "startMinute": 540, "endMinute": 1080 }
+    ]
+  }
+}

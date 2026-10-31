@@ -1,6 +1,7 @@
 import { bookingSettingsRepository, type BookingReadiness } from './booking-settings.repository.js';
 import {
   BookingAvailabilityRequiredError,
+  BookingLeadExceedsHorizonError,
   BookingNotReadyError,
   BookingSlugTakenError,
   type BookingReadinessKey,
@@ -17,6 +18,7 @@ import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js'
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 
 const BOOKING_SETTINGS_DIFF_FIELDS = schemaKeys(updateBookingSettingsSchema);
+const MINUTES_PER_DAY = 1440;
 
 const READINESS_KEYS: Record<keyof BookingReadiness, BookingReadinessKey> = {
   hasSlug: 'slug',
@@ -65,6 +67,13 @@ export const bookingSettingsService = {
     const result = await prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       const existing = await bookingSettingsRepository.getSettings(userId, tx);
+
+      // Checked only when either value changes, so an older stored pair never blocks unrelated edits.
+      if (dto.minLeadMinutes !== undefined || dto.maxHorizonDays !== undefined) {
+        const lead = dto.minLeadMinutes ?? existing.minLeadMinutes;
+        const horizonDays = dto.maxHorizonDays ?? existing.maxHorizonDays;
+        if (lead >= horizonDays * MINUTES_PER_DAY) throw new BookingLeadExceedsHorizonError();
+      }
 
       const changes: UpdateBookingSettingsDto = { ...dto };
       if (changes.bookingSlug === null) changes.bookingEnabled = false;

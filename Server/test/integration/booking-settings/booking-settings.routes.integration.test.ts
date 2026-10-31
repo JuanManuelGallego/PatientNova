@@ -87,6 +87,12 @@ describe('booking settings routes (integration)', () => {
     expect((await patchSettings({ slotIntervalMinutes: 7 })).statusCode).toBe(400);
   });
 
+  it('PATCH /settings refuses a lead time that reaches the horizon (422), merged with stored values', async () => {
+    expect((await patchSettings({ minLeadMinutes: 48 * 60, maxHorizonDays: 2 })).statusCode).toBe(422);
+    expect((await patchSettings({ minLeadMinutes: 48 * 60, maxHorizonDays: 3 })).statusCode).toBe(200);
+    expect((await patchSettings({ maxHorizonDays: 2 })).statusCode).toBe(422);
+  });
+
   it('PATCH /settings refuses to enable until ready (422), then succeeds', async () => {
     const notReady = await patchSettings({ bookingEnabled: true });
     expect(notReady.statusCode).toBe(422);

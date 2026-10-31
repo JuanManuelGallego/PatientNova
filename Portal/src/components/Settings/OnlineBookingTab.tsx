@@ -534,7 +534,6 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     );
 }
 
-// Empty input stays NaN so it fails validation instead of silently becoming 0.
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
 function RulesSection({ settings, save, onSaved }: {
@@ -556,7 +555,9 @@ function RulesSection({ settings, save, onSaved }: {
     const horizon = toNumber(horizonText);
     const bufferError = Number.isInteger(buffer) && buffer >= 0 && buffer <= 240 ? null : "Escribe un número entero entre 0 y 240.";
     const leadError = Number.isFinite(leadMinutes) && leadMinutes >= 0 && leadMinutes <= 14 * 24 * 60 ? null : "Escribe un número entre 0 y 336 horas (14 días).";
-    const horizonError = Number.isInteger(horizon) && horizon >= 1 && horizon <= 365 ? null : "Escribe un número entero entre 1 y 365.";
+    const horizonError = !(Number.isInteger(horizon) && horizon >= 1 && horizon <= 365) ? "Escribe un número entero entre 1 y 365."
+        : !leadError && leadMinutes >= horizon * 24 * 60 ? "Debe ser mayor que la anticipación mínima, o no habrá horarios disponibles."
+        : null;
     const invalid = !!(bufferError || leadError || horizonError);
     const changed = interval !== settings.slotIntervalMinutes || buffer !== settings.bufferMinutes
         || leadMinutes !== settings.minLeadMinutes || horizon !== settings.maxHorizonDays;
@@ -626,7 +627,7 @@ function RulesSection({ settings, save, onSaved }: {
                         value: leadText, onChange: setLeadHours, err: leadError, min: 0, max: 336, step: 0.5, testId: "online-booking-lead",
                     })}
                     {numberField({
-                        key: "horizon", label: "Reservar hasta (días)", hint: "Qué tan lejos en el futuro se puede reservar.",
+                        key: "horizon", label: "Reservar hasta (días)", hint: "Cuántos días hacia adelante se puede reservar, contando hoy.",
                         value: horizonText, onChange: setHorizon, err: horizonError, min: 1, max: 365, testId: "online-booking-horizon",
                     })}
                 </div>
