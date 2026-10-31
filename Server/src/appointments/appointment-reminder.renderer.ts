@@ -44,15 +44,16 @@ Quedamos a su disposición para cualquier duda. ¡Feliz día!`;
 export function renderAppointmentReminder(
   appointment: AppointmentWithRelations,
   doctorName: string,
+  timezone: string,
 ): { contentSid: string | null; contentVariables: Record<string, string>; body: string | null; subject: string | null } | null {
   const reminder = appointment.reminder;
   if (!reminder) return null;
 
   const date = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    day: 'numeric', month: 'long', year: 'numeric', timeZone: appointment.timezone,
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: timezone,
   }).format(appointment.startAt);
   const time = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: appointment.timezone,
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: timezone,
   }).format(appointment.startAt);
   const isVirtual = appointment.appointmentLocation?.isVirtual ?? false;
   const variables: Record<string, string> = {

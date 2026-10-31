@@ -4,7 +4,7 @@ import { userInclude } from './user.types.js';
 /**
  * The public user shape returned in all API responses.
  * Sensitive fields (passwordHash, failedLoginAttempts, lockedUntil,
- * refreshTokenVersion, lastLoginIp) are intentionally excluded.
+ * refreshTokenVersion) are intentionally excluded.
  */
 export type UserResponse = Prisma.UserGetPayload<{ select: typeof userInclude }>;
 
@@ -37,6 +37,7 @@ function _extractFields(
     status: string;
     timezone: string;
     lastLoginAt: Date | null;
+    lastPasswordChange: Date | null;
     reminderActive: boolean;
     reminderChannel: string | null;
     phoneNumber: string | null;
@@ -64,6 +65,7 @@ function _extractFields(
     status: user.status as UserResponse[ 'status' ],
     timezone: user.timezone,
     lastLoginAt: user.lastLoginAt,
+    lastPasswordChange: user.lastPasswordChange,
     reminderActive: user.reminderActive,
     reminderChannel: user.reminderChannel as UserResponse[ 'reminderChannel' ],
     phoneNumber: user.phoneNumber,

@@ -85,13 +85,11 @@ const fakeUser = {
   lastName: 'Doe',
   displayName: 'John Doe',
   lastLoginAt: null,
-  lastLoginIp: null,
 };
 
 const fakeUpdatedUser = {
   ...fakeUser,
   lastLoginAt: new Date(),
-  lastLoginIp: '127.0.0.1',
   failedLoginAttempts: 0,
   lockedUntil: null,
 };
@@ -108,11 +106,11 @@ describe('authService.login', () => {
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('fake-jwt-token' as any);
 
-    const result = await authService.login('test@example.com', 'password123', '127.0.0.1');
+    const result = await authService.login('test@example.com', 'password123');
 
     expect(mockRepo.findByEmail).toHaveBeenCalledWith('test@example.com');
     expect(mockBcrypt.compare).toHaveBeenCalledWith('password123', '$2b$04$hashedpassword');
-    expect(mockRepo.recordSuccessfulLogin).toHaveBeenCalledWith('user-1', '127.0.0.1');
+    expect(mockRepo.recordSuccessfulLogin).toHaveBeenCalledWith('user-1');
     expect(mockJwt.sign).toHaveBeenCalledTimes(2);
     expect(result.accessToken).toBe('fake-jwt-token');
     expect(result.refreshToken).toBe('fake-jwt-token');
@@ -124,7 +122,7 @@ describe('authService.login', () => {
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('token' as any);
 
-    await authService.login('test@example.com', 'password123', '127.0.0.1');
+    await authService.login('test@example.com', 'password123');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
       { id: 'user-1', email: 'test@example.com', role: 'USER', timezone: 'America/Bogota', sid: expect.any(String) },
@@ -139,7 +137,7 @@ describe('authService.login', () => {
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('token' as any);
 
-    await authService.login('test@example.com', 'password123', '127.0.0.1');
+    await authService.login('test@example.com', 'password123');
 
     const [ accessClaims, refreshClaims ] = mockJwt.sign.mock.calls.map((c) => c[0] as { sid: string });
     expect(accessClaims!.sid).toBeTruthy();
@@ -152,7 +150,7 @@ describe('authService.login', () => {
     mockRepo.recordSuccessfulLogin.mockResolvedValue(fakeUpdatedUser as any);
     mockJwt.sign.mockReturnValue('token' as any);
 
-    await authService.login('test@example.com', 'password123', '127.0.0.1');
+    await authService.login('test@example.com', 'password123');
 
     expect(mockJwt.sign).toHaveBeenCalledWith(
       { id: 'user-1', version: 1, sid: expect.any(String), type: 'refresh' },
@@ -165,21 +163,21 @@ describe('authService.login', () => {
     mockRepo.findByEmail.mockResolvedValue(null);
     mockBcrypt.compare.mockResolvedValue(false as any);
 
-    await expect(authService.login('unknown@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Invalid credentials');
+    await expect(authService.login('unknown@example.com', 'pass')).rejects.toThrow('Invalid credentials');
   });
 
   it('throws AuthInvalidCredentialsError when user is not ACTIVE', async () => {
     mockRepo.findByEmail.mockResolvedValue({ ...fakeUser, status: 'INACTIVE' } as any);
     mockBcrypt.compare.mockResolvedValue(false as any);
 
-    await expect(authService.login('test@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Invalid credentials');
+    await expect(authService.login('test@example.com', 'pass')).rejects.toThrow('Invalid credentials');
   });
 
   it('throws AuthAccountLockedError when account is locked', async () => {
     const lockedUser = { ...fakeUser, lockedUntil: new Date(Date.now() + 60000) };
     mockRepo.findByEmail.mockResolvedValue(lockedUser as any);
 
-    await expect(authService.login('test@example.com', 'pass', '127.0.0.1')).rejects.toThrow('Account temporarily locked');
+    await expect(authService.login('test@example.com', 'pass')).rejects.toThrow('Account temporarily locked');
     expect(mockBcrypt.compare).not.toHaveBeenCalled();
   });
 
@@ -188,7 +186,7 @@ describe('authService.login', () => {
     mockBcrypt.compare.mockResolvedValue(false as any);
     mockRepo.recordFailedAttempt.mockResolvedValue({ failedAttempts: 1, locked: false });
 
-    await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
+    await expect(authService.login('test@example.com', 'wrong')).rejects.toThrow('Invalid credentials');
     expect(mockRepo.recordFailedAttempt).toHaveBeenCalledWith('user-1', 3, 900000);
   });
 
@@ -197,7 +195,7 @@ describe('authService.login', () => {
     mockBcrypt.compare.mockResolvedValue(false as any);
     mockRepo.recordFailedAttempt.mockRejectedValue(new Error('DB connection lost'));
 
-    await expect(authService.login('test@example.com', 'wrong', '127.0.0.1')).rejects.toThrow('Invalid credentials');
+    await expect(authService.login('test@example.com', 'wrong')).rejects.toThrow('Invalid credentials');
   });
 });
 

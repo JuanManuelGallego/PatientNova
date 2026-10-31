@@ -1,13 +1,7 @@
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../generated/prisma/client.ts';
 import { z } from 'zod';
 import { includeDeletedQuery } from '../utils/validation/schemas.js';
-import { isValidIANATimezone } from '../utils/time/time-utils.ts';
 import { emailRegex } from '../utils/validation/middleware.ts';
-
-const timezoneSchema = z.string().max(50).optional().refine(
-  tz => !tz || isValidIANATimezone(tz),
-  { message: 'Invalid IANA timezone identifier' }
-);
 
 const reminderInlineSchema = z.object({
   channel: z.enum(Channel),
@@ -29,9 +23,7 @@ const reminderInlineSchema = z.object({
 export const createAppointmentSchema = z.object({
   startAt: z.iso.datetime(),
   endAt: z.iso.datetime(),
-  timezone: timezoneSchema,
   price: z.number().min(0, 'Price must be non-negative'),
-  currency: z.string().optional(),
   paid: z.boolean().default(false),
   meetingUrl: z.url('meetingUrl must be a valid URL').max(500).or(z.literal('')).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
@@ -56,9 +48,7 @@ export const updateAppointmentSchema = z
   .object({
     startAt: z.iso.datetime().optional(),
     endAt: z.iso.datetime().optional(),
-    timezone: timezoneSchema,
     price: z.number().min(0, 'Price must be non-negative').optional(),
-    currency: z.string().optional(),
     paid: z.boolean().optional(),
     meetingUrl: z.url('meetingUrl must be a valid URL').max(500).nullable().optional().or(z.literal('')),
     notes: z.string().max(1000).optional(),

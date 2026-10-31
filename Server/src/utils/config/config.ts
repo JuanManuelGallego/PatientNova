@@ -121,7 +121,6 @@ export const config = {
 
   defaults: {
     timezone: process.env.DEFAULT_TIMEZONE ?? 'America/Bogota',
-    currency: process.env.DEFAULT_CURRENCY ?? 'COP',
   },
 
   scheduler: {

@@ -9,10 +9,8 @@ export interface Appointment {
 
   startAt: string;
   endAt: string;
-  timezone: string;
 
   price: number;
-  currency: string;
   paid: boolean;
 
   meetingUrl?: string | null;
@@ -24,7 +22,6 @@ export interface Appointment {
   completedAt?: string | null;
 
   patientId: string;
-  reminderId?: string | null;
   locationId?: string | null;
   typeId?: string | null;
 

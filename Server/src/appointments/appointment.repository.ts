@@ -8,7 +8,6 @@ import {
 } from './appointment.schemas.js';
 import { AppointmentNotFoundError } from './appointment.errors.js';
 import { paginate, type Paginated } from '../utils/api/pagination.js';
-import { config } from '../utils/config/config.js';
 import { appointmentInclude, type AppointmentWithRelations, type AppointmentStats } from './appointment.types.js';
 import { getCurrentMonthBoundsInTz, getDayBoundsInTz, getTodayBoundsInTz } from '../utils/time/time-utils.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
@@ -25,9 +24,7 @@ export const appointmentRepository = {
       data: {
         startAt: dto.startAt,
         endAt: dto.endAt,
-        timezone: dto.timezone || config.defaults.timezone,
         price: dto.price,
-        currency: dto.currency || config.defaults.currency,
         paid: dto.paid,
         locationId: dto.locationId,
         meetingUrl: dto.meetingUrl || null,
@@ -36,7 +33,7 @@ export const appointmentRepository = {
         status: dto.status,
         patientId: dto.patientId,
         userId,
-        ...(dto.reminderId && { reminder: { connect: { id: dto.reminderId } }, reminderId: dto.reminderId }),
+        ...(dto.reminderId && { reminder: { connect: { id: dto.reminderId } } }),
       },
       include: appointmentInclude,
     });
@@ -117,7 +114,7 @@ export const appointmentRepository = {
     const client = tx ?? prisma;
     const data: Prisma.AppointmentUpdateInput = buildUpdateData(
       dto,
-      [ 'startAt', 'endAt', 'timezone', 'price', 'currency', 'paid', 'locationId', 'meetingUrl', 'notes', 'typeId', 'status' ],
+      [ 'startAt', 'endAt', 'price', 'paid', 'locationId', 'meetingUrl', 'notes', 'typeId', 'status' ],
       {
         meetingUrl: emptyToNull,
       },

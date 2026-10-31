@@ -365,14 +365,16 @@ describe('Audit writing: auth (integration)', () => {
     const password = 'Password123!';
     const user = await createTestUser({ password });
 
-    await withAuditContext(() => authService.login(user.email, password, '10.0.0.1'));
+    // Login runs outside `authenticate`, so there is no request audit context and no IP.
+    await authService.login(user.email, password);
 
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
     expect(log!.actionType).toBe('UPDATE');
     expect(log!.description).toContain('inició sesión');
     expect(log!.affectedFields).toContain('lastLoginAt');
-    expect(log!.fieldsAfter).toMatchObject({ lastLoginIp: '10.0.0.1' });
+    expect(log!.ipAddress).toBeNull();
+    expect(log!.fieldsAfter).not.toHaveProperty('lastLoginIp');
   });
 
   it('creates an audit log on logout', async () => {

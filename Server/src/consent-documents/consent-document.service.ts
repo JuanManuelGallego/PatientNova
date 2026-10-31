@@ -26,7 +26,6 @@ export const consentDocumentService = {
         name: doc.name,
         mimeType: doc.mimeType,
         sizeBytes: doc.sizeBytes,
-        checksum: doc.checksum,
       },
     });
     logger.info({ userId }, 'Consent document created');

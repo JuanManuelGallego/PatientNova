@@ -142,13 +142,11 @@ model Appointment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  startAt  DateTime
-  endAt    DateTime
-  timezone String   @default("America/Bogota") @db.VarChar(50)
+  startAt DateTime
+  endAt   DateTime
 
-  price    Int
-  currency String  @default("COP") @db.Char(3)
-  paid     Boolean @default(false)
+  price Int
+  paid  Boolean @default(false)
 
   meetingUrl String? @db.VarChar(500)
   notes      String? @db.Text
@@ -165,7 +163,6 @@ model Appointment {
 
   patientId  String  @db.Uuid
   userId     String
-  reminderId String? @db.Uuid
   locationId String? @db.Uuid
   typeId     String? @db.Uuid
 
@@ -256,7 +253,6 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
   lastLoginAt         DateTime?
-  lastLoginIp         String?
   refreshTokenVersion Int       @default(0)
 
   deletedAt DateTime?
@@ -403,7 +399,6 @@ enum AdminRole {
 enum AdminStatus {
   ACTIVE
   INACTIVE
-  SUSPENDED
   PENDING
 }
 
@@ -546,7 +541,6 @@ model Document {
   content   Bytes
   mimeType  String   @default("application/pdf")
   sizeBytes Int?
-  checksum  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -634,9 +628,7 @@ enum ActionType {
 
 enum ActionSource {
   API
-  ADMIN_PANEL
   JOB
-  MIGRATION
   PUBLIC_PORTAL
 }
 
@@ -655,7 +647,6 @@ model AuditLog {
   affectedFields    String[]
   fieldsBefore      Json?
   fieldsAfter       Json?
-  reason            String?
   ipAddress         String?
 
   @@index([entityType, entityId])

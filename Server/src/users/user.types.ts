@@ -14,6 +14,7 @@ export const userInclude = {
   status: true,
   timezone: true,
   lastLoginAt: true,
+  lastPasswordChange: true,
   reminderActive: true,
   reminderChannel: true,
   phoneNumber: true,

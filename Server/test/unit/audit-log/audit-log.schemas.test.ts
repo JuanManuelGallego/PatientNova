@@ -115,7 +115,7 @@ describe('createAuditLogSchema', () => {
   });
 
   it('accepts all valid sources', () => {
-    for (const source of ['API', 'ADMIN_PANEL', 'JOB', 'MIGRATION']) {
+    for (const source of ['API', 'JOB', 'PUBLIC_PORTAL']) {
       const result = createAuditLogSchema.safeParse({ ...validDto, source });
       expect(result.success).toBe(true);
     }

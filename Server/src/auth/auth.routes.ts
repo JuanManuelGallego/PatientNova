@@ -27,7 +27,7 @@ export const authRouter = Router();
 authRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const dto = loginSchema.parse(req.body);
-    const result = await authService.login(dto.email, dto.password, req.ip ?? '');
+    const result = await authService.login(dto.email, dto.password);
     const cookieDefaults = authService.getCookieDefaults();
 
     res.cookie('token', result.accessToken, {

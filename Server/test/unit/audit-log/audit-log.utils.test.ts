@@ -159,7 +159,6 @@ describe('buildAuditEntry', () => {
           description: 'Deleted reminder',
           affectedFields: ['status'],
           fieldsBefore: { status: 'PENDING' },
-          reason: 'Cleanup',
           ipAddress: '192.168.1.1',
           userId: 'explicit-user',
         });
@@ -168,7 +167,6 @@ describe('buildAuditEntry', () => {
         expect(entry.source).toBe('JOB');
         expect(entry.affectedFields).toEqual(['status']);
         expect(entry.fieldsBefore).toEqual({ status: 'PENDING' });
-        expect(entry.reason).toBe('Cleanup');
         expect(entry.ipAddress).toBe('192.168.1.1');
         expect(entry.userId).toBe('explicit-user');
       },

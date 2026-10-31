@@ -150,7 +150,7 @@ describe('bookingSettingsService.isBookingLive', () => {
 
   it.each([
     [ 'disabled', { bookingEnabled: false } ],
-    [ 'inactive', { status: 'SUSPENDED' } ],
+    [ 'inactive', { status: 'INACTIVE' } ],
     [ 'deleted', { deletedAt: new Date() } ],
   ])('is not live for a %s provider', async (_label, override) => {
     repo.getBookingState.mockResolvedValue({ ...state, ...override } as any);
