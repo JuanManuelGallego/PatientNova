@@ -211,6 +211,34 @@ describe("OnlineBookingTab: availability", () => {
         expect(screen.getByTestId("availability-add-3")).toBeDisabled();
     });
 
+    it("shows overlap errors on the offending day only", async () => {
+        rules = [ { weekday: 2, startMinute: 540, endMinute: 720 } ];
+        render(<OnlineBookingTab />);
+        await userEvent.click(screen.getByTestId("availability-add-2"));
+        fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
+        expect(within(screen.getByTestId("availability-day-2")).getByRole("alert")).toHaveTextContent(/superponen/);
+        expect(screen.getByTestId("availability-start-2-1")).toHaveAttribute("aria-invalid", "true");
+    });
+
+    it("copies a day's windows to the rest of the workweek, replacing them", async () => {
+        rules = [
+            { weekday: 1, startMinute: 540, endMinute: 720 },
+            { weekday: 3, startMinute: 600, endMinute: 660 },
+            { weekday: 6, startMinute: 600, endMinute: 660 },
+        ];
+        render(<OnlineBookingTab />);
+        await userEvent.click(screen.getByTestId("availability-copy-1"));
+        await userEvent.click(screen.getByTestId("availability-save"));
+        expect(saveAvailability).toHaveBeenCalledWith([ 1, 2, 3, 4, 5 ].map((weekday) => ({ weekday, startMinute: 540, endMinute: 720 }))
+            .concat({ weekday: 6, startMinute: 600, endMinute: 660 }));
+    });
+
+    it("labels a midnight end as end of day", async () => {
+        rules = [ { weekday: 4, startMinute: 1200, endMinute: 1440 } ];
+        render(<OnlineBookingTab />);
+        expect(within(screen.getByTestId("availability-day-4")).getByText("fin del día")).toBeInTheDocument();
+    });
+
     it("removes a window", async () => {
         rules = [ { weekday: 5, startMinute: 600, endMinute: 660 } ];
         render(<OnlineBookingTab />);
@@ -239,5 +267,38 @@ describe("OnlineBookingTab: rules", () => {
         await userEvent.clear(horizon);
         await userEvent.type(horizon, "400");
         expect(screen.getByTestId("online-booking-rules-save")).toBeDisabled();
+        expect(horizon).toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByRole("alert")).toHaveTextContent(/entre 1 y 365/);
+    });
+
+    it("keeps a cleared field empty and invalid instead of turning it into 0", async () => {
+        render(<OnlineBookingTab />);
+        const buffer = screen.getByTestId("online-booking-buffer");
+        await userEvent.type(buffer, "5");
+        await userEvent.clear(buffer);
+        expect(buffer).toHaveValue(null);
+        expect(screen.getByTestId("online-booking-rules-save")).toBeDisabled();
+    });
+});
+
+describe("OnlineBookingTab: status summary", () => {
+    it("says plainly when the link is live and hides the checklist", () => {
+        settings = makeSettings({ bookingEnabled: true, live: true, bookingSlug: "dra", bookingUrl: "https://app.test/book/dra", readiness: READY });
+        render(<OnlineBookingTab />);
+        expect(screen.getByTestId("online-booking-status")).toHaveTextContent("Tu enlace está recibiendo reservas.");
+        expect(screen.queryByTestId("online-booking-readiness")).not.toBeInTheDocument();
+    });
+
+    it("links pending items to where they are fixed", () => {
+        settings = makeSettings({ readiness: { ...READY, hasBookableType: false } });
+        render(<OnlineBookingTab />);
+        expect(screen.getByRole("link", { name: "Ir a Tipos de Cita" })).toHaveAttribute("href", "/settings?tab=Tipos+de+Cita");
+        expect(screen.queryByRole("link", { name: "Ir a Ubicaciones" })).not.toBeInTheDocument();
+    });
+
+    it("shows the full domain as the slug prefix once a link exists", () => {
+        settings = makeSettings({ bookingSlug: "dra", bookingUrl: "https://app.test/book/dra" });
+        render(<OnlineBookingTab />);
+        expect(screen.getByText("https://app.test/book/")).toBeInTheDocument();
     });
 });

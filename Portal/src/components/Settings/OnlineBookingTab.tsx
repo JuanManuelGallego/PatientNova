@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useFetchBookingSettings } from "@/src/api/booking/useFetchBookingSettings";
 import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSettings";
@@ -24,12 +25,15 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
 
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
+const WORKWEEK = [ 1, 2, 3, 4, 5 ];
+const LINK_SECTION_ID = "online-booking-link";
+const AVAILABILITY_SECTION_ID = "online-booking-availability";
 
-const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string }> = [
-    { key: "hasSlug", label: "Enlace de reserva definido" },
-    { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal" },
-    { key: "hasBookableType", label: "Un tipo de cita disponible en línea (Tipos de Cita)" },
-    { key: "hasBookableLocation", label: "Una ubicación presencial disponible en línea (Ubicaciones)" },
+const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string; fixLabel: string; href: string }> = [
+    { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
+    { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
+    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: "/settings?tab=Tipos+de+Cita" },
+    { key: "hasBookableLocation", label: "Una ubicación presencial disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
 ];
 
 function ErrorLine({ message }: { message: string }) {
@@ -40,11 +44,28 @@ function ErrorLine({ message }: { message: string }) {
     );
 }
 
+function FieldError({ id, message }: { id?: string; message: string }) {
+    return (
+        <span id={id} role="alert" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--c-error)" }}>
+            <STATUS_ICONS.warning size={12} aria-hidden="true" /> {message}
+        </span>
+    );
+}
+
 function WarningHint({ testId, children }: { testId: string; children: ReactNode }) {
     return (
         <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid={testId}>
             <STATUS_ICONS.warning size={14} />
             {children}
+        </div>
+    );
+}
+
+function SaveRow({ dirty, children }: { dirty: boolean; children: ReactNode }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {children}
+            {dirty && <span style={{ fontSize: 12, color: "var(--c-gray-500)" }}>Cambios sin guardar</span>}
         </div>
     );
 }
@@ -109,48 +130,70 @@ function StatusSection({ settings, onToggle, error }: {
         }
     }
 
+    const status = settings.bookingEnabled && settings.live
+        ? { text: "Tu enlace está recibiendo reservas.", bg: "var(--c-success-bg)", border: "var(--c-success-light)", Icon: STATUS_ICONS.success, iconColor: "var(--c-success)" }
+        : settings.bookingEnabled
+            ? { text: "Está activada, pero tu enlace no recibe reservas: completa los puntos pendientes.", bg: "var(--c-warning-light)", border: "var(--c-warning-light)", Icon: STATUS_ICONS.warning, iconColor: "var(--c-warning-dark)" }
+            : { text: "La reserva en línea está desactivada.", bg: "var(--c-page-bg)", border: "var(--c-gray-100)", Icon: STATUS_ICONS.pending, iconColor: "var(--c-gray-500)" };
+
     return (
         <div className="dash-card">
             <div className="dash-card__header">
                 <span className="dash-card__title">Reserva en línea</span>
             </div>
             <div className="dash-card__body form-stack">
-                <span className="form-input-hint">
-                    Permite que tus pacientes reserven citas desde tu enlace público, según tu disponibilidad semanal.
-                </span>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 6 }} data-testid="online-booking-readiness">
-                    {READINESS_ITEMS.map((item) => {
-                        const ok = settings.readiness[ item.key ];
-                        const Icon = ok ? STATUS_ICONS.success : STATUS_ICONS.pending;
-                        return (
-                            <li key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: ok ? "var(--c-success)" : "var(--c-gray-400)" }}>
-                                <Icon size={14} aria-hidden="true" />
-                                <span>{item.label}</span>
-                                <span className="sr-only">{ok ? "(listo)" : "(pendiente)"}</span>
-                            </li>
-                        );
-                    })}
-                </ul>
-                <label
-                    className="form-label"
-                    style={{ flexDirection: "row", alignItems: "center", gap: 8, opacity: canToggle ? 1 : 0.6 }}
+                <div
+                    style={{
+                        display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                        background: status.bg, border: `1px solid ${status.border}`, borderRadius: "var(--r-lg)", padding: "14px 16px",
+                    }}
+                    data-testid={settings.bookingEnabled && !settings.live ? "online-booking-not-live" : "online-booking-status"}
+                    aria-live="polite"
                 >
-                    <input
-                        type="checkbox"
-                        checked={settings.bookingEnabled}
-                        disabled={!canToggle || toggling}
-                        onChange={(e) => handleToggle(e.target.checked)}
-                        data-testid="online-booking-enabled-toggle"
-                    />
-                    Activar reserva en línea
-                </label>
-                {!canToggle && (
-                    <span className="form-input-hint">Completa los puntos pendientes para poder activarla.</span>
+                    <status.Icon size={18} aria-hidden="true" style={{ color: status.iconColor, flexShrink: 0 }} />
+                    <span style={{ flex: 1, minWidth: 200, fontSize: 15, fontWeight: 600, color: "var(--c-gray-900)" }}>{status.text}</span>
+                    <label
+                        className="form-label"
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, margin: 0, opacity: canToggle ? 1 : 0.6 }}
+                    >
+                        <input
+                            type="checkbox"
+                            role="switch"
+                            checked={settings.bookingEnabled}
+                            disabled={!canToggle || toggling}
+                            onChange={(e) => handleToggle(e.target.checked)}
+                            data-testid="online-booking-enabled-toggle"
+                        />
+                        Activar reserva en línea
+                    </label>
+                </div>
+                {!settings.bookingEnabled && (
+                    <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
+                        Permite que tus pacientes reserven citas desde tu enlace público, según tu disponibilidad semanal.
+                    </span>
                 )}
-                {settings.bookingEnabled && !settings.live && (
-                    <WarningHint testId="online-booking-not-live">
-                        Está activada, pero tu enlace no recibe reservas: completa los puntos pendientes.
-                    </WarningHint>
+                {!ready && (
+                    <>
+                        {!canToggle && (
+                            <span style={{ fontSize: 13, color: "var(--c-gray-700)" }}>Completa los puntos pendientes para poder activarla:</span>
+                        )}
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 }} data-testid="online-booking-readiness">
+                            {READINESS_ITEMS.map((item) => {
+                                const ok = settings.readiness[ item.key ];
+                                const Icon = ok ? STATUS_ICONS.success : STATUS_ICONS.pending;
+                                return (
+                                    <li key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: ok ? "var(--c-gray-500)" : "var(--c-gray-900)" }}>
+                                        <Icon size={14} aria-hidden="true" style={{ color: ok ? "var(--c-success)" : "var(--c-warning-dark)" }} />
+                                        <span style={{ fontWeight: ok ? 400 : 600 }}>{item.label}</span>
+                                        <span className="sr-only">{ok ? "(listo)" : "(pendiente)"}</span>
+                                        {!ok && (
+                                            <Link href={item.href} style={{ color: "var(--c-brand)", textDecoration: "underline" }}>{item.fixLabel}</Link>
+                                        )}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </>
                 )}
                 {error && <ErrorLine message={error} />}
             </div>
@@ -178,6 +221,10 @@ function LinkSection({ settings, save, onSaved }: {
     const changed = normalized !== (settings.bookingSlug ?? "");
     const isRename = !!settings.bookingSlug && changed && !!normalized;
     const isClear = !!settings.bookingSlug && !normalized;
+    // shortcut: the domain is only known once the server returns a bookingUrl; before that the prefix is the bare path.
+    const prefix = settings.bookingUrl && settings.bookingSlug
+        ? settings.bookingUrl.slice(0, -settings.bookingSlug.length)
+        : "/book/";
 
     async function handleSave() {
         setError(null);
@@ -217,27 +264,54 @@ function LinkSection({ settings, save, onSaved }: {
     }
 
     return (
-        <div className="dash-card">
+        <div className="dash-card" id={LINK_SECTION_ID}>
             <div className="dash-card__header">
                 <span className="dash-card__title">Enlace de reserva</span>
             </div>
             <div className="dash-card__body form-stack">
+                {settings.bookingUrl && (
+                    <div style={{ borderBottom: "1px solid var(--c-gray-100)", paddingBottom: 16, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+                        <div ref={qrRef} data-testid="online-booking-qr">
+                            <QRCodeSVG value={settings.bookingUrl} size={128} marginSize={2} title="Código QR del enlace de reserva" />
+                        </div>
+                        <div className="form-stack" style={{ flex: 1, minWidth: 220 }}>
+                            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--c-gray-900)", wordBreak: "break-all" }} data-testid="online-booking-url">
+                                {settings.bookingUrl}
+                            </span>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button type="button" className="btn-primary" onClick={handleCopy} data-testid="online-booking-copy">
+                                    <ACTION_ICONS.copy size={14} /> <span aria-live="polite">{copied ? "¡Copiado!" : "Copiar enlace"}</span>
+                                </button>
+                                <button type="button" className="btn-secondary" onClick={handleDownloadQr} data-testid="online-booking-qr-download">
+                                    <ACTION_ICONS.download size={14} /> Descargar QR
+                                </button>
+                            </div>
+                            {!settings.bookingEnabled && (
+                                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>El enlace no recibirá reservas hasta que actives la reserva en línea.</span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <label className="form-label">
-                    Enlace
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span className="form-input-hint" style={{ whiteSpace: "nowrap" }}>/book/</span>
+                    {settings.bookingSlug ? "Cambiar enlace" : "Elige tu enlace"}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ whiteSpace: "nowrap", fontSize: 13, color: "var(--c-gray-500)" }}>{prefix}</span>
                         <input
                             className="form-input"
+                            style={{ flex: 1, minWidth: 160 }}
                             value={slug}
                             onChange={(e) => { setSaved(false); setSlug(e.target.value); }}
                             placeholder="dra-maria-perez"
                             maxLength={40}
+                            aria-invalid={touched && !!validation}
                             data-testid="online-booking-slug-input"
                         />
                     </div>
-                    <span className="form-input-hint">Letras minúsculas, números y guiones. Entre 3 y 40 caracteres.</span>
+                    {touched && validation
+                        ? <FieldError message={validation} />
+                        : <span className="form-input-hint">Letras minúsculas, números y guiones. Entre 3 y 40 caracteres.</span>}
                 </label>
-                {touched && validation && <ErrorLine message={validation} />}
                 {isRename && (
                     <WarningHint testId="online-booking-slug-warning">
                         Si cambias el enlace, los enlaces y códigos QR que ya compartiste dejarán de funcionar.
@@ -250,39 +324,17 @@ function LinkSection({ settings, save, onSaved }: {
                 )}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Enlace actualizado." />}
-                <div>
+                <SaveRow dirty={touched && changed}>
                     <button
                         type="button"
-                        className="btn-primary"
+                        className={settings.bookingUrl ? "btn-secondary" : "btn-primary"}
                         onClick={handleSave}
                         disabled={saving || !changed || !!validation}
                         data-testid="online-booking-slug-save"
                     >
                         {saving ? LBL_SAVING : "Guardar enlace"}
                     </button>
-                </div>
-
-                {settings.bookingUrl && (
-                    <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
-                        <div ref={qrRef} data-testid="online-booking-qr">
-                            <QRCodeSVG value={settings.bookingUrl} size={128} marginSize={2} title="Código QR del enlace de reserva" />
-                        </div>
-                        <div className="form-stack" style={{ flex: 1, minWidth: 220 }}>
-                            <code style={{ fontSize: 13, wordBreak: "break-all" }} data-testid="online-booking-url">{settings.bookingUrl}</code>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button type="button" className="btn-secondary" onClick={handleCopy} data-testid="online-booking-copy">
-                                    <ACTION_ICONS.copy size={14} /> {copied ? "¡Copiado!" : "Copiar enlace"}
-                                </button>
-                                <button type="button" className="btn-secondary" onClick={handleDownloadQr} data-testid="online-booking-qr-download">
-                                    <ACTION_ICONS.download size={14} /> Descargar QR
-                                </button>
-                            </div>
-                            {!settings.bookingEnabled && (
-                                <span className="form-input-hint">El enlace no recibirá reservas hasta que actives la reserva en línea.</span>
-                            )}
-                        </div>
-                    </div>
-                )}
+                </SaveRow>
             </div>
         </div>
     );
@@ -300,6 +352,8 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     const [ saved, setSaved ] = useState(false);
 
     const validation = rules ? availabilityError(rules) : null;
+    const dayErrors = new Map(WEEKDAYS_ES.map(({ weekday }) => [ weekday, rules ? availabilityError(rules.filter((r) => r.weekday === weekday)) : null ]));
+    const anyDayError = [ ...dayErrors.values() ].some(Boolean);
 
     function update(next: AvailabilityRule[]) {
         setDraft(next);
@@ -317,6 +371,16 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
             : last.endMinute;
         const endMinute = last ? Math.min(startMinute + 180, MINUTES_PER_DAY) : DEFAULT_WINDOW.endMinute;
         update([ ...current, { weekday, startMinute, endMinute } ]);
+    }
+
+    function copyToWorkweek(weekday: number) {
+        if (!rules) return;
+        const source = rules.filter((r) => r.weekday === weekday);
+        const targets = WORKWEEK.filter((d) => d !== weekday);
+        update([
+            ...rules.filter((r) => !targets.includes(r.weekday)),
+            ...targets.flatMap((d) => source.map((r) => ({ ...r, weekday: d }))),
+        ]);
     }
 
     function setTime(target: AvailabilityRule, field: "startMinute" | "endMinute", value: string) {
@@ -343,12 +407,12 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     }
 
     return (
-        <div className="dash-card">
+        <div className="dash-card" id={AVAILABILITY_SECTION_ID}>
             <div className="dash-card__header">
                 <span className="dash-card__title">Disponibilidad semanal</span>
             </div>
             <div className="dash-card__body form-stack" data-testid="online-booking-availability">
-                <span className="form-input-hint">
+                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Horarios en los que los pacientes pueden reservar, en tu zona horaria ({fmtTimezoneLabel(timezone)}).
                     Las citas y bloqueos de tu agenda se descuentan automáticamente.
                 </span>
@@ -357,17 +421,15 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                 {rules && WEEKDAYS_ES.map(({ weekday, label }) => {
                     const dayRules = rules.filter((r) => r.weekday === weekday);
                     const dayFull = dayRules.some((r) => r.endMinute >= MINUTES_PER_DAY);
+                    const dayError = dirty ? dayErrors.get(weekday) : null;
                     return (
                         <div
                             key={weekday}
-                            style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, alignItems: "start", borderTop: "1px solid var(--c-gray-100)", paddingTop: 10 }}
+                            style={{ display: "grid", gridTemplateColumns: "minmax(80px, 110px) 1fr", gap: 12, alignItems: "start", borderTop: "1px solid var(--c-gray-100)", paddingTop: 10 }}
                             data-testid={`availability-day-${weekday}`}
                         >
                             <span style={{ fontWeight: 600, fontSize: 13, paddingTop: 8 }}>{label}</span>
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                {dayRules.length === 0 && (
-                                    <span className="form-input-hint" style={{ paddingTop: 8 }}>No disponible</span>
-                                )}
                                 {dayRules.map((r, i) => (
                                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                         <input
@@ -378,6 +440,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                             value={minutesToTime(r.startMinute)}
                                             onChange={(e) => setTime(r, "startMinute", e.target.value)}
                                             aria-label={`${label}: hora de inicio`}
+                                            aria-invalid={!!dayError}
                                             data-testid={`availability-start-${weekday}-${i}`}
                                         />
                                         <span aria-hidden="true">–</span>
@@ -389,8 +452,12 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                             value={r.endMinute === MINUTES_PER_DAY ? "00:00" : minutesToTime(r.endMinute)}
                                             onChange={(e) => setTime(r, "endMinute", e.target.value)}
                                             aria-label={`${label}: hora de fin`}
+                                            aria-invalid={!!dayError}
                                             data-testid={`availability-end-${weekday}-${i}`}
                                         />
+                                        {r.endMinute === MINUTES_PER_DAY && (
+                                            <span style={{ fontSize: 12, color: "var(--c-gray-500)" }}>fin del día</span>
+                                        )}
                                         <button
                                             type="button"
                                             className="btn-action-delete"
@@ -403,25 +470,41 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                                         </button>
                                     </div>
                                 ))}
-                                <div>
+                                {dayError && <FieldError message={dayError} />}
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                    {dayRules.length === 0 && (
+                                        <span style={{ fontSize: 13, color: "var(--c-gray-500)", marginRight: 4 }}>No disponible</span>
+                                    )}
                                     <button
                                         type="button"
                                         className="btn-action-edit"
                                         onClick={() => addWindow(weekday)}
                                         disabled={dayFull}
+                                        aria-label={`${label}: agregar franja`}
                                         data-testid={`availability-add-${weekday}`}
                                     >
                                         <ACTION_ICONS.plus size={14} /> Agregar franja
                                     </button>
+                                    {dayRules.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="btn-action-edit"
+                                            onClick={() => copyToWorkweek(weekday)}
+                                            aria-label={`Copiar el horario del ${label.toLowerCase()} a lunes–viernes`}
+                                            data-testid={`availability-copy-${weekday}`}
+                                        >
+                                            <ACTION_ICONS.copy size={14} /> Copiar a lunes–viernes
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     );
                 })}
-                {validation && dirty && <ErrorLine message={validation} />}
+                {validation && dirty && !anyDayError && <ErrorLine message={validation} />}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Disponibilidad actualizada." />}
-                <div>
+                <SaveRow dirty={dirty}>
                     <button
                         type="button"
                         className="btn-primary"
@@ -431,11 +514,14 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                     >
                         {saving ? LBL_SAVING : "Guardar disponibilidad"}
                     </button>
-                </div>
+                </SaveRow>
             </div>
         </div>
     );
 }
+
+// Empty input stays NaN so it fails validation instead of silently becoming 0.
+const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
 function RulesSection({ settings, save, onSaved }: {
     settings: BookingSettings;
@@ -443,16 +529,21 @@ function RulesSection({ settings, save, onSaved }: {
     onSaved: (s: BookingSettings) => void;
 }) {
     const [ interval, setSlotInterval ] = useState(settings.slotIntervalMinutes);
-    const [ buffer, setBuffer ] = useState(settings.bufferMinutes);
-    const [ leadHours, setLeadHours ] = useState(settings.minLeadMinutes / 60);
-    const [ horizon, setHorizon ] = useState(settings.maxHorizonDays);
+    const [ bufferText, setBuffer ] = useState(String(settings.bufferMinutes));
+    const [ leadText, setLeadHours ] = useState(String(settings.minLeadMinutes / 60));
+    const [ horizonText, setHorizon ] = useState(String(settings.maxHorizonDays));
     const [ error, setError ] = useState<string | null>(null);
     const [ saving, setSaving ] = useState(false);
     const [ saved, setSaved ] = useState(false);
+    const ids = useId();
 
-    const leadMinutes = Math.round(leadHours * 60);
-    const invalid = buffer < 0 || buffer > 240 || leadMinutes < 0 || leadMinutes > 14 * 24 * 60 || horizon < 1 || horizon > 365
-        || !Number.isInteger(buffer) || !Number.isInteger(horizon);
+    const buffer = toNumber(bufferText);
+    const leadMinutes = Math.round(toNumber(leadText) * 60);
+    const horizon = toNumber(horizonText);
+    const bufferError = Number.isInteger(buffer) && buffer >= 0 && buffer <= 240 ? null : "Escribe un número entero entre 0 y 240.";
+    const leadError = Number.isFinite(leadMinutes) && leadMinutes >= 0 && leadMinutes <= 14 * 24 * 60 ? null : "Escribe un número entre 0 y 336 horas (14 días).";
+    const horizonError = Number.isInteger(horizon) && horizon >= 1 && horizon <= 365 ? null : "Escribe un número entero entre 1 y 365.";
+    const invalid = !!(bufferError || leadError || horizonError);
     const changed = interval !== settings.slotIntervalMinutes || buffer !== settings.bufferMinutes
         || leadMinutes !== settings.minLeadMinutes || horizon !== settings.maxHorizonDays;
 
@@ -470,6 +561,32 @@ function RulesSection({ settings, save, onSaved }: {
         }
     }
 
+    function numberField(props: {
+        label: string; hint: string; value: string; onChange: (v: string) => void; err: string | null;
+        min: number; max: number; step?: number; testId: string; key: string;
+    }) {
+        const errId = `${ids}-${props.key}-error`;
+        return (
+            <label className="form-label">
+                {props.label}
+                <input
+                    className="form-input"
+                    type="number"
+                    inputMode="decimal"
+                    min={props.min}
+                    max={props.max}
+                    step={props.step}
+                    value={props.value}
+                    onChange={(e) => { setSaved(false); props.onChange(e.target.value); }}
+                    aria-invalid={!!props.err}
+                    aria-describedby={props.err ? errId : undefined}
+                    data-testid={props.testId}
+                />
+                {props.err ? <FieldError id={errId} message={props.err} /> : <span className="form-input-hint">{props.hint}</span>}
+            </label>
+        );
+    }
+
     return (
         <div className="dash-card">
             <div className="dash-card__header">
@@ -481,56 +598,27 @@ function RulesSection({ settings, save, onSaved }: {
                         Intervalo entre horarios (min)
                         <CustomSelect
                             value={String(interval)}
-                            onChange={(v) => setSlotInterval(Number(v))}
+                            onChange={(v) => { setSaved(false); setSlotInterval(Number(v)); }}
                             options={SLOT_INTERVAL_OPTIONS.map((n) => ({ value: String(n), label: `${n} min` }))}
                         />
                         <span className="form-input-hint">Cada cuánto se ofrece un horario de inicio. La duración la define el tipo de cita.</span>
                     </label>
-                    <label className="form-label">
-                        Tiempo entre citas (min)
-                        <input
-                            className="form-input"
-                            type="number"
-                            min={0}
-                            max={240}
-                            value={buffer}
-                            onChange={(e) => setBuffer(Number(e.target.value))}
-                            data-testid="online-booking-buffer"
-                        />
-                        <span className="form-input-hint">Margen libre antes y después de cada cita reservada en línea.</span>
-                    </label>
-                    <label className="form-label">
-                        Anticipación mínima (horas)
-                        <input
-                            className="form-input"
-                            type="number"
-                            min={0}
-                            max={336}
-                            step={0.5}
-                            value={leadHours}
-                            onChange={(e) => setLeadHours(Number(e.target.value))}
-                            data-testid="online-booking-lead"
-                        />
-                        <span className="form-input-hint">Con cuánto tiempo de antelación se puede reservar.</span>
-                    </label>
-                    <label className="form-label">
-                        Reservar hasta (días)
-                        <input
-                            className="form-input"
-                            type="number"
-                            min={1}
-                            max={365}
-                            value={horizon}
-                            onChange={(e) => setHorizon(Number(e.target.value))}
-                            data-testid="online-booking-horizon"
-                        />
-                        <span className="form-input-hint">Qué tan lejos en el futuro se puede reservar.</span>
-                    </label>
+                    {numberField({
+                        key: "buffer", label: "Tiempo entre citas (min)", hint: "Margen libre antes y después de cada cita reservada en línea.",
+                        value: bufferText, onChange: setBuffer, err: bufferError, min: 0, max: 240, testId: "online-booking-buffer",
+                    })}
+                    {numberField({
+                        key: "lead", label: "Anticipación mínima (horas)", hint: "Con cuánto tiempo de antelación se puede reservar.",
+                        value: leadText, onChange: setLeadHours, err: leadError, min: 0, max: 336, step: 0.5, testId: "online-booking-lead",
+                    })}
+                    {numberField({
+                        key: "horizon", label: "Reservar hasta (días)", hint: "Qué tan lejos en el futuro se puede reservar.",
+                        value: horizonText, onChange: setHorizon, err: horizonError, min: 1, max: 365, testId: "online-booking-horizon",
+                    })}
                 </div>
-                {invalid && <ErrorLine message="Revisa los valores: tiempo entre citas 0–240 min, anticipación hasta 14 días, reservar hasta 1–365 días." />}
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Reglas de reserva actualizadas." />}
-                <div>
+                <SaveRow dirty={changed}>
                     <button
                         type="button"
                         className="btn-primary"
@@ -540,7 +628,7 @@ function RulesSection({ settings, save, onSaved }: {
                     >
                         {saving ? LBL_SAVING : LBL_SAVE}
                     </button>
-                </div>
+                </SaveRow>
             </div>
         </div>
     );
