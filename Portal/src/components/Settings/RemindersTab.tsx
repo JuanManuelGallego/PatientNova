@@ -9,6 +9,7 @@ import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
+import { Switch } from "@/src/components/Form/Switch";
 
 export function RemindersTab() {
   const { user } = useAuthContext();
@@ -102,22 +103,17 @@ export function RemindersTab() {
                 canal que configures aquí se usará para <strong>todos</strong>{" "}
                 los recordatorios enviados a tus pacientes.
               </span>
-              <label
-                className="form-label"
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                data-testid="reminders-active-toggle"
-              >
-                <input
-                  type="checkbox"
-                  checked={reminderActive}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setReminderActive(checked);
-                    updateProfile({ reminderActive: checked, whatsappNumber, phoneNumber });
-                  }}
-                />
-                Activar recordatorios mios
-              </label>
+              <Switch
+                checked={reminderActive}
+                onChange={(checked) => {
+                  setReminderActive(checked);
+                  updateProfile({ reminderActive: checked, whatsappNumber, phoneNumber });
+                }}
+                label="Recordatorios automáticos"
+                onText="Activados"
+                offText="Desactivados"
+                testId="reminders-active-toggle"
+              />
             </div>
             {reminderActive && (
               <>

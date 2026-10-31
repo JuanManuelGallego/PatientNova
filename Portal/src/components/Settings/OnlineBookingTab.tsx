@@ -20,6 +20,7 @@ import {
 } from "@/src/utils/bookingAvailability";
 import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
+import { Switch } from "@/src/components/Form/Switch";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
@@ -143,20 +144,13 @@ function StatusSection({ settings, onToggle, error }: {
                 >
                     <status.Icon size={18} aria-hidden="true" style={{ color: status.iconColor, flexShrink: 0 }} />
                     <span style={{ flex: 1, minWidth: 200, fontSize: 15, fontWeight: 600, color: "var(--c-gray-900)" }}>{status.text}</span>
-                    <label
-                        className="form-label"
-                        style={{ flexDirection: "row", alignItems: "center", gap: 8, margin: 0, opacity: canToggle ? 1 : 0.6 }}
-                    >
-                        <input
-                            type="checkbox"
-                            role="switch"
-                            checked={settings.bookingEnabled}
-                            disabled={!canToggle || toggling}
-                            onChange={(e) => handleToggle(e.target.checked)}
-                            data-testid="online-booking-enabled-toggle"
-                        />
-                        Activar reserva en línea
-                    </label>
+                    <Switch
+                        checked={settings.bookingEnabled}
+                        disabled={!canToggle || toggling}
+                        onChange={handleToggle}
+                        label="Reserva en línea"
+                        testId="online-booking-enabled-toggle"
+                    />
                 </div>
                 {!settings.bookingEnabled && (
                     <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
