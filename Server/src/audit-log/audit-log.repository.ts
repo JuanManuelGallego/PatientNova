@@ -21,7 +21,6 @@ export const auditLogRepository = {
         affectedFields: dto.affectedFields,
         fieldsBefore: (dto.fieldsBefore as Prisma.InputJsonValue) ?? Prisma.DbNull,
         fieldsAfter: (dto.fieldsAfter as Prisma.InputJsonValue) ?? Prisma.DbNull,
-        reason: dto.reason ?? null,
         ipAddress: dto.ipAddress ?? null,
       },
     });

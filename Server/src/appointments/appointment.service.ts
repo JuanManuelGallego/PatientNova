@@ -102,20 +102,26 @@ async function validateReminder(
   return null;
 }
 
-async function getDoctorName(tx: TransactionClient, userId: string): Promise<string> {
+interface ReminderContext {
+  doctorName: string;
+  timezone: string;
+}
+
+async function getReminderContext(tx: TransactionClient, userId: string): Promise<ReminderContext> {
   const user = await tx.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { displayName: true, firstName: true, lastName: true },
+    select: { displayName: true, firstName: true, lastName: true, timezone: true },
   });
-  return user.displayName ?? ([user.firstName, user.lastName].filter(Boolean).join(' ') || 'su profesional de salud');
+  const doctorName = user.displayName ?? ([user.firstName, user.lastName].filter(Boolean).join(' ') || 'su profesional de salud');
+  return { doctorName, timezone: user.timezone };
 }
 
 async function renderLinkedReminder(
   appointment: AppointmentWithRelations,
-  doctorName: string,
+  context: ReminderContext,
   tx: TransactionClient,
 ): Promise<AppointmentWithRelations> {
-  const payload = renderAppointmentReminder(appointment, doctorName);
+  const payload = renderAppointmentReminder(appointment, context.doctorName, context.timezone);
   if (!appointment.reminder || !payload) return appointment;
   await tx.reminder.update({ where: { id: appointment.reminder.id }, data: payload });
   return { ...appointment, reminder: { ...appointment.reminder, ...payload } };
@@ -299,7 +305,7 @@ export async function createWithin(
   const patient = await validatePatient(tx, dto.patientId, userId);
   const location = await validateLocation(tx, dto.locationId, userId);
   await validateType(tx, dto.typeId, userId);
-  const doctorName = await getDoctorName(tx, userId);
+  const reminderContext = await getReminderContext(tx, userId);
 
   await checkConflict(tx, userId, dto.startAt, dto.endAt);
   await checkBlockedTimeConflict(tx, userId, dto.startAt, dto.endAt);
@@ -384,7 +390,7 @@ export async function createWithin(
 
     return renderLinkedReminder(
       created,
-      doctorName,
+      reminderContext,
       tx,
     );
 }
@@ -445,7 +451,7 @@ export const appointmentService = {
       const selectedReminder = dto.reminderId !== undefined
         ? await validateReminder(tx, dto.reminderId, userId, existing.patientId, id)
         : null;
-      const doctorName = await getDoctorName(tx, userId);
+      const reminderContext = await getReminderContext(tx, userId);
       const effectiveLocation = location ?? existing.appointmentLocation;
       const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
         location: effectiveLocation,
@@ -521,7 +527,7 @@ export const appointmentService = {
 
       return renderLinkedReminder(
         updated,
-        doctorName,
+        reminderContext,
         tx,
       );
     }, { timeout: 10000 });

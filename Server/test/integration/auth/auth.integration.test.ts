@@ -20,7 +20,7 @@ beforeEach(async () => {
 
 describe('authService (integration)', () => {
   it('logs in with valid credentials and returns tokens', async () => {
-    const result = await authService.login(user.email, PASSWORD, '127.0.0.1');
+    const result = await authService.login(user.email, PASSWORD);
     expect(result.accessToken).toBeTruthy();
     expect(result.refreshToken).toBeTruthy();
     expect(result.user.id).toBe(user.id);
@@ -32,7 +32,7 @@ describe('authService (integration)', () => {
   });
 
   it('rejects invalid password and increments failed attempts', async () => {
-    await expect(authService.login(user.email, 'wrong-password', '127.0.0.1'))
+    await expect(authService.login(user.email, 'wrong-password'))
       .rejects.toThrow(AuthInvalidCredentialsError);
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
@@ -40,7 +40,7 @@ describe('authService (integration)', () => {
   });
 
   it('counts concurrent wrong guesses individually and locks the account', async () => {
-    const attempts = Array.from({ length: 6 }, () => authService.login(user.email, 'wrong-password', '127.0.0.1'));
+    const attempts = Array.from({ length: 6 }, () => authService.login(user.email, 'wrong-password'));
     const results = await Promise.allSettled(attempts);
     expect(results.every((r) => r.status === 'rejected')).toBe(true);
 
@@ -53,19 +53,19 @@ describe('authService (integration)', () => {
   it('locks the account after max failed attempts', async () => {
     const max = config.lockout.maxFailedAttempts;
     for (let i = 0; i < max; i++) {
-      await authService.login(user.email, 'wrong-password', '127.0.0.1').catch(() => {});
+      await authService.login(user.email, 'wrong-password').catch(() => {});
     }
 
     const locked = await prisma.user.findUnique({ where: { id: user.id } });
     expect(locked!.lockedUntil).toBeInstanceOf(Date);
     expect(locked!.lockedUntil!.getTime()).toBeGreaterThan(Date.now());
 
-    await expect(authService.login(user.email, PASSWORD, '127.0.0.1'))
+    await expect(authService.login(user.email, PASSWORD))
       .rejects.toThrow(AuthAccountLockedError);
   });
 
   it('refreshes the access token with a valid refresh token', async () => {
-    const { refreshToken } = await authService.login(user.email, PASSWORD, '127.0.0.1');
+    const { refreshToken } = await authService.login(user.email, PASSWORD);
     const { accessToken } = await authService.refreshToken(refreshToken);
     expect(accessToken).toBeTruthy();
     const segments = accessToken.split('.');
@@ -75,7 +75,7 @@ describe('authService (integration)', () => {
   });
 
   it('rejects a refresh token after logout (version bump)', async () => {
-    const { refreshToken } = await authService.login(user.email, PASSWORD, '127.0.0.1');
+    const { refreshToken } = await authService.login(user.email, PASSWORD);
     await authService.logout(user.id);
 
     await expect(authService.refreshToken(refreshToken))
@@ -91,10 +91,10 @@ describe('authService (integration)', () => {
     const NEW = 'NewPassword456!';
     await authService.changePassword(user.id, PASSWORD, NEW);
 
-    await expect(authService.login(user.email, PASSWORD, '127.0.0.1'))
+    await expect(authService.login(user.email, PASSWORD))
       .rejects.toThrow(AuthInvalidCredentialsError);
 
-    const ok = await authService.login(user.email, NEW, '127.0.0.1');
+    const ok = await authService.login(user.email, NEW);
     expect(ok.user.id).toBe(user.id);
   });
 

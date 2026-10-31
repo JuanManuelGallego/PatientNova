@@ -17,7 +17,6 @@ export const createAuditLogSchema = z.object({
   affectedFields: z.array(z.string()).default([]),
   fieldsBefore: z.record(z.string(), z.unknown()).nullable().optional(),
   fieldsAfter: z.record(z.string(), z.unknown()).nullable().optional(),
-  reason: z.string().max(500).nullable().optional(),
   ipAddress: z.string().max(45).nullable().optional(),
 });
 

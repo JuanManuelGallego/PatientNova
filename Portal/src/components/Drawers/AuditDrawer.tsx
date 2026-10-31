@@ -116,12 +116,6 @@ export function AuditDrawer({
         <div className="drawer-prose">{log.description}</div>
       </Section>
 
-      {log.reason && (
-        <Section title="Razón">
-          <div className="drawer-prose">{log.reason}</div>
-        </Section>
-      )}
-
       {log.fieldsBefore && log.fieldsAfter && (
         <Section title="Cambios">
           <div className="audit-changes">

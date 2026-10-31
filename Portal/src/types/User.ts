@@ -13,6 +13,7 @@ export interface User {
     role: AdminRole
     status: AdminStatus
     timezone: string
+    lastPasswordChange?: string | null
     phoneNumber?: string | null
     whatsappNumber?: string | null
     reminderActive: boolean
@@ -41,6 +42,5 @@ export enum AdminRole {
 export enum AdminStatus {
     ACTIVE = 'ACTIVE',
     INACTIVE = 'INACTIVE',
-    SUSPENDED = 'SUSPENDED',
     PENDING = 'PENDING'
 }

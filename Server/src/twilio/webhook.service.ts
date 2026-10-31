@@ -218,6 +218,7 @@ export class TwilioWebhookService {
             // Format appointment date and time
             const notificationVars = this.buildNotificationVariables(
                 appointment.startAt,
+                user.timezone,
                 user.displayName,
                 patient.name,
                 patient.lastName,
@@ -284,6 +285,7 @@ export class TwilioWebhookService {
      */
     private buildNotificationVariables(
         startAt: Date,
+        timezone: string,
         userDisplayName: string | null,
         patientName: string,
         patientLastName: string | null,
@@ -292,13 +294,13 @@ export class TwilioWebhookService {
         const appointmentDate = new Date(startAt);
 
         const fecha = appointmentDate.toLocaleString('es-ES', {
-            timeZone: config.defaults.timezone,
+            timeZone: timezone,
             day: 'numeric',
             month: 'long',
         });
 
         const hora = appointmentDate.toLocaleString('es-ES', {
-            timeZone: config.defaults.timezone,
+            timeZone: timezone,
             timeStyle: 'short',
         });
 

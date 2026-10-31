@@ -1,6 +1,9 @@
 import { useChangePassword } from "@/src/api/auth/useChangePassword";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { useAuthContext } from "@/src/providers/AuthContext";
+import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 
 export const PW_RULES = [
@@ -15,6 +18,8 @@ export const PW_RULES = [
 ];
 
 export function SecurityTab() {
+  const { user, refreshUser } = useAuthContext();
+  const timezone = useDisplayTimezone();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -42,6 +47,7 @@ export function SecurityTab() {
       setConfirm("");
       setSuccess(true);
       setTimeout(() => setSuccess(false), 5000);
+      void refreshUser();
     } catch {
       const msg = apiError ?? "Error al cambiar contraseña";
       setError(msg);
@@ -55,6 +61,11 @@ export function SecurityTab() {
           <span className="dash-card__title">Cambiar contraseña</span>
         </div>
         <div className="dash-card__body">
+          <p data-testid="security-last-password-change" style={{ fontSize: 13, color: "var(--c-gray-500)", margin: "0 0 12px" }}>
+            {user?.lastPasswordChange &&
+              `Último cambio de contraseña: ${fmtDateTime(user.lastPasswordChange, timezone)}`
+            }
+          </p>
           <form className="form-stack" onSubmit={handleSubmit}>
             <label className="form-label">
               Contraseña actual

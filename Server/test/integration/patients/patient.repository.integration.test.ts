@@ -109,7 +109,6 @@ describe('patientRepository (integration)', () => {
       data: {
         startAt: new Date(Date.now() + 60_000),
         endAt: new Date(Date.now() + 90_000),
-        timezone: 'America/Bogota',
         price: 0,
         paid: false,
         status: 'SCHEDULED',
@@ -140,7 +139,6 @@ describe('patientRepository (integration)', () => {
         data: {
           startAt: new Date(base + i * 60_000),
           endAt: new Date(base + i * 60_000 + 30_000),
-          timezone: 'America/Bogota',
           price: 0,
           paid: false,
           status: 'SCHEDULED',

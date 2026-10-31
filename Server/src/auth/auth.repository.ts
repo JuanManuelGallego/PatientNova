@@ -40,12 +40,11 @@ export const authRepository = {
     }) as unknown as UserForAuth | null;
   },
 
-  async recordSuccessfulLogin(id: string, ip: string) {
+  async recordSuccessfulLogin(id: string) {
     return prisma.user.update({
       where: { id },
       data: {
         lastLoginAt: new Date(),
-        lastLoginIp: ip.replace('::ffff:', '') ?? null,
         failedLoginAttempts: 0,
         lockedUntil: null,
       },

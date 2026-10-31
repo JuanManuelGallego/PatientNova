@@ -10,7 +10,6 @@ export const createLocationSchema = z
     address: z.string().max(255).nullable().optional(),
     instructions: z.string().max(500).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().default(false),
     bookableOnline: z.boolean().optional(),
   })
@@ -42,7 +41,6 @@ export const updateLocationSchema = z
     address: z.string().max(255).nullable().optional(),
     instructions: z.string().max(500).nullable().optional(),
     color: z.string().max(20).nullable().optional(),
-    defaultPrice: z.number().int().min(0).nullable().optional(),
     isVirtual: z.boolean().optional(),
     bookableOnline: z.boolean().optional(),
   })

@@ -9,9 +9,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     updatedAt: new Date(),
     startAt: new Date('2026-10-20T15:30:00.000Z'),
     endAt: new Date('2026-10-20T16:30:00.000Z'),
-    timezone: 'America/Bogota',
     price: 100,
-    currency: 'COP',
     paid: false,
     meetingUrl: 'https://meet.google.com/final-room',
     notes: null,
@@ -25,7 +23,6 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     cancelledBy: null,
     patientId: 'patient-1',
     userId: 'user-1',
-    reminderId: 'reminder-1',
     locationId: 'location-1',
     typeId: 'type-1',
     patient: { id: 'patient-1', name: 'Ana', lastName: 'Diaz', email: null },
@@ -45,7 +42,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     },
     appointmentLocation: {
       id: 'location-1', name: 'Virtual', address: null, instructions: null,
-      color: null, defaultPrice: null, isVirtual: true,
+      color: null, isVirtual: true,
     },
     appointmentType: {
       id: 'type-1', name: 'Consulta', description: null, defaultDuration: 60,
@@ -57,7 +54,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
 
 describe('renderAppointmentReminder', () => {
   it('replaces the complete WhatsApp payload from canonical virtual data', () => {
-    const rendered = renderAppointmentReminder(appointment(), 'Dra. Rivera');
+    const rendered = renderAppointmentReminder(appointment(), 'Dra. Rivera', 'America/Bogota');
     expect(rendered).toEqual({
       contentSid: 'HX4a988ec65d4afaec679c99b3ac218517',
       contentVariables: {
@@ -82,7 +79,7 @@ describe('renderAppointmentReminder', () => {
         address: 'Calle 1',
         instructions: 'Piso 2',
       },
-    }), 'Dra. Rivera');
+    }), 'Dra. Rivera', 'America/Bogota');
 
     expect(rendered?.contentSid).toBeNull();
     expect(rendered?.body).toContain('Dirección: Calle 1');
@@ -93,7 +90,7 @@ describe('renderAppointmentReminder', () => {
   it('renders an EMAIL with the "Asunto" line as subject, not body text', () => {
     const rendered = renderAppointmentReminder(appointment({
       reminder: { ...appointment().reminder, channel: 'EMAIL' },
-    }), 'Dra. Rivera');
+    }), 'Dra. Rivera', 'America/Bogota');
 
     expect(rendered?.contentSid).toBeNull();
     expect(rendered?.subject).toBe('Recordatorio de cita');
@@ -105,9 +102,15 @@ describe('renderAppointmentReminder', () => {
   it('keeps the SMS body unchanged and leaves subject null', () => {
     const rendered = renderAppointmentReminder(appointment({
       reminder: { ...appointment().reminder, channel: 'SMS' },
-    }), 'Dra. Rivera');
+    }), 'Dra. Rivera', 'America/Bogota');
 
     expect(rendered?.subject).toBeNull();
     expect(rendered?.body?.startsWith('Asunto: Recordatorio de cita')).toBe(true);
+  });
+
+  it("formats date and time in the provider's timezone", () => {
+    const rendered = renderAppointmentReminder(appointment(), 'Dra. Rivera', 'Europe/Madrid');
+    expect(rendered?.contentVariables['3']).toBe('20 de octubre de 2026');
+    expect(rendered?.contentVariables['4']).toBe('05:30 p. m.');
   });
 });

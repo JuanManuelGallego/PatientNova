@@ -63,8 +63,8 @@ async function seedE2e() {
   });
   await prisma.appointmentLocation.upsert({
     where: { id: E2E_SEED.locationId },
-    update: { isDeleted: false, isActive: true, defaultPrice: 100000 },
-    create: { id: E2E_SEED.locationId, name: E2E_SEED.locationName, isVirtual: false, defaultPrice: 100000, userId: user.id },
+    update: { isDeleted: false, isActive: true },
+    create: { id: E2E_SEED.locationId, name: E2E_SEED.locationName, isVirtual: false, userId: user.id },
   });
 
   const content = Buffer.from('%PDF-1.4 e2e consent');

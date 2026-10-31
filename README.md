@@ -406,7 +406,7 @@ The database uses PostgreSQL with Prisma ORM. Key models:
 |---|---|---|
 | `User` | Admin users | email, role (`SUPER_ADMIN`/`ADMIN`/`VIEWER`), status, timezone, banking info |
 | `Patient` | Patient records | name, contact info, status (`ACTIVE`/`INACTIVE`) |
-| `Appointment` | Scheduled visits | startAt, endAt, timezone, price, currency, status, paid |
+| `Appointment` | Scheduled visits | startAt, endAt, price, status, paid |
 | `Reminder` | Notifications | channel, to, status, sendMode, sendAt, messageId |
 | `MedicalRecord` | Clinical history | consultation reason, development, lifestyle, trauma, mental history |
 | `FamilyMember` | Patient family | name, sex, age, relationship |

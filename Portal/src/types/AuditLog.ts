@@ -21,9 +21,8 @@ export enum ActionType {
 
 export enum ActionSource {
   API = "API",
-  ADMIN_PANEL = "ADMIN_PANEL",
   JOB = "JOB",
-  MIGRATION = "MIGRATION",
+  PUBLIC_PORTAL = "PUBLIC_PORTAL",
 }
 
 export interface AuditLog {
@@ -40,7 +39,6 @@ export interface AuditLog {
   affectedFields: string[];
   fieldsBefore: Record<string, unknown> | null;
   fieldsAfter: Record<string, unknown> | null;
-  reason: string | null;
   ipAddress: string | null;
 }
 
@@ -89,7 +87,6 @@ export const ACTION_SOURCE_CONFIG: Record<
   { label: string }
 > = {
   [ActionSource.API]: { label: "API" },
-  [ActionSource.ADMIN_PANEL]: { label: "Panel Admin" },
   [ActionSource.JOB]: { label: "Tarea" },
-  [ActionSource.MIGRATION]: { label: "Migracion" },
+  [ActionSource.PUBLIC_PORTAL]: { label: "Portal de pacientes" },
 };
