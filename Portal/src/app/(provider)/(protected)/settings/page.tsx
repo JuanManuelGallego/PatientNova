@@ -9,14 +9,18 @@ import { RemindersTab } from "@/src/components/Settings/RemindersTab";
 import { AppointmentTypesTab } from "@/src/components/Settings/AppointmentTypesTab";
 import { AuditLogsTab } from "@/src/components/Settings/AuditLogsTab";
 import { GoogleIntegrationTab } from "@/src/components/Settings/GoogleIntegrationTab";
+import { OnlineBookingTab } from "@/src/components/Settings/OnlineBookingTab";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { TabNav } from "@/src/components/TabNav";
 import { QUERY_PARAMS } from "@/src/utils/listQuery";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", Integrations = "Integraciones", Notifications = "Recordatorios", AuditLogs = "Registro de actividad" }
+enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", OnlineBooking = "Reserva en línea", Integrations = "Integraciones", Notifications = "Recordatorios", AuditLogs = "Registro de actividad" }
 
 export default function SettingsPage() {
-    const [ tab, setTab ] = useQueryState(QUERY_PARAMS.settingsTab, parseAsStringEnum<ActiveTab>(Object.values(ActiveTab)).withDefault(ActiveTab.Profile));
+    const { user } = useAuthContext();
+    const tabs = (Object.values(ActiveTab) as ActiveTab[]).filter((t) => t !== ActiveTab.OnlineBooking || user?.portalEnabled);
+    const [ tab, setTab ] = useQueryState(QUERY_PARAMS.settingsTab, parseAsStringEnum<ActiveTab>(tabs).withDefault(ActiveTab.Profile));
 
     return (
         <PageLayout>
@@ -27,7 +31,7 @@ export default function SettingsPage() {
             />
             <div style={{ marginBottom: 28 }}>
                 <TabNav
-                    items={(Object.values(ActiveTab) as ActiveTab[]).map((t) => ({
+                    items={tabs.map((t) => ({
                         key: t,
                         label: t,
                     }))}
@@ -40,6 +44,7 @@ export default function SettingsPage() {
             {tab === ActiveTab.Security && (<SecurityTab />)}
             {tab === ActiveTab.Locations && (<LocationsTab />)}
             {tab === ActiveTab.AppointmentTypes && (<AppointmentTypesTab />)}
+            {tab === ActiveTab.OnlineBooking && user?.portalEnabled && (<OnlineBookingTab />)}
             {tab === ActiveTab.Integrations && (<GoogleIntegrationTab />)}
             {tab === ActiveTab.Notifications && (<RemindersTab />)}
             {tab === ActiveTab.AuditLogs && (<AuditLogsTab />)}

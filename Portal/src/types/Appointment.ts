@@ -160,6 +160,7 @@ export interface AppointmentLocation {
   color?: string | null;
   isVirtual: boolean;
   instructions?: string | null;
+  bookableOnline?: boolean;
 }
 
 export type AppointmentLocationForm = {
@@ -168,6 +169,7 @@ export type AppointmentLocationForm = {
   color: string;
   isVirtual: boolean;
   instructions: string;
+  bookableOnline: boolean;
 };
 
 export interface AppointmentType {
@@ -177,4 +179,5 @@ export interface AppointmentType {
   defaultDuration: number;
   defaultPrice?: number | null;
   color?: string | null;
+  bookableOnline?: boolean;
 }

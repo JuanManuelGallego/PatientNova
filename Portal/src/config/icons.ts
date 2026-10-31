@@ -64,6 +64,8 @@ import {
   UserX,
   Loader2,
   type LucideIcon,
+  Copy,
+  Download,
 } from "lucide-react";
 
 /* ── Sidebar Navigation ─────────────────────────────────────────────────── */
@@ -93,6 +95,8 @@ export const ACTION_ICONS = {
   link: ExternalLink,
   loader: Loader2,
   filter: Filter,
+  copy: Copy,
+  download: Download,
 } as const satisfies Record<string, LucideIcon>;
 
 /* ── Status Icons (for ConfirmDialog, EmptyState, etc.) ──────────────────── */

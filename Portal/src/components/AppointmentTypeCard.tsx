@@ -1,6 +1,7 @@
 import { AppointmentType } from "@/src/types/Appointment";
 
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { OnlineBadge } from "@/src/components/OnlineBadge";
 
 export function AppointmentTypeCard({
   type,
@@ -35,7 +36,10 @@ export function AppointmentTypeCard({
           <DETAIL_ICONS.calendar size={17} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{type.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14 }}>
+            {type.name}
+            {type.bookableOnline && <OnlineBadge testId={`appointment-type-online-badge-${type.id}`} />}
+          </div>
           <div
             style={{
               fontSize: 12,

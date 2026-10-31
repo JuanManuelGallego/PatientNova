@@ -22,6 +22,7 @@ export interface User {
     nationalId?: string | null
     bankingKey?: string | null
     consentDocument?: Document | null
+    portalEnabled?: boolean
 }
 
 export interface Document {

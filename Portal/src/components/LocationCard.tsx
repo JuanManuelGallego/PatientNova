@@ -1,5 +1,6 @@
 import { AppointmentLocation } from "@/src/types/Appointment";
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { OnlineBadge } from "@/src/components/OnlineBadge";
 
 export function LocationCard({
   loc,
@@ -57,6 +58,7 @@ export function LocationCard({
                 Virtual
               </span>
             )}
+            {loc.bookableOnline && <OnlineBadge testId={`location-online-badge-${loc.id}`} />}
           </div>
           {loc.address && (
             <div
