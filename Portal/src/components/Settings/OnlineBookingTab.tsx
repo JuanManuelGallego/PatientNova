@@ -3,6 +3,12 @@
 import { ReactNode, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
+import { ConfigProvider } from "antd";
+import esEs from "antd/locale/es_ES";
+import dayjs from "dayjs";
+import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
+import { getAntThemeConfig } from "@/src/config/antTheme";
+import { useTheme } from "@/src/providers/ThemeContext";
 import { useFetchBookingSettings } from "@/src/api/booking/useFetchBookingSettings";
 import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSettings";
 import { useFetchSlugSuggestion } from "@/src/api/booking/useFetchSlugSuggestion";
@@ -264,10 +270,10 @@ function LinkSection({ settings, save, onSaved }: {
                                 {settings.bookingUrl}
                             </span>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button type="button" className="btn-primary" onClick={handleCopy} data-testid="online-booking-copy">
+                                <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-primary" onClick={handleCopy} data-testid="online-booking-copy">
                                     <ACTION_ICONS.copy size={14} /> <span aria-live="polite">{copied ? "¡Copiado!" : "Copiar enlace"}</span>
                                 </button>
-                                <button type="button" className="btn-secondary" onClick={handleDownloadQr} data-testid="online-booking-qr-download">
+                                <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-secondary" onClick={handleDownloadQr} data-testid="online-booking-qr-download">
                                     <ACTION_ICONS.download size={14} /> Descargar QR
                                 </button>
                             </div>
@@ -322,6 +328,37 @@ function LinkSection({ settings, save, onSaved }: {
                 </div>
             </div>
         </div>
+    );
+}
+
+// A wall-clock time of day ("HH:mm") with no date or zone; the fixed UTC day keeps device DST out of it.
+const timeOfDay = (value: string) => dayjs.utc(`2000-01-01T${value}:00`);
+
+function TimeField({ value, onChange, label, invalid, testId }: {
+    value: string;
+    onChange: (value: string) => void;
+    label: string;
+    invalid: boolean;
+    testId: string;
+}) {
+    const { isDark } = useTheme();
+    return (
+        <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
+            <ZonedDatePicker.TimePicker
+                value={timeOfDay(value)}
+                onChange={(d) => d && onChange(d.format("HH:mm"))}
+                format="HH:mm"
+                minuteStep={5}
+                allowClear={false}
+                needConfirm={false}
+                showNow={false}
+                status={invalid ? "error" : undefined}
+                aria-label={label}
+                aria-invalid={invalid}
+                style={{ width: 110 }}
+                data-testid={testId}
+            />
+        </ConfigProvider>
     );
 }
 
@@ -417,28 +454,20 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {dayRules.map((r, i) => (
                                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                        <input
-                                            type="time"
-                                            step={300}
-                                            className="form-input"
-                                            style={{ width: 120 }}
+                                        <TimeField
                                             value={minutesToTime(r.startMinute)}
-                                            onChange={(e) => setTime(r, "startMinute", e.target.value)}
-                                            aria-label={`${label}: hora de inicio`}
-                                            aria-invalid={!!dayError}
-                                            data-testid={`availability-start-${weekday}-${i}`}
+                                            onChange={(v) => setTime(r, "startMinute", v)}
+                                            label={`${label}: hora de inicio`}
+                                            invalid={!!dayError}
+                                            testId={`availability-start-${weekday}-${i}`}
                                         />
                                         <span aria-hidden="true">–</span>
-                                        <input
-                                            type="time"
-                                            step={300}
-                                            className="form-input"
-                                            style={{ width: 120 }}
+                                        <TimeField
                                             value={r.endMinute === MINUTES_PER_DAY ? "00:00" : minutesToTime(r.endMinute)}
-                                            onChange={(e) => setTime(r, "endMinute", e.target.value)}
-                                            aria-label={`${label}: hora de fin`}
-                                            aria-invalid={!!dayError}
-                                            data-testid={`availability-end-${weekday}-${i}`}
+                                            onChange={(v) => setTime(r, "endMinute", v)}
+                                            label={`${label}: hora de fin`}
+                                            invalid={!!dayError}
+                                            testId={`availability-end-${weekday}-${i}`}
                                         />
                                         {r.endMinute === MINUTES_PER_DAY && (
                                             <span style={{ fontSize: 12, color: "var(--c-gray-500)" }}>fin del día</span>

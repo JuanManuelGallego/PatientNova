@@ -11,6 +11,29 @@ let settings: BookingSettings;
 let rules: AvailabilityRule[];
 let suggestion: string | null;
 
+vi.mock("@/src/providers/ThemeContext", () => ({
+    useTheme: () => ({ isDark: false }),
+}));
+// The antd popup needs browser APIs jsdom lacks; a plain input feeds the same UTC-mode dayjs values.
+vi.mock("@/src/components/ZonedDatePicker", async () => {
+    const { default: dayjs } = await import("dayjs");
+    const { default: utc } = await import("dayjs/plugin/utc");
+    dayjs.extend(utc);
+    type Props = { value: import("dayjs").Dayjs; onChange: (d: import("dayjs").Dayjs) => void; "aria-label": string; "aria-invalid": boolean; "data-testid": string };
+    return {
+        ZonedDatePicker: {
+            TimePicker: ({ value, onChange, ...rest }: Props) => (
+                <input
+                    value={value.format("HH:mm")}
+                    onChange={(e) => onChange(dayjs.utc(`2000-01-01T${e.target.value}:00`))}
+                    aria-label={rest[ "aria-label" ]}
+                    aria-invalid={rest[ "aria-invalid" ]}
+                    data-testid={rest[ "data-testid" ]}
+                />
+            ),
+        },
+    };
+});
 vi.mock("@/src/api/booking/useFetchBookingSettings", () => ({
     useFetchBookingSettings: () => ({ settings, loading: false, error: null, fetchSettings }),
 }));
