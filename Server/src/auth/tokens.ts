@@ -35,9 +35,12 @@ export interface RefreshTokenClaims {
 export interface PortalTokenClaims {
   userId: string;
   email: string;
+  sid: string;
 }
 
-function portalSecret(): string {
+export const PORTAL_SESSION_TTL_SECONDS = 2 * 60 * 60;
+
+export function portalSecret(): string {
   const secret = config.auth.portalJwtSecret;
   if (!secret) throw new Error('PORTAL_AUTH_SECRET is not configured');
   return secret;
@@ -61,7 +64,7 @@ export function signRefreshToken(claims: RefreshTokenClaims): string {
   });
 }
 
-export function signPortalToken(claims: PortalTokenClaims, expiresInSeconds = 2 * 60 * 60): string {
+export function signPortalToken(claims: PortalTokenClaims, expiresInSeconds = PORTAL_SESSION_TTL_SECONDS): string {
   return jwt.sign({ ...claims, typ: 'portal' }, portalSecret(), {
     algorithm: ALGORITHM,
     issuer: TOKEN_ISSUER,

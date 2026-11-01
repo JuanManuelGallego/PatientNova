@@ -1,0 +1,35 @@
+meta {
+  name: Request OTP
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/public/providers/{{bookingSlug}}/otp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+}
+
+body:json {
+  {
+    "email": "{{portalEmail}}",
+    "captchaToken": "{{captchaToken}}"
+  }
+}
+
+script:post-response {
+  const challenge = res.body?.data?.challenge;
+  if (challenge) bru.setVar("otpChallenge", challenge);
+}
+
+docs {
+  Always 202 `{ challenge }` for a valid request (patient or not, throttled or not; a throttled
+  request returns a random challenge that verify rejects). `captchaToken` must be a
+  Turnstile token solved for the action `otp-request` on an allowed hostname; copy one from the
+  Portal's network tab. The code arrives by email.
+}

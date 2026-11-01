@@ -1,0 +1,36 @@
+meta {
+  name: Verify OTP
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/portal/{{bookingSlug}}/otp/verify
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+}
+
+body:json {
+  {
+    "email": "{{portalEmail}}",
+    "code": "{{otpCode}}",
+    "challenge": "{{otpChallenge}}"
+  }
+}
+
+script:post-response {
+  const token = res.body?.data?.csrfToken;
+  if (token) bru.setVar("portalCsrfToken", token);
+}
+
+docs {
+  Needs the exact Origin of an allowed Portal origin, but no CSRF header. Sets the
+  `portal_session` cookie (path /v1/portal) and returns `{ email, expiresAt, csrfToken }`.
+  `challenge` comes from Request OTP (saved by its script). Any failure answers 400 "Invalid or
+  expired code"; 5 wrong codes with the right challenge lock the code.
+}

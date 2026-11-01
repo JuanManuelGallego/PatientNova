@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 planned in detail below, not started (the `/v1/public` and `/v1/portal` routers are mounted behind `ENABLE_PORTAL` with no endpoints). **Updated:** 2026-10-31
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 planned in detail below, not started (the `/v1/portal` session router is mounted behind `ENABLE_PORTAL` with no endpoints). **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -137,7 +137,7 @@ All eight findings were checked against the code and accepted.
 - New `portal/` module with the two router classes above, mounted outside the provider `authenticate` stack in `app.ts`, each with its own CORS, body limit and rate limits, plus CAPTCHA on OTP request.
 - Separate patient JWT (own `aud`, secret and cookie) and middleware, so it cannot pass provider routes (and vice versa). Every portal query is scoped by the session's `userId` and `email`; the client never supplies them.
 - Public booking uses a separate minimal DTO: price, `meetingUrl`, `paid` and reminder fields are derived server-side, never client-supplied.
-- Reuse Brevo email (`src/twilio/email-client.ts`) for OTP and confirmations, and the pg-boss reminder pipeline.
+- Reuse Brevo email (`src/brevo/email-client.ts`, `sendTransactionalEmail` in `src/brevo/transactional.ts`, templates in `src/brevo/email-templates.ts`) for OTP and confirmations, and the pg-boss reminder pipeline.
 - Allow-list DTOs only; patients see only their own appointments.
 
 ## Portal (Next.js)
@@ -214,10 +214,10 @@ Work:
 - **1.3 Online-bookable toggles** on appointment types and locations in the existing screens. Virtual locations can't be marked bookable until 5.4.
 - **1.4 Slug management.** Auto-suggest, edit, validation, reserved words, `bookingEnabled` toggle, copyable link and QR; a warning that changing the slug breaks shared links (no aliases).
 
-### Phase 2: Slot engine and read-only public page
-- **2.1 Slot generator.** Pure function implementing the slot contract (grid, fit, buffer, half-open intervals, lead/horizon, DST). Heavy unit tests: gap and overlap DST days, buffers at window edges, adjacent appointments, blocked time, windows shorter than the duration.
-- **2.2 Public read API.** `GET /v1/public/providers/:slug` and `/slots` per the contract, anonymous CORS class, identical response for unknown and disabled slugs, allow-list DTOs. Tests: cross-tenant isolation, no data leakage, range limit, client-supplied duration ignored.
-- **2.3 `/book/[slug]` read-only page.** Provider card, type picker, slot calendar, no booking yet. Shippable: patients can browse availability.
+### Phase 2: Slot engine and read-only public page — done (#72, #73, `05226ec`)
+- **2.1 Slot generator.** *(Done, #72: `src/public-booking/slot-engine.ts`.)* Pure function implementing the slot contract (grid, fit, buffer, half-open intervals, lead/horizon, DST). Heavy unit tests: gap and overlap DST days, buffers at window edges, adjacent appointments, blocked time, windows shorter than the duration.
+- **2.2 Public read API.** *(Done, #73.)* `GET /v1/public/providers/:slug` and `/slots` per the contract, anonymous CORS class, identical response for unknown and disabled slugs, allow-list DTOs. Tests: cross-tenant isolation, no data leakage, range limit, client-supplied duration ignored.
+- **2.3 `/book/[slug]` read-only page.** *(Done, `05226ec`.)* Provider card, type picker, slot calendar, no booking yet. Shippable: patients can browse availability.
 
 #### Phase 2 implementation plan (prepared 2026-10-31)
 Starting point (checked in code): `AvailabilityRule` (ISO weekday, `startMinute`/`endMinute` wall-clock minutes in `User.timezone`, 5-minute grid, `endMinute` up to 1440), the `User` booking settings (`slotIntervalMinutes` from `SLOT_INTERVAL_OPTIONS`, `bufferMinutes` 0-240, `minLeadMinutes`, `maxHorizonDays` 1-365), `bookableOnline` on types and locations, and `bookingSettingsService.isBookingLive(userId, tx)` all exist. `resolveLocalTime` (`src/utils/time/time-utils.ts`) already reports DST gaps (`exists: false`) and overlaps (first occurrence). `createPublicApiRouter()` (anonymous CORS, `public-ip` limiter, 10kb parser) has no routes; the Portal has `publicApi` (`credentials: 'omit'`, no refresh/redirect) and `proxy.ts` does not match `/book`. Three PRs, in order; 2.3 can start against a stubbed API once the 2.2 DTOs are merged.
@@ -237,7 +237,7 @@ Starting point (checked in code): `AvailabilityRule` (ISO weekday, `startMinute`
 - `GET /v1/public/providers/:slug/avatar` and `/logo` → the decoded `avatar`/`logo` data URL as bytes, only for `image/png|jpeg|webp` (anything else or none set: 404), with `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Cache-Control: public, max-age=300` and `Cross-Origin-Resource-Policy: cross-origin` (helmet's default `same-origin` would block the Portal's `<img>`). One shared handler for both. Kept out of the JSON because both are base64 strings up to 500KB. Portal CSP `img-src` must add the API origin. (`altLogo` is not exposed.)
 - `GET /v1/public/providers/:slug/slots?typeId=&from=&to=` → `{ timezone, slots: [{ startUtc, endUtc }] }` (ISO strings). Query schema: `typeId` uuid, `from`/`to` valid `YYYY-MM-DD`, `from <= to`, at most 31 days inclusive (400 otherwise, Spanish-safe generic message). Unknown query keys (e.g. `duration`) are stripped and ignored. A `typeId` that is not a bookable, active, non-deleted type of this provider → `404 { error: 'Appointment type not found' }` (same for another tenant's type). Duration is always `AppointmentType.defaultDuration`. `Cache-Control: no-store`.
 - Loader (`publicBookingRepository.loadBusy(userId, rangeStartUtc, rangeEndUtc, bufferMinutes)`): appointments in `ACTIVE_STATUSES` (move the `appointment.service.ts` constant to a shared module instead of copying it), not deleted, overlapping the range widened by the buffer; non-deleted `BlockedTime` overlapping the range. Range bounds come from the local `from` 00:00 and `to + 1` 00:00 in the provider zone. No lock and no transaction (a read; 4.1 revalidates under the lock).
-- **Price (decided 2026-10-31):** the price is `AppointmentType.defaultPrice` only. `AppointmentLocation.defaultPrice` is not used anywhere: not in the public DTOs, not in the slot or booking logic (4.1 derives the appointment price from the type alone). The column, its schema/repository fields, the `appointment.types.ts` select, `seed-e2e.ts` and the Bruno Locations requests still reference it; removing them (plus a migration dropping the column) is a separate cleanup PR, independent of Phase 2.
+- **Price (decided 2026-10-31):** the price is `AppointmentType.defaultPrice` only. `AppointmentLocation.defaultPrice` is not used anywhere: not in the public DTOs, not in the slot or booking logic (4.1 derives the appointment price from the type alone). The column and its references were removed in `e2418e8` (migration `20261031000000_drop_location_default_price`).
 - Integration tests (`test/integration/public-booking/public-booking.routes.integration.test.ts`, supertest on the real app like `public-api.integration.test.ts`): unknown, invalid, disabled, not-ready (no bookable type), inactive and deleted providers give byte-identical 404s; `ENABLE_PORTAL` off → route absent; the provider DTO has exactly the allow-listed keys (deep key snapshot, no location price); avatar/logo 404 when unset; non-bookable, inactive, deleted and virtual types/locations hidden; another tenant's `typeId` 404; `duration` query ignored; range > 31 days, reversed range and bad dates 400; slots exclude SCHEDULED/CONFIRMED appointments (with buffer) and blocked time but not CANCELLED/deleted appointments; two providers' calendars don't affect each other; responses carry no `Set-Cookie` and `Access-Control-Allow-Credentials` is absent; avatar content-type allow-list + nosniff. Update the AGENTS.md coverage matrix and add a calendar rule: "public availability goes through `generateSlots`/`isSlotAvailable` only".
 - Bruno (after the endpoints are final): new `Public Booking` folder with `Get Provider`, `Get Slots` (example `typeId`/`from`/`to`), `Get Avatar` and `Get Logo`, all without auth headers and using a `{{bookingSlug}}` variable in the environments.
 
@@ -261,9 +261,186 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **3.3 Verified-email session.** Cookie, CSRF token, `GET /v1/portal/session`, the single patient-resolution function (stage 2), consent endpoint with the uniform responses. Tests: portal token rejected on provider routes and vice versa, no existence disclosure in any response or timing-visible field, revoked patient behaves like unavailable, email change stops resolving.
 - **3.4 OTP step in the UI.**
 
+#### Phase 3 implementation plan (prepared 2026-11-01)
+**Decided (2026-11-01):**
+- The portal session is a stateless JWT. Logout clears the cookie; a copied cookie stays valid until it expires (at most 2h). Revocation is the per-request `portalAccessEnabled` check, with no session table.
+- Patients reach the OTP login from a "Mis citas" page, `/book/[slug]/appointments`. Phase 4's booking form reuses the same component.
+- Three PRs, in order.
+
+**Starting point (checked in code):**
+- Already built but not used by any route yet:
+  - `signPortalToken`/`verifyPortalToken` (`src/auth/tokens.ts`). Claims are `{userId, email}`; there is no `sid` yet.
+  - `portalCookieOptions`, `PORTAL_COOKIE_NAME`, `PORTAL_COOKIE_PATH` (`src/auth/portal-cookie.ts`): httpOnly, Secure, Lax, path `/v1/portal`.
+  - `requireCsrf` (`src/middlewares/csrf.ts`) and `createCsrfToken` (`src/utils/security/csrf.ts`).
+  - The pure OTP helpers in `src/utils/security/one-time-code.ts`.
+  - `requireCaptcha` with `createCaptchaVerifier`.
+  - `renderOtpEmail` and `sendTransactionalEmail` (`src/brevo/`). The send never throws, and the subject is fixed, so the code never appears in it.
+  - `portalPatientAuditContext`.
+  - `emailHash` (`src/utils/encryption/blind-index.ts`).
+  - `EntityType.PATIENT_CONSENT` and `ActionSource.PUBLIC_PORTAL`.
+- `createPortalSessionRouter()` already applies session CORS, the exact-Origin check, the `portal-ip` limiter, the 10kb parser and `cookieParser`, but has no routes.
+- Missing:
+  - `PortalOtp`, `PatientConsent` and `Patient.portalAccessEnabled`.
+  - A policy version constant. `docs/compliance-patient-data.md` defines `policyVersion` as the policy date, `2026-10-19`.
+  - Any portal session middleware.
+- `patientRepository.findByEmail` takes no `tx` and ignores status.
+- Portal: `publicApi` and `portalApi` exist, and `portalApi` stores any `data.csrfToken` automatically. `TurnstileWidget` exists but nothing renders it yet. There is no public or portal mutation hook and no code input.
+
+**PR 3.1+3.2 — Server: schema, OTP request/verify, purge.**
+- **Schema.** Migration `20261101000000_portal_auth`, created with `--create-only`. Read the SQL and delete any DROP of the raw-only objects, then run `prisma generate`.
+  - `Patient.portalAccessEnabled Boolean @default(true)`.
+  - `PortalOtp`, one row per provider and email, upserted:
+    - Fields: `id`, `userId` (→ User, cascade), `emailHash VarChar(64)`, `codeHash VarChar(64)`, `expiresAt`, `attempts`, `consumedAt?`, `lastSentAt`, `sendWindowStart`, `sendCount`, `createdAt`. *(Added in review: `challengeHash`, `failedCount`, `failedWindowStart`.)*
+    - Indexes: `@@unique([userId, emailHash])`, `@@index([userId, lastSentAt])`, `@@index([lastSentAt])`.
+    - No plaintext email, only the blind index.
+  - `PatientConsent`:
+    - Fields: `id`, `patientId` (→ Patient, Restrict, since patients are soft-deleted), `userId`, `kind ConsentKind (DATA_PROCESSING)`, `policyVersion VarChar(20)`, `acceptedAt`, `ipAddress?`, `userAgent? VarChar(512)`, `revokedAt?`, `createdAt`.
+    - Raw partial unique index `patient_consents_active_key` on `("patientId", kind, "policyVersion") WHERE "revokedAt" IS NULL`. Add it to the AGENTS.md raw-only list.
+    - The repository offers only insert and select. Rows are immutable; revocation comes in 7.2.
+  - `PRIVACY_POLICY_VERSION = '2026-10-19'` in `src/portal/privacy-policy.ts`. The server is the only authority; the client never sends a version.
+- **`POST /v1/public/providers/:slug/otp`** (anonymous class).
+  - Body `{ email, captchaToken }`, strict zod. The email is normalized like the patient schema does.
+  - Middleware chain: route limiter `createPublicLimiter({ name: 'otp-request-ip' })` (about 10 per 15 min), then `validateBody`, then `requireCaptcha(createCaptchaVerifier(), 'otp-request')`.
+  - `portalOtpService.request` steps:
+    1. `publicBookingService.resolveProvider(slug)`. A bad or not-live slug gets the same 404 as the public page.
+    2. In one transaction, `createMany({ skipDuplicates: true })` the row, then `SELECT … FOR UPDATE` it. Raw SQL is fine here because these columns are not encrypted.
+    3. Check three limits on that record:
+       - per-email resend cooldown of 60s (`canResend`);
+       - per-email cap of 5 sends per rolling hour (`sendWindowStart`/`sendCount`);
+       - per-provider cap `PORTAL_OTP_PROVIDER_HOURLY_CAP` (about 100; count of rows with `lastSentAt` in the last hour).
+    4. If allowed: `generateNumericCode()`, store `hashOneTimeCode(code, \`${userId}:${emailHash}\`, PORTAL_AUTH_SECRET)`, reset `attempts` and `consumedAt`, and set `expiresAt` to now + 10 min.
+    5. After commit, `sendTransactionalEmail(email, renderOtpEmail(...))`. No external call runs inside the transaction.
+  - The response is always a `202 { challenge }` of the same shape: patient or not, throttled or not, sent or failed. The reason is logged with the masked email.
+  - *(Added in review, 2026-11-01.)* Each issued code gets a random challenge (24 bytes, base64url; its SHA-256 is stored on the row) that only this response carries. A throttled request returns a random unused one. Without it, anyone who knew a patient's email could send 5 wrong codes to the CAPTCHA-free verify endpoint and lock the code.
+  - Resend uses the same endpoint with a fresh CAPTCHA token.
+- **`POST /v1/portal/:slug/otp/verify`** (session class).
+  - Exact Origin required. No CSRF header and no CAPTCHA. Route limiter `otp-verify-ip` (about 20 per 15 min).
+  - Body `{ email, code, challenge }`, where `code` matches `^\d{6}$`. A wrong challenge gets the same 400 and is never counted as an attempt.
+  - Steps:
+    1. `resolveProvider`.
+    2. A transaction holding `FOR UPDATE` on the row.
+    3. A missing, consumed, expired or exhausted (`areAttemptsExhausted`) row gets one uniform `400 'Invalid or expired code'`.
+    4. A wrong code increments `attempts`; the increment is committed before the same 400 is returned.
+    5. The right code sets `consumedAt`, so it is single use.
+  - *(Added in review, 2026-11-01.)* Daily failure cap: wrong codes also count in `failedCount` over a fixed 24h window (`failedWindowStart`), which a resend does not reset. At `maxFailuresPerDay` (15, three codes' worth) verify rejects even the right code without counting an attempt, and request answers the usual 202 without sending. A successful login resets it. Without it, re-requesting codes allowed about 25 guesses per email per hour (roughly 20% success over a year).
+  - On success:
+    - Sign the portal token with a new random `sid` claim (add `sid` to `PortalTokenClaims`).
+    - Set the cookie with `portalCookieOptions(2h)`.
+    - Respond `{ email, expiresAt, csrfToken: createCsrfToken(sid, PORTAL_AUTH_SECRET) }`.
+  - No patient lookup happens. The login is logged, not audited, since nothing changes.
+- **Purge.** A daily pg-boss cron `purge-portal-otps` in `src/scheduler/pg-boss.ts`, modelled on `complete-appointments`, deletes rows whose `lastSentAt` is older than 24h. Without `ENABLE_SCHEDULER` rows accumulate, bounded at one per provider and email.
+- **Tests.** `test/integration/portal/portal-otp.integration.test.ts` uses supertest on the real app with `ENABLE_PORTAL` pinned, `src/brevo/transactional.js` mocked to capture the code, and CAPTCHA via stubbed `fetch`. Cases:
+  - Byte-identical 202s for a new email, an existing patient, a deleted-only patient and a revoked patient.
+  - The code is never stored or logged in plain form and never appears in the subject.
+  - Cooldown, the hourly cap and the provider cap each answer 202 without sending an email.
+  - Unknown slug gives 404. CAPTCHA missing gives 400; a provider outage gives 503.
+  - A successful verify sets the cookie attributes, returns `csrfToken`, and the cookie decodes to `{userId, email, sid}`.
+  - Five wrong codes lock the code, even against the right one. An expired code and a reused code fail.
+  - Provider A's code is rejected on provider B.
+  - Email case and whitespace are normalized.
+  - Two concurrent right-code verifies produce exactly one session.
+  - Missing Origin gives 403; a body over 10kb gives 413.
+  - Plus a purge case in `workers.integration.test.ts`.
+- **Bruno.** A `Portal Auth` folder with Request OTP and Verify OTP. Verify sends an `Origin` header and uses `{{bookingSlug}}`.
+- **AGENTS.md.** Matrix rows, plus the rule that OTP limits live on `PortalOtp` under `FOR UPDATE` and the table stores only `emailHash`.
+
+**PR 3.3 — Server: session, patient resolution, consent.**
+- **`requirePortalSession`** (`src/portal/portal-session.middleware.ts`):
+  - Reads `req.cookies.portal_session` and runs `verifyPortalToken`.
+  - Type-guards `{typ: 'portal', userId, email, sid}` and sets `req.portal` (Express augmentation).
+  - Checks `bookingSettingsService.isBookingLive(userId)` on every request. Phase 5 may relax this so patients can still view appointments.
+  - Any failure gives `401 'Invalid session'`.
+  - It is followed by `requireCsrf({ sessionIdFrom: (r) => r.portal?.sid, secret: () => config.auth.portalJwtSecret })`.
+  - Every query is scoped by `req.portal`; the client never supplies `userId` or email.
+- **`resolvePortalPatient(session, tx?)`** (`src/portal/patient-resolution.ts`) is the single stage-2 matching function. It is built on a new `patientRepository.findPortalMatch(userId, emailHash, tx)`, which returns the active patient plus whether deleted ones exist. Outcomes:
+  - `patient`: active, `status=ACTIVE` and `portalAccessEnabled`.
+  - `unavailable`: revoked or inactive, or deleted-only (until 6.6).
+  - `none`.
+  - The outcome never reaches a response.
+- **`GET /v1/portal/session`** returns `{ email, expiresAt, csrfToken, providerSlug, consentRequired }`.
+  - `consentRequired` is false only for a `patient` with an active consent at the current version.
+  - The shape and value types are identical for every outcome.
+  - `providerSlug` lets the Portal spot a session that belongs to another provider, since one cookie path serves every provider.
+  - Query-count timing differences are accepted, as for slugs.
+- **`POST /v1/portal/consent`** takes body `{ accepted: true }` (`z.literal(true)`).
+  - It runs inside `runInAuditContext(portalPatientAuditContext(...))`, then a transaction, then `resolvePortalPatient(tx)`.
+  - Only for a `patient` it calls `ensureCurrentConsent(tx, patientId, PRIVACY_POLICY_VERSION, { ip, userAgent })` (`src/patient-consents/`, reused by 4.1 and 6.3). That function does `createMany({ skipDuplicates: true })` (ON CONFLICT DO NOTHING against the partial index), then a select, and returns `{ consent, created }`.
+  - When a row is created, it writes an audit `PATIENT_CONSENT` CREATE with `tx` and `required: true`.
+  - The answer is always `204`.
+- **`POST /v1/portal/logout`** requires CSRF. It clears the cookie with the same name, path and domain and answers 204.
+  - *(Open, from the 3.1–3.2 review.)* Logout is stateless: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Decide here whether that is acceptable or whether `requirePortalSession` should check a stored `sid` (or a per-email session version).
+- **Tests.** `test/integration/portal/portal-session.integration.test.ts`:
+  - Token rejection, all 401:
+    - a portal cookie on provider routes;
+    - a provider token (cookie or Bearer) on `/v1/portal/session`;
+    - tampered, expired or wrong-audience tokens.
+  - Session responses have identical keys and types across `none`, revoked, inactive, deleted-only, and a patient without consent. `consentRequired` is false only with a current consent.
+  - Bumping the policy version (`vi.mock` of the constant) makes consent required again.
+  - Consent POST:
+    - answers 204 in every case;
+    - creates one row only for a real patient, and concurrent calls still leave one row;
+    - writes an audit row with `PUBLIC_PORTAL` and the hashed actor;
+    - writes nothing for revoked or `none`.
+  - Missing CSRF gives 403 on consent and logout.
+  - Logout clears the cookie (Max-Age 0, same path).
+  - After the provider changes the patient's email, the session stops resolving: `consentRequired` is true and consent is a no-op.
+  - A disabled or deleted provider gives 401.
+  - A unit test covers the resolution classification.
+- **Bruno.** Get Session, Accept Consent and Logout.
+- **AGENTS.md.** Matrix rows, plus these rules:
+  - mount session routes behind `requirePortalSession`;
+  - resolve patients only with `resolvePortalPatient`;
+  - record consent only with `ensureCurrentConsent`;
+  - add `patient_consents_active_key` to the raw-only list.
+
+**PR 3.4 — Portal: OTP login on "Mis citas".**
+- **API hooks.**
+  - Generic `usePublicMutation`/`usePortalMutation` in `src/api/base/`, copying the `useApiMutation` shape: `{mutate, loading, error}` plus an inflight guard.
+  - `src/api/portal/`: `useRequestOtp(slug)`, `useVerifyOtp(slug)`, `usePortalSession()` (a 401 means no session, not an error), `useAcceptConsent()`, `useLogout()`.
+  - Types in `src/types/PortalSession.ts`.
+  - Spanish patterns in `errorMessages.ts` for an invalid or expired code and for CAPTCHA failure or outage. Verify overrides the 401 wording through `statusMessages`.
+- **Page.** `src/app/book/[slug]/appointments/page.tsx`: noindex, same layout. It resolves the provider with `useFetchPublicProvider`; any 404 shows the same "no disponible" page.
+- **`PortalLogin`** (`src/components/PublicBooking/`):
+  - Email step: `type=email`, `autoComplete=email`, and `<TurnstileWidget action="otp-request">`. Submit stays disabled until there is a token. The copy is neutral: "Si el correo es válido, te enviamos un código".
+  - Keep the `challenge` from the latest 202 in memory and send it with the code. A resend replaces it. Two tabs requesting at once leave only the last one working; accepted.
+  - Code step: `inputMode=numeric`, `autoComplete=one-time-code`, `maxLength=6`.
+  - "Reenviar código" has a 60s countdown and resets the widget. "Cambiar correo" goes back to the email step.
+- **After login:**
+  - If `providerSlug !== slug`, show the login.
+  - If `consentRequired`, show a consent card: a checkbox, a link to `/privacy-policy` in a new tab, then the POST.
+    - After the 204, continue on local state rather than refetching. The server keeps answering `consentRequired: true` while no patient exists yet, so a refetch would loop.
+  - Otherwise show a placeholder, "Aquí verás tus citas" (filled in by 4.3/5.1), and "Cerrar sesión".
+  - `/book/[slug]` gains a "Mis citas" link; the "Pronto podrás reservar aquí" notice stays.
+- **Config.** Add `NEXT_PUBLIC_TURNSTILE_SITE_KEY` to `.env.example`. Set it to Cloudflare's test site key `1x00000000000000000000AA` in the CI Portal build.
+- **Tests.**
+  - Component tests:
+    - the login steps;
+    - submit gated on the CAPTCHA token;
+    - the resend countdown and the wrong-code message;
+    - another provider's session shows the login;
+    - the consent loop guard and logout.
+  - Hook test: `usePortalSession` returns null on 401.
+  - E2E: `e2e/tests/public/portal-login.spec.ts` in `public` and `public-mobile`.
+    - The CI e2e job runs a tiny mock Brevo HTTP server (`e2e/support/mock-brevo.mjs`), and the Server's existing `BREVO_API_BASE_URL` points at it.
+    - The mock records `/smtp/email` and gives the spec the latest code per address. This is the real Server flow with no product bypass.
+    - Flow: request, read the code, verify, consent, placeholder. A reload keeps the session (CSRF comes back from `/session`). Logout returns to the login. A wrong code shows the message.
+    - Keep stripping the Vercel bypass headers.
+- **Risk check, first step of 3.4.** Call siteverify once with the test secret and a dummy token, and see which `hostname` and `action` it returns.
+  - If the hostname is not the Portal host, set `CAPTCHA_EXPECTED_HOSTNAMES` in the e2e job and in the local-dev notes.
+  - If the action can never match `otp-request`, stop and decide before writing the e2e spec, since local dev has the same problem.
+
+**Phase 3 exit criteria:**
+- A patient can prove control of an email for one provider and get a 2h session: an httpOnly cookie plus an in-memory CSRF token.
+- Portal and provider tokens are mutually rejected.
+- No response reveals whether a patient exists.
+- OTP limits are enforced on the domain record.
+- Existing patients' consent is recorded once per policy version.
+- The Bruno collection covers every Phase 3 endpoint.
+- Everything stays behind `ENABLE_PORTAL` and per-provider booking live.
+
 ### Phase 4: Booking, auto-confirm only (MVP)
 - **4.1 Booking transaction.** Exactly the single-transaction sequence in "Booking transaction", using `createWithin` and `withProviderLock`. Tests: concurrent bookings of one slot (one wins, the other gets a slot-taken error), buffer respected, off-grid and out-of-window starts rejected, consent required, new patient needs name/lastName, existing patient never modified, failure at any step rolls back patient, consent, appointment and queued email. The booking also sends the patient's device IANA zone; it is validated and stored as a nullable `Appointment.patientTimezone` (set only from the patient's device, unlike the always-default `Appointment.timezone` dropped in #71). Tests: an invalid zone gives 400.
-- **4.2 Confirmation and reminders.** Confirmation email through Brevo (link to the appointments page, no token), reminders on the `EMAIL` channel. Queue via `fromPrisma(tx)` inside the transaction. Every time sent to or shown to the patient (confirmation, reminders, the patient's appointments page) uses `Appointment.patientTimezone`, never the provider's zone; the provider's calendar and notices stay in `User.timezone`. Tests: a patient in another zone gets their own times, including a DST change between booking and appointment. (In-person only until 5.4; for virtual appointments the confirmation waits for `meetingStatus` to reach `READY` or the defined fallback.)
+- **4.2 Confirmation and reminders.** Confirmation email through Brevo (link to the appointments page, no token), reminders on the `EMAIL` channel. Queue via `fromPrisma(tx)` inside the transaction. Every time sent to or shown to the patient (confirmation, reminders, the patient's appointments page) uses `Appointment.patientTimezone`, never the provider's zone; the provider's calendar and notices stay in `User.timezone`. Tests: a patient in another zone gets their own times, including a DST change between booking and appointment. (The `whenLocal` parameter comment on `renderBookingConfirmationEmail`, `src/brevo/email-templates.ts`, still says "provider's timezone"; switch it to `patientTimezone`.) (In-person only until 5.4; for virtual appointments the confirmation waits for `meetingStatus` to reach `READY` or the defined fallback.)
 - **4.3 Booking form, appointments page, and provider notification** of a new booking (on `reminderChannel`).
 - **Pilot gate:** end-to-end self-booking is the milestone; pilot with real patients only after 0.23 is satisfied, otherwise synthetic/staff data only.
 
