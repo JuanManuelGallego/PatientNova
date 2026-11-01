@@ -38,31 +38,44 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
     return <PublicPageShell>{body}</PublicPageShell>;
 }
 
+const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo con tu correo.";
+
 function PortalArea({ slug }: { slug: string }) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     // Keyed by the session, so a new login (another email) asks again.
     const [ consentedFor, setConsentedFor ] = useState<string | null>(null);
+    const [ notice, setNotice ] = useState<string | undefined>();
 
     if (loading) return <CardSkeleton />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
-    // One cookie serves every provider: a session for another provider means "log in here".
-    if (!session || session.providerSlug !== slug) return <PortalLogin slug={slug} onLoggedIn={refetch} />;
+    // One cookie serves every provider: a session for another provider means "log in here". The
+    // server stores slugs lowercased and resolves the URL's slug the same way.
+    if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
+        return <PortalLogin slug={slug} notice={notice} onLoggedIn={() => { setNotice(undefined); refetch(); }} />;
+    }
 
     const sessionKey = `${session.email}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
-        return <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={clear} />;
+        return (
+            <PortalConsent
+                onAccepted={() => setConsentedFor(sessionKey)}
+                onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
+            />
+        );
     }
-    return <SignedIn session={session} onLoggedOut={clear} />;
+    return <SignedIn session={session} onLoggedOut={() => { setNotice(undefined); clear(); }} />;
 }
 
 function SignedIn({ session, onLoggedOut }: { session: PortalSession; onLoggedOut: () => void }) {
-    const { logout, loading } = useLogout();
+    const { logout, loading, error } = useLogout();
 
     const onLogout = async () => {
         try {
             await logout();
         } catch {
-            // The cookie may survive a failed request, but this tab forgets the session either way.
+            // The cookie only goes away when the server answers: keep the session on screen with the
+            // error so the patient can retry, instead of a fake logout that a reload undoes (shared devices).
+            return;
         }
         onLoggedOut();
     };
@@ -71,6 +84,7 @@ function SignedIn({ session, onLoggedOut }: { session: PortalSession; onLoggedOu
         <section className={`dash-card ${styles.card}`} aria-labelledby="portal-signed-in">
             <h1 id="portal-signed-in" className={styles.title}>Mis citas</h1>
             <p className={styles.lead}>Aquí verás tus citas.</p>
+            {error && <p className={`error-inline ${styles.error}`} role="alert">No pudimos cerrar la sesión. {error}</p>}
             <div className={styles.account}>
                 <span className={styles.muted}>Sesión iniciada como <strong className={styles.email}>{session.email}</strong></span>
                 <button type="button" className="btn-secondary" disabled={loading} onClick={() => void onLogout()}>

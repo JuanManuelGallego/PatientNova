@@ -430,6 +430,12 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - If the action can never match `otp-request`, stop and decide before writing the e2e spec, since local dev has the same problem.
   - *(Result, 2026-11-01.)* The test secret answers `hostname: "example.com"`, **no `action`**, and `metadata.result_with_testing_key: true`. **Decided:** the verifier skips the hostname and action checks only for responses carrying that flag (the test secret already accepts every token, and a real secret never gets the flag); `challenge_ts` is still checked. The Server logs a warning at startup when `NODE_ENV=production` runs with a Cloudflare test secret. No `CAPTCHA_EXPECTED_HOSTNAMES` change is needed.
 - **As built.** `usePublicMutation`/`usePortalMutation` live in `src/api/base/useClientMutation.ts`; the portal hooks are `usePortalSession` and `usePortalAuth` (`useRequestOtp`, `useVerifyOtp`, `useAcceptConsent`, `useLogout`). The page is `PortalAppointmentsPage` (`PortalLogin`, `PortalConsent`); the shared "no disponible" and error states moved to `PublicStates.tsx`. A 401 on consent returns to the login. A CAPTCHA rejection or outage has its own Spanish message, and so does a wrong code. `Portal/.env.example` is new (the README already pointed to it). The e2e uses one login test per project, because `otp-request-ip` allows 10 requests per IP per 15 minutes across both public projects and retries. Locally, run `node Portal/e2e/support/mock-brevo.mjs` and start the API with `ENABLE_PORTAL=true BREVO_API_BASE_URL=http://localhost:4010`.
+- *(Review fixes, 2026-11-01.)*
+  - The session is matched to the lowercased URL slug, so a mixed-case link no longer loops back to the login.
+  - "Cambiar correo" keeps the challenge and the countdown. Returning to the same address goes back to the code step without a request; a re-request inside the cooldown would get a throttled random challenge and break the emailed code.
+  - A failed logout keeps the session on screen with an error, instead of a fake logout that a reload undoes.
+  - A 401 on consent returns to the login with "Tu sesión expiró".
+  - The verifier skips the hostname/action checks only when the configured secret is a Cloudflare test secret **and** the answer carries the test flag.
 
 **Phase 3 exit criteria:**
 - A patient can prove control of an email for one provider and get a 2h session: an httpOnly cookie plus an in-memory CSRF token.

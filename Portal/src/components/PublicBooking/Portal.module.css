@@ -43,6 +43,16 @@
   color: var(--c-gray-900);
 }
 
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-brand-light);
+  color: var(--c-gray-900);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .form {
   display: flex;
   flex-direction: column;

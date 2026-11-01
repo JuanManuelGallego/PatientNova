@@ -71,9 +71,10 @@ export function createTurnstileVerifier(opts: TurnstileOptions): CaptchaVerifier
         return fail(reason);
       }
       // Cloudflare's test secrets pass every token and answer with a placeholder hostname
-      // (`example.com`) and no action, so those two checks cannot apply. A real secret never gets
-      // this flag, and the test secret already accepts any token, so skipping them loses nothing.
-      if (payload.metadata?.result_with_testing_key !== true) {
+      // (`example.com`) and no action, so those two checks cannot apply. Skipped only when both our
+      // secret is a test secret and Cloudflare flags the answer: a real secret is always fully checked.
+      const testKeyResult = isTurnstileTestSecret(opts.secret) && payload.metadata?.result_with_testing_key === true;
+      if (!testKeyResult) {
         if (!payload.hostname || !opts.expectedHostnames.includes(payload.hostname)) return fail('hostname-mismatch');
         if (payload.action !== action) return fail('action-mismatch');
       }

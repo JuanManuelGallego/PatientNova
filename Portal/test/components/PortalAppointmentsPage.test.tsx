@@ -48,6 +48,7 @@ interface Server {
     verify: () => Response;
     otp: () => Response;
     challenges: number;
+    logoutFails?: boolean;
 }
 let server: Server;
 const fetchMock = vi.fn();
@@ -73,7 +74,7 @@ beforeEach(() => {
     };
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (url: string, init: RequestInit = {}) => {
-        const path = url.replace(/^.*\/v1/, "");
+        const path = url.replace(/^.*\/v1/, "").toLowerCase();
         if (path === `/public/providers/${SLUG}`) {
             return server.profileStatus === 200 ? ok(200, provider) : fail(server.profileStatus, "Provider not found");
         }
@@ -82,6 +83,7 @@ beforeEach(() => {
         if (path === "/portal/session") return server.session ? ok(200, server.session) : fail(401, "Invalid session");
         if (path === "/portal/consent") return ok(204);
         if (path === "/portal/logout") {
+            if (server.logoutFails) return fail(503, "unavailable");
             server.session = null;
             return ok(204);
         }
@@ -238,6 +240,7 @@ describe("PortalAppointmentsPage", () => {
         await user.click(await screen.findByRole("checkbox"));
         await user.click(screen.getByRole("button", { name: "Continuar" }));
         expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
+        expect(screen.getByRole("status")).toHaveTextContent("Tu sesión expiró");
     });
 
     it("shows the same unavailable page for an unknown provider, without a session call", async () => {
@@ -245,5 +248,68 @@ describe("PortalAppointmentsPage", () => {
         render(<PortalAppointmentsPage slug={SLUG} />);
         expect(await screen.findByRole("heading", { name: "Esta página de reservas no está disponible" })).toBeInTheDocument();
         await waitFor(() => expect(call("/portal/session")).toHaveLength(0));
+    });
+
+    it("matches the session to a mixed-case slug in the URL (the server stores it lowercased)", async () => {
+        server.session = session();
+        render(<PortalAppointmentsPage slug="Dra-Ana" />);
+        expect(await screen.findByText("Aquí verás tus citas.")).toBeInTheDocument();
+    });
+
+    it("returning to the same email goes back to the code step without a new request", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await requestCode(user);
+
+        await user.click(screen.getByRole("button", { name: "Cambiar correo" }));
+        const emailInput = screen.getByLabelText("Correo electrónico");
+        await user.clear(emailInput);
+        await user.type(emailInput, "ANA@example.com");
+        // No CAPTCHA needed: nothing is sent.
+        await user.click(screen.getByRole("button", { name: "Ingresar el código enviado" }));
+
+        const codeInput = await screen.findByLabelText("Código de 6 dígitos");
+        expect(screen.getByRole("button", { name: /Reenviar código \(\d+ s\)/ })).toBeDisabled();
+        expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(1);
+
+        await user.type(codeInput, "123456");
+        await user.click(screen.getByRole("button", { name: "Ingresar" }));
+        await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
+        expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toMatchObject({ email: "ana@example.com", challenge: "challenge-1" });
+    });
+
+    it("a different email needs the CAPTCHA and sends a new code", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await requestCode(user);
+        await user.click(screen.getByRole("button", { name: "Cambiar correo" }));
+        const emailInput = screen.getByLabelText("Correo electrónico");
+        await user.clear(emailInput);
+        await user.type(emailInput, "otra@example.com");
+
+        const send = screen.getByRole("button", { name: "Enviar código" });
+        expect(send).toBeDisabled();
+        await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+        await user.click(send);
+        await screen.findByLabelText("Código de 6 dígitos");
+        expect(bodyOf(`/public/providers/${SLUG}/otp`, 1).email).toBe("otra@example.com");
+        expect(screen.getByText("otra@example.com")).toBeInTheDocument();
+    });
+
+    it("keeps the session on screen when logout fails, and logs out on retry", async () => {
+        server.session = session();
+        server.logoutFails = true;
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        await user.click(await screen.findByRole("button", { name: "Cerrar sesión" }));
+        expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cerrar la sesión");
+        expect(screen.getByText("Aquí verás tus citas.")).toBeInTheDocument();
+        expect(csrfStore.get()).toBe("csrf-from-session");
+
+        server.logoutFails = false;
+        await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+        expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 });

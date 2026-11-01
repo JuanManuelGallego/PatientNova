@@ -33,14 +33,12 @@ export function useAcceptConsent() {
     return { acceptConsent, ...rest };
 }
 
+/** Clears the cookie server-side; the CSRF token is dropped only once that succeeded. */
 export function useLogout() {
     const { mutate, ...rest } = usePortalMutation<void>();
     const logout = useCallback(async () => {
-        try {
-            await mutate("/logout");
-        } finally {
-            csrfStore.clear();
-        }
+        await mutate("/logout");
+        csrfStore.clear();
     }, [ mutate ]);
     return { logout, ...rest };
 }

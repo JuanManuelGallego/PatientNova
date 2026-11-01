@@ -190,7 +190,7 @@ Suite: `50` files, `627` tests, all against real Postgres, `tsc --noEmit` clean.
   503). Turnstile is used in every environment, with no bypass: `CAPTCHA_SECRET` is always required
   (`.env.test`/CI use Cloudflare's always-pass test secret). Test-secret answers carry
   `metadata.result_with_testing_key` with no `action` and hostname `example.com`, so the verifier skips only those two
-  checks for them (never for a real secret); startup warns if production runs with a test secret. Unit tests stub
+  checks, and only when the configured secret is itself a test secret (`isTurnstileTestSecret`); startup warns if production runs with a test secret. Unit tests stub
   global `fetch`; never call siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
   without `NEXT_PUBLIC_TURNSTILE_SITE_KEY` shows the widget error instead of submitting.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
