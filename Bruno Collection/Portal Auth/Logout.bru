@@ -1,0 +1,25 @@
+meta {
+  name: Logout
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/portal/logout
+  body: none
+  auth: none
+}
+
+headers {
+  Origin: {{portalOrigin}}
+}
+
+script:post-response {
+  bru.setVar("portalCsrfToken", "");
+}
+
+docs {
+  Clears the `portal_session` cookie (204). The session is a stateless JWT: a copied cookie stays
+  valid until it expires (at most 2h). Needs only the exact Origin: it clears the cookie even when
+  the session no longer validates.
+}

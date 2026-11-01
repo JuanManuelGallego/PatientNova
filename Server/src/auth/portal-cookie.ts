@@ -14,3 +14,8 @@ export function portalCookieOptions(maxAgeMs: number): CookieOptions {
     ...(config.cookieDomain && { domain: config.cookieDomain }),
   };
 }
+
+export function portalClearCookieOptions(): CookieOptions {
+  const { maxAge: _maxAge, ...options } = portalCookieOptions(0);
+  return options;
+}

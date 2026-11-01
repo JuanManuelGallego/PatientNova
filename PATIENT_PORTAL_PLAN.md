@@ -76,7 +76,7 @@ All eight findings were checked against the code and accepted.
 - `GET /v1/public/providers/:slug/slots?typeId=&from=&to=`
 - `POST /v1/public/providers/:slug/otp` (always returns the same 202)
 
-**Credentialed patient session** (`/v1/portal/*`, exact-origin allow-list with `credentials: true`; on every non-GET request the `Origin` header must be present and exactly match, otherwise 403; plus a CSRF header on every non-GET request **except `otp/verify`**, which creates the session and returns its first CSRF token, so it requires the exact `Origin` but no CSRF header (the one-time code plus the Origin check cover login CSRF); logout and every other mutation require the CSRF header):
+**Credentialed patient session** (`/v1/portal/*`, exact-origin allow-list with `credentials: true`; on every non-GET request the `Origin` header must be present and exactly match, otherwise 403; plus a CSRF header on every non-GET request **except `otp/verify`**, which creates the session and returns its first CSRF token, so it requires the exact `Origin` but no CSRF header (the one-time code plus the Origin check cover login CSRF); logout needs only the exact `Origin` (it must clear the cookie even when the session no longer validates); every other mutation requires the CSRF header):
 - `POST /v1/portal/:slug/otp/verify` (sets the session cookie), `GET /v1/portal/session`, `POST /v1/portal/consent`, `POST /v1/portal/bookings`, `GET /v1/portal/appointments`, cancel, reschedule, logout.
 - Cookie `portal_session` (name and secret distinct from provider cookies): httpOnly, Secure, path `/v1/portal`. If API and Portal share a registrable domain (the config already has `COOKIE_DOMAIN`), prefer `SameSite=Lax`; otherwise `SameSite=None` with the Origin check and CSRF header mandatory. Confirm the deployed domains in 0.6.
 - **CSRF token:** the Portal origin can't read an API-domain cookie, so the token is returned in the `verify`/`session` response body, held in memory, sent as `X-CSRF-Token`, and validated as an HMAC bound to the session id.
@@ -286,7 +286,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - `patientRepository.findByEmail` takes no `tx` and ignores status.
 - Portal: `publicApi` and `portalApi` exist, and `portalApi` stores any `data.csrfToken` automatically. `TurnstileWidget` exists but nothing renders it yet. There is no public or portal mutation hook and no code input.
 
-**PR 3.1+3.2 — Server: schema, OTP request/verify, purge.**
+**PR 3.1+3.2 — Server: schema, OTP request/verify, purge.** Done (`54a6c2d`…`65677b7`).
 - **Schema.** Migration `20261101000000_portal_auth`, created with `--create-only`. Read the SQL and delete any DROP of the raw-only objects, then run `prisma generate`.
   - `Patient.portalAccessEnabled Boolean @default(true)`.
   - `PortalOtp`, one row per provider and email, upserted:
@@ -344,7 +344,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **Bruno.** A `Portal Auth` folder with Request OTP and Verify OTP. Verify sends an `Origin` header and uses `{{bookingSlug}}`.
 - **AGENTS.md.** Matrix rows, plus the rule that OTP limits live on `PortalOtp` under `FOR UPDATE` and the table stores only `emailHash`.
 
-**PR 3.3 — Server: session, patient resolution, consent.**
+**PR 3.3 — Server: session, patient resolution, consent.** Done (2026-11-01).
 - **`requirePortalSession`** (`src/portal/portal-session.middleware.ts`):
   - Reads `req.cookies.portal_session` and runs `verifyPortalToken`.
   - Type-guards `{typ: 'portal', userId, email, sid}` and sets `req.portal` (Express augmentation).
@@ -367,8 +367,8 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - Only for a `patient` it calls `ensureCurrentConsent(tx, patientId, PRIVACY_POLICY_VERSION, { ip, userAgent })` (`src/patient-consents/`, reused by 4.1 and 6.3). That function does `createMany({ skipDuplicates: true })` (ON CONFLICT DO NOTHING against the partial index), then a select, and returns `{ consent, created }`.
   - When a row is created, it writes an audit `PATIENT_CONSENT` CREATE with `tx` and `required: true`.
   - The answer is always `204`.
-- **`POST /v1/portal/logout`** requires CSRF. It clears the cookie with the same name, path and domain and answers 204.
-  - *(Open, from the 3.1–3.2 review.)* Logout is stateless: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Decide here whether that is acceptable or whether `requirePortalSession` should check a stored `sid` (or a per-email session version).
+- **`POST /v1/portal/logout`** clears the cookie with the same name, path and domain and answers 204. *(Changed in review, 2026-11-01.)* It has no session guard and no CSRF header, only the router's exact-Origin check: behind the guard, a logout while the provider was briefly not live answered 401 and left the cookie, which came back to life when booking was re-enabled (a shared-device risk).
+  - *(Resolved 2026-11-01 by the stateless-JWT decision above.)* Logout only clears the cookie: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Revocation is the per-request `portalAccessEnabled` check (through resolution) and the per-request `isBookingLive` check.
 - **Tests.** `test/integration/portal/portal-session.integration.test.ts`:
   - Token rejection, all 401:
     - a portal cookie on provider routes;
@@ -381,8 +381,8 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
     - creates one row only for a real patient, and concurrent calls still leave one row;
     - writes an audit row with `PUBLIC_PORTAL` and the hashed actor;
     - writes nothing for revoked or `none`.
-  - Missing CSRF gives 403 on consent and logout.
-  - Logout clears the cookie (Max-Age 0, same path).
+  - Missing CSRF gives 403 on consent.
+  - Logout clears the cookie (same path), also without a valid session; a foreign Origin gives 403.
   - After the provider changes the patient's email, the session stops resolving: `consentRequired` is true and consent is a no-op.
   - A disabled or deleted provider gives 401.
   - A unit test covers the resolution classification.

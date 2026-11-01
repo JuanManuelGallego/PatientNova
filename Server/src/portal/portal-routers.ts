@@ -5,6 +5,7 @@ import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { publicBookingRouter } from '../public-booking/public-booking.routes.js';
 import { createOtpRequestRouter, createOtpVerifyRouter } from './portal-otp.routes.js';
+import { createPortalSessionRoutes } from './portal-session.routes.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
 
@@ -27,6 +28,7 @@ export function createPortalSessionRouter(): Router {
   // Scoped here, not app-wide: the anonymous /v1/public class must never read cookies.
   router.use(cookieParser());
   router.use(createOtpVerifyRouter());
+  router.use(createPortalSessionRoutes());
   return router;
 }
 

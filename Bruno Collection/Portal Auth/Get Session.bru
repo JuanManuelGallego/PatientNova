@@ -1,0 +1,24 @@
+meta {
+  name: Get Session
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/portal/session
+  body: none
+  auth: none
+}
+
+script:post-response {
+  const token = res.body?.data?.csrfToken;
+  if (token) bru.setVar("portalCsrfToken", token);
+}
+
+docs {
+  Needs the `portal_session` cookie from Verify OTP. Returns
+  `{ email, expiresAt, csrfToken, providerSlug, consentRequired }` with the same keys and types
+  whether or not the email belongs to a patient. `consentRequired` is false only for an existing
+  patient who accepted the current privacy policy version. Any session problem (missing, expired,
+  tampered, provider not live) answers 401 "Invalid session".
+}
