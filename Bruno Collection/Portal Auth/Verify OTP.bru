@@ -18,7 +18,8 @@ headers {
 body:json {
   {
     "email": "{{portalEmail}}",
-    "code": "{{otpCode}}"
+    "code": "{{otpCode}}",
+    "challenge": "{{otpChallenge}}"
   }
 }
 
@@ -31,5 +32,6 @@ script:post-response {
 docs {
   Needs the exact Origin of an allowed Portal origin, but no CSRF header. Sets the
   `portal_session` cookie (path /v1/portal) and returns `{ email, expiresAt, csrfToken }`.
-  Any bad code answers 400 "Invalid or expired code"; 5 wrong attempts lock the code.
+  `challenge` comes from Request OTP (saved by its script). Any failure answers 400 "Invalid or
+  expired code"; 5 wrong codes with the right challenge lock the code.
 }

@@ -42,7 +42,7 @@ export interface PortalTokenClaims {
 
 export const PORTAL_SESSION_TTL_SECONDS = 2 * 60 * 60;
 
-function portalSecret(): string {
+export function portalSecret(): string {
   const secret = config.auth.portalJwtSecret;
   if (!secret) throw new Error('PORTAL_AUTH_SECRET is not configured');
   return secret;

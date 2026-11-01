@@ -11,6 +11,8 @@ export const requestOtpSchema = z.strictObject({
 export const verifyOtpSchema = z.strictObject({
   email: portalEmail,
   code: z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits'),
+  // Returned by the request step (base64url of 24 random bytes).
+  challenge: z.string().regex(/^[A-Za-z0-9_-]{32}$/, 'Invalid challenge'),
 });
 
 export type RequestOtpBody = z.infer<typeof requestOtpSchema>;

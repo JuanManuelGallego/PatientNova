@@ -15,7 +15,8 @@ export const OTP_CAPTCHA_ACTION = 'otp-request';
 
 /**
  * Anonymous class (mounted under /v1/public/providers by createPublicApiRouter).
- * POST /:slug/otp — always 202 for a valid request, whatever happened (see portalOtpService.request).
+ * POST /:slug/otp — always 202 `{ challenge }` for a valid request, whatever happened (see
+ * portalOtpService.request). The Portal keeps the latest challenge in memory and sends it to verify.
  * The per-IP limiter is only a coarse throttle; the real limits live on the PortalOtp row.
  */
 export function createOtpRequestRouter(): Router {
@@ -27,9 +28,9 @@ export function createOtpRequestRouter(): Router {
     requireCaptcha(createCaptchaVerifier(), OTP_CAPTCHA_ACTION),
     asyncHandler(async (req: Request, res: Response) => {
       const { email } = req.body as RequestOtpBody;
-      await portalOtpService.request(String(req.params.slug), email);
+      const result = await portalOtpService.request(String(req.params.slug), email);
       res.set('Cache-Control', 'no-store');
-      ok(res, null, 202);
+      ok(res, result, 202);
     }),
   );
   return router;
@@ -47,8 +48,8 @@ export function createOtpVerifyRouter(): Router {
     createPublicLimiter({ name: 'otp-verify-ip', windowMs: FIFTEEN_MINUTES_MS, max: 20 }),
     validateBody(verifyOtpSchema),
     asyncHandler(async (req: Request, res: Response) => {
-      const { email, code } = req.body as VerifyOtpBody;
-      const login = await portalOtpService.verify(String(req.params.slug), email, code);
+      const { email, code, challenge } = req.body as VerifyOtpBody;
+      const login = await portalOtpService.verify(String(req.params.slug), email, code, challenge);
       res.cookie(PORTAL_COOKIE_NAME, login.token, portalCookieOptions(PORTAL_SESSION_TTL_SECONDS * 1000));
       res.set('Cache-Control', 'no-store');
       ok(res, { email: login.email, expiresAt: login.expiresAt.toISOString(), csrfToken: login.csrfToken });

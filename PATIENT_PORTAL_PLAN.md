@@ -310,11 +310,12 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
        - per-provider cap `PORTAL_OTP_PROVIDER_HOURLY_CAP` (about 100; count of rows with `lastSentAt` in the last hour).
     4. If allowed: `generateNumericCode()`, store `hashOneTimeCode(code, \`${userId}:${emailHash}\`, PORTAL_AUTH_SECRET)`, reset `attempts` and `consumedAt`, and set `expiresAt` to now + 10 min.
     5. After commit, `sendTransactionalEmail(email, renderOtpEmail(...))`. No external call runs inside the transaction.
-  - The response is always the same `202`: patient or not, throttled or not, sent or failed. The reason is logged with the masked email.
+  - The response is always a `202 { challenge }` of the same shape: patient or not, throttled or not, sent or failed. The reason is logged with the masked email.
+  - *(Added in review, 2026-11-01.)* Each issued code gets a random challenge (24 bytes, base64url; its SHA-256 is stored on the row) that only this response carries. A throttled request returns a random unused one. Without it, anyone who knew a patient's email could send 5 wrong codes to the CAPTCHA-free verify endpoint and lock the code.
   - Resend uses the same endpoint with a fresh CAPTCHA token.
 - **`POST /v1/portal/:slug/otp/verify`** (session class).
   - Exact Origin required. No CSRF header and no CAPTCHA. Route limiter `otp-verify-ip` (about 20 per 15 min).
-  - Body `{ email, code }`, where `code` matches `^\d{6}$`.
+  - Body `{ email, code, challenge }`, where `code` matches `^\d{6}$`. A wrong challenge gets the same 400 and is never counted as an attempt.
   - Steps:
     1. `resolveProvider`.
     2. A transaction holding `FOR UPDATE` on the row.
@@ -399,6 +400,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **Page.** `src/app/book/[slug]/appointments/page.tsx`: noindex, same layout. It resolves the provider with `useFetchPublicProvider`; any 404 shows the same "no disponible" page.
 - **`PortalLogin`** (`src/components/PublicBooking/`):
   - Email step: `type=email`, `autoComplete=email`, and `<TurnstileWidget action="otp-request">`. Submit stays disabled until there is a token. The copy is neutral: "Si el correo es válido, te enviamos un código".
+  - Keep the `challenge` from the latest 202 in memory and send it with the code. A resend replaces it. Two tabs requesting at once leave only the last one working; accepted.
   - Code step: `inputMode=numeric`, `autoComplete=one-time-code`, `maxLength=6`.
   - "Reenviar código" has a 60s countdown and resets the widget. "Cambiar correo" goes back to the email step.
 - **After login:**

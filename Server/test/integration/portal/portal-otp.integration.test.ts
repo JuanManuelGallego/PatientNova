@@ -65,6 +65,7 @@ afterAll(() => { portal.patientEnabled = portalWas; });
 beforeEach(() => {
   app = buildApp();
   sentEmails.length = 0;
+  challenges.clear();
   stubSiteverify();
 });
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -84,12 +85,28 @@ async function createLiveProvider(): Promise<{ id: string; slug: string }> {
   return { id: user.id, slug };
 }
 
-const requestOtp = (slug: string, email: string, captchaToken: string | null = 'good') =>
-  request(app).post(`/v1/public/providers/${slug}/otp`).set('Origin', ALLOWED)
-    .send(captchaToken === null ? { email } : { email, captchaToken });
+// Like the Portal: keep the latest challenge each 202 returns, per provider and email.
+const challenges = new Map<string, string>();
+const challengeKey = (slug: string, email: string) => `${slug}:${email.trim().toLowerCase()}`;
+const CHALLENGE = /^[A-Za-z0-9_-]{32}$/;
+const randomChallenge = () => 'x'.repeat(32);
 
-const verifyOtp = (slug: string, email: string, code: string) =>
-  request(app).post(`/v1/portal/${slug}/otp/verify`).set('Origin', ALLOWED).send({ email, code });
+async function requestOtp(slug: string, email: string, captchaToken: string | null = 'good') {
+  const res = await request(app).post(`/v1/public/providers/${slug}/otp`).set('Origin', ALLOWED)
+    .send(captchaToken === null ? { email } : { email, captchaToken });
+  if (res.status === 202) challenges.set(challengeKey(slug, email), res.body.data.challenge);
+  return res;
+}
+
+const verifyOtp = (slug: string, email: string, code: string, challenge?: string) =>
+  request(app).post(`/v1/portal/${slug}/otp/verify`).set('Origin', ALLOWED)
+    .send({ email, code, challenge: challenge ?? challenges.get(challengeKey(slug, email)) ?? randomChallenge() });
+
+/** Moves the last send back past the resend cooldown, so the next request issues a new code. */
+const skipCooldown = (userId: string) => prisma.portalOtp.updateMany({
+  where: { userId },
+  data: { lastSentAt: new Date(Date.now() - PORTAL_OTP_LIMITS.resendCooldownMs - 1000) },
+});
 
 function lastCodeFor(email: string): string {
   const mail = [ ...sentEmails ].reverse().find((m) => m.to === email);
@@ -97,7 +114,7 @@ function lastCodeFor(email: string): string {
   return /\b(\d{6})\b/.exec(mail.body)![1]!;
 }
 
-const withoutTimestamp = (body: Record<string, unknown>) => ({ ...body, timestamp: undefined });
+const withoutVolatile = (body: Record<string, unknown>) => ({ ...body, timestamp: undefined, data: { challenge: '' } });
 
 const otpRow = (userId: string, email: string) =>
   prisma.portalOtp.findUnique({ where: { userId_emailHash: { userId, emailHash: emailHash(email)! } } });
@@ -124,9 +141,11 @@ describe('POST /v1/public/providers/:slug/otp', () => {
       expect(res.status).toBe(202);
       expect(res.headers[ 'set-cookie' ]).toBeUndefined();
       expect(res.headers[ 'cache-control' ]).toBe('no-store');
-      expect(withoutTimestamp(res.body)).toEqual(withoutTimestamp(responses[ 0 ]!.body));
+      expect(Object.keys(res.body.data)).toEqual([ 'challenge' ]);
+      expect(res.body.data.challenge).toMatch(CHALLENGE);
+      expect(withoutVolatile(res.body)).toEqual(withoutVolatile(responses[ 0 ]!.body));
     }
-    expect(responses[ 0 ]!.body).toMatchObject({ success: true, data: null });
+    expect(responses[ 0 ]!.body.success).toBe(true);
     expect(sentEmails.map((m) => m.to)).toEqual([ fresh, existing, deletedOnly, revoked ]);
   });
 
@@ -163,10 +182,7 @@ describe('POST /v1/public/providers/:slug/otp', () => {
     expect((await requestOtp(provider.slug, email)).status).toBe(202);
     expect(sentEmails).toHaveLength(1);
 
-    await prisma.portalOtp.updateMany({
-      where: { userId: provider.id },
-      data: { lastSentAt: new Date(Date.now() - PORTAL_OTP_LIMITS.resendCooldownMs - 1000) },
-    });
+    await skipCooldown(provider.id);
     expect((await requestOtp(provider.slug, email)).status).toBe(202);
     expect(sentEmails).toHaveLength(2);
     const second = lastCodeFor(email);
@@ -369,6 +385,56 @@ describe('POST /v1/portal/:slug/otp/verify', () => {
     await requestOtp(provider.slug, email);
     expect((await verifyOtp(provider.slug, email, '12ab56')).status).toBe(400);
     expect((await otpRow(provider.id, email))!.attempts).toBe(0);
+  });
+});
+
+describe('verify challenge', () => {
+  it('never counts attempts made with a wrong challenge, so strangers cannot lock the code', async () => {
+    const provider = await createLiveProvider();
+    const email = newEmail();
+    await requestOtp(provider.slug, email);
+    const code = lastCodeFor(email);
+
+    for (let i = 0; i < PORTAL_OTP_LIMITS.maxAttempts + 1; i++) {
+      expect((await verifyOtp(provider.slug, email, wrongCode(code), randomChallenge())).status).toBe(400);
+    }
+    const rightCodeWrongChallenge = await verifyOtp(provider.slug, email, code, randomChallenge());
+    expect(rightCodeWrongChallenge.status).toBe(400);
+    expect(rightCodeWrongChallenge.body.error).toBe('Invalid or expired code');
+    expect((await otpRow(provider.id, email))!.attempts).toBe(0);
+
+    expect((await verifyOtp(provider.slug, email, code)).status).toBe(200);
+  });
+
+  it('answers a throttled request with an unused challenge that verify rejects', async () => {
+    const provider = await createLiveProvider();
+    const email = newEmail();
+    const real = (await requestOtp(provider.slug, email)).body.data.challenge;
+    const throttled = (await requestOtp(provider.slug, email)).body.data.challenge;
+    expect(sentEmails).toHaveLength(1);
+    expect(throttled).toMatch(CHALLENGE);
+    expect(throttled).not.toBe(real);
+
+    const code = lastCodeFor(email);
+    expect((await verifyOtp(provider.slug, email, code, throttled)).status).toBe(400);
+    expect((await verifyOtp(provider.slug, email, code, real)).status).toBe(200);
+  });
+
+  it('recovers from a locked code with a new one, and lets the patient log in again later', async () => {
+    const provider = await createLiveProvider();
+    const email = newEmail();
+    await requestOtp(provider.slug, email);
+    const locked = lastCodeFor(email);
+    for (let i = 0; i < PORTAL_OTP_LIMITS.maxAttempts; i++) await verifyOtp(provider.slug, email, wrongCode(locked));
+    expect((await verifyOtp(provider.slug, email, locked)).status).toBe(400);
+
+    await skipCooldown(provider.id);
+    await requestOtp(provider.slug, email);
+    expect((await verifyOtp(provider.slug, email, lastCodeFor(email))).status).toBe(200);
+
+    await skipCooldown(provider.id);
+    await requestOtp(provider.slug, email);
+    expect((await verifyOtp(provider.slug, email, lastCodeFor(email))).status).toBe(200);
   });
 });
 

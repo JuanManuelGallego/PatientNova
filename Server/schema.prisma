@@ -320,11 +320,14 @@ model PortalOtp {
 
   emailHash       String    @db.VarChar(64)
   codeHash        String    @db.VarChar(64)
+  /// SHA-256 of the random challenge returned only to whoever requested the current code.
+  /// Verify must present it, so a stranger who knows the email cannot burn the attempts.
+  challengeHash   String    @default("") @db.VarChar(64)
   expiresAt       DateTime
   attempts        Int       @default(0)
   consumedAt      DateTime?
   lastSentAt      DateTime
-  /// Start of the rolling per-email send window and the sends counted in it.
+  /// Start of the fixed one-hour per-email send window (opened by its first send) and the sends counted in it.
   sendWindowStart DateTime
   sendCount       Int       @default(0)
 

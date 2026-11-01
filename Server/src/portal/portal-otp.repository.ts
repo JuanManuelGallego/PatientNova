@@ -4,6 +4,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 export interface PortalOtpRow {
   id: string;
   codeHash: string;
+  challengeHash: string;
   expiresAt: Date;
   attempts: number;
   consumedAt: Date | null;
@@ -35,7 +36,7 @@ export const portalOtpRepository = {
   /** Reads the row under `FOR UPDATE`, serializing concurrent sends and verifies for one email. */
   async lockRow(tx: TransactionClient, userId: string, emailHash: string): Promise<PortalOtpRow | null> {
     const rows = await tx.$queryRaw<PortalOtpRow[]>`
-      SELECT "id", "codeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount"
+      SELECT "id", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount"
       FROM "portal_otps"
       WHERE "userId" = ${userId} AND "emailHash" = ${emailHash}
       FOR UPDATE`;
