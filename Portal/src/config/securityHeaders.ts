@@ -31,14 +31,17 @@ function originOf(url: string | undefined): string | undefined {
 }
 
 export function buildCsp(options: CspOptions): string {
-    const connect = [ "'self'", ...[ originOf(options.apiUrl), originOf(options.sentryDsn) ].filter((o): o is string => !!o) ];
+    const apiOrigin = originOf(options.apiUrl);
+    const connect = [ "'self'", ...[ apiOrigin, originOf(options.sentryDsn) ].filter((o): o is string => !!o) ];
     if (options.isDev) connect.push("http://localhost:3001", "ws://localhost:3000");
+    // The public booking page loads the provider's avatar/logo from the API.
+    const img = [ "'self'", "data:", "blob:", "https://flagcdn.com", ...(apiOrigin ? [ apiOrigin ] : []), ...(options.isDev ? [ "http://localhost:3001" ] : []) ];
 
     const directives: Record<string, string[]> = {
         "default-src": [ "'self'" ],
         "script-src": [ "'self'", "'unsafe-inline'", ...(options.isDev ? [ "'unsafe-eval'" ] : []), TURNSTILE_ORIGIN ],
         "style-src": [ "'self'", "'unsafe-inline'" ],
-        "img-src": [ "'self'", "data:", "blob:", "https://flagcdn.com" ],
+        "img-src": img,
         "font-src": [ "'self'", "data:" ],
         "connect-src": [ ...connect, TURNSTILE_ORIGIN ],
         "object-src": [ "'none'" ],

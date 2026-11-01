@@ -11,7 +11,7 @@ describe("security headers", () => {
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("connect-src 'self' https://api.patientnova.net");
-    expect(csp).toContain("img-src 'self' data: blob: https://flagcdn.com");
+    expect(csp).toContain("img-src 'self' data: blob: https://flagcdn.com https://api.patientnova.net;");
   });
 
   it("allows no third-party script source except Turnstile, and no eval in production", () => {

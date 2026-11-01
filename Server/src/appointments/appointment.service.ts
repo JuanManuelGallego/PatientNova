@@ -1,6 +1,7 @@
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
 import { appointmentRepository } from './appointment.repository.js';
+import { ACTIVE_STATUSES } from './appointment-status.js';
 import {
   AppointmentConflictError,
   AppointmentPatientNotFoundError,
@@ -27,11 +28,6 @@ import { config } from '../utils/config/config.ts';
 import { renderAppointmentReminder } from './appointment-reminder.renderer.ts';
 
 const REMINDER_QUEUE = 'send-reminder';
-
-const ACTIVE_STATUSES = new Set<AppointmentStatus>([
-  AppointmentStatus.SCHEDULED,
-  AppointmentStatus.CONFIRMED,
-]);
 
 const PAYABLE_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.SCHEDULED,
