@@ -23,7 +23,6 @@ body:json {
 }
 
 script:post-response {
-  // Verify needs the challenge of the latest request.
   const challenge = res.body?.data?.challenge;
   if (challenge) bru.setVar("otpChallenge", challenge);
 }

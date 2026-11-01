@@ -15,7 +15,6 @@ function localMidnightUtc(isoDate: string, timezone: string, plusDays = 0): Date
   return localToUtc(d.year, d.month, d.day, 0, 0, 0, timezone);
 }
 
-/** Public name of a provider: `displayName`, else first + last name. */
 export function providerDisplayName(p: { displayName: string | null; firstName: string | null; lastName: string | null }): string {
   return p.displayName?.trim() || [ p.firstName, p.lastName ].filter(Boolean).join(' ');
 }

@@ -24,7 +24,6 @@ body:json {
 }
 
 script:post-response {
-  // Keep the CSRF token for later portal requests (sent as X-CSRF-Token).
   const token = res.body?.data?.csrfToken;
   if (token) bru.setVar("portalCsrfToken", token);
 }

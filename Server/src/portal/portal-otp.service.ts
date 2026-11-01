@@ -23,13 +23,6 @@ import { InvalidPortalOtpError } from './portal-otp.errors.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/**
- * Brute-force-sensitive limits, enforced on the `PortalOtp` row under `FOR UPDATE` (never by an
- * HTTP limiter). 5 attempts per code and 5 codes per fixed one-hour window per email cap guessing
- * at about 25 tries/hour (up to 50 across a window edge) against 10^6 codes. Attempts only count
- * with the right challenge, so only the requester can spend them. The provider cap counts emails sent to in the last hour; it is a coarse
- * abuse brake (concurrent sends to different emails can overshoot it by a few).
- */
 export const PORTAL_OTP_LIMITS = {
   ttlMs: ONE_TIME_CODE_DEFAULTS.ttlMs,
   maxAttempts: ONE_TIME_CODE_DEFAULTS.maxAttempts,
@@ -42,7 +35,6 @@ type SkipReason = 'cooldown' | 'email-cap' | 'provider-cap';
 
 const codeContext = (userId: string, hash: string) => `${userId}:${hash}`;
 
-/** 24 random bytes as base64url (32 chars). High entropy, so a plain SHA-256 is enough to store it. */
 const newChallenge = () => randomBytes(24).toString('base64url');
 const hashChallenge = (challenge: string) => createHash('sha256').update(challenge).digest('hex');
 
@@ -54,12 +46,6 @@ export interface PortalLogin {
 }
 
 export const portalOtpService = {
-  /**
-   * Issues a code for (provider, email) and emails it, unless a limit applies. Always returns a
-   * challenge of the same shape: the real one (verify needs it) when a code was issued, a random
-   * unused one otherwise, so the response never reveals whether the email belongs to a patient,
-   * was throttled, or failed to send. No patient lookup happens here.
-   */
   async request(slug: string, rawEmail: string): Promise<{ challenge: string }> {
     const provider = await publicBookingService.resolveProvider(slug);
     const email = normalizeEmail(rawEmail);
@@ -98,8 +84,6 @@ export const portalOtpService = {
       logger.info({ maskedEmail: maskEmail(email), userId: provider.id, reason: outcome.skipped }, 'Portal OTP not sent');
       return { challenge };
     }
-    // After commit: no external call inside the transaction. A failed send is logged (masked)
-    // and the patient can ask again after the cooldown.
     const { sent } = await sendTransactionalEmail(email, renderOtpEmail({
       code: outcome.code,
       providerName: providerDisplayName(provider),
@@ -109,12 +93,6 @@ export const portalOtpService = {
     return { challenge };
   },
 
-  /**
-   * Checks the code and, on success, consumes it and returns a signed session. Every failure
-   * (no code, wrong challenge, consumed, expired, too many attempts, wrong code) is the same
-   * `InvalidPortalOtpError`. A wrong guess with the right challenge is counted and committed before
-   * the error is thrown; a wrong challenge never counts, so strangers cannot lock the code.
-   */
   async verify(slug: string, rawEmail: string, code: string, challenge: string): Promise<PortalLogin> {
     const provider = await publicBookingService.resolveProvider(slug);
     const email = normalizeEmail(rawEmail);

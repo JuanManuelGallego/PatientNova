@@ -14,10 +14,6 @@ export interface PortalOtpRow {
 }
 
 export const portalOtpRepository = {
-  /**
-   * Creates the (provider, email) row if missing. A new row holds no usable code: it is already
-   * expired and has never been sent (lastSentAt = epoch), so it can only be filled by a send.
-   */
   async ensureRow(tx: TransactionClient, userId: string, emailHash: string, now: Date): Promise<void> {
     await tx.portalOtp.createMany({
       data: [ {
@@ -33,7 +29,6 @@ export const portalOtpRepository = {
     });
   },
 
-  /** Reads the row under `FOR UPDATE`, serializing concurrent sends and verifies for one email. */
   async lockRow(tx: TransactionClient, userId: string, emailHash: string): Promise<PortalOtpRow | null> {
     const rows = await tx.$queryRaw<PortalOtpRow[]>`
       SELECT "id", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount"
@@ -43,7 +38,6 @@ export const portalOtpRepository = {
     return rows[0] ?? null;
   },
 
-  /** Emails this provider sent a code to since `since` (coarse per-provider cap, not locked). */
   countSentSince(tx: TransactionClient, userId: string, since: Date): Promise<number> {
     return tx.portalOtp.count({ where: { userId, lastSentAt: { gte: since } } });
   },

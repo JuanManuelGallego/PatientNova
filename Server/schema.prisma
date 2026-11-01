@@ -34,7 +34,6 @@ model Patient {
 
   source RecordSource @default(PROVIDER)
 
-  // Provider kill switch for portal access (checked on every portal request).
   portalAccessEnabled Boolean @default(true)
 
   notes            String? @db.Text
@@ -309,25 +308,17 @@ model AvailabilityRule {
   @@map("availability_rules")
 }
 
-// ─── Patient portal ──────────────────────────────────────────────────────────
-
-/// One-time email codes for the patient portal: one row per (provider, email), reused on resend.
-/// Stores only the email's blind index, never the address. Send limits and the attempt counter
-/// live here and are enforced under a row lock (src/portal/portal-otp.service.ts).
 model PortalOtp {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
 
   emailHash       String    @db.VarChar(64)
   codeHash        String    @db.VarChar(64)
-  /// SHA-256 of the random challenge returned only to whoever requested the current code.
-  /// Verify must present it, so a stranger who knows the email cannot burn the attempts.
   challengeHash   String    @default("") @db.VarChar(64)
   expiresAt       DateTime
   attempts        Int       @default(0)
   consumedAt      DateTime?
   lastSentAt      DateTime
-  /// Start of the fixed one-hour per-email send window (opened by its first send) and the sends counted in it.
   sendWindowStart DateTime
   sendCount       Int       @default(0)
 
@@ -344,9 +335,6 @@ enum ConsentKind {
   DATA_PROCESSING
 }
 
-/// A patient's acceptance of the portal privacy/data-processing text. Immutable; revocation
-/// sets `revokedAt`. At most one active row per (patient, kind, policyVersion), enforced by the
-/// raw partial unique index `patient_consents_active_key` (migration 20261101000000_portal_auth).
 model PatientConsent {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())

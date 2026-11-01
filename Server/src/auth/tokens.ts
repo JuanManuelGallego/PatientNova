@@ -34,9 +34,7 @@ export interface RefreshTokenClaims {
 
 export interface PortalTokenClaims {
   userId: string;
-  /** Normalized email the OTP proved control of; the session never carries a patient id. */
   email: string;
-  /** Random per-login session id; the portal CSRF token is an HMAC of it. */
   sid: string;
 }
 

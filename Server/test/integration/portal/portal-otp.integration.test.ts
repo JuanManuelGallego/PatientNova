@@ -3,7 +3,6 @@ import helmet from 'helmet';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Email boundary: capture what would be sent instead of calling Brevo.
 const sentEmails: { to: string; subject: string; body: string }[] = [];
 vi.mock('../../../src/brevo/transactional.js', () => ({
   sendTransactionalEmail: vi.fn(async (to: string, email: { subject: string; body: string }) => {
@@ -27,7 +26,6 @@ import { createTestAppointmentType, createTestLocation, createTestPatient, creat
 
 const ALLOWED = 'http://localhost:3000';
 
-// Wired like app.ts with ENABLE_PORTAL on (the real app reads the flag at import, and it is off in tests).
 function buildApp() {
   const a = express();
   a.set('trust proxy', 1);
@@ -39,7 +37,6 @@ function buildApp() {
   return a;
 }
 
-// Turnstile siteverify stub: 'good' passes for the OTP action, 'outage' is a provider 5xx.
 const realFetch = globalThis.fetch;
 function stubSiteverify() {
   vi.stubGlobal('fetch', vi.fn(async (url: unknown, init?: RequestInit) => {
@@ -61,7 +58,6 @@ const portal = config.portal as { patientEnabled: boolean };
 const portalWas = portal.patientEnabled;
 beforeAll(() => { portal.patientEnabled = true; });
 afterAll(() => { portal.patientEnabled = portalWas; });
-// A fresh app per test: the per-IP limiters are in-memory per router instance.
 beforeEach(() => {
   app = buildApp();
   sentEmails.length = 0;
@@ -85,7 +81,6 @@ async function createLiveProvider(): Promise<{ id: string; slug: string }> {
   return { id: user.id, slug };
 }
 
-// Like the Portal: keep the latest challenge each 202 returns, per provider and email.
 const challenges = new Map<string, string>();
 const challengeKey = (slug: string, email: string) => `${slug}:${email.trim().toLowerCase()}`;
 const CHALLENGE = /^[A-Za-z0-9_-]{32}$/;
@@ -102,7 +97,6 @@ const verifyOtp = (slug: string, email: string, code: string, challenge?: string
   request(app).post(`/v1/portal/${slug}/otp/verify`).set('Origin', ALLOWED)
     .send({ email, code, challenge: challenge ?? challenges.get(challengeKey(slug, email)) ?? randomChallenge() });
 
-/** Moves the last send back past the resend cooldown, so the next request issues a new code. */
 const skipCooldown = (userId: string) => prisma.portalOtp.updateMany({
   where: { userId },
   data: { lastSentAt: new Date(Date.now() - PORTAL_OTP_LIMITS.resendCooldownMs - 1000) },
@@ -351,7 +345,6 @@ describe('POST /v1/portal/:slug/otp/verify', () => {
     await requestOtp(b.slug, email);
     const codeB = lastCodeFor(email);
 
-    // Codes are random: only a 1-in-a-million collision would make A's code valid on B.
     if (codeA !== codeB) expect((await verifyOtp(b.slug, email, codeA)).status).toBe(400);
     expect((await verifyOtp(a.slug, email, codeA)).status).toBe(200);
   });

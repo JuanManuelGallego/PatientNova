@@ -10,6 +10,7 @@ CREATE TABLE "portal_otps" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "emailHash" VARCHAR(64) NOT NULL,
     "codeHash" VARCHAR(64) NOT NULL,
+    "challengeHash" VARCHAR(64) NOT NULL DEFAULT '',
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "attempts" INTEGER NOT NULL DEFAULT 0,
     "consumedAt" TIMESTAMP(3),
@@ -61,9 +62,6 @@ ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_patientId_fkey" 
 -- AddForeignKey
 ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Raw-only (not expressible in schema.prisma, so invisible to Prisma's diff; see AGENTS.md):
--- at most one active consent per patient, kind and policy version. `ensureCurrentConsent`
--- inserts with ON CONFLICT DO NOTHING against it, so concurrent accepts never duplicate.
 CREATE UNIQUE INDEX "patient_consents_active_key"
     ON "patient_consents"("patientId", "kind", "policyVersion")
     WHERE "revokedAt" IS NULL;

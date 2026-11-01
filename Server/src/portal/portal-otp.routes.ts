@@ -13,12 +13,6 @@ import { requestOtpSchema, verifyOtpSchema, type RequestOtpBody, type VerifyOtpB
 
 export const OTP_CAPTCHA_ACTION = 'otp-request';
 
-/**
- * Anonymous class (mounted under /v1/public/providers by createPublicApiRouter).
- * POST /:slug/otp — always 202 `{ challenge }` for a valid request, whatever happened (see
- * portalOtpService.request). The Portal keeps the latest challenge in memory and sends it to verify.
- * The per-IP limiter is only a coarse throttle; the real limits live on the PortalOtp row.
- */
 export function createOtpRequestRouter(): Router {
   const router = Router();
   router.post(
@@ -36,11 +30,6 @@ export function createOtpRequestRouter(): Router {
   return router;
 }
 
-/**
- * Credentialed session class (mounted under /v1/portal by createPortalSessionRouter).
- * POST /:slug/otp/verify — exact Origin (router-wide), no CSRF header (this request creates the
- * session and returns its first CSRF token), no CAPTCHA (the attempt counter covers guessing).
- */
 export function createOtpVerifyRouter(): Router {
   const router = Router();
   router.post(
