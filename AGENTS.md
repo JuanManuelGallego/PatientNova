@@ -39,7 +39,8 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   `(userId, emailHash) WHERE isDeleted = false`
   (`migrations/20261019000000_encrypt_patient_pii`, replaces `patients_userId_email_normalized_active_key`) and exclusion constraint
   `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
-  the `btree_gist` extension). Before committing any generated migration,
+  the `btree_gist` extension), and partial unique index `patient_consents_active_key` on
+  `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` (`migrations/20261101000000_portal_auth`). Before committing any generated migration,
   read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
   raw-only objects to this list.
 - **External services are mocked at module boundaries** in tests: `twilio` SDK
@@ -59,7 +60,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `49` files, `606` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -82,6 +83,7 @@ Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
 | Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
 | Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
 | Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
+| Portal OTP (routes) | `test/integration/portal/portal-otp.integration.test.ts` | `POST /v1/public/providers/:slug/otp` + `POST /v1/portal/:slug/otp/verify` on an app wired like `app.ts` (Brevo `transactional.js` mocked, Turnstile siteverify stubbed): identical 202 for new/patient/deleted-only/revoked emails, only hashes stored (no email, code not in subject), email normalization, resend cooldown replaces the code, per-email hourly cap + new window, per-provider cap (other provider unaffected), public-page 404 for unknown/not-live slugs, CAPTCHA 400/503, strict body 400; verify sets the cookie (HttpOnly/Secure/Lax/path/2h) with `{userId,email,sid}` and a sid-bound CSRF token, attempt lock (right code rejected after 5 misses), expired/reused/never-requested give one error, code not valid on another provider, concurrent verifies give one session, exact Origin (no CSRF), 10kb limit, malformed code not counted; `purgePortalOtpsWorker` |
 | Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, lead time reaching the horizon 422 (merged with stored values), enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
 | Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
@@ -159,6 +161,12 @@ Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
   parser. Brute-force-sensitive limits (OTP verify attempts, resend cooldown, per-email sends) must
   be enforced on the domain record in the same transaction (see `src/utils/security/one-time-code.ts`),
   never by an HTTP limiter. `trust proxy` is exactly 1 hop.
+- Portal OTP (`src/portal/portal-otp.*`): one `PortalOtp` row per (provider, `emailHash`), never the plaintext
+  email. Send limits (cooldown, per-email hourly cap, coarse per-provider cap) and the attempt counter are checked
+  under `SELECT … FOR UPDATE` on that row (`portalOtpRepository.lockRow`); the email is sent after commit. The
+  request endpoint answers the same 202 whatever happened and never looks up a patient; every verify failure is
+  the same `InvalidPortalOtpError`, and a wrong guess is committed before it is thrown. The portal JWT carries a
+  random `sid`, and the portal CSRF token is `createCsrfToken(sid, PORTAL_AUTH_SECRET)`.
 - CAPTCHA (Cloudflare Turnstile): public endpoints that send messages or create records
   (OTP request/resend, anonymous booking) use `requireCaptcha(createCaptchaVerifier(), '<action>')`
   after the limiter and body parser; the Portal renders `<TurnstileWidget action="<action>">` with the

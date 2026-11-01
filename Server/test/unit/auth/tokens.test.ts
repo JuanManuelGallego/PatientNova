@@ -16,7 +16,7 @@ import {
 
 const access = () => signAccessToken({ id: 'u1', email: 'a@b.com', role: 'ADMIN', timezone: 'UTC', sid: 's1' });
 const refresh = () => signRefreshToken({ id: 'u1', version: 3, sid: 's1' });
-const portal = () => signPortalToken({ userId: 'u1', email: 'p@x.com' });
+const portal = () => signPortalToken({ userId: 'u1', email: 'p@x.com', sid: 's1' });
 
 describe('token separation', () => {
   it('each verifier accepts only its own token kind', () => {
@@ -54,7 +54,7 @@ describe('token separation', () => {
   });
 
   it('expires access tokens and portal sessions', () => {
-    const expired = signPortalToken({ userId: 'u1', email: 'p@x.com' }, -10);
+    const expired = signPortalToken({ userId: 'u1', email: 'p@x.com', sid: 's1' }, -10);
     expect(() => verifyPortalToken(expired)).toThrow(jwt.TokenExpiredError);
   });
 });

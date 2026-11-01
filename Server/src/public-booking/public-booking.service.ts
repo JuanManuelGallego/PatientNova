@@ -15,6 +15,11 @@ function localMidnightUtc(isoDate: string, timezone: string, plusDays = 0): Date
   return localToUtc(d.year, d.month, d.day, 0, 0, 0, timezone);
 }
 
+/** Public name of a provider: `displayName`, else first + last name. */
+export function providerDisplayName(p: { displayName: string | null; firstName: string | null; lastName: string | null }): string {
+  return p.displayName?.trim() || [ p.firstName, p.lastName ].filter(Boolean).join(' ');
+}
+
 export const publicBookingService = {
   async resolveProvider(rawSlug: string) {
     const slug = bookingSlugSchema.safeParse(rawSlug);
@@ -32,7 +37,7 @@ export const publicBookingService = {
       publicBookingRepository.listBookableLocations(provider.id),
     ]);
     return {
-      displayName: provider.displayName?.trim() || [ provider.firstName, provider.lastName ].filter(Boolean).join(' '),
+      displayName: providerDisplayName(provider),
       jobTitle: provider.jobTitle,
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),

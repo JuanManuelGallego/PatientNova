@@ -34,8 +34,13 @@ export interface RefreshTokenClaims {
 
 export interface PortalTokenClaims {
   userId: string;
+  /** Normalized email the OTP proved control of; the session never carries a patient id. */
   email: string;
+  /** Random per-login session id; the portal CSRF token is an HMAC of it. */
+  sid: string;
 }
+
+export const PORTAL_SESSION_TTL_SECONDS = 2 * 60 * 60;
 
 function portalSecret(): string {
   const secret = config.auth.portalJwtSecret;
@@ -61,7 +66,7 @@ export function signRefreshToken(claims: RefreshTokenClaims): string {
   });
 }
 
-export function signPortalToken(claims: PortalTokenClaims, expiresInSeconds = 2 * 60 * 60): string {
+export function signPortalToken(claims: PortalTokenClaims, expiresInSeconds = PORTAL_SESSION_TTL_SECONDS): string {
   return jwt.sign({ ...claims, typ: 'portal' }, portalSecret(), {
     algorithm: ALGORITHM,
     issuer: TOKEN_ISSUER,

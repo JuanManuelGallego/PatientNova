@@ -4,6 +4,7 @@ import { anonymousCors, requireExactOrigin, sessionCors } from '../middlewares/c
 import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { apiError } from '../utils/api/api-utils.js';
 import { publicBookingRouter } from '../public-booking/public-booking.routes.js';
+import { createOtpRequestRouter, createOtpVerifyRouter } from './portal-otp.routes.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
 
@@ -12,6 +13,7 @@ export function createPublicApiRouter(): Router {
   router.use(anonymousCors);
   router.use(createPublicLimiter({ name: 'public-ip' }));
   router.use(express.json({ limit: PUBLIC_BODY_LIMIT }));
+  router.use('/providers', createOtpRequestRouter());
   router.use('/providers', publicBookingRouter);
   return router;
 }
@@ -24,6 +26,7 @@ export function createPortalSessionRouter(): Router {
   router.use(express.json({ limit: PUBLIC_BODY_LIMIT }));
   // Scoped here, not app-wide: the anonymous /v1/public class must never read cookies.
   router.use(cookieParser());
+  router.use(createOtpVerifyRouter());
   return router;
 }
 

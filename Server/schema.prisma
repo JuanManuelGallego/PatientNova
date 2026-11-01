@@ -34,6 +34,9 @@ model Patient {
 
   source RecordSource @default(PROVIDER)
 
+  // Provider kill switch for portal access (checked on every portal request).
+  portalAccessEnabled Boolean @default(true)
+
   notes            String? @db.Text
   appointmentTypeId String? @db.Uuid
 
@@ -50,6 +53,7 @@ model Patient {
   appointments  Appointment[]  @relation("PatientAppointments")
   reminders     Reminder[]     @relation("PatientReminders")
   medicalRecord MedicalRecord?
+  consents      PatientConsent[]
 
   @@index([userId])
   @@index([userId, status])
@@ -267,6 +271,8 @@ model User {
   googleConnection     GoogleConnection?
   googleOAuthStates    GoogleOAuthState[]
   availabilityRules    AvailabilityRule[]
+  portalOtps           PortalOtp[]
+  patientConsents      PatientConsent[]
 
   @@index([email])
   @@index([status])
@@ -301,6 +307,62 @@ model AvailabilityRule {
 
   @@index([userId, weekday])
   @@map("availability_rules")
+}
+
+// ─── Patient portal ──────────────────────────────────────────────────────────
+
+/// One-time email codes for the patient portal: one row per (provider, email), reused on resend.
+/// Stores only the email's blind index, never the address. Send limits and the attempt counter
+/// live here and are enforced under a row lock (src/portal/portal-otp.service.ts).
+model PortalOtp {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  emailHash       String    @db.VarChar(64)
+  codeHash        String    @db.VarChar(64)
+  expiresAt       DateTime
+  attempts        Int       @default(0)
+  consumedAt      DateTime?
+  lastSentAt      DateTime
+  /// Start of the rolling per-email send window and the sends counted in it.
+  sendWindowStart DateTime
+  sendCount       Int       @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, emailHash])
+  @@index([userId, lastSentAt])
+  @@index([lastSentAt])
+  @@map("portal_otps")
+}
+
+enum ConsentKind {
+  DATA_PROCESSING
+}
+
+/// A patient's acceptance of the portal privacy/data-processing text. Immutable; revocation
+/// sets `revokedAt`. At most one active row per (patient, kind, policyVersion), enforced by the
+/// raw partial unique index `patient_consents_active_key` (migration 20261101000000_portal_auth).
+model PatientConsent {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  kind          ConsentKind
+  policyVersion String      @db.VarChar(20)
+  acceptedAt    DateTime
+  ipAddress     String?     @db.VarChar(64)
+  userAgent     String?     @db.VarChar(512)
+  revokedAt     DateTime?
+
+  patientId String  @db.Uuid
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([userId])
+  @@map("patient_consents")
 }
 
 // ─── Google Connection ──────────────────────────────────────────────────────────

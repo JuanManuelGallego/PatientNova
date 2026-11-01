@@ -1,0 +1,29 @@
+meta {
+  name: Request OTP
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/public/providers/{{bookingSlug}}/otp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+}
+
+body:json {
+  {
+    "email": "{{portalEmail}}",
+    "captchaToken": "{{captchaToken}}"
+  }
+}
+
+docs {
+  Always 202 for a valid request (patient or not, throttled or not). `captchaToken` must be a
+  Turnstile token solved for the action `otp-request` on an allowed hostname; copy one from the
+  Portal's network tab. The code arrives by email.
+}
