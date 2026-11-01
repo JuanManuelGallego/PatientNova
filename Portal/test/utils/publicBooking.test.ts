@@ -50,6 +50,12 @@ describe("weekPage", () => {
         expect(weekPage("2026-11-09", "2026-11-09", "2026-11-16").hasNext).toBe(true);
         expect(weekPage("2026-11-09", "2026-11-09", "2026-11-15").hasNext).toBe(false);
     });
+
+    it("never inverts the range when today is past the last bookable date (stale profile, clock skew)", () => {
+        expect(weekPage("2026-11-10", "2026-11-10", "2026-11-09")).toEqual({
+            from: "2026-11-09", to: "2026-11-09", hasPrevious: false, hasNext: false,
+        });
+    });
 });
 
 describe("addCalendarDays", () => {

@@ -52,6 +52,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const days = slots ? groupSlotsByDay(slots.slots, timezone) : [];
     const day = days.find((d) => d.date === dayChoice) ?? days[ 0 ];
 
+    // Booking turned off (or the type withdrawn) while the page was open: same page as an unknown slug.
+    if (error?.status === 404) return <Unavailable />;
+
     const goToWeek = (start: string) => {
         setWeekStart(start);
         setDayChoice(null);

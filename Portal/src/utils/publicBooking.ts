@@ -42,14 +42,19 @@ export interface WeekPage {
     hasNext: boolean;
 }
 
-/** The 7-day page starting at `start`, kept between today and the last bookable date. */
+/**
+ * The 7-day page starting at `start`, kept between today and the last bookable date. `start` is clamped
+ * to the last bookable date so the range is never inverted when the device's today passes it (page left
+ * open past midnight, clock ahead of the server's).
+ */
 export function weekPage(start: string, today: string, lastBookableDate: string): WeekPage {
-    const end = addCalendarDays(start, WEEK_DAYS - 1);
+    const from = start < lastBookableDate ? start : lastBookableDate;
+    const end = addCalendarDays(from, WEEK_DAYS - 1);
     return {
-        from: start,
+        from,
         to: end < lastBookableDate ? end : lastBookableDate,
-        hasPrevious: start > today,
-        hasNext: addCalendarDays(start, WEEK_DAYS) <= lastBookableDate,
+        hasPrevious: from > today,
+        hasNext: addCalendarDays(from, WEEK_DAYS) <= lastBookableDate,
     };
 }
 

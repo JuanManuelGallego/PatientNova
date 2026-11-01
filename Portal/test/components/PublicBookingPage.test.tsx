@@ -30,9 +30,13 @@ const slots = {
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 const fetchMock = vi.fn();
 
-function routeFetch(profileStatus = 200) {
+function routeFetch(profileStatus = 200, slotsStatus = 200) {
     fetchMock.mockImplementation(async (url: string) => {
-        if (url.includes("/slots?")) return json(200, { success: true, data: slots });
+        if (url.includes("/slots?")) {
+            return slotsStatus === 200
+                ? json(200, { success: true, data: slots })
+                : json(slotsStatus, { success: false, error: "Provider not found" });
+        }
         if (profileStatus !== 200) return json(profileStatus, { success: false, error: "Provider not found" });
         return json(200, { success: true, data: provider });
     });
@@ -77,6 +81,13 @@ describe("PublicBookingPage", () => {
         routeFetch(404);
         render(<PublicBookingPage slug="nadie" />);
         expect(await screen.findByText("Esta página de reservas no está disponible")).toBeInTheDocument();
+    });
+
+    it("shows the unavailable page when the slots answer 404 (booking turned off meanwhile)", async () => {
+        routeFetch(200, 404);
+        render(<PublicBookingPage slug="dra-ana" />);
+        expect(await screen.findByText("Esta página de reservas no está disponible")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
     });
 
     it("offers a retry on server errors", async () => {
