@@ -1,0 +1,30 @@
+meta {
+  name: Accept Consent
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/portal/consent
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+  X-CSRF-Token: {{portalCsrfToken}}
+}
+
+body:json {
+  {
+    "accepted": true
+  }
+}
+
+docs {
+  Records data-processing consent at the server's current privacy policy version (the client never
+  sends a version). Always 204: it records a consent only for an existing patient with portal
+  access, and is a no-op otherwise. Needs the session cookie, the exact Origin and the CSRF token
+  from Verify OTP or Get Session.
+}

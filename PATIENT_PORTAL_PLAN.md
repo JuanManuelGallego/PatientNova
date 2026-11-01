@@ -286,7 +286,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - `patientRepository.findByEmail` takes no `tx` and ignores status.
 - Portal: `publicApi` and `portalApi` exist, and `portalApi` stores any `data.csrfToken` automatically. `TurnstileWidget` exists but nothing renders it yet. There is no public or portal mutation hook and no code input.
 
-**PR 3.1+3.2 — Server: schema, OTP request/verify, purge.**
+**PR 3.1+3.2 — Server: schema, OTP request/verify, purge.** Done (`54a6c2d`…`65677b7`).
 - **Schema.** Migration `20261101000000_portal_auth`, created with `--create-only`. Read the SQL and delete any DROP of the raw-only objects, then run `prisma generate`.
   - `Patient.portalAccessEnabled Boolean @default(true)`.
   - `PortalOtp`, one row per provider and email, upserted:
@@ -344,7 +344,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **Bruno.** A `Portal Auth` folder with Request OTP and Verify OTP. Verify sends an `Origin` header and uses `{{bookingSlug}}`.
 - **AGENTS.md.** Matrix rows, plus the rule that OTP limits live on `PortalOtp` under `FOR UPDATE` and the table stores only `emailHash`.
 
-**PR 3.3 — Server: session, patient resolution, consent.**
+**PR 3.3 — Server: session, patient resolution, consent.** Done (2026-11-01).
 - **`requirePortalSession`** (`src/portal/portal-session.middleware.ts`):
   - Reads `req.cookies.portal_session` and runs `verifyPortalToken`.
   - Type-guards `{typ: 'portal', userId, email, sid}` and sets `req.portal` (Express augmentation).
@@ -368,7 +368,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - When a row is created, it writes an audit `PATIENT_CONSENT` CREATE with `tx` and `required: true`.
   - The answer is always `204`.
 - **`POST /v1/portal/logout`** requires CSRF. It clears the cookie with the same name, path and domain and answers 204.
-  - *(Open, from the 3.1–3.2 review.)* Logout is stateless: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Decide here whether that is acceptable or whether `requirePortalSession` should check a stored `sid` (or a per-email session version).
+  - *(Resolved 2026-11-01 by the stateless-JWT decision above.)* Logout only clears the cookie: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Revocation is the per-request `portalAccessEnabled` check (through resolution) and the per-request `isBookingLive` check.
 - **Tests.** `test/integration/portal/portal-session.integration.test.ts`:
   - Token rejection, all 401:
     - a portal cookie on provider routes;

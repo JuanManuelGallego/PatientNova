@@ -120,6 +120,21 @@ export const patientRepository = {
     });
   },
 
+  /**
+   * Portal stage-2 lookup: the provider's non-deleted patient with this email blind index (at most one,
+   * by the partial unique index) and whether soft-deleted ones exist. Use only via `resolvePortalPatient`.
+   */
+  async findPortalMatch(userId: string, hash: string, tx?: TransactionClient) {
+    const rows = await (tx ?? prisma).patient.findMany({
+      where: { userId, emailHash: hash },
+      select: { id: true, status: true, portalAccessEnabled: true, isDeleted: true },
+    });
+    return {
+      active: rows.find((r) => !r.isDeleted) ?? null,
+      hasDeleted: rows.some((r) => r.isDeleted),
+    };
+  },
+
   async findById(id: string, userId: string, tx?: TransactionClient): Promise<Patient> {
     const patient = await (tx ?? prisma).patient.findFirst({ where: { id, userId } });
     if (!patient) throw new PatientNotFoundError(id);
