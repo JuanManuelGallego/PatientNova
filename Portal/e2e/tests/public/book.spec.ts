@@ -1,11 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { Env } from '../../utils/env';
 
-// Seeded by Server `db:seed-e2e` (seedPublicProvider): booking live, open 08:00-18:00 every day,
-// types "Control" (30 min, listed first by name) and "Primera consulta" (60 min), one in-person location.
 const SLUG = 'e2e-publica';
 
-/** Collects any request to the provider auth API; the public page must never make one. */
 function watchAuthCalls(page: Page): string[] {
   const calls: string[] = [];
   page.on('request', (req) => {
@@ -15,8 +12,6 @@ function watchAuthCalls(page: Page): string[] {
 }
 
 test.describe('public booking page', () => {
-  // The Vercel bypass headers (config `extraHTTPHeaders`, deployed previews) are meant for the Portal only:
-  // on the page's own API calls they trigger a CORS preflight the anonymous API rightly refuses.
   test.beforeEach(async ({ page }) => {
     await page.route(`${new URL(Env.apiBaseUrl).origin}/**`, (route) => {
       const headers = { ...route.request().headers() };

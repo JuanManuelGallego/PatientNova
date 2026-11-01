@@ -15,7 +15,6 @@ export const E2E_SEED = {
   appointmentTypeName: 'E2E Consulta',
   locationId: '00000000-0000-4000-8000-0000000000a2',
   locationName: 'E2E Consultorio',
-  // A second provider whose online booking is live, for the public /book pages (Portal e2e `public` projects).
   publicProviderEmail: 'e2e-public-provider@example.com',
   publicSlug: 'e2e-publica',
   publicTypeId: '00000000-0000-4000-8000-0000000000b1',
@@ -86,7 +85,6 @@ async function seedE2e() {
   console.log(`E2E seed ready for ${maskEmail(email)}`);
 }
 
-/** Never logs in (random password): it only backs the public booking page. Open 08:00-18:00 every day. */
 async function seedPublicProvider() {
   const booking = { bookingSlug: E2E_SEED.publicSlug, bookingEnabled: true, slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60 };
   const provider = await prisma.user.upsert({

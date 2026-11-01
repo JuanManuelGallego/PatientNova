@@ -1,14 +1,9 @@
 import { COMMON_TIMEZONES, fmtTimezoneLabel, zonedDateTimeParts } from "./TimeUtils";
 import type { PublicSlot } from "@/src/types/PublicBooking";
 
-/*
- * Helpers for the public booking page. Dates here are calendar days ("YYYY-MM-DD") in the provider's
- * zone; instants are always read through that zone (`zonedDateTimeParts`), never through `Date` getters.
- */
 
 export const WEEK_DAYS = 7;
 
-/** A "YYYY-MM-DD" calendar day moved by `days` (pure calendar math, no time zone). */
 export function addCalendarDays(day: string, days: number): string {
     const [ y, m, d ] = day.split("-").map(Number);
     return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
@@ -20,7 +15,6 @@ export interface SlotDay {
     afternoon: PublicSlot[];
 }
 
-/** Slots (sorted by start) grouped by their local date in `timezone`, split at 12:00 local. */
 export function groupSlotsByDay(slots: PublicSlot[], timezone: string): SlotDay[] {
     const days = new Map<string, SlotDay>();
     for (const slot of slots) {
@@ -42,11 +36,6 @@ export interface WeekPage {
     hasNext: boolean;
 }
 
-/**
- * The 7-day page starting at `start`, kept between today and the last bookable date. `start` is clamped
- * to the last bookable date so the range is never inverted when the device's today passes it (page left
- * open past midnight, clock ahead of the server's).
- */
 export function weekPage(start: string, today: string, lastBookableDate: string): WeekPage {
     const from = start < lastBookableDate ? start : lastBookableDate;
     const end = addCalendarDays(from, WEEK_DAYS - 1);
@@ -58,7 +47,6 @@ export function weekPage(start: string, today: string, lastBookableDate: string)
     };
 }
 
-/** A calendar day as "lun, 9 nov" (read as a date, not through any time zone). */
 export function fmtDayChip(day: string): string {
     return new Date(`${day}T12:00:00Z`).toLocaleDateString("es-CO", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
 }
@@ -69,7 +57,6 @@ export function fmtCop(value: number): string {
     return COP.format(value);
 }
 
-/** "Colombia (UTC-5) — Bogotá" for the zones the provider can pick, else "Bogota (GMT-5)". */
 export function timezoneName(timezone: string): string {
     return COMMON_TIMEZONES.find((z) => z.value === timezone)?.label ?? fmtTimezoneLabel(timezone);
 }

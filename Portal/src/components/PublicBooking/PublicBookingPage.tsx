@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- small, cacheable API images; next/image would proxy them through the Next server */
+/* eslint-disable @next/next/no-img-element */
 
 import { useState } from "react";
 import { API_BASE } from "@/src/config/api";
@@ -11,7 +11,6 @@ import { browserTimezone, fmtTime, todayFormattedString } from "@/src/utils/Time
 import { addCalendarDays, fmtCop, fmtDayChip, groupSlotsByDay, timezoneName, WEEK_DAYS, weekPage } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 
-/** The public booking page (read-only until Phase 4). Anonymous: only `publicApi`, never the provider auth API. */
 export function PublicBookingPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
 
@@ -52,7 +51,6 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const days = slots ? groupSlotsByDay(slots.slots, timezone) : [];
     const day = days.find((d) => d.date === dayChoice) ?? days[ 0 ];
 
-    // Booking turned off (or the type withdrawn) while the page was open: same page as an unknown slug.
     if (error?.status === 404) return <Unavailable />;
 
     const goToWeek = (start: string) => {

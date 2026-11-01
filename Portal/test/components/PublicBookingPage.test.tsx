@@ -21,7 +21,6 @@ const provider = {
     locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10" } ],
 };
 
-// 09:00 and 15:00 Bogota (UTC-5) on today's local date.
 const slots = {
     timezone: TZ,
     slots: [ `${today}T14:00:00.000Z`, `${today}T20:00:00.000Z` ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
@@ -54,7 +53,7 @@ describe("PublicBookingPage", () => {
         render(<PublicBookingPage slug="dra-ana" />);
 
         expect(await screen.findByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
-        expect(screen.getByText("AP")).toBeInTheDocument(); // initials, no avatar set
+        expect(screen.getByText("AP")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByText(/Consultorio Centro/)).toBeInTheDocument();
 

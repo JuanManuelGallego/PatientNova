@@ -7,10 +7,10 @@ const starts = (slots: { startUtc: string }[]) => slots.map((s) => s.startUtc);
 describe("groupSlotsByDay", () => {
     it("groups by the provider's local date and splits at local noon (Bogota)", () => {
         const days = groupSlotsByDay([
-            slot("2026-11-09T13:00:00.000Z"), // 08:00 Mon
-            slot("2026-11-09T17:00:00.000Z"), // 12:00 Mon
-            slot("2026-11-10T04:30:00.000Z"), // 23:30 Mon, already Tuesday in UTC
-            slot("2026-11-10T14:00:00.000Z"), // 09:00 Tue
+            slot("2026-11-09T13:00:00.000Z"),
+            slot("2026-11-09T17:00:00.000Z"),
+            slot("2026-11-10T04:30:00.000Z"),
+            slot("2026-11-10T14:00:00.000Z"),
         ], "America/Bogota");
         expect(days.map((d) => d.date)).toEqual([ "2026-11-09", "2026-11-10" ]);
         expect(starts(days[ 0 ]!.morning)).toEqual([ "2026-11-09T13:00:00.000Z" ]);
@@ -20,11 +20,11 @@ describe("groupSlotsByDay", () => {
 
     it("uses each instant's own offset across DST changes (New York)", () => {
         const days = groupSlotsByDay([
-            slot("2026-03-08T07:00:00.000Z"), // 03:00 EDT, just after the jump
-            slot("2026-03-09T03:30:00.000Z"), // 23:30 EDT, still Mar 8
-            slot("2026-11-01T05:30:00.000Z"), // 01:30 EDT
-            slot("2026-11-01T06:30:00.000Z"), // 01:30 EST (repeated hour)
-            slot("2026-11-01T17:00:00.000Z"), // 12:00 EST
+            slot("2026-03-08T07:00:00.000Z"),
+            slot("2026-03-09T03:30:00.000Z"),
+            slot("2026-11-01T05:30:00.000Z"),
+            slot("2026-11-01T06:30:00.000Z"),
+            slot("2026-11-01T17:00:00.000Z"),
         ], "America/New_York");
         expect(days.map((d) => d.date)).toEqual([ "2026-03-08", "2026-11-01" ]);
         expect(days[ 0 ]!.morning).toHaveLength(1);
