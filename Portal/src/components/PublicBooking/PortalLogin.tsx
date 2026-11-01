@@ -47,11 +47,16 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
     const [ email, setEmail ] = useState("");
     const [ code, setCode ] = useState("");
     const [ captchaToken, setCaptchaToken ] = useState<string | null>(null);
+    const [ captchaFailed, setCaptchaFailed ] = useState(false);
     const [ challenge, setChallenge ] = useState<string | null>(null);
     /** The normalized address the current `challenge` belongs to. */
     const [ sentTo, setSentTo ] = useState<string | null>(null);
     const [ cooldown, setCooldown ] = useCountdown();
     const request = useRequestOtp(slug);
+    const onCaptchaToken = (token: string | null) => {
+        setCaptchaToken(token);
+        if (token) setCaptchaFailed(false);
+    };
     const verify = useVerifyOtp(slug);
 
     const sendCode = async () => {
@@ -133,6 +138,9 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
                         disabled={!email.trim() || request.loading || (!codeAlreadySent && !captchaToken)}>
                         {request.loading ? "Enviando…" : codeAlreadySent ? "Ingresar el código enviado" : "Enviar código"}
                     </button>
+                    {!captchaToken && !captchaFailed && !codeAlreadySent && (
+                        <p className={styles.hint} aria-live="polite">Comprobando que eres una persona…</p>
+                    )}
                 </form>
             ) : (
                 <form className={styles.form} onSubmit={onSubmitCode}>
@@ -174,7 +182,9 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
             )}
 
             {/* Mounted across both steps: the resend needs a fresh token too. */}
-            <TurnstileWidget ref={widget} action={OTP_CAPTCHA_ACTION} onToken={setCaptchaToken} />
+            <div className={styles.captcha}>
+                <TurnstileWidget ref={widget} action={OTP_CAPTCHA_ACTION} onToken={onCaptchaToken} onError={() => setCaptchaFailed(true)} />
+            </div>
         </section>
     );
 }

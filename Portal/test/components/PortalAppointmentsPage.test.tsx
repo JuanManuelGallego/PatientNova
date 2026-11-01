@@ -9,11 +9,16 @@ import { csrfStore } from "@/src/api/base/csrfStore";
 vi.mock("@/src/components/TurnstileWidget", async () => {
     const { useImperativeHandle } = await import("react");
     return {
-        TurnstileWidget: ({ action, onToken, ref }: {
-            action: string; onToken: (t: string | null) => void; ref?: React.Ref<{ reset: () => void }>;
+        TurnstileWidget: ({ action, onToken, onError, ref }: {
+            action: string; onToken: (t: string | null) => void; onError?: () => void; ref?: React.Ref<{ reset: () => void }>;
         }) => {
             useImperativeHandle(ref, () => ({ reset: () => onToken(null) }), [ onToken ]);
-            return <button type="button" data-action={action} onClick={() => onToken(`captcha-${action}`)}>Resolver captcha</button>;
+            return (
+                <>
+                    <button type="button" data-action={action} onClick={() => onToken(`captcha-${action}`)}>Resolver captcha</button>
+                    <button type="button" onClick={() => onError?.()}>Fallar captcha</button>
+                </>
+            );
         },
     };
 });
@@ -151,8 +156,19 @@ describe("PortalAppointmentsPage", () => {
         await user.type(await screen.findByLabelText("Correo electrónico"), "ana@example.com");
         const submit = screen.getByRole("button", { name: "Enviar código" });
         expect(submit).toBeDisabled();
+        expect(screen.getByText("Comprobando que eres una persona…")).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
         expect(submit).toBeEnabled();
+        expect(screen.queryByText("Comprobando que eres una persona…")).not.toBeInTheDocument();
+    });
+
+    it("stops saying it is checking once the CAPTCHA widget fails (it shows its own error)", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await screen.findByText("Comprobando que eres una persona…");
+        await user.click(screen.getByRole("button", { name: "Fallar captcha" }));
+        expect(screen.queryByText("Comprobando que eres una persona…")).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Enviar código" })).toBeDisabled();
     });
 
     it("counts down the resend, then sends a new code that replaces the challenge", async () => {
@@ -220,6 +236,10 @@ describe("PortalAppointmentsPage", () => {
 
         expect(await screen.findByText("Aquí verás tus citas.")).toBeInTheDocument();
         expect(screen.getByText("ana@example.com")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Ver horarios disponibles" })).toHaveAttribute("href", `/book/${SLUG}`);
+        expect(screen.getByRole("heading", { name: "Mis citas" })).toBeInTheDocument();
+        expect(screen.getByText("Dra. Ana Pública")).toBeInTheDocument();
+        expect(screen.getByText("AP")).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
         expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();

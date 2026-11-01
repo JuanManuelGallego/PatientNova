@@ -4,7 +4,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
-import { API_BASE } from "@/src/config/api";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { useFetchPublicSlots } from "@/src/api/public-booking/useFetchPublicSlots";
 import type { PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
@@ -15,6 +14,7 @@ import {
 } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
+import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
 
 export function PublicBookingPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
@@ -26,15 +26,6 @@ export function PublicBookingPage({ slug }: { slug: string }) {
     else body = <BookingView slug={slug} provider={provider} />;
 
     return <PublicPageShell>{body}</PublicPageShell>;
-}
-
-function imageUrl(slug: string, kind: "avatar" | "logo") {
-    return `${API_BASE}/public/providers/${encodeURIComponent(slug)}/${kind}`;
-}
-
-function initials(name: string): string {
-    const words = name.split(/\s+/).filter((w) => w && !w.endsWith("."));
-    return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
 }
 
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
@@ -157,17 +148,14 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 }
 
 function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvider }) {
-    const [ avatarFailed, setAvatarFailed ] = useState(false);
     const [ logoFailed, setLogoFailed ] = useState(false);
     return (
         <section className={styles.hero}>
             {provider.hasLogo && !logoFailed && (
-                <img className={styles.logo} src={imageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
+                <img className={styles.logo} src={providerImageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
             )}
             <div className={styles.identity}>
-                {provider.hasAvatar && !avatarFailed
-                    ? <img className={styles.avatar} src={imageUrl(slug, "avatar")} alt="" onError={() => setAvatarFailed(true)} />
-                    : <div className={styles.avatar} aria-hidden="true">{initials(provider.displayName)}</div>}
+                <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
                 <div>
                     <h1 className={styles.name}>{provider.displayName}</h1>
                     {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}

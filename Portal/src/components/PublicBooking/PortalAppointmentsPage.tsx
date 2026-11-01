@@ -10,6 +10,7 @@ import type { PortalSession } from "@/src/types/PortalSession";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { PortalLogin } from "./PortalLogin";
 import { PortalConsent } from "./PortalConsent";
+import { ProviderAvatar } from "./ProviderAvatar";
 import styles from "./Portal.module.css";
 
 /** `/book/[slug]/appointments`: OTP login, consent, then the patient's appointments (Phase 4/5). */
@@ -28,7 +29,13 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
                         <ChevronLeft size={18} aria-hidden="true" />
                         Horarios disponibles
                     </Link>
-                    <p className={styles.provider}>{provider.displayName}</p>
+                    <div className={styles.identity}>
+                        <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
+                        <div>
+                            <p className={styles.providerName}>{provider.displayName}</p>
+                            {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}
+                        </div>
+                    </div>
                 </header>
                 <PortalArea slug={slug} />
             </>
@@ -63,10 +70,10 @@ function PortalArea({ slug }: { slug: string }) {
             />
         );
     }
-    return <SignedIn session={session} onLoggedOut={() => { setNotice(undefined); clear(); }} />;
+    return <SignedIn slug={slug} session={session} onLoggedOut={() => { setNotice(undefined); clear(); }} />;
 }
 
-function SignedIn({ session, onLoggedOut }: { session: PortalSession; onLoggedOut: () => void }) {
+function SignedIn({ slug, session, onLoggedOut }: { slug: string; session: PortalSession; onLoggedOut: () => void }) {
     const { logout, loading, error } = useLogout();
 
     const onLogout = async () => {
@@ -84,10 +91,13 @@ function SignedIn({ session, onLoggedOut }: { session: PortalSession; onLoggedOu
         <section className={`dash-card ${styles.card}`} aria-labelledby="portal-signed-in">
             <h1 id="portal-signed-in" className={styles.title}>Mis citas</h1>
             <p className={styles.lead}>Aquí verás tus citas.</p>
+            <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
+                Ver horarios disponibles
+            </Link>
             {error && <p className={`error-inline ${styles.error}`} role="alert">No pudimos cerrar la sesión. {error}</p>}
             <div className={styles.account}>
                 <span className={styles.muted}>Sesión iniciada como <strong className={styles.email}>{session.email}</strong></span>
-                <button type="button" className="btn-secondary" disabled={loading} onClick={() => void onLogout()}>
+                <button type="button" className={styles.linkButton} disabled={loading} onClick={() => void onLogout()}>
                     {loading ? "Cerrando…" : "Cerrar sesión"}
                 </button>
             </div>
