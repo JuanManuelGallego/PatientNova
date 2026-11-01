@@ -47,8 +47,31 @@ export function weekPage(start: string, today: string, lastBookableDate: string)
     };
 }
 
-export function fmtDayChip(day: string): string {
-    return new Date(`${day}T12:00:00Z`).toLocaleDateString("es-CO", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+export function calendarDaysBetween(from: string, to: string): string[] {
+    const days: string[] = [];
+    for (let day = from; day <= to; day = addCalendarDays(day, 1)) days.push(day);
+    return days;
+}
+
+const asDate = (day: string) => new Date(`${day}T12:00:00Z`);
+const part = (day: string, options: Intl.DateTimeFormatOptions) =>
+    asDate(day).toLocaleDateString("es-CO", { timeZone: "UTC", ...options }).replace(/\.$/, "");
+
+export function fmtDayParts(day: string): { weekday: string; dayNumber: string; full: string } {
+    return {
+        weekday: part(day, { weekday: "short" }),
+        dayNumber: part(day, { day: "numeric" }),
+        full: part(day, { weekday: "long", day: "numeric", month: "long" }),
+    };
+}
+
+export function fmtWeekRange(from: string, to: string): string {
+    const month = (day: string) => part(day, { month: "short" });
+    const day = (d: string) => part(d, { day: "numeric" });
+    if (from === to) return `${day(from)} ${month(from)}`;
+    return month(from) === month(to)
+        ? `${day(from)} – ${day(to)} ${month(to)}`
+        : `${day(from)} ${month(from)} – ${day(to)} ${month(to)}`;
 }
 
 const COP = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });

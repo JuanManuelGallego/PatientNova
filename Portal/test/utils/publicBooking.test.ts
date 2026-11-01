@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCalendarDays, fmtCop, groupSlotsByDay, weekPage } from "@/src/utils/publicBooking";
+import { addCalendarDays, calendarDaysBetween, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, weekPage } from "@/src/utils/publicBooking";
 
 const slot = (startUtc: string) => ({ startUtc, endUtc: startUtc });
 const starts = (slots: { startUtc: string }[]) => slots.map((s) => s.startUtc);
@@ -69,5 +69,26 @@ describe("addCalendarDays", () => {
 describe("fmtCop", () => {
     it("formats Colombian pesos without decimals", () => {
         expect(fmtCop(150000).replace(/\s/g, " ")).toMatch(/^\$ ?150\.000$/);
+    });
+});
+
+describe("calendarDaysBetween", () => {
+    it("lists every day from `from` to `to`, inclusive", () => {
+        expect(calendarDaysBetween("2026-12-30", "2027-01-02")).toEqual([ "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02" ]);
+        expect(calendarDaysBetween("2026-11-09", "2026-11-09")).toEqual([ "2026-11-09" ]);
+    });
+});
+
+describe("fmtDayParts", () => {
+    it("reads the calendar day, without trailing abbreviation dots", () => {
+        expect(fmtDayParts("2026-11-09")).toEqual({ weekday: "lun", dayNumber: "9", full: "lunes, 9 de noviembre" });
+    });
+});
+
+describe("fmtWeekRange", () => {
+    it("names the month once inside a month, both months across one, and one day alone", () => {
+        expect(fmtWeekRange("2026-11-09", "2026-11-15")).toBe("9 – 15 nov");
+        expect(fmtWeekRange("2026-12-28", "2027-01-03")).toBe("28 dic – 3 ene");
+        expect(fmtWeekRange("2026-11-09", "2026-11-09")).toBe("9 nov");
     });
 });

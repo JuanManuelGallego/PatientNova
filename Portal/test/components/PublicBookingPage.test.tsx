@@ -57,17 +57,42 @@ describe("PublicBookingPage", () => {
         expect(screen.getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByText(/Consultorio Centro/)).toBeInTheDocument();
 
-        const morning = await screen.findByRole("group", { name: "Mañana" });
-        expect(within(morning).getAllByRole("button")).toHaveLength(1);
-        expect(within(screen.getByRole("group", { name: "Tarde" })).getAllByRole("button")).toHaveLength(1);
-        expect(screen.getByRole("button", { name: "Reservar" })).toBeDisabled();
+        const morning = await screen.findByRole("list", { name: "Mañana" });
+        expect(within(morning).getAllByRole("listitem")).toHaveLength(1);
+        expect(within(screen.getByRole("list", { name: "Tarde" })).getAllByRole("listitem")).toHaveLength(1);
+        expect(within(morning).queryByRole("button")).not.toBeInTheDocument();
+        expect(screen.getByText(/Pronto podrás reservar aquí/)).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Reservar" })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
+    });
+
+    it("shows the whole week, with days without slots disabled", async () => {
+        routeFetch();
+        render(<PublicBookingPage slug="dra-ana" />);
+        const week = await screen.findByRole("group", { name: "Días de la semana" });
+        const days = within(week).getAllByRole("button");
+        expect(days).toHaveLength(7);
+        expect(days[ 0 ]).toBeEnabled();
+        expect(days[ 0 ]).toHaveAttribute("aria-pressed", "true");
+        for (const closed of days.slice(1)) {
+            expect(closed).toBeDisabled();
+            expect(closed).toHaveAccessibleName(/sin horarios$/);
+        }
+    });
+
+    it("offers the next week when this one has no slots", async () => {
+        routeFetch();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await screen.findByRole("list", { name: "Mañana" });
+        await userEvent.click(screen.getByRole("button", { name: "Semana siguiente" }));
+        expect(await screen.findByText("No hay horarios disponibles esta semana.")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Ver la semana siguiente" })).toBeInTheDocument();
     });
 
     it("reloads slots for the chosen type and pages to the next week", async () => {
         routeFetch();
         render(<PublicBookingPage slug="dra-ana" />);
-        await screen.findByRole("group", { name: "Mañana" });
+        await screen.findByRole("list", { name: "Mañana" });
 
         await userEvent.click(screen.getByRole("button", { name: /Control/ }));
         await waitFor(() => expect(fetchMock.mock.calls.some(([ url ]) => String(url).includes("typeId=t2"))).toBe(true));
@@ -101,7 +126,7 @@ describe("PublicBookingPage", () => {
     it("only calls the anonymous public API, without credentials", async () => {
         routeFetch();
         render(<PublicBookingPage slug="dra-ana" />);
-        await screen.findByRole("group", { name: "Mañana" });
+        await screen.findByRole("list", { name: "Mañana" });
         for (const [ url, init ] of fetchMock.mock.calls) {
             expect(String(url)).toMatch(/\/v1\/public\/providers\/dra-ana/);
             expect((init as RequestInit).credentials).toBe("omit");

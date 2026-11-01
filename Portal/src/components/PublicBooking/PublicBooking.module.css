@@ -1,49 +1,41 @@
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--c-page-bg);
-  padding: 24px 16px 48px;
+  padding: 32px 16px 48px;
 }
 
 .container {
-  max-width: 720px;
+  max-width: 640px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-.header {
+.hero {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 40px;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 4px;
 }
 
 .logo {
-  max-height: 40px;
-  max-width: 160px;
+  align-self: flex-start;
+  max-height: 44px;
+  max-width: 180px;
   object-fit: contain;
 }
 
-.brand {
-  font-size: 13px;
-  color: var(--c-gray-400);
-}
-
-.card {
-  padding: 20px;
-}
-
-.provider {
+.identity {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .avatar {
-  width: 72px;
-  height: 72px;
+  width: 88px;
+  height: 88px;
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
@@ -51,29 +43,113 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
   color: var(--c-white);
 }
 
 .name {
-  font-size: 20px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--c-gray-900);
+  margin: 0;
+}
+
+.jobTitle {
+  font-size: 16px;
+  color: var(--c-gray-500);
+  margin: 4px 0 0;
+}
+
+.locations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--c-gray-700);
+}
+
+.locationIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--c-brand);
+}
+
+.locationName {
+  display: block;
+  font-weight: 600;
+  color: var(--c-gray-900);
+}
+
+.address {
+  display: block;
+  color: var(--c-gray-500);
+}
+
+.flow {
+  padding: 8px 20px 20px;
+}
+
+.notice {
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-brand-light);
+  color: var(--c-gray-900);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.step {
+  padding-top: 20px;
+}
+
+.step + .step {
+  margin-top: 20px;
+  border-top: 1px solid var(--c-gray-100);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--c-gray-900);
   margin: 0;
 }
 
-.muted {
-  font-size: 14px;
-  color: var(--c-gray-500);
-  margin: 2px 0 0;
-}
-
-.sectionTitle {
-  font-size: 16px;
+.stepNumber {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-brand-light);
+  color: var(--c-brand);
+  font-size: 13px;
   font-weight: 700;
-  color: var(--c-gray-900);
-  margin: 0 0 12px;
 }
 
 .options {
@@ -83,7 +159,11 @@
 }
 
 .option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   text-align: left;
+  min-height: 44px;
   padding: 12px 14px;
   border-radius: var(--r-lg);
   border: 1px solid var(--c-gray-200);
@@ -91,68 +171,154 @@
   cursor: pointer;
   font: inherit;
   color: var(--c-gray-900);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.option:hover {
+  border-color: var(--c-gray-300);
 }
 
 .option[aria-pressed="true"] {
   border-color: var(--c-brand);
+  background: var(--c-brand-light);
   box-shadow: 0 0 0 1px var(--c-brand);
 }
 
-.optionMeta {
-  display: block;
-  font-size: 13px;
-  color: var(--c-gray-500);
-  margin-top: 2px;
+.optionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
 }
 
-.locations {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--c-gray-700);
+.optionName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.optionPrice {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionMeta {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--c-gray-500);
 }
 
 .weekNav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  gap: 4px;
 }
 
 .weekLabel {
+  min-width: 96px;
+  text-align: center;
   font-size: 14px;
   font-weight: 600;
   color: var(--c-gray-700);
+  white-space: nowrap;
 }
 
-.chips {
+.iconButton {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--c-gray-700);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--c-gray-100);
+}
+
+.iconButton:disabled {
+  color: var(--c-gray-300);
+  cursor: default;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.day {
+  min-height: 60px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.chip {
-  padding: 8px 12px;
-  border-radius: var(--r-full);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: var(--r-lg);
   border: 1px solid var(--c-gray-200);
   background: var(--c-surface);
   font: inherit;
-  font-size: 14px;
   color: var(--c-gray-900);
   cursor: pointer;
+  transition: border-color 0.15s;
 }
 
-.chip[aria-pressed="true"] {
+.day:hover:not(:disabled) {
+  border-color: var(--c-gray-300);
+}
+
+.day[aria-pressed="true"] {
   background: var(--c-brand);
   border-color: var(--c-brand);
   color: var(--c-white);
+}
+
+.day:disabled {
+  background: transparent;
+  border-color: var(--c-gray-100);
+  color: var(--c-gray-400);
+  cursor: default;
+}
+
+.dayWeekday {
+  font-size: 12px;
+  text-transform: capitalize;
+  opacity: 0.8;
+}
+
+.dayNumber {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.option:focus-visible,
+.day:focus-visible,
+.iconButton:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+.zoneWarning {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--c-warning-dark);
+}
+
+.zoneWarning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .period {
@@ -162,17 +328,71 @@
   margin: 0 0 8px;
 }
 
+.times {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.time {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-md);
+  background: var(--c-gray-50);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-gray-900);
+}
+
+.avatarSkeleton {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.daySkeleton {
+  height: 60px;
+  border-radius: var(--r-lg);
+}
+
+.timeSkeleton {
+  height: 44px;
+  border-radius: var(--r-md);
+}
+
+.skeletonLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.muted {
+  font-size: 14px;
+  color: var(--c-gray-500);
+  margin: 0;
+}
+
 .note {
   font-size: 13px;
   color: var(--c-gray-500);
-  margin: 4px 0 0;
+  margin: 0;
 }
 
-.footer {
+.empty {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 20px;
+  text-align: center;
 }
 
 .state {
@@ -184,10 +404,41 @@
   gap: 12px;
 }
 
-@media (max-width: 560px) {
-  .weekLabel {
-    order: -1;
-    flex-basis: 100%;
-    text-align: center;
+.stateTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-gray-900);
+  margin: 0;
+}
+
+@media (max-width: 420px) {
+  .name {
+    font-size: 24px;
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 26px;
+  }
+
+  .flow {
+    padding: 4px 14px 16px;
+  }
+
+  .days {
+    gap: 4px;
+  }
+
+  .stepHead {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option,
+  .day,
+  .iconButton {
+    transition: none;
   }
 }

@@ -29,8 +29,9 @@ test.describe('public booking page', () => {
     await expect(page.getByText('Psicóloga')).toBeVisible();
     await expect(page.getByRole('button', { name: /Control/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByText(/Consultorio Centro/)).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Días con horarios' }).getByRole('button').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Reservar' })).toBeDisabled();
+    await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Tarde' }).getByRole('listitem').first()).toBeVisible();
+    await expect(page.getByText(/Pronto podrás reservar aquí/)).toBeVisible();
     await expect(page.getByText(/Horario de Colombia/)).toBeVisible();
 
     await page.waitForLoadState('networkidle');
@@ -39,13 +40,13 @@ test.describe('public booking page', () => {
 
   test('switching the type reloads the slots for it', async ({ page }) => {
     await page.goto(`/book/${SLUG}`);
-    await expect(page.getByRole('group', { name: 'Días con horarios' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
 
     const reload = page.waitForRequest((req) => req.url().includes('/slots?') && req.url().includes('00000000-0000-4000-8000-0000000000b1'));
     await page.getByRole('button', { name: /Primera consulta/ }).click();
     await reload;
     await expect(page.getByRole('button', { name: /Primera consulta/ })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('group', { name: 'Días con horarios' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
   });
 
   test('pages forward a week and back, never before today', async ({ page }) => {
