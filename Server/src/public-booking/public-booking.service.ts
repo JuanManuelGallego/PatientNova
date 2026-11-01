@@ -37,6 +37,8 @@ export const publicBookingService = {
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
+      // Last local date the horizon allows (it ends at the start of today + maxHorizonDays), for week paging.
+      lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,
         name: t.name,
