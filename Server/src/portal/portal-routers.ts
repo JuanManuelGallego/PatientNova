@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import { anonymousCors, requireExactOrigin, sessionCors } from '../middlewares/cors.js';
 import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { apiError } from '../utils/api/api-utils.js';
+import { publicBookingRouter } from '../public-booking/public-booking.routes.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
 
@@ -11,6 +12,7 @@ export function createPublicApiRouter(): Router {
   router.use(anonymousCors);
   router.use(createPublicLimiter({ name: 'public-ip' }));
   router.use(express.json({ limit: PUBLIC_BODY_LIMIT }));
+  router.use('/providers', publicBookingRouter);
   return router;
 }
 

@@ -59,12 +59,13 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `47` files, `575` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
 | App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF on cookie-authenticated writes, CORS allow/reject, rate limit + webhooks exempt from it (stay last: limiter is process-wide per IP) |
 | Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook (400 on failure, 503 on provider outage), public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
+| Public booking (routes) | `test/integration/public-booking/public-booking.routes.integration.test.ts` | `/v1/public/providers/:slug` (+ `/slots`, `/avatar`, `/logo`) on an app wired like `app.ts` with the portal on: identical 404 for unknown/malformed/reserved/disabled/not-ready/inactive/deleted providers, exact allow-listed profile keys (no ids but type/location, no `instructions`), hidden non-bookable/inactive/deleted/virtual types and locations, image allow-list (PNG/JPEG/WebP) + `nosniff` + `Cross-Origin-Resource-Policy: cross-origin`, slots in the provider zone with the type duration (client `duration` ignored), active appointments (buffered) and blocked time excluded but not cancelled/deleted, provider isolation, foreign type 404, range/date 400s, no cookies or credentialed CORS |
 | Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
 | Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, `cancelledBy` set/cleared, past-appointment lock (plain edits OK, no move/reactivate into the past), create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
 | Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
@@ -206,6 +207,13 @@ Suite: `47` files, `575` tests, all against real Postgres, `tsc --noEmit` clean.
   slot and booking endpoints must gate on `bookingSettingsService.isBookingLive(userId, tx)` (portal on, provider
   active and not deleted, enabled, ready) inside the booking transaction after `withProviderLock`, and answer as for
   an unknown slug when it is false. Never re-derive that check elsewhere.
+- Public booking (`src/public-booking/`, mounted at `/v1/public/providers` inside `createPublicApiRouter()`): turn a slug
+  into a provider only with `publicBookingService.resolveProvider` (malformed, unknown and not-live slugs all throw the
+  same `ProviderNotFoundError`). Public availability goes through `generateSlots`/`isSlotAvailable` only; busy time is
+  `ACTIVE_STATUSES` appointments (`src/appointments/appointment-status.ts`) plus non-deleted blocked time. Public DTOs
+  are allow-lists: never return `userId`, contact details, settings or location `instructions`. Images are served as
+  bytes from data URLs of an allowed type only, with `Cross-Origin-Resource-Policy: cross-origin` (helmet defaults to
+  `same-origin`, which blocks the Portal's `<img>`); the Portal CSP `img-src` allows the API origin.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
   `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,

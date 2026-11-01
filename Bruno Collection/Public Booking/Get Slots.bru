@@ -1,0 +1,17 @@
+meta {
+  name: Get Slots
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/public/providers/{{bookingSlug}}/slots?typeId={{typeId}}&from=2026-11-09&to=2026-11-15
+  body: none
+  auth: none
+}
+
+params:query {
+  typeId: {{typeId}}
+  from: 2026-11-09
+  to: 2026-11-15
+}
