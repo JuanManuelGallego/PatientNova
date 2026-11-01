@@ -8,11 +8,6 @@ export interface ConsentRequestMeta {
   userAgent?: string | undefined;
 }
 
-/**
- * Records the patient's data-processing consent for `policyVersion` once. Idempotent and race-safe:
- * concurrent callers leave one row, and only the caller that inserted it writes the audit row
- * (inside `tx`, required). The only way to record consent (Phase 3 session, 4.1 booking, 6.3).
- */
 export async function ensureCurrentConsent(
   tx: TransactionClient,
   patient: { patientId: string; userId: string },

@@ -42,12 +42,6 @@ function isPortalClaims(payload: unknown): payload is PortalClaims {
 
 const deny = (res: Response) => apiError(res, 'Invalid session', 401);
 
-/**
- * Authenticates the patient portal session cookie and sets `req.portal`. Every failure (missing,
- * tampered, expired, provider token, provider no longer live) is the same 401. Mount it on every
- * session route, followed by `requirePortalCsrf`; scope every query by `req.portal`, never by
- * client-supplied ids.
- */
 export async function requirePortalSession(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token: unknown = req.cookies?.[PORTAL_COOKIE_NAME];
   if (typeof token !== 'string' || token.length === 0) return deny(res);

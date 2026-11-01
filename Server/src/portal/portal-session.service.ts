@@ -9,7 +9,6 @@ import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
-/** Same keys and value types for every resolution outcome: nothing here reveals whether a patient exists. */
 export interface PortalSessionView {
   email: string;
   expiresAt: string;
@@ -35,10 +34,6 @@ export const portalSessionService = {
     };
   },
 
-  /**
-   * Records consent at the current policy version for an existing patient with portal access; a no-op
-   * for every other outcome (the caller answers 204 either way). New patients consent in the 4.1 booking.
-   */
   async acceptConsent(session: PortalSessionContext, meta: ConsentRequestMeta): Promise<void> {
     const auditContext = portalPatientAuditContext({
       userId: session.userId,

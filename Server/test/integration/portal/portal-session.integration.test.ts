@@ -38,7 +38,6 @@ function buildApp() {
   a.use(helmet());
   a.use('/v1/public', createPublicApiRouter(), portalNotFound);
   a.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
-  // A provider route, wired like app.ts, to check that portal sessions are rejected there.
   a.get('/v1/users/me', cookieParser(), authenticate, (_req, res) => { res.json({ ok: true }); });
   a.use(errorHandler);
   return a;

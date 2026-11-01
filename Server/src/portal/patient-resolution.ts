@@ -8,13 +8,6 @@ export interface PortalIdentity {
   email: string;
 }
 
-/**
- * Outcome of matching a verified email to a provider's patient. It drives behavior only and must
- * never reach a response: callers answer the same shape for every outcome.
- *   - patient:     one active, non-deleted patient with portal access
- *   - unavailable: revoked (`portalAccessEnabled=false`), INACTIVE, or only soft-deleted matches (until 6.6)
- *   - none:        no patient has this email
- */
 export type PortalPatientResolution =
   | { kind: 'patient'; patientId: string }
   | { kind: 'unavailable' }
@@ -32,7 +25,6 @@ export function classifyPortalMatch(match: PortalMatch): PortalPatientResolution
   return hasDeleted ? { kind: 'unavailable' } : { kind: 'none' };
 }
 
-/** The single stage-2 patient resolution for portal sessions. Never match portal patients any other way. */
 export async function resolvePortalPatient(identity: PortalIdentity, tx?: TransactionClient): Promise<PortalPatientResolution> {
   const hash = emailHash(identity.email);
   if (!hash) return { kind: 'none' };

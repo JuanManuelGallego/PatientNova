@@ -120,10 +120,6 @@ export const patientRepository = {
     });
   },
 
-  /**
-   * Portal stage-2 lookup: the provider's non-deleted patient with this email blind index (at most one,
-   * by the partial unique index) and whether soft-deleted ones exist. Use only via `resolvePortalPatient`.
-   */
   async findPortalMatch(userId: string, hash: string, tx?: TransactionClient) {
     const rows = await (tx ?? prisma).patient.findMany({
       where: { userId, emailHash: hash },
