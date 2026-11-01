@@ -1,4 +1,4 @@
-import { COMMON_TIMEZONES, fmtTimezoneLabel, zonedDateTimeParts } from "./TimeUtils";
+import { COMMON_TIMEZONES, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
 import type { PublicSlot } from "@/src/types/PublicBooking";
 
 
@@ -45,6 +45,17 @@ export function weekPage(start: string, today: string, lastBookableDate: string)
         hasPrevious: from > today,
         hasNext: addCalendarDays(from, WEEK_DAYS) <= lastBookableDate,
     };
+}
+
+const ZONE_PADDING_DAYS = 2;
+
+export function slotQueryRange(from: string, to: string): { from: string; to: string } {
+    return { from: addCalendarDays(from, -ZONE_PADDING_DAYS), to: addCalendarDays(to, ZONE_PADDING_DAYS) };
+}
+
+export function lastBookableDateIn(zone: string, lastBookableDate: string, providerZone: string): string {
+    const horizonEnd = Date.parse(localDateTimeToUtc(addCalendarDays(lastBookableDate, 1), "00:00:00", providerZone));
+    return todayFormattedString(zone, new Date(horizonEnd - 1));
 }
 
 export function calendarDaysBetween(from: string, to: string): string[] {

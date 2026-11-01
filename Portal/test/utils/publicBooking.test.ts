@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addCalendarDays, calendarDaysBetween, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, weekPage } from "@/src/utils/publicBooking";
+import { addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, weekPage } from "@/src/utils/publicBooking";
 
 const slot = (startUtc: string) => ({ startUtc, endUtc: startUtc });
 const starts = (slots: { startUtc: string }[]) => slots.map((s) => s.startUtc);
@@ -90,5 +90,21 @@ describe("fmtWeekRange", () => {
         expect(fmtWeekRange("2026-11-09", "2026-11-15")).toBe("9 – 15 nov");
         expect(fmtWeekRange("2026-12-28", "2027-01-03")).toBe("28 dic – 3 ene");
         expect(fmtWeekRange("2026-11-09", "2026-11-09")).toBe("9 nov");
+    });
+});
+
+describe("slotQueryRange", () => {
+    it("pads the patient's week by two days each side, enough for any two zones", () => {
+        expect(slotQueryRange("2026-11-09", "2026-11-15")).toEqual({ from: "2026-11-07", to: "2026-11-17" });
+    });
+});
+
+describe("lastBookableDateIn", () => {
+    it("converts the provider's last bookable date to the patient's calendar", () => {
+        expect(lastBookableDateIn("America/Bogota", "2026-12-30", "America/Bogota")).toBe("2026-12-30");
+        expect(lastBookableDateIn("Asia/Tokyo", "2026-12-30", "America/Bogota")).toBe("2026-12-31");
+        expect(lastBookableDateIn("Pacific/Honolulu", "2026-12-30", "America/Bogota")).toBe("2026-12-30");
+        expect(lastBookableDateIn("Pacific/Honolulu", "2026-12-30", "Asia/Tokyo")).toBe("2026-12-30");
+        expect(lastBookableDateIn("Etc/GMT+12", "2026-12-30", "Pacific/Kiritimati")).toBe("2026-12-29");
     });
 });

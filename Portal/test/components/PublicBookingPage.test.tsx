@@ -3,9 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicBookingPage } from "@/src/components/PublicBooking/PublicBookingPage";
 import { todayFormattedString } from "@/src/utils/TimeUtils";
+import { addCalendarDays } from "@/src/utils/publicBooking";
 
 const TZ = "America/Bogota";
 const today = todayFormattedString(TZ);
+
+const patientZone = vi.hoisted(() => ({ value: "America/Bogota" }));
+vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
+    ...await importOriginal<typeof import("@/src/utils/TimeUtils")>(),
+    browserTimezone: () => patientZone.value,
+}));
 
 const provider = {
     displayName: "Dra. Ana Pública",
@@ -21,10 +28,11 @@ const provider = {
     locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10" } ],
 };
 
-const slots = {
+let slots = {
     timezone: TZ,
     slots: [ `${today}T14:00:00.000Z`, `${today}T20:00:00.000Z` ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
 };
+const defaultSlots = slots;
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 const fetchMock = vi.fn();
@@ -42,6 +50,8 @@ function routeFetch(profileStatus = 200, slotsStatus = 200) {
 }
 
 beforeEach(() => {
+    patientZone.value = TZ;
+    slots = defaultSlots;
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
 });
@@ -64,6 +74,29 @@ describe("PublicBookingPage", () => {
         expect(screen.getByText(/Pronto podrás reservar aquí/)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reservar" })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
+    });
+
+    it("shows days and times in the patient's zone, not the provider's", async () => {
+        patientZone.value = "Asia/Tokyo";
+        const tokyoToday = todayFormattedString("Asia/Tokyo");
+        const tomorrow = addCalendarDays(tokyoToday, 1);
+        slots = {
+            timezone: TZ,
+            slots: [ `${tomorrow}T01:00:00.000Z`, `${tomorrow}T06:00:00.000Z` ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
+        };
+        routeFetch();
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        const morning = await screen.findByRole("list", { name: "Mañana" });
+        expect(morning).toHaveTextContent(/10:00/);
+        expect(screen.getByRole("list", { name: "Tarde" })).toHaveTextContent(/03:00/);
+        const week = screen.getByRole("group", { name: "Días de la semana" });
+        expect(within(week).getAllByRole("button")[ 1 ]).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByText(/Horas en tu zona horaria/)).toHaveTextContent(/Tokio|Tokyo/);
+
+        const url = new URL(String(fetchMock.mock.calls.find(([ u ]) => String(u).includes("/slots?"))![ 0 ]));
+        expect(url.searchParams.get("from")).toBe(addCalendarDays(tokyoToday, -2));
+        expect(url.searchParams.get("to")).toBe(addCalendarDays(tokyoToday, 8));
     });
 
     it("shows the whole week, with days without slots disabled", async () => {

@@ -32,7 +32,7 @@ test.describe('public booking page', () => {
     await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
     await expect(page.getByRole('list', { name: 'Tarde' }).getByRole('listitem').first()).toBeVisible();
     await expect(page.getByText(/Pronto podrás reservar aquí/)).toBeVisible();
-    await expect(page.getByText(/Horario de Colombia/)).toBeVisible();
+    await expect(page.getByText(/Horas en tu zona horaria: Colombia/)).toBeVisible();
 
     await page.waitForLoadState('networkidle');
     expect(authCalls).toEqual([]);

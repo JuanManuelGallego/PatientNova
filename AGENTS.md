@@ -217,8 +217,10 @@ Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
   `same-origin`, which blocks the Portal's `<img>`); the Portal CSP `img-src` allows the API origin.
 - Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
   fetch only through `publicApi` via `usePublicQuery` (`src/api/base/`), never `useApiQuery`/`fetchWithAuth`. They show
-  times in the provider's zone from the response (passed explicitly to `TimeUtils`), group by local date with
-  `src/utils/publicBooking.ts`, and render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
+  times only in the patient's device zone (`browserTimezone()`, passed explicitly to `TimeUtils`), never the provider's:
+  weeks are the patient's calendar days, the slots query (provider dates) is padded with `slotQueryRange`, the horizon
+  is converted with `lastBookableDateIn`, and slots are grouped by the patient's local date with
+  `src/utils/publicBooking.ts`. They render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
   (pinned in `test/proxy.test.ts`). E2E: `db:seed-e2e` seeds a second, booking-live provider (`e2e-publica`) for the
   `public`/`public-mobile` projects, so the API must run with `ENABLE_PORTAL=true` (set in the CI e2e job; set it locally
   too). Specs strip the Vercel bypass headers from API calls, since the anonymous CORS refuses them.

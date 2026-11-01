@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { API_BASE } from "@/src/config/api";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { useFetchPublicSlots } from "@/src/api/public-booking/useFetchPublicSlots";
@@ -10,7 +10,8 @@ import type { ApiClientError } from "@/src/api/base/apiClients";
 import type { PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import { browserTimezone, fmtTime, todayFormattedString } from "@/src/utils/TimeUtils";
 import {
-    addCalendarDays, calendarDaysBetween, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, timezoneName, WEEK_DAYS, weekPage,
+    addCalendarDays, calendarDaysBetween, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, lastBookableDateIn, slotQueryRange,
+    timezoneName, WEEK_DAYS, weekPage,
 } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 
@@ -40,15 +41,17 @@ function initials(name: string): string {
 }
 
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
-    const { timezone } = provider;
+    const timezone = browserTimezone();
     const today = todayFormattedString(timezone);
     const [ typeId, setTypeId ] = useState<string | null>(null);
     const [ weekStart, setWeekStart ] = useState<string | null>(null);
     const [ dayChoice, setDayChoice ] = useState<string | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
-    const page = weekPage(weekStart ?? today, today, provider.lastBookableDate);
-    const { slots, loading, error, retry } = useFetchPublicSlots(slug, type?.id ?? null, page.from, page.to);
+    const lastDate = lastBookableDateIn(timezone, provider.lastBookableDate, provider.timezone);
+    const page = weekPage(weekStart ?? today, today, lastDate);
+    const query = slotQueryRange(page.from, page.to);
+    const { slots, loading, error, retry } = useFetchPublicSlots(slug, type?.id ?? null, query.from, query.to);
     const slotDays = new Map((slots ? groupSlotsByDay(slots.slots, timezone) : []).map((d) => [ d.date, d ]));
     const weekDays = calendarDaysBetween(page.from, page.to);
     const openDays = weekDays.filter((d) => slotDays.has(d));
@@ -129,12 +132,6 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 </Step>
 
                 <Step number={3} title="Hora">
-                    {browserTimezone() !== timezone && (
-                        <p className={styles.zoneWarning}>
-                            <AlertTriangle size={16} aria-hidden="true" />
-                            Tu dispositivo está en otra zona horaria. Las horas están en la del profesional.
-                        </p>
-                    )}
                     {error ? null
                         : loading || !slots ? <TimesSkeleton />
                         : !day ? (
@@ -150,7 +147,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                                 <TimeGroup title="Tarde" slots={day.afternoon} timezone={timezone} />
                             </>
                         )}
-                    <p className={styles.note}>Horario de {timezoneName(timezone)}</p>
+                    <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
                 </Step>
             </section>
         </>
