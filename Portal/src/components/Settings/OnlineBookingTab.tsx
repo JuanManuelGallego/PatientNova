@@ -266,9 +266,15 @@ function LinkSection({ settings, save, onSaved }: {
                             <QRCodeSVG value={settings.bookingUrl} size={128} marginSize={2} title="Código QR del enlace de reserva" />
                         </div>
                         <div className="form-stack" style={{ flex: 1, minWidth: 220 }}>
-                            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--c-gray-900)", wordBreak: "break-all" }} data-testid="online-booking-url">
+                            <a
+                                href={settings.bookingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ fontSize: 15, fontWeight: 600, color: "var(--c-brand)", textDecoration: "underline", wordBreak: "break-all", alignSelf: "flex-start" }}
+                                data-testid="online-booking-url"
+                            >
                                 {settings.bookingUrl}
-                            </span>
+                            </a>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-primary" onClick={handleCopy} data-testid="online-booking-copy">
                                     <ACTION_ICONS.copy size={14} /> <span aria-live="polite">{copied ? "¡Copiado!" : "Copiar enlace"}</span>

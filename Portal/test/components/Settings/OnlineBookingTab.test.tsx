@@ -195,7 +195,10 @@ describe("OnlineBookingTab: link", () => {
         const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
         settings = makeSettings({ bookingSlug: "dra", bookingUrl: "https://app.test/book/dra" });
         render(<OnlineBookingTab />);
-        expect(screen.getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/dra");
+        const link = screen.getByRole("link", { name: "https://app.test/book/dra" });
+        expect(link).toHaveAttribute("href", "https://app.test/book/dra");
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
         expect(within(screen.getByTestId("online-booking-qr")).getByTitle(/Código QR/)).toBeInTheDocument();
         await user.click(screen.getByTestId("online-booking-copy"));
         expect(writeText).toHaveBeenCalledWith("https://app.test/book/dra");
