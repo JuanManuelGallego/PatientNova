@@ -431,6 +431,59 @@ describe('verify challenge', () => {
   });
 });
 
+describe('daily failure cap', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  it('counts wrong codes across resends, then stops sending until the 24h window passes', async () => {
+    const provider = await createLiveProvider();
+    const email = newEmail();
+    const codes = Math.ceil(PORTAL_OTP_LIMITS.maxFailuresPerDay / PORTAL_OTP_LIMITS.maxAttempts);
+    for (let c = 0; c < codes; c++) {
+      if (c > 0) await skipCooldown(provider.id);
+      await requestOtp(provider.slug, email);
+      const code = lastCodeFor(email);
+      for (let i = 0; i < PORTAL_OTP_LIMITS.maxAttempts; i++) {
+        expect((await verifyOtp(provider.slug, email, wrongCode(code))).status).toBe(400);
+      }
+    }
+    expect((await otpRow(provider.id, email))!.failedCount).toBe(PORTAL_OTP_LIMITS.maxFailuresPerDay);
+
+    await skipCooldown(provider.id);
+    const sentBefore = sentEmails.length;
+    const capped = await requestOtp(provider.slug, email);
+    expect(capped.status).toBe(202);
+    expect(capped.body.data.challenge).toMatch(CHALLENGE);
+    expect(sentEmails.length).toBe(sentBefore);
+
+    await prisma.portalOtp.updateMany({
+      where: { userId: provider.id },
+      data: { failedWindowStart: new Date(Date.now() - DAY_MS - 1000) },
+    });
+    await skipCooldown(provider.id);
+    await requestOtp(provider.slug, email);
+    expect(sentEmails.length).toBe(sentBefore + 1);
+    expect((await verifyOtp(provider.slug, email, lastCodeFor(email))).status).toBe(200);
+    expect((await otpRow(provider.id, email))!.failedCount).toBe(0);
+  });
+
+  it('rejects the right code once the cap is reached, without counting an attempt', async () => {
+    const provider = await createLiveProvider();
+    const email = newEmail();
+    await requestOtp(provider.slug, email);
+    await prisma.portalOtp.updateMany({
+      where: { userId: provider.id },
+      data: { failedCount: PORTAL_OTP_LIMITS.maxFailuresPerDay, failedWindowStart: new Date() },
+    });
+
+    const res = await verifyOtp(provider.slug, email, lastCodeFor(email));
+    expect(res.status).toBe(400);
+    expect(res.headers[ 'set-cookie' ]).toBeUndefined();
+    const row = (await otpRow(provider.id, email))!;
+    expect(row.attempts).toBe(0);
+    expect(row.consumedAt).toBeNull();
+  });
+});
+
 describe('purgePortalOtpsWorker', () => {
   it('deletes rows not sent to for a day and keeps recent ones', async () => {
     const provider = await createLiveProvider();

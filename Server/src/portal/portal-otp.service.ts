@@ -22,6 +22,7 @@ import { portalOtpRepository } from './portal-otp.repository.js';
 import { InvalidPortalOtpError } from './portal-otp.errors.js';
 
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 export const PORTAL_OTP_LIMITS = {
   ttlMs: ONE_TIME_CODE_DEFAULTS.ttlMs,
@@ -29,9 +30,15 @@ export const PORTAL_OTP_LIMITS = {
   resendCooldownMs: ONE_TIME_CODE_DEFAULTS.resendCooldownMs,
   perEmailPerHour: 5,
   perProviderPerHour: 100,
+  maxFailuresPerDay: 15,
 } as const;
 
-type SkipReason = 'cooldown' | 'email-cap' | 'provider-cap';
+type SkipReason = 'failure-cap' | 'cooldown' | 'email-cap' | 'provider-cap';
+
+function failuresInWindow(row: { failedCount: number; failedWindowStart: Date }, now: Date) {
+  const expired = now.getTime() - row.failedWindowStart.getTime() >= DAY_MS;
+  return { expired, count: expired ? 0 : row.failedCount };
+}
 
 const codeContext = (userId: string, hash: string) => `${userId}:${hash}`;
 
@@ -59,6 +66,7 @@ export const portalOtpService = {
       const row = await portalOtpRepository.lockRow(tx, provider.id, hash);
       if (!row) throw new Error('PortalOtp row missing after ensureRow');
 
+      if (failuresInWindow(row, now).count >= PORTAL_OTP_LIMITS.maxFailuresPerDay) return { skipped: 'failure-cap' };
       if (!canResend(row.lastSentAt, now, PORTAL_OTP_LIMITS.resendCooldownMs)) return { skipped: 'cooldown' };
       const windowExpired = now.getTime() - row.sendWindowStart.getTime() >= HOUR_MS;
       const sendCount = windowExpired ? 0 : row.sendCount;
@@ -109,11 +117,17 @@ export const portalOtpService = {
         || isCodeExpired(row.expiresAt, now)
         || areAttemptsExhausted(row.attempts, PORTAL_OTP_LIMITS.maxAttempts)
       ) return false;
+      const failures = failuresInWindow(row, now);
+      if (failures.count >= PORTAL_OTP_LIMITS.maxFailuresPerDay) return false;
       if (!verifyOneTimeCode(code, codeContext(provider.id, hash), portalSecret(), row.codeHash)) {
-        await portalOtpRepository.update(tx, row.id, { attempts: { increment: 1 } });
+        await portalOtpRepository.update(tx, row.id, {
+          attempts: { increment: 1 },
+          failedCount: failures.count + 1,
+          failedWindowStart: failures.expired ? now : row.failedWindowStart,
+        });
         return false;
       }
-      await portalOtpRepository.update(tx, row.id, { consumedAt: now });
+      await portalOtpRepository.update(tx, row.id, { consumedAt: now, failedCount: 0 });
       return true;
     });
 

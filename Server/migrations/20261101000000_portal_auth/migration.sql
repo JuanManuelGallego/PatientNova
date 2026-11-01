@@ -17,6 +17,8 @@ CREATE TABLE "portal_otps" (
     "lastSentAt" TIMESTAMP(3) NOT NULL,
     "sendWindowStart" TIMESTAMP(3) NOT NULL,
     "sendCount" INTEGER NOT NULL DEFAULT 0,
+    "failedCount" INTEGER NOT NULL DEFAULT 0,
+    "failedWindowStart" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "userId" TEXT NOT NULL,
 
     CONSTRAINT "portal_otps_pkey" PRIMARY KEY ("id")

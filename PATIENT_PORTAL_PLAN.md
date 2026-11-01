@@ -290,7 +290,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **Schema.** Migration `20261101000000_portal_auth`, created with `--create-only`. Read the SQL and delete any DROP of the raw-only objects, then run `prisma generate`.
   - `Patient.portalAccessEnabled Boolean @default(true)`.
   - `PortalOtp`, one row per provider and email, upserted:
-    - Fields: `id`, `userId` (→ User, cascade), `emailHash VarChar(64)`, `codeHash VarChar(64)`, `expiresAt`, `attempts`, `consumedAt?`, `lastSentAt`, `sendWindowStart`, `sendCount`, `createdAt`.
+    - Fields: `id`, `userId` (→ User, cascade), `emailHash VarChar(64)`, `codeHash VarChar(64)`, `expiresAt`, `attempts`, `consumedAt?`, `lastSentAt`, `sendWindowStart`, `sendCount`, `createdAt`. *(Added in review: `challengeHash`, `failedCount`, `failedWindowStart`.)*
     - Indexes: `@@unique([userId, emailHash])`, `@@index([userId, lastSentAt])`, `@@index([lastSentAt])`.
     - No plaintext email, only the blind index.
   - `PatientConsent`:
@@ -322,6 +322,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
     3. A missing, consumed, expired or exhausted (`areAttemptsExhausted`) row gets one uniform `400 'Invalid or expired code'`.
     4. A wrong code increments `attempts`; the increment is committed before the same 400 is returned.
     5. The right code sets `consumedAt`, so it is single use.
+  - *(Added in review, 2026-11-01.)* Daily failure cap: wrong codes also count in `failedCount` over a fixed 24h window (`failedWindowStart`), which a resend does not reset. At `maxFailuresPerDay` (15, three codes' worth) verify rejects even the right code without counting an attempt, and request answers the usual 202 without sending. A successful login resets it. Without it, re-requesting codes allowed about 25 guesses per email per hour (roughly 20% success over a year).
   - On success:
     - Sign the portal token with a new random `sid` claim (add `sid` to `PortalTokenClaims`).
     - Set the cookie with `portalCookieOptions(2h)`.
@@ -367,6 +368,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - When a row is created, it writes an audit `PATIENT_CONSENT` CREATE with `tx` and `required: true`.
   - The answer is always `204`.
 - **`POST /v1/portal/logout`** requires CSRF. It clears the cookie with the same name, path and domain and answers 204.
+  - *(Open, from the 3.1–3.2 review.)* Logout is stateless: a copied token stays valid until its 2h expiry, because the `sid` is not stored. Decide here whether that is acceptable or whether `requirePortalSession` should check a stored `sid` (or a per-email session version).
 - **Tests.** `test/integration/portal/portal-session.integration.test.ts`:
   - Token rejection, all 401:
     - a portal cookie on provider routes;

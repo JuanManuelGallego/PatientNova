@@ -11,6 +11,8 @@ export interface PortalOtpRow {
   lastSentAt: Date;
   sendWindowStart: Date;
   sendCount: number;
+  failedCount: number;
+  failedWindowStart: Date;
 }
 
 export const portalOtpRepository = {
@@ -31,7 +33,8 @@ export const portalOtpRepository = {
 
   async lockRow(tx: TransactionClient, userId: string, emailHash: string): Promise<PortalOtpRow | null> {
     const rows = await tx.$queryRaw<PortalOtpRow[]>`
-      SELECT "id", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount"
+      SELECT "id", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount",
+        "failedCount", "failedWindowStart"
       FROM "portal_otps"
       WHERE "userId" = ${userId} AND "emailHash" = ${emailHash}
       FOR UPDATE`;
