@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { DateTime } from 'luxon';
 
-export const MAX_SLOT_RANGE_DAYS = 31;
+const MAX_SLOT_RANGE_DAYS = 31;
 const RANGE_MESSAGE = 'Rango de fechas inválido';
 
 const dayOf = (d: string) => DateTime.fromISO(d, { zone: 'UTC' });

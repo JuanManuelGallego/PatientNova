@@ -5,13 +5,20 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/public/providers/{{bookingSlug}}/slots?typeId={{typeId}}&from=2026-11-09&to=2026-11-15
+  url: {{baseUrl}}/public/providers/{{bookingSlug}}/slots?typeId={{typeId}}&from={{from}}&to={{to}}
   body: none
   auth: none
 }
 
 params:query {
   typeId: {{typeId}}
-  from: 2026-11-09
-  to: 2026-11-15
+  from: {{from}}
+  to: {{to}}
+}
+
+script:pre-request {
+  // The next 7 days, so the example never drifts into the past.
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  bru.setVar("from", day(0));
+  bru.setVar("to", day(6));
 }

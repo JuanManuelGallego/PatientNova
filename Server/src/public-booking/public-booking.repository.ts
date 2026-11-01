@@ -31,6 +31,11 @@ export const publicBookingRepository = {
     return prisma.user.findUnique({ where: { id: userId }, select: { avatar: true, logo: true } });
   },
 
+  async getImage(userId: string, kind: ProviderImageKind): Promise<string | null> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { avatar: kind === 'avatar', logo: kind === 'logo' } });
+    return user?.[kind] ?? null;
+  },
+
   async listBookableTypes(userId: string) {
     return prisma.appointmentType.findMany({
       where: { userId, ...bookable },

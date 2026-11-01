@@ -50,7 +50,7 @@ export const publicBookingService = {
 
   async getImage(slug: string, kind: ProviderImageKind): Promise<{ contentType: string; bytes: Buffer }> {
     const provider = await publicBookingService.resolveProvider(slug);
-    const dataUrl = (await publicBookingRepository.getImages(provider.id))?.[kind] ?? null;
+    const dataUrl = await publicBookingRepository.getImage(provider.id, kind);
     const match = dataUrl ? IMAGE_DATA_URL.exec(dataUrl) : null;
     if (!dataUrl || !match) throw new ProviderImageNotFoundError();
     return { contentType: match[1]!, bytes: Buffer.from(dataUrl.slice(match[0].length), 'base64') };
