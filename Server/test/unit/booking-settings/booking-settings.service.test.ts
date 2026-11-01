@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { bookingSettingsService } from '../../../src/booking-settings/booking-settings.service.js';
-import { BookingAvailabilityRequiredError, BookingNotReadyError, BookingSlugTakenError } from '../../../src/booking-settings/booking-settings.errors.js';
+import { BookingAvailabilityRequiredError, BookingLeadExceedsHorizonError, BookingNotReadyError, BookingSlugTakenError } from '../../../src/booking-settings/booking-settings.errors.js';
 
 const portal = vi.hoisted(() => ({ url: 'https://portal.test', patientEnabled: true }));
 vi.mock('../../../src/utils/config/config.js', () => ({ config: { portal } }));
@@ -122,6 +122,22 @@ describe('bookingSettingsService.updateSettings', () => {
     repo.getSettings.mockResolvedValue({ ...settings, bookingEnabled: true });
     await bookingSettingsService.updateSettings('user-1', { bookingSlug: null });
     expect(repo.updateSettings).toHaveBeenCalledWith('user-1', { bookingSlug: null, bookingEnabled: false }, { tx: true });
+  });
+
+  it('refuses a lead time that reaches the horizon, merged with the stored values', async () => {
+    // Stored: lead 120 min, horizon 60 days.
+    await expect(bookingSettingsService.updateSettings('user-1', { minLeadMinutes: 48 * 60, maxHorizonDays: 2 }))
+      .rejects.toBeInstanceOf(BookingLeadExceedsHorizonError);
+    repo.getSettings.mockResolvedValue({ ...settings, minLeadMinutes: 48 * 60 });
+    await expect(bookingSettingsService.updateSettings('user-1', { maxHorizonDays: 1 }))
+      .rejects.toBeInstanceOf(BookingLeadExceedsHorizonError);
+    expect(repo.updateSettings).not.toHaveBeenCalled();
+    await expect(bookingSettingsService.updateSettings('user-1', { maxHorizonDays: 3 })).resolves.toBeDefined();
+  });
+
+  it('does not re-check a stored lead/horizon pair on unrelated edits', async () => {
+    repo.getSettings.mockResolvedValue({ ...settings, minLeadMinutes: 48 * 60, maxHorizonDays: 1 });
+    await expect(bookingSettingsService.updateSettings('user-1', { bufferMinutes: 10 })).resolves.toBeDefined();
   });
 
   it('maps a unique violation to a neutral 409', async () => {

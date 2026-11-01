@@ -1,0 +1,26 @@
+meta {
+  name: Update Booking Settings
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/booking/settings
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "bookingSlug": "consulta-ejemplo",
+    "bookingEnabled": false,
+    "slotIntervalMinutes": 30,
+    "bufferMinutes": 0,
+    "minLeadMinutes": 120,
+    "maxHorizonDays": 60
+  }
+}

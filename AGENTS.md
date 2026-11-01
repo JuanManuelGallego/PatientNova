@@ -59,7 +59,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `47` files, `574` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `47` files, `575` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -81,7 +81,7 @@ Suite: `47` files, `574` tests, all against real Postgres, `tsc --noEmit` clean.
 | Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
 | Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
 | Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
-| Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
+| Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, lead time reaching the horizon 422 (merged with stored values), enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
 | Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
 | Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
@@ -184,8 +184,9 @@ Suite: `47` files, `574` tests, all against real Postgres, `tsc --noEmit` clean.
   `ENCRYPTION_KEY`. Local dev must set `NODE_ENV=development` explicitly (see `.env.example`).
 - Time math goes through `src/utils/time/time-utils.ts` (luxon). DST conventions: spring-forward
   gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
-  fall-back overlaps use the first occurrence (`ambiguous: true`). Slot generation must skip
-  nonexistent times. Never hand-roll offset arithmetic.
+  fall-back overlaps use the first occurrence (`ambiguous: true`). The slot engine resolves each
+  window's edges per date with `localToUtc` and steps in real minutes; a DST jump inside an open
+  window is deliberately not special-cased (see the slot contract). Never hand-roll offset arithmetic.
 - Portal (provider side) shows every date/time in the provider's timezone (`user.timezone`), never the
   browser's. `AuthContext` calls `setDisplayTimezone` (an invalid zone falls back to the browser's and is
   reported to Sentry). React components read it with `useDisplayTimezone()` (`src/hooks`) and pass it

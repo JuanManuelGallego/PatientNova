@@ -294,6 +294,22 @@ describe("OnlineBookingTab: rules", () => {
         expect(screen.getByRole("alert")).toHaveTextContent(/entre 1 y 365/);
     });
 
+    it("disables saving a lead time that reaches the horizon", async () => {
+        render(<OnlineBookingTab />);
+        const lead = screen.getByTestId("online-booking-lead");
+        await userEvent.clear(lead);
+        await userEvent.type(lead, "48");
+        const horizon = screen.getByTestId("online-booking-horizon");
+        await userEvent.clear(horizon);
+        await userEvent.type(horizon, "2");
+        expect(screen.getByTestId("online-booking-rules-save")).toBeDisabled();
+        expect(horizon).toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByRole("alert")).toHaveTextContent(/anticipación mínima/);
+        await userEvent.clear(horizon);
+        await userEvent.type(horizon, "3");
+        expect(screen.getByTestId("online-booking-rules-save")).toBeEnabled();
+    });
+
     it("keeps a cleared field empty and invalid instead of turning it into 0", async () => {
         render(<OnlineBookingTab />);
         const buffer = screen.getByTestId("online-booking-buffer");
