@@ -158,6 +158,7 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/patientnova_e2e
       RATE_LIMIT_MAX: "100000"
       ENABLE_SCHEDULER: "false"
+      ENABLE_PORTAL: "true"
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: e2e-admin@example.com
       ADMIN_PASSWORD: E2e-Admin-Password-1

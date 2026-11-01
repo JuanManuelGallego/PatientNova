@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { randomBytes } from 'node:crypto';
 import { prisma } from './prisma-client.js';
 import { maskEmail } from '../api/logger.js';
 import { config } from '../config/config.js';
@@ -14,6 +15,11 @@ export const E2E_SEED = {
   appointmentTypeName: 'E2E Consulta',
   locationId: '00000000-0000-4000-8000-0000000000a2',
   locationName: 'E2E Consultorio',
+  publicProviderEmail: 'e2e-public-provider@example.com',
+  publicSlug: 'e2e-publica',
+  publicTypeId: '00000000-0000-4000-8000-0000000000b1',
+  publicFollowUpTypeId: '00000000-0000-4000-8000-0000000000b3',
+  publicLocationId: '00000000-0000-4000-8000-0000000000b2',
 } as const;
 
 // A complete profile unlocks UI flows that are gated on it (e.g. the patient welcome message).
@@ -74,7 +80,48 @@ async function seedE2e() {
     create: { userId: user.id, name: 'Consentimiento E2E.pdf', content, mimeType: 'application/pdf', sizeBytes: content.length },
   });
 
+  await seedPublicProvider();
+
   console.log(`E2E seed ready for ${maskEmail(email)}`);
+}
+
+async function seedPublicProvider() {
+  const booking = { bookingSlug: E2E_SEED.publicSlug, bookingEnabled: true, slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60 };
+  const provider = await prisma.user.upsert({
+    where: { email: E2E_SEED.publicProviderEmail },
+    update: { status: AdminStatus.ACTIVE, deletedAt: null, isDeleted: false, ...booking },
+    create: {
+      email: E2E_SEED.publicProviderEmail,
+      passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), config.auth.bcryptRounds),
+      firstName: 'Ana',
+      lastName: 'Pública',
+      displayName: 'Dra. Ana Pública',
+      jobTitle: 'Psicóloga',
+      role: AdminRole.ADMIN,
+      status: AdminStatus.ACTIVE,
+      reminderChannel: Channel.EMAIL,
+      ...booking,
+    },
+  });
+  await prisma.availabilityRule.deleteMany({ where: { userId: provider.id } });
+  await prisma.availabilityRule.createMany({
+    data: [ 1, 2, 3, 4, 5, 6, 7 ].map((weekday) => ({ userId: provider.id, weekday, startMinute: 8 * 60, endMinute: 18 * 60 })),
+  });
+  await prisma.appointmentType.upsert({
+    where: { id: E2E_SEED.publicTypeId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicTypeId, name: 'Primera consulta', defaultDuration: 60, defaultPrice: 150000, bookableOnline: true, userId: provider.id },
+  });
+  await prisma.appointmentType.upsert({
+    where: { id: E2E_SEED.publicFollowUpTypeId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicFollowUpTypeId, name: 'Control', defaultDuration: 30, defaultPrice: 90000, bookableOnline: true, userId: provider.id },
+  });
+  await prisma.appointmentLocation.upsert({
+    where: { id: E2E_SEED.publicLocationId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicLocationId, name: 'Consultorio Centro', address: 'Calle 10 # 5-20', bookableOnline: true, userId: provider.id },
+  });
 }
 
 seedE2e()

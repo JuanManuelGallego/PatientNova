@@ -211,9 +211,19 @@ Suite: `48` files, `588` tests, all against real Postgres, `tsc --noEmit` clean.
   into a provider only with `publicBookingService.resolveProvider` (malformed, unknown and not-live slugs all throw the
   same `ProviderNotFoundError`). Public availability goes through `generateSlots`/`isSlotAvailable` only; busy time is
   `ACTIVE_STATUSES` appointments (`src/appointments/appointment-status.ts`) plus non-deleted blocked time. Public DTOs
-  are allow-lists: never return `userId`, contact details, settings or location `instructions`. Images are served as
+  are allow-lists: never return `userId`, contact details, settings or location `instructions` (the profile exposes only
+  `lastBookableDate`, derived from the horizon, for week paging). Images are served as
   bytes from data URLs of an allowed type only, with `Cross-Origin-Resource-Policy: cross-origin` (helmet defaults to
   `same-origin`, which blocks the Portal's `<img>`); the Portal CSP `img-src` allows the API origin.
+- Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
+  fetch only through `publicApi` via `usePublicQuery` (`src/api/base/`), never `useApiQuery`/`fetchWithAuth`. They show
+  times only in the patient's device zone (`browserTimezone()`, passed explicitly to `TimeUtils`), never the provider's:
+  weeks are the patient's calendar days, the slots query (provider dates) is padded with `slotQueryRange`, the horizon
+  is converted with `lastBookableDateIn`, and slots are grouped by the patient's local date with
+  `src/utils/publicBooking.ts`. They render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
+  (pinned in `test/proxy.test.ts`). E2E: `db:seed-e2e` seeds a second, booking-live provider (`e2e-publica`) for the
+  `public`/`public-mobile` projects, so the API must run with `ENABLE_PORTAL=true` (set in the CI e2e job; set it locally
+  too). Specs strip the Vercel bypass headers from API calls, since the anonymous CORS refuses them.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
   `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,

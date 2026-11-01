@@ -37,6 +37,7 @@ export const publicBookingService = {
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
+      lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,
         name: t.name,
