@@ -270,7 +270,7 @@
   transition: border-color 0.15s;
 }
 
-.day:hover:not(:disabled) {
+.day:hover:not([aria-disabled="true"]) {
   border-color: var(--c-gray-300);
 }
 
@@ -280,11 +280,46 @@
   color: var(--c-white);
 }
 
-.day:disabled {
+.day[aria-disabled="true"] {
+  position: relative;
   background: transparent;
   border-color: var(--c-gray-100);
   color: var(--c-gray-400);
   cursor: default;
+}
+
+.day[data-tooltip]::after {
+  content: attr(data-tooltip);
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--c-gray-900);
+  color: var(--c-white);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.day[data-tooltip]:first-child::after {
+  left: 0;
+  transform: none;
+}
+
+.day[data-tooltip]:last-child::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.day[data-tooltip]:hover::after,
+.day[data-tooltip]:focus-visible::after {
+  display: block;
 }
 
 .dayWeekday {

@@ -118,10 +118,12 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                                     const { weekday, dayNumber, full } = fmtDayParts(date);
                                     const open = openDays.includes(date);
                                     return (
-                                        <button key={date} type="button" className={styles.day} disabled={!open}
+                                        <button key={date} type="button" className={styles.day}
+                                            aria-disabled={open ? undefined : true}
                                             aria-pressed={open ? date === day?.date : undefined}
                                             aria-label={open ? full : `${full}, sin horarios`}
-                                            onClick={() => setDayChoice(date)}>
+                                            data-tooltip={open ? undefined : "Sin horarios disponibles"}
+                                            onClick={() => { if (open) setDayChoice(date); }}>
                                             <span className={styles.dayWeekday}>{weekday}</span>
                                             <span className={styles.dayNumber}>{dayNumber}</span>
                                         </button>

@@ -99,18 +99,24 @@ describe("PublicBookingPage", () => {
         expect(url.searchParams.get("to")).toBe(addCalendarDays(tokyoToday, 8));
     });
 
-    it("shows the whole week, with days without slots disabled", async () => {
+    it("shows the whole week, with days without slots greyed out and a tooltip", async () => {
         routeFetch();
         render(<PublicBookingPage slug="dra-ana" />);
         const week = await screen.findByRole("group", { name: "Días de la semana" });
         const days = within(week).getAllByRole("button");
         expect(days).toHaveLength(7);
-        expect(days[ 0 ]).toBeEnabled();
+        expect(days[ 0 ]).not.toHaveAttribute("aria-disabled");
+        expect(days[ 0 ]).not.toHaveAttribute("data-tooltip");
         expect(days[ 0 ]).toHaveAttribute("aria-pressed", "true");
         for (const closed of days.slice(1)) {
-            expect(closed).toBeDisabled();
+            expect(closed).toHaveAttribute("aria-disabled", "true");
+            expect(closed).toHaveAttribute("data-tooltip", "Sin horarios disponibles");
             expect(closed).toHaveAccessibleName(/sin horarios$/);
         }
+
+        await userEvent.click(days[ 1 ]);
+        expect(days[ 0 ]).toHaveAttribute("aria-pressed", "true");
+        expect(days[ 1 ]).not.toHaveAttribute("aria-pressed");
     });
 
     it("offers the next week when this one has no slots", async () => {
