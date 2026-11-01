@@ -12,7 +12,6 @@ post {
 
 headers {
   Origin: {{portalOrigin}}
-  X-CSRF-Token: {{portalCsrfToken}}
 }
 
 script:post-response {
@@ -21,5 +20,6 @@ script:post-response {
 
 docs {
   Clears the `portal_session` cookie (204). The session is a stateless JWT: a copied cookie stays
-  valid until it expires (at most 2h). Needs the session cookie, the exact Origin and the CSRF token.
+  valid until it expires (at most 2h). Needs only the exact Origin: it clears the cookie even when
+  the session no longer validates.
 }

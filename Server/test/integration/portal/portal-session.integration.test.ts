@@ -347,15 +347,28 @@ describe('POST /v1/portal/logout', () => {
     expect(cleared).toContain('SameSite=Lax');
   });
 
-  it('requires CSRF and a session', async () => {
+  it('clears the cookie even when the session no longer validates', async () => {
     const provider = await createLiveProvider();
     const session = sessionFor(provider.id, unique('p@test.local'));
-    const res = await postLogout(session, null);
-    expect(res.status).toBe(403);
-    expect(res.headers[ 'set-cookie' ]).toBeUndefined();
+    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
+    const clears = (res: request.Response) => ([] as string[]).concat(res.headers[ 'set-cookie' ] ?? [])
+      .some((c) => c.startsWith(`${PORTAL_COOKIE_NAME}=;`));
+
+    const notLive = await postLogout(session, null);
+    expect(notLive.status).toBe(204);
+    expect(clears(notLive)).toBe(true);
 
     const anonymous = await request(app).post('/v1/portal/logout').set('Origin', ALLOWED).send();
-    expect(anonymous.status).toBe(401);
+    expect(anonymous.status).toBe(204);
+    expect(clears(anonymous)).toBe(true);
+  });
+
+  it('requires the exact Origin', async () => {
+    const provider = await createLiveProvider();
+    const session = sessionFor(provider.id, unique('p@test.local'));
+    const res = await request(app).post('/v1/portal/logout').set('Origin', 'https://evil.example').set('Cookie', session.cookie).send();
+    expect(res.status).toBe(403);
+    expect(res.headers[ 'set-cookie' ]).toBeUndefined();
   });
 });
 
