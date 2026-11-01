@@ -74,6 +74,7 @@ describe("PublicBookingPage", () => {
         expect(screen.getByText(/Pronto podrás reservar aquí/)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reservar" })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
+        expect(screen.getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
     });
 
     it("shows days and times in the patient's zone, not the provider's", async () => {

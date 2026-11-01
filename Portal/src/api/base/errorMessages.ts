@@ -29,6 +29,9 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /availability cannot be empty while online booking is enabled/i, "Desactiva la reserva en línea antes de quitar toda la disponibilidad." ],
     [ /availability windows overlap/i, "Hay franjas de disponibilidad que se superponen el mismo día." ],
     [ /virtual locations cannot be bookable online/i, "Las ubicaciones virtuales aún no pueden reservarse en línea." ],
+    [ /invalid or expired code/i, "El código no es válido o ya expiró. Revísalo o solicita uno nuevo." ],
+    [ /captcha verification failed/i, "No pudimos verificar que eres una persona. Inténtalo de nuevo." ],
+    [ /captcha verification is temporarily unavailable/i, "La verificación de seguridad no está disponible en este momento. Inténtalo de nuevo en unos minutos." ],
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],
 ];
 

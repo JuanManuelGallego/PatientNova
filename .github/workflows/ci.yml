@@ -162,6 +162,9 @@ jobs:
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: e2e-admin@example.com
       ADMIN_PASSWORD: E2e-Admin-Password-1
+      # OTP emails go to the mock Brevo server started below (Portal/e2e/support/mock-brevo.mjs).
+      BREVO_API_BASE_URL: http://localhost:4010
+      MOCK_BREVO_URL: http://localhost:4010
       # Playwright
       PLAYWRIGHT_BASE_URL: http://localhost:3000
       API_BASE_URL: http://localhost:3001/v1
@@ -200,6 +203,16 @@ jobs:
       - name: Seed e2e data
         working-directory: Server
         run: pnpm run db:seed-e2e
+      - name: Start mock Brevo
+        run: |
+          nohup node Portal/e2e/support/mock-brevo.mjs > mock-brevo.log 2>&1 &
+          for i in $(seq 1 15); do
+            curl -sf http://localhost:4010/health && exit 0
+            sleep 1
+          done
+          echo "mock Brevo did not start" >&2
+          cat mock-brevo.log
+          exit 1
       - name: Start API
         working-directory: Server
         run: |
@@ -219,6 +232,8 @@ jobs:
         working-directory: Portal
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          # Cloudflare's always-pass test site key, paired with the test CAPTCHA_SECRET in .env.test.
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
         run: |
           pnpm run build
           nohup pnpm exec next start -p 3000 > ../portal.log 2>&1 &
@@ -260,4 +275,5 @@ jobs:
           path: |
             server.log
             portal.log
+            mock-brevo.log
           retention-days: 7

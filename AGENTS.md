@@ -188,8 +188,10 @@ Suite: `50` files, `627` tests, all against real Postgres, `tsc --noEmit` clean.
   same action and sends `captchaToken` in the body. Not on `otp/verify` (attempt counter) or session
   routes. The verifier checks hostname, action and `challenge_ts`, and fails closed (provider outage →
   503). Turnstile is used in every environment, with no bypass: `CAPTCHA_SECRET` is always required
-  (`.env.test`/CI use Cloudflare's always-pass test secret). Unit tests stub global `fetch`; never call
-  siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
+  (`.env.test`/CI use Cloudflare's always-pass test secret). Test-secret answers carry
+  `metadata.result_with_testing_key` with no `action` and hostname `example.com`, so the verifier skips only those two
+  checks for them (never for a real secret); startup warns if production runs with a test secret. Unit tests stub
+  global `fetch`; never call siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
   without `NEXT_PUBLIC_TURNSTILE_SITE_KEY` shows the widget error instead of submitting.
 - Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
   get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
@@ -246,7 +248,11 @@ Suite: `50` files, `627` tests, all against real Postgres, `tsc --noEmit` clean.
   `src/utils/publicBooking.ts`. They render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
   (pinned in `test/proxy.test.ts`). E2E: `db:seed-e2e` seeds a second, booking-live provider (`e2e-publica`) for the
   `public`/`public-mobile` projects, so the API must run with `ENABLE_PORTAL=true` (set in the CI e2e job; set it locally
-  too). Specs strip the Vercel bypass headers from API calls, since the anonymous CORS refuses them.
+  too). The portal login spec reads OTP codes from a mock Brevo server (`Portal/e2e/support/mock-brevo.mjs`,
+  port 4010; the API runs with `BREVO_API_BASE_URL=http://localhost:4010`) and the Portal is built with Cloudflare's test
+  site key. Keep OTP requests in e2e minimal: `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages
+  (`/book/[slug]/appointments`) use `portalApi` via `usePortalSession`/`src/api/portal/` only; a 401 from `/session`
+  means "no session", never an error. Specs strip the Vercel bypass headers from API calls, since the anonymous CORS refuses them.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
   `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,

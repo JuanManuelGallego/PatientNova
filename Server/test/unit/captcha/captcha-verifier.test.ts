@@ -21,6 +21,25 @@ describe('createCaptchaVerifier', () => {
     expect(url).toBe(TURNSTILE_SITEVERIFY_URL);
     expect(JSON.parse(init.body as string)).toMatchObject({ secret: 's3cret', response: 'anything' });
   });
+
+  it('warns once when production runs with a Cloudflare test secret', async () => {
+    vi.resetModules();
+    vi.doMock('../../../src/utils/config/config.js', () => ({ config: { env: 'production', captcha: {} } }));
+    try {
+      const { logger } = await import('../../../src/utils/api/logger.js');
+      const fresh = await import('../../../src/captcha/captcha-verifier.js');
+      vi.mocked(logger.warn).mockClear();
+      const testSecret = { secret: '1x0000000000000000000000000000000AA', expectedHostnames: [ 'localhost' ], timeoutMs: 3000 };
+      fresh.createCaptchaVerifier(testSecret);
+      fresh.createCaptchaVerifier(testSecret);
+      fresh.createCaptchaVerifier({ ...testSecret, secret: 'real-secret' });
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(logger.warn).mock.calls[ 0 ]![ 0 ]).toMatch(/test secret/);
+    } finally {
+      vi.doUnmock('../../../src/utils/config/config.js');
+      vi.resetModules();
+    }
+  });
 });
 
 describe('config.captcha', () => {

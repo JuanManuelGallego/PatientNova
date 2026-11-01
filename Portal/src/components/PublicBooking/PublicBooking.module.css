@@ -462,3 +462,30 @@
     transition: none;
   }
 }
+
+.topNav {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -12px;
+}
+
+.topLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-brand);
+  text-decoration: none;
+}
+
+.topLink:hover {
+  text-decoration: underline;
+}
+
+.topLink:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: var(--r-md);
+}

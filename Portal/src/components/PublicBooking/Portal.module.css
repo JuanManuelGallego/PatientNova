@@ -1,0 +1,160 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-brand);
+  text-decoration: none;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.provider {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-700);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--c-gray-900);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--c-gray-700);
+}
+
+.email {
+  font-weight: 600;
+  color: var(--c-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.form :global(.form-input) {
+  min-height: 44px;
+  font-size: 16px; /* 16px keeps iOS from zooming into the field */
+}
+
+.codeInput {
+  letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+}
+
+.submit {
+  min-height: 44px;
+  width: 100%;
+  font-size: 15px;
+}
+
+.secondaryActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.linkButton {
+  min-height: 44px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-brand);
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  color: var(--c-gray-400);
+  cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+
+.linkButton:focus-visible,
+.back:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: var(--r-md);
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--c-gray-900);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--c-brand);
+}
+
+.checkbox a {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-gray-100);
+}
+
+.muted {
+  font-size: 14px;
+  color: var(--c-gray-500);
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: 22px 16px;
+  }
+}
