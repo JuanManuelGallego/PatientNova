@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Next is Phase 5. **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Next is Phase 5 (plan prepared 2026-11-01: 5.1–5.3; 5.4 deferred until after 8.2 (b)–(c)). **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -506,8 +506,150 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 ### Phase 5: Patient self-service
 - **5.1 My appointments.** List endpoint and page, own appointments only.
 - **5.2 Cancel.** Calls `reminderJobManager.cancel`, frees the slot, notifies the provider, sets `cancelledBy`.
-- **5.3 Reschedule.** Atomic cancel-and-rebook under the same lock.
-- **5.4 Virtual locations.** (a) Add `Appointment.meetingStatus` (`NOT_REQUIRED | PENDING | READY | FAILED`) and relax the meeting-URL invariant only for the portal path. (b) The booking transaction creates the appointment with `meetingStatus=PENDING` and enqueues a durable pg-boss `provision-meet` job via `fromPrisma(tx)`, with retries and a dead-letter queue (reuse the existing Google Meet service and its encrypted per-provider token). (c) The job creates the Meet space, sets `meetingUrl`, `meetingStatus=READY`, then triggers the confirmation email and reminders. (d) Fallback: if Google is disconnected or retries are exhausted, set `FAILED`, send the confirmation without a link stating that it will follow, and notify the provider to add the URL manually (which sets `READY`). (e) The patient sees "link pending" until `READY`. (f) Only then allow virtual locations to be marked bookable online (1.3). Requires `ENABLE_SCHEDULER`; reject enabling virtual bookable locations when the scheduler is off. Tests: job retry and idempotency, disconnected Google, provider adds the URL manually, cancel while pending.
+- **5.3 Reschedule.** ~~Atomic cancel-and-rebook~~ An atomic move of the same appointment under the same lock (decided 2026-11-01, see below).
+- **5.4 Virtual locations.** *(Deferred 2026-11-01: not part of the Phase 5 PRs below; it starts after 8.2 (b)–(c) lands.)* (a) Add `Appointment.meetingStatus` (`NOT_REQUIRED | PENDING | READY | FAILED`) and relax the meeting-URL invariant only for the portal path. (b) The booking transaction creates the appointment with `meetingStatus=PENDING` and enqueues a durable pg-boss `provision-meet` job via `fromPrisma(tx)`, with retries and a dead-letter queue (reuse the existing Google Meet service and its encrypted per-provider token). (c) The job creates the Meet space, sets `meetingUrl`, `meetingStatus=READY`, then triggers the confirmation email and reminders. (d) Fallback: if Google is disconnected or retries are exhausted, set `FAILED`, send the confirmation without a link stating that it will follow, and notify the provider to add the URL manually (which sets `READY`). (e) The patient sees "link pending" until `READY`. (f) Only then allow virtual locations to be marked bookable online (1.3). Requires `ENABLE_SCHEDULER`; reject enabling virtual bookable locations when the scheduler is off. Tests: job retry and idempotency, disconnected Google, provider adds the URL manually, cancel while pending.
+
+#### Phase 5 implementation plan (prepared 2026-11-01)
+**Decided (2026-11-01):**
+- Phase 5 is 5.1–5.3. 5.4 is planned separately once 8.2 (b)–(c) (Google connection check and provider alert) has landed, since its `FAILED` fallback relies on that signal.
+- **Reschedule moves the appointment in place:** same id, new `startAt`/`endAt`, under the provider lock. Notes, payment and the reminder link stay. This replaces "cancel-and-rebook".
+- **Eligibility:** a patient can cancel **any** of their upcoming active appointments (the WhatsApp quick reply already allows that). They can reschedule only `source=PORTAL` appointments whose type and location are still bookable online, so a provider's own booking is never moved into a slot the provider did not open.
+- No cancellation or reschedule cutoff (as decided at the start): allowed while `startAt > now`. The new slot still obeys lead time and horizon.
+- **Provider notices** go on `reminderChannel` (honoring `reminderActive`) with no patient details. WhatsApp uses two new **required** templates, `TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID` and `TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID`. Both must be approved before deploy. Add them to `config.ts`, `.env.test`, `ci.yml`, `.env.example` and the local `Server/.env`.
+- Reschedule duration = the type's current `defaultDuration`, so it matches the slots the patient was shown. Price, status and `confirmedAt` are unchanged. `patientTimezone` is updated from the request.
+
+**Starting point (checked in code):**
+- 5.1 is mostly built by 4.1/4.3. `GET /v1/portal/appointments` returns the consented patient's upcoming active appointments, provider-created ones included. `PortalAppointmentDto` has `type: { name }` (no id) and no action flags.
+- **Pre-existing gap (fixed in PR 5.1 below):** cancelling an appointment never touches its linked reminder. `setStatus(CANCELLED)` and the repository's cancel branch leave a PENDING reminder, and `send-reminder` checks only the reminder's own status, never the appointment's. So today a 24h reminder still goes out for an appointment the provider cancelled.
+- `reminderJobManager.cancel` calls `getBoss()` outside any transaction. Calling it inside a Prisma `$transaction` risks the pool deadlock described in AGENTS.md.
+- `appointmentService.update` opens its own transaction, so it can't be composed with the lock and slot check. `loadBusy` counts the appointment being moved, which would block its own neighbouring slots through the buffer.
+- `handleReminderUpdate` updates an existing reminder's `sendAt` even when it is already SENT, and only re-enqueues PENDING ones.
+- `deliverBookingNotification` skips any appointment that is not active. That is right for booking notices, but wrong for a cancellation notice.
+- The provider Portal doesn't show `cancelledBy`.
+- The confirmation email says "Puedes ver tus citas". The cancel/reschedule wording was held back until this phase.
+- `requirePortalSession` re-checks `isBookingLive`, so when a provider pauses booking, patients can't log in or cancel online. **Kept in Phase 5** (see Open).
+
+Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers item 5.2 plus the 5.1 list changes, PR 5.2 covers item 5.3, PR 5.3 is the Portal for both). PR 5.2 can start as soon as PR 5.1's shared pieces (eligibility, the patient-appointment lookup, the notification kinds) are merged; PR 5.3 can start against the PR 5.1 DTO.
+
+**PR 5.1 — Server: cancel + reminder fix + notifications.**
+- **Shared reminder fix (applies to every path):**
+  - `cancelLinkedReminder(tx, appointment, userId)`: a PENDING linked reminder becomes `CANCELLED` in the same `tx`, with a required audit. It is used by `setStatus(CANCELLED)`, by `update` when the status changes to CANCELLED, by the portal cancel, and by the WhatsApp quick-reply cancel (a no-op there, since that reminder was already sent).
+  - `send-reminder` also skips a reminder whose linked appointment is deleted or not in `ACTIVE_STATUSES`. This is defense in depth for jobs already in the queue.
+  - After commit, when the scheduler is on, `reminderJobManager.cancel(reminderId)` runs best effort (logged on failure). The worker skips non-PENDING reminders anyway, so this only tidies the queue.
+- **Eligibility** in `src/portal/portal-appointment-actions.ts`, pure and used by both the DTO and the services:
+  - `canCancel`: active, not deleted, `startAt > now`.
+  - `canReschedule`: `canCancel`, plus `source=PORTAL`, plus type and location still bookable (`findBookableType`/`findBookableLocation`; non-virtual until 5.4), plus booking `AUTO_CONFIRM`.
+  - `PortalAppointmentDto` gains `type: { id, name }`, `canCancel` and `canReschedule`. The type id is already public through the provider profile. Keep the deep key snapshot test.
+- **`POST /v1/portal/appointments/:id/cancel`**: `portal-change-ip` limiter (about 10 per 15 min), `portalSessionGuard`, `validateParams` (uuid), strict empty body. No reason field, so no free text or PII.
+  - `portalAppointmentService.cancel`, inside `runInAuditContext(portalPatientAuditContext(...))`, runs one transaction:
+    1. `withProviderLock`.
+    2. `resolvePortalPatient(tx)`. Only a `patient` with current consent goes on.
+    3. Load the appointment by `(id, userId, patientId)`, not deleted. It must pass `canCancel`.
+    4. Update `status=CANCELLED`, `cancelledAt`, `cancelledBy=PATIENT`, `paid=false` (same as the quick reply).
+    5. `cancelLinkedReminder`.
+    6. Required `APPOINTMENT` UPDATE audit.
+    7. Enqueue the notifications on `tx`.
+  - Every miss (none/unavailable/unconsented session, another patient's or provider's id, unknown id, past, already cancelled, deleted) gives the same `404 'Appointment not found'` (`PortalAppointmentNotFoundError`). Cancelling twice is therefore a 404, not an error leak. Answer 204.
+- **Notifications** (`portal-booking-notifications.ts` becomes `portal-notifications.ts`; the queue name `portal-booking-notify` is kept so jobs already queued still run):
+  - Job payload `{ appointmentId, kind, previousStartAt? }`, ids and timestamps only.
+  - New kinds:
+    - `patient-cancellation` and `provider-cancel-notice`: require `CANCELLED`.
+    - `patient-reschedule` and `provider-reschedule-notice`: require active, and carry `previousStartAt`.
+  - Each kind declares the status it requires. The handler re-reads the appointment, skips it when the status doesn't match, and throws on a failed send. Scheduler off: sent after commit, best effort (same as 4.2).
+  - Patient emails (`renderPortalCancellationEmail`, `renderPortalRescheduleEmail` in `src/brevo/email-templates.ts`) use `patientTimezone ?? User.timezone` with a zone label and the appointments link (no token). Provider text uses `User.timezone`, has no patient details, and links to `/calendar`.
+  - WhatsApp variables: cancel `{1: name, 2: date, 3: time}`; reschedule `{1: name, 2: previous date and time, 3: new date, 4: new time}`.
+  - Confirmation copy goes back to "Puedes ver, cancelar o reprogramar tus citas".
+- **Tests:**
+  - `test/integration/portal/portal-appointment-cancel.integration.test.ts`, supertest on an app wired like `app.ts`:
+    - 204 and the row is `CANCELLED`/`PATIENT`/`cancelledAt`, with one `PUBLIC_PORTAL` audit.
+    - The slot is free again in `/slots`.
+    - The linked reminder becomes CANCELLED.
+    - A provider-created appointment can be cancelled.
+    - Identical 404s for: another patient's id, another provider's id, unknown, past, cancelled, deleted, a `none`/unavailable/unconsented session.
+    - Concurrent double cancel: one 204, one 404, one audit.
+    - CSRF, Origin and strict body.
+    - A failure after the update rolls back status, reminder, audit and jobs.
+  - Reminder fix:
+    - provider `POST /:id/cancel` and an `update` to CANCELLED cancel the PENDING reminder;
+    - `send-reminder` skips a PENDING reminder whose appointment is cancelled or deleted (`workers`/`scheduler` tests).
+  - Notifications (extend `portal-booking-notify.integration.test.ts`): each new kind on each provider channel, `reminderActive` off, the patient zone, a status mismatch skipped, enqueued on `tx` and dropped on rollback, the scheduler-off path.
+  - Unit tests: eligibility and the DTO key snapshot.
+- **Bruno:** `Portal Booking/Cancel Appointment`.
+- **AGENTS.md:** matrix rows. New rules:
+  - patient actions go through `portalAppointmentService` (lock, resolve, then own-appointment lookup) with one 404 for every miss;
+  - cancelling an appointment by any path cancels its PENDING linked reminder on `tx`;
+  - `send-reminder` skips reminders of inactive appointments.
+
+**PR 5.2 — Server: reschedule.**
+- **Extract `updateWithin(tx, id, dto, userId)`** from `appointmentService.update`, the same way `createWithin` was extracted. `update` wraps it. The lock stays first (`withProviderLock` is idempotent within a transaction).
+- `loadBusy(userId, from, to, buffer, tx, { excludeAppointmentId })`, so the moved appointment doesn't block itself.
+- **`POST /v1/portal/appointments/:id/reschedule`**: same limiter and guard. Strict body `{ startUtc, patientTimezone }` (the schemas are shared with booking).
+  - `portalAppointmentService.reschedule`, one transaction:
+    1. `withProviderLock`.
+    2. `isBookingLive(userId, tx)` and `AUTO_CONFIRM`, else the unknown-provider 404.
+    3. Resolve the patient and check consent.
+    4. Look up the own appointment and check `canCancel`; a miss gives the same 404 as cancel.
+    5. `source=PORTAL`, type and location still bookable, else `409 'Reschedule unavailable'` (`PortalRescheduleUnavailableError`). This is not a 404, because the patient can see the appointment.
+    6. The new start must differ from the current one (400).
+    7. `isSlotAvailable` with the type's current duration on `loadBusy(..., { excludeAppointmentId })`, else `SlotUnavailableError`.
+    8. `updateWithin(tx, id, { startAt, endAt }, userId)`. That call re-runs `checkConflict` (excluding itself), blocked time and the past-appointment lock. A conflict maps through `toPortalError` to the neutral slot 409.
+    9. Set `patientTimezone`.
+    10. Required audit.
+    11. Enqueue the reschedule notices with `previousStartAt`.
+  - The per-patient cap is not re-checked: the count of upcoming appointments doesn't change.
+- **Reminder on reschedule.** The new `sendAt` is `start − 24h`. Make these outcomes explicit in `updateWithin`:
+  - PENDING reminder and new `sendAt > now`: update `sendAt` (re-enqueued; the stale job skips).
+  - PENDING reminder and new `sendAt <= now`: cancel it.
+  - No reminder, or a non-PENDING one (e.g. already SENT because the old time was under 24h away), and new `sendAt > now`: unlink the old reminder (its history is kept) and create a new linked EMAIL reminder.
+  - Never rewrite a SENT reminder's `sendAt`.
+- Returns 200 `{ appointment }` (`PortalAppointmentDto`).
+- **Tests** (`portal-appointment-reschedule.integration.test.ts`):
+  - Happy path: same id, new times, type duration, price and status unchanged, `patientTimezone` updated, one audit, both notices.
+  - The old slot is free and the new one taken.
+  - Moving into a slot that touches its own buffer works (self excluded).
+  - Concurrent reschedule vs a booking of the same slot: one winner, the loser fully rolled back.
+  - Off-grid, lead, horizon, blocked and taken slots each give the one 409, without the other appointment's times.
+  - Same start gives 400.
+  - Provider-created appointment, type or location no longer bookable, approval mode: 409 or 404 as specified.
+  - All the cancel 404 cases.
+  - All three reminder outcomes, including SENT left untouched.
+  - CSRF, Origin and strict body (no client `endUtc`/`typeId`/`price`).
+  - Rollback on a later failure.
+  - Plus a regression run of `appointment.integrity`/`reminder-scheduling` on the extracted `updateWithin`.
+- **Bruno:** `Portal Booking/Reschedule Appointment` (uses `slotStartUtc`).
+- **AGENTS.md:** matrix row. Calendar rule: patient reschedules go through `updateWithin` after `isSlotAvailable` with the appointment excluded from busy time. Also list the two new env vars.
+
+**PR 5.3 — Portal: actions on "Mis citas", provider badge, e2e.**
+- Hooks in `src/api/portal/usePortalBooking.ts`: `useCancelAppointment`, `useRescheduleAppointment`. Types are updated (`type.id`, `canCancel`, `canReschedule`). Spanish messages for the 404 ("Esta cita ya no se puede modificar") and for `Reschedule unavailable`.
+- `PortalAppointmentCard` gets "Cancelar cita" and "Reprogramar", shown only from the server flags; the client never re-derives eligibility.
+  - Cancel opens an in-app confirm dialog (never `window.confirm`). On a 204 or 404 it refetches the list and shows a status message.
+- Reschedule reuses the slot browser:
+  - Extract the week/day/time picker from `PublicBookingPage` (335 lines) into a `SlotPicker` that takes `typeId`. `/book/[slug]` and the reschedule view then share it, along with the patient-device-zone rules (`browserTimezone()`, `slotQueryRange`, `lastBookableDateIn`).
+  - The appointment being moved is chosen through local state, never the URL.
+  - The view shows "Cita actual" plus the new choice and a confirm step.
+  - On a taken slot, clear the choice and reload the slots, like the booking form.
+  - On success, show the updated card.
+- A 401 from either mutation returns to the login ("Tu sesión expiró").
+- Provider Portal: add `cancelledBy` to the `Appointment` type. The drawer and chip show "Cancelada por el paciente" for `PATIENT` (this covers the WhatsApp quick reply too). The "Reservada en línea" badge stays.
+- **Tests:**
+  - Component tests: buttons follow the flags, the confirm dialog (cancel keeps the appointment), the error mapping, a reschedule taken-slot reload, the `SlotPicker` extraction (existing `PublicBookingPage` tests pass unchanged).
+  - E2E: extend `booking.spec.ts` (or a new `self-service.spec.ts`) in `public`/`public-mobile`. Book, reschedule to the next free slot, check the reschedule email in mock Brevo (`/__test/messages`), cancel, check the list is empty and the cancellation email arrived.
+  - Reuse the booking spec's session so no extra OTP request is spent (`otp-request-ip` allows 10 per 15 min).
+  - The run frees its slot by cancelling, which also keeps the shared seeded calendar from filling up across runs.
+
+**Phase 5 exit criteria:**
+- A logged-in, consented patient can cancel any upcoming appointment, and reschedule their own online bookings, with no cutoff.
+- Both run under the provider lock.
+- Both answer neutrally: one 404 for anything not theirs, and one slot 409 that never shows other appointments.
+- Both are audited as `PUBLIC_PORTAL`.
+- Both notify patient and provider (the provider without patient details).
+- No reminder fires for a cancelled appointment, on any cancel path.
+- The Bruno collection covers both endpoints.
+
+**Open:**
+- Whether patients should keep view and cancel access while the provider has paused booking. Today they can't: the session and OTP require `isBookingLive`. Relaxing it means a second liveness check (portal on, provider active) for session routes, while reschedule and booking keep `isBookingLive`.
+- Whether to cap reschedules per appointment. Today they are bounded only by the `portal-change-ip` limiter and the audit trail.
+- A "past appointments" history on "Mis citas" (not in Phase 5).
 
 ### Phase 6: Approval mode and review inbox
 - **6.1 `BookingRequest` model + holds.** Slot engine and lock count active holds. Tests: held slot not bookable, hold creation races with appointment creation.
@@ -536,7 +678,7 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 - **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Dependency summary
-`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; 7.1 depends on 3; 7.2 depends on 4. Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) should land before 5.4. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
+`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; 7.1 depends on 3; 7.2 depends on 4. Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
 
 ## Verification
 - Integration tests per `AGENTS.md` (real Postgres, mocked Twilio/Brevo/dispatch), including the concurrent-booking race, admin vs portal vs blocked-time races, cross-tenant slug isolation, portal vs provider token rejection, uniform responses regardless of patient existence, and email-normalization collisions.
