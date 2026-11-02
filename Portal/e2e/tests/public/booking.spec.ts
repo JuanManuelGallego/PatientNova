@@ -78,5 +78,33 @@ test.describe('self-booking on the public page', () => {
         await page.getByRole('button', { name: 'Semana siguiente' }).click();
         await days.getByRole('button', { name: dayName! }).click();
         await expect(page.getByRole('list', { name: 'Mañana' }).getByRole('button', { name: timeText, exact: true })).toHaveCount(0);
+
+        // Self-service on the same session (no extra OTP: `otp-request-ip` allows 10 per IP per 15 minutes).
+        await page.goto(`/book/${SLUG}/appointments`);
+        const card = page.getByRole('list', { name: 'Próximas citas' }).getByRole('article').first();
+        await card.getByRole('button', { name: 'Reprogramar' }).click();
+        await expect(page.getByRole('heading', { name: 'Reprogramar cita' })).toBeVisible();
+        await page.getByRole('button', { name: 'Semana siguiente' }).click();
+        const newTime = page.getByRole('list', { name: /Mañana|Tarde/ }).first().getByRole('button').first();
+        const newTimeText = (await newTime.textContent())!.trim();
+        await newTime.click();
+        await page.getByRole('button', { name: 'Confirmar nuevo horario' }).click();
+        await expect(page.getByRole('status')).toContainText('Tu cita quedó reprogramada');
+        await expect(page.getByRole('list', { name: 'Próximas citas' })).toContainText(newTimeText);
+        await expect.poll(async () => (await inbox(email)).map((m) => m.subject))
+            .toContain('Cita reprogramada con Dra. Ana Pública');
+        await expect.poll(async () => (await inbox(PROVIDER_EMAIL)).map((m) => m.subject))
+            .toContain('Cita reprogramada en línea');
+
+        // Cancelling frees the slot again, which also keeps the shared seeded calendar from filling up across runs.
+        await page.getByRole('list', { name: 'Próximas citas' }).getByRole('article').first()
+            .getByRole('button', { name: 'Cancelar cita' }).click();
+        await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, cancelar cita' }).click();
+        await expect(page.getByRole('status')).toContainText('Tu cita quedó cancelada');
+        await expect(page.getByText('No tienes citas próximas.')).toBeVisible();
+        await expect.poll(async () => (await inbox(email)).map((m) => m.subject))
+            .toContain('Cita cancelada con Dra. Ana Pública');
+        await expect.poll(async () => (await inbox(PROVIDER_EMAIL)).map((m) => m.subject))
+            .toContain('Cita cancelada en línea');
     });
 });

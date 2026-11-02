@@ -22,6 +22,8 @@ export interface Appointment {
   completedAt?: string | null;
 
   source?: "PROVIDER" | "PORTAL";
+  /** Who cancelled it: the patient (portal or WhatsApp reply) or the provider. */
+  cancelledBy?: "PROVIDER" | "PATIENT" | null;
 
   patientId: string;
   locationId?: string | null;

@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Next is Phase 5 (plan prepared 2026-11-01: 5.1–5.3; 5.4 deferred until after 8.2 (b)–(c)). **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 5.4 deferred until after 8.2 (b)–(c). **Updated:** 2026-11-02
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -626,7 +626,12 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
 - **Bruno:** `Portal Booking/Reschedule Appointment` (uses `slotStartUtc`).
 - **AGENTS.md:** matrix row. Calendar rule: patient reschedules go through `updateWithin` after `isSlotAvailable` with the appointment excluded from busy time. Also list the two new env vars.
 
-**PR 5.3 — Portal: actions on "Mis citas", provider badge, e2e.**
+**PR 5.3 — Portal: actions on "Mis citas", provider badge, e2e.** Built (2026-11-02). As built:
+- `useSlotPicker` + `SlotSteps` (`SlotPicker.tsx`) replace the inline picker in `PublicBookingPage`; its existing tests pass unchanged.
+- `RescheduleFlow` shows the current appointment, then the picker (steps 1–2), then "Confirma el cambio" with "Antes"/"Ahora".
+- The cancel dialog reuses the provider `ConfirmDialog` inside its own `FocusTrapProvider`. Without it, the dialog threw on the public page, where no provider layout mounts one.
+- The provider drawer shows "Cancelada por el paciente" next to the status, and the calendar chip adds it to its title. No drawer test exists yet.
+- The e2e reschedule and cancel steps extend `booking.spec.ts` on the same session, so no extra OTP request is spent.
 - Hooks in `src/api/portal/usePortalBooking.ts`: `useCancelAppointment`, `useRescheduleAppointment`. Types are updated (`type.id`, `canCancel`, `canReschedule`). Spanish messages for the 404 ("Esta cita ya no se puede modificar") and for `Reschedule unavailable`.
 - `PortalAppointmentCard` gets "Cancelar cita" and "Reprogramar", shown only from the server flags; the client never re-derives eligibility.
   - Cancel opens an in-app confirm dialog (never `window.confirm`). On a 204 or 404 it refetches the list and shows a status message.

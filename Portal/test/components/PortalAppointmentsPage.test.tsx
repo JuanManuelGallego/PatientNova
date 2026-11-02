@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,7 @@ vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
 import { PortalAppointmentsPage } from "@/src/components/PublicBooking/PortalAppointmentsPage";
 import { RESEND_COOLDOWN_SECONDS } from "@/src/components/PublicBooking/PortalLogin";
 import { csrfStore } from "@/src/api/base/csrfStore";
+import { todayFormattedString } from "@/src/utils/TimeUtils";
 
 vi.mock("@/src/components/TurnstileWidget", async () => {
     const { useImperativeHandle } = await import("react");
@@ -60,6 +61,9 @@ interface Server {
     challenges: number;
     logoutFails?: boolean;
     appointments: () => Response;
+    slots: () => Response;
+    cancel: (id: string) => Response;
+    reschedule: (id: string, body: unknown) => Response;
 }
 let server: Server;
 const fetchMock = vi.fn();
@@ -83,6 +87,9 @@ beforeEach(() => {
         },
         challenges: 0,
         appointments: () => ok(200, { appointments: [], consentRequired: true }),
+        slots: () => ok(200, { timezone: "America/Bogota", slots: [] }),
+        cancel: () => ok(204),
+        reschedule: () => fail(500, "unexpected"),
     };
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (url: string, init: RequestInit = {}) => {
@@ -95,6 +102,11 @@ beforeEach(() => {
         if (path === "/portal/session") return server.session ? ok(200, server.session) : fail(401, "Invalid session");
         if (path === "/portal/consent") return ok(204);
         if (path === "/portal/appointments") return server.appointments();
+        if (path.startsWith(`/public/providers/${SLUG}/slots?`)) return server.slots();
+        const action = path.match(/^\/portal\/appointments\/([^/]+)\/(cancel|reschedule)$/);
+        if (action) {
+            return action[ 2 ] === "cancel" ? server.cancel(action[ 1 ]) : server.reschedule(action[ 1 ], JSON.parse(String(init.body)));
+        }
         if (path === "/portal/logout") {
             if (server.logoutFails) return fail(503, "unavailable");
             server.session = null;
@@ -393,5 +405,163 @@ describe("PortalAppointmentsPage upcoming appointments", () => {
         server.appointments = () => ok(200, { consentRequired: false, appointments: [] });
         await user.click(screen.getByRole("button", { name: "Reintentar" }));
         expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
+    });
+});
+
+describe("PortalAppointmentsPage cancel and reschedule", () => {
+    const madridToday = todayFormattedString("Europe/Madrid");
+    const morning = `${madridToday}T09:00:00.000Z`;
+    const afternoon = `${madridToday}T15:00:00.000Z`;
+    const appt = (id: string, overrides: Record<string, unknown> = {}) => ({
+        id,
+        startUtc: "2099-01-20T15:00:00.000Z",
+        endUtc: "2099-01-20T16:00:00.000Z",
+        durationMinutes: 60,
+        status: "CONFIRMED",
+        price: 150000,
+        type: { id: "t1", name: "Primera consulta" },
+        location: { name: "Consultorio Centro", address: "Calle 10", instructions: null },
+        canCancel: true,
+        canReschedule: true,
+        ...overrides,
+    });
+    let listed: ReturnType<typeof appt>[];
+    const slotCalls = () => fetchMock.mock.calls.filter(([ url ]) => String(url).includes("/slots?"));
+
+    beforeEach(() => {
+        server.session = session();
+        listed = [ appt("a1"), appt("a2", { startUtc: "2099-02-20T15:00:00.000Z", endUtc: "2099-02-20T16:00:00.000Z", canReschedule: false }) ];
+        server.appointments = () => ok(200, { consentRequired: false, appointments: listed });
+        server.slots = () => ok(200, {
+            timezone: "America/Bogota",
+            slots: [ morning, afternoon ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
+        });
+    });
+
+    const cardOf = async (index: number) => within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")[ index ];
+
+    it("shows each action only when the server allows it", async () => {
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        const [ first, second ] = [ await cardOf(0), await cardOf(1) ];
+        expect(within(first).getByRole("button", { name: "Reprogramar" })).toBeInTheDocument();
+        expect(within(first).getByRole("button", { name: "Cancelar cita" })).toBeInTheDocument();
+        expect(within(second).queryByRole("button", { name: "Reprogramar" })).toBeNull();
+        expect(within(second).getByRole("button", { name: "Cancelar cita" })).toBeInTheDocument();
+
+        listed = [ appt("a3", { canCancel: false, canReschedule: false }) ];
+        cleanup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        expect(within(await cardOf(0)).queryByRole("button")).toBeNull();
+    });
+
+    it("asks before cancelling, keeps the appointment on 'Volver' and cancels on confirm", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Cancelar cita" }));
+
+        const dialog = screen.getByRole("alertdialog", { name: "¿Cancelar esta cita?" });
+        expect(dialog).toHaveTextContent(/20 de enero de 2099, 04:00 p\. m\./);
+        await user.click(within(dialog).getByRole("button", { name: "Volver" }));
+        expect(screen.queryByRole("alertdialog")).toBeNull();
+        expect(call("/cancel")).toHaveLength(0);
+
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Cancelar cita" }));
+        listed = [ listed[ 1 ] ];
+        await user.click(screen.getByRole("button", { name: "Sí, cancelar cita" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Tu cita quedó cancelada");
+        expect(call("/portal/appointments/a1/cancel")).toHaveLength(1);
+        const [ , init ] = call("/portal/appointments/a1/cancel")[ 0 ];
+        expect(init.method).toBe("POST");
+        expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-from-session");
+        expect(within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")).toHaveLength(1);
+        expect(call("/portal/appointments").length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("closes the dialog and refreshes the list when the appointment can no longer be changed", async () => {
+        server.cancel = () => fail(404, "Appointment not found");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Cancelar cita" }));
+        await user.click(screen.getByRole("button", { name: "Sí, cancelar cita" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Esta cita ya no se puede modificar");
+        expect(screen.queryByRole("alertdialog")).toBeNull();
+    });
+
+    it("keeps the dialog open with the error on a server failure", async () => {
+        server.cancel = () => fail(503, "unavailable");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Cancelar cita" }));
+        await user.click(screen.getByRole("button", { name: "Sí, cancelar cita" }));
+
+        const dialog = await screen.findByRole("alertdialog");
+        await waitFor(() => expect(dialog).toHaveTextContent(/error en el servidor/));
+    });
+
+    it("reschedules to a new time in the device zone and returns to the list", async () => {
+        let sent: unknown;
+        server.reschedule = (_id, body) => {
+            sent = body;
+            listed = [ appt("a1", { startUtc: morning, endUtc: morning }) ];
+            return ok(200, { appointment: listed[ 0 ] });
+        };
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+
+        expect(await screen.findByRole("heading", { name: "Reprogramar cita" })).toHaveFocus();
+        expect(screen.getByText("Cita actual")).toBeInTheDocument();
+        expect(slotCalls()[ 0 ][ 0 ]).toContain("typeId=t1");
+        await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+        expect(await screen.findByRole("heading", { name: /Confirma el cambio/ })).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Confirmar nuevo horario" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Tu cita quedó reprogramada");
+        expect(sent).toEqual({ startUtc: morning, patientTimezone: "Europe/Madrid" });
+        expect(call("/portal/appointments/a1/reschedule")).toHaveLength(1);
+    });
+
+    it("drops a taken time, says why and reloads the slots", async () => {
+        server.reschedule = () => fail(409, "Slot no longer available");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+        await user.click(await screen.findByRole("button", { name: "Confirmar nuevo horario" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("Ese horario ya no está disponible");
+        expect(screen.queryByRole("heading", { name: /Confirma el cambio/ })).toBeNull();
+        await waitFor(() => expect(slotCalls()).toHaveLength(2));
+        expect(screen.getByRole("heading", { name: "Reprogramar cita" })).toBeInTheDocument();
+    });
+
+    it("returns to the list with the reason when the appointment can no longer be moved online", async () => {
+        server.reschedule = () => fail(409, "Reschedule unavailable");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+        await user.click(await screen.findByRole("button", { name: "Confirmar nuevo horario" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("ya no se puede reprogramar en línea");
+        expect(await screen.findByRole("list", { name: "Próximas citas" })).toBeInTheDocument();
+    });
+
+    it("goes back without a request, and to the login when the session expired", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        await user.click(await screen.findByRole("button", { name: "Volver a mis citas" }));
+        expect(await screen.findByRole("list", { name: "Próximas citas" })).toBeInTheDocument();
+        expect(call("/reschedule")).toHaveLength(0);
+
+        server.reschedule = () => fail(401, "Invalid session");
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+        server.session = null;
+        await user.click(await screen.findByRole("button", { name: "Confirmar nuevo horario" }));
+        expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
     });
 });

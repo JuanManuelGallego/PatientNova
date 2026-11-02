@@ -307,7 +307,12 @@ Suite: `55` files, `700` tests, all against real Postgres, `tsc --noEmit` clean.
   next week on the shared seeded calendar (each run takes the first free one). Keep OTP requests in e2e minimal:
   `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages (`/book/[slug]/appointments`) use `portalApi`
   via `usePortalSession`/`usePortalQuery`/`src/api/portal/` only; a 401 from `/session` means "no session", never an
-  error, and a 401 from `/appointments` returns to the login. Specs strip the Vercel bypass headers from API calls, since
+  error, and a 401 from `/appointments` returns to the login. "Mis citas" shows "Reprogramar"/"Cancelar cita" only from the
+  server's `canReschedule`/`canCancel` flags (never re-derived), cancels through an in-app `ConfirmDialog` (never
+  `window.confirm`; public pages have no provider layout, so it brings its own `FocusTrapProvider`), and keeps the
+  appointment being moved in component state, never in the URL. Booking and rescheduling share the week/day/time picker
+  (`useSlotPicker` + `SlotSteps`, `src/components/PublicBooking/SlotPicker.tsx`) so both follow the same device-zone and
+  paging rules. A 404 on cancel/reschedule closes the action and refreshes the list with the server's message. Specs strip the Vercel bypass headers from API calls, since
   the anonymous CORS refuses them.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
