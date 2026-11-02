@@ -12,6 +12,12 @@ export class PublicAppointmentTypeNotFoundError extends ApiError {
   }
 }
 
+export class PublicLocationNotFoundError extends ApiError {
+  constructor() {
+    super('Location not found', 404);
+  }
+}
+
 export class ProviderImageNotFoundError extends ApiError {
   constructor() {
     super('Image not found', 404);

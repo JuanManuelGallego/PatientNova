@@ -129,7 +129,7 @@ describe('patientService.create', () => {
     const dto = { name: 'John', lastName: 'Doe', email: 'john@test.com', status: 'ACTIVE' as const };
     mockRepo.create.mockResolvedValue(fakePatient as any);
     const result = await patientService.create(dto, 'user-1');
-    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1', expect.anything());
+    expect(mockRepo.create).toHaveBeenCalledWith(dto, 'user-1', expect.anything(), {});
     expect(result).toEqual(fakePatient);
   });
 

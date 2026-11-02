@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); next is Phase 4. **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 in progress (4.1 booking transaction built; 4.2 notifications and 4.3 Portal next). **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -109,7 +109,7 @@ All eight findings were checked against the code and accepted.
 - **Booking revalidates** with the same function (`isSlotAvailable`) inside the booking transaction, and the start must be exactly on the grid.
 
 ## Booking transaction (auto-confirm)
-`appointmentService.create` currently validates and checks conflicts outside its transaction using the global client, then opens its own `$transaction` (`appointment.service.ts:299-395`). It must become transaction-aware:
+*(Done in 0.2: `createWithin(tx, dto, userId, opts)` exists and `create` wraps it; `opts` (`source`, `patientTimezone`) added in 4.1.)* Originally, `appointmentService.create` validated and checked conflicts outside its transaction using the global client, then opened its own `$transaction`. It had to become transaction-aware:
 - Refactor to `createWithin(tx, dto, userId, opts)`; the existing `create` wraps it in its own transaction. All validators and conflict checks take the `tx` client.
 - A shared helper `withProviderLock(tx, userId)` runs `pg_advisory_xact_lock` on the provider. It is taken by: admin create/update/reschedule/reactivation, blocked-time create/update, `BookingRequest` hold creation and approval, and the public booking.
 - Public booking runs, in **one transaction**: provider lock → validate type/location bookable → `isSlotAvailable` → resolve or create Patient (never modify an existing one) → `ensureCurrentConsent` → `createWithin` → **required** audits (they must rethrow, see below) → enqueue the confirmation via `fromPrisma(tx)`. Anything failing rolls back everything.
@@ -451,6 +451,57 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **4.2 Confirmation and reminders.** Confirmation email through Brevo (link to the appointments page, no token), reminders on the `EMAIL` channel. Queue via `fromPrisma(tx)` inside the transaction. Every time sent to or shown to the patient (confirmation, reminders, the patient's appointments page) uses `Appointment.patientTimezone`, never the provider's zone; the provider's calendar and notices stay in `User.timezone`. Tests: a patient in another zone gets their own times, including a DST change between booking and appointment. (The `whenLocal` parameter comment on `renderBookingConfirmationEmail`, `src/brevo/email-templates.ts`, still says "provider's timezone"; switch it to `patientTimezone`.) (In-person only until 5.4; for virtual appointments the confirmation waits for `meetingStatus` to reach `READY` or the defined fallback.)
 - **4.3 Booking form, appointments page, and provider notification** of a new booking (on `reminderChannel`).
 - **Pilot gate:** end-to-end self-booking is the milestone; pilot with real patients only after 0.23 is satisfied, otherwise synthetic/staff data only.
+
+#### Phase 4 implementation plan (prepared 2026-11-01)
+**Decided (2026-11-01):**
+- A portal booking is created `CONFIRMED` (with `confirmedAt`): the patient chose the slot.
+- One linked EMAIL reminder 24h before the start, skipped when the booking is made less than 24h ahead.
+- The provider notice goes on `User.reminderChannel` (honoring `reminderActive`); WhatsApp uses a new **required**
+  `TWILIO_PORTAL_BOOKING_SID`, so the template must be approved before deploy.
+- A patient holds at most 3 upcoming portal-sourced appointments.
+- Patient pages show times in the device zone (as `/book` does); `Appointment.patientTimezone` is used for emails and
+  reminders only. This replaces the 4.2 wording "the patient's appointments page uses `patientTimezone`".
+
+**Starting point (checked in code):** `createWithin` already takes the lock but had no options (`source` always
+`PROVIDER`, no `confirmedAt`) and never enqueues SCHEDULED linked reminders (only the 12h reconcile picks them up);
+`loadBusy`/`findBookableType` had no `tx`; `patientService.create` opens its own transaction; `renderBookingConfirmationEmail`
+exists but nothing sends it; `bookingApprovalMode` is not editable, so every provider is `AUTO_CONFIRM`; `mock-brevo.mjs`
+keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
+
+**PR 4.1 — Server: booking transaction + upcoming list.** Built (2026-11-01).
+- Migration `20261102000000_portal_booking`: `Appointment.patientTimezone VARCHAR(50) NULL`.
+- `createWithin(tx, dto, userId, { source, patientTimezone })`; the repository sets `confirmedAt` on a CONFIRMED create
+  (provider path too). `createPatientWithin(tx, dto, userId, { source })` extracted from `patientService.create`.
+  `findBookableType`/`loadBusy` take `tx`; new `findBookableLocation`.
+- `POST /v1/portal/bookings` (`portal-booking-ip` limiter, `portalSessionGuard`, strict body
+  `{ typeId, locationId, startUtc, patientTimezone, consentAccepted: true, patient: { name, lastName, phone? } }`):
+  lock → live + `AUTO_CONFIRM` (else 404) → bookable type/location (404) → `isSlotAvailable` (409
+  `Slot no longer available`) → resolve patient (`unavailable` → 409 `Online booking unavailable`; `none` → new patient,
+  `source=PORTAL`, `reminderChannel=EMAIL`) → cap (409 `Booking limit reached`) → `ensureCurrentConsent` → `createWithin`
+  (type price, `paid=false`, CONFIRMED). Calendar conflicts map to the neutral slot error. 201 `{ appointment }`.
+- `GET /v1/portal/appointments` → `{ appointments, consentRequired }`; only a consented patient gets their upcoming active
+  appointments (at most 50), every other case `{ appointments: [], consentRequired: true }`.
+- Tests: `portal-booking.integration.test.ts` (shared `portal-helpers.ts`), schema unit test. Bruno: `Portal Booking`
+  folder; Get Slots stores `slotStartUtc`.
+
+**PR 4.2 — Server: confirmation, reminder, provider notice.**
+- `createWithin` (and the update path) enqueue SCHEDULED linked reminders with `{ startAfter, db: fromPrisma(tx) }`; the
+  reconcile stays as a safety net. `renderLinkedReminder` uses `patientTimezone ?? User.timezone`.
+- `book` adds the 24h EMAIL reminder.
+- New queue `portal-booking-notify` (`{ appointmentId, kind: 'patient-confirmation' | 'provider-notice' }`, ids only),
+  enqueued with `fromPrisma(tx)`; with the scheduler off the same handler runs after commit, best effort. The handler
+  skips deleted/inactive appointments and throws on send failure. Confirmation: `renderBookingConfirmationEmail` in the
+  patient's zone with a zone label and the appointments link (no token). Provider notice modelled on
+  `sendReminderFailureAlert`, generic text without patient details.
+- Tests: jobs enqueued in the transaction and dropped on rollback, scheduler-off path, reminder row, patient zone across a
+  DST change, each provider channel, `reminderActive=false`.
+
+**PR 4.3 — Portal: booking form, appointments page, badge, e2e.**
+- `/book/[slug]`: time buttons, step 4 "Confirma tu cita" (summary, location picker, inline `PortalLogin` without a
+  session, then name/lastName/phone + consent, `useCreateBooking`), success card, Spanish errors for the three 409s.
+- "Mis citas": `usePortalQuery` + `usePortalAppointments`, device-zone cards, empty state.
+- Provider: `source` on the `Appointment` type, "Reservada en línea" badge in the drawer and chip.
+- E2E: mock-brevo history + `/__test/messages`, `e2e-publica` on `reminderChannel: EMAIL`, `booking.spec.ts`.
 
 ### Phase 5: Patient self-service
 - **5.1 My appointments.** List endpoint and page, own appointments only.

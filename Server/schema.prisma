@@ -159,6 +159,8 @@ model Appointment {
 
   source      RecordSource @default(PROVIDER)
   cancelledBy CancelledBy?
+  // IANA zone of the patient's device at portal booking time; patient-facing text uses it.
+  patientTimezone String? @db.VarChar(50)
 
   patientId  String  @db.Uuid
   userId     String

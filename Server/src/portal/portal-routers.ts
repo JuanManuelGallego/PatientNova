@@ -6,6 +6,7 @@ import { apiError } from '../utils/api/api-utils.js';
 import { publicBookingRouter } from '../public-booking/public-booking.routes.js';
 import { createOtpRequestRouter, createOtpVerifyRouter } from './portal-otp.routes.js';
 import { createPortalSessionRoutes } from './portal-session.routes.js';
+import { createPortalBookingRoutes } from './portal-booking.routes.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
 
@@ -29,6 +30,7 @@ export function createPortalSessionRouter(): Router {
   router.use(cookieParser());
   router.use(createOtpVerifyRouter());
   router.use(createPortalSessionRoutes());
+  router.use(createPortalBookingRoutes());
   return router;
 }
 

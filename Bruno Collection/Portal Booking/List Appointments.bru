@@ -1,0 +1,18 @@
+meta {
+  name: List Appointments
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/portal/appointments
+  body: none
+  auth: none
+}
+
+docs {
+  Needs the `portal_session` cookie. Returns `{ appointments, consentRequired }`: the session
+  patient's upcoming active appointments (at most 50, soonest first) once they have accepted the
+  current privacy policy, otherwise `{ appointments: [], consentRequired: true }` with the same shape
+  whether or not the email belongs to a patient.
+}

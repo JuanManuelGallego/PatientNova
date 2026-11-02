@@ -1,0 +1,48 @@
+meta {
+  name: Create Booking
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/portal/bookings
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+  X-CSRF-Token: {{portalCsrfToken}}
+}
+
+body:json {
+  {
+    "typeId": "{{typeId}}",
+    "locationId": "{{locationId}}",
+    "startUtc": "{{slotStartUtc}}",
+    "patientTimezone": "America/Bogota",
+    "consentAccepted": true,
+    "patient": {
+      "name": "Paciente",
+      "lastName": "Prueba",
+      "phone": ""
+    }
+  }
+}
+
+docs {
+  Books `startUtc` (run Public Booking > Get Slots first; it stores the first free slot in
+  `slotStartUtc`) for the session's email. Needs the session cookie, the exact Origin and the CSRF
+  token from Verify OTP or Get Session. The type and location must be bookable online.
+
+  The body is strict: price, duration, end time and status come from the server (type price,
+  type duration, CONFIRMED). `patient` is used only when the email has no patient yet; an existing
+  patient is never changed. `patientTimezone` is the device's IANA zone, used for the patient's
+  emails.
+
+  201 `{ appointment }`. 409 "Slot no longer available" (taken, off-grid, outside the window, lead
+  time or horizon), 409 "Booking limit reached" (3 upcoming portal bookings), 409 "Online booking
+  unavailable" (portal access not available for this email), 404 for a type, location or provider
+  that is not bookable.
+}

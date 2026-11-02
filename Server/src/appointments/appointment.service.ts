@@ -1,6 +1,6 @@
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
-import { appointmentRepository } from './appointment.repository.js';
+import { appointmentRepository, type CreateAppointmentOptions } from './appointment.repository.js';
 import { ACTIVE_STATUSES } from './appointment-status.js';
 import {
   AppointmentConflictError,
@@ -294,6 +294,7 @@ export async function createWithin(
   tx: TransactionClient,
   dto: CreateAppointmentDto,
   userId: string,
+  opts: CreateAppointmentOptions = {},
 ): Promise<AppointmentWithRelations> {
   await withProviderLock(tx, userId);
 
@@ -336,6 +337,7 @@ export async function createWithin(
       { ...dto, meetingUrl: meetingUrl ?? null, reminderId: reminderId ?? undefined },
       userId,
       tx,
+      opts,
     );
 
     await logAudit({

@@ -1,4 +1,4 @@
-import { Channel, type Patient, type Prisma } from '../../generated/prisma/client.ts';
+import { Channel, type Patient, type Prisma, type RecordSource } from '../../generated/prisma/client.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { PatientEmailConflictError } from './patient.errors.js';
@@ -63,11 +63,16 @@ async function sortByDecryptedField(
   return { data: pageIds.map((id) => byId.get(id)).filter((r): r is Patient => !!r), total: keys.length };
 }
 
+export interface CreatePatientOptions {
+  source?: RecordSource;
+}
+
 export const patientRepository = {
-  async create(dto: CreatePatientDto, userId: string, tx?: TransactionClient): Promise<Patient> {
+  async create(dto: CreatePatientDto, userId: string, tx?: TransactionClient, opts: CreatePatientOptions = {}): Promise<Patient> {
     try {
       return await (tx ?? prisma).patient.create({
         data: {
+          ...(opts.source && { source: opts.source }),
           name: dto.name,
           lastName: dto.lastName,
           whatsappNumber: dto.whatsappNumber ?? null,
