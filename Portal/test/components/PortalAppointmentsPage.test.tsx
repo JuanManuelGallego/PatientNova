@@ -420,7 +420,7 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         durationMinutes: 60,
         status: "CONFIRMED",
         price: 150000,
-        type: { id: "t1", name: "Primera consulta" },
+        type: { name: "Primera consulta" },
         location: { name: "Consultorio Centro", address: "Calle 10", instructions: null },
         canCancel: true,
         canReschedule: true,

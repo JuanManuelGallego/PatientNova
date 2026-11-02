@@ -1,44 +1,35 @@
 import {
   ActionType,
   AppointmentStatus,
-  BookingApprovalMode,
   CancelledBy,
-  Channel,
   EntityType,
-  RecordSource,
-  ReminderMode,
   ReminderStatus,
 } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { config } from '../utils/config/config.js';
-import { ONE_DAY_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
+import { ONE_MINUTE_MS } from '../utils/config/constants.js';
 import { logger } from '../utils/api/logger.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { cancelLinkedReminder, updateWithin } from '../appointments/appointment.service.js';
 import type { UpdateAppointmentDto } from '../appointments/appointment.schemas.js';
-import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
-import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
-import { publicBookingRepository } from '../public-booking/public-booking.repository.js';
-import { ProviderNotFoundError } from '../public-booking/public-booking.errors.js';
-import { isSlotAvailable } from '../public-booking/slot-engine.js';
-import { computeSlots } from '../public-booking/public-booking.service.js';
+import { computeSlots, isSlotFree } from '../public-booking/public-booking.service.js';
 import type { SlotRangeQuery } from '../public-booking/public-booking.schemas.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 import { hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
-import { canCancel } from './portal-appointment-actions.js';
+import { canCancel, canReschedule } from './portal-appointment-actions.js';
 import {
   PortalAppointmentNotFoundError,
   PortalRescheduleUnavailableError,
   RescheduleSameTimeError,
   SlotUnavailableError,
 } from './portal-booking.errors.js';
-import { toPortalError } from './portal-booking.service.js';
+import { portalReminder, requireSelfBooking, toPortalError } from './portal-booking.service.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import type { ReschedulePortalAppointmentBody } from './portal-booking.schemas.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications } from './portal-booking-notifications.js';
@@ -48,7 +39,7 @@ import type { PortalSessionContext } from './portal-session.middleware.js';
  * The session's patient, only when it may see its appointments (a matched patient with a current consent).
  * Every other case is the same 404 as an appointment that is not theirs.
  */
-export async function requireConsentedPatient(session: PortalSessionContext, tx: TransactionClient): Promise<string> {
+async function requireConsentedPatient(session: PortalSessionContext, tx: TransactionClient): Promise<string> {
   const resolution = await resolvePortalPatient(session, tx);
   if (resolution.kind !== 'patient') throw new PortalAppointmentNotFoundError();
   if (!(await hasCurrentConsent(resolution.patientId, PRIVACY_POLICY_VERSION, tx))) throw new PortalAppointmentNotFoundError();
@@ -77,34 +68,14 @@ async function reminderPatch(
   now: Date,
   email: string,
 ): Promise<Pick<UpdateAppointmentDto, 'reminder'>> {
-  const reminderAt = new Date(start.getTime() - ONE_DAY_MS);
-  const due = reminderAt > now;
   const linked = await tx.reminder.findFirst({
     where: { appointmentId, isDeleted: false },
     select: { status: true, channel: true, to: true },
   });
-  if (linked?.status === ReminderStatus.PENDING) {
-    if (!due) return { reminder: null };
-    return {
-      reminder: {
-        channel: linked.channel,
-        to: linked.to,
-        sendMode: ReminderMode.SCHEDULED,
-        sendAt: reminderAt.toISOString(),
-        status: ReminderStatus.PENDING,
-      },
-    };
-  }
-  if (!due) return {};
-  return {
-    reminder: {
-      channel: Channel.EMAIL,
-      to: email,
-      sendMode: ReminderMode.SCHEDULED,
-      sendAt: reminderAt.toISOString(),
-      status: ReminderStatus.PENDING,
-    },
-  };
+  const pending = linked?.status === ReminderStatus.PENDING;
+  const reminder = pending ? portalReminder(start, now, linked.to, linked.channel) : portalReminder(start, now, email);
+  if (reminder) return { reminder };
+  return pending ? { reminder: null } : {};
 }
 
 /**
@@ -114,19 +85,14 @@ async function reminderPatch(
  */
 async function loadReschedulable(tx: TransactionClient, session: PortalSessionContext, appointmentId: string, now: Date) {
   const { userId } = session;
-  if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
-  const settings = await bookingSettingsRepository.getSettings(userId, tx);
-  if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
+  const settings = await requireSelfBooking(userId, tx);
 
   const patientId = await requireConsentedPatient(session, tx);
   const appt = await portalBookingRepository.findOwn(userId, patientId, appointmentId, tx);
   if (!appt || !canCancel(appt, now)) throw new PortalAppointmentNotFoundError();
-  if (appt.source !== RecordSource.PORTAL || !appt.typeId || !appt.locationId) throw new PortalRescheduleUnavailableError();
-
-  const type = await publicBookingRepository.findBookableType(userId, appt.typeId, tx);
-  const location = await publicBookingRepository.findBookableLocation(userId, appt.locationId, tx);
-  if (!type || !location) throw new PortalRescheduleUnavailableError();
-  return { settings, appt, type };
+  // Same rule as the `canReschedule` flag the patient sees, so the button and the endpoint never disagree.
+  if (!canReschedule(appt, { now, canBook: true })) throw new PortalRescheduleUnavailableError();
+  return { settings, appt, durationMinutes: appt.appointmentType!.defaultDuration };
 }
 
 export const portalAppointmentService = {
@@ -175,8 +141,8 @@ export const portalAppointmentService = {
   async rescheduleSlots(session: PortalSessionContext, appointmentId: string, range: SlotRangeQuery) {
     const { userId } = session;
     return prisma.$transaction(async (tx) => {
-      const { settings, appt, type } = await loadReschedulable(tx, session, appointmentId, new Date());
-      const slots = await computeSlots(userId, settings, type.defaultDuration, range, { excludeAppointmentId: appt.id, tx });
+      const { settings, appt, durationMinutes } = await loadReschedulable(tx, session, appointmentId, new Date());
+      const slots = await computeSlots(userId, settings, durationMinutes, range, { excludeAppointmentId: appt.id, tx });
       const current = appt.startAt.toISOString();
       return { timezone: settings.timezone, slots: slots.filter((s) => s.startUtc !== current) };
     });
@@ -200,24 +166,12 @@ export const portalAppointmentService = {
       const { moved, move } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
         const now = new Date();
-        const { settings, appt, type } = await loadReschedulable(tx, session, appointmentId, now);
+        const { settings, appt, durationMinutes } = await loadReschedulable(tx, session, appointmentId, now);
         if (start.getTime() === appt.startAt.getTime()) throw new RescheduleSameTimeError();
 
-        const end = new Date(start.getTime() + type.defaultDuration * ONE_MINUTE_MS);
-        const rules = await bookingSettingsRepository.listRules(userId, tx);
-        const busy = await publicBookingRepository.loadBusy(userId, start, end, settings.bufferMinutes, tx, { excludeAppointmentId: appt.id });
-        const available = isSlotAvailable(start, {
-          timezone: settings.timezone,
-          rules,
-          durationMinutes: type.defaultDuration,
-          slotIntervalMinutes: settings.slotIntervalMinutes,
-          bufferMinutes: settings.bufferMinutes,
-          minLeadMinutes: settings.minLeadMinutes,
-          maxHorizonDays: settings.maxHorizonDays,
-          now,
-          busy: { ...busy, holds: [] },
-        });
-        if (!available) throw new SlotUnavailableError();
+        const end = new Date(start.getTime() + durationMinutes * ONE_MINUTE_MS);
+        const free = await isSlotFree(userId, settings, durationMinutes, start, now, { excludeAppointmentId: appt.id, tx });
+        if (!free) throw new SlotUnavailableError();
 
         await updateWithin(tx, appt.id, {
           startAt: start.toISOString(),

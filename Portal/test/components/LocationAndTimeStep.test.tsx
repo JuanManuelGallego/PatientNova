@@ -10,6 +10,7 @@ import { ApiMutationError } from "@/src/api/base/useApiMutation";
 const createMeet = vi.fn();
 const startOAuth = vi.fn();
 let connected = true;
+let status: "connected" | "expired" | "not_connected" = "connected";
 
 vi.mock("@/src/api/google/useCreateGoogleMeet", () => ({
   useCreateGoogleMeet: () => ({ createMeet, loading: false, error: null }),
@@ -18,7 +19,7 @@ vi.mock("@/src/api/google/useStartGoogleOAuth", () => ({
   useStartGoogleOAuth: () => ({ startOAuth, loading: false, error: null }),
 }));
 vi.mock("@/src/api/google/useFetchGoogleConnection", () => ({
-  useFetchGoogleConnection: () => ({ data: { connected }, loading: false, error: null }),
+  useFetchGoogleConnection: () => ({ data: { connected, status }, loading: false, error: null }),
 }));
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({ user: { role: "ADMIN" } }),
@@ -58,6 +59,7 @@ function Harness({ meetingUrl }: { meetingUrl?: string }) {
 
 beforeEach(() => {
   connected = true;
+  status = "connected";
   createMeet.mockReset().mockResolvedValue({ meetingUrl: "https://meet.google.com/new", spaceName: "space" });
   startOAuth.mockReset().mockResolvedValue({ authUrl: "https://accounts.google.test" });
   vi.restoreAllMocks();
@@ -92,6 +94,30 @@ describe("LocationAndTimeStep Google Meet", () => {
 
     await waitFor(() => expect(createMeet).toHaveBeenCalledTimes(1));
     expect(startOAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an expired connection up front and reconnects with consent", async () => {
+    connected = false;
+    status = "expired";
+    const popup = { closed: false, close: vi.fn(), location: { href: "" } } as unknown as Window;
+    vi.spyOn(window, "open").mockReturnValue(popup);
+    render(<Harness />);
+
+    expect(screen.getByRole("button", { name: /Reconectar y generar/ })).toBeInTheDocument();
+    expect(screen.getByTestId("google-expired-hint")).toHaveTextContent("pega el enlace de tu propia sala");
+    expect(screen.getByTestId("generate-meet-link-button")).toHaveAccessibleDescription(/Tu conexión con Google expiró/);
+    expect(screen.getByTestId("appointment-meeting-url-input")).toBeEnabled();
+
+    await userEvent.click(screen.getByTestId("generate-meet-link-button"));
+    expect(startOAuth).toHaveBeenCalledWith("/appointments", true);
+    expect(createMeet).not.toHaveBeenCalled();
+  });
+
+  it("asks to reconnect before regenerating an existing URL when expired", async () => {
+    connected = false;
+    status = "expired";
+    render(<Harness meetingUrl="https://zoom.us/j/123" />);
+    expect(screen.getByRole("button", { name: /Reconectar y generar/ })).toBeInTheDocument();
   });
 
   it("requires confirmation before replacing an existing URL", async () => {

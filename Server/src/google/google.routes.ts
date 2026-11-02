@@ -7,6 +7,7 @@ import { logger } from '../utils/api/logger.js';
 import { config } from '../utils/config/config.js';
 import { googleOAuthService } from './google-oauth.service.js';
 import { googleMeetService } from './google-meet.service.js';
+import { verifyConnection } from './google-connection.service.js';
 import { GoogleOAuthError } from './google-errors.js';
 
 export const googleRouter = Router();
@@ -27,6 +28,15 @@ const oauthCallbackLimit = rateLimit({
   handler: (_req, res) => { apiError(res, 'Too many OAuth requests', 429); },
 });
 
+const verifyLimit = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `google-verify:${req.user!.id}`,
+  handler: (_req, res) => { apiError(res, 'Too many connection checks', 429); },
+});
+
 const OAUTH_ERROR_REDIRECTS: Record<string, string> = {
   INVALID_OAUTH_STATE: 'invalid_state',
   OAUTH_STATE_CONSUMED: 'state_consumed',
@@ -43,8 +53,14 @@ const validateOrigin = (req: Request): void => {
 };
 
 googleRouter.get('/connection', authenticate, requireAdmin, asyncHandler(async (req: Request, res: Response) => {
-  const status = await googleOAuthService.getConnectionStatus(req.user!.id);
-  ok(res, status);
+  ok(res, await googleOAuthService.getConnectionStatus(req.user!.id));
+}));
+
+// Calls Google and may mark the connection expired, so it is a POST (CSRF-protected) with its own limit.
+googleRouter.post('/connection/verify', authenticate, requireAdmin, verifyLimit, asyncHandler(async (req: Request, res: Response) => {
+  validateOrigin(req);
+  await verifyConnection(req.user!.id);
+  ok(res, await googleOAuthService.getConnectionStatus(req.user!.id));
 }));
 
 googleRouter.post('/oauth/start', authenticate, requireAdmin, asyncHandler(async (req: Request, res: Response) => {

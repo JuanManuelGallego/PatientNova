@@ -5,6 +5,7 @@ import Image from "next/image";
 import Sidebar from "@/src/components/Sidebar";
 import { useMediaQuery } from "@/src/hooks/useMediaQuery";
 import { ACTION_ICONS } from "@/src/config/icons";
+import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
 
 /** Wraps the standard page-shell (sidebar + navbar + main content area). */
 export default function PageLayout({
@@ -86,7 +87,10 @@ export default function PageLayout({
           </div>
           <div className="navbar-spacer" />
         </header>
-        <main className="page-main">{children}</main>
+        <main className="page-main">
+          <ProviderAlerts />
+          {children}
+        </main>
       </div>
     </div>
   );

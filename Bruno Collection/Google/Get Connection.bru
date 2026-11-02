@@ -1,0 +1,28 @@
+meta {
+  name: Get Connection
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/google/connection
+  body: none
+  auth: inherit
+}
+
+docs {
+  Google connection status for the signed-in provider (ADMIN/SUPER_ADMIN).
+
+  `status`:
+  - `connected`: usable for Google Meet.
+  - `expired`: a stored connection Google rejected (or missing the Meet scope); reconnect.
+  - `not_connected`: never connected, or disconnected manually.
+
+  To check the token with Google now, use `Verify Connection` (POST). A daily
+  `check-google-connections` job does the same for every active connection.
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

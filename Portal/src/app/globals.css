@@ -96,6 +96,8 @@
   --c-warning-dark: #92400e;
   --c-warning-bg: #ffe4dfa6;
   --c-warning-light: #fef9c3;
+  --c-warning-surface: #fffbeb;
+  --c-warning-border: #fcd34d;
   --c-info-bg: #eff6ff;
   --c-info-border: #bfdbfe;
   --c-required: #ef4444;
@@ -166,6 +168,8 @@
   --c-warning-dark: #fef3c7;
   --c-warning-bg: #451a03;
   --c-warning-light: #78350f;
+  --c-warning-surface: #451a03;
+  --c-warning-border: #92400e;
   --c-info-bg: #1e3a5f;
   --c-info-border: #1e40af;
   --c-required: #f87171;
@@ -2067,6 +2071,120 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+}
+
+.warning-banner {
+  background: var(--c-warning-surface);
+  border: 1px solid var(--c-warning-border);
+  border-radius: var(--r-xl);
+  padding: 10px 12px 10px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--c-warning-dark);
+}
+
+.warning-banner__icon {
+  flex-shrink: 0;
+}
+
+.warning-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.warning-banner__text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.warning-banner__error {
+  font-size: 13px;
+  margin-top: 4px;
+  color: var(--c-error);
+}
+
+.warning-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.warning-banner__link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-warning-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.warning-banner__link:focus-visible,
+.warning-banner__action:focus-visible {
+  outline: 2px solid var(--c-warning-dark);
+  outline-offset: 2px;
+}
+
+.warning-banner__action {
+  padding: 7px 14px;
+  background: var(--c-surface);
+  color: var(--c-warning-dark);
+  border: 1px solid var(--c-warning-border);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.warning-banner__action:hover:not(:disabled) {
+  background: var(--c-warning-border);
+}
+
+.warning-banner__action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .warning-banner {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .warning-banner__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Inline action that belongs to the text next to it (e.g. "Verificar ahora" beside a timestamp). */
+.btn-text {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--c-link);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-text:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.btn-text:focus-visible {
+  outline: 2px solid var(--c-link);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.btn-text:disabled {
+  color: var(--c-gray-400);
+  cursor: default;
 }
 
 /* ================================================================

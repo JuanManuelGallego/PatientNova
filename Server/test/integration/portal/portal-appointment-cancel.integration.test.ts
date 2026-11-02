@@ -33,6 +33,7 @@ import {
   createLiveProvider,
   portalBookingBody,
   sessionFor,
+  portalPost,
   slotStarts,
   type LiveProvider,
   type TestSession,
@@ -55,15 +56,10 @@ beforeEach(() => {
   mocks.cancel.mockReset().mockResolvedValue(undefined);
 });
 
-const postBooking = (s: TestSession, body: unknown) =>
-  request(app).post('/v1/portal/bookings').set('Origin', ALLOWED_ORIGIN).set('Cookie', s.cookie).set('X-CSRF-Token', s.csrf).send(body as object);
+const postBooking = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
 
-function postCancel(s: TestSession, id: string, opts: { csrf?: string | null; origin?: string; body?: object } = {}) {
-  const req = request(app).post(`/v1/portal/appointments/${id}/cancel`).set('Origin', opts.origin ?? ALLOWED_ORIGIN).set('Cookie', s.cookie);
-  const csrf = opts.csrf === undefined ? s.csrf : opts.csrf;
-  if (csrf !== null) req.set('X-CSRF-Token', csrf);
-  return opts.body ? req.send(opts.body) : req.send();
-}
+const postCancel = (s: TestSession, id: string, opts: { csrf?: string | null; origin?: string; body?: object } = {}) =>
+  portalPost(app, `/v1/portal/appointments/${id}/cancel`, s, opts.body, opts);
 
 const listAppointments = (s: TestSession) => request(app).get('/v1/portal/appointments').set('Cookie', s.cookie);
 

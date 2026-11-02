@@ -1,4 +1,5 @@
 import express from 'express';
+import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
@@ -71,6 +72,20 @@ export function sessionFor(userId: string, email: string): TestSession {
   const sid = `sid-${++seq}`;
   const token = signPortalToken({ userId, email, sid });
   return { cookie: `${PORTAL_COOKIE_NAME}=${token}`, csrf: createCsrfToken(sid, portalSecret()), email, sid };
+}
+
+/** POST on a session route with the exact Origin, the session cookie and its CSRF token (`csrf: null` omits it). */
+export function portalPost(
+  app: express.Express,
+  path: string,
+  s: TestSession,
+  body?: object,
+  opts: { csrf?: string | null; origin?: string } = {},
+) {
+  const req = request(app).post(path).set('Origin', opts.origin ?? ALLOWED_ORIGIN).set('Cookie', s.cookie);
+  const csrf = opts.csrf === undefined ? s.csrf : opts.csrf;
+  if (csrf !== null) req.set('X-CSRF-Token', csrf);
+  return body ? req.send(body) : req.send();
 }
 
 export const PORTAL_ZONE = 'America/Bogota';

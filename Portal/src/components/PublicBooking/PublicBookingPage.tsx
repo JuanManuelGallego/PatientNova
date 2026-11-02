@@ -34,7 +34,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const [ booked, setBooked ] = useState<PortalAppointment | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
-    const picker = useSlotPicker(slug, provider, type?.id ?? null, timezone);
+    const picker = useSlotPicker(slug, provider, { typeId: type?.id ?? null }, timezone);
     const { slot, notice, error } = picker;
     const pickedStart = slot?.startUtc;
     const confirmStep = useRef<HTMLDivElement>(null);

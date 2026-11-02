@@ -1,0 +1,22 @@
+meta {
+  name: Verify Connection
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/google/connection/verify
+  body: none
+  auth: inherit
+}
+
+docs {
+  Checks the stored Google token with Google now and answers the same body as `Get Connection`.
+  Success sets `lastCheckedAt`; `invalid_grant` marks the connection expired (`status: expired`);
+  a Google outage changes nothing. ADMIN/SUPER_ADMIN, exact Origin, 5 per minute per provider (429).
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

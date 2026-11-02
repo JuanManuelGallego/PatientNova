@@ -1,4 +1,4 @@
-import { COMMON_TIMEZONES, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
+import { COMMON_TIMEZONES, fmtTime, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
 import type { PublicSlot } from "@/src/types/PublicBooking";
 
 
@@ -82,6 +82,11 @@ export function localDayOf(iso: string, zone: string): string {
 
 export function fmtLongDay(day: string): string {
     return part(day, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+/** "lunes, 3 de noviembre de 2026, 9:00 a. m." in `zone`: how patient pages name an appointment time. */
+export function fmtLongDayTime(iso: string, zone: string): string {
+    return `${fmtLongDay(localDayOf(iso, zone))}, ${fmtTime(iso, zone)}`;
 }
 
 export function normalizePhone(value: string): string {

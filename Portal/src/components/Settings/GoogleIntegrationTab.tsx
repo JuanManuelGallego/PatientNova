@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useDisconnectGoogle } from "@/src/api/google/useDisconnectGoogle";
+import { useVerifyGoogleConnection } from "@/src/api/google/useVerifyGoogleConnection";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
@@ -14,8 +15,10 @@ export function GoogleIntegrationTab() {
   const { fetchConnection, loading: loadingConnection, error: connectionError, data } = useFetchGoogleConnection();
   const { startOAuth, loading: startingOAuth, error: oauthStartError } = useStartGoogleOAuth();
   const { disconnect, loading: disconnecting, error: disconnectError } = useDisconnectGoogle();
+  const { verifyConnection, loading: verifying, error: verifyError } = useVerifyGoogleConnection();
 
   const [ actionError, setActionError ] = useState<string | null>(null);
+  const [ verifiedNotice, setVerifiedNotice ] = useState<string | null>(null);
   const connection = data;
 
   const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
@@ -46,12 +49,46 @@ export function GoogleIntegrationTab() {
     }
   }, [ disconnect, fetchConnection ]);
 
-  const isConnected = connection?.connected === true;
+  const handleVerify = useCallback(async () => {
+    setActionError(null);
+    setVerifiedNotice(null);
+    try {
+      const result = await verifyConnection();
+      if (result.status === "connected") setVerifiedNotice("Conexión verificada.");
+    } catch { }
+    await fetchConnection();
+  }, [ verifyConnection, fetchConnection ]);
+
+  const isConnected = connection?.status === "connected";
+  const isExpired = connection?.status === "expired";
   const connectedAt = connection?.connectedAt;
   const lastUsedAt = connection?.lastUsedAt;
+  const lastCheckedAt = connection?.lastCheckedAt;
+  const disconnectedAt = connection?.disconnectedAt;
   const isUnknown = !connection && !connectionError;
-  const isLoading = loadingConnection || startingOAuth || waitingForOAuth || disconnecting;
-  const displayedError = actionError || popupError || oauthStartError || connectionError || disconnectError;
+  const isLoading = loadingConnection || startingOAuth || waitingForOAuth || disconnecting || verifying;
+  const displayedError = actionError || popupError || oauthStartError || connectionError || disconnectError || verifyError;
+  const at = (iso: string) => `${fmtDate(iso, timezone)} a las ${fmtTime(iso, timezone)}`;
+
+  const heading = isUnknown
+    ? "Comprobando conexión con Google…"
+    : connectionError
+      ? "No se pudo comprobar la conexión"
+      : isConnected
+        ? "Cuenta de Google conectada"
+        : isExpired
+          ? "La conexión con Google expiró"
+          : "Cuenta de Google no conectada";
+
+  const detail = isUnknown
+    ? "Espera mientras consultamos el estado de la integración."
+    : isConnected && connectedAt
+      ? `Conectado el ${at(connectedAt)}`
+      : isConnected
+        ? "La cuenta está conectada."
+        : isExpired
+          ? `Reconéctala para seguir generando enlaces de Meet.${disconnectedAt ? ` Google dejó de aceptarla el ${at(disconnectedAt)}` : ""}`
+          : "En espera de activación.";
 
   return (
     <div className="form-stack" style={{ maxWidth: 600 }}>
@@ -69,7 +106,7 @@ export function GoogleIntegrationTab() {
               width: 56,
               height: 56,
               borderRadius: 12,
-              background: isConnected ? "var(--c-green-100)" : "var(--c-gray-100)",
+              background: isConnected ? "var(--c-green-100)" : isExpired ? "var(--c-warning-surface)" : "var(--c-gray-100)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -78,22 +115,12 @@ export function GoogleIntegrationTab() {
             {isConnected ? (
               <STATUS_ICONS.success size={28} style={{ color: "var(--c-green)" }} />
             ) : (
-              <STATUS_ICONS.warning size={28} style={{ color: "var(--c-gray-400)" }} />
+              <STATUS_ICONS.warning size={28} style={{ color: isExpired ? "var(--c-warning-dark)" : "var(--c-gray-400)" }} />
             )}
           </div>
           <div>
-            <h4 style={{ marginBottom: 4 }}>
-              {isUnknown ? "Comprobando conexión con Google…" : connectionError ? "No se pudo comprobar la conexión" : isConnected ? "Cuenta de Google conectada" : "Cuenta de Google no conectada"}
-            </h4>
-            <p style={{ color: "var(--c-gray-500)", fontSize: 14 }}>
-              {isUnknown
-                ? "Espera mientras consultamos el estado de la integración."
-                : isConnected && connectedAt
-                  ? `Conectado el ${fmtDate(connectedAt, timezone)} a las ${fmtTime(connectedAt, timezone)}`
-                  : isConnected
-                    ? "La cuenta está conectada."
-                    : "En espera de activación."}
-            </p>
+            <h4 style={{ marginBottom: 4 }} data-testid="google-connection-heading">{heading}</h4>
+            <p style={{ color: "var(--c-gray-500)", fontSize: 14 }}>{detail}</p>
           </div>
         </div>
 
@@ -102,14 +129,31 @@ export function GoogleIntegrationTab() {
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
               <div>
                 <span style={{ color: "var(--c-gray-500)" }}>Último uso: </span>
-                <strong>{lastUsedAt ? `${fmtDate(lastUsedAt, timezone)} a las ${fmtTime(lastUsedAt, timezone)}` : "Nunca"}</strong>
+                <strong>{lastUsedAt ? at(lastUsedAt) : "Nunca"}</strong>
+              </div>
+              <div>
+                <span style={{ color: "var(--c-gray-500)" }}>Última verificación: </span>
+                <strong data-testid="google-last-checked">{lastCheckedAt ? at(lastCheckedAt) : "Aún no verificada"}</strong>
+                <button
+                  type="button"
+                  className="btn-text"
+                  style={{ marginLeft: 10 }}
+                  onClick={handleVerify}
+                  disabled={isLoading}
+                  data-testid="google-verify-button"
+                >
+                  {verifying ? "Verificando…" : "Verificar ahora"}
+                </button>
               </div>
             </div>
+            <p aria-live="polite" data-testid="google-verified-notice" style={{ marginTop: verifiedNotice ? 6 : 0, color: "var(--c-green)" }}>
+              {verifiedNotice}
+            </p>
           </div>
         )}
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {!isUnknown && !isConnected && (
+          {!isUnknown && !isConnected && !isExpired && (
             <button
               className="btn-primary"
               onClick={() => handleConnect(false)}
@@ -120,10 +164,10 @@ export function GoogleIntegrationTab() {
             </button>
           )}
 
-          {isConnected && (
+          {(isConnected || isExpired) && (
             <>
               <button
-                className="btn-secondary"
+                className={isExpired ? "btn-primary" : "btn-secondary"}
                 onClick={() => handleConnect(true)}
                 disabled={isLoading}
                 data-testid="google-reconnect-button"
@@ -141,6 +185,12 @@ export function GoogleIntegrationTab() {
             </>
           )}
         </div>
+
+        {isExpired && (
+          <p style={{ marginTop: 12, color: "var(--c-gray-500)", fontSize: 13 }}>
+            ¿No usas Google Meet? Desconecta la cuenta y el aviso dejará de aparecer.
+          </p>
+        )}
 
         {displayedError && (
           <div role="alert" className="error-inline" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>

@@ -15,7 +15,7 @@ export const portalAppointmentSelect = {
   price: true,
   isDeleted: true,
   source: true,
-  appointmentType: { select: { id: true, name: true, ...bookableFields } },
+  appointmentType: { select: { name: true, defaultDuration: true, ...bookableFields } },
   appointmentLocation: { select: { name: true, address: true, instructions: true, isVirtual: true, ...bookableFields } },
 } as const;
 

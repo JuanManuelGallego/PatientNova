@@ -61,7 +61,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `55` files, `705` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `56` files, `721` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -112,6 +112,7 @@ Suite: `55` files, `705` tests, all against real Postgres, `tsc --noEmit` clean.
 | Audit log (required) | `test/integration/audit-log/audit-required.integration.test.ts` | `required` audit mode rolls back the change (patient create/update/delete), best-effort default stays non-fatal, PUBLIC_PORTAL actor + new entity types |
 | Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
 | Audit log (writing expanded) | `test/integration/audit-log/audit-log-writing-expanded.integration.test.ts` | audit trails for appointments/reminders/users/auth/consent docs/twilio webhooks |
+| Google connection | `test/integration/google/google-connection-check.integration.test.ts`, `google.routes.integration.test.ts`, `google-oauth.service.integration.test.ts`, `google-connection.repository.integration.test.ts` | `verifyConnection` (refresh sets `lastCheckedAt`, rotated refresh token persisted, `invalid_grant` expires + one audit, transient error changes nothing, no Google call without an active connection); `check-google-connections` worker (only the rejected connection expires, audited as JOB, re-run no-op, one failure doesn't stop the rest); status `connected`/`expired` (disconnected or scope missing)/`not_connected`, `POST /connection/verify` (exact Origin, 5/min per provider, plain reads unlimited); encrypted refresh-token CAS rotation (Google prototypes patched: `OAuth2Client.prototype.refreshTokenNoCache`) |
 | Tenant isolation | `test/integration/tenants/tenant-isolation.integration.test.ts` | cross-tenant data isolation across all repositories |
 
 ### Known product bugs found & fixed during test build
@@ -334,5 +335,14 @@ Suite: `55` files, `705` tests, all against real Postgres, `tsc --noEmit` clean.
   plaintext (`BLIND_INDEXES`); never set them by hand. Raw SQL bypasses encryption: do not write these
   columns with `$executeRaw` outside `backfill-pii.ts`. Adding a new PII field: register it in
   `ENCRYPTED_FIELDS` (+ `BLIND_INDEXES` if searched), widen the column to `TEXT`, and add it to the tests.
+- Google connection (`src/google/`): `GET /v1/google/connection` answers `status: connected | expired | not_connected`
+  (`connected` kept for old clients). Mark a connection expired only with `markConnectionExpired`
+  (`google-connection.service.ts`: idempotent, one audit, source from the audit context), and classify errors with
+  `isAuthorizationFailure`. Refresh tokens are encrypted, so never match `refreshToken` in a `where` (it never matches);
+  `rotateRefreshToken` compares the decrypted value and guards the write with `updatedAt`. The daily
+  `check-google-connections` job and `POST /google/connection/verify` both go through `verifyConnection` (a check calls Google and may write, so it is never a GET); provider alerts about Google are
+  in-app only (no WhatsApp/SMS/email). Portal: branch on `status`, not `connected` (expired ≠ never connected; reconnect
+  with `startOAuth(path, true)`). Provider-wide alerts live in `ProviderAlerts` (`src/components/Info/`), rendered by
+  `PageLayout` for ADMIN/SUPER_ADMIN only (VIEWER gets 403 on the status endpoint, so never fetch it for them).
 - Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
   and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.

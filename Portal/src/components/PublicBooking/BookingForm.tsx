@@ -7,8 +7,7 @@ import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
-import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtCop, fmtLongDay, isE164, localDayOf, normalizePhone } from "@/src/utils/publicBooking";
+import { fmtCop, fmtLongDayTime, isE164, normalizePhone } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
@@ -40,7 +39,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 </div>
                 <div>
                     <dt>Fecha</dt>
-                    <dd>{fmtLongDay(localDayOf(slot.startUtc, timezone))}, {fmtTime(slot.startUtc, timezone)}</dd>
+                    <dd>{fmtLongDayTime(slot.startUtc, timezone)}</dd>
                 </div>
                 {location && (
                     <div>

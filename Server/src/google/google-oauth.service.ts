@@ -2,10 +2,20 @@ import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { googleConnectionRepository, googleOAuthStateRepository, hashState, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
+import { googleConnectionRepository, googleOAuthStateRepository, hashState, isConnectionActive, isConnectionUsable, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { GoogleOAuthError } from './google-errors.js';
+import { markConnectionExpired } from './google-connection.service.js';
+
+export interface GoogleConnectionStatus {
+  status: 'connected' | 'expired' | 'not_connected';
+  connected: boolean;
+  connectedAt: Date | null;
+  lastUsedAt: Date | null;
+  lastCheckedAt: Date | null;
+  disconnectedAt: Date | null;
+}
 
 const ALLOWED_RETURN_PATHS = ['/appointments', '/settings', '/'];
 
@@ -150,7 +160,7 @@ export const googleOAuthService = {
       const err = error as Error & { response?: { data?: { error?: string } } };
       if (err.response?.data?.error === 'invalid_grant') {
         logger.warn({ userId }, 'Google authorization grant was rejected');
-        await markConnectionDisconnected(userId, 'Google connection authorization expired');
+        await markConnectionExpired(userId, 'Google connection authorization expired');
 
         throw new GoogleOAuthError(
           'Google authorization was revoked. Please reconnect your account.',
@@ -164,17 +174,24 @@ export const googleOAuthService = {
     }
   },
 
-  async getConnectionStatus(userId: string) {
+  async getConnectionStatus(userId: string): Promise<GoogleConnectionStatus> {
     const conn = await googleConnectionRepository.findByUserId(userId);
 
-    if (!isConnectionActive(conn) || !conn.grantedScopes.includes(REQUIRED_SCOPE)) {
-      return { connected: false, connectedAt: null, lastUsedAt: null };
+    if (!conn) {
+      return {
+        status: 'not_connected', connected: false,
+        connectedAt: null, lastUsedAt: null, lastCheckedAt: null, disconnectedAt: null,
+      };
     }
 
+    const connected = isConnectionUsable(conn);
     return {
-      connected: true,
+      status: connected ? 'connected' : 'expired',
+      connected,
       connectedAt: conn.connectedAt,
       lastUsedAt: conn.lastUsedAt,
+      lastCheckedAt: conn.lastCheckedAt,
+      disconnectedAt: conn.disconnectedAt,
     };
   },
 
@@ -218,25 +235,3 @@ export const googleOAuthService = {
     return { success: true };
   },
 };
-
-async function markConnectionDisconnected(userId: string, description: string): Promise<void> {
-  const connection = await googleConnectionRepository.findByUserId(userId);
-  if (!connection || connection.disconnectedAt) return;
-  const disconnected = await googleConnectionRepository.markDisconnected(userId);
-  if (disconnected.count === 0) return;
-  try {
-    await logAudit({
-      entityType: EntityType.GOOGLE_CONNECTION,
-      entityId: connection.id,
-      actionType: ActionType.UPDATE,
-      description,
-      source: ActionSource.API,
-      userId,
-      affectedFields: ['connected'],
-      fieldsBefore: { connected: true },
-      fieldsAfter: { connected: false },
-    });
-  } catch {
-    logger.error({ userId }, 'Failed to audit disconnected Google connection');
-  }
-}

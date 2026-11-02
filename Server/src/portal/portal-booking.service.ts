@@ -16,7 +16,7 @@ import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { publicBookingRepository } from '../public-booking/public-booking.repository.js';
-import { isSlotAvailable } from '../public-booking/slot-engine.js';
+import { isSlotFree } from '../public-booking/public-booking.service.js';
 import {
   ProviderNotFoundError,
   PublicAppointmentTypeNotFoundError,
@@ -38,6 +38,24 @@ import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
+
+/**
+ * The gate for a patient choosing a slot (booking or reschedule): booking live and in auto-confirm mode,
+ * else the unknown-provider 404. Returns the settings the slot check needs.
+ */
+export async function requireSelfBooking(userId: string, tx: TransactionClient) {
+  if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
+  const settings = await bookingSettingsRepository.getSettings(userId, tx);
+  if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
+  return settings;
+}
+
+/** The email reminder of a portal appointment: 24h before it, or none when that time has already passed. */
+export function portalReminder(start: Date, now: Date, to: string, channel: Channel = Channel.EMAIL) {
+  const sendAt = new Date(start.getTime() - ONE_DAY_MS);
+  if (sendAt <= now) return undefined;
+  return { channel, to, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
+}
 
 export function toPortalError(err: unknown): unknown {
   if (
@@ -77,9 +95,7 @@ export const portalBookingService = {
     try {
       const created = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
-        if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
-        const settings = await bookingSettingsRepository.getSettings(userId, tx);
-        if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
+        const settings = await requireSelfBooking(userId, tx);
 
         const type = await publicBookingRepository.findBookableType(userId, body.typeId, tx);
         if (!type) throw new PublicAppointmentTypeNotFoundError();
@@ -88,20 +104,7 @@ export const portalBookingService = {
 
         const now = new Date();
         const end = new Date(start.getTime() + type.defaultDuration * ONE_MINUTE_MS);
-        const rules = await bookingSettingsRepository.listRules(userId, tx);
-        const busy = await publicBookingRepository.loadBusy(userId, start, end, settings.bufferMinutes, tx);
-        const available = isSlotAvailable(start, {
-          timezone: settings.timezone,
-          rules,
-          durationMinutes: type.defaultDuration,
-          slotIntervalMinutes: settings.slotIntervalMinutes,
-          bufferMinutes: settings.bufferMinutes,
-          minLeadMinutes: settings.minLeadMinutes,
-          maxHorizonDays: settings.maxHorizonDays,
-          now,
-          busy: { ...busy, holds: [] },
-        });
-        if (!available) throw new SlotUnavailableError();
+        if (!(await isSlotFree(userId, settings, type.defaultDuration, start, now, { tx }))) throw new SlotUnavailableError();
 
         const patientId = await resolveOrCreatePatient(tx, session, body.patient);
         if (await portalBookingRepository.countUpcomingPortal(userId, patientId, now, tx) >= MAX_UPCOMING_PORTAL_BOOKINGS) {
@@ -109,7 +112,7 @@ export const portalBookingService = {
         }
         await ensureCurrentConsent(tx, { patientId, userId }, PRIVACY_POLICY_VERSION, meta);
 
-        const reminderAt = new Date(start.getTime() - ONE_DAY_MS);
+        const reminder = portalReminder(start, now, session.email);
         const appointment = await createWithin(tx, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),
@@ -119,15 +122,7 @@ export const portalBookingService = {
           patientId,
           locationId: location.id,
           typeId: type.id,
-          ...(reminderAt > now && {
-            reminder: {
-              channel: Channel.EMAIL,
-              to: session.email,
-              sendMode: ReminderMode.SCHEDULED,
-              sendAt: reminderAt.toISOString(),
-              status: ReminderStatus.PENDING,
-            },
-          }),
+          ...(reminder && { reminder }),
         }, userId, { source: RecordSource.PORTAL, patientTimezone: body.patientTimezone });
         await enqueuePortalNotifications('booked', appointment.id, tx);
         return portalBookingRepository.findForDto(appointment.id, tx);

@@ -4,6 +4,7 @@ import { googleRouter } from '../../../src/google/google.routes.js';
 import { googleConnectionRepository, REQUIRED_SCOPE } from '../../../src/google/google-connection.repository.js';
 import { createTestUser, authReq, csrfHeaders, invokeRoute } from '../helpers.js';
 import { EntityType, ActionType } from '../../../generated/prisma/enums.ts';
+import { OAuth2Client } from 'google-auth-library';
 
 let userId: string;
 let userEmail: string;
@@ -43,7 +44,55 @@ describe('google routes (integration)', () => {
 
       expect(res.statusCode).toBe(200);
       expect((res.body as any).success).toBe(true);
-      expect((res.body as any).data).toEqual({ connected: false, connectedAt: null, lastUsedAt: null });
+      expect((res.body as any).data).toEqual({
+        status: 'not_connected', connected: false,
+        connectedAt: null, lastUsedAt: null, lastCheckedAt: null, disconnectedAt: null,
+      });
+    });
+
+    it('requires the exact Origin to run a check', async () => {
+      const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq({ headers: { ...csrfHeaders() } }));
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('POST /connection/verify checks the token with Google and reports an expired connection', async () => {
+      await googleConnectionRepository.upsertConnection(userId, {
+        refreshToken: 'token',
+        grantedScopes: [REQUIRED_SCOPE],
+      });
+      const spy = vi.spyOn(OAuth2Client.prototype as unknown as { refreshTokenNoCache: () => Promise<unknown> }, 'refreshTokenNoCache')
+        .mockRejectedValue(Object.assign(new Error('invalid_grant'), { response: { data: { error: 'invalid_grant' } } }));
+
+      try {
+        const plain = await invokeRoute(googleRouter, 'get', '/connection', baseReq());
+        expect((plain.body as any).data.status).toBe('connected');
+        expect(spy).not.toHaveBeenCalled();
+
+        const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
+        expect(res.statusCode).toBe(200);
+        expect((res.body as any).data).toMatchObject({ status: 'expired', connected: false });
+        expect(spy).toHaveBeenCalledTimes(1);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('POST /connection/verify records the check time on a healthy connection', async () => {
+      await googleConnectionRepository.upsertConnection(userId, {
+        refreshToken: 'token',
+        grantedScopes: [REQUIRED_SCOPE],
+      });
+      const spy = vi.spyOn(OAuth2Client.prototype as unknown as { refreshTokenNoCache: () => Promise<unknown> }, 'refreshTokenNoCache')
+        .mockResolvedValue({ tokens: { access_token: 'access', expiry_date: Date.now() + 3_600_000 }, res: null });
+
+      try {
+        const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
+        expect(res.statusCode).toBe(200);
+        expect((res.body as any).data.status).toBe('connected');
+        expect((res.body as any).data.lastCheckedAt).toBeInstanceOf(Date);
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('returns connected: true with details when connected', async () => {
@@ -59,6 +108,37 @@ describe('google routes (integration)', () => {
       expect((res.body as any).data.grantedScopes).toBeUndefined();
       expect((res.body as any).data.connectedAt).toBeDefined();
       expect((res.body as any).data.lastUsedAt).toBeNull();
+    });
+  });
+
+  describe('POST /v1/google/connection/verify rate limit', () => {
+    it('allows 5 checks per minute per provider; plain status reads are not limited', async () => {
+      await googleConnectionRepository.upsertConnection(userId, {
+        refreshToken: 'token',
+        grantedScopes: [REQUIRED_SCOPE],
+      });
+      const spy = vi.spyOn(OAuth2Client.prototype as unknown as { refreshTokenNoCache: () => Promise<unknown> }, 'refreshTokenNoCache')
+        .mockResolvedValue({ tokens: { access_token: 'access', expiry_date: Date.now() + 3_600_000 }, res: null });
+
+      try {
+        for (let i = 0; i < 5; i++) {
+          const ok = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
+          expect(ok.statusCode).toBe(200);
+        }
+        const limited = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
+        expect(limited.statusCode).toBe(429);
+        expect(spy).toHaveBeenCalledTimes(5);
+
+        expect((await invokeRoute(googleRouter, 'get', '/connection', baseReq())).statusCode).toBe(200);
+
+        const other = await createTestUser({ email: 'other-admin@test.local', role: 'ADMIN' });
+        const otherRes = await invokeRoute(googleRouter, 'post', '/connection/verify', authReq(
+          { id: other.id, email: other.email, role: 'ADMIN' }, { headers: { ...csrfHeaders(), origin: 'http://localhost:3000' } },
+        ));
+        expect(otherRes.statusCode).toBe(200);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

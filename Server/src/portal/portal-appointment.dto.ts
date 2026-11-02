@@ -12,7 +12,7 @@ export interface PortalAppointmentDto {
   durationMinutes: number;
   status: AppointmentStatus;
   price: number;
-  type: { id: string; name: string } | null;
+  type: { name: string } | null;
   location: { name: string; address: string | null; instructions: string | null } | null;
   /** Computed on the server; the Portal shows actions only from these flags. */
   canCancel: boolean;
@@ -29,7 +29,7 @@ export function toPortalAppointmentDto(a: PortalAppointmentRow, ctx: PortalActio
     durationMinutes: Math.round((a.endAt.getTime() - a.startAt.getTime()) / ONE_MINUTE_MS),
     status: a.status,
     price: a.price,
-    type: a.appointmentType ? { id: a.appointmentType.id, name: a.appointmentType.name } : null,
+    type: a.appointmentType ? { name: a.appointmentType.name } : null,
     location: a.appointmentLocation
       ? { name: a.appointmentLocation.name, address: a.appointmentLocation.address, instructions: a.appointmentLocation.instructions }
       : null,

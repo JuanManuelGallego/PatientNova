@@ -87,6 +87,41 @@ describe('googleConnectionRepository (integration)', () => {
     expect(await googleConnectionRepository.findByUserId(userId)).toBeNull();
   });
 
+  it('rotateRefreshToken swaps the encrypted token when the previous one matches', async () => {
+    const connection = await googleConnectionRepository.upsertConnection(userId, {
+      refreshToken: 'old-token',
+      grantedScopes: [REQUIRED_SCOPE],
+    });
+
+    expect((await googleConnectionRepository.rotateRefreshToken(connection.id, 'stale-token', 'x')).count).toBe(0);
+    expect((await googleConnectionRepository.rotateRefreshToken(connection.id, 'old-token', 'new-token')).count).toBe(1);
+    expect((await googleConnectionRepository.findByUserId(userId))!.refreshToken).toBe('new-token');
+    expect((await googleConnectionRepository.rotateRefreshToken(connection.id, 'old-token', 'other')).count).toBe(0);
+  });
+
+  it('rotateRefreshToken never revives a disconnected connection', async () => {
+    const connection = await googleConnectionRepository.upsertConnection(userId, {
+      refreshToken: 'old-token',
+      grantedScopes: [REQUIRED_SCOPE],
+    });
+    await googleConnectionRepository.markDisconnected(userId);
+
+    expect((await googleConnectionRepository.rotateRefreshToken(connection.id, 'old-token', 'new-token')).count).toBe(0);
+    expect((await googleConnectionRepository.findByUserId(userId))!.refreshToken).toBeNull();
+  });
+
+  it('updateLastChecked and findActiveUserIds only touch active connections', async () => {
+    const other = await createTestUser();
+    await googleConnectionRepository.upsertConnection(userId, { refreshToken: 'a', grantedScopes: [REQUIRED_SCOPE] });
+    await googleConnectionRepository.upsertConnection(other.id, { refreshToken: 'b', grantedScopes: [REQUIRED_SCOPE] });
+    await googleConnectionRepository.markDisconnected(other.id);
+
+    expect(await googleConnectionRepository.findActiveUserIds()).toEqual([userId]);
+    expect((await googleConnectionRepository.updateLastChecked(other.id)).count).toBe(0);
+    expect((await googleConnectionRepository.updateLastChecked(userId)).count).toBe(1);
+    expect((await googleConnectionRepository.findByUserId(userId))!.lastCheckedAt).toBeInstanceOf(Date);
+  });
+
   it('updateLastUsed updates lastUsedAt', async () => {
     await googleConnectionRepository.upsertConnection(userId, {
       refreshToken: 'test-token',

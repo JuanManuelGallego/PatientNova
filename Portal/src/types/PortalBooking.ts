@@ -14,7 +14,7 @@ export interface PortalAppointment {
     durationMinutes: number;
     status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
     price: number;
-    type: { id: string; name: string } | null;
+    type: { name: string } | null;
     location: { name: string; address: string | null; instructions: string | null } | null;
     /** Computed by the server; the Portal never re-derives eligibility. */
     canCancel: boolean;

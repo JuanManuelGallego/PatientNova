@@ -143,12 +143,15 @@ describe('googleOAuthService (integration)', () => {
   });
 
   describe('getConnectionStatus', () => {
-    it('returns connected: false for no connection', async () => {
+    it('returns not_connected for no connection', async () => {
       const status = await googleOAuthService.getConnectionStatus(userId);
-      expect(status).toEqual({ connected: false, connectedAt: null, lastUsedAt: null });
+      expect(status).toEqual({
+        status: 'not_connected', connected: false,
+        connectedAt: null, lastUsedAt: null, lastCheckedAt: null, disconnectedAt: null,
+      });
     });
 
-    it('returns connected: false for disconnected connection', async () => {
+    it('returns expired for a disconnected connection', async () => {
       await googleConnectionRepository.upsertConnection(userId, {
         refreshToken: 'token',
         grantedScopes: [REQUIRED_SCOPE],
@@ -156,7 +159,20 @@ describe('googleOAuthService (integration)', () => {
       await googleConnectionRepository.markDisconnected(userId);
 
       const status = await googleOAuthService.getConnectionStatus(userId);
-      expect(status).toEqual({ connected: false, connectedAt: null, lastUsedAt: null });
+      expect(status.status).toBe('expired');
+      expect(status.connected).toBe(false);
+      expect(status.disconnectedAt).toBeInstanceOf(Date);
+      expect(status.connectedAt).toBeInstanceOf(Date);
+    });
+
+    it('returns expired when the Meet scope is missing', async () => {
+      await googleConnectionRepository.upsertConnection(userId, {
+        refreshToken: 'token',
+        grantedScopes: ['other'],
+      });
+
+      const status = await googleOAuthService.getConnectionStatus(userId);
+      expect(status).toMatchObject({ status: 'expired', connected: false, disconnectedAt: null });
     });
 
     it('returns connected: true with details for active connection', async () => {
@@ -167,8 +183,10 @@ describe('googleOAuthService (integration)', () => {
 
       const status = await googleOAuthService.getConnectionStatus(userId);
       expect(status.connected).toBe(true);
+      expect(status.status).toBe('connected');
       expect(status.connectedAt).toBeInstanceOf(Date);
       expect(status.lastUsedAt).toBeNull();
+      expect(status.lastCheckedAt).toBeNull();
       expect(status).not.toHaveProperty('grantedScopes');
     });
   });

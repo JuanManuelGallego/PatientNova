@@ -1,35 +1,14 @@
 import { SpacesServiceClient } from '@google-apps/meet';
-import { OAuth2Client } from 'google-auth-library';
-import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { googleConnectionRepository, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
-import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
+import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { GoogleOAuthError } from './google-errors.js';
+import { buildOAuthClient, isAuthorizationFailure, isGoogleConfigured, markConnectionExpired } from './google-connection.service.js';
 
 export interface MeetingSpaceResult {
   meetingUrl: string;
   spaceName: string;
-}
-
-/**
- * Detect authorization failures from the Google Meet SDK or underlying HTTP/gRPC layer.
- * The SDK may surface errors as:
- * - gRPC code 16 (UNAUTHENTICATED)
- * - HTTP 401 status
- * - `invalid_grant` in the response body (refresh token revoked/expired)
- */
-function isAuthorizationFailure(error: unknown): boolean {
-  const providerError = error as {
-    code?: number | string;
-    status?: number;
-    response?: { status?: number; data?: { error?: string } };
-  };
-  return providerError.response?.data?.error === 'invalid_grant'
-    || providerError.code === 16
-    || providerError.code === 401
-    || providerError.status === 401
-    || providerError.response?.status === 401;
 }
 
 async function buildMeetClientForUser(userId: string): Promise<{
@@ -45,33 +24,11 @@ async function buildMeetClientForUser(userId: string): Promise<{
       409,
     );
   }
-  if (!conn!.grantedScopes.includes(REQUIRED_SCOPE)) {
+  if (!conn.grantedScopes.includes(REQUIRED_SCOPE)) {
     throw new GoogleOAuthError('Required Google Meet scope was not granted', 'GOOGLE_SCOPE_MISSING', 409);
   }
 
-  const oauth2Client = new OAuth2Client(
-    config.google.clientId,
-    config.google.clientSecret,
-    config.google.oauthRedirectUri,
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: conn.refreshToken,
-  });
-
-  const tokenPersistence: Promise<unknown>[] = [];
-  oauth2Client.on('tokens', (tokens) => {
-    if (tokens.refresh_token) {
-      tokenPersistence.push(
-        googleConnectionRepository.rotateRefreshToken(conn!.id, conn!.refreshToken!, tokens.refresh_token)
-          .then((result) => {
-            if (result.count === 1) logger.info({ userId }, 'Google refresh token rotated');
-          })
-          .catch(() => logger.error({ userId }, 'Failed to persist rotated Google refresh token')),
-      );
-    }
-  });
-
+  const { oauth2Client, tokenPersistence } = buildOAuthClient(userId, conn);
   return {
     client: new SpacesServiceClient({ authClient: oauth2Client as never }),
     tokenPersistence,
@@ -80,7 +37,7 @@ async function buildMeetClientForUser(userId: string): Promise<{
 
 export const googleMeetService = {
   async createMeetingSpace(userId: string): Promise<MeetingSpaceResult> {
-    if (!config.google.clientId || !config.google.clientSecret || !config.google.oauthRedirectUri) {
+    if (!isGoogleConfigured()) {
       throw new GoogleOAuthError('Google OAuth is not configured', 'GOOGLE_CONFIG_MISSING', 503);
     }
 
@@ -114,7 +71,6 @@ export const googleMeetService = {
           entityId: spaceName,
           actionType: ActionType.CREATE,
           description: 'Google Meet space created',
-          source: ActionSource.API,
           userId,
           affectedFields: ['accessType'],
           fieldsBefore: null,
@@ -134,27 +90,7 @@ export const googleMeetService = {
 
       if (isAuthorizationFailure(error)) {
         logger.warn({ userId }, 'Google Meet authorization expired');
-        const connection = await googleConnectionRepository.findByUserId(userId);
-        if (connection) {
-          const disconnected = await googleConnectionRepository.markDisconnected(userId);
-          if (disconnected.count > 0) {
-            try {
-              await logAudit({
-                entityType: EntityType.GOOGLE_CONNECTION,
-                entityId: connection.id,
-                actionType: ActionType.UPDATE,
-                description: 'Google connection authorization expired',
-                source: ActionSource.API,
-                userId,
-                affectedFields: ['connected'],
-                fieldsBefore: { connected: true },
-                fieldsAfter: { connected: false },
-              });
-            } catch {
-              logger.error({ userId }, 'Failed to audit expired Google connection');
-            }
-          }
-        }
+        await markConnectionExpired(userId, 'Google connection authorization expired');
 
         throw new GoogleOAuthError(
           'Google authorization was revoked. Please reconnect your account.',
@@ -173,7 +109,6 @@ export const googleMeetService = {
             entityId: connection.id,
             actionType: ActionType.CREATE,
             description: 'Google Meet space creation failed',
-            source: ActionSource.API,
             userId,
             affectedFields: ['outcome'],
             fieldsBefore: null,
