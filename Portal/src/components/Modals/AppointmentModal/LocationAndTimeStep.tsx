@@ -69,6 +69,8 @@ export function LocationAndTimeStep({
   const [ needsReconnect, setNeedsReconnect ] = useState(false);
   const [ actionError, setActionError ] = useState<string | null>(null);
   const isConnected = connection?.connected === true && !needsReconnect;
+  // Known up front from the status (daily check / earlier failure), or learned from a 409 on generate.
+  const mustReconnect = needsReconnect || connection?.status === "expired";
 
   const generateMeet = useCallback(async () => {
     setActionError(null);
@@ -106,20 +108,20 @@ export function LocationAndTimeStep({
       return;
     }
 
-    await openOAuth(() => startOAuth("/appointments", needsReconnect));
-  }, [ form.meetingUrl, generateMeet, isConnected, isVirtual, needsReconnect, openOAuth, startOAuth ]);
+    await openOAuth(() => startOAuth("/appointments", mustReconnect));
+  }, [ form.meetingUrl, generateMeet, isConnected, isVirtual, mustReconnect, openOAuth, startOAuth ]);
 
   const meetingUrlInvalid = Boolean(form.meetingUrl && !validateHttpUrl(form.meetingUrl));
   const googleError = actionError || popupError || oauthStartError || createMeetError || connectionError;
   const isGoogleBusy = creatingMeet || startingOAuth || waitingForOAuth;
   const googleMeetActionLabel = isGoogleBusy
     ? "Generando enlace de Google Meet"
-    : form.meetingUrl
-      ? "Regenerar Google Meet"
-      : isConnected
-        ? "Generar Google Meet"
-        : needsReconnect
-          ? "Reconectar y generar Google Meet"
+    : mustReconnect
+      ? "Reconectar y generar Google Meet"
+      : form.meetingUrl
+        ? "Regenerar Google Meet"
+        : isConnected
+          ? "Generar Google Meet"
           : "Conectar y generar Google Meet";
 
   return (
@@ -190,6 +192,11 @@ export function LocationAndTimeStep({
               <div id="appointment-meeting-url-error" role="alert" className="error-inline" style={{ marginTop: 4 }}>
                 Ingresa una URL completa que comience con http:// o https://.
               </div>
+            )}
+            {mustReconnect && !googleError && (
+              <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-expired-hint">
+                Tu conexión con Google expiró: el botón la reconecta antes de generar el enlace. También puedes pegar un enlace propio.
+              </p>
             )}
             {googleError && (
               <div role="alert" className="error-inline" style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>

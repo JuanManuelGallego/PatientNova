@@ -685,7 +685,15 @@ status.
 - Also rule out password resets and the 50-tokens-per-client limit.
 - Record the finding in `docs/operations.md`.
 
-**PR 8.2-A — Server: proactive connection check.**
+**PR 8.2-A — Server: proactive connection check.** Built (2026-11-02). As built:
+- `getConnectionStatus` returns `connectedAt`/`lastUsedAt` for an expired row too (it used to null them).
+- **Pre-existing bug fixed:** `rotateRefreshToken` matched the encrypted `refreshToken` column against the plaintext
+  token, so a refresh token rotated by Google was never saved. It now compares the decrypted value and guards the
+  write with `updatedAt`.
+- The new test file is `test/integration/google/google-connection-check.integration.test.ts` (service + worker).
+  Google's token refresh is stubbed with `OAuth2Client.prototype.refreshTokenNoCache`.
+
+As planned:
 - **Schema:** `GoogleConnection.lastCheckedAt DateTime?`.
 - **New `src/google/google-connection.service.ts`:**
   - `isAuthorizationFailure`: moved from `google-meet.service.ts` and exported.
@@ -719,7 +727,14 @@ status.
   - Google is mocked by patching `OAuth2Client.prototype`, as the existing Google tests do.
 - **Bruno:** `Google/Get Connection`.
 
-**PR 8.2-B — Portal: expired state.**
+**PR 8.2-B — Portal: expired state.** Built (2026-11-02). As built:
+- "Verificar ahora" uses `useVerifyGoogleConnection` (`useApiMutation` now accepts `GET`), then refetches the status.
+- The banner renders inside `<main>`, so it gets the page padding.
+- An expired connection shows "Reconectar cuenta" (with consent) and no "Verificar ahora".
+- The appointment modal puts "Reconectar y generar" ahead of "Regenerar", and adds a hint that a manual link still
+  works.
+
+As planned:
 - **Types and hook:** `GoogleConnectionStatus` gains `status`, `lastCheckedAt` and `disconnectedAt`.
   `useFetchGoogleConnection` takes `verify`.
 - **New `ProviderAlerts` component** in `PageLayout`, between the header and `<main>`:

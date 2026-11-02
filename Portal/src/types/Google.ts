@@ -1,7 +1,13 @@
+/** `expired`: a stored connection Google rejected (or missing the Meet scope); reconnect it. */
+export type GoogleConnectionState = "connected" | "expired" | "not_connected";
+
 export interface GoogleConnectionStatus {
+  status: GoogleConnectionState;
   connected: boolean;
-  connectedAt?: string;
-  lastUsedAt?: string;
+  connectedAt?: string | null;
+  lastUsedAt?: string | null;
+  lastCheckedAt?: string | null;
+  disconnectedAt?: string | null;
 }
 
 export interface GoogleOAuthStartResponse {

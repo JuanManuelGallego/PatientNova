@@ -2069,6 +2069,43 @@ body {
   gap: 12px;
 }
 
+.warning-banner {
+  background: var(--c-warning-bg);
+  border: 1px solid var(--c-warning);
+  border-radius: var(--r-xl);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--c-warning-dark);
+}
+
+.warning-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.warning-banner__text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.warning-banner__error {
+  font-size: 13px;
+  margin-top: 4px;
+  color: var(--c-error);
+}
+
+@media (max-width: 640px) {
+  .warning-banner {
+    flex-wrap: wrap;
+  }
+  .warning-banner > button {
+    width: 100%;
+  }
+}
+
 /* ================================================================
    Data Table
    ================================================================ */

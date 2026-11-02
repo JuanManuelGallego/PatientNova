@@ -341,6 +341,8 @@ Suite: `56` files, `721` tests, all against real Postgres, `tsc --noEmit` clean.
   `isAuthorizationFailure`. Refresh tokens are encrypted, so never match `refreshToken` in a `where` (it never matches);
   `rotateRefreshToken` compares the decrypted value and guards the write with `updatedAt`. The daily
   `check-google-connections` job and `?verify=true` both go through `verifyConnection`; provider alerts about Google are
-  in-app only (no WhatsApp/SMS/email).
+  in-app only (no WhatsApp/SMS/email). Portal: branch on `status`, not `connected` (expired ≠ never connected; reconnect
+  with `startOAuth(path, true)`). Provider-wide alerts live in `ProviderAlerts` (`src/components/Info/`), rendered by
+  `PageLayout` for ADMIN/SUPER_ADMIN only (VIEWER gets 403 on the status endpoint, so never fetch it for them).
 - Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
   and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.
