@@ -73,6 +73,7 @@ export const publicBookingRepository = {
     end: Date,
     bufferMinutes: number,
     tx?: TransactionClient,
+    opts: { excludeAppointmentId?: string } = {},
   ): Promise<{ appointments: Interval[]; blocked: Interval[] }> {
     const client = tx ?? prisma;
     const bufferMs = bufferMinutes * MINUTE_MS;
@@ -82,6 +83,8 @@ export const publicBookingRepository = {
           userId,
           isDeleted: false,
           status: { in: [ ...ACTIVE_STATUSES ] },
+          // A rescheduled appointment must not block its own neighbourhood through the buffer.
+          ...(opts.excludeAppointmentId && { NOT: { id: opts.excludeAppointmentId } }),
           startAt: { lt: new Date(end.getTime() + bufferMs) },
           endAt: { gt: new Date(start.getTime() - bufferMs) },
         },

@@ -584,7 +584,10 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
   - cancelling an appointment by any path cancels its PENDING linked reminder on `tx`;
   - `send-reminder` skips reminders of inactive appointments.
 
-**PR 5.2 — Server: reschedule.**
+**PR 5.2 — Server: reschedule.** Built (2026-11-02). As built:
+- `updateWithin(tx, id, dto, userId, { patientTimezone, replaceSettledReminder })`. The "unlink a settled reminder and link a new one" rule applies only with `replaceSettledReminder` (the portal reschedule). A provider edit still updates the linked reminder in place, so a provider form that resends an unchanged reminder never creates a duplicate.
+- The portal service builds the reminder patch: the full EMAIL reminder at `start − 24h`, `null` to cancel a PENDING one under 24h, nothing when a settled reminder is not replaced.
+- The 400 message is "New time must differ from the current one".
 - **Extract `updateWithin(tx, id, dto, userId)`** from `appointmentService.update`, the same way `createWithin` was extracted. `update` wraps it. The lock stays first (`withProviderLock` is idempotent within a transaction).
 - `loadBusy(userId, from, to, buffer, tx, { excludeAppointmentId })`, so the moved appointment doesn't block itself.
 - **`POST /v1/portal/appointments/:id/reschedule`**: same limiter and guard. Strict body `{ startUtc, patientTimezone }` (the schemas are shared with booking).

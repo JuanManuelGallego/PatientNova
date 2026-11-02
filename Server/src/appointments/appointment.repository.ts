@@ -22,6 +22,13 @@ export interface CreateAppointmentOptions {
   patientTimezone?: string;
 }
 
+export interface UpdateAppointmentOptions {
+  /** Patient device zone for patient-facing texts; set by the portal reschedule only. */
+  patientTimezone?: string;
+  /** Portal reschedule: a non-PENDING linked reminder is unlinked and replaced instead of rewritten. */
+  replaceSettledReminder?: boolean;
+}
+
 export const appointmentRepository = {
   async create(
     dto: CreateAppointmentDto,
@@ -123,7 +130,13 @@ export const appointmentRepository = {
     );
   },
 
-  async update(id: string, dto: UpdateAppointmentDto, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+  async update(
+    id: string,
+    dto: UpdateAppointmentDto,
+    userId: string,
+    tx?: TransactionClient,
+    opts: Pick<UpdateAppointmentOptions, 'patientTimezone'> = {},
+  ): Promise<AppointmentWithRelations> {
     const client = tx ?? prisma;
     const data: Prisma.AppointmentUpdateInput = buildUpdateData(
       dto,
@@ -147,6 +160,8 @@ export const appointmentRepository = {
     } else if (dto.status === AppointmentStatus.COMPLETED) {
       data.completedAt = new Date();
     }
+
+    if (opts.patientTimezone) data.patientTimezone = opts.patientTimezone;
 
     if (dto.reminderId !== undefined) {
       data.reminder = dto.reminderId

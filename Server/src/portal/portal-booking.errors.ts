@@ -24,3 +24,16 @@ export class PortalAppointmentNotFoundError extends ApiError {
     super('Appointment not found', 404);
   }
 }
+
+/** The patient's appointment exists but can no longer be moved online (provider-created, or no longer bookable). */
+export class PortalRescheduleUnavailableError extends ApiError {
+  constructor() {
+    super('Reschedule unavailable', 409);
+  }
+}
+
+export class RescheduleSameTimeError extends ApiError {
+  constructor() {
+    super('New time must differ from the current one', 400);
+  }
+}

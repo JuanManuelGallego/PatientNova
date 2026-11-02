@@ -16,3 +16,8 @@ export const createPortalBookingSchema = z.strictObject({
 });
 
 export type CreatePortalBookingBody = z.infer<typeof createPortalBookingSchema>;
+
+/** The new start and the device zone only: the end, price and type come from the server. */
+export const reschedulePortalAppointmentSchema = createPortalBookingSchema.pick({ startUtc: true, patientTimezone: true }).strict();
+
+export type ReschedulePortalAppointmentBody = z.infer<typeof reschedulePortalAppointmentSchema>;

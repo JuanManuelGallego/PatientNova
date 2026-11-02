@@ -10,7 +10,12 @@ import type { ConsentRequestMeta } from '../patient-consents/patient-consent.ser
 import { portalSessionGuard } from './portal-session.middleware.js';
 import { portalBookingService } from './portal-booking.service.js';
 import { portalAppointmentService } from './portal-appointment.service.js';
-import { createPortalBookingSchema, type CreatePortalBookingBody } from './portal-booking.schemas.js';
+import {
+  createPortalBookingSchema,
+  reschedulePortalAppointmentSchema,
+  type CreatePortalBookingBody,
+  type ReschedulePortalAppointmentBody,
+} from './portal-booking.schemas.js';
 
 /** Cancel takes no input: no reason field, so no free text reaches the server. */
 const cancelBodySchema = z.strictObject({}).optional();
@@ -53,6 +58,24 @@ export function createPortalBookingRoutes(): Router {
       await portalAppointmentService.cancel(req.portal!, req.params.id as string, requestMeta(req));
       res.set('Cache-Control', 'no-store');
       res.status(204).end();
+    }),
+  );
+
+  router.post(
+    '/appointments/:id/reschedule',
+    changeLimiter,
+    ...portalSessionGuard,
+    validateParams(uuidParamSchema),
+    validateBody(reschedulePortalAppointmentSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      const appointment = await portalAppointmentService.reschedule(
+        req.portal!,
+        req.params.id as string,
+        req.body as ReschedulePortalAppointmentBody,
+        requestMeta(req),
+      );
+      res.set('Cache-Control', 'no-store');
+      ok(res, { appointment });
     }),
   );
 

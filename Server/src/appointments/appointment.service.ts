@@ -1,6 +1,6 @@
 import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
-import { appointmentRepository, type CreateAppointmentOptions } from './appointment.repository.js';
+import { appointmentRepository, type CreateAppointmentOptions, type UpdateAppointmentOptions } from './appointment.repository.js';
 import { ACTIVE_STATUSES } from './appointment-status.js';
 import {
   AppointmentConflictError,
@@ -177,7 +177,23 @@ async function handleReminderUpdate(
   existing: AppointmentWithRelations,
   userId: string,
   tx: TransactionClient,
+  replaceSettledReminder = false,
 ): Promise<{ reminderId?: string | null | undefined; reminder?: Reminder | null; rescheduled?: Reminder }> {
+  if (replaceSettledReminder && dto.reminder && existing.reminder && existing.reminder.status !== ReminderStatus.PENDING) {
+    // A sent (or failed/cancelled) reminder keeps its record: unlink it and link a fresh one. Never rewrite its sendAt.
+    await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
+    logger.info({ reminderId: existing.reminder.id, status: existing.reminder.status }, 'Settled reminder unlinked for a new one');
+    const createdReminder = await createLinkedReminder(
+      dto.reminder,
+      existing.patientId,
+      userId,
+      `${existing.patient.name} ${existing.patient.lastName}`,
+      'reprogramación de cita',
+      tx,
+    );
+    return { reminderId: createdReminder.id, reminder: createdReminder };
+  }
+
   if (dto.reminder === null && existing.reminder) {
     if (existing.reminder.status === ReminderStatus.PENDING) {
       await tx.reminder.update({
@@ -430,6 +446,126 @@ export async function createWithin(
     );
 }
 
+/**
+ * Updates an appointment on the caller's transaction (the provider lock is taken first, and is idempotent
+ * within a transaction). `update` wraps it; the portal reschedule composes it with its own slot check.
+ */
+export async function updateWithin(
+  tx: TransactionClient,
+  id: string,
+  dto: UpdateAppointmentDto,
+  userId: string,
+  opts: UpdateAppointmentOptions = {},
+): Promise<AppointmentWithRelations> {
+  await withProviderLock(tx, userId);
+  const existing = await appointmentRepository.findByIdWithRelations(id, userId, tx);
+
+  const newStatus = dto.status ?? existing.status;
+  if (dto.status !== undefined && !ALLOWED_STATUS_TRANSITIONS[ existing.status ].includes(dto.status)) {
+    throw new AppointmentStatusTransitionError(existing.status, `change status to ${dto.status}`);
+  }
+  const willBeActive = ACTIVE_STATUSES.has(newStatus);
+  const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
+  const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
+  const statusChanged = dto.status !== undefined && dto.status !== existing.status;
+  const newStart = dto.startAt ?? existing.startAt;
+  const newEnd = dto.endAt ?? existing.endAt;
+  if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
+    throw new AppointmentInvalidTimeRangeError();
+  }
+  if (willBeActive && (timeChanged || statusChanged) && new Date(newEnd).getTime() <= Date.now()) {
+    throw new PastAppointmentLockedError(id);
+  }
+  if (willBeActive && (timeChanged || becomesActive)) {
+    await checkConflict(tx, userId, newStart, newEnd, id);
+    await checkBlockedTimeConflict(tx, userId, newStart, newEnd);
+  }
+
+  const location = dto.locationId ? await validateLocation(tx, dto.locationId, userId) : undefined;
+  if (dto.typeId) await validateType(tx, dto.typeId, userId);
+  const selectedReminder = dto.reminderId !== undefined
+    ? await validateReminder(tx, dto.reminderId, userId, existing.patientId, id)
+    : null;
+  const reminderContext = await getReminderContext(tx, userId);
+  const effectiveLocation = location ?? existing.appointmentLocation;
+  const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+    location: effectiveLocation,
+    previousLocation: existing.appointmentLocation,
+    existingUrl: existing.meetingUrl,
+    desiredUrl: dto.meetingUrl,
+    appointmentId: id,
+  });
+
+  const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
+  let effectiveReminderId: string | null | undefined;
+  let createdReminder: Reminder | null = null;
+
+  if (dto.reminderId !== undefined) {
+    effectiveReminderId = dto.reminderId;
+    if (existing.reminder && existing.reminder.id !== dto.reminderId) {
+      if (existing.reminder.status === ReminderStatus.PENDING) {
+        await tx.reminder.update({
+          where: { id: existing.reminder.id },
+          data: { status: ReminderStatus.CANCELLED, appointmentId: null },
+        });
+      } else {
+        await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
+      }
+    }
+  } else if (hasReminderChange) {
+    const reminderResult = await handleReminderUpdate(dto, existing, userId, tx, opts.replaceSettledReminder);
+    effectiveReminderId = reminderResult.reminderId;
+    createdReminder = reminderResult.reminder ?? null;
+    const toEnqueue = createdReminder ?? reminderResult.rescheduled;
+    if (toEnqueue) await enqueueLinkedReminder(toEnqueue, tx);
+  }
+
+  const updated = await appointmentRepository.update(id, {
+    ...dto,
+    ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
+    ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
+  }, userId, tx, opts);
+
+  const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
+  await logAudit({
+    entityType: EntityType.APPOINTMENT,
+    entityId: id,
+    userId,
+    actionType: ActionType.UPDATE,
+    description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
+    ...diff,
+    tx,
+    required: true,
+  });
+
+  const newlyLinkedReminder = createdReminder ?? selectedReminder;
+  if (newlyLinkedReminder && newlyLinkedReminder.id !== existing.reminder?.id) {
+    await tx.reminder.update({
+      where: { id: newlyLinkedReminder.id },
+      data: { appointmentId: id },
+    });
+
+    await logAudit({
+       entityType: EntityType.REMINDER,
+       entityId: newlyLinkedReminder.id,
+       userId,
+       actionType: ActionType.UPDATE,
+      description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
+      affectedFields: [ 'appointmentId' ],
+      fieldsBefore: { appointmentId: null },
+      fieldsAfter: { appointmentId: id },
+      tx,
+      required: true,
+    });
+  }
+
+  const cancelledReminderId = statusChanged && newStatus === AppointmentStatus.CANCELLED
+    ? await cancelLinkedReminder(tx, id, userId)
+    : null;
+  const rendered = await renderLinkedReminder(updated, reminderContext, tx);
+  return withCancelledReminder(rendered, cancelledReminderId);
+}
+
 export const appointmentService = {
   async findById(id: string, userId: string): Promise<AppointmentWithRelations> {
     return appointmentRepository.findByIdWithRelations(id, userId);
@@ -456,116 +592,7 @@ export const appointmentService = {
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    return prisma.$transaction(async (tx: TransactionClient) => {
-      await withProviderLock(tx, userId);
-      const existing = await appointmentRepository.findByIdWithRelations(id, userId, tx);
-
-      const newStatus = dto.status ?? existing.status;
-      if (dto.status !== undefined && !ALLOWED_STATUS_TRANSITIONS[ existing.status ].includes(dto.status)) {
-        throw new AppointmentStatusTransitionError(existing.status, `change status to ${dto.status}`);
-      }
-      const willBeActive = ACTIVE_STATUSES.has(newStatus);
-      const becomesActive = willBeActive && !ACTIVE_STATUSES.has(existing.status);
-      const timeChanged = dto.startAt !== undefined || dto.endAt !== undefined;
-      const statusChanged = dto.status !== undefined && dto.status !== existing.status;
-      const newStart = dto.startAt ?? existing.startAt;
-      const newEnd = dto.endAt ?? existing.endAt;
-      if (timeChanged && new Date(newEnd).getTime() <= new Date(newStart).getTime()) {
-        throw new AppointmentInvalidTimeRangeError();
-      }
-      if (willBeActive && (timeChanged || statusChanged) && new Date(newEnd).getTime() <= Date.now()) {
-        throw new PastAppointmentLockedError(id);
-      }
-      if (willBeActive && (timeChanged || becomesActive)) {
-        await checkConflict(tx, userId, newStart, newEnd, id);
-        await checkBlockedTimeConflict(tx, userId, newStart, newEnd);
-      }
-
-      const location = dto.locationId ? await validateLocation(tx, dto.locationId, userId) : undefined;
-      if (dto.typeId) await validateType(tx, dto.typeId, userId);
-      const selectedReminder = dto.reminderId !== undefined
-        ? await validateReminder(tx, dto.reminderId, userId, existing.patientId, id)
-        : null;
-      const reminderContext = await getReminderContext(tx, userId);
-      const effectiveLocation = location ?? existing.appointmentLocation;
-      const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
-        location: effectiveLocation,
-        previousLocation: existing.appointmentLocation,
-        existingUrl: existing.meetingUrl,
-        desiredUrl: dto.meetingUrl,
-        appointmentId: id,
-      });
-
-      const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
-      let effectiveReminderId: string | null | undefined;
-      let createdReminder: Reminder | null = null;
-
-      if (dto.reminderId !== undefined) {
-        effectiveReminderId = dto.reminderId;
-        if (existing.reminder && existing.reminder.id !== dto.reminderId) {
-          if (existing.reminder.status === ReminderStatus.PENDING) {
-            await tx.reminder.update({
-              where: { id: existing.reminder.id },
-              data: { status: ReminderStatus.CANCELLED, appointmentId: null },
-            });
-          } else {
-            await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
-          }
-        }
-      } else if (hasReminderChange) {
-        const reminderResult = await handleReminderUpdate(dto, existing, userId, tx);
-        effectiveReminderId = reminderResult.reminderId;
-        createdReminder = reminderResult.reminder ?? null;
-        const toEnqueue = createdReminder ?? reminderResult.rescheduled;
-        if (toEnqueue) await enqueueLinkedReminder(toEnqueue, tx);
-      }
-
-      const updated = await appointmentRepository.update(id, {
-        ...dto,
-        ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
-        ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
-      }, userId, tx);
-
-      const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
-      await logAudit({
-        entityType: EntityType.APPOINTMENT,
-        entityId: id,
-        userId,
-        actionType: ActionType.UPDATE,
-        description: `Cita actualizada para el paciente ${updated.patient.name} ${updated.patient.lastName}`,
-        ...diff,
-        tx,
-        required: true,
-      });
-
-      const newlyLinkedReminder = createdReminder ?? selectedReminder;
-      if (newlyLinkedReminder && newlyLinkedReminder.id !== existing.reminder?.id) {
-        await tx.reminder.update({
-          where: { id: newlyLinkedReminder.id },
-          data: { appointmentId: id },
-        });
-
-        await logAudit({
-           entityType: EntityType.REMINDER,
-           entityId: newlyLinkedReminder.id,
-           userId,
-           actionType: ActionType.UPDATE,
-          description: `Recordatorio vinculado a la cita del paciente ${updated.patient.name} ${updated.patient.lastName}`,
-          affectedFields: [ 'appointmentId' ],
-          fieldsBefore: { appointmentId: null },
-          fieldsAfter: { appointmentId: id },
-          tx,
-          required: true,
-        });
-      }
-
-      const cancelledReminderId = statusChanged && newStatus === AppointmentStatus.CANCELLED
-        ? await cancelLinkedReminder(tx, id, userId)
-        : null;
-      const rendered = await renderLinkedReminder(updated, reminderContext, tx);
-      return withCancelledReminder(rendered, cancelledReminderId);
-    }, { timeout: 10000 });
-
+    return prisma.$transaction((tx: TransactionClient) => updateWithin(tx, id, dto, userId), { timeout: 10000 });
   },
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {

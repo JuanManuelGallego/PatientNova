@@ -1,0 +1,42 @@
+meta {
+  name: Reschedule Appointment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/portal/appointments/{{portalAppointmentId}}/reschedule
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+  X-CSRF-Token: {{portalCsrfToken}}
+}
+
+body:json {
+  {
+    "startUtc": "{{slotStartUtc}}",
+    "patientTimezone": "America/Bogota"
+  }
+}
+
+docs {
+  Moves one of the session patient's online bookings to `startUtc`, in place (same appointment id).
+  Run Create Booking or List Appointments first (they store `portalAppointmentId`), then Public
+  Booking > Get Slots for a free time (it stores `slotStartUtc`). Needs the session cookie, the exact
+  Origin and the CSRF token.
+
+  The body is strict: only the new start and the device's IANA zone. The end comes from the type's
+  current duration; price, status and confirmation stay as they were. The linked reminder follows
+  the new time (cancelled when it is under 24h away; a reminder already sent is kept and a new one
+  is linked). Patient and provider are notified with the previous and new times.
+
+  200 `{ appointment }`. 409 "Slot no longer available" (taken, off-grid, outside the window, lead
+  time or horizon), 409 "Reschedule unavailable" (a provider-created appointment, or its type or
+  location is no longer bookable online), 400 "New time must differ from the current one", 404
+  "Appointment not found" (not theirs, unknown, past, cancelled), 404 "Provider not found" when
+  booking is off or in approval mode.
+}
