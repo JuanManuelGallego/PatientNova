@@ -60,7 +60,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `50` files, `627` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `51` files, `644` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|

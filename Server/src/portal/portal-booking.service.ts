@@ -17,7 +17,7 @@ import {
 import { createWithin } from '../appointments/appointment.service.js';
 import { AppointmentBlockedTimeConflictError, AppointmentConflictError } from '../appointments/appointment.errors.js';
 import { createPatientWithin } from '../patients/patient.service.js';
-import { PatientLimitReachedError } from '../patients/patient.errors.js';
+import { PatientEmailConflictError, PatientLimitReachedError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
@@ -73,7 +73,8 @@ function toPortalError(err: unknown): unknown {
     || err instanceof AppointmentBlockedTimeConflictError
     || isAppointmentOverlapViolation(err)
   ) return new SlotUnavailableError();
-  if (err instanceof PatientLimitReachedError) return new PortalBookingUnavailableError();
+  // A provider-side email edit can race the new-patient insert; neither error may reach the patient as is.
+  if (err instanceof PatientLimitReachedError || err instanceof PatientEmailConflictError) return new PortalBookingUnavailableError();
   return err;
 }
 
@@ -109,10 +110,10 @@ export const portalBookingService = {
     try {
       const created = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
+        // Live check first: it answers false for a missing provider, where getSettings would throw a different 404.
+        if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
         const settings = await bookingSettingsRepository.getSettings(userId, tx);
-        if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM || !(await bookingSettingsService.isBookingLive(userId, tx))) {
-          throw new ProviderNotFoundError();
-        }
+        if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
 
         const type = await publicBookingRepository.findBookableType(userId, body.typeId, tx);
         if (!type) throw new PublicAppointmentTypeNotFoundError();

@@ -244,7 +244,6 @@ describe('POST /v1/portal/bookings', () => {
       slots[6]!, // blocked time
       offGrid, // between grid starts
       localAt(3, 20), // outside the 08:00-18:00 window
-      localAt(3, 17, 30), // would end after the window
       localAt(-1, 9), // in the past (lead time)
       localAt(40, 9), // past the 30-day horizon
     ];
@@ -254,6 +253,18 @@ describe('POST /v1/portal/bookings', () => {
     }
     expect(await appointmentsOf(provider.id)).toHaveLength(1);
     expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(1);
+  });
+
+  it('rejects an on-grid start whose appointment would overrun the window', async () => {
+    const provider = await createLiveProvider();
+    await prisma.appointmentType.update({ where: { id: provider.typeId }, data: { defaultDuration: 90 } });
+    const session = sessionFor(provider.id, unique('largo@test.local'));
+
+    const overrun = await postBooking(session, bookingBody(provider, localAt(3, 17)));
+    expect({ status: overrun.status, error: overrun.body.error }).toEqual({ status: 409, error: 'Slot no longer available' });
+    const fits = await postBooking(session, bookingBody(provider, localAt(3, 16)));
+    expect(fits.status).toBe(201);
+    expect(fits.body.data.appointment.durationMinutes).toBe(90);
   });
 
   it('allows back-to-back bookings when the buffer is 0', async () => {
