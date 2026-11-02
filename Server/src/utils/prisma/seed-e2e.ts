@@ -86,7 +86,10 @@ async function seedE2e() {
 }
 
 async function seedPublicProvider() {
-  const booking = { bookingSlug: E2E_SEED.publicSlug, bookingEnabled: true, slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60 };
+  const booking = {
+    bookingSlug: E2E_SEED.publicSlug, bookingEnabled: true, slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60,
+    reminderChannel: Channel.EMAIL, reminderActive: true,
+  };
   const provider = await prisma.user.upsert({
     where: { email: E2E_SEED.publicProviderEmail },
     update: { status: AdminStatus.ACTIVE, deletedAt: null, isDeleted: false, ...booking },
@@ -99,7 +102,6 @@ async function seedPublicProvider() {
       jobTitle: 'Psicóloga',
       role: AdminRole.ADMIN,
       status: AdminStatus.ACTIVE,
-      reminderChannel: Channel.EMAIL,
       ...booking,
     },
   });

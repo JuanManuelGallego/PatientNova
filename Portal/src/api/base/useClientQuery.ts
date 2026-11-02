@@ -37,7 +37,6 @@ export function usePublicQuery<T>(path: string | null) {
     return useClientQuery<T>(publicApi, path);
 }
 
-/** Credentialed portal reads; a 401 surfaces as `error.status === 401` (the caller decides it means "signed out"). */
 export function usePortalQuery<T>(path: string | null) {
     return useClientQuery<T>(portalApi, path);
 }

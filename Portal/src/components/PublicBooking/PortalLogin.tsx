@@ -27,12 +27,14 @@ interface PortalLoginProps {
     onLoggedIn: () => void;
     notice?: string;
     title?: string;
-    /** Inside the booking form: no card of its own, and an h2 under the page's h1. */
+    lead?: string;
     embedded?: boolean;
 }
 
-export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", embedded = false }: PortalLoginProps) {
-    const Heading = embedded ? "h2" : "h1";
+const DEFAULT_LEAD = "Ingresa tu correo y te enviaremos un código para entrar. No necesitas contraseña.";
+
+export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false }: PortalLoginProps) {
+    const Heading = embedded ? "h3" : "h1";
     const ids = useId();
     const widget = useRef<TurnstileHandle>(null);
     const codeInput = useRef<HTMLInputElement>(null);
@@ -108,7 +110,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", emb
 
             {step === "email" ? (
                 <form className={styles.form} onSubmit={onSubmitEmail}>
-                    <p className={styles.lead}>Ingresa tu correo y te enviaremos un código para entrar. No necesitas contraseña.</p>
+                    <p className={styles.lead}>{lead}</p>
                     <label className="form-label">
                         Correo electrónico
                         <input

@@ -112,8 +112,13 @@
   line-height: 1.45;
 }
 
+.notice:focus {
+  outline: none;
+}
+
 .step {
   padding-top: 20px;
+  scroll-margin-top: 16px;
 }
 
 .step + .step {

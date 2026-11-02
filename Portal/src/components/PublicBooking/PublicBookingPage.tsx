@@ -51,6 +51,17 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const openDays = weekDays.filter((d) => slotDays.has(d));
     const day = slotDays.get(dayChoice && openDays.includes(dayChoice) ? dayChoice : openDays[ 0 ] ?? "");
     const slot = day && [ ...day.morning, ...day.afternoon ].find((s) => s.startUtc === startUtc);
+    const pickedStart = slot?.startUtc;
+    const confirmStep = useRef<HTMLDivElement>(null);
+    const slotNoticeRef = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        if (pickedStart) reveal(confirmStep.current);
+    }, [ pickedStart ]);
+
+    useEffect(() => {
+        if (slotNotice) slotNoticeRef.current?.focus();
+    }, [ slotNotice ]);
 
     if (error?.status === 404) return <Unavailable />;
 
@@ -159,7 +170,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 </Step>
 
                 <Step number={3} title="Hora">
-                    {slotNotice && <p className={styles.notice} role="alert">{slotNotice}</p>}
+                    {slotNotice && <p ref={slotNoticeRef} tabIndex={-1} className={styles.notice} role="alert">{slotNotice}</p>}
                     {error ? null
                         : loading || !slots ? <TimesSkeleton />
                         : !day ? (
@@ -179,7 +190,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 </Step>
 
                 {slot && type && (
-                    <Step number={4} title="Confirma tu cita">
+                    <Step number={4} title="Confirma tu cita" stepRef={confirmStep}>
                         <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
                             onBooked={setBooked} onSlotTaken={onSlotTaken} />
                     </Step>
@@ -220,10 +231,24 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
     );
 }
 
-function Step({ number, title, aside, children }: { number: number; title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+function reveal(el: HTMLElement | null) {
+    if (!el?.scrollIntoView) return;
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+}
+
+interface StepProps {
+    number: number;
+    title: string;
+    aside?: React.ReactNode;
+    stepRef?: React.Ref<HTMLDivElement>;
+    children: React.ReactNode;
+}
+
+function Step({ number, title, aside, stepRef, children }: StepProps) {
     const id = `step-${number}`;
     return (
-        <div className={styles.step} role="group" aria-labelledby={id}>
+        <div ref={stepRef} className={styles.step} role="group" aria-labelledby={id}>
             <div className={styles.stepHead}>
                 <h2 id={id} className={styles.stepTitle}>
                     <span className={styles.stepNumber} aria-hidden="true">{number}</span>
@@ -271,7 +296,8 @@ function BookingDone({ slug, appointment, timezone, onBookAnother }: {
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="booking-done">
             <h2 id="booking-done" ref={heading} tabIndex={-1} className={styles.doneTitle}>Tu cita quedó reservada</h2>
             <p className={styles.muted}>Te enviamos la confirmación a tu correo.</p>
-            <PortalAppointmentCard appointment={appointment} timezone={timezone} />
+            <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
+            <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
             <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Reservar otra cita</button>
         </section>

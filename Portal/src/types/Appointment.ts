@@ -21,7 +21,6 @@ export interface Appointment {
   cancelledAt?: string | null;
   completedAt?: string | null;
 
-  /** PORTAL: booked by the patient on the public booking page. */
   source?: "PROVIDER" | "PORTAL";
 
   patientId: string;

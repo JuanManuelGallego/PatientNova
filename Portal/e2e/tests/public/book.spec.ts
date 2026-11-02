@@ -30,8 +30,7 @@ test.describe('public booking page', () => {
     await expect(page.getByRole('button', { name: /Control/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByText(/Consultorio Centro/)).toBeVisible();
     await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'Tarde' }).getByRole('listitem').first()).toBeVisible();
-    await expect(page.getByText(/Pronto podrás reservar aquí/)).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Tarde' }).getByRole('button').first()).toBeVisible();
     await expect(page.getByText(/Horas en tu zona horaria: Colombia/)).toBeVisible();
 
     await page.waitForLoadState('networkidle');

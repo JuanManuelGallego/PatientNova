@@ -76,7 +76,6 @@ export function fmtDayParts(day: string): { weekday: string; dayNumber: string; 
     };
 }
 
-/** The calendar day an instant falls on in `zone`. */
 export function localDayOf(iso: string, zone: string): string {
     return todayFormattedString(zone, new Date(iso));
 }
@@ -85,7 +84,6 @@ export function fmtLongDay(day: string): string {
     return part(day, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
-/** E.164, as the API validates it; spaces, dashes and parentheses are dropped first. */
 export function normalizePhone(value: string): string {
     return value.replace(/[\s()-]/g, "");
 }

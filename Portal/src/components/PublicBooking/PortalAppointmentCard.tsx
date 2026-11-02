@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { fmtTime } from "@/src/utils/TimeUtils";
 import { fmtLongDay, localDayOf } from "@/src/utils/publicBooking";
@@ -11,16 +12,22 @@ const STATUS_LABEL: Record<PortalAppointment[ "status" ], string> = {
     NO_SHOW: "No asistió",
 };
 
-/** Times in the patient's device zone (`timezone`), never the provider's. */
-export function PortalAppointmentCard({ appointment: a, timezone }: { appointment: PortalAppointment; timezone: string }) {
+interface PortalAppointmentCardProps {
+    appointment: PortalAppointment;
+    timezone: string;
+    inset?: boolean;
+}
+
+export function PortalAppointmentCard({ appointment: a, timezone, inset = false }: PortalAppointmentCardProps) {
+    const dayId = useId();
     return (
-        <article className={styles.appt} aria-label={`Cita del ${fmtLongDay(localDayOf(a.startUtc, timezone))}`}>
+        <article className={inset ? `${styles.appt} ${styles.inset}` : styles.appt} aria-labelledby={dayId}>
             <div className={styles.apptHead}>
                 <div>
-                    <p className={styles.apptDay}>{fmtLongDay(localDayOf(a.startUtc, timezone))}</p>
+                    <p id={dayId} className={styles.apptDay}>{fmtLongDay(localDayOf(a.startUtc, timezone))}</p>
                     <p className={styles.apptTime}>{fmtTime(a.startUtc, timezone)} – {fmtTime(a.endUtc, timezone)}</p>
                 </div>
-                <span className={styles.status}>{STATUS_LABEL[ a.status ]}</span>
+                <span className={styles.status} data-status={a.status}>{STATUS_LABEL[ a.status ]}</span>
             </div>
             {a.type && <p className={styles.apptMeta}>{a.type.name} · {a.durationMinutes} minutos</p>}
             {a.location && (

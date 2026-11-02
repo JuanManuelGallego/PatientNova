@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, weekPage } from "@/src/utils/publicBooking";
+import {
+    addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtCop, fmtDayParts, fmtLongDay, fmtWeekRange, groupSlotsByDay,
+    isE164, localDayOf, normalizePhone, weekPage,
+} from "@/src/utils/publicBooking";
 
 const slot = (startUtc: string) => ({ startUtc, endUtc: startUtc });
 const starts = (slots: { startUtc: string }[]) => slots.map((s) => s.startUtc);
@@ -106,5 +109,22 @@ describe("lastBookableDateIn", () => {
         expect(lastBookableDateIn("Pacific/Honolulu", "2026-12-30", "America/Bogota")).toBe("2026-12-30");
         expect(lastBookableDateIn("Pacific/Honolulu", "2026-12-30", "Asia/Tokyo")).toBe("2026-12-30");
         expect(lastBookableDateIn("Etc/GMT+12", "2026-12-30", "Pacific/Kiritimati")).toBe("2026-12-29");
+    });
+});
+
+describe("localDayOf / fmtLongDay", () => {
+    it("names the day an instant falls on in the patient's zone", () => {
+        expect(localDayOf("2026-11-05T03:30:00.000Z", "America/Bogota")).toBe("2026-11-04");
+        expect(localDayOf("2026-11-05T03:30:00.000Z", "Europe/Madrid")).toBe("2026-11-05");
+        expect(fmtLongDay("2026-11-04")).toBe("miércoles, 4 de noviembre de 2026");
+    });
+});
+
+describe("phone helpers", () => {
+    it("normalizes and validates E.164 like the API", () => {
+        expect(normalizePhone(" +57 (300) 111-2233 ")).toBe("+573001112233");
+        expect(isE164("+573001112233")).toBe(true);
+        expect(isE164("3001112233")).toBe(false);
+        expect(isE164("+571234")).toBe(false);
     });
 });
