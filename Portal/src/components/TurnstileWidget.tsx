@@ -43,7 +43,6 @@ export interface TurnstileHandle {
 interface TurnstileWidgetProps {
     action: string;
     onToken: (token: string | null) => void;
-    /** The widget cannot produce a token (misconfigured build, script blocked, challenge error). */
     onError?: () => void;
     siteKey?: string;
     ref?: Ref<TurnstileHandle>;

@@ -162,7 +162,6 @@ jobs:
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: e2e-admin@example.com
       ADMIN_PASSWORD: E2e-Admin-Password-1
-      # OTP emails go to the mock Brevo server started below (Portal/e2e/support/mock-brevo.mjs).
       BREVO_API_BASE_URL: http://localhost:4010
       MOCK_BREVO_URL: http://localhost:4010
       # Playwright
@@ -232,7 +231,6 @@ jobs:
         working-directory: Portal
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
-          # Cloudflare's always-pass test site key, paired with the test CAPTCHA_SECRET in .env.test.
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
         run: |
           pnpm run build

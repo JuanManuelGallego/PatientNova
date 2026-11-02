@@ -15,7 +15,6 @@ interface SiteverifyResponse {
   metadata?: { result_with_testing_key?: boolean };
 }
 
-/** Cloudflare's dummy secrets (always pass / always fail / token spent): fine for dev and CI only. */
 export function isTurnstileTestSecret(secret: string): boolean {
   return /^[123]x0+AA$/.test(secret);
 }
@@ -70,9 +69,6 @@ export function createTurnstileVerifier(opts: TurnstileOptions): CaptchaVerifier
         if (reason === 'unavailable') logger.error({ errorCodes }, 'Turnstile rejected our request (check CAPTCHA_SECRET)');
         return fail(reason);
       }
-      // Cloudflare's test secrets pass every token and answer with a placeholder hostname
-      // (`example.com`) and no action, so those two checks cannot apply. Skipped only when both our
-      // secret is a test secret and Cloudflare flags the answer: a real secret is always fully checked.
       const testKeyResult = isTurnstileTestSecret(opts.secret) && payload.metadata?.result_with_testing_key === true;
       if (!testKeyResult) {
         if (!payload.hostname || !opts.expectedHostnames.includes(payload.hostname)) return fail('hostname-mismatch');

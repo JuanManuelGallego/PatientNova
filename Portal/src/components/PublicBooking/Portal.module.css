@@ -12,7 +12,6 @@
   padding: 0 4px;
 }
 
-/* The booking page's hero avatar at a size that leaves the card as the page's subject. */
 .avatar {
   width: 52px;
   height: 52px;
@@ -65,8 +64,6 @@
   padding: 28px 24px;
 }
 
-/* The CAPTCHA has no height unless Cloudflare needs an interaction, but it still takes the card's
-   gap: take that gap back from the bottom padding so every card ends the same way. */
 .card:has(> .captcha) {
   padding-bottom: 12px;
 }
@@ -110,7 +107,7 @@
 
 .form :global(.form-input) {
   min-height: 44px;
-  font-size: 16px; /* 16px keeps iOS from zooming into the field */
+  font-size: 16px;
 }
 
 .codeInput {
@@ -223,7 +220,6 @@
   }
 }
 
-/* Optically align the text button with the line above it (its 4px padding is for the touch target). */
 .account .linkButton {
   margin-left: -4px;
 }

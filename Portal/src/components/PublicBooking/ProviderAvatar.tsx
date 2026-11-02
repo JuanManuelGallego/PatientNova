@@ -14,7 +14,6 @@ export function initials(name: string): string {
     return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
 }
 
-/** The provider's photo, or their initials when there is none or it fails to load. Size comes from `className`. */
 export function ProviderAvatar({ slug, provider, className }: { slug: string; provider: PublicProvider; className: string }) {
     const [ failed, setFailed ] = useState(false);
     return provider.hasAvatar && !failed

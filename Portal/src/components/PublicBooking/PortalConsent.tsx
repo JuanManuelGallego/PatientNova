@@ -8,15 +8,9 @@ import styles from "./Portal.module.css";
 
 interface PortalConsentProps {
     onAccepted: () => void;
-    /** The session stopped validating (expired, provider no longer live): back to the login. */
     onSessionLost: () => void;
 }
 
-/**
- * Acceptance of the portal's privacy/data-processing text (not the provider's own consent form).
- * The server answers 204 whether or not it recorded anything, so the parent continues on local
- * state: refetching the session would show this card again while no patient exists yet.
- */
 export function PortalConsent({ onAccepted, onSessionLost }: PortalConsentProps) {
     const ids = useId();
     const [ checked, setChecked ] = useState(false);

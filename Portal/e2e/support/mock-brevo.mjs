@@ -1,11 +1,7 @@
-// Tiny stand-in for Brevo's transactional email API, for the self-contained e2e stack only.
-// The Server sends real requests to it (`BREVO_API_BASE_URL=http://localhost:4010`), so the OTP
-// flow runs end to end with no product bypass. Specs read the latest code per address from
-// `GET /__test/latest-code?email=`. Binds to localhost; never run it anywhere else.
 import { createServer } from 'node:http';
 
 const PORT = Number(process.env.MOCK_BREVO_PORT ?? 4010);
-const latest = new Map(); // lowercased address -> { subject, textContent }
+const latest = new Map();
 let sent = 0;
 
 function reply(res, status, body) {
@@ -34,7 +30,7 @@ const server = createServer((req, res) => {
                     latest.set(String(email).toLowerCase(), { subject: payload.subject, textContent: payload.textContent ?? '' });
                 }
                 sent += 1;
-                console.log(`mock-brevo: accepted email #${sent}`); // never log addresses or codes
+                console.log(`mock-brevo: accepted email #${sent}`);
                 reply(res, 201, { messageId: `<mock-${sent}@mock-brevo.local>` });
             } catch {
                 reply(res, 400, { code: 'bad_request', message: 'invalid JSON' });

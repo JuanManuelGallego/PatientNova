@@ -5,7 +5,6 @@ import { PortalAppointmentsPage } from "@/src/components/PublicBooking/PortalApp
 import { RESEND_COOLDOWN_SECONDS } from "@/src/components/PublicBooking/PortalLogin";
 import { csrfStore } from "@/src/api/base/csrfStore";
 
-// Stand-in for Cloudflare's widget: a button that "solves" it, and `reset()` drops the token like the real one.
 vi.mock("@/src/components/TurnstileWidget", async () => {
     const { useImperativeHandle } = await import("react");
     return {
@@ -146,7 +145,6 @@ describe("PortalAppointmentsPage", () => {
         const [ , consentInit ] = call("/portal/consent")[ 0 ];
         expect(JSON.parse(String(consentInit.body))).toEqual({ accepted: true });
         expect((consentInit.headers as Record<string, string>)[ "X-CSRF-Token" ]).toBe("csrf-from-session");
-        // Continues on local state: the server still says consentRequired (no patient yet), a refetch would loop.
         expect(call("/portal/session")).toHaveLength(2);
     });
 
@@ -182,7 +180,6 @@ describe("PortalAppointmentsPage", () => {
         for (let i = 0; i < RESEND_COOLDOWN_SECONDS; i++) await act(async () => { vi.advanceTimersByTime(1000); });
 
         const ready = screen.getByRole("button", { name: "Reenviar código" });
-        // The widget was reset after the first request: a fresh token is required.
         expect(ready).toBeDisabled();
         await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
         await user.click(ready);
@@ -285,7 +282,6 @@ describe("PortalAppointmentsPage", () => {
         const emailInput = screen.getByLabelText("Correo electrónico");
         await user.clear(emailInput);
         await user.type(emailInput, "ANA@example.com");
-        // No CAPTCHA needed: nothing is sent.
         await user.click(screen.getByRole("button", { name: "Ingresar el código enviado" }));
 
         const codeInput = await screen.findByLabelText("Código de 6 dígitos");

@@ -80,7 +80,6 @@ describe('Turnstile verifier', () => {
   });
 
   describe('Cloudflare test-key results', () => {
-    // What siteverify actually answers for the always-pass test secret (checked 2026-11-01).
     const testKey = { success: true, 'error-codes': [], challenge_ts: '2026-10-12T11:59:00Z', hostname: 'example.com', metadata: { result_with_testing_key: true } };
     const testVerifier = createTurnstileVerifier({
       secret: '1x0000000000000000000000000000000AA',

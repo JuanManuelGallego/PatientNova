@@ -13,7 +13,6 @@ import { PortalConsent } from "./PortalConsent";
 import { ProviderAvatar } from "./ProviderAvatar";
 import styles from "./Portal.module.css";
 
-/** `/book/[slug]/appointments`: OTP login, consent, then the patient's appointments (Phase 4/5). */
 export function PortalAppointmentsPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
 
@@ -49,14 +48,11 @@ const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo con tu correo.
 
 function PortalArea({ slug }: { slug: string }) {
     const { session, loading, error, refetch, clear } = usePortalSession();
-    // Keyed by the session, so a new login (another email) asks again.
     const [ consentedFor, setConsentedFor ] = useState<string | null>(null);
     const [ notice, setNotice ] = useState<string | undefined>();
 
     if (loading) return <CardSkeleton />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
-    // One cookie serves every provider: a session for another provider means "log in here". The
-    // server stores slugs lowercased and resolves the URL's slug the same way.
     if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
         return <PortalLogin slug={slug} notice={notice} onLoggedIn={() => { setNotice(undefined); refetch(); }} />;
     }
@@ -80,8 +76,6 @@ function SignedIn({ slug, session, onLoggedOut }: { slug: string; session: Porta
         try {
             await logout();
         } catch {
-            // The cookie only goes away when the server answers: keep the session on screen with the
-            // error so the patient can retry, instead of a fake logout that a reload undoes (shared devices).
             return;
         }
         onLoggedOut();

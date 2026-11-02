@@ -5,12 +5,10 @@ import { TurnstileWidget, type TurnstileHandle } from "@/src/components/Turnstil
 import { useRequestOtp, useVerifyOtp } from "@/src/api/portal/usePortalAuth";
 import styles from "./Portal.module.css";
 
-/** Matches the server's per-email resend cooldown. */
 export const RESEND_COOLDOWN_SECONDS = 60;
 export const OTP_CAPTCHA_ACTION = "otp-request";
 const CODE_LENGTH = 6;
 
-/** Same normalization as the server (trim + lowercase), to tell whether a code was already sent here. */
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
 function useCountdown() {
@@ -25,20 +23,10 @@ function useCountdown() {
 
 interface PortalLoginProps {
     slug: string;
-    /** Called once the session cookie is set; the parent reloads the session. */
     onLoggedIn: () => void;
-    /** Shown above the form, e.g. why the patient is back at the login. */
     notice?: string;
 }
 
-/**
- * Email OTP login for one provider. Responses never say whether the email belongs to a patient,
- * so the copy stays neutral. The `challenge` from the latest request lives only in memory and is
- * sent with the code; a resend replaces it (two tabs requesting at once leave only the last working).
- * "Cambiar correo" keeps it and the countdown: asking again for the same address inside the server's
- * cooldown would get a throttled 202 whose random challenge makes the emailed code fail, so returning
- * to that address goes straight back to the code step instead.
- */
 export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
     const ids = useId();
     const widget = useRef<TurnstileHandle>(null);
@@ -49,7 +37,6 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
     const [ captchaToken, setCaptchaToken ] = useState<string | null>(null);
     const [ captchaFailed, setCaptchaFailed ] = useState(false);
     const [ challenge, setChallenge ] = useState<string | null>(null);
-    /** The normalized address the current `challenge` belongs to. */
     const [ sentTo, setSentTo ] = useState<string | null>(null);
     const [ cooldown, setCooldown ] = useCountdown();
     const request = useRequestOtp(slug);
@@ -71,9 +58,7 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
             setStep("code");
             setCooldown(RESEND_COOLDOWN_SECONDS);
         } catch {
-            // `request.error` holds the Spanish message.
         } finally {
-            // A token is single use: get a fresh one for the next request either way.
             widget.current?.reset();
         }
     };
@@ -181,7 +166,6 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
                 </form>
             )}
 
-            {/* Mounted across both steps: the resend needs a fresh token too. */}
             <div className={styles.captcha}>
                 <TurnstileWidget ref={widget} action={OTP_CAPTCHA_ACTION} onToken={onCaptchaToken} onError={() => setCaptchaFailed(true)} />
             </div>

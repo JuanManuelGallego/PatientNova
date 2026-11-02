@@ -4,11 +4,6 @@ import { toSpanishMessage } from "./errorMessages";
 
 type PostClient = { post: <T>(path: string, body?: unknown) => Promise<T> };
 
-/**
- * Mutation state for the patient-facing clients (`publicApi`/`portalApi`), same shape as
- * `useApiMutation`: `{ mutate, loading, error }`, and a call made while one is in flight is refused.
- * `error` is the curated Spanish message; the thrown `ApiClientError` carries the status.
- */
 function useClientMutation<TOutput>(client: PostClient) {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
@@ -36,12 +31,10 @@ function useClientMutation<TOutput>(client: PostClient) {
     return { mutate, loading, error, reset };
 }
 
-/** POST to an anonymous `/v1/public` endpoint (no cookies). */
 export function usePublicMutation<TOutput = void>() {
     return useClientMutation<TOutput>(publicApi);
 }
 
-/** POST to a `/v1/portal` session endpoint (cookie + `X-CSRF-Token`). */
 export function usePortalMutation<TOutput = void>() {
     return useClientMutation<TOutput>(portalApi);
 }

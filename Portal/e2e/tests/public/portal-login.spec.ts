@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { Env } from '../../utils/env';
 
 const SLUG = 'e2e-publica';
-// The mock Brevo server the API sends email to in the self-contained stack (e2e/support/mock-brevo.mjs).
 const MOCK_BREVO_URL = process.env.MOCK_BREVO_URL ?? 'http://localhost:4010';
 
 async function latestCode(email: string): Promise<string> {
@@ -18,7 +17,6 @@ async function latestCode(email: string): Promise<string> {
 
 async function requestCode(page: Page, email: string) {
     await page.getByLabel('Correo electrónico').fill(email);
-    // Cloudflare's test site key solves itself; the submit unlocks once the widget hands over a token.
     const submit = page.getByRole('button', { name: 'Enviar código' });
     await expect(submit).toBeEnabled({ timeout: 20_000 });
     await submit.click();
@@ -27,7 +25,6 @@ async function requestCode(page: Page, email: string) {
 
 test.describe('portal login on "Mis citas"', () => {
     test.beforeEach(async ({ page }) => {
-        // The anonymous CORS class refuses the Vercel bypass headers.
         await page.route(`${new URL(Env.apiBaseUrl).origin}/**`, (route) => {
             const headers = { ...route.request().headers() };
             delete headers[ 'x-vercel-protection-bypass' ];
@@ -36,8 +33,6 @@ test.describe('portal login on "Mis citas"', () => {
         });
     });
 
-    // One test on purpose: the OTP request limiter allows 10 per IP per 15 minutes, shared by both
-    // public projects and retries.
     test('emailed code logs in, consent, reload keeps the session, logout', async ({ page }, testInfo) => {
         const email = `paciente-${testInfo.project.name}-${Date.now()}@example.com`;
         await page.goto(`/book/${SLUG}`);
@@ -56,14 +51,11 @@ test.describe('portal login on "Mis citas"', () => {
         await codeInput.fill(code);
         await page.getByRole('button', { name: 'Ingresar' }).click();
 
-        // Not a patient of this provider yet: the consent card shows (the server can't tell us apart).
         await expect(page.getByRole('heading', { name: 'Antes de continuar' })).toBeVisible();
         await page.getByRole('checkbox').check();
         await page.getByRole('button', { name: 'Continuar' }).click();
         await expect(page.getByText('Aquí verás tus citas.')).toBeVisible();
 
-        // Reload: the cookie survives and `/session` re-issues the CSRF token, so consent (a CSRF-guarded
-        // POST) still works. No patient exists yet, so the server asks for consent again.
         await page.reload();
         await expect(page.getByRole('heading', { name: 'Antes de continuar' })).toBeVisible();
         const consent = page.waitForResponse((res) => res.url().endsWith('/v1/portal/consent'));

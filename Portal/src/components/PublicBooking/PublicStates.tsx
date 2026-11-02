@@ -1,7 +1,6 @@
 import type { ApiClientError } from "@/src/api/base/apiClients";
 import styles from "./PublicBooking.module.css";
 
-/** The one page every 404 (unknown, disabled or not-live provider) renders, so they look the same. */
 export function Unavailable() {
     return (
         <section className={`dash-card ${styles.state}`}>
