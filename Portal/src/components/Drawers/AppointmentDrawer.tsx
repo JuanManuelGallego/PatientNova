@@ -21,6 +21,7 @@ import {
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
+import { OnlineBadge } from "../OnlineBadge";
 import { useFetchAppointment } from "@/src/api/appointments/useFetchAppointment";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
@@ -98,7 +99,12 @@ export function AppointmentDrawer({
       title={appointment.appointmentType.name}
       eyebrow="Detalles de la cita"
       icon={DETAIL_ICONS.calendar}
-      status={<AppointmentStatusPill status={appointment.status} />}
+      status={
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <AppointmentStatusPill status={appointment.status} />
+          {appointment.source === "PORTAL" && <OnlineBadge testId="appointment-drawer-portal-badge" label="Reservada en línea" />}
+        </span>
+      }
       footer={footer}
       onClose={onClose}
       panelTestId="appointment-drawer-panel"

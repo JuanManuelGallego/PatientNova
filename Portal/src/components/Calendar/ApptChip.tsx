@@ -32,7 +32,7 @@ export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProp
         gap: 4,
         ...style,
       }}
-      title={`${a.patient.name} ${a.patient.lastName} — ${a.appointmentLocation.name} — ${cfg.label}`}
+      title={`${a.patient.name} ${a.patient.lastName} — ${a.appointmentLocation.name} — ${cfg.label}${a.source === "PORTAL" ? " — Reservada en línea" : ""}`}
     >
       {!compact && (
         <span style={{

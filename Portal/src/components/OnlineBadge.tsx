@@ -1,4 +1,4 @@
-export function OnlineBadge({ testId }: { testId: string }) {
+export function OnlineBadge({ testId, label = "En línea" }: { testId: string; label?: string }) {
   return (
     <span
       style={{
@@ -13,7 +13,7 @@ export function OnlineBadge({ testId }: { testId: string }) {
       }}
       data-testid={testId}
     >
-      En línea
+      {label}
     </span>
   );
 }
