@@ -43,7 +43,57 @@ export function renderBookingConfirmationEmail(params: {
       ...(params.locationName ? [ `Lugar: ${params.locationName}` ] : []),
       ...(params.address ? [ `Dirección: ${params.address}` ] : []),
       '',
-      'Puedes ver tus citas aquí (te pediremos verificar tu correo):',
+      APPOINTMENTS_LINK_LINE,
+      params.appointmentsUrl,
+    ].join('\n'),
+  };
+}
+
+const APPOINTMENTS_LINK_LINE = 'Puedes ver, cancelar o reprogramar tus citas aquí (te pediremos verificar tu correo):';
+
+/** Patient confirmation of a cancellation made in the portal. `whenLocal` is in the patient's zone. */
+export function renderPortalCancellationEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  timezone: string;
+  bookingUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Cita cancelada con ${params.providerName}`,
+    body: [
+      'Hola,',
+      '',
+      `Tu cita con ${params.providerName} del ${params.whenLocal} (hora de ${params.timezone}) quedó cancelada.`,
+      '',
+      'Si quieres, puedes reservar una nueva cita aquí:',
+      params.bookingUrl,
+    ].join('\n'),
+  };
+}
+
+/** Patient confirmation of a reschedule made in the portal. Both times are in the patient's zone. */
+export function renderPortalRescheduleEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  previousLocal: string;
+  timezone: string;
+  locationName?: string | null;
+  address?: string | null;
+  appointmentsUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Cita reprogramada con ${params.providerName}`,
+    body: [
+      'Hola,',
+      '',
+      `Tu cita con ${params.providerName} quedó reprogramada.`,
+      '',
+      `Nueva fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
+      `Fecha anterior: ${params.previousLocal}`,
+      ...(params.locationName ? [ `Lugar: ${params.locationName}` ] : []),
+      ...(params.address ? [ `Dirección: ${params.address}` ] : []),
+      '',
+      APPOINTMENTS_LINK_LINE,
       params.appointmentsUrl,
     ].join('\n'),
   };

@@ -297,6 +297,38 @@ async function enqueueLinkedReminder(reminder: Pick<Reminder, 'id' | 'sendMode' 
   });
 }
 
+/**
+ * Cancels the appointment's linked reminder when it is still PENDING, on `tx`, so a cancelled appointment
+ * never sends one. Every cancel path calls it. Returns the cancelled reminder id, or null.
+ */
+export async function cancelLinkedReminder(tx: TransactionClient, appointmentId: string, userId: string): Promise<string | null> {
+  const reminder = await tx.reminder.findFirst({
+    where: { appointmentId, userId, status: ReminderStatus.PENDING, isDeleted: false },
+    select: { id: true },
+  });
+  if (!reminder) return null;
+  await tx.reminder.update({ where: { id: reminder.id }, data: { status: ReminderStatus.CANCELLED } });
+  await logAudit({
+    entityType: EntityType.REMINDER,
+    entityId: reminder.id,
+    userId,
+    actionType: ActionType.UPDATE,
+    description: 'Recordatorio cancelado porque la cita fue cancelada',
+    affectedFields: [ 'status' ],
+    fieldsBefore: { status: ReminderStatus.PENDING },
+    fieldsAfter: { status: ReminderStatus.CANCELLED },
+    tx,
+    required: true,
+  });
+  logger.info({ reminderId: reminder.id, appointmentId }, 'Linked reminder cancelled with its appointment');
+  return reminder.id;
+}
+
+function withCancelledReminder(appointment: AppointmentWithRelations, cancelledReminderId: string | null): AppointmentWithRelations {
+  if (!cancelledReminderId || appointment.reminder?.id !== cancelledReminderId) return appointment;
+  return { ...appointment, reminder: { ...appointment.reminder, status: ReminderStatus.CANCELLED } };
+}
+
 export async function createWithin(
   tx: TransactionClient,
   dto: CreateAppointmentDto,
@@ -527,11 +559,11 @@ export const appointmentService = {
         });
       }
 
-      return renderLinkedReminder(
-        updated,
-        reminderContext,
-        tx,
-      );
+      const cancelledReminderId = statusChanged && newStatus === AppointmentStatus.CANCELLED
+        ? await cancelLinkedReminder(tx, id, userId)
+        : null;
+      const rendered = await renderLinkedReminder(updated, reminderContext, tx);
+      return withCancelledReminder(rendered, cancelledReminderId);
     }, { timeout: 10000 });
 
   },
@@ -552,6 +584,9 @@ export const appointmentService = {
         await checkBlockedTimeConflict(tx, userId, appt.startAt, appt.endAt);
       }
       const updated = await appointmentRepository.update(id, { status }, userId, tx);
+      const cancelledReminderId = status === AppointmentStatus.CANCELLED && appt.status !== AppointmentStatus.CANCELLED
+        ? await cancelLinkedReminder(tx, id, userId)
+        : null;
       await logAudit({
         entityType: EntityType.APPOINTMENT,
         entityId: id,
@@ -565,7 +600,7 @@ export const appointmentService = {
         required: true,
       });
       logger.info({ appointmentId: id, previousStatus: appt.status, newStatus: status }, 'Appointment status changed');
-      return updated;
+      return withCancelledReminder(updated, cancelledReminderId);
     }, { timeout: 10000 });
   },
 

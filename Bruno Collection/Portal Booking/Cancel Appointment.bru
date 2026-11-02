@@ -1,0 +1,33 @@
+meta {
+  name: Cancel Appointment
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/portal/appointments/{{portalAppointmentId}}/cancel
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+  X-CSRF-Token: {{portalCsrfToken}}
+}
+
+body:json {
+  {}
+}
+
+docs {
+  Cancels one of the session patient's upcoming active appointments (run Create Booking or List
+  Appointments first; both store `portalAppointmentId`). Any appointment of the patient can be
+  cancelled, provider-created ones too, with no cutoff. Needs the session cookie, the exact Origin
+  and the CSRF token. The body is an empty object (or none): there is no reason field.
+
+  204 on success: the appointment becomes CANCELLED with `cancelledBy=PATIENT`, its pending reminder
+  is cancelled, and the patient and provider are notified. Every other case (not theirs, unknown,
+  past, already cancelled, deleted, no consented patient for the session) is the same 404
+  "Appointment not found".
+}

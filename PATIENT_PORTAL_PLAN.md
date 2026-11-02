@@ -531,7 +531,11 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 
 Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers item 5.2 plus the 5.1 list changes, PR 5.2 covers item 5.3, PR 5.3 is the Portal for both). PR 5.2 can start as soon as PR 5.1's shared pieces (eligibility, the patient-appointment lookup, the notification kinds) are merged; PR 5.3 can start against the PR 5.1 DTO.
 
-**PR 5.1 — Server: cancel + reminder fix + notifications.**
+**PR 5.1 — Server: cancel + reminder fix + notifications.** Built (2026-11-02). As built:
+- The notifications stay in `portal-booking-notifications.ts` (not renamed). `enqueuePortalNotifications(event, id, tx, previousStartAt?)` and `deliverPortalNotificationsNow` take an event (`booked`/`cancelled`/`rescheduled`) instead of fixed kinds.
+- Provider SMS/EMAIL text uses separate lines ("Antes:"/"Ahora:" for a reschedule), because formatted times end in "a. m." and a following full stop doubled it. The booking notice line changed the same way.
+- The DTO lives in `portal-appointment.dto.ts`. `book` re-reads the created row with `portalAppointmentSelect`, so the flags come from the same fields as the list.
+- The cancel audit has no patient name. A reactivated appointment does not get its cancelled reminder back; the provider adds a new one.
 - **Shared reminder fix (applies to every path):**
   - `cancelLinkedReminder(tx, appointment, userId)`: a PENDING linked reminder becomes `CANCELLED` in the same `tx`, with a required audit. It is used by `setStatus(CANCELLED)`, by `update` when the status changes to CANCELLED, by the portal cancel, and by the WhatsApp quick-reply cancel (a no-op there, since that reminder was already sent).
   - `send-reminder` also skips a reminder whose linked appointment is deleted or not in `ACTIVE_STATUSES`. This is defense in depth for jobs already in the queue.

@@ -106,4 +106,25 @@ describe('send-reminder worker', () => {
     await sendReminderWorker([ { data: { reminderId: reminder.id } } ]);
     expect(mocks.dispatch).toHaveBeenCalledWith(Channel.EMAIL, expect.objectContaining({ to: reminder.to }));
   });
+
+  it('skips a due PENDING reminder whose linked appointment is cancelled, completed or deleted', async () => {
+    const inactive = [
+      { status: AppointmentStatus.CANCELLED },
+      { status: AppointmentStatus.COMPLETED },
+      { status: AppointmentStatus.SCHEDULED, isDeleted: true, deletedAt: new Date() },
+    ];
+    for (const [ i, state ] of inactive.entries()) {
+      const reminder = await scheduledReminder(new Date(Date.now() - 1000).toISOString());
+      const start = new Date(Date.now() + (i + 1) * 86_400_000);
+      await prisma.appointment.create({
+        data: {
+          userId: reminder.userId, patientId: reminder.patientId!, startAt: start, endAt: new Date(start.getTime() + 3600_000),
+          price: 0, ...state, reminder: { connect: { id: reminder.id } },
+        },
+      });
+      await sendReminderWorker([ { data: { reminderId: reminder.id } } ]);
+      expect((await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).status).toBe(ReminderStatus.PENDING);
+    }
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
 });

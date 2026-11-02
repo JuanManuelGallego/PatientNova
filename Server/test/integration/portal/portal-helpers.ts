@@ -9,7 +9,11 @@ import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from
 import { portalSecret, signPortalToken } from '../../../src/auth/tokens.js';
 import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
 import { createCsrfToken } from '../../../src/utils/security/csrf.js';
-import { createTestAppointmentType, createTestLocation, createTestUser } from '../helpers.js';
+import { DateTime } from 'luxon';
+import { ConsentKind } from '../../../generated/prisma/enums.js';
+import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
+import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
+import { createTestAppointmentType, createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
 
 export const ALLOWED_ORIGIN = 'http://localhost:3000';
 
@@ -67,4 +71,34 @@ export function sessionFor(userId: string, email: string): TestSession {
   const sid = `sid-${++seq}`;
   const token = signPortalToken({ userId, email, sid });
   return { cookie: `${PORTAL_COOKIE_NAME}=${token}`, csrf: createCsrfToken(sid, portalSecret()), email, sid };
+}
+
+export const PORTAL_ZONE = 'America/Bogota';
+
+/** Start instants (ISO) the public slot engine offers `daysAhead` days from today, in the provider zone. */
+export async function slotStarts(provider: LiveProvider, daysAhead = 3): Promise<string[]> {
+  const date = DateTime.now().setZone(PORTAL_ZONE).plus({ days: daysAhead }).toISODate()!;
+  const { slots } = await publicBookingService.getSlots(provider.slug, { typeId: provider.typeId, from: date, to: date });
+  return slots.map((s) => s.startUtc);
+}
+
+export function portalBookingBody(provider: LiveProvider, startUtc: string, overrides: Record<string, unknown> = {}) {
+  return {
+    typeId: provider.typeId,
+    locationId: provider.locationId,
+    startUtc,
+    patientTimezone: 'America/New_York',
+    consentAccepted: true,
+    patient: { name: 'Lucia', lastName: 'Rojas', phone: '+573001112233' },
+    ...overrides,
+  };
+}
+
+/** An existing (provider-created) patient who already accepted the current policy in the portal. */
+export async function createConsentedPatient(userId: string) {
+  const patient = await createTestPatient(userId);
+  await prisma.patientConsent.create({
+    data: { patientId: patient.id, userId, kind: ConsentKind.DATA_PROCESSING, policyVersion: PRIVACY_POLICY_VERSION, acceptedAt: new Date() },
+  });
+  return patient;
 }

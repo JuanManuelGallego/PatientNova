@@ -9,6 +9,7 @@ import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
+import { ACTIVE_STATUSES } from '../../appointments/appointment-status.js';
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
@@ -20,7 +21,10 @@ export async function sendReminderWorker([ job ]: Array<{
   const { reminderId } = job.data;
   logger.info({ reminderId, retryCount: job.retryCount ?? 0 }, 'Processing send-reminder job');
 
-  const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
+  const reminder = await prisma.reminder.findUnique({
+    where: { id: reminderId },
+    include: { appointment: { select: { status: true, isDeleted: true } } },
+  });
   if (!reminder) {
     logger.warn({ reminderId }, 'Reminder not found — skipping');
     return;
@@ -28,6 +32,13 @@ export async function sendReminderWorker([ job ]: Array<{
 
   if (reminder.status !== ReminderStatus.PENDING || reminder.isDeleted) {
     logger.debug({ reminderId, status: reminder.status }, 'Reminder no longer pending — skipping');
+    return;
+  }
+
+  // Defense in depth: cancel paths mark the reminder CANCELLED, but a queued job must never
+  // remind a patient of an appointment that was cancelled, completed or deleted.
+  if (reminder.appointment && (reminder.appointment.isDeleted || !ACTIVE_STATUSES.has(reminder.appointment.status))) {
+    logger.info({ reminderId, appointmentStatus: reminder.appointment.status }, 'Linked appointment no longer active — skipping reminder');
     return;
   }
 
