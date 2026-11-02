@@ -18,6 +18,7 @@ export function GoogleIntegrationTab() {
   const { verifyConnection, loading: verifying, error: verifyError } = useVerifyGoogleConnection();
 
   const [ actionError, setActionError ] = useState<string | null>(null);
+  const [ verifiedNotice, setVerifiedNotice ] = useState<string | null>(null);
   const connection = data;
 
   const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
@@ -50,8 +51,11 @@ export function GoogleIntegrationTab() {
 
   const handleVerify = useCallback(async () => {
     setActionError(null);
+    setVerifiedNotice(null);
     try {
-      await verifyConnection();
+      const result = await verifyConnection();
+      // An expired result is announced by the heading change; only a healthy check needs a confirmation.
+      if (result.status === "connected") setVerifiedNotice("Conexión verificada.");
     } catch {
       // verifyError carries the Spanish message (e.g. too many checks)
     }
@@ -86,7 +90,7 @@ export function GoogleIntegrationTab() {
       : isConnected
         ? "La cuenta está conectada."
         : isExpired
-          ? `Google rechazó la autorización${disconnectedAt ? ` el ${at(disconnectedAt)}` : ""}. Reconéctala para seguir generando enlaces de Meet.`
+          ? `Reconéctala para seguir generando enlaces de Meet.${disconnectedAt ? ` Google dejó de aceptarla el ${at(disconnectedAt)}` : ""}`
           : "En espera de activación.";
 
   return (
@@ -105,7 +109,7 @@ export function GoogleIntegrationTab() {
               width: 56,
               height: 56,
               borderRadius: 12,
-              background: isConnected ? "var(--c-green-100)" : isExpired ? "var(--c-warning-bg)" : "var(--c-gray-100)",
+              background: isConnected ? "var(--c-green-100)" : isExpired ? "var(--c-warning-surface)" : "var(--c-gray-100)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -114,7 +118,7 @@ export function GoogleIntegrationTab() {
             {isConnected ? (
               <STATUS_ICONS.success size={28} style={{ color: "var(--c-green)" }} />
             ) : (
-              <STATUS_ICONS.warning size={28} style={{ color: isExpired ? "var(--c-warning)" : "var(--c-gray-400)" }} />
+              <STATUS_ICONS.warning size={28} style={{ color: isExpired ? "var(--c-warning-dark)" : "var(--c-gray-400)" }} />
             )}
           </div>
           <div>
@@ -132,9 +136,22 @@ export function GoogleIntegrationTab() {
               </div>
               <div>
                 <span style={{ color: "var(--c-gray-500)" }}>Última verificación: </span>
-                <strong data-testid="google-last-checked">{lastCheckedAt ? at(lastCheckedAt) : "Pendiente"}</strong>
+                <strong data-testid="google-last-checked">{lastCheckedAt ? at(lastCheckedAt) : "Aún no verificada"}</strong>
+                <button
+                  type="button"
+                  className="btn-text"
+                  style={{ marginLeft: 10 }}
+                  onClick={handleVerify}
+                  disabled={isLoading}
+                  data-testid="google-verify-button"
+                >
+                  {verifying ? "Verificando…" : "Verificar ahora"}
+                </button>
               </div>
             </div>
+            <p aria-live="polite" data-testid="google-verified-notice" style={{ marginTop: verifiedNotice ? 6 : 0, color: "var(--c-green)" }}>
+              {verifiedNotice}
+            </p>
           </div>
         )}
 
@@ -182,14 +199,6 @@ export function GoogleIntegrationTab() {
                 {startingOAuth ? "Reconectando…" : "Reconectar cuenta"}
               </button>
               <button
-                className="btn-secondary"
-                onClick={handleVerify}
-                disabled={isLoading}
-                data-testid="google-verify-button"
-              >
-                {verifying ? "Verificando…" : "Verificar ahora"}
-              </button>
-              <button
                 className="btn-danger"
                 onClick={handleDisconnect}
                 disabled={isLoading}
@@ -200,6 +209,12 @@ export function GoogleIntegrationTab() {
             </>
           )}
         </div>
+
+        {isExpired && (
+          <p style={{ marginTop: 12, color: "var(--c-gray-500)", fontSize: 13 }}>
+            ¿No usas Google Meet? Desconecta la cuenta y el aviso dejará de aparecer.
+          </p>
+        )}
 
         {displayedError && (
           <div role="alert" className="error-inline" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>

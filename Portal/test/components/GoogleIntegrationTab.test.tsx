@@ -67,22 +67,34 @@ describe("GoogleIntegrationTab", () => {
   it("shows when the connection was last checked, or that no check ran yet", () => {
     connectionState.data = { status: "connected", connected: true, lastCheckedAt: null };
     const { unmount } = render(<GoogleIntegrationTab />);
-    expect(screen.getByTestId("google-last-checked")).toHaveTextContent("Pendiente");
+    expect(screen.getByTestId("google-last-checked")).toHaveTextContent("Aún no verificada");
     unmount();
 
     connectionState.data = { status: "connected", connected: true, lastCheckedAt: "2026-11-02T11:00:00.000Z" };
     render(<GoogleIntegrationTab />);
-    expect(screen.getByTestId("google-last-checked")).not.toHaveTextContent("Pendiente");
+    expect(screen.getByTestId("google-last-checked")).not.toHaveTextContent("Aún no verificada");
   });
 
-  it("'Verificar ahora' checks with Google, then reloads the status", async () => {
+  it("'Verificar ahora' checks with Google, confirms it, then reloads the status", async () => {
     connectionState.data = { status: "connected", connected: true };
     render(<GoogleIntegrationTab />);
+    expect(screen.getByTestId("google-verified-notice")).toBeEmptyDOMElement();
 
     await userEvent.click(screen.getByTestId("google-verify-button"));
 
     expect(verifyConnection).toHaveBeenCalledTimes(1);
     expect(fetchConnection).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("google-verified-notice")).toHaveTextContent("Conexión verificada.");
+  });
+
+  it("does not confirm a check that found the connection expired", async () => {
+    verifyConnection.mockResolvedValue({ status: "expired", connected: false });
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+
+    await userEvent.click(screen.getByTestId("google-verify-button"));
+
+    expect(screen.getByTestId("google-verified-notice")).toBeEmptyDOMElement();
   });
 
   it("reports a refused check (e.g. too many) without losing the status", async () => {
@@ -100,6 +112,10 @@ describe("GoogleIntegrationTab", () => {
     connectionState.data = { status: "expired", connected: false, disconnectedAt: "2026-11-01T11:00:00.000Z" };
     const { unmount } = render(<GoogleIntegrationTab />);
     expect(screen.getByTestId("google-connection-heading")).toHaveTextContent("La conexión con Google expiró");
+    // The formatted time ends in "a. m."/"p. m.", so it closes the sentence: never a full stop after it.
+    const detail = screen.getByText(/Reconéctala para seguir generando enlaces de Meet\. Google dejó de aceptarla el/);
+    expect(detail.textContent).toMatch(/[ap]\. m\.$/);
+    expect(screen.getByText(/¿No usas Google Meet\?/)).toBeInTheDocument();
     expect(screen.queryByTestId("google-connect-button")).not.toBeInTheDocument();
     expect(screen.queryByTestId("google-verify-button")).not.toBeInTheDocument();
 

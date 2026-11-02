@@ -104,7 +104,8 @@ describe("LocationAndTimeStep Google Meet", () => {
     render(<Harness />);
 
     expect(screen.getByRole("button", { name: /Reconectar y generar/ })).toBeInTheDocument();
-    expect(screen.getByTestId("google-expired-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("google-expired-hint")).toHaveTextContent("pega el enlace de tu propia sala");
+    expect(screen.getByTestId("generate-meet-link-button")).toHaveAccessibleDescription(/Tu conexión con Google expiró/);
     expect(screen.getByTestId("appointment-meeting-url-input")).toBeEnabled();
 
     await userEvent.click(screen.getByTestId("generate-meet-link-button"));

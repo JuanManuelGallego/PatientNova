@@ -36,6 +36,23 @@ describe("ProviderAlerts", () => {
     connection = { status: "expired", connected: false };
     render(<ProviderAlerts />);
     expect(screen.getByTestId("google-expired-banner")).toHaveTextContent("Tu conexión con Google expiró");
+    expect(screen.getByRole("region", { name: /Tu conexión con Google expiró/ })).toBeInTheDocument();
+    expect(screen.getByTestId("google-expired-reconnect")).toHaveTextContent("Reconectar Google");
+  });
+
+  it("offers providers who don't use Meet a way to the integration settings", () => {
+    connection = { status: "expired", connected: false };
+    render(<ProviderAlerts />);
+    const link = screen.getByRole("link", { name: "No uso Google Meet" });
+    expect(link).toHaveAttribute("href", "/settings?tab=Integraciones");
+  });
+
+  it("is not a live region, so it isn't re-announced on every page", () => {
+    connection = { status: "expired", connected: false };
+    render(<ProviderAlerts />);
+    const banner = screen.getByTestId("google-expired-banner");
+    expect(banner).not.toHaveAttribute("role", "status");
+    expect(banner).not.toHaveAttribute("aria-live");
   });
 
   it.each([ "connected", "not_connected" ] as const)("shows nothing when the connection is %s", (status) => {

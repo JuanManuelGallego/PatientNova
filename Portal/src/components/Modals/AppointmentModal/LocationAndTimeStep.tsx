@@ -182,6 +182,7 @@ export function LocationAndTimeStep({
                 disabled={isGoogleBusy || loadingConnection || !isVirtual}
                 data-testid="generate-meet-link-button"
                 aria-label={googleMeetActionLabel}
+                aria-describedby={mustReconnect && !googleError ? "google-expired-hint" : undefined}
                 title={googleMeetActionLabel}
                 style={{ alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
@@ -194,8 +195,8 @@ export function LocationAndTimeStep({
               </div>
             )}
             {mustReconnect && !googleError && (
-              <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-expired-hint">
-                Tu conexión con Google expiró: el botón la reconecta antes de generar el enlace. También puedes pegar un enlace propio.
+              <p id="google-expired-hint" className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-expired-hint">
+                Tu conexión con Google expiró. Reconéctala con el botón junto al campo o pega el enlace de tu propia sala.
               </p>
             )}
             {googleError && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { AdminRole } from "@/src/types/User";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
@@ -18,6 +19,9 @@ export function ProviderAlerts() {
 
   return isAdmin ? <GoogleExpiredAlert /> : null;
 }
+
+/** Settings → Integraciones, where a provider who doesn't use Meet can disconnect Google. */
+const INTEGRATIONS_HREF = { pathname: "/settings", query: { tab: "Integraciones" } };
 
 function GoogleExpiredAlert() {
   const { data: connection, fetchConnection } = useFetchGoogleConnection();
@@ -40,27 +44,34 @@ function GoogleExpiredAlert() {
   const error = resultError || popupError || startError;
   const busy = startingOAuth || waiting;
 
+  // Not a live region: it is shown on every page until fixed, so announcing it on each
+  // navigation would be noise. Only a failed reconnect (role="alert") is announced.
   return (
-    <div className="warning-banner" role="status" data-testid="google-expired-banner">
-      <STATUS_ICONS.warning size={18} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+    <section className="warning-banner" aria-labelledby="google-expired-banner-text" data-testid="google-expired-banner">
+      <STATUS_ICONS.warning size={18} aria-hidden="true" className="warning-banner__icon" />
       <div className="warning-banner__body">
-        <p className="warning-banner__text">
+        <p id="google-expired-banner-text" className="warning-banner__text">
           Tu conexión con Google expiró. Reconéctala para generar enlaces de Meet.
         </p>
         {error && <p className="warning-banner__error" role="alert">{error}</p>}
       </div>
-      <button
-        type="button"
-        className="btn-secondary"
-        disabled={busy}
-        onClick={() => {
-          setResultError(null);
-          void openOAuth(() => startOAuth("/settings", true));
-        }}
-        data-testid="google-expired-reconnect"
-      >
-        {busy ? "Reconectando…" : "Reconectar"}
-      </button>
-    </div>
+      <div className="warning-banner__actions">
+        <Link href={INTEGRATIONS_HREF} className="warning-banner__link" data-testid="google-expired-settings-link">
+          No uso Google Meet
+        </Link>
+        <button
+          type="button"
+          className="warning-banner__action"
+          disabled={busy}
+          onClick={() => {
+            setResultError(null);
+            void openOAuth(() => startOAuth("/settings", true));
+          }}
+          data-testid="google-expired-reconnect"
+        >
+          {busy ? "Reconectando…" : "Reconectar Google"}
+        </button>
+      </div>
+    </section>
   );
 }
