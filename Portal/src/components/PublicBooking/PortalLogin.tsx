@@ -7,6 +7,7 @@ import styles from "./Portal.module.css";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
 export const OTP_CAPTCHA_ACTION = "otp-request";
+export const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo con tu correo.";
 const CODE_LENGTH = 6;
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -25,9 +26,15 @@ interface PortalLoginProps {
     slug: string;
     onLoggedIn: () => void;
     notice?: string;
+    title?: string;
+    lead?: string;
+    embedded?: boolean;
 }
 
-export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
+const DEFAULT_LEAD = "Ingresa tu correo y te enviaremos un código para entrar. No necesitas contraseña.";
+
+export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false }: PortalLoginProps) {
+    const Heading = embedded ? "h3" : "h1";
     const ids = useId();
     const widget = useRef<TurnstileHandle>(null);
     const codeInput = useRef<HTMLInputElement>(null);
@@ -97,13 +104,13 @@ export function PortalLogin({ slug, onLoggedIn, notice }: PortalLoginProps) {
     const error = request.error ?? verify.error;
 
     return (
-        <section className={`dash-card ${styles.card}`} aria-labelledby={`${ids}-title`}>
-            <h1 id={`${ids}-title`} className={styles.title}>Mis citas</h1>
+        <section className={embedded ? `${styles.card} ${styles.embedded}` : `dash-card ${styles.card}`} aria-labelledby={`${ids}-title`}>
+            <Heading id={`${ids}-title`} className={styles.title}>{title}</Heading>
             {notice && <p className={styles.notice} role="status">{notice}</p>}
 
             {step === "email" ? (
                 <form className={styles.form} onSubmit={onSubmitEmail}>
-                    <p className={styles.lead}>Ingresa tu correo y te enviaremos un código para entrar. No necesitas contraseña.</p>
+                    <p className={styles.lead}>{lead}</p>
                     <label className="form-label">
                         Correo electrónico
                         <input

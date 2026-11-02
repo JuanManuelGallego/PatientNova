@@ -263,18 +263,25 @@ Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
   skips a SCHEDULED job that fires more than a minute before `sendAt`. Never enqueue a second job for an unchanged
   `sendAt`: two jobs firing together can both read PENDING and send twice.
 - Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
-  fetch only through `publicApi` via `usePublicQuery` (`src/api/base/`), never `useApiQuery`/`fetchWithAuth`. They show
+  read only through `publicApi` via `usePublicQuery` (`src/api/base/useClientQuery.ts`), never `useApiQuery`/`fetchWithAuth`;
+  the booking form's session check and `POST /bookings` are the only `portalApi` calls on `/book/[slug]` (`BookingForm`,
+  `src/api/portal/`). The form never sends price, end time or status, always shows the consent checkbox, and maps the
+  three booking 409s to their Spanish messages (a taken slot clears the choice and reloads the slots). They show
   times only in the patient's device zone (`browserTimezone()`, passed explicitly to `TimeUtils`), never the provider's:
   weeks are the patient's calendar days, the slots query (provider dates) is padded with `slotQueryRange`, the horizon
   is converted with `lastBookableDateIn`, and slots are grouped by the patient's local date with
   `src/utils/publicBooking.ts`. They render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
   (pinned in `test/proxy.test.ts`). E2E: `db:seed-e2e` seeds a second, booking-live provider (`e2e-publica`) for the
   `public`/`public-mobile` projects, so the API must run with `ENABLE_PORTAL=true` (set in the CI e2e job; set it locally
-  too). The portal login spec reads OTP codes from a mock Brevo server (`Portal/e2e/support/mock-brevo.mjs`,
-  port 4010; the API runs with `BREVO_API_BASE_URL=http://localhost:4010`) and the Portal is built with Cloudflare's test
-  site key. Keep OTP requests in e2e minimal: `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages
-  (`/book/[slug]/appointments`) use `portalApi` via `usePortalSession`/`src/api/portal/` only; a 401 from `/session`
-  means "no session", never an error. Specs strip the Vercel bypass headers from API calls, since the anonymous CORS refuses them.
+  too). The portal specs read OTP codes and other emails from a mock Brevo server (`Portal/e2e/support/mock-brevo.mjs`,
+  port 4010; the API runs with `BREVO_API_BASE_URL=http://localhost:4010`; it keeps every email per address:
+  `/__test/latest-code` and `/__test/messages`) and the Portal is built with Cloudflare's test site key. `e2e-publica`
+  uses `reminderChannel: EMAIL`, so booking notices reach the mock instead of Twilio. The booking spec books a real slot
+  next week on the shared seeded calendar (each run takes the first free one). Keep OTP requests in e2e minimal:
+  `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages (`/book/[slug]/appointments`) use `portalApi`
+  via `usePortalSession`/`usePortalQuery`/`src/api/portal/` only; a 401 from `/session` means "no session", never an
+  error, and a 401 from `/appointments` returns to the login. Specs strip the Vercel bypass headers from API calls, since
+  the anonymous CORS refuses them.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
   `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,

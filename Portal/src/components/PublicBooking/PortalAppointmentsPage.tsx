@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useLogout } from "@/src/api/portal/usePortalAuth";
+import { usePortalAppointments } from "@/src/api/portal/usePortalBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
+import { browserTimezone } from "@/src/utils/TimeUtils";
+import { timezoneName } from "@/src/utils/publicBooking";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
-import { PortalLogin } from "./PortalLogin";
+import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
+import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalConsent } from "./PortalConsent";
 import { ProviderAvatar } from "./ProviderAvatar";
 import styles from "./Portal.module.css";
@@ -44,8 +48,6 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
     return <PublicPageShell>{body}</PublicPageShell>;
 }
 
-const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo con tu correo.";
-
 function PortalArea({ slug }: { slug: string }) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     const [ consentedFor, setConsentedFor ] = useState<string | null>(null);
@@ -66,10 +68,24 @@ function PortalArea({ slug }: { slug: string }) {
             />
         );
     }
-    return <SignedIn slug={slug} session={session} onLoggedOut={() => { setNotice(undefined); clear(); }} />;
+    return (
+        <SignedIn
+            slug={slug}
+            session={session}
+            onLoggedOut={() => { setNotice(undefined); clear(); }}
+            onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
+        />
+    );
 }
 
-function SignedIn({ slug, session, onLoggedOut }: { slug: string; session: PortalSession; onLoggedOut: () => void }) {
+interface SignedInProps {
+    slug: string;
+    session: PortalSession;
+    onLoggedOut: () => void;
+    onSessionLost: () => void;
+}
+
+function SignedIn({ slug, session, onLoggedOut, onSessionLost }: SignedInProps) {
     const { logout, loading, error } = useLogout();
 
     const onLogout = async () => {
@@ -84,9 +100,9 @@ function SignedIn({ slug, session, onLoggedOut }: { slug: string; session: Porta
     return (
         <section className={`dash-card ${styles.card}`} aria-labelledby="portal-signed-in">
             <h1 id="portal-signed-in" className={styles.title}>Mis citas</h1>
-            <p className={styles.lead}>Aquí verás tus citas.</p>
+            <UpcomingAppointments onSessionLost={onSessionLost} />
             <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
-                Ver horarios disponibles
+                Reservar una cita
             </Link>
             {error && <p className={`error-inline ${styles.error}`} role="alert">No pudimos cerrar la sesión. {error}</p>}
             <div className={styles.account}>
@@ -96,6 +112,28 @@ function SignedIn({ slug, session, onLoggedOut }: { slug: string; session: Porta
                 </button>
             </div>
         </section>
+    );
+}
+
+function UpcomingAppointments({ onSessionLost }: { onSessionLost: () => void }) {
+    const timezone = browserTimezone();
+    const { appointments, loading, error, retry } = usePortalAppointments();
+    const sessionLost = error?.status === 401;
+
+    useEffect(() => { if (sessionLost) onSessionLost(); }, [ sessionLost, onSessionLost ]);
+
+    if (loading || sessionLost) {
+        return <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
+    }
+    if (error) return <ErrorState error={error} onRetry={retry} inline />;
+    if (!appointments?.length) return <p className={styles.lead}>No tienes citas próximas.</p>;
+    return (
+        <>
+            <ul className={styles.appts} aria-label="Próximas citas">
+                {appointments.map((a) => <li key={a.id}><PortalAppointmentCard appointment={a} timezone={timezone} /></li>)}
+            </ul>
+            <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+        </>
     );
 }
 

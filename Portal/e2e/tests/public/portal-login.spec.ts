@@ -54,7 +54,7 @@ test.describe('portal login on "Mis citas"', () => {
         await expect(page.getByRole('heading', { name: 'Antes de continuar' })).toBeVisible();
         await page.getByRole('checkbox').check();
         await page.getByRole('button', { name: 'Continuar' }).click();
-        await expect(page.getByText('Aquí verás tus citas.')).toBeVisible();
+        await expect(page.getByText('No tienes citas próximas.')).toBeVisible();
 
         await page.reload();
         await expect(page.getByRole('heading', { name: 'Antes de continuar' })).toBeVisible();

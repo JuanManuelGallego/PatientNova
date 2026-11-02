@@ -1,12 +1,13 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { useFetchPublicSlots } from "@/src/api/public-booking/useFetchPublicSlots";
 import type { PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
+import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { browserTimezone, fmtTime, todayFormattedString } from "@/src/utils/TimeUtils";
 import {
     addCalendarDays, calendarDaysBetween, fmtCop, fmtDayParts, fmtWeekRange, groupSlotsByDay, lastBookableDateIn, slotQueryRange,
@@ -15,6 +16,8 @@ import {
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
+import { BookingForm } from "./BookingForm";
+import { PortalAppointmentCard } from "./PortalAppointmentCard";
 
 export function PublicBookingPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
@@ -34,6 +37,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const [ typeId, setTypeId ] = useState<string | null>(null);
     const [ weekStart, setWeekStart ] = useState<string | null>(null);
     const [ dayChoice, setDayChoice ] = useState<string | null>(null);
+    const [ startUtc, setStartUtc ] = useState<string | null>(null);
+    const [ slotNotice, setSlotNotice ] = useState<string | null>(null);
+    const [ booked, setBooked ] = useState<PortalAppointment | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
     const lastDate = lastBookableDateIn(timezone, provider.lastBookableDate, provider.timezone);
@@ -44,25 +50,64 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     const weekDays = calendarDaysBetween(page.from, page.to);
     const openDays = weekDays.filter((d) => slotDays.has(d));
     const day = slotDays.get(dayChoice && openDays.includes(dayChoice) ? dayChoice : openDays[ 0 ] ?? "");
+    const slot = day && [ ...day.morning, ...day.afternoon ].find((s) => s.startUtc === startUtc);
+    const pickedStart = slot?.startUtc;
+    const confirmStep = useRef<HTMLDivElement>(null);
+    const slotNoticeRef = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        if (pickedStart) reveal(confirmStep.current);
+    }, [ pickedStart ]);
+
+    useEffect(() => {
+        if (slotNotice) slotNoticeRef.current?.focus();
+    }, [ slotNotice ]);
 
     if (error?.status === 404) return <Unavailable />;
 
+    const pickSlot = (next: string | null) => {
+        setStartUtc(next);
+        setSlotNotice(null);
+    };
     const goToWeek = (start: string) => {
         setWeekStart(start);
         setDayChoice(null);
+        pickSlot(null);
     };
     const nextWeek = () => goToWeek(addCalendarDays(page.from, WEEK_DAYS));
+    const onSlotTaken = (message: string) => {
+        setStartUtc(null);
+        setSlotNotice(message);
+        retry();
+    };
+    const bookAnother = () => {
+        setBooked(null);
+        pickSlot(null);
+        retry();
+    };
+
+    const nav = (
+        <nav className={styles.topNav} aria-label="Cuenta">
+            <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.topLink}>Mis citas</Link>
+        </nav>
+    );
+
+    if (booked) {
+        return (
+            <>
+                {nav}
+                <ProviderHero slug={slug} provider={provider} />
+                <BookingDone slug={slug} appointment={booked} timezone={timezone} onBookAnother={bookAnother} />
+            </>
+        );
+    }
 
     return (
         <>
-            <nav className={styles.topNav} aria-label="Cuenta">
-                <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.topLink}>Mis citas</Link>
-            </nav>
+            {nav}
             <ProviderHero slug={slug} provider={provider} />
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
-                <p className={styles.notice}>Pronto podrás reservar aquí. Por ahora puedes ver los horarios disponibles.</p>
-
                 <Step number={1} title="Tipo de cita">
                     <div className={styles.options}>
                         {provider.types.map((t) => (
@@ -71,7 +116,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                                 type="button"
                                 className={styles.option}
                                 aria-pressed={t.id === type?.id}
-                                onClick={() => { setTypeId(t.id); setDayChoice(null); }}
+                                onClick={() => { setTypeId(t.id); setDayChoice(null); pickSlot(null); }}
                             >
                                 <span className={styles.optionHead}>
                                     <span className={styles.optionName}>{t.name}</span>
@@ -114,7 +159,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                                             aria-pressed={open ? date === day?.date : undefined}
                                             aria-label={open ? full : `${full}, sin horarios`}
                                             data-tooltip={open ? undefined : "Sin horarios disponibles"}
-                                            onClick={() => { if (open) setDayChoice(date); }}>
+                                            onClick={() => { if (open) { setDayChoice(date); pickSlot(null); } }}>
                                             <span className={styles.dayWeekday}>{weekday}</span>
                                             <span className={styles.dayNumber}>{dayNumber}</span>
                                         </button>
@@ -125,6 +170,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 </Step>
 
                 <Step number={3} title="Hora">
+                    {slotNotice && <p ref={slotNoticeRef} tabIndex={-1} className={styles.notice} role="alert">{slotNotice}</p>}
                     {error ? null
                         : loading || !slots ? <TimesSkeleton />
                         : !day ? (
@@ -136,12 +182,19 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                             </div>
                         ) : (
                             <>
-                                <TimeGroup title="Mañana" slots={day.morning} timezone={timezone} />
-                                <TimeGroup title="Tarde" slots={day.afternoon} timezone={timezone} />
+                                <TimeGroup title="Mañana" slots={day.morning} timezone={timezone} selected={slot?.startUtc} onSelect={pickSlot} />
+                                <TimeGroup title="Tarde" slots={day.afternoon} timezone={timezone} selected={slot?.startUtc} onSelect={pickSlot} />
                             </>
                         )}
                     <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
                 </Step>
+
+                {slot && type && (
+                    <Step number={4} title="Confirma tu cita" stepRef={confirmStep}>
+                        <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
+                            onBooked={setBooked} onSlotTaken={onSlotTaken} />
+                    </Step>
+                )}
             </section>
         </>
     );
@@ -178,10 +231,24 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
     );
 }
 
-function Step({ number, title, aside, children }: { number: number; title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+function reveal(el: HTMLElement | null) {
+    if (!el?.scrollIntoView) return;
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+}
+
+interface StepProps {
+    number: number;
+    title: string;
+    aside?: React.ReactNode;
+    stepRef?: React.Ref<HTMLDivElement>;
+    children: React.ReactNode;
+}
+
+function Step({ number, title, aside, stepRef, children }: StepProps) {
     const id = `step-${number}`;
     return (
-        <div className={styles.step} role="group" aria-labelledby={id}>
+        <div ref={stepRef} className={styles.step} role="group" aria-labelledby={id}>
             <div className={styles.stepHead}>
                 <h2 id={id} className={styles.stepTitle}>
                     <span className={styles.stepNumber} aria-hidden="true">{number}</span>
@@ -194,15 +261,46 @@ function Step({ number, title, aside, children }: { number: number; title: strin
     );
 }
 
-function TimeGroup({ title, slots, timezone }: { title: string; slots: PublicSlot[]; timezone: string }) {
+interface TimeGroupProps {
+    title: string;
+    slots: PublicSlot[];
+    timezone: string;
+    selected: string | undefined;
+    onSelect: (startUtc: string) => void;
+}
+
+function TimeGroup({ title, slots, timezone, selected, onSelect }: TimeGroupProps) {
     if (slots.length === 0) return null;
     return (
         <div>
             <p className={styles.period}>{title}</p>
             <ul className={styles.times} aria-label={title}>
-                {slots.map((s) => <li key={s.startUtc} className={styles.time}>{fmtTime(s.startUtc, timezone)}</li>)}
+                {slots.map((s) => (
+                    <li key={s.startUtc}>
+                        <button type="button" className={styles.time} aria-pressed={s.startUtc === selected} onClick={() => onSelect(s.startUtc)}>
+                            {fmtTime(s.startUtc, timezone)}
+                        </button>
+                    </li>
+                ))}
             </ul>
         </div>
+    );
+}
+
+function BookingDone({ slug, appointment, timezone, onBookAnother }: {
+    slug: string; appointment: PortalAppointment; timezone: string; onBookAnother: () => void;
+}) {
+    const heading = useRef<HTMLHeadingElement>(null);
+    useEffect(() => { heading.current?.focus(); }, []);
+    return (
+        <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="booking-done">
+            <h2 id="booking-done" ref={heading} tabIndex={-1} className={styles.doneTitle}>Tu cita quedó reservada</h2>
+            <p className={styles.muted}>Te enviamos la confirmación a tu correo.</p>
+            <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
+            <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+            <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
+            <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Reservar otra cita</button>
+        </section>
     );
 }
 

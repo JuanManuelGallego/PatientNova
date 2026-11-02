@@ -1,4 +1,4 @@
-import { usePublicQuery } from "@/src/api/base/usePublicQuery";
+import { usePublicQuery } from "@/src/api/base/useClientQuery";
 import type { PublicSlots } from "@/src/types/PublicBooking";
 
 export const useFetchPublicSlots = (slug: string, typeId: string | null, from: string | null, to: string | null) => {

@@ -1,6 +1,12 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
+    ...await importOriginal<typeof import("@/src/utils/TimeUtils")>(),
+    browserTimezone: () => "Europe/Madrid",
+}));
+
 import { PortalAppointmentsPage } from "@/src/components/PublicBooking/PortalAppointmentsPage";
 import { RESEND_COOLDOWN_SECONDS } from "@/src/components/PublicBooking/PortalLogin";
 import { csrfStore } from "@/src/api/base/csrfStore";
@@ -53,6 +59,7 @@ interface Server {
     otp: () => Response;
     challenges: number;
     logoutFails?: boolean;
+    appointments: () => Response;
 }
 let server: Server;
 const fetchMock = vi.fn();
@@ -75,6 +82,7 @@ beforeEach(() => {
             return ok(202, { challenge: `challenge-${server.challenges}` });
         },
         challenges: 0,
+        appointments: () => ok(200, { appointments: [], consentRequired: true }),
     };
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (url: string, init: RequestInit = {}) => {
@@ -86,6 +94,7 @@ beforeEach(() => {
         if (path === `/portal/${SLUG}/otp/verify`) return server.verify();
         if (path === "/portal/session") return server.session ? ok(200, server.session) : fail(401, "Invalid session");
         if (path === "/portal/consent") return ok(204);
+        if (path === "/portal/appointments") return server.appointments();
         if (path === "/portal/logout") {
             if (server.logoutFails) return fail(503, "unavailable");
             server.session = null;
@@ -141,7 +150,7 @@ describe("PortalAppointmentsPage", () => {
         await user.click(screen.getByRole("checkbox"));
         await user.click(accept);
 
-        expect(await screen.findByText("Aquí verás tus citas.")).toBeInTheDocument();
+        expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
         const [ , consentInit ] = call("/portal/consent")[ 0 ];
         expect(JSON.parse(String(consentInit.body))).toEqual({ accepted: true });
         expect((consentInit.headers as Record<string, string>)[ "X-CSRF-Token" ]).toBe("csrf-from-session");
@@ -223,7 +232,7 @@ describe("PortalAppointmentsPage", () => {
         server.session = session({ providerSlug: "otro-profesional" });
         render(<PortalAppointmentsPage slug={SLUG} />);
         expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
-        expect(screen.queryByText("Aquí verás tus citas.")).not.toBeInTheDocument();
+        expect(screen.queryByText("No tienes citas próximas.")).not.toBeInTheDocument();
     });
 
     it("resumes an existing session on reload and logs out back to the login", async () => {
@@ -231,9 +240,9 @@ describe("PortalAppointmentsPage", () => {
         const user = userEvent.setup();
         render(<PortalAppointmentsPage slug={SLUG} />);
 
-        expect(await screen.findByText("Aquí verás tus citas.")).toBeInTheDocument();
+        expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
         expect(screen.getByText("ana@example.com")).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Ver horarios disponibles" })).toHaveAttribute("href", `/book/${SLUG}`);
+        expect(screen.getByRole("link", { name: "Reservar una cita" })).toHaveAttribute("href", `/book/${SLUG}`);
         expect(screen.getByRole("heading", { name: "Mis citas" })).toBeInTheDocument();
         expect(screen.getByText("Dra. Ana Pública")).toBeInTheDocument();
         expect(screen.getByText("AP")).toBeInTheDocument();
@@ -270,7 +279,7 @@ describe("PortalAppointmentsPage", () => {
     it("matches the session to a mixed-case slug in the URL (the server stores it lowercased)", async () => {
         server.session = session();
         render(<PortalAppointmentsPage slug="Dra-Ana" />);
-        expect(await screen.findByText("Aquí verás tus citas.")).toBeInTheDocument();
+        expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
     });
 
     it("returning to the same email goes back to the code step without a new request", async () => {
@@ -320,12 +329,69 @@ describe("PortalAppointmentsPage", () => {
 
         await user.click(await screen.findByRole("button", { name: "Cerrar sesión" }));
         expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cerrar la sesión");
-        expect(screen.getByText("Aquí verás tus citas.")).toBeInTheDocument();
+        expect(screen.getByText("No tienes citas próximas.")).toBeInTheDocument();
         expect(csrfStore.get()).toBe("csrf-from-session");
 
         server.logoutFails = false;
         await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
         expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
         expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+});
+
+describe("PortalAppointmentsPage upcoming appointments", () => {
+    const appointment = (id: string, startUtc: string, endUtc: string) => ({
+        id,
+        startUtc,
+        endUtc,
+        durationMinutes: 60,
+        status: "CONFIRMED",
+        price: 150000,
+        type: { name: "Primera consulta" },
+        location: { name: "Consultorio Centro", address: "Calle 10", instructions: "Timbre 2" },
+    });
+
+    it("lists the appointments in the device zone, across its DST change", async () => {
+        server.session = session();
+        server.appointments = () => ok(200, {
+            consentRequired: false,
+            appointments: [
+                appointment("a1", "2099-01-20T15:00:00.000Z", "2099-01-20T16:00:00.000Z"),
+                appointment("a2", "2099-07-20T15:00:00.000Z", "2099-07-20T16:00:00.000Z"),
+            ],
+        });
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const list = await screen.findByRole("list", { name: "Próximas citas" });
+        const [ winter, summer ] = within(list).getAllByRole("article");
+        expect(winter).toHaveTextContent(/20 de enero de 2099/);
+        expect(winter).toHaveTextContent(/04:00 p\. m\. – 05:00 p\. m\./);
+        expect(summer).toHaveTextContent(/05:00 p\. m\. – 06:00 p\. m\./);
+        expect(winter).toHaveTextContent("Primera consulta · 60 minutos");
+        expect(winter).toHaveTextContent("Consultorio Centro, Calle 10");
+        expect(winter).toHaveTextContent("Timbre 2");
+        expect(winter).toHaveTextContent("Confirmada");
+        expect(screen.getByText(/Horas en tu zona horaria/)).toBeInTheDocument();
+        expect(call("/portal/appointments")[ 0 ][ 1 ].credentials).toBe("include");
+    });
+
+    it("goes back to the login when the list answers 401", async () => {
+        server.session = session();
+        server.appointments = () => fail(401, "Invalid session");
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
+        expect(screen.getByRole("status")).toHaveTextContent("Tu sesión expiró");
+    });
+
+    it("offers a retry when the list fails", async () => {
+        server.session = session();
+        server.appointments = () => fail(503, "unavailable");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        expect(await screen.findByRole("alert")).toHaveTextContent(/error en el servidor/);
+
+        server.appointments = () => ok(200, { consentRequired: false, appointments: [] });
+        await user.click(screen.getByRole("button", { name: "Reintentar" }));
+        expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
     });
 });

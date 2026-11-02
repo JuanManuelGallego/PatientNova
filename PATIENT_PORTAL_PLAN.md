@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 in progress (4.1 booking transaction #78; 4.2 notifications built; 4.3 Portal next). **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Next is Phase 5. **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -496,7 +496,7 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 - Tests: jobs enqueued in the transaction and dropped on rollback, scheduler-off path, reminder row, patient zone across a
   DST change, each provider channel, `reminderActive=false`.
 
-**PR 4.3 — Portal: booking form, appointments page, badge, e2e.**
+**PR 4.3 — Portal: booking form, appointments page, badge, e2e.** Built (2026-11-01). As built: `BookingForm` (step 4, inline `PortalLogin embedded`), `PortalAppointmentCard` shared by the success view and "Mis citas", `usePortalQuery` in `src/api/base/useClientQuery.ts` (renamed from `usePublicQuery.ts`), `usePortalBooking` hooks; the drawer badge reuses `OnlineBadge` with a label. Local e2e run: 30/30 public tests.
 - `/book/[slug]`: time buttons, step 4 "Confirma tu cita" (summary, location picker, inline `PortalLogin` without a
   session, then name/lastName/phone + consent, `useCreateBooking`), success card, Spanish errors for the three 409s.
 - "Mis citas": `usePortalQuery` + `usePortalAppointments`, device-zone cards, empty state.

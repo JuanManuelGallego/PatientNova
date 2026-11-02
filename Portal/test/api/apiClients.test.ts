@@ -123,6 +123,11 @@ describe("toSpanishMessage", () => {
     );
     expect(toSpanishMessage(423, "Account has been locked")).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(401, undefined, { 401: "Correo o contraseña incorrectos." })).toBe("Correo o contraseña incorrectos.");
+    expect(toSpanishMessage(409, "Slot no longer available")).toBe("Ese horario ya no está disponible. Elige otro.");
+    expect(toSpanishMessage(409, "Booking limit reached")).toMatch(/3 citas próximas/);
+    expect(toSpanishMessage(409, "Online booking unavailable")).toMatch(/Comunícate con el consultorio/);
+    expect(toSpanishMessage(404, "Location not found")).toMatch(/Esa opción ya no está disponible/);
+    expect(toSpanishMessage(404, 'Appointment location with id "x" not found')).toBe("No encontramos lo que buscas.");
     expect(toSpanishMessage(401, "Account temporarily locked", { 401: "x" })).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(418)).toBe("No pudimos completar la acción. Inténtalo de nuevo.");
   });

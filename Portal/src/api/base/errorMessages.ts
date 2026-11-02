@@ -33,6 +33,10 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /captcha verification failed/i, "No pudimos verificar que eres una persona. Inténtalo de nuevo." ],
     [ /captcha verification is temporarily unavailable/i, "La verificación de seguridad no está disponible en este momento. Inténtalo de nuevo en unos minutos." ],
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],
+    [ /slot no longer available/i, "Ese horario ya no está disponible. Elige otro." ],
+    [ /booking limit reached/i, "Ya tienes 3 citas próximas reservadas en línea. Para reservar otra, comunícate con el consultorio." ],
+    [ /online booking unavailable/i, "No pudimos completar tu reserva en línea. Comunícate con el consultorio." ],
+    [ /^(appointment type|location) not found$/i, "Esa opción ya no está disponible. Recarga la página e inténtalo de nuevo." ],
 ];
 
 /** `statusMessages` replaces the status fallback (not a matched server message) where context differs. */
