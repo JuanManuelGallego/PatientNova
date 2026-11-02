@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, Video } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
@@ -23,9 +23,28 @@ export function PublicBookingPage({ slug }: { slug: string }) {
     if (error?.status === 404) body = <Unavailable />;
     else if (error) body = <ErrorState error={error} onRetry={retry} />;
     else if (loading || !provider) body = <ProfileSkeleton />;
+    else if (!provider.bookingOpen) body = <BookingPaused slug={slug} provider={provider} />;
     else body = <BookingView slug={slug} provider={provider} />;
 
     return <PublicPageShell>{body}</PublicPageShell>;
+}
+
+const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
+
+/** Booking is paused or not set up: patients can still manage (see and cancel) the appointments they have. */
+function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvider }) {
+    return (
+        <>
+            <ProviderHero slug={slug} provider={provider} />
+            <section className={`dash-card ${styles.state}`} data-testid="booking-paused">
+                <h2 className={styles.stateTitle}>Las reservas en línea están en pausa</h2>
+                <p className={styles.muted}>
+                    Por ahora no es posible reservar nuevas citas en línea. Si ya tienes una cita, puedes verla o cancelarla.
+                </p>
+                <Link href={appointmentsPath(slug)} className="btn-primary">Ver mis citas</Link>
+            </section>
+        </>
+    );
 }
 
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
@@ -58,7 +77,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     const nav = (
         <nav className={styles.topNav} aria-label="Cuenta">
-            <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.topLink}>Mis citas</Link>
+            <Link href={appointmentsPath(slug)} className={styles.topLink}>Mis citas</Link>
         </nav>
     );
 
@@ -130,10 +149,14 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
                 <ul className={styles.locations} aria-label="Dónde atiende">
                     {provider.locations.map((l) => (
                         <li key={l.id} className={styles.location}>
-                            <MapPin size={18} aria-hidden="true" className={styles.locationIcon} />
+                            {l.isVirtual
+                                ? <Video size={18} aria-hidden="true" className={styles.locationIcon} />
+                                : <MapPin size={18} aria-hidden="true" className={styles.locationIcon} />}
                             <span>
                                 <span className={styles.locationName}>{l.name}</span>
-                                {l.address && <span className={styles.address}>{l.address}</span>}
+                                {l.isVirtual
+                                    ? <span className={styles.address}>Videollamada</span>
+                                    : l.address && <span className={styles.address}>{l.address}</span>}
                             </span>
                         </li>
                     ))}

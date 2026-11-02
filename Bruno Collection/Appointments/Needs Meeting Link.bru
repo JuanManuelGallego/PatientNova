@@ -1,0 +1,19 @@
+meta {
+  name: Needs Meeting Link
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/appointments/needs-meeting-link
+  body: none
+  auth: none
+}
+
+docs {
+  ADMIN/SUPER_ADMIN only (VIEWER gets 403). Upcoming active portal bookings at a virtual location whose
+  video-call link the provider still has to add (`meetingStatus: NEEDS_LINK`: Google not connected, the
+  scheduler off, or Meet provisioning failed). Returns `{ count, appointments: [{ id, startAt }] }`
+  (at most 50 listed). Adding a link with `PATCH /appointments/:id` (`meetingUrl`) makes it `READY`
+  and emails the link to the patient.
+}

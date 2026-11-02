@@ -1,348 +1,110 @@
 # AGENTS.md
 
-Guidance for AI agents and contributors working in this repository.
+## Repository
 
-## Repository layout
-- `Server/` — Nest-free Node/TS backend (Prisma + pg-boss). Contains both unit and integration tests.
-- `Portal/` — Next.js frontend (Playwright e2e lives here).
+- `Server/`: Node/TypeScript backend, Prisma, pg-boss; unit and real-Postgres integration tests.
+- `Portal/`: Next.js frontend; Playwright e2e tests.
+- Backend `src/` paths below are relative to `Server/`; frontend paths to `Portal/`.
 
-## Running integration tests (Server)
-Integration tests hit a **real Postgres** and must run against a disposable test database.
-They use the `integration` vitest project (`test/integration/**/*.test.ts`).
+## Tests and configuration
 
-1. Start the test database (port 5433):
-   ```bash
-   cd Server
-   docker compose -f docker-compose.test.yml up -d
-   ```
-2. Run the suite (loads `.env.test` automatically via `test/integration/setup.ts`):
-   ```bash
-   cd Server
-   pnpm run test:integration
-   ```
-3. The suite runs serially (`fileParallelism: false`) and truncates all `public`
-   tables between tests. `DATABASE_URL` must contain the string `test` or the guard
-   refuses to run.
+From `Server/`, start the disposable database on port 5433 and run integration tests:
 
-### Common pitfalls
-- **Keep `.env.test` in sync with `.github/workflows/ci.yml`.** CI supplies env vars
-  directly (it does NOT load `.env.test`). When you add a `requireEnv(...)` var in
-  `src/utils/config.ts`, update both places, plus `.env.example`. Unit tests load your local `Server/.env`,
-  so add the var there too (e.g. `TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID`).
-- **Never point `DATABASE_URL` at dev/prod** — the guard blocks non-`test` URLs.
-- **Stale generated client:** if you change `schema.prisma`, run `pnpm exec prisma generate`.
-  The committed `generated/prisma` client is typechecked, so a stale client surfaces
-  as `tsc` errors across many files.
-- **Raw-SQL-only database objects** (not expressible in `schema.prisma`) are invisible to
-  Prisma's diff, so `prisma migrate dev` may generate a `DROP` for them in the next
-  migration (verified on Prisma 7.9.1: `migrate diff` against a migrated DB ignores the
-  partial patients index, but re-check when adding expression indexes or `EXCLUDE`). Currently: partial unique index `patients_userId_emailHash_active_key` on
-  `(userId, emailHash) WHERE isDeleted = false`
-  (`migrations/20261019000000_encrypt_patient_pii`, replaces `patients_userId_email_normalized_active_key`) and exclusion constraint
-  `appointments_no_provider_overlap` (`migrations/20261007000000_appointment_no_overlap`, needs
-  the `btree_gist` extension), and partial unique index `patient_consents_active_key` on
-  `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` (`migrations/20261101000000_portal_auth`). Before committing any generated migration,
-  read the SQL and delete any `DROP INDEX`/`DROP CONSTRAINT` for these objects. Add new
-  raw-only objects to this list.
-- **External services are mocked at module boundaries** in tests: `twilio` SDK
-  (`vi.mock('twilio')`), `src/twilio/twilioClient.js`, `src/twilio/email-client.js`
-  (Brevo REST API, EMAIL channel; unit tests stub global `fetch`), and `src/scheduler/dispatch.js`.
-  Do not add real network calls to integration tests.
-- **`reminderJobManager` is mocked** in tests that exercise `reminderService`
-  methods depending on pg-boss (`cancel`, `softDelete`, `restore`, `update`
-  sendAt reschedule). This avoids the Prisma-`$transaction` / pg-boss connection-pool
-  deadlock that aborts `reminderService.create` when a live `boss` shares the
-  test DB pool. The `scheduler.integration.test.ts` file is the exception: it calls
-  `initializePgBoss()`/`stopPgBoss()` and relies on the real `send-reminder` queue.
-- **`asyncHandler` swallows thrown errors** and writes them to `res` via
-  `handleError(res, err)` — it does NOT call `next(err)`. Route tests that invoke
-  handlers directly must assert on `res.statusCode`/`res.body`, not on a `next` mock.
-  Also note `asyncHandler` drops the returned promise, so flush microtasks before
-  inspecting `res`.
+```bash
+docker compose -f docker-compose.test.yml up -d
+pnpm run test:integration
+```
 
-## Integration coverage matrix (Scope A)
-Suite: `56` files, `721` tests, all against real Postgres, `tsc --noEmit` clean.
+- The Vitest `integration` project (`test/integration/**/*.test.ts`) loads `.env.test` via setup, runs serially, and truncates all `public` tables between tests. Never use dev/prod: `DATABASE_URL` must contain `test`.
+- Adding `requireEnv(...)` in `src/utils/config.ts` requires updating `.env.test`, `.github/workflows/ci.yml` (CI supplies env directly), `.env.example`, and local `Server/.env` (used by unit tests).
+- After changing `schema.prisma`, run `pnpm exec prisma generate`; the committed `generated/prisma` client is typechecked.
+- Unit tests (`test/unit/**/*.test.ts`) mock Prisma/DB. Integration tests cover repositories, services and HTTP routes; consult the tests for coverage.
+- Reuse `test/integration/helpers.ts`: entity factories, `appointmentTimeRange`, `futureDate`, `unique`, `makeRes`, and `invokeRoute`. The latter runs validation/middleware and waits for `asyncHandler` to settle.
+- `asyncHandler` writes errors through `handleError(res, err)`, does not call `next(err)`, and drops its promise. Direct-handler tests must flush microtasks and assert `res.statusCode`/`res.body`.
+- Mock external services at module boundaries: `twilio`, `src/twilio/twilioClient.js`, `src/twilio/email-client.js`, and `src/scheduler/dispatch.js`. Stub `fetch` for Brevo/Turnstile; never make real network calls in integration tests.
+- Mock `reminderJobManager` for reminder-service pg-boss operations to avoid transaction/connection-pool deadlocks. `scheduler.integration.test.ts` explicitly starts/stops real pg-boss and tests `send-reminder`.
+- Route-test `authReq` includes CSRF: preserve `csrfHeaders()` when overriding headers.
 
-| Area | File | Covers |
-|------|------|--------|
-| App layer (supertest) | `test/integration/app/app.integration.test.ts` | real `app`: request id, nosniff header, JSON 404/400/413, scoped body limits (100kb default, large only on file-upload routes), message-status endpoint removed, provider CSRF on cookie-authenticated writes, CORS allow/reject, rate limit + webhooks exempt from it (stay last: limiter is process-wide per IP) |
-| Public API classes | `test/integration/app/public-api.integration.test.ts` | anonymous vs credentialed-session CORS classes, exact-Origin on mutations, CSRF binding, 10kb body limit, cookie attributes, CAPTCHA hook (400 on failure, 503 on provider outage), public rate limit (JSON 429, per-key), real-app provider CORS + dark `/v1/public` |
-| Public booking (routes) | `test/integration/public-booking/public-booking.routes.integration.test.ts` | `/v1/public/providers/:slug` (+ `/slots`, `/avatar`, `/logo`) on an app wired like `app.ts` with the portal on: identical 404 for unknown/malformed/reserved/disabled/not-ready/inactive/deleted providers, exact allow-listed profile keys (no ids but type/location, no `instructions`), hidden non-bookable/inactive/deleted/virtual types and locations, image allow-list (PNG/JPEG/WebP) + `nosniff` + `Cross-Origin-Resource-Policy: cross-origin`, slots in the provider zone with the type duration (client `duration` ignored), active appointments (buffered) and blocked time excluded but not cancelled/deleted, provider isolation, foreign type 404, range/date 400s, no cookies or credentialed CORS |
-| Appointments (concurrency) | `test/integration/appointments/appointment.concurrency.integration.test.ts` | provider lock + `appointments_no_provider_overlap`: concurrent creates/moves (one winner), cross-patient overlap, back-to-back OK, other provider unaffected, cancelled ignored, reactivation conflict, blocked-time races, DB backstop error shape |
-| Appointments (integrity) | `test/integration/appointments/appointment.integrity.integration.test.ts` | status transitions via update, partial time-range validation, `cancelledBy` set/cleared, past-appointment lock (plain edits OK, no move/reactivate into the past), create status restriction, reactivation/restore conflict re-checks, audit rows written with the operation, tenant-scoped repository update |
-| Appointments (repo) | `test/integration/appointments/appointment.repository.integration.test.ts` | create/read/findById/getStats/restore, ownership scoping |
-| Appointments (routes) | `test/integration/appointments/appointment.routes.integration.test.ts` | full HTTP layer: POST/GET/PATCH/confirm/cancel/pay/delete/restore, conflict 409, validation 400/422, ownership 404 (non-virtual location avoids Google) |
-| Auth | `test/integration/auth/auth.integration.test.ts` | login, JWT, lockout (atomic counter: concurrent wrong guesses all count) |
-| Users (repo) | `test/integration/users/user.repository.integration.test.ts` | CRUD, scoping |
-| Medical records (repo) | `test/integration/medical-records/medical-record.repository.integration.test.ts` | create/read/delete |
-| Medical records (calendar-day migration) | `test/integration/medical-records/calendar-day-migration.integration.test.ts` | `20261018000000_calendar_day_utc_midnight`: local midnights (west/east of UTC) and save times → UTC midnight of the provider-zone day; UTC-midnight values untouched; idempotent |
-| Reminders (repo) | `test/integration/reminders/reminder.repository.integration.test.ts` | create/findById/update/cancel/findMany/getStats/softDelete+restore |
-| Reminders (svc) | `test/integration/reminders/reminder.service.integration.test.ts` | cancel/softDelete/restore, sendAt reschedule (pg-boss mocked) |
-| Reminders (routes) | `test/integration/reminders/reminder.routes.integration.test.ts` | POST/GET/PATCH/cancel/delete/restore/stats; validation 400, ownership 404 (`getBoss` + jobManager mocked) |
-| Locations (repo) | `test/integration/locations/location.repository.integration.test.ts` | CRUD, scoping |
-| Appointment types (repo) | `test/integration/appointment-types/appointment-type.repository.integration.test.ts` | CRUD, scoping |
-| Consent doc | `test/integration/consent-documents/consent-document.integration.test.ts` | upload/read/byUserId |
-| Blocked time (repo) | `test/integration/blocked-time/blocked-time.repository.integration.test.ts` | CRUD, pagination, filtering, overlap detection, softDelete+restore |
-| Blocked time (routes) | `test/integration/blocked-time/blocked-time.routes.integration.test.ts` | HTTP layer: CRUD, validation 400, ownership 404, pagination |
-| Portal OTP (routes) | `test/integration/portal/portal-otp.integration.test.ts` | `POST /v1/public/providers/:slug/otp` + `POST /v1/portal/:slug/otp/verify` on an app wired like `app.ts` (Brevo `transactional.js` mocked, Turnstile siteverify stubbed): identical 202 `{challenge}` for new/patient/deleted-only/revoked emails, only hashes stored (no email, code not in subject), email normalization, resend cooldown replaces the code, per-email hourly cap + new window, per-provider cap (other provider unaffected), public-page 404 for unknown/not-live slugs, CAPTCHA 400/503, strict body 400; verify sets the cookie (HttpOnly/Secure/Lax/path/2h) with `{userId,email,sid}` and a sid-bound CSRF token, attempt lock (right code rejected after 5 misses), expired/reused/never-requested give one error, code not valid on another provider, concurrent verifies give one session, exact Origin (no CSRF), 10kb limit, malformed code not counted; challenge: wrong challenge never counts an attempt, throttled 202 carries an unused challenge, lock recovery + second login; daily failure cap across resends (stops sending, right code rejected, window reset); `purgePortalOtpsWorker` |
-| Portal session (routes) | `test/integration/portal/portal-session.integration.test.ts` | `GET /v1/portal/session`, `POST /v1/portal/consent`, `POST /v1/portal/logout` on an app wired like `app.ts`: one 401 for missing/tampered/expired/wrong-audience/wrong-secret/claim-less tokens and provider tokens (Bearer or cookie), portal token rejected on provider routes, 401 once the provider is not live (disabled/deleted/portal off); identical session keys and types for none/patient/revoked/inactive/deleted-only, `consentRequired` false only with a consent at the current policy version (version bump re-requires it), email change stops resolving, other provider's patient never resolves; consent 204 in every case, one row + one `PUBLIC_PORTAL` audit row even under concurrency, nothing for non-patients, CSRF/Origin/strict body (no client `policyVersion`); logout clears the cookie on the same path even without a valid session, foreign Origin 403 |
-| Portal booking (routes) | `test/integration/portal/portal-booking.integration.test.ts` | `POST /v1/portal/bookings` + `GET /v1/portal/appointments` on an app wired like `app.ts`: new patient (PORTAL source, EMAIL channel, session email) + consent + CONFIRMED portal appointment (type price, `confirmedAt`, `patientTimezone`) with `PUBLIC_PORTAL` audits; existing patient never modified, consent reused; one neutral 409 for revoked/inactive/deleted-only; concurrent same-slot bookings and portal-vs-admin races (one winner, loser fully rolled back); same new email twice at once → one patient; slot rejections (buffer, taken, blocked, off-grid, outside/overrunning the window, lead, horizon) as one 409 without the other appointment's times; non-bookable/inactive/virtual/foreign type or location 404; strict body 400 (no client price/end/status, IANA zone); 3-upcoming portal cap (provider-created, cancelled, past not counted); rollback of patient/consent/appointment/audits on a later failure; CSRF/session/Origin guards, approval mode 404; list: same shape for none/unavailable/unconsented, own upcoming active only, soonest first |
-| Portal booking (notifications) | `test/integration/portal/portal-booking.integration.test.ts`, `portal-booking-notify.integration.test.ts` | confirmation to the patient in their zone (and across a DST change in that zone), provider zone fallback, address/location/appointments link; provider notice on WhatsApp (template SID) / SMS / EMAIL without patient details, skipped when `reminderActive` is off or no contact; scheduler on: reminder + both notify jobs sent with `db` inside the booking `tx`; scheduler off: sent after commit, nothing on rollback, a failed send keeps the booking; 24h EMAIL reminder in the patient zone, none under 24h; inactive/deleted appointments skipped; cancellation notices (patient email with a book-again link, provider WhatsApp cancel template / SMS / EMAIL) only for CANCELLED appointments; reschedule notices (patient email with new + previous time in the patient zone, provider WhatsApp reschedule template / EMAIL with both times) skipped once cancelled or superseded by a later move; failed send throws (worker retry) (dispatch + `getBoss` mocked) |
-| Portal appointment cancel (routes) | `test/integration/portal/portal-appointment-cancel.integration.test.ts` | `POST /v1/portal/appointments/:id/cancel` on an app wired like `app.ts`: 204 + CANCELLED/`cancelledBy=PATIENT`/`paid=false`, slot freed, linked reminder CANCELLED, `PUBLIC_PORTAL` audits, patient + provider notices; provider-created appointments cancellable (not reschedulable); one identical 404 for another patient's/provider's/unknown/past/cancelled/deleted/completed ids and for none/revoked/unconsented sessions; concurrent double cancel (one 204, one audit); scheduler on: both notify jobs on `tx` + queued reminder job removed after commit; rollback of status/reminder/audits on a later failure; a failed notice keeps the cancel; session/CSRF/Origin/uuid/strict empty body; `canCancel`/`canReschedule` flags (type no longer bookable, approval mode); provider `setStatus`/`update` to CANCELLED cancel a PENDING linked reminder, never a SENT one |
-| Portal appointment reschedule (routes) | `test/integration/portal/portal-appointment-reschedule.integration.test.ts` | `POST /v1/portal/appointments/:id/reschedule` on an app wired like `app.ts`: in-place move (same id, type duration, price/status/`confirmedAt` kept, `patientTimezone` updated, one `PUBLIC_PORTAL` APPOINTMENT audit, patient + provider notices with the previous time), old slot freed / new taken; linked reminder moved and re-rendered, cancelled under 24h, a SENT one unlinked and replaced, one added when the booking was under 24h; moving next to its own old time with a buffer; reschedule-vs-booking race (one winner); taken/blocked/off-grid/beyond-horizon/past as one 409 without the other appointment's times; same start 400; provider-created or no-longer-bookable type 409 `Reschedule unavailable`; approval mode 404; not-theirs/cancelled/unknown 404; scheduler on: `send-reminder` + both notify jobs on `tx`, rollback on a failed enqueue; session/CSRF/Origin/uuid/strict body (no client end/type/price, IANA zone); a PENDING reminder keeps its channel/address; the settled-reminder unlink is audited; `GET .../:id/slots` offers the times next to the appointment that the public slots hide (not its own start), same 404/409s as the move, session/uuid/strict range |
-| Appointments (reminder scheduling) | `test/integration/appointments/appointment.reminder-scheduling.integration.test.ts` | linked SCHEDULED reminder enqueued with `startAfter` on `tx`, IMMEDIATE without; re-enqueued only when an update moves `sendAt`; nothing without the scheduler; `send-reminder` skips a stale job before `sendAt` and sends when due (`getBoss` + dispatch mocked); cancels (never sends) a due PENDING reminder of a cancelled/completed/deleted appointment, audited as JOB |
-| Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, lead time reaching the horizon 422 (merged with stored values), enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
-| Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
-| Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
-| Twilio client | `test/integration/twilio/client.integration.test.ts` | send wrappers (mocked SDK) |
-| Twilio status callback (route) | `test/integration/twilio/status-callback.routes.integration.test.ts` | `POST /webhooks/twilio/status`: HMAC auth middleware valid sig → 200 + service; missing/bad/tampered sig → 403; service mocked |
-| Twilio status callback (svc) | `test/integration/twilio/message-status.service.integration.test.ts` | `processMessageStatusCallback`: delivered→SENT, failed→FAILED+resolved error, queued no-op, ghost sid no-op, out-of-order guard (late FAILED wins, stale SENT ignored), tenant isolation by messageId |
-| Notify (routes) | `test/integration/twilio/notify/notify.integration.test.ts` | POST /whatsapp, /sms & /email → create+send+QUEUED; email recipient 400; ownership 404; provider failure → FAILED (jobManager + twilio + email-client mocked) |
-| Brevo webhook (route) | `test/integration/twilio/brevo-webhook.routes.integration.test.ts` | `POST /webhooks/brevo/events`: shared secret via Bearer or Basic password → 200 + service (single event or batch array); missing/wrong/unsupported scheme → 403; non-object payload 400; service mocked |
-| Brevo events (svc) | `test/integration/twilio/brevo-events.service.integration.test.ts` | `processBrevoEvents`: delivered→SENT, hard_bounce/blocked/invalid_email/error→FAILED+reason+EMAIL failure alert, request/deferred/soft_bounce/opened/spam no-op, out-of-order guard, ghost id no-op, batch continues past bad events |
-| Bulk send (routes) | `test/integration/twilio/notify/notify-bulk.integration.test.ts` | POST /notify/bulk: channel resolved per patient from `patient.reminderChannel` (mixed batch, legacy `channel` field ignored), 201 + staggered enqueue, SCHEDULED honors sendAt, template 400/403, missing-body 400, SMS body render per patient (`{{N}}` placeholders), EMAIL to `patient.email` with rendered body+subject / no-email skip, scheduler-off 503, ownership/number skips, dedupe, enqueue-failure → FAILED, CREATE audits (`getBoss` mocked, test template registered on `BULK_TEMPLATE_CONFIG`) |
-| Scheduler | `test/integration/scheduler/scheduler.integration.test.ts` | `send-reminder` worker via real pg-boss + dispatch mock |
-| Scheduler workers | `test/integration/scheduler/workers.integration.test.ts` | `completeAppointments`, `trackDelivery` (stale/failed/delivered, EMAIL not polled), `dailyReminder` (WhatsApp + EMAIL; dispatch mock, `config` hour pin) |
-| Bulk send (worker) | `test/integration/scheduler/bulk-send-worker.integration.test.ts` | `bulkSendWorker`: QUEUED + messageId, not-found/non-PENDING/deleted/future-sendAt skips, invalid → FAILED, non-final retry rethrows, final retry → FAILED without dead-letter, EMAIL body+subject dispatch / missing body → FAILED (dispatch mock) |
-| Patients (repo) | `test/integration/patients/patient.repository.integration.test.ts` | create/read/email normalization/softDelete+restore/ownership/getStats/findByIdWithRelations |
-| Patients (email integrity) | `test/integration/patients/patient.email-integrity.integration.test.ts` | schema trim/lowercase, normalized unique index (case/whitespace, raw writes), `findByEmail`, cross-provider reuse, soft-delete + restore 409, update conflict 409 without echoing the email |
-| Patients (PII encryption) | `test/integration/patients/patient.pii-encryption.integration.test.ts` | ciphertext at rest (patient name/last name/email/phones, reminder to/subject, medical record name/birth place), blind indexes on create/update/clear, 3+ letter prefix accent-insensitive name search, `PII_VERSION` rehash + exact email/phone across patient/appointment/reminder/medical-record lists, tenant isolation, in-memory sort by name/email with pagination, `backfillPii` (encrypts legacy rows, keeps `updatedAt`, idempotent, uniqueness after backfill) |
-| Patients (routes) | `test/integration/patients/patient.routes.integration.test.ts` | POST/GET/PATCH/delete/restore/stats; `reminderChannel` default WHATSAPP / set / update / invalid 400; validation 400, ownership 404 |
-| Audit log (core) | `test/integration/audit-log/audit-log.integration.test.ts` | CRUD, filtering, ordering, pagination, scoping, Prisma immutability guard, routes |
-| Audit log (required) | `test/integration/audit-log/audit-required.integration.test.ts` | `required` audit mode rolls back the change (patient create/update/delete), best-effort default stays non-fatal, PUBLIC_PORTAL actor + new entity types |
-| Audit log (writing) | `test/integration/audit-log/audit-log-writing.integration.test.ts` | audit trails for patients/locations/appointment types/blocked time/medical records, actor metadata |
-| Audit log (writing expanded) | `test/integration/audit-log/audit-log-writing-expanded.integration.test.ts` | audit trails for appointments/reminders/users/auth/consent docs/twilio webhooks |
-| Google connection | `test/integration/google/google-connection-check.integration.test.ts`, `google.routes.integration.test.ts`, `google-oauth.service.integration.test.ts`, `google-connection.repository.integration.test.ts` | `verifyConnection` (refresh sets `lastCheckedAt`, rotated refresh token persisted, `invalid_grant` expires + one audit, transient error changes nothing, no Google call without an active connection); `check-google-connections` worker (only the rejected connection expires, audited as JOB, re-run no-op, one failure doesn't stop the rest); status `connected`/`expired` (disconnected or scope missing)/`not_connected`, `POST /connection/verify` (exact Origin, 5/min per provider, plain reads unlimited); encrypted refresh-token CAS rotation (Google prototypes patched: `OAuth2Client.prototype.refreshTokenNoCache`) |
-| Tenant isolation | `test/integration/tenants/tenant-isolation.integration.test.ts` | cross-tenant data isolation across all repositories |
+## Database, calendar and audit integrity
 
-### Known product bugs found & fixed during test build
-- `sendSmsSchema` (`src/utils/validation.ts`) lacked `patientId`, so SMS
-  reminders could not be linked to a patient (route threw `PatientNotFoundError`).
-  Fixed by adding `patientId: z.uuid().optional()` to mirror the WhatsApp schema.
+- Generated migrations can drop objects absent from Prisma's schema. Inspect SQL and remove generated `DROP INDEX`/`DROP CONSTRAINT` for these raw-SQL objects; add new ones to this list:
+  - `patients_userId_emailHash_active_key`: unique `(userId, emailHash) WHERE isDeleted = false`, migration `20261019000000_encrypt_patient_pii`.
+  - `appointments_no_provider_overlap`: exclusion constraint, migration `20261007000000_appointment_no_overlap`; requires `btree_gist`.
+  - `patient_consents_active_key`: unique `(patientId, kind, policyVersion) WHERE revokedAt IS NULL`, migration `20261101000000_portal_auth`.
+- Transactions creating/moving appointments or blocked time call `withProviderLock(tx, userId)` FIRST (`src/utils/prisma/provider-lock.ts`), then validate and write on that same `tx`. Compose with `createWithin`/`updateWithin`.
+- Conflicts are provider-wide over non-deleted SCHEDULED/CONFIRMED appointments (`ACTIVE_STATUSES`), using half-open intervals. Map the exclusion backstop through `isAppointmentOverlapViolation` to a neutral 409.
+- Transactional `logAudit` calls require both `tx` and `required: true`; swallowing an audit error leaves the transaction aborted. Best-effort audit is only for non-transactional legacy paths.
+- Portal actions use `runInAuditContext(portalPatientAuditContext({...}), fn)` for `ActionSource.PUBLIC_PORTAL` and a hashed actor id.
 
-### Remaining gaps (future phases)
-- **Google virtual-location / Meet appointment path** is unexercised. Needs
-  `src/google/google-meet.service.js` mocked + a virtual `appointmentLocation`.
-- **Playwright e2e (Portal)** — see handoff below.
+## Security and PII
 
-## Test conventions
-- Scope A (implemented): repository/service-level tests against real Postgres, no HTTP layer.
-- Unit tests (`test/unit/**/*.test.ts`) mock Prisma/DB and run fast.
-- `test/integration/helpers.ts` provides `createTestUser`, `createTestPatient`,
-  `createTestLocation`, `createTestAppointmentType`, `appointmentTimeRange`, `futureDate`,
-  `unique` (sequence-suffixed unique strings for emails etc.), and the route-layer
-  doubles `makeRes`/`invokeRoute(router, method, path, req)` used by the `*.routes.*`
-  integration tests. `invokeRoute` chains the full Express middleware stack
-  (validateBody/Query/Params + asyncHandler), replicating short-circuiting
-  (e.g. a 400 from `validateBody` stops the chain) and polling until `asyncHandler`
-  settles the response.
+- Use only `src/auth/tokens.ts` for JWTs (HS256, issuer, per-kind audience; separate `PORTAL_AUTH_SECRET`). Never call `jwt.sign/verify` directly.
+- Provider cookie-authenticated writes require `X-CSRF-Token = createCsrfToken(sid, AUTH_SECRET)`; GET/HEAD/OPTIONS and Bearer requests are exempt. `fetchWithAuth` obtains it from `GET /v1/auth/csrf` and keeps it in memory.
+- Twilio/Brevo webhook signature checks are always enforced, with no environment bypass. Test with real signatures or mocked middleware.
+- Unset/blank `NODE_ENV` resolves to production and requires `ENCRYPTION_KEY`. Set `NODE_ENV=development` explicitly locally.
+- Log paths with `loggedPath(req)`, never `req.originalUrl` (queries may carry PII). Use `maskEmail`/`maskPhone` under `maskedEmail`/`maskedTo`; logger redaction is only a safety net.
+- Errors reach Sentry: never interpolate names, notes, emails or phones. `scrubText` only masks well-formed emails and phone-like numbers. Sentry stays opt-in via DSN, with restricted `dataCollection` and `scrubEvent`/`scrubBrowserEvent`; see `docs/operations.md`.
+- Encrypted fields: `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`. Never SQL-filter, sort or `contains` on ciphertext.
+- Search through `patientSearchWhere`/`medicalRecordNameWhere` (`src/utils/encryption/pii-search.ts`); exact lookups use blind indexes (`emailHash`, `toHash`, etc.). The Prisma extension maintains `BLIND_INDEXES`; never set them manually.
+- Raw SQL bypasses encryption: never `$executeRaw` encrypted fields outside `backfill-pii.ts`. New PII fields require `ENCRYPTED_FIELDS`, `BLIND_INDEXES` if searched, a `TEXT` column, and tests.
+- Global JSON/urlencoded limit: `100kb`. Mount larger parsers BEFORE it: `/v1/users` 2mb, `/v1/consent-document` and `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb. First parser wins. Limiters run before parsing; global per-IP limiting skips signature-authenticated `/webhooks/*`. `trust proxy` is exactly 1 hop.
 
-### Calendar integrity rules
-- Any transaction that creates/moves an appointment or blocked time must call
-  `withProviderLock(tx, userId)` (`src/utils/prisma/provider-lock.ts`) FIRST, then validate and
-  write on `tx`. Use `createWithin(tx, dto, userId)` to compose booking steps atomically.
-- A provider has one calendar: conflicts are checked per provider (not per patient) over
-  SCHEDULED/CONFIRMED, non-deleted appointments, using half-open intervals.
-- The exclusion constraint is only a backstop; its violation maps to a neutral 409
-  (`isAppointmentOverlapViolation` in `src/utils/errors/prisma-errors.ts`).
-- Audit writes that are part of a transaction must pass `tx` AND `required: true`
-  (`logAudit`): a swallowed audit failure would leave the Postgres transaction aborted and
-  surface later as a confusing commit error. Best-effort (default) is only for
-  non-transactional legacy paths. Portal actions run inside
-  `runInAuditContext(portalPatientAuditContext({...}), fn)` so rows carry
-  `ActionSource.PUBLIC_PORTAL` and a hashed actor id.
-- All JWTs go through `src/auth/tokens.ts` (pinned HS256, issuer, per-kind audience; the
-  portal session uses its own `PORTAL_AUTH_SECRET`). Never call `jwt.sign/verify` directly.
-  Deploying the audience change invalidates existing provider sessions (forced re-login).
-- Logging: never log `req.originalUrl` (use `loggedPath(req)`; query strings can carry PII),
-  raw emails or phone numbers (log `maskEmail`/`maskPhone` output under `maskedEmail`/`maskedTo`;
-  `email`/`to` keys are redacted outright). The logger redacts PII keys
-  (`email`, `to`, `lastName`, `phone`, ... top level and one level deep) as a safety net and
-  adds the request id to every line via `AsyncLocalStorage`; do not rely on redaction as the
-  primary control. Error messages (`new Error(...)`) reach Sentry and must not interpolate names,
-  notes, emails or phone numbers: `scrubText` only masks well-formed emails and phone-like numbers.
-- Public portal API (`ENABLE_PORTAL=true`): mount only via `createPublicApiRouter()` (anonymous,
-  no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on
-  mutations). Both are mounted in `app.ts` BEFORE the provider CORS/body parsers/global limiter.
-  Session routes must add `requireCsrf` (except `otp/verify`). `createPublicLimiter` is a coarse
-  in-memory per-IP throttle (resets on restart, per instance), mounted before the router's body
-  parser. Brute-force-sensitive limits (OTP verify attempts, resend cooldown, per-email sends) must
-  be enforced on the domain record in the same transaction (see `src/utils/security/one-time-code.ts`),
-  never by an HTTP limiter. `trust proxy` is exactly 1 hop.
-- Portal OTP (`src/portal/portal-otp.*`): one `PortalOtp` row per (provider, `emailHash`), never the plaintext
-  email. Send limits (cooldown, per-email hourly cap, coarse per-provider cap), the per-code attempt counter and the
-  per-email daily failure cap (`failedCount`, not reset by a resend) are checked
-  under `SELECT … FOR UPDATE` on that row (`portalOtpRepository.lockRow`); the email is sent after commit. The
-  request endpoint answers the same 202 whatever happened and never looks up a patient; every verify failure is
-  the same `InvalidPortalOtpError`, and a wrong guess is committed before it is thrown. Each issued code has a
-  random challenge (hash on the row) returned only in that request's 202; verify must send it, and a wrong
-  challenge never counts an attempt, so someone who only knows the email cannot lock the code. Throttled
-  requests return a random unused challenge (same shape). The portal JWT carries a
-  random `sid`, and the portal CSRF token is `createCsrfToken(sid, PORTAL_AUTH_SECRET)`.
-- Portal session (`src/portal/portal-session.*`): every route on the session router goes behind `portalSessionGuard`
-  (`requirePortalSession` + `requirePortalCsrf`), except `otp/verify` and `logout` (logout must clear the cookie even
-  when the session no longer validates; the exact-Origin check covers it). The middleware reads only the `portal_session` cookie, verifies it
-  with `verifyPortalToken`, re-checks `isBookingLive` on every request and answers one `401 'Invalid session'` for
-  every failure; scope queries by `req.portal`, never by client-supplied ids. The session is a stateless JWT (logout
-  only clears the cookie; revocation is the per-request `portalAccessEnabled` check through resolution). Match a
-  session to a patient only with `resolvePortalPatient` (`src/portal/patient-resolution.ts`); its outcome
-  (`patient`/`unavailable`/`none`) must never change a response's shape or status. Record consent only with
-  `ensureCurrentConsent` (`src/patient-consents/`): idempotent on `patient_consents_active_key`, audits inside `tx`
-  only when it inserted. The policy version is the server's `PRIVACY_POLICY_VERSION`; clients never send one.
-- CAPTCHA (Cloudflare Turnstile): public endpoints that send messages or create records
-  (OTP request/resend, anonymous booking) use `requireCaptcha(createCaptchaVerifier(), '<action>')`
-  after the limiter and body parser; the Portal renders `<TurnstileWidget action="<action>">` with the
-  same action and sends `captchaToken` in the body. Not on `otp/verify` (attempt counter) or session
-  routes. The verifier checks hostname, action and `challenge_ts`, and fails closed (provider outage →
-  503). Turnstile is used in every environment, with no bypass: `CAPTCHA_SECRET` is always required
-  (`.env.test`/CI use Cloudflare's always-pass test secret). Test-secret answers carry
-  `metadata.result_with_testing_key` with no `action` and hostname `example.com`, so the verifier skips only those two
-  checks, and only when the configured secret is itself a test secret (`isTurnstileTestSecret`); startup warns if production runs with a test secret. Unit tests stub
-  global `fetch`; never call siteverify from tests. The Portal CSP always allows `https://challenges.cloudflare.com`, and a build
-  without `NEXT_PUBLIC_TURNSTILE_SITE_KEY` shows the widget error instead of submitting.
-- Request bodies: the global JSON/urlencoded limit is `100kb`. Routes that accept base64 files
-  get a route-scoped parser in `app.ts` (`/v1/users` 2mb, `/v1/consent-document` and
-  `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb) mounted BEFORE the default one (the first
-  parser to run wins). Rate limiters run before body parsing. The global per-IP limiter skips `/webhooks/*`
-  (signature-authenticated, few sender IPs).
-- Provider CSRF: access/refresh tokens carry a login-session `sid`; `authenticate` requires
-  `X-CSRF-Token` = `createCsrfToken(sid, AUTH_SECRET)` on every method except GET/HEAD/OPTIONS when the token
-  came from the cookie (Bearer requests are exempt). The Portal gets it from `GET /v1/auth/csrf`
-  and `fetchWithAuth` attaches it (memory only). Route tests: `authReq` already sends a valid
-  header via `csrfHeaders()`; keep it when overriding `headers`
-  (`{ headers: { ...csrfHeaders(), origin } }`).
-- Webhook signature checks (Twilio, Brevo) are always enforced; there is no environment bypass.
-  Test webhooks locally with real signatures (e.g. an ngrok tunnel) or by mocking the middleware in tests.
-- `NODE_ENV` fails closed: unset/blank behaves as `production` (`resolveNodeEnv`), which requires
-  `ENCRYPTION_KEY`. Local dev must set `NODE_ENV=development` explicitly (see `.env.example`).
-- Time math goes through `src/utils/time/time-utils.ts` (luxon). DST conventions: spring-forward
-  gap times do not exist (`resolveLocalTime(...).exists === false`; `localToUtc` shifts forward),
-  fall-back overlaps use the first occurrence (`ambiguous: true`). The slot engine resolves each
-  window's edges per date with `localToUtc` and steps in real minutes; a DST jump inside an open
-  window is deliberately not special-cased (see the slot contract). Never hand-roll offset arithmetic.
-- Portal (provider side) shows every date/time in the provider's timezone (`user.timezone`), never the
-  browser's. `AuthContext` calls `setDisplayTimezone` (an invalid zone falls back to the browser's and is
-  reported to Sentry). React components read it with `useDisplayTimezone()` (`src/hooks`) and pass it
-  explicitly to the `src/utils/TimeUtils.ts` helpers (`fmt*`, `todayFormattedString`, `zonedDateTimeParts`,
-  `localDateTimeToUtc`, ...), so a timezone change re-renders in place (no remount). The helpers' implicit
-  default is only for non-React callers. Do not use `Date` getters/setters (`getHours`, `setDate`, ...) or bare
-  `toLocale*String` on instants. Pickers use `ZonedDatePicker`, which holds the provider's wall-clock time as a
-  UTC-mode dayjs (no DST gaps on the device), converted at the edges with `toPickerValue`/`fromPickerValue`.
-  The calendar takes one `timezone` from its page and passes it to its hooks and views.
-- Online-booking setup (`src/booking-settings/`, mounted at `/v1/booking` behind `requirePortalEnabled`, 404 when
-  `ENABLE_PORTAL` is off; `GET /users/me` returns `portalEnabled`). `AvailabilityRule` stores ISO weekday (1=Mon) and
-  `startMinute`/`endMinute` as wall-clock minutes in `User.timezone` (half-open, 5-minute grid, no midnight crossing);
-  resolve them per date with `resolveLocalTime`, never as fixed UTC offsets. The week is replaced atomically under
-  `withProviderLock`. Until 5.4 a location cannot be both `isVirtual` and `bookableOnline`. Readiness (slug,
-  availability, bookable type, in-person bookable location) is enforced only when enabling; later edits (deleting the
-  last bookable type/location) leave `bookingEnabled` on, and `GET /booking/settings` reports `live: false`. Public
-  slot and booking endpoints must gate on `bookingSettingsService.isBookingLive(userId, tx)` (portal on, provider
-  active and not deleted, enabled, ready) inside the booking transaction after `withProviderLock`, and answer as for
-  an unknown slug when it is false. Never re-derive that check elsewhere.
-- Public booking (`src/public-booking/`, mounted at `/v1/public/providers` inside `createPublicApiRouter()`): turn a slug
-  into a provider only with `publicBookingService.resolveProvider` (malformed, unknown and not-live slugs all throw the
-  same `ProviderNotFoundError`). Public availability goes through `generateSlots`/`isSlotAvailable` only; busy time is
-  `ACTIVE_STATUSES` appointments (`src/appointments/appointment-status.ts`) plus non-deleted blocked time. Public DTOs
-  are allow-lists: never return `userId`, contact details, settings or location `instructions` (the profile exposes only
-  `lastBookableDate`, derived from the horizon, for week paging). Images are served as
-  bytes from data URLs of an allowed type only, with `Cross-Origin-Resource-Policy: cross-origin` (helmet defaults to
-  `same-origin`, which blocks the Portal's `<img>`); the Portal CSP `img-src` allows the API origin.
-- Portal booking (`src/portal/portal-booking.*`, `POST /v1/portal/bookings` behind `portalSessionGuard`): book only through
-  `portalBookingService.book`, one transaction in this order: `withProviderLock` → `isBookingLive(userId, tx)` (and
-  `AUTO_CONFIRM`, else the unknown-provider 404) → bookable type/location → `isSlotAvailable` on `loadBusy(..., tx)` →
-  `resolvePortalPatient` (create a new patient with `createPatientWithin(tx, ..., { source: PORTAL })`, never update an
-  existing one) → per-patient cap → `ensureCurrentConsent` → `createWithin(tx, dto, userId, { source: PORTAL, patientTimezone })`.
-  Price, duration, end time and status are derived on the server; the body is strict. Calendar conflicts
-  (`AppointmentConflictError`, blocked time, the 23P01 backstop) surface as the neutral `SlotUnavailableError`, never
-  with the other appointment's times. Patient-facing lists go through the allow-listed `PortalAppointmentDto`.
-- Booking notifications (`src/portal/portal-booking-notifications.ts`): the patient confirmation and the provider notice
-  (and the cancel/reschedule pairs) are `portal-booking-notify` jobs (`{ appointmentId, kind, previousStartAt? }`, ids
-  and timestamps only) enqueued on the booking `tx` with
-  `fromPrisma(tx)`, so a rollback drops them; without the scheduler they are sent after commit, best effort. The
-  handler re-reads the appointment, skips deleted ones and those not in the state the kind needs (CANCELLED for
-  cancellation notices, active otherwise) and throws on a failed send (pg-boss retries). Provider
-  notices carry no patient details. Patient-facing times (confirmation, linked reminders) use
-  `Appointment.patientTimezone ?? User.timezone`; provider-facing text stays in `User.timezone`.
-- Linked reminders: `createWithin`/`update` enqueue `send-reminder` on `tx` (`startAfter: sendAt` for SCHEDULED) when the
-  reminder is created or its `sendAt`/`sendMode` actually changes. A moved reminder keeps its old job; `send-reminder`
-  skips a SCHEDULED job that fires more than a minute before `sendAt`. Never enqueue a second job for an unchanged
-  `sendAt`: two jobs firing together can both read PENDING and send twice.
-  Cancelling an appointment by any path (`setStatus`, `update`, the portal) calls `cancelLinkedReminder(tx, ...)`, which
-  marks a PENDING linked reminder CANCELLED on the same `tx` (a reactivated appointment does not get it back). As a
-  backstop, `send-reminder` marks CANCELLED (never sends) a reminder whose linked appointment is deleted or not in `ACTIVE_STATUSES`.
-- Patient self-service (`src/portal/portal-appointment.service.ts`, `POST /v1/portal/appointments/:id/cancel` behind
-  `portal-change-ip` + `portalSessionGuard`): one transaction, `withProviderLock` → `requireConsentedPatient` (a
-  consented `patient` only) → `portalBookingRepository.findOwn(userId, patientId, id, tx)` → `canCancel`
-  (`src/portal/portal-appointment-actions.ts`). Every miss is the same `PortalAppointmentNotFoundError` (404), never a
-  different status for "not yours". A patient may cancel any upcoming active appointment (no cutoff) and reschedule only
-  `source=PORTAL` ones whose type and location are still bookable; `PortalAppointmentDto` carries `canCancel`/
-  `canReschedule` from the same functions, and the Portal shows actions only from those flags. Patient changes notify
-  through `enqueuePortalNotifications(event, id, tx, previousStartAt?)` (`booked`/`cancelled`/`rescheduled`); provider
-  WhatsApp notices use `TWILIO_WHATSAPP_USER_PORTAL_{BOOKING,CANCEL,RESCHEDULE}_SID`. Formatted times end in
-  "a. m."/"p. m.": never put a full stop right after one.
-- Patient reschedule (`POST /v1/portal/appointments/:id/reschedule`, same limiter and guard, strict body
-  `{ startUtc, patientTimezone }`): moves the appointment in place, one transaction in this order: `withProviderLock` →
-  `isBookingLive` + `AUTO_CONFIRM` (else the unknown-provider 404) → `requireConsentedPatient` → `findOwn` + `canCancel`
-  (404) → `source=PORTAL` with a still-bookable type and location (else 409 `PortalRescheduleUnavailableError`) → new
-  start differs (400) → `isSlotAvailable` with the type's current duration on `loadBusy(..., { excludeAppointmentId })`
-  (the moved appointment must not block itself through the buffer) → `updateWithin(tx, id, { startAt, endAt, reminder },
-  userId, { patientTimezone, replaceSettledReminder: true })`. `updateWithin` is `appointmentService.update` on the
-  caller's `tx`; use it to compose an appointment edit with other steps. Price, status and `confirmedAt` never change;
-  the per-patient cap is not re-checked. The linked reminder follows the move: PENDING → new `sendAt` with its channel
-  and address kept (or cancelled under 24h); a SENT/FAILED/CANCELLED one is unlinked (audited) and a new email reminder
-  linked (`replaceSettledReminder`), never rewritten. The preconditions up to the bookable type/location are one
-  function (`loadReschedulable`), shared with `GET /v1/portal/appointments/:id/slots` (same guard, strict `{ from, to }`),
-  which lists times through `computeSlots` (`src/public-booking/public-booking.service.ts`, also behind the public slots)
-  with `excludeAppointmentId` and drops the current start. Reschedule notice jobs carry the new `startAt`; a notice
-  whose appointment has since moved again is skipped (the later move sends its own).
-- Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
-  read only through `publicApi` via `usePublicQuery` (`src/api/base/useClientQuery.ts`), never `useApiQuery`/`fetchWithAuth`;
-  the booking form's session check and `POST /bookings` are the only `portalApi` calls on `/book/[slug]` (`BookingForm`,
-  `src/api/portal/`). The form never sends price, end time or status, always shows the consent checkbox, and maps the
-  three booking 409s to their Spanish messages (a taken slot clears the choice and reloads the slots). They show
-  times only in the patient's device zone (`browserTimezone()`, passed explicitly to `TimeUtils`), never the provider's:
-  weeks are the patient's calendar days, the slots query (provider dates) is padded with `slotQueryRange`, the horizon
-  is converted with `lastBookableDateIn`, and slots are grouped by the patient's local date with
-  `src/utils/publicBooking.ts`. They render any 404 as the same "no disponible" page. `proxy.ts` must not match `/book`
-  (pinned in `test/proxy.test.ts`). E2E: `db:seed-e2e` seeds a second, booking-live provider (`e2e-publica`) for the
-  `public`/`public-mobile` projects, so the API must run with `ENABLE_PORTAL=true` (set in the CI e2e job; set it locally
-  too). The portal specs read OTP codes and other emails from a mock Brevo server (`Portal/e2e/support/mock-brevo.mjs`,
-  port 4010; the API runs with `BREVO_API_BASE_URL=http://localhost:4010`; it keeps every email per address:
-  `/__test/latest-code` and `/__test/messages`) and the Portal is built with Cloudflare's test site key. `e2e-publica`
-  uses `reminderChannel: EMAIL`, so booking notices reach the mock instead of Twilio. The booking spec books a real slot
-  next week on the shared seeded calendar (each run takes the first free one). Keep OTP requests in e2e minimal:
-  `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages (`/book/[slug]/appointments`) use `portalApi`
-  via `usePortalSession`/`usePortalQuery`/`src/api/portal/` only; a 401 from `/session` means "no session", never an
-  error, and a 401 from `/appointments` returns to the login. "Mis citas" shows "Reprogramar"/"Cancelar cita" only from the
-  server's `canReschedule`/`canCancel` flags (never re-derived), cancels through an in-app `ConfirmDialog` (never
-  `window.confirm`; public pages have no provider layout, so it brings its own `FocusTrapProvider`), and keeps the
-  appointment being moved in component state, never in the URL. Booking and rescheduling share the week/day/time picker
-  (`useSlotPicker` + `SlotSteps`, `src/components/PublicBooking/SlotPicker.tsx`) so both follow the same device-zone and
-  paging rules; rescheduling passes the appointment id so times come from the session's `/appointments/:id/slots`
-  (`useRescheduleSlots`), never the public slots (which would hide the times next to it). A 401 there returns to the
-  login and a 404/409 returns to the list with the server's message. A 404 on cancel/reschedule closes the action and refreshes the list with the server's message. Specs strip the Vercel bypass headers from API calls, since
-  the anonymous CORS refuses them.
-- Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
-  (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,
-  `fmtCalendarDay`, `getAge`), never through a timezone. A bare `YYYY-MM-DD` (list filters,
-  `mode="localDate"`) is also a calendar day. Migration `20261018000000_calendar_day_utc_midnight`
-  converted legacy rows using the provider's timezone. The patient portal will need its own rule.
-- Patient PII is encrypted at rest (`ENCRYPTED_FIELDS`): `Patient.name/lastName/email/whatsappNumber/smsNumber`,
-  `Reminder.to/subject`, `MedicalRecord.name/birthPlace`. Never filter, sort or `contains` on these columns
-  in SQL (it silently matches nothing). Search with `patientSearchWhere`/`medicalRecordNameWhere`
-  (`src/utils/encryption/pii-search.ts`), look up with the blind-index columns (`emailHash`, `toHash`,
-  ...; `src/utils/encryption/blind-index.ts`). The Prisma extension writes those columns from the
-  plaintext (`BLIND_INDEXES`); never set them by hand. Raw SQL bypasses encryption: do not write these
-  columns with `$executeRaw` outside `backfill-pii.ts`. Adding a new PII field: register it in
-  `ENCRYPTED_FIELDS` (+ `BLIND_INDEXES` if searched), widen the column to `TEXT`, and add it to the tests.
-- Google connection (`src/google/`): `GET /v1/google/connection` answers `status: connected | expired | not_connected`
-  (`connected` kept for old clients). Mark a connection expired only with `markConnectionExpired`
-  (`google-connection.service.ts`: idempotent, one audit, source from the audit context), and classify errors with
-  `isAuthorizationFailure`. Refresh tokens are encrypted, so never match `refreshToken` in a `where` (it never matches);
-  `rotateRefreshToken` compares the decrypted value and guards the write with `updatedAt`. The daily
-  `check-google-connections` job and `POST /google/connection/verify` both go through `verifyConnection` (a check calls Google and may write, so it is never a GET); provider alerts about Google are
-  in-app only (no WhatsApp/SMS/email). Portal: branch on `status`, not `connected` (expired ≠ never connected; reconnect
-  with `startOAuth(path, true)`). Provider-wide alerts live in `ProviderAlerts` (`src/components/Info/`), rendered by
-  `PageLayout` for ADMIN/SUPER_ADMIN only (VIEWER gets 403 on the status endpoint, so never fetch it for them).
-- Error tracking (Sentry) is opt-in via DSN and must stay PII-free: keep `dataCollection` locked down
-  and route events through `scrubEvent`/`scrubBrowserEvent`. Operational notes live in `docs/operations.md`.
+## Public API, OTP and sessions
+
+- Mount only through `createPublicApiRouter()` (anonymous, no cookies/credentials) or `createPortalSessionRouter()` (credentialed, exact Origin on mutations), BEFORE provider CORS, body parsers and global limiter in `app.ts`. Public/session bodies are limited to 10kb.
+- `createPublicLimiter` is coarse, in-memory, per-instance/per-IP and runs before parsing. Enforce brute-force-sensitive counters on domain records transactionally (`src/utils/security/one-time-code.ts`), never solely through HTTP limits.
+- Public endpoints sending messages/creating records use `requireCaptcha(createCaptchaVerifier(), '<action>')` after limiter/parser. `TurnstileWidget` sends matching action and `captchaToken`; no CAPTCHA on OTP verify or session routes.
+- Turnstile checks hostname, action and `challenge_ts`, failing closed (outage: 503). No environment bypass; `CAPTCHA_SECRET` is required. `.env.test`/CI use Cloudflare's test secret; only `isTurnstileTestSecret` plus testing metadata may skip hostname/action checks. Keep Portal CSP access to `https://challenges.cloudflare.com`; missing `NEXT_PUBLIC_TURNSTILE_SITE_KEY` must show an error and block submission.
+- OTP (`src/portal/portal-otp.*`): one row per provider/`emailHash`, never plaintext email. Under `portalOtpRepository.lockRow` (`SELECT ... FOR UPDATE`), enforce cooldown, per-email hourly/per-provider send caps, per-code attempts, and daily `failedCount` (not reset on resend). Send email after commit.
+- OTP request never looks up patients and always returns the same 202 shape. Store only code/challenge hashes; return a random challenge for each issued code, an unused random challenge when throttled. Verify requires the challenge; a wrong challenge never counts an attempt. All verify failures use `InvalidPortalOtpError`; commit wrong guesses before throwing.
+- Portal JWTs carry random `sid`; CSRF uses `createCsrfToken(sid, PORTAL_AUTH_SECRET)`. Session routes use `portalSessionGuard` (`requirePortalSession` + `requirePortalCsrf`) except OTP verify and logout. Logout clears the cookie even without a valid session; exact Origin still applies.
+- Read only the `portal_session` cookie with `verifyPortalToken`; recheck `isPortalReachable` every request and return one `401 'Invalid session'` for all failures. Scope by `req.portal`, never client ids. Logout only clears the stateless JWT cookie; patient resolution checks `portalAccessEnabled` on every request.
+- Match patients only through `resolvePortalPatient` (`src/portal/patient-resolution.ts`). Its `patient`/`unavailable`/`none` result must not reveal patient existence via response shape/status.
+- Consent uses `ensureCurrentConsent` (`src/patient-consents/`), idempotent on `patient_consents_active_key`, auditing inside `tx` only on insertion. Only the server selects `PRIVACY_POLICY_VERSION`.
+
+## Booking and patient actions
+
+- Booking settings (`src/booking-settings/`, `/v1/booking`) require `requirePortalEnabled` (404 with portal off); `/users/me` exposes `portalEnabled`.
+- Availability uses ISO weekdays and half-open wall-clock minute ranges in `User.timezone`, a 5-minute grid and no midnight crossing. Resolve per date, never fixed offsets; replace the week atomically under `withProviderLock`.
+- Virtual locations may be `bookableOnline`. `Appointment.meetingStatus` is `NOT_REQUIRED | PENDING | NEEDS_LINK | READY`, set only through `resolveMeeting` (`src/appointments/appointment-meeting.service.ts`): virtual without a URL is allowed only on portal create (`createWithin` option `meetingPending`) or while `PENDING`/`NEEDS_LINK`; every provider-created virtual appointment still needs a URL.
+- Portal virtual bookings: `auto` (scheduler on + usable Google connection, read on `tx`) creates `PENDING` and enqueues `provision-meet` on `tx` (`singletonKey`); otherwise `manual` → `NEEDS_LINK`. Call Google only in the `provision-meet` worker, never inside a transaction; it sets the link through `updateWithin` under the lock, and falls back to `NEEDS_LINK` (`markNeedsLink`, `src/portal/portal-meeting.service.ts`) on provider-side errors or the final attempt. `sweep-pending-meetings` moves `PENDING` older than 30 min.
+- Readiness is checked when enabling (slug, availability, bookable type/location). Later loss of readiness keeps `bookingEnabled` but reports `live: false`. Use `bookingSettingsService.isBookingLive(userId, tx)` after the provider lock for booking; pages/images/login/sessions need only `isPortalReachable`. Never re-derive these checks. Profile/session expose `bookingOpen`.
+- Reachable means portal on, provider active/not deleted, with a slug. Live additionally requires booking enabled and ready; paused/not-ready booking must still allow login, listing and cancellation.
+- Resolve slugs only with `publicBookingService.resolveProvider(slug, 'reachable' | 'live')`: reachable for profile/images/OTP, live for slots. Invalid, unknown or unavailable providers share `ProviderNotFoundError`; closed profiles list no types/locations.
+- Availability uses `generateSlots`/`isSlotAvailable` and `ACTIVE_STATUSES` appointments plus non-deleted blocked time. Public DTOs are allow-lists: no `userId`, contacts, settings or location `instructions`; expose `lastBookableDate` for paging.
+- Public images serve only allowed data-URL image bytes with `Cross-Origin-Resource-Policy: cross-origin`; Portal CSP `img-src` allows the API origin.
+- Book only through `portalBookingService.book`: lock -> live + `AUTO_CONFIRM` (else unknown-provider 404) -> bookable type/location -> `isSlotAvailable(loadBusy(..., tx))` -> resolve/create patient -> cap -> consent -> `createWithin`. New patients use `source: PORTAL`; never modify existing patients. Strict bodies; server derives price/duration/end/status. Map conflicts, including 23P01, to neutral `SlotUnavailableError` without others' times. Lists use `PortalAppointmentDto`.
+- Cancel/reschedule use `portal-change-ip` + `portalSessionGuard`. Cancel order: lock -> `requireConsentedPatient` -> `findOwn` -> `canCancel`. Every missing/ineligible cancel target shares `PortalAppointmentNotFoundError` (404). Any upcoming active appointment can be cancelled, including provider-created ones and while booking is paused.
+- Reschedule order: lock -> live + `AUTO_CONFIRM` (404) -> consented patient -> `findOwn`/`canCancel` (404) -> `canReschedule` (409). It requires `source=PORTAL`, still-bookable type/location, remaining `maxPatientReschedules` and sufficient `minRescheduleNoticeHours`; otherwise `PortalRescheduleUnavailableError`. Increment `patientRescheduleCount` only on successful patient moves.
+- Reuse `portalActionContext` and `canCancel`/`canReschedule` (`src/portal/portal-appointment-actions.ts`); expose flags through `PortalAppointmentDto`. Frontend actions use these flags only.
+- Reschedule body is strictly `{ startUtc, patientTimezone }`; unchanged start is 400. Use current type duration and `loadBusy(..., { excludeAppointmentId })` so the old appointment/buffer does not block itself. `updateWithin(..., { patientTimezone, replaceSettledReminder: true })` moves in place, keeping price/status/`confirmedAt`; do not recheck the patient booking cap.
+- Share `loadReschedulable` with session `GET /appointments/:id/slots` (strict `{ from, to }`); use `computeSlots` with `excludeAppointmentId`, removing the current start.
+
+## Notifications and reminders
+
+- Use `enqueuePortalNotifications(event, id, tx, previousStartAt?)`. `portal-booking-notify` payloads contain only ids/timestamps/kind; enqueue with `fromPrisma(tx)` so rollback removes jobs. Without the scheduler, send after commit, best effort.
+- Workers reread appointments, skip deleted/wrong-state records (CANCELLED for cancellation, active otherwise), and throw on failed sends for retries. Reschedule notices skip superseded moves. Provider notices contain no patient details; WhatsApp templates use `TWILIO_WHATSAPP_USER_PORTAL_{BOOKING,CANCEL,RESCHEDULE}_SID`.
+- A `PENDING` booking sends only the provider notice (`booked-link-pending`); the patient confirmation waits for `meeting-ready` (link set, or the "link will follow" fallback). A link set on a portal appointment fires `onMeetingLinkSet` in `updateWithin` (`meeting-ready` from `PENDING`, else `patient-meeting-link`); callers owning the transaction run `afterCommit` (scheduler off). Emails and reminders never print a placeholder for a missing link.
+- Patient-facing notifications/reminders use `Appointment.patientTimezone ?? User.timezone`; provider text uses `User.timezone`. Do not add a full stop after formatted "a. m."/"p. m.".
+- Enqueue `send-reminder` on `tx` when created or `sendAt`/`sendMode` changes (`startAfter: sendAt` for SCHEDULED). Never duplicate an unchanged job: simultaneous PENDING reads can send twice. Old jobs remain after moves; workers skip jobs more than a minute before the new `sendAt`.
+- All cancellation paths call `cancelLinkedReminder(tx, ...)` for PENDING reminders; reactivation does not restore them. Workers cancel instead of sending reminders for deleted/inactive appointments.
+- Rescheduling keeps PENDING reminder channel/address and moves `sendAt` (or cancels under 24h). Settled SENT/FAILED/CANCELLED reminders are unlinked with audit and replaced by a new email reminder, never rewritten.
+
+## Time and frontend conventions
+
+- Backend time math uses Luxon via `src/utils/time/time-utils.ts`. Spring gaps: `resolveLocalTime(...).exists === false`, `localToUtc` shifts forward; fall overlaps use the first occurrence. Resolve window edges per date, step in real minutes; never hand-roll offsets.
+- Provider UI uses `user.timezone`. React components read `useDisplayTimezone()` and pass it explicitly to `src/utils/TimeUtils.ts`; implicit defaults are for non-React callers. `AuthContext` sets it; invalid zones fall back to browser time and report to Sentry. Do not use local `Date` getters/setters or bare `toLocale*String` on instants.
+- Use `ZonedDatePicker` and `toPickerValue`/`fromPickerValue` (wall time held as UTC-mode dayjs). Calendar pages pass one timezone through hooks/views.
+- Calendar days (birth/evolution-note dates) are UTC midnight, written with `calendarDayToIso`/`DateTimePicker mode="calendarDay"`, read with `calendarDayOf`/`fmtCalendarDay`/`getAge`, never through a timezone. Bare `YYYY-MM-DD` and `mode="localDate"` also represent calendar days.
+- Public pages (`src/app/book/[slug]`) stay outside `(provider)`, with no `AuthProvider` or `/users/me` probe, and use `noindex`. Keep `/book` outside `proxy.ts` matching (`test/proxy.test.ts`).
+- Anonymous reads use `publicApi`/`usePublicQuery`, never provider `useApiQuery`/`fetchWithAuth`. Session/booking calls use `portalApi` through `src/api/portal/`. Session 401 means no session; appointment/slot 401 returns to login.
+- Public UI uses the patient's device zone (`browserTimezone()`) explicitly: `src/utils/publicBooking.ts` supplies `slotQueryRange`, `lastBookableDateIn` and patient-date grouping. Reuse `useSlotPicker` + `SlotSteps` (`src/components/PublicBooking/SlotPicker.tsx`); reschedule slots come from the session appointment endpoint, never public slots.
+- Always show booking consent; never submit price/end/status. Map booking 409s to Spanish messages; a taken slot clears selection and reloads. Public 404s share the "no disponible" page. Cancel/reschedule 404 closes the action and refreshes; slot 404/409 returns to the list with the server message.
+- Use in-app `ConfirmDialog` with its own `FocusTrapProvider` on public pages, never `window.confirm`. Keep the appointment being moved in component state, not the URL.
+- E2E public projects seed `e2e-publica` via `db:seed-e2e`; API needs `ENABLE_PORTAL=true`. Use `Portal/e2e/support/mock-brevo.mjs` (4010), `BREVO_API_BASE_URL=http://localhost:4010`, provider EMAIL reminders, and Cloudflare's test site key. Read `/__test/latest-code`/`/__test/messages`; minimize OTP requests (10/IP/15min). Strip Vercel bypass headers from anonymous API calls.
+
+## Google connections
+
+- Reuse `verifyConnection` for the daily check and `POST /google/connection/verify`; checks call Google and may write, so never use GET for verification.
+- Expire only through `markConnectionExpired` (idempotent audit), classifying with `isAuthorizationFailure`. Encrypted refresh tokens cannot appear in `where`; `rotateRefreshToken` compares decrypted values and guards writes with `updatedAt`.
+- Frontend branches on `status: connected | expired | not_connected`, not legacy `connected`; reconnect with `startOAuth(path, true)`. Google alerts are in-app only through `ProviderAlerts`/`PageLayout` for ADMIN/SUPER_ADMIN; never fetch the status endpoint for VIEWER (403).

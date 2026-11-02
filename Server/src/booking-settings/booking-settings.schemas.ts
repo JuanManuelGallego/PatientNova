@@ -3,6 +3,8 @@ import { isReservedSlug, isValidSlugFormat, SLUG_MAX_LENGTH, SLUG_MIN_LENGTH } f
 
 export const SLOT_INTERVAL_OPTIONS = [ 5, 10, 15, 20, 30, 45, 60, 90, 120 ] as const;
 export const MAX_AVAILABILITY_RULES = 50;
+export const MAX_PATIENT_RESCHEDULES = 10;
+export const MAX_RESCHEDULE_NOTICE_HOURS = 7 * 24;
 const MINUTES_PER_DAY = 1440;
 const MINUTE_STEP = 5;
 
@@ -26,6 +28,8 @@ export const updateBookingSettingsSchema = z
     bufferMinutes: z.number().int().min(0).max(240).optional(),
     minLeadMinutes: z.number().int().min(0).max(14 * 24 * 60).optional(),
     maxHorizonDays: z.number().int().min(1).max(365).optional(),
+    maxPatientReschedules: z.number().int().min(0).max(MAX_PATIENT_RESCHEDULES).optional(),
+    minRescheduleNoticeHours: z.number().int().min(0).max(MAX_RESCHEDULE_NOTICE_HOURS).optional(),
   })
   .refine(
     (d) => Object.keys(d).length > 0,

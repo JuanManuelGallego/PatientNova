@@ -44,7 +44,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 {location && (
                     <div>
                         <dt>Lugar</dt>
-                        <dd>{location.name}{location.address && `, ${location.address}`}</dd>
+                        <dd>{location.name}{location.isVirtual ? " · Videollamada" : location.address && `, ${location.address}`}</dd>
                     </div>
                 )}
             </dl>
@@ -57,7 +57,9 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                             <button key={l.id} type="button" className={styles.option} aria-pressed={l.id === locationId}
                                 onClick={() => setLocationId(l.id)}>
                                 <span className={styles.optionName}>{l.name}</span>
-                                {l.address && <span className={styles.optionMeta}>{l.address}</span>}
+                                {l.isVirtual
+                                    ? <span className={styles.optionMeta}>Videollamada</span>
+                                    : l.address && <span className={styles.optionMeta}>{l.address}</span>}
                             </button>
                         ))}
                     </div>

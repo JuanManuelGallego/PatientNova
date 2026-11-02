@@ -109,9 +109,13 @@ function SignedIn({ slug, provider, session, onLoggedOut, onSessionLost }: Signe
         <section className={`dash-card ${styles.card}`} aria-labelledby="portal-signed-in">
             <h1 id="portal-signed-in" className={styles.title}>Mis citas</h1>
             <UpcomingAppointments slug={slug} provider={provider} onSessionLost={onSessionLost} />
-            <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
-                Reservar una cita
-            </Link>
+            {provider.bookingOpen ? (
+                <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
+                    Reservar una cita
+                </Link>
+            ) : (
+                <p className={styles.muted} data-testid="portal-booking-paused">Las reservas en línea están en pausa por ahora.</p>
+            )}
             {error && <p className={`error-inline ${styles.error}`} role="alert">No pudimos cerrar la sesión. {error}</p>}
             <div className={styles.account}>
                 <span className={styles.muted}>Sesión iniciada como <strong className={styles.email}>{session.email}</strong></span>

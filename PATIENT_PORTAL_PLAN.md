@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 5.4 deferred until after 8.2 (b)–(c); the plan for 5.4 + 8.2 (a)–(c) is prepared (2026-11-02, see "5.4 + 8.2 (a)–(c) implementation plan"). **Updated:** 2026-11-02
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete except the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"). **Updated:** 2026-11-02
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -659,9 +659,34 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
 - The Bruno collection covers both endpoints.
 
 **Open:**
-- Whether patients should keep view and cancel access while the provider has paused booking. Today they can't: the session and OTP require `isBookingLive`. Relaxing it means a second liveness check (portal on, provider active) for session routes, while reschedule and booking keep `isBookingLive`.
-- Whether to cap reschedules per appointment. Today they are bounded only by the `portal-change-ip` limiter and the audit trail.
+- ~~Whether patients should keep view and cancel access while the provider has paused booking.~~ Decided 2026-11-02:
+  yes, see PR 5.5-A below.
+- ~~Whether to cap reschedules per appointment.~~ Decided 2026-11-02: a provider setting, see PR 5.5-A below.
 - A "past appointments" history on "Mis citas" (not in Phase 5).
+
+#### 5.5: cancel while booking is off + reschedule policy (decided 2026-11-02)
+**Decided:**
+- Booking off is not portal off. While the provider has paused booking or setup is incomplete, patients can still
+  log in, see "Mis citas" and cancel; they cannot book or reschedule. Portal flag off, provider inactive/deleted, or
+  no slug stays fully unavailable (the identical 404/401).
+- Provider reschedule policy: `maxPatientReschedules` per appointment (0–10, default 2, 0 = none) and
+  `minRescheduleNoticeHours` before the current start (0–168, default 0). Cancelling keeps no cutoff.
+- `/book/[slug]` while paused shows "Las reservas en línea están en pausa" with a link to "Mis citas".
+
+**PR 5.5-A — Server.** Built (2026-11-02). As built:
+- `bookingSettingsService.isPortalReachable` (portal on, provider active and not deleted, has a slug);
+  `isBookingLive` builds on it. `resolveProvider(slug, 'reachable' | 'live')`: `reachable` for the profile, images and
+  OTP request/verify, `live` for slots. `requirePortalSession` uses `isPortalReachable`. Booking, reschedule and
+  reschedule slots keep `requireSelfBooking` (unknown-provider 404 while paused); cancel never checked liveness.
+- The profile adds `bookingOpen`; while false, `types` and `locations` are empty. `GET /portal/session` adds
+  `bookingOpen`.
+- `User.maxPatientReschedules`, `User.minRescheduleNoticeHours`, `Appointment.patientRescheduleCount`
+  (`20261104000000_portal_reschedule_policy`). Only the portal reschedule increments the counter, on `tx`.
+- `portalActionContext(settings, bookingLive, now)` builds every flag context; `canReschedule` adds the limit and
+  the notice (measured from the current start). A failing rule is the existing 409 `Reschedule unavailable`.
+
+**PR 5.5-B — Portal.** Built (2026-11-02). Paused page on `/book/[slug]`; "Mis citas" hides "Reservar una cita" when `!bookingOpen`;
+"Reprogramación por pacientes" fields in "Reglas de reserva"; status hint that patients can still cancel while paused.
 
 #### 5.4 + 8.2 (a)–(c) implementation plan (prepared 2026-11-02)
 These are the last Phase 5 tasks. They cover the Google work only; the "Open" items above stay open.
@@ -746,7 +771,20 @@ As planned:
 - **Appointment modal (8.2 e):** shows the reconnect label up front when the connection has expired.
 - **Tests:** `GoogleIntegrationTab`, `LocationAndTimeStep`, and the new `ProviderAlerts`.
 
-**PR 5.4-A — Server: virtual portal bookings.**
+**PR 5.4-A — Server: virtual portal bookings.** Built (2026-11-02). As built:
+- `resolveMeeting` keeps a `PENDING`/`NEEDS_LINK` status when other fields change or the URL is cleared; clearing a
+  `READY` link is still 422, and a provider switching an in-person appointment to virtual still needs a URL.
+- Events: `booked-link-pending` (provider notice only), `meeting-ready` (the held confirmation, with the link or
+  "Te enviaremos el enlace…"), `meeting-link` (`patient-meeting-link`). `updateWithin` takes an `afterCommit` list so
+  `appointmentService.update` sends them after commit without the scheduler.
+- The job logic lives in `src/portal/portal-meeting.service.ts` (`meetingPendingMode`, `enqueueProvisionMeet`,
+  `provisionMeet`, `markNeedsLink`, `sweepPendingMeetings`, `findNeedsMeetingLink`); the workers are thin.
+  `PROVISION_MEET_RETRY_LIMIT = 5`.
+- The public profile and `PortalAppointmentDto` never show an address for a virtual location.
+- Tests: `portal-virtual-booking.integration.test.ts`, `scheduler/provision-meet.integration.test.ts`, and the
+  `needs-meeting-link` route case in `appointment.routes.integration.test.ts`.
+
+As planned:
 - **Schema:** `enum MeetingStatus` and `Appointment.meetingStatus @default(NOT_REQUIRED)`. The migration backfills
   `READY` where `meetingUrl` is set.
 - **`resolveMeetingUrl` becomes `resolveMeeting(...) → { meetingUrl, meetingStatus }`:**
@@ -826,7 +864,12 @@ As planned:
   - Unit tests for `resolveMeeting` and the renderer fallback.
 - **Bruno:** `Appointments/Needs Meeting Link`.
 
-**PR 5.4-B — Portal: virtual booking UI.**
+**PR 5.4-B — Portal: virtual booking UI.** Built (2026-11-02). As built: the drawer's "Falta el enlace" row has an
+"Agregar enlace" button (opens the edit modal); the modal shows a hint instead of the required mark while the link may
+wait; the banner names the next affected appointment and links to "Citas" (the list has no deep link yet). No drawer
+test exists (as before).
+
+As planned:
 - **Provider:**
   - `LocationModal` stops disabling `bookableOnline` for virtual locations and drops the "más adelante" hint.
   - The readiness label becomes "Una ubicación disponible en línea".

@@ -7,13 +7,51 @@ import { AdminRole } from "@/src/types/User";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { useFetchNeedsMeetingLink } from "@/src/api/appointments/useFetchNeedsMeetingLink";
+import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { STATUS_ICONS } from "@/src/config/icons";
 
 export function ProviderAlerts() {
   const { user } = useAuthContext();
   const isAdmin = user?.role === AdminRole.ADMIN || user?.role === AdminRole.SUPER_ADMIN;
+  if (!isAdmin) return null;
 
-  return isAdmin ? <GoogleExpiredAlert /> : null;
+  return (
+    <>
+      <GoogleExpiredAlert />
+      {user?.portalEnabled && <NeedsMeetingLinkAlert />}
+    </>
+  );
+}
+
+/** Online bookings at a video-call location that still need a link from the provider (Google not connected or failed). */
+function NeedsMeetingLinkAlert() {
+  const timezone = useDisplayTimezone();
+  const { data } = useFetchNeedsMeetingLink();
+  if (!data || data.count === 0) return null;
+
+  const next = data.appointments[ 0 ];
+  const text = data.count === 1
+    ? "1 cita reservada en línea necesita un enlace de videollamada."
+    : `${data.count} citas reservadas en línea necesitan un enlace de videollamada.`;
+
+  return (
+    <section className="warning-banner" aria-labelledby="needs-meeting-link-text" data-testid="needs-meeting-link-banner">
+      <STATUS_ICONS.warning size={18} aria-hidden="true" className="warning-banner__icon" />
+      <div className="warning-banner__body">
+        <p id="needs-meeting-link-text" className="warning-banner__text">
+          {text}
+          {next && <> La próxima es el {fmtDate(next.startAt, timezone)} a las {fmtTime(next.startAt, timezone)}</>}
+        </p>
+      </div>
+      <div className="warning-banner__actions">
+        <Link href="/appointments" className="warning-banner__link" data-testid="needs-meeting-link-appointments">
+          Ver citas
+        </Link>
+      </div>
+    </section>
+  );
 }
 
 const INTEGRATIONS_HREF = { pathname: "/settings", query: { tab: "Integraciones" } };

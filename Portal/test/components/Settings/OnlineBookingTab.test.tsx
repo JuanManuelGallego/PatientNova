@@ -61,6 +61,8 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         bufferMinutes: 0,
         minLeadMinutes: 120,
         maxHorizonDays: 60,
+        maxPatientReschedules: 2,
+        minRescheduleNoticeHours: 0,
         readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
         live: false,
         ...overrides,
@@ -284,7 +286,37 @@ describe("OnlineBookingTab: rules", () => {
         await userEvent.clear(lead);
         await userEvent.type(lead, "24");
         await userEvent.click(screen.getByTestId("online-booking-rules-save"));
-        expect(updateSettings).toHaveBeenCalledWith({ slotIntervalMinutes: 30, bufferMinutes: 15, minLeadMinutes: 1440, maxHorizonDays: 60 });
+        expect(updateSettings).toHaveBeenCalledWith({
+            slotIntervalMinutes: 30, bufferMinutes: 15, minLeadMinutes: 1440, maxHorizonDays: 60,
+            maxPatientReschedules: 2, minRescheduleNoticeHours: 0,
+        });
+    });
+
+    it("saves the patient reschedule policy, 0 meaning no online reschedules", async () => {
+        render(<OnlineBookingTab />);
+        const reschedules = screen.getByTestId("online-booking-max-reschedules");
+        await userEvent.clear(reschedules);
+        await userEvent.type(reschedules, "0");
+        const notice = screen.getByTestId("online-booking-reschedule-notice");
+        await userEvent.clear(notice);
+        await userEvent.type(notice, "24");
+        await userEvent.click(screen.getByTestId("online-booking-rules-save"));
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ maxPatientReschedules: 0, minRescheduleNoticeHours: 24 }));
+    });
+
+    it("refuses an out-of-range reschedule policy", async () => {
+        render(<OnlineBookingTab />);
+        const reschedules = screen.getByTestId("online-booking-max-reschedules");
+        await userEvent.clear(reschedules);
+        await userEvent.type(reschedules, "11");
+        expect(screen.getByTestId("online-booking-rules-save")).toBeDisabled();
+        expect(screen.getByRole("alert")).toHaveTextContent(/entre 0 y 10/);
+        await userEvent.clear(reschedules);
+        await userEvent.type(reschedules, "1");
+        const notice = screen.getByTestId("online-booking-reschedule-notice");
+        await userEvent.clear(notice);
+        await userEvent.type(notice, "1.5");
+        expect(screen.getByTestId("online-booking-rules-save")).toBeDisabled();
     });
 
     it("disables saving out-of-range values", async () => {

@@ -15,7 +15,9 @@ export interface PortalAppointment {
     status: "SCHEDULED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
     price: number;
     type: { name: string } | null;
-    location: { name: string; address: string | null; instructions: string | null } | null;
+    location: { name: string; address: string | null; instructions: string | null; isVirtual: boolean } | null;
+    /** Video call only: the link once set, otherwise pending (it will arrive by email). */
+    meeting: { status: "ready"; url: string } | { status: "pending" } | null;
     /** Computed by the server; the Portal never re-derives eligibility. */
     canCancel: boolean;
     canReschedule: boolean;

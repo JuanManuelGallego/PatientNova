@@ -54,7 +54,8 @@ export interface PortalLogin {
 
 export const portalOtpService = {
   async request(slug: string, rawEmail: string): Promise<{ challenge: string }> {
-    const provider = await publicBookingService.resolveProvider(slug);
+    // Reachable, not live: patients log in to see and cancel their appointments while booking is paused.
+    const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const email = normalizeEmail(rawEmail);
     const hash = emailHash(email);
     const challenge = newChallenge();
@@ -102,7 +103,7 @@ export const portalOtpService = {
   },
 
   async verify(slug: string, rawEmail: string, code: string, challenge: string): Promise<PortalLogin> {
-    const provider = await publicBookingService.resolveProvider(slug);
+    const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const email = normalizeEmail(rawEmail);
     const hash = emailHash(email);
     if (!hash) throw new InvalidPortalOtpError();

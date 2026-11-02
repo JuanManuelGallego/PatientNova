@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { requireSuperAdmin } from '../middlewares/authenticate.js';
+import { requireAdmin, requireSuperAdmin } from '../middlewares/authenticate.js';
 import type { ParamsDictionary } from 'express-serve-static-core';
 import type { ParsedQs } from 'qs';
 import {
@@ -16,6 +16,7 @@ import { validateBody, validateQuery, validateParams } from '../middlewares/vali
 import { asyncHandler } from '../utils/api/async-handler.js';
 import { ok } from '../utils/api/api-utils.js';
 import { uuidParamSchema } from '../utils/validation/schemas.js';
+import { findNeedsMeetingLink } from '../portal/portal-meeting.service.js';
 
 export const appointmentRouter = Router();
 
@@ -32,6 +33,15 @@ appointmentRouter.get<ParamsDictionary, unknown, unknown, AppointmentStatsQuery 
   validateQuery(appointmentStatsSchema),
   asyncHandler(async (req: Request<ParamsDictionary, unknown, unknown, AppointmentStatsQuery & ParsedQs>, res: Response) => {
     ok(res, await appointmentService.getStats(req.query, req.user!.id, req.user!.timezone));
+  }),
+);
+
+// Before '/:id' (its uuid validator would answer 400). Admins only: it feeds the provider alert banner.
+appointmentRouter.get(
+  '/needs-meeting-link',
+  requireAdmin,
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await findNeedsMeetingLink(req.user!.id));
   }),
 );
 

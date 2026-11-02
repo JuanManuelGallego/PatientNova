@@ -227,16 +227,27 @@ describe('POST /v1/public/providers/:slug/otp', () => {
     expect(sentEmails).toHaveLength(1);
   });
 
-  it('gives the public-page 404 for unknown and not-live providers', async () => {
-    const provider = await createLiveProvider();
-    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
+  it('gives the public-page 404 for unknown and unreachable providers', async () => {
+    const deleted = await createLiveProvider();
+    await prisma.user.update({ where: { id: deleted.id }, data: { deletedAt: new Date() } });
 
     const unknown = await requestOtp('no-such-provider', newEmail());
-    const disabled = await requestOtp(provider.slug, newEmail());
+    const gone = await requestOtp(deleted.slug, newEmail());
     expect(unknown.status).toBe(404);
-    expect(disabled.status).toBe(404);
-    expect(disabled.body.error).toBe(unknown.body.error);
+    expect(gone.status).toBe(404);
+    expect(gone.body.error).toBe(unknown.body.error);
     expect(sentEmails).toHaveLength(0);
+  });
+
+  it('still sends a code while booking is paused or not ready, so patients can cancel', async () => {
+    const paused = await createLiveProvider();
+    await prisma.user.update({ where: { id: paused.id }, data: { bookingEnabled: false } });
+    const notReady = await createLiveProvider();
+    await prisma.availabilityRule.deleteMany({ where: { userId: notReady.id } });
+
+    expect((await requestOtp(paused.slug, newEmail())).status).toBe(202);
+    expect((await requestOtp(notReady.slug, newEmail())).status).toBe(202);
+    expect(sentEmails).toHaveLength(2);
   });
 
   it('requires a valid CAPTCHA and fails closed on a provider outage', async () => {

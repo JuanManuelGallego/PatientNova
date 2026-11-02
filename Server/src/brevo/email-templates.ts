@@ -24,12 +24,30 @@ export function renderOtpEmail(params: { code: string; providerName: string; ttl
   };
 }
 
-export function renderBookingConfirmationEmail(params: {
+/** Where the appointment takes place: an address in person; for a video call its link, or a note that it will follow. */
+interface PlaceParams {
+  locationName?: string | null;
+  address?: string | null;
+  meetingUrl?: string | null;
+  /** Video call whose link is not ready yet. */
+  meetingPending?: boolean;
+}
+
+export const MEETING_LINK_PENDING_LINE = 'Te enviaremos el enlace de la videollamada en un correo aparte.';
+
+function placeLines(p: PlaceParams): string[] {
+  return [
+    ...(p.locationName ? [ `Lugar: ${p.locationName}` ] : []),
+    ...(p.address ? [ `Dirección: ${p.address}` ] : []),
+    ...(p.meetingUrl ? [ `Enlace de la videollamada: ${p.meetingUrl}` ] : []),
+    ...(p.meetingPending && !p.meetingUrl ? [ MEETING_LINK_PENDING_LINE ] : []),
+  ];
+}
+
+export function renderBookingConfirmationEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
   timezone: string;
-  locationName?: string | null;
-  address?: string | null;
   appointmentsUrl: string;
 }): RenderedEmail {
   return {
@@ -40,8 +58,31 @@ export function renderBookingConfirmationEmail(params: {
       `Tu cita con ${params.providerName} quedó confirmada.`,
       '',
       `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
-      ...(params.locationName ? [ `Lugar: ${params.locationName}` ] : []),
-      ...(params.address ? [ `Dirección: ${params.address}` ] : []),
+      ...placeLines(params),
+      '',
+      APPOINTMENTS_LINK_LINE,
+      params.appointmentsUrl,
+    ].join('\n'),
+  };
+}
+
+/** The video-call link of a portal appointment, sent when it is set after the confirmation. */
+export function renderPortalMeetingLinkEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  timezone: string;
+  meetingUrl: string;
+  appointmentsUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Enlace de tu videollamada con ${params.providerName}`,
+    body: [
+      'Hola,',
+      '',
+      `Ya está listo el enlace de tu cita virtual con ${params.providerName}.`,
+      '',
+      `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
+      `Enlace de la videollamada: ${params.meetingUrl}`,
       '',
       APPOINTMENTS_LINK_LINE,
       params.appointmentsUrl,
@@ -72,13 +113,11 @@ export function renderPortalCancellationEmail(params: {
 }
 
 /** Patient confirmation of a reschedule made in the portal. Both times are in the patient's zone. */
-export function renderPortalRescheduleEmail(params: {
+export function renderPortalRescheduleEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
   previousLocal: string;
   timezone: string;
-  locationName?: string | null;
-  address?: string | null;
   appointmentsUrl: string;
 }): RenderedEmail {
   return {
@@ -90,8 +129,7 @@ export function renderPortalRescheduleEmail(params: {
       '',
       `Nueva fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
       `Fecha anterior: ${params.previousLocal}`,
-      ...(params.locationName ? [ `Lugar: ${params.locationName}` ] : []),
-      ...(params.address ? [ `Dirección: ${params.address}` ] : []),
+      ...placeLines(params),
       '',
       APPOINTMENTS_LINK_LINE,
       params.appointmentsUrl,

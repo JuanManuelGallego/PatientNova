@@ -5,7 +5,6 @@ import type { Interval } from './slot-engine.js';
 const MINUTE_MS = 60_000;
 
 const bookable = { bookableOnline: true, isActive: true, isDeleted: false } as const;
-const bookableLocation = { ...bookable, isVirtual: false } as const;
 
 export type ProviderImageKind = 'avatar' | 'logo';
 
@@ -54,16 +53,16 @@ export const publicBookingRepository = {
 
   async listBookableLocations(userId: string) {
     return prisma.appointmentLocation.findMany({
-      where: { userId, ...bookableLocation },
-      select: { id: true, name: true, address: true },
+      where: { userId, ...bookable },
+      select: { id: true, name: true, address: true, isVirtual: true },
       orderBy: { name: 'asc' },
     });
   },
 
   async findBookableLocation(userId: string, locationId: string, tx?: TransactionClient) {
     return (tx ?? prisma).appointmentLocation.findFirst({
-      where: { id: locationId, userId, ...bookableLocation },
-      select: { id: true },
+      where: { id: locationId, userId, ...bookable },
+      select: { id: true, isVirtual: true },
     });
   },
 

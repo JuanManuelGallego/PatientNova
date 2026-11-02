@@ -1,5 +1,6 @@
-import { RecordSource, type AppointmentStatus } from '../../generated/prisma/enums.js';
+import { BookingApprovalMode, RecordSource, type AppointmentStatus } from '../../generated/prisma/enums.js';
 import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
+import { ONE_HOUR_MS } from '../utils/config/constants.js';
 
 interface Bookable {
   bookableOnline: boolean;
@@ -12,14 +13,36 @@ export interface ActionableAppointment {
   isDeleted: boolean;
   startAt: Date;
   source: RecordSource;
+  patientRescheduleCount: number;
   appointmentType: Bookable | null;
-  appointmentLocation: (Bookable & { isVirtual: boolean }) | null;
+  appointmentLocation: Bookable | null;
 }
 
 export interface PortalActionContext {
   now: Date;
   /** Booking is live and in auto-confirm mode: the only mode in which a patient may pick a new slot. */
   canBook: boolean;
+  /** Provider policy: portal reschedules allowed per appointment (0 = none). */
+  maxReschedules: number;
+  /** Provider policy: no reschedule once the current start is this close. */
+  minNoticeMs: number;
+}
+
+/** The provider settings the action flags depend on. */
+export interface PortalActionSettings {
+  bookingApprovalMode: BookingApprovalMode;
+  maxPatientReschedules: number;
+  minRescheduleNoticeHours: number;
+}
+
+/** One place that turns the provider's settings and booking liveness into the action context. */
+export function portalActionContext(settings: PortalActionSettings, bookingLive: boolean, now: Date): PortalActionContext {
+  return {
+    now,
+    canBook: bookingLive && settings.bookingApprovalMode === BookingApprovalMode.AUTO_CONFIRM,
+    maxReschedules: settings.maxPatientReschedules,
+    minNoticeMs: settings.minRescheduleNoticeHours * ONE_HOUR_MS,
+  };
 }
 
 const isBookable = (b: Bookable | null): boolean => !!b && b.bookableOnline && b.isActive && !b.isDeleted;
@@ -31,13 +54,15 @@ export function canCancel(a: Pick<ActionableAppointment, 'status' | 'isDeleted' 
 
 /**
  * Only the patient's own online bookings, and only while their type and location are still bookable,
- * so a provider's appointment is never moved into a slot the provider did not open.
+ * so a provider's appointment is never moved into a slot the provider did not open. The provider's policy
+ * caps how many times one appointment can be moved and how close to its current start.
  */
 export function canReschedule(a: ActionableAppointment, ctx: PortalActionContext): boolean {
   return ctx.canBook
     && canCancel(a, ctx.now)
     && a.source === RecordSource.PORTAL
+    && a.patientRescheduleCount < ctx.maxReschedules
+    && a.startAt.getTime() - ctx.now.getTime() > ctx.minNoticeMs
     && isBookable(a.appointmentType)
-    && isBookable(a.appointmentLocation)
-    && !a.appointmentLocation!.isVirtual;
+    && isBookable(a.appointmentLocation);
 }

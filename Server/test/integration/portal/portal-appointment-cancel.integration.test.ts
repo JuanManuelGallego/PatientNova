@@ -260,6 +260,24 @@ describe('POST /v1/portal/appointments/:id/cancel', () => {
     expect(await flags()).toEqual({ canCancel: true, canReschedule: false });
     expect((await postCancel(session, appointmentId)).status).toBe(204);
   });
+
+  it('still lists and cancels while booking is paused, but offers no reschedule', async () => {
+    const provider = await createLiveProvider();
+    const { session, appointmentId } = await book(provider);
+    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
+
+    const [ a ] = (await listAppointments(session)).body.data.appointments;
+    expect({ canCancel: a.canCancel, canReschedule: a.canReschedule }).toEqual({ canCancel: true, canReschedule: false });
+    expect((await postCancel(session, appointmentId)).status).toBe(204);
+    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId } })).status).toBe(AppointmentStatus.CANCELLED);
+  });
+
+  it('still cancels while setup is incomplete (not ready)', async () => {
+    const provider = await createLiveProvider();
+    const { session, appointmentId } = await book(provider);
+    await prisma.availabilityRule.deleteMany({ where: { userId: provider.id } });
+    expect((await postCancel(session, appointmentId)).status).toBe(204);
+  });
 });
 
 describe('cancelling an appointment by any path cancels its pending reminder', () => {

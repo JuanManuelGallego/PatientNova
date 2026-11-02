@@ -17,12 +17,20 @@ export interface BookingSettings {
     bufferMinutes: number;
     minLeadMinutes: number;
     maxHorizonDays: number;
+    /** Portal reschedules allowed per appointment; 0 = patients cannot reschedule online. */
+    maxPatientReschedules: number;
+    /** No patient reschedule once the current start is this many hours away. */
+    minRescheduleNoticeHours: number;
     readiness: BookingReadiness;
     live: boolean;
 }
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
-    "bookingSlug" | "bookingEnabled" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays">>;
+    "bookingSlug" | "bookingEnabled" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
+    | "maxPatientReschedules" | "minRescheduleNoticeHours">>;
+
+export const MAX_PATIENT_RESCHEDULES = 10;
+export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
 
 export interface AvailabilityRule {
     weekday: number;

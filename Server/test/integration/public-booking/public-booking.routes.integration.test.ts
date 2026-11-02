@@ -92,23 +92,37 @@ async function appointment(p: Provider, from: string, to: string, extra: Record<
 const ALL = [ '09:00', '09:30', '10:00', '10:30', '11:00' ];
 
 describe('public provider resolution', () => {
-  it('answers unknown, malformed, disabled, not-ready, inactive and deleted providers with the same 404', async () => {
-    const disabled = await createLiveProvider();
-    await prisma.user.update({ where: { id: disabled.id }, data: { bookingEnabled: false } });
-    const notReady = await createLiveProvider();
-    await prisma.appointmentType.update({ where: { id: notReady.typeId }, data: { bookableOnline: false } });
+  it('answers unknown, malformed, inactive and deleted providers with the same 404', async () => {
     const inactive = await createLiveProvider();
     await prisma.user.update({ where: { id: inactive.id }, data: { status: AdminStatus.INACTIVE } });
     const deleted = await createLiveProvider();
     await prisma.user.update({ where: { id: deleted.id }, data: { deletedAt: new Date(), isDeleted: true } });
 
-    const slugs = [ 'no-such-provider', 'BAD SLUG!!', 'login', disabled.slug, notReady.slug, inactive.slug, deleted.slug ];
+    const slugs = [ 'no-such-provider', 'BAD SLUG!!', 'login', inactive.slug, deleted.slug ];
     for (const slug of slugs) {
       for (const path of [ '', '/slots?typeId=00000000-0000-4000-8000-000000000000&from=2030-01-07&to=2030-01-07', '/avatar' ]) {
         const res = await get(`/${encodeURIComponent(slug)}${path}`);
         expect(res.status, `${slug}${path}`).toBe(404);
         expect(res.body).toEqual({ success: false, error: 'Provider not found', requestId: expect.any(String), timestamp: expect.any(String) });
       }
+    }
+  });
+
+  it('shows a paused or not-ready provider with bookingOpen: false and nothing bookable; slots stay 404', async () => {
+    const paused = await createLiveProvider();
+    await prisma.user.update({ where: { id: paused.id }, data: { bookingEnabled: false } });
+    const notReady = await createLiveProvider();
+    await prisma.appointmentType.update({ where: { id: notReady.typeId }, data: { bookableOnline: false } });
+
+    for (const p of [ paused, notReady ]) {
+      const profile = await get(`/${p.slug}`);
+      expect(profile.status).toBe(200);
+      expect(profile.body.data).toMatchObject({ bookingOpen: false, types: [], locations: [] });
+      expect(JSON.stringify(profile.body)).not.toContain('Calle 1');
+      expect((await get(`/${p.slug}/avatar`)).body.error).toBe('Image not found');
+      const slots = await get(`/${p.slug}/slots?typeId=${p.typeId}&from=2030-01-07&to=2030-01-07`);
+      expect(slots.status).toBe(404);
+      expect(slots.body.error).toBe('Provider not found');
     }
   });
 
@@ -130,9 +144,10 @@ describe('GET /v1/public/providers/:slug', () => {
       hasAvatar: false,
       hasLogo: false,
       timezone: TZ,
+      bookingOpen: true,
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],
-      locations: [ { id: p.locationId, name: expect.any(String), address: 'Calle 1' } ],
+      locations: [ { id: p.locationId, name: expect.any(String), address: 'Calle 1', isVirtual: false } ],
     });
     const text = JSON.stringify(res.body);
     expect(text).not.toContain(p.id);
@@ -145,20 +160,29 @@ describe('GET /v1/public/providers/:slug', () => {
     expect((await get(`/${p.slug}`)).body.data.displayName).toBe('Test User');
   });
 
-  it('hides non-bookable, inactive, deleted and virtual types and locations', async () => {
+  it('lists a bookable virtual location without an address', async () => {
+    const p = await createLiveProvider();
+    const virtual = await createTestLocation(p.id, { isVirtual: true });
+    await prisma.appointmentLocation.update({ where: { id: virtual.id }, data: { bookableOnline: true, address: 'No debe verse' } });
+    const body = (await get(`/${p.slug}`)).body.data;
+    expect(body.locations).toContainEqual({ id: virtual.id, name: virtual.name, address: null, isVirtual: true });
+    expect(JSON.stringify(body)).not.toContain('No debe verse');
+  });
+
+  it('hides non-bookable, inactive and deleted types and locations', async () => {
     const p = await createLiveProvider();
     const hiddenTypes = await Promise.all([ {}, { isActive: false }, { isDeleted: true } ].map(async (data, i) => {
       const t = await createTestAppointmentType(p.id);
       return prisma.appointmentType.update({ where: { id: t.id }, data: { bookableOnline: i > 0, ...data } });
     }));
-    const hiddenLocations = await Promise.all([ {}, { isActive: false }, { isDeleted: true }, { isVirtual: true } ].map(async (data, i) => {
+    const hiddenLocations = await Promise.all([ {}, { isActive: false }, { isDeleted: true } ].map(async (data, i) => {
       const l = await createTestLocation(p.id);
       return prisma.appointmentLocation.update({ where: { id: l.id }, data: { bookableOnline: i > 0, ...data } });
     }));
     const body = (await get(`/${p.slug}`)).body.data;
     expect(body.types.map((t: { id: string }) => t.id)).toEqual([ p.typeId ]);
     expect(body.locations.map((l: { id: string }) => l.id)).toEqual([ p.locationId ]);
-    expect(hiddenTypes.length + hiddenLocations.length).toBe(7);
+    expect(hiddenTypes.length + hiddenLocations.length).toBe(6);
   });
 
   it('carries no cookies and no credentialed CORS', async () => {

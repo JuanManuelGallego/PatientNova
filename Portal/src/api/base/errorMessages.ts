@@ -28,7 +28,6 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /online booking cannot be enabled yet/i, "Completa la configuración antes de activar la reserva en línea." ],
     [ /availability cannot be empty while online booking is enabled/i, "Desactiva la reserva en línea antes de quitar toda la disponibilidad." ],
     [ /availability windows overlap/i, "Hay franjas de disponibilidad que se superponen el mismo día." ],
-    [ /virtual locations cannot be bookable online/i, "Las ubicaciones virtuales aún no pueden reservarse en línea." ],
     [ /invalid or expired code/i, "El código no es válido o ya expiró. Revísalo o solicita uno nuevo." ],
     [ /captcha verification failed/i, "No pudimos verificar que eres una persona. Inténtalo de nuevo." ],
     [ /captcha verification is temporarily unavailable/i, "La verificación de seguridad no está disponible en este momento. Inténtalo de nuevo en unos minutos." ],
@@ -41,6 +40,9 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^appointment not found$/i, "Esta cita ya no se puede modificar. Actualizamos la lista." ],
     [ /reschedule unavailable/i, "Esta cita ya no se puede reprogramar en línea. Comunícate con el consultorio." ],
     [ /new time must differ/i, "Elige un horario distinto al de tu cita actual." ],
+    // Public pages render this 404 as their own "no disponible" page; elsewhere (login, booking or rescheduling while the
+    // provider paused booking) it surfaces as this message.
+    [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],
 ];
 
 /** `statusMessages` replaces the status fallback (not a matched server message) where context differs. */

@@ -12,6 +12,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     price: 100,
     paid: false,
     meetingUrl: 'https://meet.google.com/final-room',
+    meetingStatus: 'READY',
     notes: null,
     status: 'SCHEDULED',
     confirmedAt: null,
@@ -22,6 +23,7 @@ function appointment(overrides: Record<string, unknown> = {}): AppointmentWithRe
     source: 'PROVIDER',
     cancelledBy: null,
     patientTimezone: null,
+    patientRescheduleCount: 0,
     patientId: 'patient-1',
     userId: 'user-1',
     locationId: 'location-1',
@@ -86,6 +88,17 @@ describe('renderAppointmentReminder', () => {
     expect(rendered?.body).toContain('Dirección: Calle 1');
     expect(rendered?.body).toContain('Instrucciones: Piso 2');
     expect(rendered?.body).not.toContain('final-room');
+  });
+
+  it('never leaves a placeholder when a virtual link is not set yet (portal booking)', () => {
+    const pending = { meetingUrl: null, meetingStatus: 'NEEDS_LINK' };
+    for (const channel of [ 'EMAIL', 'SMS' ]) {
+      const rendered = renderAppointmentReminder(appointment({ ...pending, reminder: { ...appointment().reminder, channel } }), 'Dra. Rivera', 'America/Bogota');
+      expect(rendered?.body).toContain('Enlace de la reunión: Te enviaremos el enlace por correo');
+      expect(rendered?.body).not.toMatch(/\{\{\d+\}\}/);
+    }
+    const whatsapp = renderAppointmentReminder(appointment(pending), 'Dra. Rivera', 'America/Bogota');
+    expect(whatsapp?.contentVariables['5']).toBe('Te enviaremos el enlace por correo');
   });
 
   it('renders an EMAIL with the "Asunto" line as subject, not body text', () => {

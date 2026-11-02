@@ -54,6 +54,8 @@ describe('booking settings routes (integration)', () => {
       bufferMinutes: 0,
       minLeadMinutes: 120,
       maxHorizonDays: 60,
+      maxPatientReschedules: 2,
+      minRescheduleNoticeHours: 0,
       readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
       live: false,
     });
@@ -93,6 +95,19 @@ describe('booking settings routes (integration)', () => {
     expect((await patchSettings({ maxHorizonDays: 2 })).statusCode).toBe(422);
   });
 
+  it('PATCH /settings stores the patient reschedule policy, range-checked and audited', async () => {
+    const res = await patchSettings({ maxPatientReschedules: 0, minRescheduleNoticeHours: 24 });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data).toMatchObject({ maxPatientReschedules: 0, minRescheduleNoticeHours: 24 });
+    expect((await patchSettings({ maxPatientReschedules: 11 })).statusCode).toBe(400);
+    expect((await patchSettings({ maxPatientReschedules: -1 })).statusCode).toBe(400);
+    expect((await patchSettings({ minRescheduleNoticeHours: 169 })).statusCode).toBe(400);
+    expect((await patchSettings({ minRescheduleNoticeHours: 1.5 })).statusCode).toBe(400);
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'maxPatientReschedules' } } });
+    expect(audit?.affectedFields).toEqual(expect.arrayContaining([ 'maxPatientReschedules', 'minRescheduleNoticeHours' ]));
+  });
+
   it('PATCH /settings refuses to enable until ready (422), then succeeds', async () => {
     const notReady = await patchSettings({ bookingEnabled: true });
     expect(notReady.statusCode).toBe(422);
@@ -126,16 +141,29 @@ describe('booking settings routes (integration)', () => {
     }
   });
 
-  it('virtual, inactive or deleted locations and types do not count as bookable', async () => {
+  it('inactive or deleted locations and types do not count as bookable', async () => {
     await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'listo' } });
     await prisma.availabilityRule.create({ data: { userId, ...MONDAY_MORNING } });
-    const virtual = await createTestLocation(userId, { isVirtual: true });
-    await prisma.appointmentLocation.update({ where: { id: virtual.id }, data: { bookableOnline: true } });
+    const inactive = await createTestLocation(userId);
+    await prisma.appointmentLocation.update({ where: { id: inactive.id }, data: { bookableOnline: true, isActive: false } });
     const type = await createTestAppointmentType(userId);
     await prisma.appointmentType.update({ where: { id: type.id }, data: { bookableOnline: true, isDeleted: true } });
 
     const res = await invokeRoute(bookingSettingsRouter, 'get', '/settings', reqFor(userId));
     expect((res.body as any).data.readiness).toEqual({ hasSlug: true, hasAvailability: true, hasBookableType: false, hasBookableLocation: false });
+  });
+
+  it('a bookable virtual location is enough to go live', async () => {
+    await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'solo-virtual' } });
+    await prisma.availabilityRule.create({ data: { userId, ...MONDAY_MORNING } });
+    const virtual = await createTestLocation(userId, { isVirtual: true });
+    await prisma.appointmentLocation.update({ where: { id: virtual.id }, data: { bookableOnline: true } });
+    const type = await createTestAppointmentType(userId);
+    await prisma.appointmentType.update({ where: { id: type.id }, data: { bookableOnline: true } });
+
+    const res = await patchSettings({ bookingEnabled: true });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data).toMatchObject({ live: true, readiness: { hasBookableLocation: true } });
   });
 
   it('clearing the slug disables booking', async () => {
@@ -224,23 +252,24 @@ describe('bookable toggles (integration)', () => {
     expect((await prisma.appointmentLocation.findUnique({ where: { id } }))!.bookableOnline).toBe(false);
   });
 
-  it('locations: virtual + bookable is rejected on create', async () => {
+  it('locations: a virtual location can be bookable online on create', async () => {
     const res = await invokeRoute(locationRouter, 'post', '/', reqFor(userId, {
       body: { name: unique('Virtual'), isVirtual: true, bookableOnline: true },
     }));
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBeLessThan(300);
+    expect((res.body as any).data).toMatchObject({ isVirtual: true, bookableOnline: true });
   });
 
-  it('locations: marking a virtual location bookable, or a bookable one virtual, is rejected', async () => {
+  it('locations: a virtual location can be marked bookable, and a bookable one made virtual', async () => {
     const virtual = await createTestLocation(userId, { isVirtual: true });
     const a = await invokeRoute(locationRouter, 'patch', `/${virtual.id}`, reqFor(userId, { params: { id: virtual.id }, body: { bookableOnline: true } }));
-    expect(a.statusCode).toBe(400);
+    expect(a.statusCode).toBe(200);
 
     const inPerson = await createTestLocation(userId);
     await prisma.appointmentLocation.update({ where: { id: inPerson.id }, data: { bookableOnline: true } });
     const b = await invokeRoute(locationRouter, 'patch', `/${inPerson.id}`, reqFor(userId, { params: { id: inPerson.id }, body: { isVirtual: true } }));
-    expect(b.statusCode).toBe(400);
-    expect((await prisma.appointmentLocation.findUnique({ where: { id: inPerson.id } }))!.isVirtual).toBe(false);
+    expect(b.statusCode).toBe(200);
+    expect(await prisma.appointmentLocation.findUnique({ where: { id: inPerson.id } })).toMatchObject({ isVirtual: true, bookableOnline: true });
   });
 
   it('appointment types: bookableOnline is stored on create and update', async () => {

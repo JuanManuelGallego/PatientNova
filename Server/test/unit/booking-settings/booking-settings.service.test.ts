@@ -49,6 +49,8 @@ const settings = {
   bufferMinutes: 0,
   minLeadMinutes: 120,
   maxHorizonDays: 60,
+  maxPatientReschedules: 2,
+  minRescheduleNoticeHours: 0,
 };
 const ready = { hasSlug: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
 
@@ -179,6 +181,39 @@ describe('bookingSettingsService.isBookingLive', () => {
     repo.getBookingState.mockResolvedValue({ ...state });
     portal.patientEnabled = false;
     await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
+  });
+});
+
+describe('bookingSettingsService.isPortalReachable', () => {
+  const state = { status: 'ACTIVE' as const, deletedAt: null as Date | null, bookingEnabled: true, bookingSlug: 'dra-maria' as string | null };
+
+  beforeEach(() => {
+    repo.getBookingState.mockResolvedValue({ ...state });
+  });
+
+  it('stays reachable while booking is paused or not ready, without reading readiness', async () => {
+    repo.getBookingState.mockResolvedValue({ ...state, bookingEnabled: false });
+    repo.getReadiness.mockResolvedValue({ ...ready, hasAvailability: false });
+    await expect(bookingSettingsService.isPortalReachable('user-1', { tx: true } as any)).resolves.toBe(true);
+    expect(repo.getBookingState).toHaveBeenCalledWith('user-1', { tx: true });
+    expect(repo.getReadiness).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [ 'inactive', { status: 'INACTIVE' } ],
+    [ 'deleted', { deletedAt: new Date() } ],
+    [ 'slug-less', { bookingSlug: null } ],
+  ])('is not reachable for a %s provider', async (_label, override) => {
+    repo.getBookingState.mockResolvedValue({ ...state, ...override } as any);
+    await expect(bookingSettingsService.isPortalReachable('user-1')).resolves.toBe(false);
+  });
+
+  it('is not reachable for an unknown provider or with ENABLE_PORTAL off', async () => {
+    repo.getBookingState.mockResolvedValue(null);
+    await expect(bookingSettingsService.isPortalReachable('nope')).resolves.toBe(false);
+    repo.getBookingState.mockResolvedValue({ ...state });
+    portal.patientEnabled = false;
+    await expect(bookingSettingsService.isPortalReachable('user-1')).resolves.toBe(false);
   });
 });
 

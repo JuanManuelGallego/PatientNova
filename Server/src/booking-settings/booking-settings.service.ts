@@ -52,6 +52,13 @@ function toResponse(settings: Settings, readiness: BookingReadiness) {
   };
 }
 
+async function reachableState(userId: string, tx?: TransactionClient) {
+  if (!config.portal.patientEnabled) return null;
+  const state = await bookingSettingsRepository.getBookingState(userId, tx);
+  if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || state.bookingSlug === null) return null;
+  return state;
+}
+
 function toRuleView(r: { weekday: number; startMinute: number; endMinute: number }) {
   return { weekday: r.weekday, startMinute: r.startMinute, endMinute: r.endMinute };
 }
@@ -112,10 +119,18 @@ export const bookingSettingsService = {
     return result;
   },
 
+  /**
+   * Patients can reach the provider's portal (log in, see and cancel their appointments): the portal is on and the
+   * provider is active, not deleted and has a booking link. Booking itself may be paused or not ready.
+   */
+  async isPortalReachable(userId: string, tx?: TransactionClient): Promise<boolean> {
+    return (await reachableState(userId, tx)) !== null;
+  },
+
+  /** Patients can choose a slot (slots, booking, reschedule): reachable, booking enabled and ready. */
   async isBookingLive(userId: string, tx?: TransactionClient): Promise<boolean> {
-    if (!config.portal.patientEnabled) return false;
-    const state = await bookingSettingsRepository.getBookingState(userId, tx);
-    if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || !state.bookingEnabled) return false;
+    const state = await reachableState(userId, tx);
+    if (!state || !state.bookingEnabled) return false;
     return isReady(await bookingSettingsRepository.getReadiness(userId, state.bookingSlug, tx));
   },
 

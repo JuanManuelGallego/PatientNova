@@ -13,6 +13,8 @@ export const bookingSettingsSelect = {
   bufferMinutes: true,
   minLeadMinutes: true,
   maxHorizonDays: true,
+  maxPatientReschedules: true,
+  minRescheduleNoticeHours: true,
 } as const;
 
 export interface BookingReadiness {
@@ -32,7 +34,10 @@ export const bookingSettingsRepository = {
   async updateSettings(userId: string, dto: UpdateBookingSettingsDto, tx?: TransactionClient) {
     const data = buildUpdateData(
       dto,
-      [ 'bookingSlug', 'bookingEnabled', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays' ],
+      [
+        'bookingSlug', 'bookingEnabled', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
+        'maxPatientReschedules', 'minRescheduleNoticeHours',
+      ],
     );
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });
   },
@@ -63,7 +68,7 @@ export const bookingSettingsRepository = {
     const [ rules, types, locations ] = await Promise.all([
       client.availabilityRule.count({ where: { userId } }),
       client.appointmentType.count({ where: { userId, bookableOnline: true, isActive: true, isDeleted: false } }),
-      client.appointmentLocation.count({ where: { userId, bookableOnline: true, isVirtual: false, isActive: true, isDeleted: false } }),
+      client.appointmentLocation.count({ where: { userId, bookableOnline: true, isActive: true, isDeleted: false } }),
     ]);
     return {
       hasSlug: slug !== null,

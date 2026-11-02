@@ -63,7 +63,7 @@ export function LocationModal({
         color: form.color,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
-        ...((portalEnabled || form.isVirtual) && { bookableOnline: !form.isVirtual && form.bookableOnline }),
+        ...(portalEnabled && { bookableOnline: form.bookableOnline }),
       };
       if (isEdit) {
         await updateLocation(location!.id, data);
@@ -165,7 +165,6 @@ export function LocationModal({
                     ...f,
                     isVirtual: e.target.checked,
                     address: e.target.checked ? "" : f.address,
-                    bookableOnline: e.target.checked ? false : f.bookableOnline,
                   }))
                 }
                 style={{ width: 15, height: 15 }}
@@ -217,9 +216,8 @@ export function LocationModal({
             <BookableOnlineCheckbox
               checked={form.bookableOnline}
               onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
-              disabled={form.isVirtual}
               hint={form.isVirtual
-                ? "Las ubicaciones virtuales estarán disponibles más adelante."
+                ? "Los pacientes podrán reservar videollamadas. Si tu cuenta de Google está conectada, crearemos el enlace de Meet; si no, deberás agregarlo tú en la cita."
                 : "Los pacientes podrán elegir esta ubicación al reservar desde tu enlace."}
               testId="location-bookable-online-checkbox"
             />

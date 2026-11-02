@@ -1,4 +1,4 @@
-import { AppointmentStatus, Channel, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, Channel, MeetingStatus, RecordSource, ReminderMode, ReminderStatus, type AppointmentLocation, type AppointmentType, type Patient, type Reminder } from '../../generated/prisma/client.ts';
 import { fromPrisma } from 'pg-boss';
 import { appointmentRepository, type CreateAppointmentOptions, type UpdateAppointmentOptions } from './appointment.repository.js';
 import { ACTIVE_STATUSES } from './appointment-status.js';
@@ -26,6 +26,7 @@ import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { config } from '../utils/config/config.ts';
 import { renderAppointmentReminder } from './appointment-reminder.renderer.ts';
+import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from '../portal/portal-booking-notifications.js';
 
 const REMINDER_QUEUE = 'send-reminder';
 
@@ -374,12 +375,14 @@ export async function createWithin(
   await checkConflict(tx, userId, dto.startAt, dto.endAt);
   await checkBlockedTimeConflict(tx, userId, dto.startAt, dto.endAt);
 
-  const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+  const meeting = appointmentMeetingService.resolveMeeting({
     location,
     existingUrl: null,
     desiredUrl: dto.meetingUrl,
+    ...(opts.meetingPending && { pending: opts.meetingPending }),
     appointmentId: 'new',
   });
+  const meetingUrl = meeting.meetingUrl;
 
     let createdReminder: Reminder | null = null;
 
@@ -402,7 +405,7 @@ export async function createWithin(
       { ...dto, meetingUrl: meetingUrl ?? null, reminderId: reminderId ?? undefined },
       userId,
       tx,
-      opts,
+      { ...opts, meetingStatus: meeting.meetingStatus },
     );
 
     await logAudit({
@@ -423,6 +426,7 @@ export async function createWithin(
         notes: created.notes ?? null,
         reminderId: reminderId ?? null,
         meetingUrl: meetingUrl ?? null,
+        meetingStatus: created.meetingStatus,
         status: created.status ?? AppointmentStatus.SCHEDULED
       },
       tx,
@@ -500,13 +504,16 @@ export async function updateWithin(
     : null;
   const reminderContext = await getReminderContext(tx, userId);
   const effectiveLocation = location ?? existing.appointmentLocation;
-  const meetingUrl = appointmentMeetingService.resolveMeetingUrl({
+  const meeting = appointmentMeetingService.resolveMeeting({
     location: effectiveLocation,
     previousLocation: existing.appointmentLocation,
     existingUrl: existing.meetingUrl,
+    existingStatus: existing.meetingStatus,
     desiredUrl: dto.meetingUrl,
     appointmentId: id,
   });
+  const meetingUrl = meeting.meetingUrl;
+  const meetingStatusChanged = meeting.meetingStatus !== existing.meetingStatus;
 
   const hasReminderChange = dto.reminder !== undefined || dto.reminderId !== undefined;
   let effectiveReminderId: string | null | undefined;
@@ -536,9 +543,13 @@ export async function updateWithin(
     ...dto,
     ...(effectiveReminderId !== undefined && { reminderId: effectiveReminderId }),
     ...(meetingUrl !== existing.meetingUrl && meetingUrl !== undefined && { meetingUrl }),
-  }, userId, tx, opts);
+  }, userId, tx, {
+    ...(opts.patientTimezone && { patientTimezone: opts.patientTimezone }),
+    ...(meetingStatusChanged && { meetingStatus: meeting.meetingStatus }),
+  });
 
-  const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, Object.keys(dto));
+  const diffFields = [ ...Object.keys(dto), ...(meetingStatusChanged ? [ 'meetingStatus' ] : []) ];
+  const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, diffFields);
   await logAudit({
     entityType: EntityType.APPOINTMENT,
     entityId: id,
@@ -574,8 +585,36 @@ export async function updateWithin(
   const cancelledReminderId = statusChanged && newStatus === AppointmentStatus.CANCELLED
     ? await cancelLinkedReminder(tx, id, userId)
     : null;
+  await onMeetingLinkSet(tx, existing, updated, opts.afterCommit);
   const rendered = await renderLinkedReminder(updated, reminderContext, tx);
   return withCancelledReminder(rendered, cancelledReminderId);
+}
+
+type MeetingState = Pick<AppointmentWithRelations, 'meetingUrl' | 'meetingStatus'>;
+
+/**
+ * A portal appointment just got its video-call link (or a new one): the patient hears about it. From `PENDING` the
+ * held booking confirmation goes out (now with the link); from `NEEDS_LINK` or `READY` a separate link email. Enqueued
+ * on `tx` (dropped on rollback); without the scheduler it is sent after commit through `afterCommit`.
+ */
+async function onMeetingLinkSet(
+  tx: TransactionClient,
+  before: MeetingState,
+  after: AppointmentWithRelations,
+  afterCommit?: (() => Promise<void>)[],
+): Promise<void> {
+  const linkSet = after.source === RecordSource.PORTAL
+    && after.meetingStatus === MeetingStatus.READY
+    && !!after.meetingUrl
+    && after.meetingUrl !== before.meetingUrl
+    && before.meetingStatus !== MeetingStatus.NOT_REQUIRED
+    && ACTIVE_STATUSES.has(after.status)
+    && !after.isDeleted
+    && after.startAt.getTime() > Date.now();
+  if (!linkSet) return;
+  const event: PortalEvent = before.meetingStatus === MeetingStatus.PENDING ? 'meeting-ready' : 'meeting-link';
+  await enqueuePortalNotifications(event, after.id, tx);
+  afterCommit?.push(() => deliverPortalNotificationsNow(event, after.id));
 }
 
 export const appointmentService = {
@@ -604,7 +643,13 @@ export const appointmentService = {
   },
 
   async update(id: string, dto: UpdateAppointmentDto, userId: string): Promise<AppointmentWithRelations> {
-    return prisma.$transaction((tx: TransactionClient) => updateWithin(tx, id, dto, userId), { timeout: 10000 });
+    const afterCommit: (() => Promise<void>)[] = [];
+    const updated = await prisma.$transaction(
+      (tx: TransactionClient) => updateWithin(tx, id, dto, userId, { afterCommit }),
+      { timeout: 10000 },
+    );
+    for (const run of afterCommit) await run();
+    return updated;
   },
 
   async setStatus(id: string, userId: string, status: AppointmentStatus): Promise<AppointmentWithRelations> {

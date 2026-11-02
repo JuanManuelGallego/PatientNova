@@ -168,13 +168,16 @@ vi.mock("@/src/components/Modals/AppointmentModal/LocationAndTimeStep", () => ({
     reminderChannel,
     locations,
     setForm,
+    linkMayWait,
   }: {
     selectedPatient?: Patient;
     reminderChannel?: string;
     locations: { id: string; name: string }[];
     setForm: React.Dispatch<React.SetStateAction<AppointmentForm>>;
+    linkMayWait?: boolean;
   }) => (
     <div data-testid="step-location">
+      <span data-testid="link-may-wait">{String(!!linkMayWait)}</span>
       <span data-testid="selected-patient-loc">
         {selectedPatient?.name ?? "none"}
       </span>
@@ -369,6 +372,31 @@ describe("AppointmentModal", () => {
       expect(screen.getByTestId("step-location")).toBeInTheDocument();
       expect(screen.queryByTestId("step-patient")).not.toBeInTheDocument();
       expect(screen.queryByTestId("step-payment")).not.toBeInTheDocument();
+    });
+
+    it("lets an online booking still waiting for its video-call link be saved without one", async () => {
+      const user = userEvent.setup();
+      const virtual = { id: "loc-2", name: "Virtual", isVirtual: true };
+      const { unmount } = render(
+        <AppointmentModal
+          appt={makeAppt({ locationId: "loc-2", appointmentLocation: virtual, meetingUrl: null, meetingStatus: "NEEDS_LINK" })}
+          onClose={mockOnClose}
+          onSaved={mockOnSaved}
+        />,
+      );
+      await user.click(screen.getByText("Continuar →"));
+      expect(screen.getByTestId("link-may-wait")).toHaveTextContent("true");
+      unmount();
+
+      render(
+        <AppointmentModal
+          appt={makeAppt({ locationId: "loc-2", appointmentLocation: virtual, meetingUrl: "https://meet.test/x", meetingStatus: "READY" })}
+          onClose={mockOnClose}
+          onSaved={mockOnSaved}
+        />,
+      );
+      await user.click(screen.getByText("Continuar →"));
+      expect(screen.getByTestId("link-may-wait")).toHaveTextContent("false");
     });
 
     it("uses the patient's reminderChannel, not the user's", async () => {

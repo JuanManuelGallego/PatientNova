@@ -14,6 +14,8 @@ export interface Appointment {
   paid: boolean;
 
   meetingUrl?: string | null;
+  /** Video-call link state. PENDING/NEEDS_LINK only on portal bookings at a virtual location. */
+  meetingStatus?: MeetingStatus;
   notes?: string | null;
 
   status: AppointmentStatus;
@@ -34,6 +36,14 @@ export interface Appointment {
   appointmentLocation: AppointmentLocation;
   appointmentType: AppointmentType;
 }
+
+export type MeetingStatus = "NOT_REQUIRED" | "PENDING" | "NEEDS_LINK" | "READY";
+
+/** A virtual appointment that may still go without a link (the provider adds it later). */
+export const isWaitingForLink = (status: MeetingStatus | undefined): boolean => status === "PENDING" || status === "NEEDS_LINK";
+
+/** Reminder text for a video call whose link is not set yet; matches the server renderer. */
+export const MEETING_LINK_PENDING_TEXT = "Te enviaremos el enlace por correo";
 
 export interface AppointmentForm {
   startAt: string;

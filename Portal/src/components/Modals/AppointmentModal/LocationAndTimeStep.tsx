@@ -37,6 +37,8 @@ interface Props {
   selectedPatient: Patient | undefined;
   reminderChannel: Channel | undefined;
   locations: AppointmentLocation[];
+  /** A portal booking still waiting for its link: the URL may stay empty for now. */
+  linkMayWait?: boolean;
 }
 
 export function LocationAndTimeStep({
@@ -46,6 +48,7 @@ export function LocationAndTimeStep({
   selectedPatient,
   reminderChannel,
   locations,
+  linkMayWait = false,
 }: Props) {
   const timezone = useDisplayTimezone();
   const setField = (field: keyof AppointmentForm) => (value: string) =>
@@ -159,7 +162,7 @@ export function LocationAndTimeStep({
         <div className="form-field-group">
           <div className="form-label">
             <label htmlFor="appointment-meeting-url">
-              <RequiredField label="URL de videollamada" />
+              {linkMayWait ? "URL de videollamada" : <RequiredField label="URL de videollamada" />}
             </label>
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
               <input
@@ -188,6 +191,11 @@ export function LocationAndTimeStep({
                 {isGoogleBusy ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <ACTION_ICONS.link size={16} />}
               </button>
             </div>
+            {linkMayWait && !form.meetingUrl && (
+              <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="meeting-link-may-wait-hint">
+                Esta cita en línea aún no tiene enlace. Agrégalo cuando lo tengas: le enviaremos un correo al paciente.
+              </p>
+            )}
             {meetingUrlInvalid && (
               <div id="appointment-meeting-url-error" role="alert" className="error-inline" style={{ marginTop: 4 }}>
                 Ingresa una URL completa que comience con http:// o https://.

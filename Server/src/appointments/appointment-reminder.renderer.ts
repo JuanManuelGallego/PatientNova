@@ -41,6 +41,9 @@ Le recordamos cordialmente que el pago de la consulta debe estar gestionado y co
 
 Quedamos a su disposición para cualquier duda. ¡Feliz día!`;
 
+/** A virtual appointment whose link is not set yet (portal booking): the reminder never shows a placeholder. */
+export const MEETING_LINK_PENDING_TEXT = 'Te enviaremos el enlace por correo';
+
 export function formatDate(at: Date, timeZone: string, weekday = false): string {
   return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
     ...(weekday && { weekday: 'long' }), day: 'numeric', month: 'long', year: 'numeric', timeZone,
@@ -68,7 +71,7 @@ export function renderAppointmentReminder(
     '3': date,
     '4': time,
     '5': isVirtual
-      ? appointment.meetingUrl!
+      ? appointment.meetingUrl || MEETING_LINK_PENDING_TEXT
       : appointment.appointmentLocation?.address || 'No hay dirección registrada',
     ...(!isVirtual && {
       '6': appointment.appointmentLocation?.instructions || 'No hay instrucciones registradas',
