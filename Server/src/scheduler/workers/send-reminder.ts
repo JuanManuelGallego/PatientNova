@@ -1,9 +1,9 @@
-import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
+import { Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { validateReminder } from '../validation.js';
 import { dispatchMessage } from '../dispatch.js';
 import { resolveTwilioError } from '../../twilio/twilio-errors.js';
-import { REMINDER_SEND_RETRY_LIMIT } from '../../utils/config/constants.js';
+import { ONE_MINUTE_MS, REMINDER_SEND_RETRY_LIMIT } from '../../utils/config/constants.js';
 import { logger } from '../../utils/api/logger.js';
 import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
@@ -11,6 +11,7 @@ import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/
 import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
+const STALE_JOB_TOLERANCE_MS = ONE_MINUTE_MS;
 
 export async function sendReminderWorker([ job ]: Array<{
   data: { reminderId: string };
@@ -28,6 +29,12 @@ export async function sendReminderWorker([ job ]: Array<{
 
   if (reminder.status !== ReminderStatus.PENDING || reminder.isDeleted) {
     logger.debug({ reminderId, status: reminder.status }, 'Reminder no longer pending — skipping');
+    return;
+  }
+
+  // A job queued for an earlier sendAt; the reschedule enqueued a new one.
+  if (reminder.sendMode === ReminderMode.SCHEDULED && reminder.sendAt.getTime() - Date.now() > STALE_JOB_TOLERANCE_MS) {
+    logger.info({ reminderId }, 'Reminder rescheduled to a later time — skipping stale job');
     return;
   }
 

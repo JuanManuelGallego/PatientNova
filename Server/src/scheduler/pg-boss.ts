@@ -8,6 +8,8 @@ import { dailyReminderWorker } from './workers/daily-reminder.js';
 import { completeAppointmentsWorker } from './workers/complete-appointments.js';
 import { bulkSendWorker } from './workers/bulk-send-message.js';
 import { purgePortalOtpsWorker } from './workers/purge-portal-otps.js';
+import { portalBookingNotifyWorker } from './workers/portal-booking-notify.js';
+import { PORTAL_BOOKING_NOTIFY_QUEUE } from '../portal/portal-booking-notifications.js';
 
 let boss: PgBoss | null = null;
 
@@ -60,6 +62,12 @@ export async function initializePgBoss(): Promise<void> {
   await boss.createQueue('daily-reminder', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('complete-appointments', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('purge-portal-otps', { retryLimit: 2, retryDelay: 300 });
+  await boss.createQueue(PORTAL_BOOKING_NOTIFY_QUEUE, {
+    retryLimit: REMINDER_SEND_RETRY_LIMIT,
+    retryDelay: 60,
+    retryBackoff: true,
+    retryDelayMax: 900,
+  });
 
   boss.work('send-reminder', sendReminderWorker);
   boss.work('bulk-send-message', { batchSize: BULK_SEND_CONCURRENCY, concurrency: BULK_SEND_CONCURRENCY }, bulkSendWorker);
@@ -67,6 +75,7 @@ export async function initializePgBoss(): Promise<void> {
   boss.work('daily-reminder', dailyReminderWorker);
   boss.work('complete-appointments', completeAppointmentsWorker);
   boss.work('purge-portal-otps', purgePortalOtpsWorker);
+  boss.work(PORTAL_BOOKING_NOTIFY_QUEUE, portalBookingNotifyWorker);
 
   await boss.schedule('track-delivery', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });

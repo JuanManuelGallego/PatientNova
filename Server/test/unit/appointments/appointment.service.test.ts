@@ -401,10 +401,11 @@ describe('appointmentService.update', () => {
     const apptWithReminder = {
       ...existingAppt,
       reminderId: 'reminder-1',
-      reminder: { id: 'reminder-1', status: 'PENDING', contentVariables: { '1': 'old' } },
+      reminder: { id: 'reminder-1', status: 'PENDING', sendMode: 'IMMEDIATE', sendAt: new Date('2026-11-01T12:00:00Z'), contentVariables: { '1': 'old' } },
     };
     const tx = mockTx(apptWithReminder);
     tx.appointment.update.mockResolvedValue(apptWithReminder);
+    tx.reminder.update.mockResolvedValue({ ...apptWithReminder.reminder, channel: 'SMS', to: '+15559876543' });
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
 
     await appointmentService.update('appt-1', {

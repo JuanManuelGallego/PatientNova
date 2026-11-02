@@ -1,9 +1,17 @@
-import { AppointmentStatus, BookingApprovalMode, Channel, PatientStatus, RecordSource } from '../../generated/prisma/enums.js';
+import {
+  AppointmentStatus,
+  BookingApprovalMode,
+  Channel,
+  PatientStatus,
+  RecordSource,
+  ReminderMode,
+  ReminderStatus,
+} from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
-import { ONE_MINUTE_MS } from '../utils/config/constants.js';
+import { ONE_DAY_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
@@ -25,10 +33,12 @@ import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
 import { portalAppointmentSelect, portalBookingRepository } from './portal-booking.repository.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
+import { deliverBookingNotificationsNow, enqueueBookingNotifications } from './portal-booking-notifications.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
+export const PORTAL_REMINDER_LEAD_MS = ONE_DAY_MS;
 
 export interface PortalAppointmentDto {
   id: string;
@@ -128,7 +138,8 @@ export const portalBookingService = {
         }
         await ensureCurrentConsent(tx, { patientId, userId }, PRIVACY_POLICY_VERSION, meta);
 
-        return createWithin(tx, {
+        const reminderAt = new Date(start.getTime() - PORTAL_REMINDER_LEAD_MS);
+        const appointment = await createWithin(tx, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),
           price: type.defaultPrice ?? 0,
@@ -137,8 +148,20 @@ export const portalBookingService = {
           patientId,
           locationId: location.id,
           typeId: type.id,
+          ...(reminderAt > now && {
+            reminder: {
+              channel: Channel.EMAIL,
+              to: session.email,
+              sendMode: ReminderMode.SCHEDULED,
+              sendAt: reminderAt.toISOString(),
+              status: ReminderStatus.PENDING,
+            },
+          }),
         }, userId, { source: RecordSource.PORTAL, patientTimezone: body.patientTimezone });
+        await enqueueBookingNotifications(appointment.id, tx);
+        return appointment;
       }, { timeout: 10000 }));
+      await deliverBookingNotificationsNow(created.id);
       return toPortalAppointmentDto(created);
     } catch (err) {
       throw toPortalError(err);

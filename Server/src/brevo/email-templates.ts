@@ -26,9 +26,11 @@ export function renderOtpEmail(params: { code: string; providerName: string; ttl
 
 export function renderBookingConfirmationEmail(params: {
   providerName: string;
-  /** Already formatted in the provider's timezone, e.g. "martes 20 de octubre de 2026, 10:30". */
+  /** Already formatted in `timezone` (the patient's), e.g. "martes, 20 de octubre de 2026, 10:30". */
   whenLocal: string;
+  timezone: string;
   locationName?: string | null;
+  address?: string | null;
   appointmentsUrl: string;
 }): RenderedEmail {
   return {
@@ -38,10 +40,11 @@ export function renderBookingConfirmationEmail(params: {
       '',
       `Tu cita con ${params.providerName} quedó confirmada.`,
       '',
-      `Fecha y hora: ${params.whenLocal}`,
+      `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
       ...(params.locationName ? [ `Lugar: ${params.locationName}` ] : []),
+      ...(params.address ? [ `Dirección: ${params.address}` ] : []),
       '',
-      'Puedes ver, cancelar o reprogramar tu cita aquí (te pediremos verificar tu correo):',
+      'Puedes ver tus citas aquí (te pediremos verificar tu correo):',
       params.appointmentsUrl,
     ].join('\n'),
   };

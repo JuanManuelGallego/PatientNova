@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 in progress (4.1 booking transaction built; 4.2 notifications and 4.3 Portal next). **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 in progress (4.1 booking transaction #78; 4.2 notifications built; 4.3 Portal next). **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -457,7 +457,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - A portal booking is created `CONFIRMED` (with `confirmedAt`): the patient chose the slot.
 - One linked EMAIL reminder 24h before the start, skipped when the booking is made less than 24h ahead.
 - The provider notice goes on `User.reminderChannel` (honoring `reminderActive`); WhatsApp uses a new **required**
-  `TWILIO_PORTAL_BOOKING_SID`, so the template must be approved before deploy.
+  `TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID`, so the template must be approved before deploy.
 - A patient holds at most 3 upcoming portal-sourced appointments.
 - Patient pages show times in the device zone (as `/book` does); `Appointment.patientTimezone` is used for emails and
   reminders only. This replaces the 4.2 wording "the patient's appointments page uses `patientTimezone`".
@@ -484,7 +484,7 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 - Tests: `portal-booking.integration.test.ts` (shared `portal-helpers.ts`), schema unit test. Bruno: `Portal Booking`
   folder; Get Slots stores `slotStartUtc`.
 
-**PR 4.2 — Server: confirmation, reminder, provider notice.**
+**PR 4.2 — Server: confirmation, reminder, provider notice.** Built (2026-11-01). The confirmation now says "Puedes ver tus citas" (cancel/reschedule wording returns with Phase 5). Also fixed: an appointment update that moves a linked reminder now enqueues a new job, and `send-reminder` skips the stale one.
 - `createWithin` (and the update path) enqueue SCHEDULED linked reminders with `{ startAfter, db: fromPrisma(tx) }`; the
   reconcile stays as a safety net. `renderLinkedReminder` uses `patientTimezone ?? User.timezone`.
 - `book` adds the 24h EMAIL reminder.
