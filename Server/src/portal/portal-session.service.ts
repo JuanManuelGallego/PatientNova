@@ -5,7 +5,7 @@ import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { ensureCurrentConsent, hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
-import { resolvePortalPatient } from './patient-resolution.js';
+import { resolvePortalPatient, type PortalPatientResolution } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
@@ -17,14 +17,18 @@ export interface PortalSessionView {
   consentRequired: boolean;
 }
 
+export async function isConsentRequired(resolution: PortalPatientResolution): Promise<boolean> {
+  return resolution.kind !== 'patient'
+    || !(await hasCurrentConsent(resolution.patientId, PRIVACY_POLICY_VERSION));
+}
+
 export const portalSessionService = {
   async getSession(session: PortalSessionContext): Promise<PortalSessionView> {
     const [ state, resolution ] = await Promise.all([
       bookingSettingsRepository.getBookingState(session.userId),
       resolvePortalPatient(session),
     ]);
-    const consentRequired = resolution.kind !== 'patient'
-      || !(await hasCurrentConsent(resolution.patientId, PRIVACY_POLICY_VERSION));
+    const consentRequired = await isConsentRequired(resolution);
     return {
       email: session.email,
       expiresAt: session.expiresAt.toISOString(),

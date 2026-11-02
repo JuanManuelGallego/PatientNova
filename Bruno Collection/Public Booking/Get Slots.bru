@@ -22,3 +22,9 @@ script:pre-request {
   bru.setVar("from", day(0));
   bru.setVar("to", day(6));
 }
+
+script:post-response {
+  // The first free slot, used by Portal Booking > Create Booking.
+  const first = res.body?.data?.slots?.[0]?.startUtc;
+  if (first) bru.setVar("slotStartUtc", first);
+}

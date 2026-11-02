@@ -1,10 +1,11 @@
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
 import type { Interval } from './slot-engine.js';
 
 const MINUTE_MS = 60_000;
 
 const bookable = { bookableOnline: true, isActive: true, isDeleted: false } as const;
+const bookableLocation = { ...bookable, isVirtual: false } as const;
 
 export type ProviderImageKind = 'avatar' | 'logo';
 
@@ -44,25 +45,39 @@ export const publicBookingRepository = {
     });
   },
 
-  async findBookableType(userId: string, typeId: string) {
-    return prisma.appointmentType.findFirst({
+  async findBookableType(userId: string, typeId: string, tx?: TransactionClient) {
+    return (tx ?? prisma).appointmentType.findFirst({
       where: { id: typeId, userId, ...bookable },
-      select: { id: true, defaultDuration: true },
+      select: { id: true, defaultDuration: true, defaultPrice: true },
     });
   },
 
   async listBookableLocations(userId: string) {
     return prisma.appointmentLocation.findMany({
-      where: { userId, ...bookable, isVirtual: false },
+      where: { userId, ...bookableLocation },
       select: { id: true, name: true, address: true },
       orderBy: { name: 'asc' },
     });
   },
 
-  async loadBusy(userId: string, start: Date, end: Date, bufferMinutes: number): Promise<{ appointments: Interval[]; blocked: Interval[] }> {
+  async findBookableLocation(userId: string, locationId: string, tx?: TransactionClient) {
+    return (tx ?? prisma).appointmentLocation.findFirst({
+      where: { id: locationId, userId, ...bookableLocation },
+      select: { id: true },
+    });
+  },
+
+  async loadBusy(
+    userId: string,
+    start: Date,
+    end: Date,
+    bufferMinutes: number,
+    tx?: TransactionClient,
+  ): Promise<{ appointments: Interval[]; blocked: Interval[] }> {
+    const client = tx ?? prisma;
     const bufferMs = bufferMinutes * MINUTE_MS;
     const [ appointments, blocked ] = await Promise.all([
-      prisma.appointment.findMany({
+      client.appointment.findMany({
         where: {
           userId,
           isDeleted: false,
@@ -72,7 +87,7 @@ export const publicBookingRepository = {
         },
         select: { startAt: true, endAt: true },
       }),
-      prisma.blockedTime.findMany({
+      client.blockedTime.findMany({
         where: { userId, isDeleted: false, startTimeUtc: { lt: end }, endTimeUtc: { gt: start } },
         select: { startTimeUtc: true, endTimeUtc: true },
       }),

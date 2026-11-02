@@ -159,6 +159,7 @@ model Appointment {
 
   source      RecordSource @default(PROVIDER)
   cancelledBy CancelledBy?
+  patientTimezone String? @db.VarChar(50)
 
   patientId  String  @db.Uuid
   userId     String

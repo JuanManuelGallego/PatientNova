@@ -1,6 +1,4 @@
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
+import type express from 'express';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,10 +10,6 @@ vi.mock('../../../src/portal/privacy-policy.js', () => ({
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
-import { requestId } from '../../../src/middlewares/request-id.js';
-import { errorHandler } from '../../../src/middlewares/error-handler.js';
-import { authenticate } from '../../../src/middlewares/authenticate.js';
-import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from '../../../src/portal/portal-routers.js';
 import {
   PORTAL_AUDIENCE,
   TOKEN_ISSUER,
@@ -24,24 +18,12 @@ import {
   signPortalToken,
 } from '../../../src/auth/tokens.js';
 import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
-import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 import { ActionSource, EntityType, PatientStatus } from '../../../generated/prisma/enums.js';
-import { createTestAppointmentType, createTestLocation, createTestPatient, createTestUser, unique } from '../helpers.js';
+import { createTestPatient, unique } from '../helpers.js';
+import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider, sessionFor, type TestSession } from './portal-helpers.js';
 
-const ALLOWED = 'http://localhost:3000';
+const ALLOWED = ALLOWED_ORIGIN;
 const DEFAULT_POLICY = '2026-10-19';
-
-function buildApp() {
-  const a = express();
-  a.set('trust proxy', 1);
-  a.use(requestId);
-  a.use(helmet());
-  a.use('/v1/public', createPublicApiRouter(), portalNotFound);
-  a.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
-  a.get('/v1/users/me', cookieParser(), authenticate, (_req, res) => { res.json({ ok: true }); });
-  a.use(errorHandler);
-  return a;
-}
 
 let app: express.Express;
 const portal = config.portal as { patientEnabled: boolean };
@@ -49,30 +31,9 @@ const portalWas = portal.patientEnabled;
 beforeAll(() => { portal.patientEnabled = true; });
 afterAll(() => { portal.patientEnabled = portalWas; });
 beforeEach(() => {
-  app = buildApp();
+  app = buildPortalApp();
   policy.version = DEFAULT_POLICY;
 });
-
-let seq = 0;
-async function createLiveProvider(): Promise<{ id: string; slug: string }> {
-  const user = await createTestUser();
-  const slug = `dra-session-${Date.now()}-${++seq}`.slice(0, 40);
-  await prisma.user.update({ where: { id: user.id }, data: { bookingSlug: slug, bookingEnabled: true } });
-  await prisma.availabilityRule.create({ data: { userId: user.id, weekday: 1, startMinute: 540, endMinute: 720 } });
-  const type = await createTestAppointmentType(user.id);
-  await prisma.appointmentType.update({ where: { id: type.id }, data: { bookableOnline: true } });
-  const location = await createTestLocation(user.id);
-  await prisma.appointmentLocation.update({ where: { id: location.id }, data: { bookableOnline: true } });
-  return { id: user.id, slug };
-}
-
-interface TestSession { cookie: string; csrf: string; email: string; sid: string }
-
-function sessionFor(userId: string, email: string): TestSession {
-  const sid = `sid-${++seq}`;
-  const token = signPortalToken({ userId, email, sid });
-  return { cookie: `${PORTAL_COOKIE_NAME}=${token}`, csrf: createCsrfToken(sid, portalSecret()), email, sid };
-}
 
 const getSession = (s: Pick<TestSession, 'cookie'>) =>
   request(app).get('/v1/portal/session').set('Cookie', s.cookie);

@@ -1,4 +1,4 @@
-import { AppointmentStatus, CancelledBy, Prisma, type Appointment } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy, Prisma, type Appointment, type RecordSource } from '../../generated/prisma/client.ts';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import {
   type CreateAppointmentDto,
@@ -17,8 +17,18 @@ import { MATCH_NOTHING, patientSearchWhere } from '../utils/encryption/pii-searc
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>[ 0 ];
 
+export interface CreateAppointmentOptions {
+  source?: RecordSource;
+  patientTimezone?: string;
+}
+
 export const appointmentRepository = {
-  async create(dto: CreateAppointmentDto, userId: string, tx?: TransactionClient): Promise<AppointmentWithRelations> {
+  async create(
+    dto: CreateAppointmentDto,
+    userId: string,
+    tx?: TransactionClient,
+    opts: CreateAppointmentOptions = {},
+  ): Promise<AppointmentWithRelations> {
     const client = tx ?? prisma;
     return client.appointment.create({
       data: {
@@ -31,6 +41,9 @@ export const appointmentRepository = {
         notes: dto.notes || null,
         typeId: dto.typeId,
         status: dto.status,
+        ...(dto.status === AppointmentStatus.CONFIRMED && { confirmedAt: new Date() }),
+        ...(opts.source && { source: opts.source }),
+        patientTimezone: opts.patientTimezone ?? null,
         patientId: dto.patientId,
         userId,
         ...(dto.reminderId && { reminder: { connect: { id: dto.reminderId } } }),

@@ -1,4 +1,4 @@
-import { MAX_PATIENTS_PER_PROVIDER, patientRepository } from './patient.repository.js';
+import { MAX_PATIENTS_PER_PROVIDER, patientRepository, type CreatePatientOptions } from './patient.repository.js';
 import { PatientLimitReachedError } from './patient.errors.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
@@ -8,7 +8,7 @@ import type { Paginated } from '../utils/api/pagination.ts';
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
-import { prisma } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
@@ -16,6 +16,31 @@ type PatientWithRelations = Patient & {
 };
 
 const PATIENT_DIFF_FIELDS = schemaKeys(updatePatientSchema);
+
+export async function createPatientWithin(
+  tx: TransactionClient,
+  dto: CreatePatientDto,
+  userId: string,
+  opts: CreatePatientOptions = {},
+): Promise<Patient> {
+  await withProviderLock(tx, userId);
+  if (await patientRepository.countActive(userId, tx) >= MAX_PATIENTS_PER_PROVIDER) {
+    throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
+  }
+  const createdPatient = await patientRepository.create(dto, userId, tx, opts);
+  await logAudit({
+    entityType: EntityType.PATIENT,
+    entityId: createdPatient.id,
+    userId,
+    actionType: ActionType.CREATE,
+    description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
+    affectedFields: Object.keys(dto),
+    fieldsAfter: dto as unknown as Record<string, unknown>,
+    tx,
+    required: true,
+  });
+  return createdPatient;
+}
 
 export const patientService = {
   findById: patientRepository.findById.bind(patientRepository),
@@ -37,25 +62,7 @@ export const patientService = {
   },
 
   async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
-    return prisma.$transaction(async (tx) => {
-      await withProviderLock(tx, userId);
-      if (await patientRepository.countActive(userId, tx) >= MAX_PATIENTS_PER_PROVIDER) {
-        throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
-      }
-      const createdPatient = await patientRepository.create(dto, userId, tx);
-      await logAudit({
-        entityType: EntityType.PATIENT,
-        entityId: createdPatient.id,
-        userId,
-        actionType: ActionType.CREATE,
-        description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
-        affectedFields: Object.keys(dto),
-        fieldsAfter: dto as unknown as Record<string, unknown>,
-        tx,
-        required: true,
-      });
-      return createdPatient;
-    });
+    return prisma.$transaction((tx) => createPatientWithin(tx, dto, userId));
   },
 
   async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
