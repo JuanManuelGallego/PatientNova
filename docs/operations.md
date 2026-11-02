@@ -91,6 +91,23 @@ access, delete scratch copies after the rehearsal.
   masked, and Prisma invocation errors are cut to the operation name (they render argument values). Do not add integrations that re-enable request capture.
 - Sentry is a third-party processor: list it in the privacy policy before enabling it in production.
 
+## Google Meet connection
+
+Each provider connects their own Google account (`google_connections`, refresh token encrypted at
+rest). A refresh token can stop working without any action in PatientNova.
+
+- **Find out why connections expire (to do, record the result here).** In Google Cloud Console →
+  OAuth consent screen, check the publishing status. In "Testing", Google expires refresh tokens after
+  7 days: move the app to "In production" (verification may be required for the Meet scope). Other
+  causes: the provider changed their Google password, revoked access in their Google account, or more
+  than 50 refresh tokens were issued for the same account and client.
+- **Detection.** With `ENABLE_SCHEDULER=true`, the `check-google-connections` job runs daily at 11:00
+  UTC (06:00 Bogotá). It refreshes each active connection's access token. A rejected token
+  (`invalid_grant`) marks the connection expired, with one `GOOGLE_CONNECTION` audit row (source
+  `JOB`). Network errors or a Google outage change nothing. Providers can also check on demand from
+  Settings → Integraciones ("Verificar ahora", `GET /v1/google/connection?verify=true`, 5 per minute).
+- **Recovery.** The provider reconnects from the banner or from Settings. Nothing else is needed.
+
 ## CSP rollout (Portal)
 
 The Content-Security-Policy ships as `Content-Security-Policy-Report-Only`. After a staging soak with

@@ -9,6 +9,7 @@ import { completeAppointmentsWorker } from './workers/complete-appointments.js';
 import { bulkSendWorker } from './workers/bulk-send-message.js';
 import { purgePortalOtpsWorker } from './workers/purge-portal-otps.js';
 import { portalBookingNotifyWorker } from './workers/portal-booking-notify.js';
+import { checkGoogleConnectionsWorker } from './workers/check-google-connections.js';
 
 let boss: PgBoss | null = null;
 
@@ -61,6 +62,7 @@ export async function initializePgBoss(): Promise<void> {
   await boss.createQueue('daily-reminder', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('complete-appointments', { retryLimit: 2, retryDelay: 30 });
   await boss.createQueue('purge-portal-otps', { retryLimit: 2, retryDelay: 300 });
+  await boss.createQueue('check-google-connections', { retryLimit: 2, retryDelay: 300 });
   await boss.createQueue('portal-booking-notify', {
     retryLimit: REMINDER_SEND_RETRY_LIMIT,
     retryDelay: 60,
@@ -75,11 +77,14 @@ export async function initializePgBoss(): Promise<void> {
   boss.work('complete-appointments', completeAppointmentsWorker);
   boss.work('purge-portal-otps', purgePortalOtpsWorker);
   boss.work('portal-booking-notify', portalBookingNotifyWorker);
+  boss.work('check-google-connections', checkGoogleConnectionsWorker);
 
   await boss.schedule('track-delivery', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' });
   await boss.schedule('purge-portal-otps', '30 3 * * *', null, { key: 'daily' });
+  // 11:00 UTC = 06:00 in Bogotá: expired connections show up before the working day.
+  await boss.schedule('check-google-connections', '0 11 * * *', null, { key: 'daily' });
 
   logger.info('pg-boss initialized (queues created)');
 }

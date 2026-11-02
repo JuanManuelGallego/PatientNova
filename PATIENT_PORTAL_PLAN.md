@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 5.4 deferred until after 8.2 (b)–(c). **Updated:** 2026-11-02
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 5.4 deferred until after 8.2 (b)–(c); the plan for 5.4 + 8.2 (a)–(c) is prepared (2026-11-02, see "5.4 + 8.2 (a)–(c) implementation plan"). **Updated:** 2026-11-02
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -507,7 +507,7 @@ keeps only the latest email per address; e2e runs with `ENABLE_SCHEDULER=false`.
 - **5.1 My appointments.** List endpoint and page, own appointments only.
 - **5.2 Cancel.** Calls `reminderJobManager.cancel`, frees the slot, notifies the provider, sets `cancelledBy`.
 - **5.3 Reschedule.** ~~Atomic cancel-and-rebook~~ An atomic move of the same appointment under the same lock (decided 2026-11-01, see below).
-- **5.4 Virtual locations.** *(Deferred 2026-11-01: not part of the Phase 5 PRs below; it starts after 8.2 (b)–(c) lands.)* (a) Add `Appointment.meetingStatus` (`NOT_REQUIRED | PENDING | READY | FAILED`) and relax the meeting-URL invariant only for the portal path. (b) The booking transaction creates the appointment with `meetingStatus=PENDING` and enqueues a durable pg-boss `provision-meet` job via `fromPrisma(tx)`, with retries and a dead-letter queue (reuse the existing Google Meet service and its encrypted per-provider token). (c) The job creates the Meet space, sets `meetingUrl`, `meetingStatus=READY`, then triggers the confirmation email and reminders. (d) Fallback: if Google is disconnected or retries are exhausted, set `FAILED`, send the confirmation without a link stating that it will follow, and notify the provider to add the URL manually (which sets `READY`). (e) The patient sees "link pending" until `READY`. (f) Only then allow virtual locations to be marked bookable online (1.3). Requires `ENABLE_SCHEDULER`; reject enabling virtual bookable locations when the scheduler is off. Tests: job retry and idempotency, disconnected Google, provider adds the URL manually, cancel while pending.
+- **5.4 Virtual locations.** *(Deferred 2026-11-01: not part of the Phase 5 PRs below; it starts after 8.2 (b)–(c) lands. Superseded 2026-11-02 by "5.4 + 8.2 (a)–(c) implementation plan" below: Meet when Google is connected, otherwise the provider adds any link; `FAILED` became `NEEDS_LINK`; no scheduler gate on the toggle.)* (a) Add `Appointment.meetingStatus` (`NOT_REQUIRED | PENDING | READY | FAILED`) and relax the meeting-URL invariant only for the portal path. (b) The booking transaction creates the appointment with `meetingStatus=PENDING` and enqueues a durable pg-boss `provision-meet` job via `fromPrisma(tx)`, with retries and a dead-letter queue (reuse the existing Google Meet service and its encrypted per-provider token). (c) The job creates the Meet space, sets `meetingUrl`, `meetingStatus=READY`, then triggers the confirmation email and reminders. (d) Fallback: if Google is disconnected or retries are exhausted, set `FAILED`, send the confirmation without a link stating that it will follow, and notify the provider to add the URL manually (which sets `READY`). (e) The patient sees "link pending" until `READY`. (f) Only then allow virtual locations to be marked bookable online (1.3). Requires `ENABLE_SCHEDULER`; reject enabling virtual bookable locations when the scheduler is off. Tests: job retry and idempotency, disconnected Google, provider adds the URL manually, cancel while pending.
 
 #### Phase 5 implementation plan (prepared 2026-11-01)
 **Decided (2026-11-01):**
@@ -663,6 +663,183 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
 - Whether to cap reschedules per appointment. Today they are bounded only by the `portal-change-ip` limiter and the audit trail.
 - A "past appointments" history on "Mis citas" (not in Phase 5).
 
+#### 5.4 + 8.2 (a)–(c) implementation plan (prepared 2026-11-02)
+These are the last Phase 5 tasks. They cover the Google work only; the "Open" items above stay open.
+
+**Decided (2026-11-02):**
+- **Provider alerts are in-app only.** No WhatsApp, SMS or email for "Google expired" or "a booking needs a link".
+  This drops 8.2 (c)'s outbound notice and needs no new Twilio template or env var.
+- **A virtual location can be bookable online without Google**, because the provider chooses their own virtual space.
+  - If Google is connected, a durable `provision-meet` job creates a Meet link.
+  - Otherwise the booking waits for the provider to add a link of their choice, and the patient sees "link pending".
+  - The `bookableOnline` toggle has no Google or scheduler gate. This replaces 5.4 (f)'s "reject when the scheduler is
+    off".
+- `MeetingStatus` is `NOT_REQUIRED | PENDING | NEEDS_LINK | READY`. It replaces 5.4's `FAILED`, since adding a link by
+  hand is now a normal path.
+  - `PENDING`: the Meet job is in flight.
+  - `NEEDS_LINK`: the provider must add a link (Google not connected, scheduler off, or provisioning failed).
+
+**Manual step first (8.2 a, owner: provider account admin).** Check the Google Cloud OAuth consent screen's publishing
+status.
+- If it is "Testing", refresh tokens die after 7 days; move it to "In production".
+- Also rule out password resets and the 50-tokens-per-client limit.
+- Record the finding in `docs/operations.md`.
+
+**PR 8.2-A — Server: proactive connection check.**
+- **Schema:** `GoogleConnection.lastCheckedAt DateTime?`.
+- **New `src/google/google-connection.service.ts`:**
+  - `isAuthorizationFailure`: moved from `google-meet.service.ts` and exported.
+  - `markConnectionExpired(userId, description)`:
+    - Replaces the inline catch block in `createMeetingSpace` and the private `markConnectionDisconnected` in
+      `google-oauth.service.ts`.
+    - Audits only when `markDisconnected` changed a row.
+    - Has no hard-coded `ActionSource.API`: the source comes from the audit context, so job runs audit as JOB.
+  - `buildOAuthClient(connection)`: extracted with its refresh-token rotation listener.
+  - `verifyConnection(userId)`:
+    - Calls `getAccessToken()` to force a refresh.
+    - Success sets `lastCheckedAt`.
+    - An authorization failure calls `markConnectionExpired`.
+    - Any other error is logged and leaves the connection unchanged.
+- **Daily job `check-google-connections`:**
+  - Cron `0 11 * * *` UTC (06:00 Bogotá), next to `purge-portal-otps`.
+  - Goes over every active connection, with a try/catch per connection, inside `runInAuditContext(JOB_CTX)`.
+  - Runs only with `ENABLE_SCHEDULER`.
+- **`GET /v1/google/connection`** returns
+  `{ status: 'connected' | 'expired' | 'not_connected', connected, connectedAt, lastUsedAt, lastCheckedAt, disconnectedAt }`.
+  - `connected` is kept for compatibility.
+  - `expired` means a row that is disconnected or missing the scope. `not_connected` means no row (a manual disconnect
+    deletes the row).
+  - `?verify=true` runs `verifyConnection` first, rate-limited per user (5/min).
+- **Tests:**
+  - The three statuses.
+  - `verify` sets `lastCheckedAt`, and `invalid_grant` returns `expired`.
+  - The rate limit.
+  - The worker: `invalid_grant` disconnects and audits once as JOB; a second run is a no-op; a transient error is
+    ignored; other providers are untouched.
+  - Google is mocked by patching `OAuth2Client.prototype`, as the existing Google tests do.
+- **Bruno:** `Google/Get Connection`.
+
+**PR 8.2-B — Portal: expired state.**
+- **Types and hook:** `GoogleConnectionStatus` gains `status`, `lastCheckedAt` and `disconnectedAt`.
+  `useFetchGoogleConnection` takes `verify`.
+- **New `ProviderAlerts` component** in `PageLayout`, between the header and `<main>`:
+  - Admins only; a VIEWER gets 403 on the endpoint, so it is never fetched for them.
+  - When `status === 'expired'` it shows "Tu conexión con Google expiró. Reconéctala para generar enlaces de Meet."
+  - Its "Reconectar" button runs `useGoogleOAuthPopup` + `startOAuth('/settings', true)`.
+  - Styled with a new `.warning-banner` class.
+- **Settings** shows three states, "Última verificación", and a "Verificar ahora" button (`?verify=true`).
+- **Appointment modal (8.2 e):** shows the reconnect label up front when the connection has expired.
+- **Tests:** `GoogleIntegrationTab`, `LocationAndTimeStep`, and the new `ProviderAlerts`.
+
+**PR 5.4-A — Server: virtual portal bookings.**
+- **Schema:** `enum MeetingStatus` and `Appointment.meetingStatus @default(NOT_REQUIRED)`. The migration backfills
+  `READY` where `meetingUrl` is set.
+- **`resolveMeetingUrl` becomes `resolveMeeting(...) → { meetingUrl, meetingStatus }`:**
+  - In-person → `NOT_REQUIRED`.
+  - Virtual with a URL → `READY`.
+  - Virtual without a URL is allowed only in two cases:
+    - on create, with the portal-only `createWithin` option `meetingPending: 'auto' | 'manual'` (→ `PENDING` /
+      `NEEDS_LINK`);
+    - on update, when the stored status is already `PENDING`/`NEEDS_LINK`.
+  - Otherwise it is still `AppointmentMeetingUrlRequiredError`, so the provider path is unchanged.
+- **Booking (`book`):**
+  - A virtual location is `auto` when the scheduler is on and the provider has an active Google connection with the
+    scope (read on `tx`). Otherwise it is `manual`.
+  - `auto` enqueues `provision-meet { appointmentId }` on `tx` (`fromPrisma(tx)`, `singletonKey`).
+  - No external call happens inside the lock.
+- **Notifications:**
+  - `booked` always sends the provider notice. It holds back the patient confirmation while the appointment is
+    `PENDING`.
+  - New kind `patient-meeting-link` (active, future, `source=PORTAL`).
+  - The confirmation and reschedule emails print the link for a virtual location, or "Te enviaremos el enlace de la
+    videollamada en un correo aparte." when it is pending. They print no address for a virtual location.
+  - `onMeetingLinkSet(tx, id, previous)` runs from `updateWithin` when the URL of a portal appointment changes:
+    - from `PENDING`, it sends the held confirmation;
+    - from `NEEDS_LINK` or `READY`, it sends `patient-meeting-link`.
+- **Job `provision-meet`** (retry 5 with backoff):
+  - It skips unless the appointment is `PENDING`, active and not deleted, so it is idempotent.
+  - It calls `createMeetingSpace` outside any transaction.
+  - It then opens a short transaction:
+    1. `withProviderLock`.
+    2. Re-check `PENDING`.
+    3. Set the URL + `READY`.
+    4. Re-render the linked reminder.
+    5. A required JOB audit.
+    6. Enqueue the confirmation.
+  - Failures:
+    - Connection missing, scope missing, token revoked or config missing → `NEEDS_LINK` + the confirmation ("link will
+      follow").
+    - A Google API error retries, then falls back to `NEEDS_LINK` on the final attempt (the `bulk-send-message` pattern,
+      no DLQ).
+  - A space created for an appointment cancelled in the meantime is left orphaned (harmless).
+- **Backstop:** `sweep-pending-meetings` runs every 15 min. It moves `PENDING` older than 30 min to `NEEDS_LINK` and
+  sends the held confirmation.
+- **Reminder renderer:** a virtual reminder with no URL says "Te enviaremos el enlace por correo". Today it leaves a
+  literal `{{5}}`.
+- **Unblock virtual + bookable:**
+  - Remove `VIRTUAL_NOT_BOOKABLE_MESSAGE` and its checks, and `VirtualLocationNotBookableError`.
+  - Readiness counts any bookable location.
+  - The public `bookableLocation` filter drops `isVirtual: false`.
+  - `canReschedule` drops `!isVirtual`. A reschedule keeps the link and the status.
+- **DTOs:**
+  - The public location adds `isVirtual`.
+  - `PortalAppointmentDto` adds `meeting: { status: 'ready', url } | { status: 'pending' } | null`. `NEEDS_LINK` shows
+    as pending.
+  - Update both key snapshots.
+- **New endpoint `GET /v1/appointments/needs-meeting-link` (admin):** upcoming active `NEEDS_LINK` appointments, for
+  the banner.
+- **Tests:**
+  - New `portal-virtual-booking.integration.test.ts`:
+    - auto → `PENDING` + job on `tx`, with the confirmation held;
+    - manual → `NEEDS_LINK` + the confirmation without a link;
+    - a rollback drops the job;
+    - a reschedule keeps the link;
+    - the public `isVirtual`.
+  - New `provision-meet.integration.test.ts`, with `vi.mock` of `src/google/google-meet.service.js`:
+    - success → `READY` + the re-rendered reminder + the confirmation;
+    - cancel while pending → skipped;
+    - re-run → no-op;
+    - token revoked → `NEEDS_LINK`;
+    - API error → retry, then `NEEDS_LINK`;
+    - the sweep.
+  - Provider `PATCH` that adds a link:
+    - `NEEDS_LINK` → `READY` + `patient-meeting-link`;
+    - `PENDING` → `READY` + the confirmation;
+    - a notes edit on `NEEDS_LINK` is OK;
+    - clearing a `READY` URL is still 422.
+  - Update the existing "virtual hidden / 400 both ways / 404" assertions.
+  - Unit tests for `resolveMeeting` and the renderer fallback.
+- **Bruno:** `Appointments/Needs Meeting Link`.
+
+**PR 5.4-B — Portal: virtual booking UI.**
+- **Provider:**
+  - `LocationModal` stops disabling `bookableOnline` for virtual locations and drops the "más adelante" hint.
+  - The readiness label becomes "Una ubicación disponible en línea".
+  - The drawer shows "Enlace pendiente" / "Falta el enlace de la videollamada".
+  - `AppointmentModal` doesn't require the URL when editing a `PENDING`/`NEEDS_LINK` appointment.
+  - `ProviderAlerts` adds "N citas en línea necesitan un enlace de videollamada".
+- **Patient:**
+  - The booking page and form show "Videollamada" instead of an address.
+  - The "Mis citas" card shows "Unirse a la videollamada" when the link is ready, or "El enlace de la videollamada
+    llegará a tu correo".
+- **Tests:** component tests only. CI e2e runs with the scheduler off and `e2e-publica` has no virtual location.
+
+**Docs:**
+- `AGENTS.md`:
+  - The matrix rows.
+  - Drop the "Meet path unexercised" gap.
+  - Replace "Until 5.4…" with the meeting-status rules: only the portal path creates without a URL; Meet only from
+    `provision-meet`, never inside a transaction; patients are notified through `onMeetingLinkSet`.
+- `docs/operations.md`: the 8.2 (a) finding and the daily check job.
+- 8.2 (d) is covered by the `NEEDS_LINK` banner, because provider-created virtual appointments always need a URL.
+
+**Exit criteria for 5.4:**
+- A patient can book and reschedule a virtual location.
+- With Google connected, they receive a Meet link without provider action.
+- Without Google, the provider sees the booking in the banner and drawer. Adding any link emails it to the patient.
+- No email or reminder ever contains a literal placeholder.
+- An expired Google connection shows up in the banner within a day, or right away with "Verificar ahora".
+
 ### Phase 6: Approval mode and review inbox
 - **6.1 `BookingRequest` model + holds.** Slot engine and lock count active holds. Tests: held slot not bookable, hold creation races with appointment creation.
 - **6.2 Approval mode in the booking flow.** Provider setting, request creation carrying consent evidence, patient "pending confirmation" state.
@@ -687,6 +864,9 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
   - (e) In the appointment modal, show the expired state up front instead of after a failed click, and keep the manual URL field usable either way.
   - Tests: `invalid_grant` from the check job marks the connection disconnected and audits once; status endpoint returns the expired state; the banner renders from that state; reconnect clears it. Google is mocked at `src/google/google-meet.service.js`; no network calls.
   - **Dependency:** 5.4 (portal virtual bookings) relies on the same signal for its `FAILED` fallback and provider notification, so build 8.2 (b)–(c) before 5.4.
+  - **Prepared 2026-11-02** together with 5.4 (see "5.4 + 8.2 (a)–(c) implementation plan" under Phase 5). Changes from
+    the text above: alerts are in-app only (no outbound notice on `reminderChannel`); (d) is covered by the
+    `NEEDS_LINK` banner; (e) is included.
 - **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Dependency summary
