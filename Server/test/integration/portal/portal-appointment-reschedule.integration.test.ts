@@ -136,6 +136,22 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect(moved.body).not.toBe(reminder.body);
   });
 
+  it('keeps a pending reminder channel and address when the provider changed them', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 5);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    const reminder = await prisma.reminder.update({
+      where: { appointmentId }, data: { channel: Channel.SMS, to: '+573001112233' },
+    });
+
+    expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
+
+    const moved = await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } });
+    expect(moved).toMatchObject({ appointmentId, status: ReminderStatus.PENDING, channel: Channel.SMS, to: '+573001112233' });
+    expect(moved.sendAt.getTime()).toBe(new Date(to!).getTime() - 24 * HOUR);
+  });
+
   it('cancels the pending reminder when the new time is less than 24h away', async () => {
     const provider = await createLiveProvider();
     const [ from ] = await slotStarts(provider, 3);
@@ -166,6 +182,8 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     });
     const fresh = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
     expect(fresh.id).not.toBe(sent.id);
+    const unlinkAudit = await prisma.auditLog.findFirstOrThrow({ where: { entityType: EntityType.REMINDER, entityId: sent.id } });
+    expect(unlinkAudit).toMatchObject({ source: ActionSource.PUBLIC_PORTAL, affectedFields: [ 'appointmentId' ] });
     expect(fresh).toMatchObject({ status: ReminderStatus.PENDING, channel: Channel.EMAIL, to: session.email });
     expect(fresh.sendAt.getTime()).toBe(new Date(to!).getTime() - 24 * HOUR);
   });
@@ -320,8 +338,8 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     const sendAt = new Date(new Date(to!).getTime() - 24 * HOUR);
     expect(mocks.send.mock.calls).toEqual([
       [ 'send-reminder', { reminderId: reminder.id }, { db: expect.anything(), startAfter: sendAt } ],
-      [ 'portal-booking-notify', { appointmentId, kind: 'patient-reschedule', previousStartAt: from }, { db: expect.anything() } ],
-      [ 'portal-booking-notify', { appointmentId, kind: 'provider-reschedule-notice', previousStartAt: from }, { db: expect.anything() } ],
+      [ 'portal-booking-notify', { appointmentId, kind: 'patient-reschedule', previousStartAt: from, startAt: to }, { db: expect.anything() } ],
+      [ 'portal-booking-notify', { appointmentId, kind: 'provider-reschedule-notice', previousStartAt: from, startAt: to }, { db: expect.anything() } ],
     ]);
     expect(mocks.dispatch).not.toHaveBeenCalled();
   });
@@ -342,5 +360,76 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect((await postReschedule(session, appointmentId, moveTo(to!, 'Mars/Olympus'))).status).toBe(400);
     expect((await postReschedule(session, appointmentId, { startUtc: to })).status).toBe(400);
     expect((await appointment(appointmentId)).startAt.toISOString()).toBe(from);
+  });
+});
+
+describe('GET /v1/portal/appointments/:id/slots', () => {
+  const dayAhead = (days: number) => DateTime.now().setZone(PORTAL_ZONE).plus({ days }).toISODate()!;
+  const getSlots = (s: TestSession | null, id: string, query: Record<string, string>) => {
+    const req = request(app).get(`/v1/portal/appointments/${id}/slots`).query(query).set('Origin', ALLOWED_ORIGIN);
+    if (s) req.set('Cookie', s.cookie);
+    return req;
+  };
+  const startsOf = (res: request.Response) => (res.body.data.slots as Array<{ startUtc: string }>).map((x) => x.startUtc);
+
+  it('offers the times next to the appointment that the public slots hide, without its own start', async () => {
+    const provider = await createLiveProvider({ bufferMinutes: 30 });
+    const starts = await slotStarts(provider, 3);
+    const { session, appointmentId } = await bookAt(provider, starts[2]!);
+    const other = await bookAt(provider, starts[5]!, unique('otra@test.local'));
+    expect(other.appointmentId).toBeDefined();
+    const publicNow = await slotStarts(provider, 3);
+    expect(publicNow).not.toContain(starts[1]);
+    expect(publicNow).not.toContain(starts[3]);
+
+    const res = await getSlots(session, appointmentId, { from: dayAhead(3), to: dayAhead(3) });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.body.data.timezone).toBe(PORTAL_ZONE);
+    const offered = startsOf(res);
+    expect(offered).toEqual(expect.arrayContaining([ starts[1], starts[3] ]));
+    expect(offered).not.toContain(starts[2]);
+    expect(offered).not.toContain(starts[5]);
+    expect(offered).not.toContain(starts[4]);
+  });
+
+  it('gives the same answers as the move itself: 404 not theirs, 409 not movable, 404 in approval mode', async () => {
+    const provider = await createLiveProvider();
+    const [ a, b ] = await slotStarts(provider, 3);
+    const range = { from: dayAhead(3), to: dayAhead(4) };
+    const mine = await bookAt(provider, a!);
+    const theirs = await bookAt(provider, b!, unique('ajena@test.local'));
+
+    const notTheirs = await getSlots(mine.session, theirs.appointmentId, range);
+    expect(notTheirs.status).toBe(404);
+    expect(notTheirs.body.error).toBe('Appointment not found');
+
+    const patient = await createConsentedPatient(provider.id);
+    const start = new Date(Date.now() + 5 * 86_400_000);
+    const created = await prisma.appointment.create({
+      data: {
+        userId: provider.id, patientId: patient.id, typeId: provider.typeId, locationId: provider.locationId,
+        startAt: start, endAt: new Date(start.getTime() + HOUR), price: 0, status: AppointmentStatus.SCHEDULED,
+      },
+    });
+    const providerCreated = await getSlots(sessionFor(provider.id, patient.email!), created.id, range);
+    expect(providerCreated.status).toBe(409);
+    expect(providerCreated.body.error).toBe('Reschedule unavailable');
+
+    await prisma.user.update({ where: { id: provider.id }, data: { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL } });
+    expect((await getSlots(mine.session, mine.appointmentId, range)).status).toBe(404);
+  });
+
+  it('requires the session, a uuid and a strict range', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const { session, appointmentId } = await bookAt(provider, from!);
+
+    expect((await getSlots(null, appointmentId, { from: dayAhead(3), to: dayAhead(3) })).status).toBe(401);
+    expect((await getSlots(session, 'not-a-uuid', { from: dayAhead(3), to: dayAhead(3) })).status).toBe(400);
+    expect((await getSlots(session, appointmentId, { from: dayAhead(4), to: dayAhead(3) })).status).toBe(400);
+    expect((await getSlots(session, appointmentId, { from: dayAhead(1), to: dayAhead(40) })).status).toBe(400);
+    expect((await getSlots(session, appointmentId, { from: dayAhead(3), to: dayAhead(3), typeId: provider.typeId })).status).toBe(400);
   });
 });

@@ -3,6 +3,7 @@ import { bookingSlugSchema } from '../booking-settings/booking-settings.schemas.
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { localToUtc } from '../utils/time/time-utils.js';
+import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { generateSlots } from './slot-engine.js';
 import { publicBookingRepository, type ProviderImageKind } from './public-booking.repository.js';
 import { ProviderImageNotFoundError, ProviderNotFoundError, PublicAppointmentTypeNotFoundError } from './public-booking.errors.js';
@@ -65,31 +66,56 @@ export const publicBookingService = {
     const provider = await publicBookingService.resolveProvider(slug);
     const type = await publicBookingRepository.findBookableType(provider.id, query.typeId);
     if (!type) throw new PublicAppointmentTypeNotFoundError();
-
-    const { timezone } = provider;
-    const [ rules, busy ] = await Promise.all([
-      bookingSettingsRepository.listRules(provider.id),
-      publicBookingRepository.loadBusy(
-        provider.id,
-        localMidnightUtc(query.from, timezone),
-        localMidnightUtc(query.to, timezone, 1),
-        provider.bufferMinutes,
-      ),
-    ]);
-
-    const slots = generateSlots({
-      timezone,
-      rules,
-      fromDate: query.from,
-      toDate: query.to,
-      durationMinutes: type.defaultDuration,
-      slotIntervalMinutes: provider.slotIntervalMinutes,
-      bufferMinutes: provider.bufferMinutes,
-      minLeadMinutes: provider.minLeadMinutes,
-      maxHorizonDays: provider.maxHorizonDays,
-      now: new Date(),
-      busy: { ...busy, holds: [] },
-    });
-    return { timezone, slots: slots.map((s) => ({ startUtc: s.startUtc.toISOString(), endUtc: s.endUtc.toISOString() })) };
+    const slots = await computeSlots(provider.id, provider, type.defaultDuration, query);
+    return { timezone: provider.timezone, slots };
   },
 };
+
+export interface SlotSettings {
+  timezone: string;
+  slotIntervalMinutes: number;
+  bufferMinutes: number;
+  minLeadMinutes: number;
+  maxHorizonDays: number;
+}
+
+/**
+ * Bookable start times over local days `from`..`to` (provider zone). The one slot computation behind the
+ * public slots and the portal reschedule slots; `excludeAppointmentId` lets an appointment being moved
+ * not block its own neighbourhood.
+ */
+export async function computeSlots(
+  userId: string,
+  settings: SlotSettings,
+  durationMinutes: number,
+  range: { from: string; to: string },
+  opts: { excludeAppointmentId?: string; tx?: TransactionClient } = {},
+): Promise<Array<{ startUtc: string; endUtc: string }>> {
+  const { timezone } = settings;
+  const [ rules, busy ] = await Promise.all([
+    bookingSettingsRepository.listRules(userId, opts.tx),
+    publicBookingRepository.loadBusy(
+      userId,
+      localMidnightUtc(range.from, timezone),
+      localMidnightUtc(range.to, timezone, 1),
+      settings.bufferMinutes,
+      opts.tx,
+      opts.excludeAppointmentId ? { excludeAppointmentId: opts.excludeAppointmentId } : {},
+    ),
+  ]);
+
+  const slots = generateSlots({
+    timezone,
+    rules,
+    fromDate: range.from,
+    toDate: range.to,
+    durationMinutes,
+    slotIntervalMinutes: settings.slotIntervalMinutes,
+    bufferMinutes: settings.bufferMinutes,
+    minLeadMinutes: settings.minLeadMinutes,
+    maxHorizonDays: settings.maxHorizonDays,
+    now: new Date(),
+    busy: { ...busy, holds: [] },
+  });
+  return slots.map((s) => ({ startUtc: s.startUtc.toISOString(), endUtc: s.endUtc.toISOString() }));
+}

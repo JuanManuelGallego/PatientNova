@@ -29,7 +29,7 @@ interface RescheduleFlowProps {
  * the page's state, never in the URL. Same slot rules and device zone as booking.
  */
 export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, onBack, onGone, onSessionLost }: RescheduleFlowProps) {
-    const picker = useSlotPicker(slug, provider, appointment.type?.id ?? null, timezone);
+    const picker = useSlotPicker(slug, provider, appointment.type?.id ?? null, timezone, appointment.id);
     const { rescheduleAppointment, loading } = useRescheduleAppointment();
     // Tied to the time it was about: choosing another time hides it.
     const [ failure, setFailure ] = useState<{ startUtc: string; message: string } | null>(null);
@@ -38,10 +38,20 @@ export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, 
     const noticeRef = useRef<HTMLParagraphElement>(null);
     const { slot, notice } = picker;
     const pickedStart = slot?.startUtc;
+    const slotsStatus = picker.error?.status;
+    const slotsMessage = picker.error?.message;
 
     useEffect(() => { heading.current?.focus(); }, []);
     useEffect(() => { if (pickedStart) reveal(confirmStep.current); }, [ pickedStart ]);
     useEffect(() => { if (notice) noticeRef.current?.focus(); }, [ notice ]);
+    // Loading the times already tells whether the appointment can still be moved. The callbacks are
+    // read through a ref so a parent re-render does not fire them again.
+    const exits = useRef({ onSessionLost, onGone });
+    useEffect(() => { exits.current = { onSessionLost, onGone }; });
+    useEffect(() => {
+        if (slotsStatus === 401) exits.current.onSessionLost();
+        else if ((slotsStatus === 404 || slotsStatus === 409) && slotsMessage) exits.current.onGone(slotsMessage);
+    }, [ slotsStatus, slotsMessage ]);
 
     const submit = async () => {
         if (!slot) return;

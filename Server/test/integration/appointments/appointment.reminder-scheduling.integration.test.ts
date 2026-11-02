@@ -8,7 +8,7 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { sendReminderWorker } from '../../../src/scheduler/workers/send-reminder.js';
-import { AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/enums.js';
+import { ActionSource, AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/enums.js';
 import { appointmentTimeRange, createTestAppointmentType, createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
 
 const scheduler = config.scheduler as { enabled: boolean };
@@ -107,7 +107,7 @@ describe('send-reminder worker', () => {
     expect(mocks.dispatch).toHaveBeenCalledWith(Channel.EMAIL, expect.objectContaining({ to: reminder.to }));
   });
 
-  it('skips a due PENDING reminder whose linked appointment is cancelled, completed or deleted', async () => {
+  it('cancels (never sends) a due PENDING reminder whose linked appointment is cancelled, completed or deleted', async () => {
     const inactive = [
       { status: AppointmentStatus.CANCELLED },
       { status: AppointmentStatus.COMPLETED },
@@ -123,7 +123,9 @@ describe('send-reminder worker', () => {
         },
       });
       await sendReminderWorker([ { data: { reminderId: reminder.id } } ]);
-      expect((await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).status).toBe(ReminderStatus.PENDING);
+      expect((await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).status).toBe(ReminderStatus.CANCELLED);
+      const audit = await prisma.auditLog.findFirstOrThrow({ where: { entityId: reminder.id, source: ActionSource.JOB } });
+      expect(audit.fieldsAfter).toEqual({ status: ReminderStatus.CANCELLED });
     }
     expect(mocks.dispatch).not.toHaveBeenCalled();
   });

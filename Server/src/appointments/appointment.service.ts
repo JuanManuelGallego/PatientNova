@@ -182,6 +182,18 @@ async function handleReminderUpdate(
   if (replaceSettledReminder && dto.reminder && existing.reminder && existing.reminder.status !== ReminderStatus.PENDING) {
     // A sent (or failed/cancelled) reminder keeps its record: unlink it and link a fresh one. Never rewrite its sendAt.
     await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
+    await logAudit({
+      entityType: EntityType.REMINDER,
+      entityId: existing.reminder.id,
+      userId,
+      actionType: ActionType.UPDATE,
+      description: 'Recordatorio desvinculado de la cita reprogramada (se vincula uno nuevo)',
+      affectedFields: [ 'appointmentId' ],
+      fieldsBefore: { appointmentId: existing.id },
+      fieldsAfter: { appointmentId: null },
+      tx,
+      required: true,
+    });
     logger.info({ reminderId: existing.reminder.id, status: existing.reminder.status }, 'Settled reminder unlinked for a new one');
     const createdReminder = await createLinkedReminder(
       dto.reminder,

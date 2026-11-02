@@ -223,6 +223,18 @@ describe('reschedule notices', () => {
     }));
   });
 
+  it('is skipped once a later move superseded it (that move sends its own)', async () => {
+    const { appt } = await bookedAppointment({ startAt: START });
+    const superseded = '2027-01-21T15:00:00Z';
+    for (const kind of [ 'patient-reschedule', 'provider-reschedule-notice' ] as const) {
+      await deliverBookingNotification({ appointmentId: appt.id, kind, previousStartAt: PREVIOUS, startAt: superseded });
+    }
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: superseded, startAt: START });
+    expect(mocks.dispatch).toHaveBeenCalledTimes(1);
+  });
+
   it('is skipped once the appointment was cancelled', async () => {
     const { appt } = await bookedAppointment({ startAt: START });
     await prisma.appointment.update({ where: { id: appt.id }, data: { status: AppointmentStatus.CANCELLED } });

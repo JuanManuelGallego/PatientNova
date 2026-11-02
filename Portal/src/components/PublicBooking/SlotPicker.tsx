@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useFetchPublicSlots } from "@/src/api/public-booking/useFetchPublicSlots";
+import { useRescheduleSlots } from "@/src/api/portal/usePortalBooking";
 import type { PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import { fmtTime, todayFormattedString } from "@/src/utils/TimeUtils";
 import {
@@ -15,8 +16,10 @@ import styles from "./PublicBooking.module.css";
 /**
  * Week, day and time selection for one appointment type, in the patient's device zone. Shared by booking
  * (`/book/[slug]`) and rescheduling ("Mis citas"), so both follow the same zone and paging rules.
+ * With `rescheduleId`, times come from the session's reschedule slots for that appointment (its own
+ * time does not block nearby ones) instead of the public slots for `typeId`.
  */
-export function useSlotPicker(slug: string, provider: PublicProvider, typeId: string | null, timezone: string) {
+export function useSlotPicker(slug: string, provider: PublicProvider, typeId: string | null, timezone: string, rescheduleId?: string) {
     const today = todayFormattedString(timezone);
     const [ weekStart, setWeekStart ] = useState<string | null>(null);
     const [ dayChoice, setDayChoice ] = useState<string | null>(null);
@@ -26,7 +29,9 @@ export function useSlotPicker(slug: string, provider: PublicProvider, typeId: st
     const lastDate = lastBookableDateIn(timezone, provider.lastBookableDate, provider.timezone);
     const page = weekPage(weekStart ?? today, today, lastDate);
     const query = slotQueryRange(page.from, page.to);
-    const { slots, loading, error, retry } = useFetchPublicSlots(slug, typeId, query.from, query.to);
+    const publicSlots = useFetchPublicSlots(slug, rescheduleId ? null : typeId, query.from, query.to);
+    const moveSlots = useRescheduleSlots(rescheduleId ?? null, query.from, query.to);
+    const { slots, loading, error, retry } = rescheduleId ? moveSlots : publicSlots;
     const slotDays = new Map((slots ? groupSlotsByDay(slots.slots, timezone) : []).map((d) => [ d.date, d ]));
     const weekDays = calendarDaysBetween(page.from, page.to);
     const openDays = weekDays.filter((d) => slotDays.has(d));

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { FIFTEEN_MINUTES_MS } from '../utils/config/constants.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
-import { validateBody, validateParams } from '../middlewares/validate.js';
+import { validateBody, validateParams, validateQuery } from '../middlewares/validate.js';
+import { slotRangeQuerySchema, type SlotRangeQuery } from '../public-booking/public-booking.schemas.js';
 import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { uuidParamSchema } from '../utils/validation/schemas.js';
 import type { ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
@@ -58,6 +59,23 @@ export function createPortalBookingRoutes(): Router {
       await portalAppointmentService.cancel(req.portal!, req.params.id as string, requestMeta(req));
       res.set('Cache-Control', 'no-store');
       res.status(204).end();
+    }),
+  );
+
+  // Read-only, so outside the change budget; same guard (GET skips the CSRF check).
+  router.get(
+    '/appointments/:id/slots',
+    ...portalSessionGuard,
+    validateParams(uuidParamSchema),
+    validateQuery(slotRangeQuerySchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      const slots = await portalAppointmentService.rescheduleSlots(
+        req.portal!,
+        req.params.id as string,
+        req.query as unknown as SlotRangeQuery,
+      );
+      res.set('Cache-Control', 'no-store');
+      ok(res, slots);
     }),
   );
 

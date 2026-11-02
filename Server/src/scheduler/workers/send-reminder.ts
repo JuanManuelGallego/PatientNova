@@ -36,9 +36,30 @@ export async function sendReminderWorker([ job ]: Array<{
   }
 
   // Defense in depth: cancel paths mark the reminder CANCELLED, but a queued job must never
-  // remind a patient of an appointment that was cancelled, completed or deleted.
+  // remind a patient of an appointment that was cancelled, completed or deleted. Settle it as
+  // CANCELLED so it does not stay PENDING forever.
   if (reminder.appointment && (reminder.appointment.isDeleted || !ACTIVE_STATUSES.has(reminder.appointment.status))) {
-    logger.info({ reminderId, appointmentStatus: reminder.appointment.status }, 'Linked appointment no longer active — skipping reminder');
+    await prisma.$transaction(async (tx) => {
+      const { count } = await tx.reminder.updateMany({
+        where: { id: reminderId, status: ReminderStatus.PENDING },
+        data: { status: ReminderStatus.CANCELLED },
+      });
+      if (count === 0) return;
+      await runInAuditContext(JOB_CTX, () => logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: reminderId,
+        actionType: ActionType.UPDATE,
+        source: ActionSource.JOB,
+        description: 'Recordatorio cancelado porque la cita ya no está activa',
+        affectedFields: [ 'status' ],
+        fieldsBefore: { status: ReminderStatus.PENDING },
+        fieldsAfter: { status: ReminderStatus.CANCELLED },
+        userId: reminder.userId,
+        tx,
+        required: true,
+      }));
+    });
+    logger.info({ reminderId, appointmentStatus: reminder.appointment.status }, 'Linked appointment no longer active — reminder cancelled');
     return;
   }
 

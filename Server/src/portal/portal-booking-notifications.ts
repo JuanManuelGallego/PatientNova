@@ -31,6 +31,17 @@ export interface BookingNotificationJob {
   kind: BookingNotificationKind;
   /** ISO start before a reschedule; only on the reschedule kinds. */
   previousStartAt?: string;
+  /**
+   * ISO start the reschedule moved to; only on the reschedule kinds. A later move supersedes the notice
+   * (that move sends its own), so the patient never gets "before X, now Z" for a move to Y.
+   */
+  startAt?: string;
+}
+
+/** The start before and after a reschedule. */
+export interface PortalMove {
+  previousStartAt: Date;
+  startAt: Date;
 }
 
 const CANCELLATION_KINDS = new Set<BookingNotificationKind>([ 'patient-cancellation', 'provider-cancel-notice' ]);
@@ -61,9 +72,10 @@ type BookedAppointment = NonNullable<Awaited<ReturnType<typeof loadAppointment>>
 type Message = { channel: Channel; opts: DispatchOpts };
 
 /** A cancellation notice needs a cancelled appointment; every other notice needs an active one. */
-function isDeliverable(appt: BookedAppointment | null, kind: BookingNotificationKind): appt is BookedAppointment {
+function isDeliverable(appt: BookedAppointment | null, job: BookingNotificationJob): appt is BookedAppointment {
   if (!appt || appt.isDeleted) return false;
-  return CANCELLATION_KINDS.has(kind) ? appt.status === AppointmentStatus.CANCELLED : ACTIVE_STATUSES.has(appt.status);
+  if (job.startAt && appt.startAt.getTime() !== new Date(job.startAt).getTime()) return false;
+  return CANCELLATION_KINDS.has(job.kind) ? appt.status === AppointmentStatus.CANCELLED : ACTIVE_STATUSES.has(appt.status);
 }
 
 function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
@@ -157,7 +169,7 @@ function providerMessage(appt: BookedAppointment, job: BookingNotificationJob): 
 export async function deliverBookingNotification(job: BookingNotificationJob): Promise<void> {
   const { appointmentId, kind } = job;
   const appt = await loadAppointment(appointmentId);
-  if (!isDeliverable(appt, kind)) {
+  if (!isDeliverable(appt, job)) {
     logger.info({ appointmentId, kind }, 'Portal notification skipped — appointment no longer in the expected state');
     return;
   }
@@ -171,11 +183,11 @@ export async function deliverBookingNotification(job: BookingNotificationJob): P
   logger.info({ appointmentId, kind, channel: message.channel, messageId: result.messageSid }, 'Portal notification sent');
 }
 
-function jobsFor(event: PortalEvent, appointmentId: string, previousStartAt?: Date): BookingNotificationJob[] {
+function jobsFor(event: PortalEvent, appointmentId: string, move?: PortalMove): BookingNotificationJob[] {
   return EVENT_KINDS[event].map((kind) => ({
     appointmentId,
     kind,
-    ...(previousStartAt && { previousStartAt: previousStartAt.toISOString() }),
+    ...(move && { previousStartAt: move.previousStartAt.toISOString(), startAt: move.startAt.toISOString() }),
   }));
 }
 
@@ -184,19 +196,19 @@ export async function enqueuePortalNotifications(
   event: PortalEvent,
   appointmentId: string,
   tx: TransactionClient,
-  previousStartAt?: Date,
+  move?: PortalMove,
 ): Promise<void> {
   if (!config.scheduler.enabled) return;
   const db = fromPrisma(tx);
-  for (const job of jobsFor(event, appointmentId, previousStartAt)) {
+  for (const job of jobsFor(event, appointmentId, move)) {
     await getBoss().send('portal-booking-notify', job, { db });
   }
 }
 
 /** Without the scheduler: sent after commit, best effort (a failure never undoes the patient's action). */
-export async function deliverPortalNotificationsNow(event: PortalEvent, appointmentId: string, previousStartAt?: Date): Promise<void> {
+export async function deliverPortalNotificationsNow(event: PortalEvent, appointmentId: string, move?: PortalMove): Promise<void> {
   if (config.scheduler.enabled) return;
-  for (const job of jobsFor(event, appointmentId, previousStartAt)) {
+  for (const job of jobsFor(event, appointmentId, move)) {
     try {
       await deliverBookingNotification(job);
     } catch (err) {

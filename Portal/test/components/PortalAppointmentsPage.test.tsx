@@ -102,7 +102,8 @@ beforeEach(() => {
         if (path === "/portal/session") return server.session ? ok(200, server.session) : fail(401, "Invalid session");
         if (path === "/portal/consent") return ok(204);
         if (path === "/portal/appointments") return server.appointments();
-        if (path.startsWith(`/public/providers/${SLUG}/slots?`)) return server.slots();
+        if (path.startsWith(`/public/providers/${SLUG}/slots?`)) throw new Error("reschedule must not use the public slots");
+        if (/^\/portal\/appointments\/[^/]+\/slots\?/.test(path)) return server.slots();
         const action = path.match(/^\/portal\/appointments\/([^/]+)\/(cancel|reschedule)$/);
         if (action) {
             return action[ 2 ] === "cancel" ? server.cancel(action[ 1 ]) : server.reschedule(action[ 1 ], JSON.parse(String(init.body)));
@@ -513,7 +514,10 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
 
         expect(await screen.findByRole("heading", { name: "Reprogramar cita" })).toHaveFocus();
         expect(screen.getByText("Cita actual")).toBeInTheDocument();
-        expect(slotCalls()[ 0 ][ 0 ]).toContain("typeId=t1");
+        const slotsUrl = String(slotCalls()[ 0 ][ 0 ]);
+        expect(slotsUrl).toContain("/portal/appointments/a1/slots?from=");
+        expect(slotsUrl).not.toContain("typeId");
+        expect(slotCalls()[ 0 ][ 1 ].credentials).toBe("include");
         await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
         expect(await screen.findByRole("heading", { name: /Confirma el cambio/ })).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Confirmar nuevo horario" }));
@@ -547,6 +551,25 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
 
         expect(await screen.findByRole("status")).toHaveTextContent("ya no se puede reprogramar en línea");
         expect(await screen.findByRole("list", { name: "Próximas citas" })).toBeInTheDocument();
+    });
+
+    it("returns to the list with the reason when the times say it can no longer be moved", async () => {
+        server.slots = () => fail(409, "Reschedule unavailable");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("ya no se puede reprogramar en línea");
+        expect(await screen.findByRole("list", { name: "Próximas citas" })).toBeInTheDocument();
+        expect(call("/reschedule")).toHaveLength(0);
+    });
+
+    it("goes back to the login when loading the times answers 401", async () => {
+        server.slots = () => fail(401, "Invalid session");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        expect(await screen.findByLabelText("Correo electrónico")).toBeInTheDocument();
     });
 
     it("goes back without a request, and to the login when the session expired", async () => {

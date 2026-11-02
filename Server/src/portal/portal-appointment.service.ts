@@ -24,6 +24,8 @@ import { bookingSettingsService } from '../booking-settings/booking-settings.ser
 import { publicBookingRepository } from '../public-booking/public-booking.repository.js';
 import { ProviderNotFoundError } from '../public-booking/public-booking.errors.js';
 import { isSlotAvailable } from '../public-booking/slot-engine.js';
+import { computeSlots } from '../public-booking/public-booking.service.js';
+import type { SlotRangeQuery } from '../public-booking/public-booking.schemas.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
 import { hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient } from './patient-resolution.js';
@@ -64,8 +66,9 @@ async function dropQueuedReminderJob(reminderId: string | null): Promise<void> {
 }
 
 /**
- * The linked reminder after a move: a PENDING one follows the new time (or is cancelled when the new time is
- * under 24h away); otherwise a new one is linked when there is still time for it. A SENT reminder is never rewritten.
+ * The linked reminder after a move: a PENDING one follows the new time with its channel and address unchanged
+ * (the provider may have switched it), or is cancelled when the new time is under 24h away; otherwise a new
+ * email reminder is linked when there is still time for it. A SENT reminder is never rewritten.
  */
 async function reminderPatch(
   tx: TransactionClient,
@@ -75,16 +78,55 @@ async function reminderPatch(
   email: string,
 ): Promise<Pick<UpdateAppointmentDto, 'reminder'>> {
   const reminderAt = new Date(start.getTime() - ONE_DAY_MS);
-  const linked = await tx.reminder.findFirst({ where: { appointmentId, isDeleted: false }, select: { status: true } });
-  const fresh = {
-    channel: Channel.EMAIL,
-    to: email,
-    sendMode: ReminderMode.SCHEDULED,
-    sendAt: reminderAt.toISOString(),
-    status: ReminderStatus.PENDING,
+  const due = reminderAt > now;
+  const linked = await tx.reminder.findFirst({
+    where: { appointmentId, isDeleted: false },
+    select: { status: true, channel: true, to: true },
+  });
+  if (linked?.status === ReminderStatus.PENDING) {
+    if (!due) return { reminder: null };
+    return {
+      reminder: {
+        channel: linked.channel,
+        to: linked.to,
+        sendMode: ReminderMode.SCHEDULED,
+        sendAt: reminderAt.toISOString(),
+        status: ReminderStatus.PENDING,
+      },
+    };
+  }
+  if (!due) return {};
+  return {
+    reminder: {
+      channel: Channel.EMAIL,
+      to: email,
+      sendMode: ReminderMode.SCHEDULED,
+      sendAt: reminderAt.toISOString(),
+      status: ReminderStatus.PENDING,
+    },
   };
-  if (linked?.status === ReminderStatus.PENDING) return reminderAt > now ? { reminder: fresh } : { reminder: null };
-  return reminderAt > now ? { reminder: fresh } : {};
+}
+
+/**
+ * Everything a reschedule needs before a slot is chosen, in order: booking live in auto-confirm (else the
+ * unknown-provider 404), a consented patient, their own upcoming active appointment (else 404), booked online
+ * with a still-bookable type and location (else 409). Shared by the slot list and the move itself.
+ */
+async function loadReschedulable(tx: TransactionClient, session: PortalSessionContext, appointmentId: string, now: Date) {
+  const { userId } = session;
+  if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
+  const settings = await bookingSettingsRepository.getSettings(userId, tx);
+  if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
+
+  const patientId = await requireConsentedPatient(session, tx);
+  const appt = await portalBookingRepository.findOwn(userId, patientId, appointmentId, tx);
+  if (!appt || !canCancel(appt, now)) throw new PortalAppointmentNotFoundError();
+  if (appt.source !== RecordSource.PORTAL || !appt.typeId || !appt.locationId) throw new PortalRescheduleUnavailableError();
+
+  const type = await publicBookingRepository.findBookableType(userId, appt.typeId, tx);
+  const location = await publicBookingRepository.findBookableLocation(userId, appt.locationId, tx);
+  if (!type || !location) throw new PortalRescheduleUnavailableError();
+  return { settings, appt, type };
 }
 
 export const portalAppointmentService = {
@@ -127,6 +169,20 @@ export const portalAppointmentService = {
   },
 
   /**
+   * Free start times for moving one of the patient's own online bookings: the type's current duration, the
+   * appointment itself not counted as busy (so nearby times show), and its current start left out.
+   */
+  async rescheduleSlots(session: PortalSessionContext, appointmentId: string, range: SlotRangeQuery) {
+    const { userId } = session;
+    return prisma.$transaction(async (tx) => {
+      const { settings, appt, type } = await loadReschedulable(tx, session, appointmentId, new Date());
+      const slots = await computeSlots(userId, settings, type.defaultDuration, range, { excludeAppointmentId: appt.id, tx });
+      const current = appt.startAt.toISOString();
+      return { timezone: settings.timezone, slots: slots.filter((s) => s.startUtc !== current) };
+    });
+  },
+
+  /**
    * Moves one of the patient's own online bookings to a new slot, in place (same id), under the provider lock.
    * Same slot rules as booking; the type's current duration; price, status and confirmation unchanged.
    */
@@ -141,21 +197,10 @@ export const portalAppointmentService = {
     const start = new Date(body.startUtc);
 
     try {
-      const { moved, previousStartAt } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
+      const { moved, move } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
-        if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
-        const settings = await bookingSettingsRepository.getSettings(userId, tx);
-        if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
-
-        const patientId = await requireConsentedPatient(session, tx);
-        const appt = await portalBookingRepository.findOwn(userId, patientId, appointmentId, tx);
         const now = new Date();
-        if (!appt || !canCancel(appt, now)) throw new PortalAppointmentNotFoundError();
-        if (appt.source !== RecordSource.PORTAL || !appt.typeId || !appt.locationId) throw new PortalRescheduleUnavailableError();
-
-        const type = await publicBookingRepository.findBookableType(userId, appt.typeId, tx);
-        const location = await publicBookingRepository.findBookableLocation(userId, appt.locationId, tx);
-        if (!type || !location) throw new PortalRescheduleUnavailableError();
+        const { settings, appt, type } = await loadReschedulable(tx, session, appointmentId, now);
         if (start.getTime() === appt.startAt.getTime()) throw new RescheduleSameTimeError();
 
         const end = new Date(start.getTime() + type.defaultDuration * ONE_MINUTE_MS);
@@ -179,12 +224,13 @@ export const portalAppointmentService = {
           endAt: end.toISOString(),
           ...(await reminderPatch(tx, appt.id, start, now, session.email)),
         }, userId, { patientTimezone: body.patientTimezone, replaceSettledReminder: true });
-        await enqueuePortalNotifications('rescheduled', appt.id, tx, appt.startAt);
-        return { moved: await portalBookingRepository.findForDto(appt.id, tx), previousStartAt: appt.startAt };
+        const move = { previousStartAt: appt.startAt, startAt: start };
+        await enqueuePortalNotifications('rescheduled', appt.id, tx, move);
+        return { moved: await portalBookingRepository.findForDto(appt.id, tx), move };
       }, { timeout: 10000 }));
 
       logger.info({ appointmentId, userId }, 'Appointment rescheduled by the patient in the portal');
-      await deliverPortalNotificationsNow('rescheduled', appointmentId, previousStartAt);
+      await deliverPortalNotificationsNow('rescheduled', appointmentId, move);
       return toPortalAppointmentDto(moved, { now: new Date(), canBook: true });
     } catch (err) {
       throw toPortalError(err);
