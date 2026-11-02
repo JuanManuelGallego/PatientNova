@@ -182,8 +182,11 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     });
     const fresh = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
     expect(fresh.id).not.toBe(sent.id);
-    const unlinkAudit = await prisma.auditLog.findFirstOrThrow({ where: { entityType: EntityType.REMINDER, entityId: sent.id } });
-    expect(unlinkAudit).toMatchObject({ source: ActionSource.PUBLIC_PORTAL, affectedFields: [ 'appointmentId' ] });
+    const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.REMINDER, entityId: sent.id, actionType: 'UPDATE' } });
+    // The booking wrote the "linked" row; the move adds exactly one "unlinked" row.
+    expect(audits.filter((a) => (a.fieldsAfter as { appointmentId?: string | null }).appointmentId === null)).toEqual([
+      expect.objectContaining({ source: ActionSource.PUBLIC_PORTAL, affectedFields: [ 'appointmentId' ], fieldsBefore: { appointmentId } }),
+    ]);
     expect(fresh).toMatchObject({ status: ReminderStatus.PENDING, channel: Channel.EMAIL, to: session.email });
     expect(fresh.sendAt.getTime()).toBe(new Date(to!).getTime() - 24 * HOUR);
   });

@@ -1,0 +1,47 @@
+meta {
+  name: Reschedule Slots
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/portal/appointments/{{portalAppointmentId}}/slots?from={{from}}&to={{to}}
+  body: none
+  auth: none
+}
+
+params:query {
+  from: {{from}}
+  to: {{to}}
+}
+
+headers {
+  Origin: {{portalOrigin}}
+}
+
+script:pre-request {
+  // The next 7 days, so the example never drifts into the past.
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  bru.setVar("from", day(0));
+  bru.setVar("to", day(6));
+}
+
+script:post-response {
+  // The first free time, used by Reschedule Appointment.
+  const first = res.body?.data?.slots?.[0]?.startUtc;
+  if (first) bru.setVar("slotStartUtc", first);
+}
+
+docs {
+  Free start times for moving one of the session patient's online bookings, over provider-zone days
+  `from`..`to` (at most 31). Run Create Booking or List Appointments first (they store
+  `portalAppointmentId`). Needs the session cookie; no CSRF token (GET).
+
+  Same shape as Public Booking > Get Slots, with the type's current duration, but the appointment
+  being moved does not block its own neighbourhood (buffer) and its current start is left out.
+  Stores the first time as `slotStartUtc` for Reschedule Appointment.
+
+  200 `{ timezone, slots }`. The same errors as Reschedule Appointment before a time is chosen:
+  404 "Appointment not found", 409 "Reschedule unavailable", 404 "Provider not found"; 400 for a
+  bad or extra query parameter.
+}

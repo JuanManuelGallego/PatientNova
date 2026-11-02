@@ -164,63 +164,63 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
         );
     }
 
-    if (loading || sessionLost) {
-        return <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
-    }
-    if (error) return <ErrorState error={error} onRetry={retry} inline />;
-
+    // The result line stays mounted (same position) while the list reloads behind it, so it keeps the
+    // focus it was given; otherwise focus would drop to the page when the skeleton replaced it.
     const statusLine = status && (
         <p ref={statusRef} tabIndex={-1} className={styles.notice} role="status">{status}</p>
     );
-    if (!appointments?.length) {
-        return (
+
+    let body: React.ReactNode;
+    if (loading || sessionLost) {
+        body = <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
+    } else if (error) {
+        body = <ErrorState error={error} onRetry={retry} inline />;
+    } else if (!appointments?.length) {
+        body = <p className={styles.lead}>No tienes citas próximas.</p>;
+    } else {
+        body = (
             <>
-                {statusLine}
-                <p className={styles.lead}>No tienes citas próximas.</p>
+                <ul className={styles.appts} aria-label="Próximas citas">
+                    {appointments.map((a) => (
+                        <li key={a.id}>
+                            <PortalAppointmentCard
+                                appointment={a}
+                                timezone={timezone}
+                                actions={(a.canReschedule || a.canCancel) && (
+                                    <>
+                                        {a.canReschedule && (
+                                            <button type="button" className="btn-secondary" onClick={() => { setStatus(null); setRescheduling(a); }}>
+                                                Reprogramar
+                                            </button>
+                                        )}
+                                        {a.canCancel && (
+                                            <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`}
+                                                onClick={() => { setStatus(null); setCancelling(a); }}>
+                                                Cancelar cita
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            />
+                        </li>
+                    ))}
+                </ul>
+                <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+                {cancelling && (
+                    <CancelDialog
+                        appointment={cancelling}
+                        timezone={timezone}
+                        onClose={() => setCancelling(null)}
+                        onCancelled={() => settle("Tu cita quedó cancelada. Te enviamos la confirmación a tu correo.")}
+                        onGone={settle}
+                        onSessionLost={onSessionLost}
+                    />
+                )}
             </>
         );
     }
-    return (
-        <>
-            {statusLine}
-            <ul className={styles.appts} aria-label="Próximas citas">
-                {appointments.map((a) => (
-                    <li key={a.id}>
-                        <PortalAppointmentCard
-                            appointment={a}
-                            timezone={timezone}
-                            actions={(a.canReschedule || a.canCancel) && (
-                                <>
-                                    {a.canReschedule && (
-                                        <button type="button" className="btn-secondary" onClick={() => { setStatus(null); setRescheduling(a); }}>
-                                            Reprogramar
-                                        </button>
-                                    )}
-                                    {a.canCancel && (
-                                        <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`}
-                                            onClick={() => { setStatus(null); setCancelling(a); }}>
-                                            Cancelar cita
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        />
-                    </li>
-                ))}
-            </ul>
-            <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
-            {cancelling && (
-                <CancelDialog
-                    appointment={cancelling}
-                    timezone={timezone}
-                    onClose={() => setCancelling(null)}
-                    onCancelled={() => settle("Tu cita quedó cancelada. Te enviamos la confirmación a tu correo.")}
-                    onGone={settle}
-                    onSessionLost={onSessionLost}
-                />
-            )}
-        </>
-    );
+
+    return <>{statusLine}{body}</>;
 }
 
 interface CancelDialogProps {

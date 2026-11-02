@@ -88,6 +88,8 @@
   --c-success-bg: #ecfdf5;
   --c-success-light: #d1fae5;
   --c-error: #ef4444;
+  /* Red for text on light surfaces: --c-error is 3.8:1 on white, under AA for body-size text. */
+  --c-error-text: #b91c1c;
   --c-error-bg: #fef2f2;
   --c-error-border: #fecaca;
   --c-warning: #f5420b;
@@ -157,6 +159,7 @@
   --c-success-bg: #064e3b;
   --c-success-light: #065f46;
   --c-error: #f87171;
+  --c-error-text: #fca5a5;
   --c-error-bg: #450a0a;
   --c-error-border: #7f1d1d;
   --c-warning: #fbbf24;

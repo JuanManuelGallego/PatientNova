@@ -477,6 +477,8 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         expect(new Headers(init.headers).get("X-CSRF-Token")).toBe("csrf-from-session");
         expect(within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")).toHaveLength(1);
         expect(call("/portal/appointments").length).toBeGreaterThanOrEqual(2);
+        // The result keeps focus through the list reload (it is never unmounted behind the skeleton).
+        expect(screen.getByRole("status")).toHaveFocus();
     });
 
     it("closes the dialog and refreshes the list when the appointment can no longer be changed", async () => {
@@ -512,7 +514,9 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         render(<PortalAppointmentsPage slug={SLUG} />);
         await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
 
-        expect(await screen.findByRole("heading", { name: "Reprogramar cita" })).toHaveFocus();
+        expect(await screen.findByRole("heading", { level: 2, name: "Reprogramar cita" })).toHaveFocus();
+        expect(screen.getByRole("heading", { level: 3, name: /Día/ })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { level: 3, name: /Hora/ })).toBeInTheDocument();
         expect(screen.getByText("Cita actual")).toBeInTheDocument();
         const slotsUrl = String(slotCalls()[ 0 ][ 0 ]);
         expect(slotsUrl).toContain("/portal/appointments/a1/slots?from=");

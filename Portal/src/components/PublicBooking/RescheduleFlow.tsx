@@ -74,10 +74,10 @@ export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, 
             <p className={portal.sectionLabel}>Cita actual</p>
             <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
 
-            <SlotSteps picker={picker} firstStep={1} noticeRef={noticeRef} />
+            <SlotSteps picker={picker} firstStep={1} noticeRef={noticeRef} headingLevel={3} />
 
             {slot && (
-                <Step number={3} title="Confirma el cambio" stepRef={confirmStep}>
+                <Step number={3} level={3} title="Confirma el cambio" stepRef={confirmStep}>
                     <div className={styles.confirm}>
                         <dl className={styles.summary}>
                             <div>

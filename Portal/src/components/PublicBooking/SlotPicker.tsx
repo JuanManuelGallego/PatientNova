@@ -82,14 +82,17 @@ interface SlotStepsProps {
     /** Number shown on the "Día" step; "Hora" follows it. */
     firstStep: number;
     noticeRef?: React.Ref<HTMLParagraphElement>;
+    /** Step heading level: 2 under the page title, 3 inside a section that has its own h2. */
+    headingLevel?: 2 | 3;
 }
 
-export function SlotSteps({ picker, firstStep, noticeRef }: SlotStepsProps) {
+export function SlotSteps({ picker, firstStep, noticeRef, headingLevel = 2 }: SlotStepsProps) {
     const { page, weekDays, openDays, day, slot, slots, loading, error, retry, notice, timezone } = picker;
     return (
         <>
             <Step
                 number={firstStep}
+                level={headingLevel}
                 title="Día"
                 aside={
                     <div className={styles.weekNav}>
@@ -128,7 +131,7 @@ export function SlotSteps({ picker, firstStep, noticeRef }: SlotStepsProps) {
                     )}
             </Step>
 
-            <Step number={firstStep + 1} title="Hora">
+            <Step number={firstStep + 1} level={headingLevel} title="Hora">
                 {notice && <p ref={noticeRef} tabIndex={-1} className={styles.notice} role="alert">{notice}</p>}
                 {error ? null
                     : loading || !slots ? <TimesSkeleton />
@@ -160,20 +163,22 @@ export function reveal(el: HTMLElement | null) {
 interface StepProps {
     number: number;
     title: string;
+    level?: 2 | 3;
     aside?: React.ReactNode;
     stepRef?: React.Ref<HTMLDivElement>;
     children: React.ReactNode;
 }
 
-export function Step({ number, title, aside, stepRef, children }: StepProps) {
+export function Step({ number, title, level = 2, aside, stepRef, children }: StepProps) {
     const id = `step-${number}`;
+    const Heading = level === 3 ? "h3" : "h2";
     return (
         <div ref={stepRef} className={styles.step} role="group" aria-labelledby={id}>
             <div className={styles.stepHead}>
-                <h2 id={id} className={styles.stepTitle}>
+                <Heading id={id} className={styles.stepTitle}>
                     <span className={styles.stepNumber} aria-hidden="true">{number}</span>
                     {title}
-                </h2>
+                </Heading>
                 {aside}
             </div>
             {children}

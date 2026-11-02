@@ -27,7 +27,7 @@ docs {
   Moves one of the session patient's online bookings to `startUtc`, in place (same appointment id).
   Run Create Booking or List Appointments first (they store `portalAppointmentId`), then Public
   Booking > Get Slots for a free time (it stores `slotStartUtc`). Needs the session cookie, the exact
-  Origin and the CSRF token.
+  Origin and the CSRF token. Reschedule Slots (or Public Booking > Get Slots) stores a free `slotStartUtc`.
 
   The body is strict: only the new start and the device's IANA zone. The end comes from the type's
   current duration; price, status and confirmation stay as they were. The linked reminder follows
