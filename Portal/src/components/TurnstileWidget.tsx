@@ -43,19 +43,22 @@ export interface TurnstileHandle {
 interface TurnstileWidgetProps {
     action: string;
     onToken: (token: string | null) => void;
+    onError?: () => void;
     siteKey?: string;
     ref?: Ref<TurnstileHandle>;
 }
 
-export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, ref }: TurnstileWidgetProps) {
+export function TurnstileWidget({ action, onToken, onError, siteKey = DEFAULT_SITE_KEY, ref }: TurnstileWidgetProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
     const onTokenRef = useRef(onToken);
+    const onErrorRef = useRef(onError);
     const [ failed, setFailed ] = useState(false);
 
     useEffect(() => {
         onTokenRef.current = onToken;
-    }, [ onToken ]);
+        onErrorRef.current = onError;
+    }, [ onToken, onError ]);
 
     useImperativeHandle(ref, () => ({
         reset: () => {
@@ -68,6 +71,7 @@ export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, r
         if (!siteKey) {
             // Misconfigured build: there is no bypass, so the form cannot be submitted.
             onTokenRef.current(null);
+            onErrorRef.current?.();
             return;
         }
         let cancelled = false;
@@ -87,11 +91,14 @@ export function TurnstileWidget({ action, onToken, siteKey = DEFAULT_SITE_KEY, r
                     "error-callback": () => {
                         setFailed(true);
                         onTokenRef.current(null);
+                        onErrorRef.current?.();
                     },
                 });
             })
             .catch(() => {
-                if (!cancelled) setFailed(true);
+                if (cancelled) return;
+                setFailed(true);
+                onErrorRef.current?.();
             });
         return () => {
             cancelled = true;

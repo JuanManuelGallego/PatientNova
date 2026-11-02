@@ -12,6 +12,11 @@ interface SiteverifyResponse {
   challenge_ts?: string;
   hostname?: string;
   action?: string;
+  metadata?: { result_with_testing_key?: boolean };
+}
+
+export function isTurnstileTestSecret(secret: string): boolean {
+  return /^[123]x0+AA$/.test(secret);
 }
 
 interface TurnstileOptions {
@@ -64,8 +69,11 @@ export function createTurnstileVerifier(opts: TurnstileOptions): CaptchaVerifier
         if (reason === 'unavailable') logger.error({ errorCodes }, 'Turnstile rejected our request (check CAPTCHA_SECRET)');
         return fail(reason);
       }
-      if (!payload.hostname || !opts.expectedHostnames.includes(payload.hostname)) return fail('hostname-mismatch');
-      if (payload.action !== action) return fail('action-mismatch');
+      const testKeyResult = isTurnstileTestSecret(opts.secret) && payload.metadata?.result_with_testing_key === true;
+      if (!testKeyResult) {
+        if (!payload.hostname || !opts.expectedHostnames.includes(payload.hostname)) return fail('hostname-mismatch');
+        if (payload.action !== action) return fail('action-mismatch');
+      }
 
       const solvedAt = payload.challenge_ts ? Date.parse(payload.challenge_ts) : NaN;
       if (Number.isNaN(solvedAt) || now() - solvedAt > MAX_TOKEN_AGE_MS) return fail('expired');

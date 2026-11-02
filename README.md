@@ -232,6 +232,7 @@ Google OAuth settings may be omitted when running in manual-link-only mode. Gene
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | Backend API URL (default: `http://localhost:3001`) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key for the patient portal login (test key `1x00000000000000000000AA` locally) |
 
 ### Installation
 

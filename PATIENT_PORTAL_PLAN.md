@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 planned in detail below, not started (the `/v1/portal` session router is mounted behind `ENABLE_PORTAL` with no endpoints). **Updated:** 2026-11-01
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); next is Phase 4. **Updated:** 2026-11-01
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -393,7 +393,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - record consent only with `ensureCurrentConsent`;
   - add `patient_consents_active_key` to the raw-only list.
 
-**PR 3.4 — Portal: OTP login on "Mis citas".**
+**PR 3.4 — Portal: OTP login on "Mis citas".** Done (2026-11-01).
 - **API hooks.**
   - Generic `usePublicMutation`/`usePortalMutation` in `src/api/base/`, copying the `useApiMutation` shape: `{mutate, loading, error}` plus an inflight guard.
   - `src/api/portal/`: `useRequestOtp(slug)`, `useVerifyOtp(slug)`, `usePortalSession()` (a 401 means no session, not an error), `useAcceptConsent()`, `useLogout()`.
@@ -428,6 +428,14 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
 - **Risk check, first step of 3.4.** Call siteverify once with the test secret and a dummy token, and see which `hostname` and `action` it returns.
   - If the hostname is not the Portal host, set `CAPTCHA_EXPECTED_HOSTNAMES` in the e2e job and in the local-dev notes.
   - If the action can never match `otp-request`, stop and decide before writing the e2e spec, since local dev has the same problem.
+  - *(Result, 2026-11-01.)* The test secret answers `hostname: "example.com"`, **no `action`**, and `metadata.result_with_testing_key: true`. **Decided:** the verifier skips the hostname and action checks only for responses carrying that flag (the test secret already accepts every token, and a real secret never gets the flag); `challenge_ts` is still checked. The Server logs a warning at startup when `NODE_ENV=production` runs with a Cloudflare test secret. No `CAPTCHA_EXPECTED_HOSTNAMES` change is needed.
+- **As built.** `usePublicMutation`/`usePortalMutation` live in `src/api/base/useClientMutation.ts`; the portal hooks are `usePortalSession` and `usePortalAuth` (`useRequestOtp`, `useVerifyOtp`, `useAcceptConsent`, `useLogout`). The page is `PortalAppointmentsPage` (`PortalLogin`, `PortalConsent`); the shared "no disponible" and error states moved to `PublicStates.tsx`. A 401 on consent returns to the login. A CAPTCHA rejection or outage has its own Spanish message, and so does a wrong code. `Portal/.env.example` is new (the README already pointed to it). The e2e uses one login test per project, because `otp-request-ip` allows 10 requests per IP per 15 minutes across both public projects and retries. Locally, run `node Portal/e2e/support/mock-brevo.mjs` and start the API with `ENABLE_PORTAL=true BREVO_API_BASE_URL=http://localhost:4010`.
+- *(Review fixes, 2026-11-01.)*
+  - The session is matched to the lowercased URL slug, so a mixed-case link no longer loops back to the login.
+  - "Cambiar correo" keeps the challenge and the countdown. Returning to the same address goes back to the code step without a request; a re-request inside the cooldown would get a throttled random challenge and break the emailed code.
+  - A failed logout keeps the session on screen with an error, instead of a fake logout that a reload undoes.
+  - A 401 on consent returns to the login with "Tu sesión expiró".
+  - The verifier skips the hostname/action checks only when the configured secret is a Cloudflare test secret **and** the answer carries the test flag.
 
 **Phase 3 exit criteria:**
 - A patient can prove control of an email for one provider and get a 2h session: an httpOnly cookie plus an in-memory CSRF token.

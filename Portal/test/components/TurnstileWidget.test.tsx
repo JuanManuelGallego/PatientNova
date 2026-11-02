@@ -39,12 +39,15 @@ describe("TurnstileWidget", () => {
 
     it("shows an accessible error and clears the token when the challenge errors", async () => {
         const onToken = vi.fn();
-        render(<TurnstileWidget action="otp-request" siteKey="site-key" onToken={onToken} />);
+        const onError = vi.fn();
+        render(<TurnstileWidget action="otp-request" siteKey="site-key" onToken={onToken} onError={onError} />);
         await waitFor(() => expect(turnstile.render).toHaveBeenCalled());
+        expect(onError).not.toHaveBeenCalled();
 
         act(() => callback("error-callback")());
         expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos verificar");
         expect(onToken).toHaveBeenLastCalledWith(null);
+        expect(onError).toHaveBeenCalledTimes(1);
     });
 
     it("resets the single-use token on demand and removes the widget on unmount", async () => {
@@ -63,8 +66,10 @@ describe("TurnstileWidget", () => {
 
     it("without a site key shows an error and never yields a token (no bypass)", () => {
         const onToken = vi.fn();
-        render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} />);
+        const onError = vi.fn();
+        render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} onError={onError} />);
         expect(screen.getByRole("alert")).toHaveTextContent("No pudimos verificar");
+        expect(onError).toHaveBeenCalled();
         expect(turnstile.render).not.toHaveBeenCalled();
         expect(onToken).toHaveBeenCalledWith(null);
         expect(onToken).not.toHaveBeenCalledWith(expect.any(String));

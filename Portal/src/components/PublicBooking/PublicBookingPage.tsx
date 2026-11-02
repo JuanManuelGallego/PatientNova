@@ -2,11 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
-import { API_BASE } from "@/src/config/api";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { useFetchPublicSlots } from "@/src/api/public-booking/useFetchPublicSlots";
-import type { ApiClientError } from "@/src/api/base/apiClients";
 import type { PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import { browserTimezone, fmtTime, todayFormattedString } from "@/src/utils/TimeUtils";
 import {
@@ -14,6 +13,8 @@ import {
     timezoneName, WEEK_DAYS, weekPage,
 } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
+import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
+import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
 
 export function PublicBookingPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
@@ -24,20 +25,7 @@ export function PublicBookingPage({ slug }: { slug: string }) {
     else if (loading || !provider) body = <ProfileSkeleton />;
     else body = <BookingView slug={slug} provider={provider} />;
 
-    return (
-        <main className={styles.page}>
-            <div className={styles.container}>{body}</div>
-        </main>
-    );
-}
-
-function imageUrl(slug: string, kind: "avatar" | "logo") {
-    return `${API_BASE}/public/providers/${encodeURIComponent(slug)}/${kind}`;
-}
-
-function initials(name: string): string {
-    const words = name.split(/\s+/).filter((w) => w && !w.endsWith("."));
-    return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
+    return <PublicPageShell>{body}</PublicPageShell>;
 }
 
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
@@ -67,6 +55,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     return (
         <>
+            <nav className={styles.topNav} aria-label="Cuenta">
+                <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.topLink}>Mis citas</Link>
+            </nav>
             <ProviderHero slug={slug} provider={provider} />
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
@@ -157,17 +148,14 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 }
 
 function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvider }) {
-    const [ avatarFailed, setAvatarFailed ] = useState(false);
     const [ logoFailed, setLogoFailed ] = useState(false);
     return (
         <section className={styles.hero}>
             {provider.hasLogo && !logoFailed && (
-                <img className={styles.logo} src={imageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
+                <img className={styles.logo} src={providerImageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
             )}
             <div className={styles.identity}>
-                {provider.hasAvatar && !avatarFailed
-                    ? <img className={styles.avatar} src={imageUrl(slug, "avatar")} alt="" onError={() => setAvatarFailed(true)} />
-                    : <div className={styles.avatar} aria-hidden="true">{initials(provider.displayName)}</div>}
+                <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
                 <div>
                     <h1 className={styles.name}>{provider.displayName}</h1>
                     {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}
@@ -214,24 +202,6 @@ function TimeGroup({ title, slots, timezone }: { title: string; slots: PublicSlo
             <ul className={styles.times} aria-label={title}>
                 {slots.map((s) => <li key={s.startUtc} className={styles.time}>{fmtTime(s.startUtc, timezone)}</li>)}
             </ul>
-        </div>
-    );
-}
-
-function Unavailable() {
-    return (
-        <section className={`dash-card ${styles.state}`}>
-            <h1 className={styles.stateTitle}>Esta página de reservas no está disponible</h1>
-            <p className={styles.muted}>Verifica el enlace o contacta directamente al profesional.</p>
-        </section>
-    );
-}
-
-function ErrorState({ error, onRetry, inline = false }: { error: ApiClientError; onRetry: () => void; inline?: boolean }) {
-    return (
-        <div className={inline ? styles.empty : `dash-card ${styles.state}`} role="alert">
-            <p className={styles.muted}>{error.message}</p>
-            <button type="button" className="btn-secondary" onClick={onRetry}>Reintentar</button>
         </div>
     );
 }

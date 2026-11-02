@@ -4,7 +4,7 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { createTurnstileVerifier, TURNSTILE_SITEVERIFY_URL } from '../../../src/captcha/turnstile.js';
+import { createTurnstileVerifier, isTurnstileTestSecret, TURNSTILE_SITEVERIFY_URL } from '../../../src/captcha/turnstile.js';
 
 const NOW = Date.parse('2026-10-12T12:00:00Z');
 const fetchMock = vi.fn();
@@ -77,6 +77,45 @@ describe('Turnstile verifier', () => {
 
     fetchMock.mockResolvedValueOnce(siteverify({ ...valid, action: 'booking-create' }));
     expect(await check()).toEqual({ ok: false, reason: 'action-mismatch' });
+  });
+
+  describe('Cloudflare test-key results', () => {
+    const testKey = { success: true, 'error-codes': [], challenge_ts: '2026-10-12T11:59:00Z', hostname: 'example.com', metadata: { result_with_testing_key: true } };
+    const testVerifier = createTurnstileVerifier({
+      secret: '1x0000000000000000000000000000000AA',
+      expectedHostnames: [ 'localhost' ],
+      timeoutMs: 3000,
+      now: () => NOW,
+    });
+    const checkTest = () => testVerifier.verify({ token: 'XXXX.DUMMY.TOKEN.XXXX', ip: undefined, action: 'otp-request' });
+
+    it('skips hostname and action when our secret is a test secret and Cloudflare flags the answer', async () => {
+      fetchMock.mockResolvedValueOnce(siteverify(testKey));
+      expect(await checkTest()).toEqual({ ok: true });
+
+      fetchMock.mockResolvedValueOnce(siteverify({ ...testKey, challenge_ts: '2026-10-12T11:54:00Z' }));
+      expect(await checkTest()).toEqual({ ok: false, reason: 'expired' });
+
+      fetchMock.mockResolvedValueOnce(siteverify({ ...testKey, metadata: { result_with_testing_key: false } }));
+      expect(await checkTest()).toEqual({ ok: false, reason: 'hostname-mismatch' });
+
+      fetchMock.mockResolvedValueOnce(siteverify({ ...testKey, success: false, 'error-codes': [ 'invalid-input-response' ] }));
+      expect(await checkTest()).toEqual({ ok: false, reason: 'invalid' });
+    });
+
+    it('never skips them for a real secret, even if the answer carries the flag', async () => {
+      fetchMock.mockResolvedValueOnce(siteverify(testKey));
+      expect(await check()).toEqual({ ok: false, reason: 'hostname-mismatch' });
+
+      fetchMock.mockResolvedValueOnce(siteverify({ ...testKey, hostname: 'portal.patientnova.net' }));
+      expect(await check()).toEqual({ ok: false, reason: 'action-mismatch' });
+    });
+  });
+
+  it('recognizes the Cloudflare test secrets', () => {
+    expect(isTurnstileTestSecret('1x0000000000000000000000000000000AA')).toBe(true);
+    expect(isTurnstileTestSecret('2x0000000000000000000000000000000AA')).toBe(true);
+    expect(isTurnstileTestSecret('0x4AAAAAAAreal-secret')).toBe(false);
   });
 
   it('rejects stale or undated challenges', async () => {
