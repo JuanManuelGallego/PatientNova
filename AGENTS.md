@@ -27,7 +27,8 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
 ### Common pitfalls
 - **Keep `.env.test` in sync with `.github/workflows/ci.yml`.** CI supplies env vars
   directly (it does NOT load `.env.test`). When you add a `requireEnv(...)` var in
-  `src/utils/config.ts`, update both places.
+  `src/utils/config.ts`, update both places, plus `.env.example`. Unit tests load your local `Server/.env`,
+  so add the var there too (e.g. `TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID`).
 - **Never point `DATABASE_URL` at dev/prod** — the guard blocks non-`test` URLs.
 - **Stale generated client:** if you change `schema.prisma`, run `pnpm exec prisma generate`.
   The committed `generated/prisma` client is typechecked, so a stale client surfaces
@@ -60,7 +61,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `51` files, `644` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -86,6 +87,8 @@ Suite: `51` files, `644` tests, all against real Postgres, `tsc --noEmit` clean.
 | Portal OTP (routes) | `test/integration/portal/portal-otp.integration.test.ts` | `POST /v1/public/providers/:slug/otp` + `POST /v1/portal/:slug/otp/verify` on an app wired like `app.ts` (Brevo `transactional.js` mocked, Turnstile siteverify stubbed): identical 202 `{challenge}` for new/patient/deleted-only/revoked emails, only hashes stored (no email, code not in subject), email normalization, resend cooldown replaces the code, per-email hourly cap + new window, per-provider cap (other provider unaffected), public-page 404 for unknown/not-live slugs, CAPTCHA 400/503, strict body 400; verify sets the cookie (HttpOnly/Secure/Lax/path/2h) with `{userId,email,sid}` and a sid-bound CSRF token, attempt lock (right code rejected after 5 misses), expired/reused/never-requested give one error, code not valid on another provider, concurrent verifies give one session, exact Origin (no CSRF), 10kb limit, malformed code not counted; challenge: wrong challenge never counts an attempt, throttled 202 carries an unused challenge, lock recovery + second login; daily failure cap across resends (stops sending, right code rejected, window reset); `purgePortalOtpsWorker` |
 | Portal session (routes) | `test/integration/portal/portal-session.integration.test.ts` | `GET /v1/portal/session`, `POST /v1/portal/consent`, `POST /v1/portal/logout` on an app wired like `app.ts`: one 401 for missing/tampered/expired/wrong-audience/wrong-secret/claim-less tokens and provider tokens (Bearer or cookie), portal token rejected on provider routes, 401 once the provider is not live (disabled/deleted/portal off); identical session keys and types for none/patient/revoked/inactive/deleted-only, `consentRequired` false only with a consent at the current policy version (version bump re-requires it), email change stops resolving, other provider's patient never resolves; consent 204 in every case, one row + one `PUBLIC_PORTAL` audit row even under concurrency, nothing for non-patients, CSRF/Origin/strict body (no client `policyVersion`); logout clears the cookie on the same path even without a valid session, foreign Origin 403 |
 | Portal booking (routes) | `test/integration/portal/portal-booking.integration.test.ts` | `POST /v1/portal/bookings` + `GET /v1/portal/appointments` on an app wired like `app.ts`: new patient (PORTAL source, EMAIL channel, session email) + consent + CONFIRMED portal appointment (type price, `confirmedAt`, `patientTimezone`) with `PUBLIC_PORTAL` audits; existing patient never modified, consent reused; one neutral 409 for revoked/inactive/deleted-only; concurrent same-slot bookings and portal-vs-admin races (one winner, loser fully rolled back); same new email twice at once → one patient; slot rejections (buffer, taken, blocked, off-grid, outside/overrunning the window, lead, horizon) as one 409 without the other appointment's times; non-bookable/inactive/virtual/foreign type or location 404; strict body 400 (no client price/end/status, IANA zone); 3-upcoming portal cap (provider-created, cancelled, past not counted); rollback of patient/consent/appointment/audits on a later failure; CSRF/session/Origin guards, approval mode 404; list: same shape for none/unavailable/unconsented, own upcoming active only, soonest first |
+| Portal booking (notifications) | `test/integration/portal/portal-booking.integration.test.ts`, `portal-booking-notify.integration.test.ts` | confirmation to the patient in their zone (and across a DST change in that zone), provider zone fallback, address/location/appointments link; provider notice on WhatsApp (template SID) / SMS / EMAIL without patient details, skipped when `reminderActive` is off or no contact; scheduler on: reminder + both notify jobs sent with `db` inside the booking `tx`; scheduler off: sent after commit, nothing on rollback, a failed send keeps the booking; 24h EMAIL reminder in the patient zone, none under 24h; inactive/deleted appointments skipped; failed send throws (worker retry) (dispatch + `getBoss` mocked) |
+| Appointments (reminder scheduling) | `test/integration/appointments/appointment.reminder-scheduling.integration.test.ts` | linked SCHEDULED reminder enqueued with `startAfter` on `tx`, IMMEDIATE without; re-enqueued only when an update moves `sendAt`; nothing without the scheduler; `send-reminder` skips a stale job before `sendAt` and sends when due (`getBoss` + dispatch mocked) |
 | Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, lead time reaching the horizon 422 (merged with stored values), enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
 | Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
@@ -249,6 +252,16 @@ Suite: `51` files, `644` tests, all against real Postgres, `tsc --noEmit` clean.
   Price, duration, end time and status are derived on the server; the body is strict. Calendar conflicts
   (`AppointmentConflictError`, blocked time, the 23P01 backstop) surface as the neutral `SlotUnavailableError`, never
   with the other appointment's times. Patient-facing lists go through the allow-listed `PortalAppointmentDto`.
+- Booking notifications (`src/portal/portal-booking-notifications.ts`): the patient confirmation and the provider notice
+  are `portal-booking-notify` jobs (`{ appointmentId, kind }`, ids only) enqueued on the booking `tx` with
+  `fromPrisma(tx)`, so a rollback drops them; without the scheduler they are sent after commit, best effort. The
+  handler re-reads the appointment, skips inactive/deleted ones and throws on a failed send (pg-boss retries). Provider
+  notices carry no patient details. Patient-facing times (confirmation, linked reminders) use
+  `Appointment.patientTimezone ?? User.timezone`; provider-facing text stays in `User.timezone`.
+- Linked reminders: `createWithin`/`update` enqueue `send-reminder` on `tx` (`startAfter: sendAt` for SCHEDULED) when the
+  reminder is created or its `sendAt`/`sendMode` actually changes. A moved reminder keeps its old job; `send-reminder`
+  skips a SCHEDULED job that fires more than a minute before `sendAt`. Never enqueue a second job for an unchanged
+  `sendAt`: two jobs firing together can both read PENDING and send twice.
 - Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
   fetch only through `publicApi` via `usePublicQuery` (`src/api/base/`), never `useApiQuery`/`fetchWithAuth`. They show
   times only in the patient's device zone (`browserTimezone()`, passed explicitly to `TimeUtils`), never the provider's:

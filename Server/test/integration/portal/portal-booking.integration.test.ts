@@ -13,6 +13,13 @@ vi.mock('../../../src/patient-consents/patient-consent.service.js', async (impor
   };
 });
 
+const mocks = vi.hoisted(() => ({
+  dispatch: vi.fn(),
+  send: vi.fn(),
+}));
+vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
+vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mocks.send }) }));
+
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
@@ -37,9 +44,15 @@ const portal = config.portal as { patientEnabled: boolean };
 const portalWas = portal.patientEnabled;
 beforeAll(() => { portal.patientEnabled = true; });
 afterAll(() => { portal.patientEnabled = portalWas; });
+const scheduler = config.scheduler as { enabled: boolean };
+const schedulerWas = scheduler.enabled;
+afterAll(() => { scheduler.enabled = schedulerWas; });
 beforeEach(() => {
   app = buildPortalApp();
   failConsent.on = false;
+  scheduler.enabled = false;
+  mocks.dispatch.mockReset().mockResolvedValue({ success: true, messageSid: 'msg-1' });
+  mocks.send.mockReset().mockResolvedValue('job-1');
 });
 
 async function slotsOn(provider: LiveProvider, daysAhead = 3): Promise<string[]> {
@@ -125,7 +138,7 @@ describe('POST /v1/portal/bookings', () => {
     expect(await prisma.patientConsent.count({ where: { patientId: patient!.id } })).toBe(1);
     const audits = await prisma.auditLog.findMany({ where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL } });
     expect(audits.map((a) => a.entityType).sort()).toEqual(
-      [ EntityType.APPOINTMENT, EntityType.PATIENT, EntityType.PATIENT_CONSENT ].sort(),
+      [ EntityType.APPOINTMENT, EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.REMINDER, EntityType.REMINDER ].sort(),
     );
   });
 
@@ -437,5 +450,123 @@ describe('GET /v1/portal/appointments', () => {
 
   it('requires a session', async () => {
     expect((await request(app).get('/v1/portal/appointments')).status).toBe(401);
+  });
+});
+
+describe('booking confirmation, reminder and provider notice', () => {
+  const MADRID = 'Europe/Madrid';
+  const fmt = (iso: string, timeZone: string, opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('es-ES', { ...opts, timeZone }).format(new Date(iso));
+  const timeIn = (iso: string, timeZone: string) => fmt(iso, timeZone, { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  async function soonestSlotWithin24h(provider: LiveProvider): Promise<string> {
+    const today = DateTime.now().setZone(ZONE);
+    const { slots } = await publicBookingService.getSlots(provider.slug, {
+      typeId: provider.typeId, from: today.toISODate()!, to: today.plus({ days: 1 }).toISODate()!,
+    });
+    const soon = slots.find((s) => new Date(s.startUtc).getTime() - Date.now() < 23 * 3600_000);
+    return soon!.startUtc;
+  }
+
+  it('sends the patient a confirmation in their own zone after commit when the scheduler is off', async () => {
+    const provider = await createLiveProvider();
+    const email = unique('confirma@test.local');
+    const [ start ] = await slotsOn(provider);
+
+    const res = await postBooking(sessionFor(provider.id, email), bookingBody(provider, start!, { patientTimezone: MADRID }));
+
+    expect(res.status).toBe(201);
+    expect(mocks.send).not.toHaveBeenCalled();
+    expect(mocks.dispatch).toHaveBeenCalledTimes(1);
+    const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
+    expect(channel).toBe(Channel.EMAIL);
+    expect(opts.to).toBe(email);
+    expect(opts.subject).toMatch(/^Cita confirmada con /);
+    expect(opts.body).toContain(timeIn(start!, MADRID));
+    expect(opts.body).toContain(`(hora de ${MADRID})`);
+    expect(opts.body).not.toContain(timeIn(start!, ZONE));
+    expect(opts.body).toContain(`${config.portal.url}/book/${provider.slug}/appointments`);
+  });
+
+  it('notifies the provider on their channel without patient details', async () => {
+    const provider = await createLiveProvider();
+    await prisma.user.update({
+      where: { id: provider.id },
+      data: { reminderActive: true, reminderChannel: Channel.WHATSAPP, whatsappNumber: '+573009998877' },
+    });
+    const [ start ] = await slotsOn(provider);
+
+    expect((await postBooking(sessionFor(provider.id, unique('aviso@test.local')), bookingBody(provider, start!))).status).toBe(201);
+
+    expect(mocks.dispatch).toHaveBeenCalledTimes(2);
+    const [ channel, opts ] = mocks.dispatch.mock.calls[1]!;
+    expect(channel).toBe(Channel.WHATSAPP);
+    expect(opts).toEqual({
+      to: '+573009998877',
+      contentSid: config.twilio.portalBookingSid,
+      contentVariables: { '1': expect.any(String), '2': expect.any(String), '3': timeIn(start!, ZONE) },
+    });
+    expect(JSON.stringify(opts)).not.toMatch(/Lucia|Rojas/);
+  });
+
+  it('keeps the booking when a notification fails after commit', async () => {
+    const provider = await createLiveProvider();
+    mocks.dispatch.mockResolvedValue({ success: false, error: 'Brevo down' });
+    const [ start ] = await slotsOn(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('caido@test.local')), bookingBody(provider, start!));
+
+    expect(res.status).toBe(201);
+    expect(await appointmentsOf(provider.id)).toHaveLength(1);
+  });
+
+  it('sends nothing when the booking rolls back', async () => {
+    const provider = await createLiveProvider();
+    failConsent.on = true;
+    const [ start ] = await slotsOn(provider);
+    expect((await postBooking(sessionFor(provider.id, unique('nada@test.local')), bookingBody(provider, start!))).status).toBe(500);
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+    expect(await prisma.reminder.count({ where: { userId: provider.id } })).toBe(0);
+  });
+
+  it('queues both notifications and the reminder inside the transaction when the scheduler is on', async () => {
+    const provider = await createLiveProvider();
+    scheduler.enabled = true;
+    const [ start ] = await slotsOn(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('cola@test.local')), bookingBody(provider, start!));
+
+    expect(res.status).toBe(201);
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+    const appointmentId = res.body.data.appointment.id;
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
+    expect(mocks.send.mock.calls).toEqual([
+      [ 'send-reminder', { reminderId: reminder.id }, { db: expect.anything(), startAfter: reminder.sendAt } ],
+      [ 'portal-booking-notify', { appointmentId, kind: 'patient-confirmation' }, { db: expect.anything() } ],
+      [ 'portal-booking-notify', { appointmentId, kind: 'provider-notice' }, { db: expect.anything() } ],
+    ]);
+  });
+
+  it('schedules an EMAIL reminder 24h before, written in the patient zone', async () => {
+    const provider = await createLiveProvider();
+    const email = unique('recuerda@test.local');
+    const [ start ] = await slotsOn(provider);
+
+    const res = await postBooking(sessionFor(provider.id, email), bookingBody(provider, start!, { patientTimezone: MADRID }));
+
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    expect(reminder).toMatchObject({ channel: Channel.EMAIL, to: email, sendMode: 'SCHEDULED', status: 'PENDING', subject: 'Recordatorio de cita' });
+    expect(reminder.sendAt.getTime()).toBe(new Date(start!).getTime() - 24 * 3600_000);
+    expect(reminder.body).toContain(`Hora: ${timeIn(start!, MADRID)}`);
+  });
+
+  it('skips the reminder when the appointment is less than 24h away', async () => {
+    const provider = await createLiveProvider();
+    const start = await soonestSlotWithin24h(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('pronto@test.local')), bookingBody(provider, start));
+
+    expect(res.status).toBe(201);
+    expect(await prisma.reminder.count({ where: { appointmentId: res.body.data.appointment.id } })).toBe(0);
   });
 });

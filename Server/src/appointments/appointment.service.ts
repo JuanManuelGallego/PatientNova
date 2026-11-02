@@ -117,7 +117,7 @@ async function renderLinkedReminder(
   context: ReminderContext,
   tx: TransactionClient,
 ): Promise<AppointmentWithRelations> {
-  const payload = renderAppointmentReminder(appointment, context.doctorName, context.timezone);
+  const payload = renderAppointmentReminder(appointment, context.doctorName, appointment.patientTimezone ?? context.timezone);
   if (!appointment.reminder || !payload) return appointment;
   await tx.reminder.update({ where: { id: appointment.reminder.id }, data: payload });
   return { ...appointment, reminder: { ...appointment.reminder, ...payload } };
@@ -177,7 +177,7 @@ async function handleReminderUpdate(
   existing: AppointmentWithRelations,
   userId: string,
   tx: TransactionClient,
-): Promise<{ reminderId?: string | null | undefined; reminder?: Reminder | null }> {
+): Promise<{ reminderId?: string | null | undefined; reminder?: Reminder | null; rescheduled?: Reminder }> {
   if (dto.reminder === null && existing.reminder) {
     if (existing.reminder.status === ReminderStatus.PENDING) {
       await tx.reminder.update({
@@ -218,7 +218,7 @@ async function handleReminderUpdate(
   }
 
   if (dto.reminder && existing.reminder) {
-    await tx.reminder.update({
+    const updatedReminder = await tx.reminder.update({
       where: { id: existing.reminder.id },
       data: {
         ...(dto.reminder.channel && { channel: dto.reminder.channel }),
@@ -245,6 +245,10 @@ async function handleReminderUpdate(
     });
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
+
+    const timingChanged = updatedReminder.sendAt.getTime() !== existing.reminder.sendAt.getTime()
+      || updatedReminder.sendMode !== existing.reminder.sendMode;
+    if (timingChanged && updatedReminder.status === ReminderStatus.PENDING) return { rescheduled: updatedReminder };
   }
 
   return {};
@@ -285,9 +289,12 @@ async function checkBlockedTimeConflict(
   }
 }
 
-async function enqueueImmediateReminder(reminderId: string, tx: TransactionClient): Promise<void> {
+async function enqueueLinkedReminder(reminder: Pick<Reminder, 'id' | 'sendMode' | 'sendAt'>, tx: TransactionClient): Promise<void> {
   if (!config.scheduler.enabled) return;
-  await getBoss().send(REMINDER_QUEUE, { reminderId }, { db: fromPrisma(tx) });
+  await getBoss().send(REMINDER_QUEUE, { reminderId: reminder.id }, {
+    db: fromPrisma(tx),
+    ...(reminder.sendMode === ReminderMode.SCHEDULED && { startAfter: reminder.sendAt }),
+  });
 }
 
 export async function createWithin(
@@ -326,9 +333,7 @@ export async function createWithin(
         tx,
       );
 
-      if (dto.reminder.sendMode === ReminderMode.IMMEDIATE) {
-        await enqueueImmediateReminder(createdReminder.id, tx);
-      }
+      await enqueueLinkedReminder(createdReminder, tx);
     }
 
     const reminderId = createdReminder?.id ?? existingReminder?.id ?? dto.reminderId ?? null;
@@ -479,9 +484,8 @@ export const appointmentService = {
         const reminderResult = await handleReminderUpdate(dto, existing, userId, tx);
         effectiveReminderId = reminderResult.reminderId;
         createdReminder = reminderResult.reminder ?? null;
-        if (createdReminder?.sendMode === ReminderMode.IMMEDIATE) {
-          await enqueueImmediateReminder(createdReminder.id, tx);
-        }
+        const toEnqueue = createdReminder ?? reminderResult.rescheduled;
+        if (toEnqueue) await enqueueLinkedReminder(toEnqueue, tx);
       }
 
       const updated = await appointmentRepository.update(id, {

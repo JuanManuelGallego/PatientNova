@@ -68,6 +68,7 @@ export const config = {
     reminderFailedSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_FAILED_SID'),
     appointmentStatusUpdateSid: requireEnv('TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID'),
     appointmentMeetingLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID'),
+    portalBookingSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID'),
   },
 
   brevo: {
