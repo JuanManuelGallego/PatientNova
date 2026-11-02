@@ -6,12 +6,6 @@ import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { googleConnectionRepository, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { GoogleOAuthError } from './google-errors.js';
 
-/**
- * Detect authorization failures from the Google SDKs or the underlying HTTP/gRPC layer:
- * - `invalid_grant` in the response body (refresh token revoked/expired)
- * - gRPC code 16 (UNAUTHENTICATED)
- * - HTTP 401 status
- */
 export function isAuthorizationFailure(error: unknown): boolean {
   const providerError = error as {
     code?: number | string;
@@ -31,11 +25,6 @@ export function isGoogleConfigured(): boolean {
 
 type ActiveConnection = { id: string; refreshToken: string };
 
-/**
- * OAuth client for a stored connection. Google may return a new refresh token while refreshing the
- * access token; it is persisted with a compare-and-swap so a concurrent disconnect wins. Callers await
- * `tokenPersistence` before returning.
- */
 export function buildOAuthClient(userId: string, conn: ActiveConnection): {
   oauth2Client: OAuth2Client;
   tokenPersistence: Promise<unknown>[];
@@ -63,11 +52,6 @@ export function buildOAuthClient(userId: string, conn: ActiveConnection): {
   return { oauth2Client, tokenPersistence };
 }
 
-/**
- * Marks the connection expired (refresh token dropped, `disconnectedAt` set) and audits the change once.
- * The audit source comes from the audit context, so a scheduled check is recorded as JOB.
- * Returns whether this call changed the connection.
- */
 export async function markConnectionExpired(userId: string, description: string): Promise<boolean> {
   const connection = await googleConnectionRepository.findByUserId(userId);
   if (!connection || connection.disconnectedAt) return false;
@@ -92,12 +76,6 @@ export async function markConnectionExpired(userId: string, description: string)
 
 export type ConnectionCheckResult = 'valid' | 'expired' | 'not_connected' | 'unknown';
 
-/**
- * Proves the stored refresh token still works by forcing an access-token refresh.
- * - success → `lastCheckedAt` is set
- * - authorization failure (`invalid_grant`, 401) → the connection is marked expired
- * - anything else (network, Google outage) → logged, connection left as is
- */
 export async function verifyConnection(userId: string): Promise<ConnectionCheckResult> {
   if (!isGoogleConfigured()) {
     throw new GoogleOAuthError('Google OAuth is not configured', 'GOOGLE_CONFIG_MISSING', 503);

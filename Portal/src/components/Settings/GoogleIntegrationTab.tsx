@@ -54,11 +54,8 @@ export function GoogleIntegrationTab() {
     setVerifiedNotice(null);
     try {
       const result = await verifyConnection();
-      // An expired result is announced by the heading change; only a healthy check needs a confirmation.
       if (result.status === "connected") setVerifiedNotice("Conexión verificada.");
-    } catch {
-      // verifyError carries the Spanish message (e.g. too many checks)
-    }
+    } catch { }
     await fetchConnection();
   }, [ verifyConnection, fetchConnection ]);
 

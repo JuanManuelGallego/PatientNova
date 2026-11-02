@@ -9,10 +9,6 @@ import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
 import { STATUS_ICONS } from "@/src/config/icons";
 
-/**
- * Persistent alerts at the top of every provider page. Today: an expired Google connection
- * (found by the daily check or a failed Meet creation). Only admins can read or fix it.
- */
 export function ProviderAlerts() {
   const { user } = useAuthContext();
   const isAdmin = user?.role === AdminRole.ADMIN || user?.role === AdminRole.SUPER_ADMIN;
@@ -20,7 +16,6 @@ export function ProviderAlerts() {
   return isAdmin ? <GoogleExpiredAlert /> : null;
 }
 
-/** Settings → Integraciones, where a provider who doesn't use Meet can disconnect Google. */
 const INTEGRATIONS_HREF = { pathname: "/settings", query: { tab: "Integraciones" } };
 
 function GoogleExpiredAlert() {
@@ -44,8 +39,6 @@ function GoogleExpiredAlert() {
   const error = resultError || popupError || startError;
   const busy = startingOAuth || waiting;
 
-  // Not a live region: it is shown on every page until fixed, so announcing it on each
-  // navigation would be noise. Only a failed reconnect (role="alert") is announced.
   return (
     <section className="warning-banner" aria-labelledby="google-expired-banner-text" data-testid="google-expired-banner">
       <STATUS_ICONS.warning size={18} aria-hidden="true" className="warning-banner__icon" />

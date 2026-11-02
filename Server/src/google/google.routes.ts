@@ -29,7 +29,6 @@ const oauthCallbackLimit = rateLimit({
   handler: (_req, res) => { apiError(res, 'Too many OAuth requests', 429); },
 });
 
-// `?verify=true` calls Google, so it is limited per provider (the status read itself is not).
 const verifyLimit = rateLimit({
   windowMs: 60_000,
   max: 5,

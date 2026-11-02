@@ -67,11 +67,6 @@ export const googleConnectionRepository = {
     });
   },
 
-  /**
-   * Compare-and-swap of the refresh token. `refreshToken` is encrypted at rest (random IV), so it can't be
-   * matched in SQL: the decrypted value is compared here and the write is guarded by `updatedAt`, so a
-   * concurrent disconnect, reconnect or rotation wins.
-   */
   async rotateRefreshToken(connectionId: string, previousToken: string, refreshToken: string, client: TransactionClient = prisma) {
     const current = await client.googleConnection.findUnique({ where: { id: connectionId } });
     if (!current || current.disconnectedAt || current.refreshToken !== previousToken) return { count: 0 };
@@ -88,7 +83,6 @@ export const googleConnectionRepository = {
     });
   },
 
-  /** Only an active connection records a check; a concurrent disconnect wins. */
   async updateLastChecked(userId: string, client: TransactionClient = prisma) {
     return client.googleConnection.updateMany({
       where: { userId, disconnectedAt: null, refreshToken: { not: null } },
@@ -96,7 +90,6 @@ export const googleConnectionRepository = {
     });
   },
 
-  /** Users whose connection is currently active, for the daily check. */
   async findActiveUserIds(client: TransactionClient = prisma): Promise<string[]> {
     const rows = await client.googleConnection.findMany({
       where: { disconnectedAt: null, refreshToken: { not: null } },

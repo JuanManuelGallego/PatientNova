@@ -174,11 +174,6 @@ export const googleOAuthService = {
     }
   },
 
-  /**
-   * `connected`: usable for Meet. `expired`: a stored connection that needs a reconnect (token rejected,
-   * or the Meet scope missing). `not_connected`: no connection (a manual disconnect deletes the row).
-   * With `verify`, the stored token is checked against Google first.
-   */
   async getConnectionStatus(userId: string, { verify = false }: { verify?: boolean } = {}): Promise<GoogleConnectionStatus> {
     if (verify) await verifyConnection(userId);
     const conn = await googleConnectionRepository.findByUserId(userId);

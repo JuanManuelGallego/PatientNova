@@ -6,10 +6,6 @@ import { isGoogleConfigured, verifyConnection, type ConnectionCheckResult } from
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker', source: ActionSource.JOB };
 
-/**
- * Daily check of every active Google connection, so an expired one shows up in the provider's
- * banner before they need a Meet link. One provider's failure never stops the others.
- */
 export async function checkGoogleConnectionsWorker(): Promise<void> {
   if (!isGoogleConfigured()) return;
   const userIds = await googleConnectionRepository.findActiveUserIds();

@@ -69,7 +69,6 @@ export function LocationAndTimeStep({
   const [ needsReconnect, setNeedsReconnect ] = useState(false);
   const [ actionError, setActionError ] = useState<string | null>(null);
   const isConnected = connection?.connected === true && !needsReconnect;
-  // Known up front from the status (daily check / earlier failure), or learned from a 409 on generate.
   const mustReconnect = needsReconnect || connection?.status === "expired";
 
   const generateMeet = useCallback(async () => {
