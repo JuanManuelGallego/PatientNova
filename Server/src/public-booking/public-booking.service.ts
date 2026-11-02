@@ -4,7 +4,7 @@ import { bookingSettingsRepository } from '../booking-settings/booking-settings.
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { localToUtc } from '../utils/time/time-utils.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
-import { generateSlots } from './slot-engine.js';
+import { generateSlots, isSlotAvailable, type SlotRules } from './slot-engine.js';
 import { publicBookingRepository, type ProviderImageKind } from './public-booking.repository.js';
 import { ProviderImageNotFoundError, ProviderNotFoundError, PublicAppointmentTypeNotFoundError } from './public-booking.errors.js';
 import type { SlotsQuery } from './public-booking.schemas.js';
@@ -89,33 +89,55 @@ export async function computeSlots(
   settings: SlotSettings,
   durationMinutes: number,
   range: { from: string; to: string },
-  opts: { excludeAppointmentId?: string; tx?: TransactionClient } = {},
+  opts: SlotOptions = {},
 ): Promise<Array<{ startUtc: string; endUtc: string }>> {
-  const { timezone } = settings;
-  const [ rules, busy ] = await Promise.all([
-    bookingSettingsRepository.listRules(userId, opts.tx),
-    publicBookingRepository.loadBusy(
-      userId,
-      localMidnightUtc(range.from, timezone),
-      localMidnightUtc(range.to, timezone, 1),
-      settings.bufferMinutes,
-      opts.tx,
-      opts.excludeAppointmentId ? { excludeAppointmentId: opts.excludeAppointmentId } : {},
-    ),
-  ]);
+  const from = localMidnightUtc(range.from, settings.timezone);
+  const to = localMidnightUtc(range.to, settings.timezone, 1);
+  const rules = await slotRules(userId, settings, durationMinutes, from, to, new Date(), opts);
+  return generateSlots({ ...rules, fromDate: range.from, toDate: range.to })
+    .map((s) => ({ startUtc: s.startUtc.toISOString(), endUtc: s.endUtc.toISOString() }));
+}
 
-  const slots = generateSlots({
-    timezone,
+/** Whether one start time is bookable, under the same rules as `computeSlots` (booking and reschedule). */
+export async function isSlotFree(
+  userId: string,
+  settings: SlotSettings,
+  durationMinutes: number,
+  start: Date,
+  now: Date,
+  opts: SlotOptions = {},
+): Promise<boolean> {
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  return isSlotAvailable(start, await slotRules(userId, settings, durationMinutes, start, end, now, opts));
+}
+
+interface SlotOptions {
+  excludeAppointmentId?: string | undefined;
+  tx?: TransactionClient | undefined;
+}
+
+async function slotRules(
+  userId: string,
+  settings: SlotSettings,
+  durationMinutes: number,
+  from: Date,
+  to: Date,
+  now: Date,
+  { excludeAppointmentId, tx }: SlotOptions,
+): Promise<SlotRules> {
+  const [ rules, busy ] = await Promise.all([
+    bookingSettingsRepository.listRules(userId, tx),
+    publicBookingRepository.loadBusy(userId, from, to, settings.bufferMinutes, tx, { excludeAppointmentId }),
+  ]);
+  return {
+    timezone: settings.timezone,
     rules,
-    fromDate: range.from,
-    toDate: range.to,
     durationMinutes,
     slotIntervalMinutes: settings.slotIntervalMinutes,
     bufferMinutes: settings.bufferMinutes,
     minLeadMinutes: settings.minLeadMinutes,
     maxHorizonDays: settings.maxHorizonDays,
-    now: new Date(),
+    now,
     busy: { ...busy, holds: [] },
-  });
-  return slots.map((s) => ({ startUtc: s.startUtc.toISOString(), endUtc: s.endUtc.toISOString() }));
+  };
 }

@@ -11,8 +11,8 @@ import { useCancelAppointment, usePortalAppointments } from "@/src/api/portal/us
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
-import { browserTimezone, fmtTime } from "@/src/utils/TimeUtils";
-import { fmtLongDay, localDayOf, timezoneName } from "@/src/utils/publicBooking";
+import { browserTimezone } from "@/src/utils/TimeUtils";
+import { fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
@@ -235,7 +235,7 @@ interface CancelDialogProps {
 /** In-app confirmation (never `window.confirm`). A failure other than "gone" keeps the dialog open with the error. */
 function CancelDialog({ appointment, timezone, onClose, onCancelled, onGone, onSessionLost }: CancelDialogProps) {
     const { cancelAppointment, loading, error } = useCancelAppointment();
-    const when = `${fmtLongDay(localDayOf(appointment.startUtc, timezone))}, ${fmtTime(appointment.startUtc, timezone)}`;
+    const when = fmtLongDayTime(appointment.startUtc, timezone);
 
     const confirm = async () => {
         try {

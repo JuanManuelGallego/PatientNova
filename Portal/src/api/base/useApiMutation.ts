@@ -7,13 +7,12 @@ import { ApiClientError, parseEnvelope } from "./apiClients";
 export { ApiClientError as ApiMutationError };
 
 /**
- * Generic hook for data mutations (POST, PATCH, PUT, DELETE), and for on-demand GETs that act
- * (e.g. a connection check) rather than load page data.
+ * Generic hook for data mutations (POST, PATCH, PUT, DELETE).
  * Call `mutate(url, body?)` to execute the request.
  * Prevents double-submission — concurrent calls while loading are ignored.
  */
 export function useApiMutation<TOutput = void>(
-    method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
+    method: "POST" | "PATCH" | "PUT" | "DELETE",
     errorMessage = "No pudimos completar la acción. Inténtalo de nuevo."
 ) {
     const [ loading, setLoading ] = useState(false);

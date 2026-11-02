@@ -13,6 +13,7 @@ import {
 import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
 import { formatDate, formatTime } from '../appointments/appointment-reminder.renderer.js';
 import { providerDisplayName } from '../public-booking/public-booking.service.js';
+import { bookingUrl } from '../booking-settings/booking-settings.service.js';
 
 /** What the patient did in the portal; each event sends one patient email and one provider notice. */
 export type PortalEvent = 'booked' | 'cancelled' | 'rescheduled';
@@ -44,7 +45,7 @@ export interface PortalMove {
   startAt: Date;
 }
 
-const CANCELLATION_KINDS = new Set<BookingNotificationKind>([ 'patient-cancellation', 'provider-cancel-notice' ]);
+const CANCELLATION_KINDS = new Set<BookingNotificationKind>(EVENT_KINDS.cancelled);
 
 const formatWhen = (at: Date, timezone: string) => `${formatDate(at, timezone, true)}, ${formatTime(at, timezone)}`;
 
@@ -81,15 +82,16 @@ function isDeliverable(appt: BookedAppointment | null, job: BookingNotificationJ
 function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
   if (!appt.patient.email) return null;
   const timezone = appt.patientTimezone ?? appt.user.timezone;
-  const slugPath = appt.user.bookingSlug ? `/book/${appt.user.bookingSlug}` : '';
+  const bookPage = bookingUrl(appt.user.bookingSlug);
+  const portalRoot = config.portal.url.replace(/\/+$/, '');
   const providerName = providerDisplayName(appt.user);
   const whenLocal = formatWhen(appt.startAt, timezone);
   const location = { locationName: appt.appointmentLocation?.name ?? null, address: appt.appointmentLocation?.address ?? null };
-  const appointmentsUrl = `${config.portal.url}${slugPath}${slugPath && '/appointments'}`;
+  const appointmentsUrl = bookPage ? `${bookPage}/appointments` : portalRoot;
 
   let email;
   if (job.kind === 'patient-cancellation') {
-    email = renderPortalCancellationEmail({ providerName, whenLocal, timezone, bookingUrl: `${config.portal.url}${slugPath}` });
+    email = renderPortalCancellationEmail({ providerName, whenLocal, timezone, bookingUrl: bookPage ?? portalRoot });
   } else if (job.kind === 'patient-reschedule') {
     if (!job.previousStartAt) return null;
     email = renderPortalRescheduleEmail({

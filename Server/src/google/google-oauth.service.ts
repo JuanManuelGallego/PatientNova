@@ -2,11 +2,11 @@ import { OAuth2Client } from 'google-auth-library';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { googleConnectionRepository, googleOAuthStateRepository, hashState, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
+import { googleConnectionRepository, googleOAuthStateRepository, hashState, isConnectionActive, isConnectionUsable, REQUIRED_SCOPE } from './google-connection.repository.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { GoogleOAuthError } from './google-errors.js';
-import { markConnectionExpired, verifyConnection } from './google-connection.service.js';
+import { markConnectionExpired } from './google-connection.service.js';
 
 export interface GoogleConnectionStatus {
   status: 'connected' | 'expired' | 'not_connected';
@@ -174,8 +174,7 @@ export const googleOAuthService = {
     }
   },
 
-  async getConnectionStatus(userId: string, { verify = false }: { verify?: boolean } = {}): Promise<GoogleConnectionStatus> {
-    if (verify) await verifyConnection(userId);
+  async getConnectionStatus(userId: string): Promise<GoogleConnectionStatus> {
     const conn = await googleConnectionRepository.findByUserId(userId);
 
     if (!conn) {
@@ -185,7 +184,7 @@ export const googleOAuthService = {
       };
     }
 
-    const connected = isConnectionActive(conn) && conn.grantedScopes.includes(REQUIRED_SCOPE);
+    const connected = isConnectionUsable(conn);
     return {
       status: connected ? 'connected' : 'expired',
       connected,

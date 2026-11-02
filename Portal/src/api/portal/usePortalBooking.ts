@@ -41,7 +41,7 @@ export function useRescheduleSlots(appointmentId: string | null, from: string | 
 export function useRescheduleAppointment() {
     const { mutate, ...rest } = usePortalMutation<{ appointment: PortalAppointment }>();
     const rescheduleAppointment = useCallback(
-        async (id: string, body: PortalRescheduleRequest) => (await mutate(`${appointmentPath(id)}/reschedule`, body)).appointment,
+        (id: string, body: PortalRescheduleRequest) => mutate(`${appointmentPath(id)}/reschedule`, body),
         [ mutate ],
     );
     return { rescheduleAppointment, ...rest };

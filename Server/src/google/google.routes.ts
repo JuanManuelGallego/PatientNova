@@ -1,14 +1,13 @@
-import { Router, type NextFunction, type Request, type Response } from 'express';
-import { z } from 'zod';
+import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { apiError, ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
 import { authenticate, requireAdmin } from '../middlewares/authenticate.js';
-import { validateQuery } from '../middlewares/validate.js';
 import { logger } from '../utils/api/logger.js';
 import { config } from '../utils/config/config.js';
 import { googleOAuthService } from './google-oauth.service.js';
 import { googleMeetService } from './google-meet.service.js';
+import { verifyConnection } from './google-connection.service.js';
 import { GoogleOAuthError } from './google-errors.js';
 
 export const googleRouter = Router();
@@ -38,13 +37,6 @@ const verifyLimit = rateLimit({
   handler: (_req, res) => { apiError(res, 'Too many connection checks', 429); },
 });
 
-const connectionStatusQuery = z.strictObject({
-  verify: z.enum([ 'true', 'false' ]).transform((v) => v === 'true').optional(),
-});
-
-const limitVerify = (req: Request, res: Response, next: NextFunction): unknown =>
-  (req.query as { verify?: boolean }).verify ? verifyLimit(req, res, next) : next();
-
 const OAUTH_ERROR_REDIRECTS: Record<string, string> = {
   INVALID_OAUTH_STATE: 'invalid_state',
   OAUTH_STATE_CONSUMED: 'state_consumed',
@@ -60,10 +52,15 @@ const validateOrigin = (req: Request): void => {
   }
 };
 
-googleRouter.get('/connection', authenticate, requireAdmin, validateQuery(connectionStatusQuery), limitVerify, asyncHandler(async (req: Request, res: Response) => {
-  const { verify } = req.query as { verify?: boolean };
-  const status = await googleOAuthService.getConnectionStatus(req.user!.id, { verify: verify ?? false });
-  ok(res, status);
+googleRouter.get('/connection', authenticate, requireAdmin, asyncHandler(async (req: Request, res: Response) => {
+  ok(res, await googleOAuthService.getConnectionStatus(req.user!.id));
+}));
+
+// Calls Google and may mark the connection expired, so it is a POST (CSRF-protected) with its own limit.
+googleRouter.post('/connection/verify', authenticate, requireAdmin, verifyLimit, asyncHandler(async (req: Request, res: Response) => {
+  validateOrigin(req);
+  await verifyConnection(req.user!.id);
+  ok(res, await googleOAuthService.getConnectionStatus(req.user!.id));
 }));
 
 googleRouter.post('/oauth/start', authenticate, requireAdmin, asyncHandler(async (req: Request, res: Response) => {

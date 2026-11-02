@@ -73,7 +73,7 @@ export const publicBookingRepository = {
     end: Date,
     bufferMinutes: number,
     tx?: TransactionClient,
-    opts: { excludeAppointmentId?: string } = {},
+    opts: { excludeAppointmentId?: string | undefined } = {},
   ): Promise<{ appointments: Interval[]; blocked: Interval[] }> {
     const client = tx ?? prisma;
     const bufferMs = bufferMinutes * MINUTE_MS;

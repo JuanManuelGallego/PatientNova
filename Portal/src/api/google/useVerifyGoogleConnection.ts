@@ -4,11 +4,11 @@ import { GoogleConnectionStatus } from "@/src/types/Google";
 
 export const useVerifyGoogleConnection = () => {
   const { mutate, loading, error } = useApiMutation<GoogleConnectionStatus>(
-    "GET",
+    "POST",
     "No se pudo verificar la conexión con Google."
   );
 
-  const verifyConnection = () => mutate(`${API_BASE}/google/connection?verify=true`);
+  const verifyConnection = () => mutate(`${API_BASE}/google/connection/verify`);
 
   return { verifyConnection, loading, error };
 };

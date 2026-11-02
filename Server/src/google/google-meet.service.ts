@@ -109,7 +109,7 @@ export const googleMeetService = {
             entityId: connection.id,
             actionType: ActionType.CREATE,
             description: 'Google Meet space creation failed',
-              userId,
+            userId,
             affectedFields: ['outcome'],
             fieldsBefore: null,
             fieldsAfter: { outcome: 'failed' },

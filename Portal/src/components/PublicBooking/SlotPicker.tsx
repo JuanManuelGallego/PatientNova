@@ -16,10 +16,15 @@ import styles from "./PublicBooking.module.css";
 /**
  * Week, day and time selection for one appointment type, in the patient's device zone. Shared by booking
  * (`/book/[slug]`) and rescheduling ("Mis citas"), so both follow the same zone and paging rules.
- * With `rescheduleId`, times come from the session's reschedule slots for that appointment (its own
- * time does not block nearby ones) instead of the public slots for `typeId`.
+ * `source` picks where times come from: the public slots of a type, or the session's reschedule slots
+ * for one appointment (its own time does not block nearby ones).
  */
-export function useSlotPicker(slug: string, provider: PublicProvider, typeId: string | null, timezone: string, rescheduleId?: string) {
+export function useSlotPicker(
+    slug: string,
+    provider: PublicProvider,
+    source: { typeId: string | null } | { rescheduleId: string },
+    timezone: string,
+) {
     const today = todayFormattedString(timezone);
     const [ weekStart, setWeekStart ] = useState<string | null>(null);
     const [ dayChoice, setDayChoice ] = useState<string | null>(null);
@@ -29,8 +34,9 @@ export function useSlotPicker(slug: string, provider: PublicProvider, typeId: st
     const lastDate = lastBookableDateIn(timezone, provider.lastBookableDate, provider.timezone);
     const page = weekPage(weekStart ?? today, today, lastDate);
     const query = slotQueryRange(page.from, page.to);
-    const publicSlots = useFetchPublicSlots(slug, rescheduleId ? null : typeId, query.from, query.to);
-    const moveSlots = useRescheduleSlots(rescheduleId ?? null, query.from, query.to);
+    const rescheduleId = "rescheduleId" in source ? source.rescheduleId : null;
+    const publicSlots = useFetchPublicSlots(slug, "typeId" in source ? source.typeId : null, query.from, query.to);
+    const moveSlots = useRescheduleSlots(rescheduleId, query.from, query.to);
     const { slots, loading, error, retry } = rescheduleId ? moveSlots : publicSlots;
     const slotDays = new Map((slots ? groupSlotsByDay(slots.slots, timezone) : []).map((d) => [ d.date, d ]));
     const weekDays = calendarDaysBetween(page.from, page.to);
@@ -54,14 +60,13 @@ export function useSlotPicker(slug: string, provider: PublicProvider, typeId: st
         weekDays,
         openDays,
         day,
-        slot: slot ?? undefined,
+        slot,
         slots,
         loading,
         error,
         retry,
         notice,
         pick,
-        goToWeek,
         nextWeek: () => goToWeek(addCalendarDays(page.from, WEEK_DAYS)),
         previousWeek: () => goToWeek(addCalendarDays(page.from, -WEEK_DAYS)),
         chooseDay: (date: string) => { setDayChoice(date); pick(null); },

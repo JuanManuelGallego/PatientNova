@@ -717,7 +717,7 @@ As planned:
   - `connected` is kept for compatibility.
   - `expired` means a row that is disconnected or missing the scope. `not_connected` means no row (a manual disconnect
     deletes the row).
-  - `?verify=true` runs `verifyConnection` first, rate-limited per user (5/min).
+  - `POST /google/connection/verify` runs `verifyConnection` and returns the status, rate-limited per user (5/min). (First built as `GET ?verify=true`; moved to a POST because a check calls Google and may write.)
 - **Tests:**
   - The three statuses.
   - `verify` sets `lastCheckedAt`, and `invalid_grant` returns `expired`.
@@ -742,7 +742,7 @@ As planned:
   - When `status === 'expired'` it shows "Tu conexión con Google expiró. Reconéctala para generar enlaces de Meet."
   - Its "Reconectar" button runs `useGoogleOAuthPopup` + `startOAuth('/settings', true)`.
   - Styled with a new `.warning-banner` class.
-- **Settings** shows three states, "Última verificación", and a "Verificar ahora" button (`?verify=true`).
+- **Settings** shows three states, "Última verificación", and a "Verificar ahora" button (`POST /google/connection/verify`).
 - **Appointment modal (8.2 e):** shows the reconnect label up front when the connection has expired.
 - **Tests:** `GoogleIntegrationTab`, `LocationAndTimeStep`, and the new `ProviderAlerts`.
 

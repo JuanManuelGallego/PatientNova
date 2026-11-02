@@ -59,7 +59,7 @@ export function GoogleIntegrationTab() {
     await fetchConnection();
   }, [ verifyConnection, fetchConnection ]);
 
-  const isConnected = connection?.connected === true;
+  const isConnected = connection?.status === "connected";
   const isExpired = connection?.status === "expired";
   const connectedAt = connection?.connectedAt;
   const lastUsedAt = connection?.lastUsedAt;
@@ -164,31 +164,10 @@ export function GoogleIntegrationTab() {
             </button>
           )}
 
-          {isExpired && (
+          {(isConnected || isExpired) && (
             <>
               <button
-                className="btn-primary"
-                onClick={() => handleConnect(true)}
-                disabled={isLoading}
-                data-testid="google-reconnect-button"
-              >
-                {startingOAuth ? "Reconectando…" : "Reconectar cuenta"}
-              </button>
-              <button
-                className="btn-danger"
-                onClick={handleDisconnect}
-                disabled={isLoading}
-                data-testid="google-disconnect-button"
-              >
-                {disconnecting ? "Desconectando…" : "Desconectar cuenta"}
-              </button>
-            </>
-          )}
-
-          {isConnected && (
-            <>
-              <button
-                className="btn-secondary"
+                className={isExpired ? "btn-primary" : "btn-secondary"}
                 onClick={() => handleConnect(true)}
                 disabled={isLoading}
                 data-testid="google-reconnect-button"

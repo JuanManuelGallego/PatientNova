@@ -50,12 +50,12 @@ describe('google routes (integration)', () => {
       });
     });
 
-    it('rejects unknown query parameters and a malformed verify', async () => {
-      expect((await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { verify: 'yes' } }))).statusCode).toBe(400);
-      expect((await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { other: '1' } }))).statusCode).toBe(400);
+    it('requires the exact Origin to run a check', async () => {
+      const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq({ headers: { ...csrfHeaders() } }));
+      expect(res.statusCode).toBe(403);
     });
 
-    it('verify=true checks the token with Google and reports an expired connection', async () => {
+    it('POST /connection/verify checks the token with Google and reports an expired connection', async () => {
       await googleConnectionRepository.upsertConnection(userId, {
         refreshToken: 'token',
         grantedScopes: [REQUIRED_SCOPE],
@@ -68,7 +68,7 @@ describe('google routes (integration)', () => {
         expect((plain.body as any).data.status).toBe('connected');
         expect(spy).not.toHaveBeenCalled();
 
-        const res = await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { verify: 'true' } }));
+        const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
         expect(res.statusCode).toBe(200);
         expect((res.body as any).data).toMatchObject({ status: 'expired', connected: false });
         expect(spy).toHaveBeenCalledTimes(1);
@@ -77,7 +77,7 @@ describe('google routes (integration)', () => {
       }
     });
 
-    it('verify=true records the check time on a healthy connection', async () => {
+    it('POST /connection/verify records the check time on a healthy connection', async () => {
       await googleConnectionRepository.upsertConnection(userId, {
         refreshToken: 'token',
         grantedScopes: [REQUIRED_SCOPE],
@@ -86,7 +86,7 @@ describe('google routes (integration)', () => {
         .mockResolvedValue({ tokens: { access_token: 'access', expiry_date: Date.now() + 3_600_000 }, res: null });
 
       try {
-        const res = await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { verify: 'true' } }));
+        const res = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
         expect(res.statusCode).toBe(200);
         expect((res.body as any).data.status).toBe('connected');
         expect((res.body as any).data.lastCheckedAt).toBeInstanceOf(Date);
@@ -111,7 +111,7 @@ describe('google routes (integration)', () => {
     });
   });
 
-  describe('GET /v1/google/connection?verify=true rate limit', () => {
+  describe('POST /v1/google/connection/verify rate limit', () => {
     it('allows 5 checks per minute per provider; plain status reads are not limited', async () => {
       await googleConnectionRepository.upsertConnection(userId, {
         refreshToken: 'token',
@@ -122,18 +122,18 @@ describe('google routes (integration)', () => {
 
       try {
         for (let i = 0; i < 5; i++) {
-          const ok = await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { verify: 'true' } }));
+          const ok = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
           expect(ok.statusCode).toBe(200);
         }
-        const limited = await invokeRoute(googleRouter, 'get', '/connection', baseReq({ query: { verify: 'true' } }));
+        const limited = await invokeRoute(googleRouter, 'post', '/connection/verify', baseReq());
         expect(limited.statusCode).toBe(429);
         expect(spy).toHaveBeenCalledTimes(5);
 
         expect((await invokeRoute(googleRouter, 'get', '/connection', baseReq())).statusCode).toBe(200);
 
         const other = await createTestUser({ email: 'other-admin@test.local', role: 'ADMIN' });
-        const otherRes = await invokeRoute(googleRouter, 'get', '/connection', authReq(
-          { id: other.id, email: other.email, role: 'ADMIN' }, { query: { verify: 'true' } },
+        const otherRes = await invokeRoute(googleRouter, 'post', '/connection/verify', authReq(
+          { id: other.id, email: other.email, role: 'ADMIN' }, { headers: { ...csrfHeaders(), origin: 'http://localhost:3000' } },
         ));
         expect(otherRes.statusCode).toBe(200);
       } finally {

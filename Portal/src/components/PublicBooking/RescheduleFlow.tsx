@@ -5,8 +5,7 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { useRescheduleAppointment } from "@/src/api/portal/usePortalBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtLongDay, localDayOf } from "@/src/utils/publicBooking";
+import { fmtLongDayTime } from "@/src/utils/publicBooking";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { reveal, SlotSteps, Step, useSlotPicker } from "./SlotPicker";
 import portal from "./Portal.module.css";
@@ -17,7 +16,7 @@ interface RescheduleFlowProps {
     provider: PublicProvider;
     appointment: PortalAppointment;
     timezone: string;
-    onDone: (updated: PortalAppointment) => void;
+    onDone: () => void;
     onBack: () => void;
     /** The appointment can no longer be moved online (404 or "Reschedule unavailable"). */
     onGone: (message: string) => void;
@@ -29,7 +28,7 @@ interface RescheduleFlowProps {
  * the page's state, never in the URL. Same slot rules and device zone as booking.
  */
 export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, onBack, onGone, onSessionLost }: RescheduleFlowProps) {
-    const picker = useSlotPicker(slug, provider, appointment.type?.id ?? null, timezone, appointment.id);
+    const picker = useSlotPicker(slug, provider, { rescheduleId: appointment.id }, timezone);
     const { rescheduleAppointment, loading } = useRescheduleAppointment();
     // Tied to the time it was about: choosing another time hides it.
     const [ failure, setFailure ] = useState<{ startUtc: string; message: string } | null>(null);
@@ -57,7 +56,8 @@ export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, 
         if (!slot) return;
         setFailure(null);
         try {
-            onDone(await rescheduleAppointment(appointment.id, { startUtc: slot.startUtc, patientTimezone: timezone }));
+            await rescheduleAppointment(appointment.id, { startUtc: slot.startUtc, patientTimezone: timezone });
+            onDone();
         } catch (err) {
             if (!(err instanceof ApiClientError)) return;
             const details = err.details ?? "";
@@ -82,11 +82,11 @@ export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, 
                         <dl className={styles.summary}>
                             <div>
                                 <dt>Antes</dt>
-                                <dd>{fmtLongDay(localDayOf(appointment.startUtc, timezone))}, {fmtTime(appointment.startUtc, timezone)}</dd>
+                                <dd>{fmtLongDayTime(appointment.startUtc, timezone)}</dd>
                             </div>
                             <div>
                                 <dt>Ahora</dt>
-                                <dd>{fmtLongDay(localDayOf(slot.startUtc, timezone))}, {fmtTime(slot.startUtc, timezone)}</dd>
+                                <dd>{fmtLongDayTime(slot.startUtc, timezone)}</dd>
                             </div>
                         </dl>
                         {failure?.startUtc === slot.startUtc && <p className={`error-inline ${portal.error}`} role="alert">{failure.message}</p>}

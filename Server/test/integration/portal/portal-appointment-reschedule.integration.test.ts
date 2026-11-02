@@ -28,6 +28,7 @@ import {
   PORTAL_ZONE,
   portalBookingBody,
   sessionFor,
+  portalPost,
   slotStarts,
   type LiveProvider,
   type TestSession,
@@ -50,15 +51,10 @@ beforeEach(() => {
 
 const HOUR = 3600_000;
 
-const postBooking = (s: TestSession, body: unknown) =>
-  request(app).post('/v1/portal/bookings').set('Origin', ALLOWED_ORIGIN).set('Cookie', s.cookie).set('X-CSRF-Token', s.csrf).send(body as object);
+const postBooking = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
 
-function postReschedule(s: TestSession, id: string, body: object, opts: { csrf?: string | null; origin?: string } = {}) {
-  const req = request(app).post(`/v1/portal/appointments/${id}/reschedule`).set('Origin', opts.origin ?? ALLOWED_ORIGIN).set('Cookie', s.cookie);
-  const csrf = opts.csrf === undefined ? s.csrf : opts.csrf;
-  if (csrf !== null) req.set('X-CSRF-Token', csrf);
-  return req.send(body);
-}
+const postReschedule = (s: TestSession, id: string, body: object, opts: { csrf?: string | null; origin?: string } = {}) =>
+  portalPost(app, `/v1/portal/appointments/${id}/reschedule`, s, body, opts);
 
 const moveTo = (startUtc: string, patientTimezone = 'Europe/Madrid') => ({ startUtc, patientTimezone });
 

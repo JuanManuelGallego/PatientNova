@@ -4,6 +4,14 @@ import crypto from 'crypto';
 
 const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/meetings.space.created';
 
+/** A stored connection whose refresh token is still in use (SQL form of `isConnectionActive`). */
+const ACTIVE_CONNECTION_WHERE = { disconnectedAt: null, refreshToken: { not: null } } as const;
+
+/** Active and granted the Meet scope: the one definition of "connected" behind the status, the check and Meet. */
+export function isConnectionUsable(conn: { refreshToken: string | null; disconnectedAt: Date | null; grantedScopes: string[] } | null): boolean {
+  return isConnectionActive(conn) && conn.grantedScopes.includes(REQUIRED_SCOPE);
+}
+
 export function isConnectionActive(conn: { refreshToken: string | null; disconnectedAt: Date | null } | null): conn is { refreshToken: string; disconnectedAt: null; grantedScopes: string[]; id: string } {
   return Boolean(conn?.refreshToken && !conn.disconnectedAt);
 }
@@ -85,14 +93,14 @@ export const googleConnectionRepository = {
 
   async updateLastChecked(userId: string, client: TransactionClient = prisma) {
     return client.googleConnection.updateMany({
-      where: { userId, disconnectedAt: null, refreshToken: { not: null } },
+      where: { userId, ...ACTIVE_CONNECTION_WHERE },
       data: { lastCheckedAt: new Date() },
     });
   },
 
   async findActiveUserIds(client: TransactionClient = prisma): Promise<string[]> {
     const rows = await client.googleConnection.findMany({
-      where: { disconnectedAt: null, refreshToken: { not: null } },
+      where: ACTIVE_CONNECTION_WHERE,
       select: { userId: true },
       orderBy: { userId: 'asc' },
     });

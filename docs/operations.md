@@ -105,7 +105,7 @@ rest). A refresh token can stop working without any action in PatientNova.
   UTC (06:00 Bogotá). It refreshes each active connection's access token. A rejected token
   (`invalid_grant`) marks the connection expired, with one `GOOGLE_CONNECTION` audit row (source
   `JOB`). Network errors or a Google outage change nothing. Providers can also check on demand from
-  Settings → Integraciones ("Verificar ahora", `GET /v1/google/connection?verify=true`, 5 per minute).
+  Settings → Integraciones ("Verificar ahora", `POST /v1/google/connection/verify`, 5 per minute).
 - **Recovery.** The provider reconnects from the banner or from Settings. Nothing else is needed.
 
 ## CSP rollout (Portal)

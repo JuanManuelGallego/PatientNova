@@ -3,7 +3,7 @@ import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
-import { googleConnectionRepository, isConnectionActive, REQUIRED_SCOPE } from './google-connection.repository.js';
+import { googleConnectionRepository, isConnectionUsable } from './google-connection.repository.js';
 import { GoogleOAuthError } from './google-errors.js';
 
 export function isAuthorizationFailure(error: unknown): boolean {
@@ -81,10 +81,10 @@ export async function verifyConnection(userId: string): Promise<ConnectionCheckR
     throw new GoogleOAuthError('Google OAuth is not configured', 'GOOGLE_CONFIG_MISSING', 503);
   }
   const conn = await googleConnectionRepository.findByUserId(userId);
-  if (!isConnectionActive(conn)) return conn ? 'expired' : 'not_connected';
-  if (!conn.grantedScopes.includes(REQUIRED_SCOPE)) return 'expired';
+  if (!conn) return 'not_connected';
+  if (!isConnectionUsable(conn) || !conn.refreshToken) return 'expired';
 
-  const { oauth2Client, tokenPersistence } = buildOAuthClient(userId, conn);
+  const { oauth2Client, tokenPersistence } = buildOAuthClient(userId, { id: conn.id, refreshToken: conn.refreshToken });
   try {
     const { token } = await oauth2Client.getAccessToken();
     if (!token) throw new Error('Google returned no access token');
