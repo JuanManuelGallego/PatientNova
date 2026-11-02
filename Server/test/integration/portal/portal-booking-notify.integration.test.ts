@@ -42,7 +42,6 @@ async function bookedAppointment(opts: {
 
 describe('patient confirmation', () => {
   it('renders in the patient zone, following its DST rules rather than the provider\'s', async () => {
-    // Bogota has no DST (UTC-5); Madrid is UTC+1 in January and UTC+2 from the end of March.
     const winter = await bookedAppointment({ startAt: '2027-01-20T15:00:00Z' });
     const summer = await bookedAppointment({ startAt: '2027-04-05T15:00:00Z' });
 

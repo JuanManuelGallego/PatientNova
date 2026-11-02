@@ -41,6 +41,16 @@ Le recordamos cordialmente que el pago de la consulta debe estar gestionado y co
 
 Quedamos a su disposición para cualquier duda. ¡Feliz día!`;
 
+export function formatDate(at: Date, timeZone: string, weekday = false): string {
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
+    ...(weekday && { weekday: 'long' }), day: 'numeric', month: 'long', year: 'numeric', timeZone,
+  }).format(at);
+}
+
+export function formatTime(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, { hour: '2-digit', minute: '2-digit', hour12: true, timeZone }).format(at);
+}
+
 export function renderAppointmentReminder(
   appointment: AppointmentWithRelations,
   doctorName: string,
@@ -49,12 +59,8 @@ export function renderAppointmentReminder(
   const reminder = appointment.reminder;
   if (!reminder) return null;
 
-  const date = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    day: 'numeric', month: 'long', year: 'numeric', timeZone: timezone,
-  }).format(appointment.startAt);
-  const time = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: timezone,
-  }).format(appointment.startAt);
+  const date = formatDate(appointment.startAt, timezone);
+  const time = formatTime(appointment.startAt, timezone);
   const isVirtual = appointment.appointmentLocation?.isVirtual ?? false;
   const variables: Record<string, string> = {
     '1': appointment.patient.name,

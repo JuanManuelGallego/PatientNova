@@ -26,7 +26,6 @@ export function renderOtpEmail(params: { code: string; providerName: string; ttl
 
 export function renderBookingConfirmationEmail(params: {
   providerName: string;
-  /** Already formatted in `timezone` (the patient's), e.g. "martes, 20 de octubre de 2026, 10:30". */
   whenLocal: string;
   timezone: string;
   locationName?: string | null;

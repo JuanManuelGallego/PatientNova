@@ -246,8 +246,6 @@ async function handleReminderUpdate(
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
 
-    // The old job still exists; the worker skips it if it fires before the new sendAt.
-    // Only on a real change: two jobs for the same sendAt could both see PENDING and send twice.
     const timingChanged = updatedReminder.sendAt.getTime() !== existing.reminder.sendAt.getTime()
       || updatedReminder.sendMode !== existing.reminder.sendMode;
     if (timingChanged && updatedReminder.status === ReminderStatus.PENDING) return { rescheduled: updatedReminder };

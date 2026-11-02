@@ -38,7 +38,6 @@ import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
-export const PORTAL_REMINDER_LEAD_MS = ONE_DAY_MS;
 
 export interface PortalAppointmentDto {
   id: string;
@@ -138,7 +137,7 @@ export const portalBookingService = {
         }
         await ensureCurrentConsent(tx, { patientId, userId }, PRIVACY_POLICY_VERSION, meta);
 
-        const reminderAt = new Date(start.getTime() - PORTAL_REMINDER_LEAD_MS);
+        const reminderAt = new Date(start.getTime() - ONE_DAY_MS);
         const appointment = await createWithin(tx, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),

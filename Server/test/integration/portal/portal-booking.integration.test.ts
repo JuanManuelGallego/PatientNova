@@ -138,7 +138,6 @@ describe('POST /v1/portal/bookings', () => {
     expect(await prisma.patientConsent.count({ where: { patientId: patient!.id } })).toBe(1);
     const audits = await prisma.auditLog.findMany({ where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL } });
     expect(audits.map((a) => a.entityType).sort()).toEqual(
-      // The 24h reminder: created, then linked to the appointment.
       [ EntityType.APPOINTMENT, EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.REMINDER, EntityType.REMINDER ].sort(),
     );
   });
@@ -478,7 +477,6 @@ describe('booking confirmation, reminder and provider notice', () => {
 
     expect(res.status).toBe(201);
     expect(mocks.send).not.toHaveBeenCalled();
-    // createTestUser leaves provider notices off, so the patient confirmation is the only message.
     expect(mocks.dispatch).toHaveBeenCalledTimes(1);
     const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
     expect(channel).toBe(Channel.EMAIL);

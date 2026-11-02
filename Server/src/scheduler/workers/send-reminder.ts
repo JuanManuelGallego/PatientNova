@@ -11,7 +11,6 @@ import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/
 import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
-const STALE_JOB_TOLERANCE_MS = ONE_MINUTE_MS;
 
 export async function sendReminderWorker([ job ]: Array<{
   data: { reminderId: string };
@@ -32,8 +31,7 @@ export async function sendReminderWorker([ job ]: Array<{
     return;
   }
 
-  // A job queued for an earlier sendAt; the reschedule enqueued a new one.
-  if (reminder.sendMode === ReminderMode.SCHEDULED && reminder.sendAt.getTime() - Date.now() > STALE_JOB_TOLERANCE_MS) {
+  if (reminder.sendMode === ReminderMode.SCHEDULED && reminder.sendAt.getTime() - Date.now() > ONE_MINUTE_MS) {
     logger.info({ reminderId }, 'Reminder rescheduled to a later time — skipping stale job');
     return;
   }
