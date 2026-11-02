@@ -21,7 +21,6 @@ const upcomingActive = (now: Date) => ({
 });
 
 export const portalBookingRepository = {
-  /** Upcoming active appointments this patient booked through the portal (the per-patient cap). */
   async countUpcomingPortal(userId: string, patientId: string, now: Date, tx: TransactionClient): Promise<number> {
     return tx.appointment.count({
       where: { userId, patientId, source: RecordSource.PORTAL, ...upcomingActive(now), startAt: { gt: now } },

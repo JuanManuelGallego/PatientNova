@@ -17,7 +17,6 @@ type PatientWithRelations = Patient & {
 
 const PATIENT_DIFF_FIELDS = schemaKeys(updatePatientSchema);
 
-/** Creates a patient on `tx` (provider lock, per-provider cap, required audit), for composing larger transactions. */
 export async function createPatientWithin(
   tx: TransactionClient,
   dto: CreatePatientDto,

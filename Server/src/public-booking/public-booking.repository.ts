@@ -5,7 +5,6 @@ import type { Interval } from './slot-engine.js';
 const MINUTE_MS = 60_000;
 
 const bookable = { bookableOnline: true, isActive: true, isDeleted: false } as const;
-// Virtual locations stay off the portal until 5.4.
 const bookableLocation = { ...bookable, isVirtual: false } as const;
 
 export type ProviderImageKind = 'avatar' | 'logo';
@@ -49,7 +48,7 @@ export const publicBookingRepository = {
   async findBookableType(userId: string, typeId: string, tx?: TransactionClient) {
     return (tx ?? prisma).appointmentType.findFirst({
       where: { id: typeId, userId, ...bookable },
-      select: { id: true, name: true, defaultDuration: true, defaultPrice: true },
+      select: { id: true, defaultDuration: true, defaultPrice: true },
     });
   },
 

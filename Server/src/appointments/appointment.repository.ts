@@ -19,7 +19,6 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>
 
 export interface CreateAppointmentOptions {
   source?: RecordSource;
-  /** Patient device zone (portal bookings only); patient-facing text renders in it. */
   patientTimezone?: string;
 }
 

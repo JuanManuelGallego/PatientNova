@@ -1,4 +1,4 @@
-import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { prisma } from '../utils/prisma/prisma-client.js';
 import { portalSecret } from '../auth/tokens.js';
 import { createCsrfToken } from '../utils/security/csrf.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
@@ -17,10 +17,9 @@ export interface PortalSessionView {
   consentRequired: boolean;
 }
 
-/** False only for a resolved patient with an active consent at the current policy version. */
-export async function isConsentRequired(resolution: PortalPatientResolution, tx?: TransactionClient): Promise<boolean> {
+export async function isConsentRequired(resolution: PortalPatientResolution): Promise<boolean> {
   return resolution.kind !== 'patient'
-    || !(await hasCurrentConsent(resolution.patientId, PRIVACY_POLICY_VERSION, tx));
+    || !(await hasCurrentConsent(resolution.patientId, PRIVACY_POLICY_VERSION));
 }
 
 export const portalSessionService = {

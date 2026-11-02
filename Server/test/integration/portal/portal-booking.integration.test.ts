@@ -42,14 +42,12 @@ beforeEach(() => {
   failConsent.on = false;
 });
 
-/** Grid starts (ISO, UTC) on the provider-local day `daysAhead` from today, from the real slot engine. */
 async function slotsOn(provider: LiveProvider, daysAhead = 3): Promise<string[]> {
   const date = DateTime.now().setZone(ZONE).plus({ days: daysAhead }).toISODate()!;
   const { slots } = await publicBookingService.getSlots(provider.slug, { typeId: provider.typeId, from: date, to: date });
   return slots.map((s) => s.startUtc);
 }
 
-/** A provider-local wall time `daysAhead` from today, as an ISO UTC instant. */
 function localAt(daysAhead: number, hour: number, minute = 0): string {
   return DateTime.now().setZone(ZONE).plus({ days: daysAhead }).set({ hour, minute, second: 0, millisecond: 0 }).toUTC().toISO()!;
 }
@@ -184,7 +182,6 @@ describe('POST /v1/portal/bookings', () => {
     expect(results.map((r) => r.status).sort()).toEqual([ 201, 409 ]);
     expect(results.find((r) => r.status === 409)!.body.error).toBe('Slot no longer available');
     expect(await appointmentsOf(provider.id)).toHaveLength(1);
-    // The loser's patient and consent rolled back with its transaction.
     expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(1);
   });
 
@@ -226,7 +223,6 @@ describe('POST /v1/portal/bookings', () => {
     const provider = await createLiveProvider({ bufferMinutes: 30 });
     const slots = await slotsOn(provider);
     const busyPatient = await createTestPatient(provider.id);
-    // An appointment at the third slot: the buffer makes the second slot (back-to-back) unavailable.
     await prisma.appointment.create({
       data: {
         userId: provider.id, patientId: busyPatient.id, startAt: new Date(slots[2]!),
@@ -239,13 +235,13 @@ describe('POST /v1/portal/bookings', () => {
     const offGrid = new Date(new Date(slots[4]!).getTime() + 30 * 60_000).toISOString();
 
     const rejected = [
-      slots[1]!, // buffer before the existing appointment
-      slots[2]!, // the existing appointment itself
-      slots[6]!, // blocked time
-      offGrid, // between grid starts
-      localAt(3, 20), // outside the 08:00-18:00 window
-      localAt(-1, 9), // in the past (lead time)
-      localAt(40, 9), // past the 30-day horizon
+      slots[1]!,
+      slots[2]!,
+      slots[6]!,
+      offGrid,
+      localAt(3, 20),
+      localAt(-1, 9),
+      localAt(40, 9),
     ];
     for (const start of rejected) {
       const res = await postBooking(sessionFor(provider.id, unique('slot@test.local')), bookingBody(provider, start));
@@ -416,7 +412,6 @@ describe('GET /v1/portal/appointments', () => {
 
     const second = await postBooking(session, bookingBody(provider, slots[4]!));
     const first = await postBooking(session, bookingBody(provider, slots[1]!));
-    // Another patient of the same provider, and the same email at another provider.
     await postBooking(sessionFor(provider.id, unique('otra@test.local')), bookingBody(provider, slots[6]!));
     const [ otherStart ] = await slotsOn(other);
     await postBooking(sessionFor(other.id, email), bookingBody(other, otherStart!));

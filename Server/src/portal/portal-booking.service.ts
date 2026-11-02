@@ -1,4 +1,5 @@
 import { AppointmentStatus, BookingApprovalMode, Channel, PatientStatus, RecordSource } from '../../generated/prisma/enums.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
@@ -22,12 +23,11 @@ import { ensureCurrentConsent, type ConsentRequestMeta } from '../patient-consen
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
-import { portalBookingRepository } from './portal-booking.repository.js';
+import { portalAppointmentSelect, portalBookingRepository } from './portal-booking.repository.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
-/** Upcoming portal-sourced appointments one patient may hold at a time. */
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
 
 export interface PortalAppointmentDto {
@@ -41,15 +41,7 @@ export interface PortalAppointmentDto {
   location: { name: string; address: string | null; instructions: string | null } | null;
 }
 
-type PortalAppointmentRow = {
-  id: string;
-  startAt: Date;
-  endAt: Date;
-  status: AppointmentStatus;
-  price: number;
-  appointmentType: { name: string } | null;
-  appointmentLocation: { name: string; address: string | null; instructions: string | null } | null;
-};
+type PortalAppointmentRow = Prisma.AppointmentGetPayload<{ select: typeof portalAppointmentSelect }>;
 
 function toPortalAppointmentDto(a: PortalAppointmentRow): PortalAppointmentDto {
   return {
@@ -66,14 +58,12 @@ function toPortalAppointmentDto(a: PortalAppointmentRow): PortalAppointmentDto {
   };
 }
 
-// Conflicts from createWithin carry the other appointment's times; the portal answers one neutral 409.
 function toPortalError(err: unknown): unknown {
   if (
     err instanceof AppointmentConflictError
     || err instanceof AppointmentBlockedTimeConflictError
     || isAppointmentOverlapViolation(err)
   ) return new SlotUnavailableError();
-  // A provider-side email edit can race the new-patient insert; neither error may reach the patient as is.
   if (err instanceof PatientLimitReachedError || err instanceof PatientEmailConflictError) return new PortalBookingUnavailableError();
   return err;
 }
@@ -98,10 +88,6 @@ async function resolveOrCreatePatient(
 }
 
 export const portalBookingService = {
-  /**
-   * Books a slot in one transaction: provider lock → live check → bookable type/location →
-   * isSlotAvailable → resolve or create the patient → cap → consent → createWithin.
-   */
   async book(session: PortalSessionContext, body: CreatePortalBookingBody, meta: ConsentRequestMeta): Promise<PortalAppointmentDto> {
     const { userId } = session;
     const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
@@ -110,7 +96,6 @@ export const portalBookingService = {
     try {
       const created = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
-        // Live check first: it answers false for a missing provider, where getSettings would throw a different 404.
         if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
         const settings = await bookingSettingsRepository.getSettings(userId, tx);
         if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
@@ -160,7 +145,6 @@ export const portalBookingService = {
     }
   },
 
-  /** Same shape for every resolution; only a consented patient gets their upcoming appointments. */
   async listAppointments(session: PortalSessionContext): Promise<{ appointments: PortalAppointmentDto[]; consentRequired: boolean }> {
     const resolution = await resolvePortalPatient(session);
     const consentRequired = await isConsentRequired(resolution);

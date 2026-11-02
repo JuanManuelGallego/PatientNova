@@ -13,7 +13,6 @@ import { createTestAppointmentType, createTestLocation, createTestUser } from '.
 
 export const ALLOWED_ORIGIN = 'http://localhost:3000';
 
-/** An app wired like `app.ts` for the portal: both public routers, plus a provider route for cross-token checks. */
 export function buildPortalApp(): express.Express {
   const a = express();
   a.set('trust proxy', 1);
@@ -35,7 +34,6 @@ export interface LiveProvider {
 
 let seq = 0;
 
-/** A booking-live provider: 08:00–18:00 every day, 60-minute grid, one bookable type (60 min) and in-person location. */
 export async function createLiveProvider(opts: { bufferMinutes?: number; price?: number } = {}): Promise<LiveProvider> {
   const user = await createTestUser();
   const slug = `dra-portal-${Date.now()}-${++seq}`.slice(0, 40);
