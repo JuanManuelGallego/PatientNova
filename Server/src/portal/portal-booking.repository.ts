@@ -4,14 +4,19 @@ import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
 
 export const PORTAL_APPOINTMENTS_LIMIT = 50;
 
+const bookableFields = { bookableOnline: true, isActive: true, isDeleted: true } as const;
+
+/** Read for patient-facing DTOs; the bookable flags feed the action flags and never reach the response. */
 export const portalAppointmentSelect = {
   id: true,
   startAt: true,
   endAt: true,
   status: true,
   price: true,
-  appointmentType: { select: { name: true } },
-  appointmentLocation: { select: { name: true, address: true, instructions: true } },
+  isDeleted: true,
+  source: true,
+  appointmentType: { select: { id: true, name: true, ...bookableFields } },
+  appointmentLocation: { select: { name: true, address: true, instructions: true, isVirtual: true, ...bookableFields } },
 } as const;
 
 const upcomingActive = (now: Date) => ({
@@ -25,6 +30,18 @@ export const portalBookingRepository = {
     return tx.appointment.count({
       where: { userId, patientId, source: RecordSource.PORTAL, ...upcomingActive(now), startAt: { gt: now } },
     });
+  },
+
+  /** The session patient's own appointment, or null; callers answer every miss with the same 404. */
+  async findOwn(userId: string, patientId: string, appointmentId: string, tx: TransactionClient) {
+    return tx.appointment.findFirst({
+      where: { id: appointmentId, userId, patientId },
+      select: { ...portalAppointmentSelect, typeId: true, locationId: true },
+    });
+  },
+
+  async findForDto(appointmentId: string, tx: TransactionClient) {
+    return tx.appointment.findUniqueOrThrow({ where: { id: appointmentId }, select: portalAppointmentSelect });
   },
 
   async listUpcoming(userId: string, patientId: string, now: Date) {

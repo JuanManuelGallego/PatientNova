@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { CalendarX, ChevronLeft } from "lucide-react";
+import { ApiClientError } from "@/src/api/base/apiClients";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useLogout } from "@/src/api/portal/usePortalAuth";
-import { usePortalAppointments } from "@/src/api/portal/usePortalBooking";
+import { useCancelAppointment, usePortalAppointments } from "@/src/api/portal/usePortalBooking";
+import type { PortalAppointment } from "@/src/types/PortalBooking";
+import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
-import { browserTimezone } from "@/src/utils/TimeUtils";
-import { timezoneName } from "@/src/utils/publicBooking";
+import { browserTimezone, fmtTime } from "@/src/utils/TimeUtils";
+import { fmtLongDay, localDayOf, timezoneName } from "@/src/utils/publicBooking";
+import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
+import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalConsent } from "./PortalConsent";
 import { ProviderAvatar } from "./ProviderAvatar";
+import { RescheduleFlow } from "./RescheduleFlow";
 import styles from "./Portal.module.css";
 
 export function PortalAppointmentsPage({ slug }: { slug: string }) {
@@ -40,7 +46,7 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
                         </div>
                     </div>
                 </header>
-                <PortalArea slug={slug} />
+                <PortalArea slug={slug} provider={provider} />
             </>
         );
     }
@@ -48,7 +54,7 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
     return <PublicPageShell>{body}</PublicPageShell>;
 }
 
-function PortalArea({ slug }: { slug: string }) {
+function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider }) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     const [ consentedFor, setConsentedFor ] = useState<string | null>(null);
     const [ notice, setNotice ] = useState<string | undefined>();
@@ -71,6 +77,7 @@ function PortalArea({ slug }: { slug: string }) {
     return (
         <SignedIn
             slug={slug}
+            provider={provider}
             session={session}
             onLoggedOut={() => { setNotice(undefined); clear(); }}
             onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
@@ -80,12 +87,13 @@ function PortalArea({ slug }: { slug: string }) {
 
 interface SignedInProps {
     slug: string;
+    provider: PublicProvider;
     session: PortalSession;
     onLoggedOut: () => void;
     onSessionLost: () => void;
 }
 
-function SignedIn({ slug, session, onLoggedOut, onSessionLost }: SignedInProps) {
+function SignedIn({ slug, provider, session, onLoggedOut, onSessionLost }: SignedInProps) {
     const { logout, loading, error } = useLogout();
 
     const onLogout = async () => {
@@ -100,7 +108,7 @@ function SignedIn({ slug, session, onLoggedOut, onSessionLost }: SignedInProps) 
     return (
         <section className={`dash-card ${styles.card}`} aria-labelledby="portal-signed-in">
             <h1 id="portal-signed-in" className={styles.title}>Mis citas</h1>
-            <UpcomingAppointments onSessionLost={onSessionLost} />
+            <UpcomingAppointments slug={slug} provider={provider} onSessionLost={onSessionLost} />
             <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
                 Reservar una cita
             </Link>
@@ -115,25 +123,149 @@ function SignedIn({ slug, session, onLoggedOut, onSessionLost }: SignedInProps) 
     );
 }
 
-function UpcomingAppointments({ onSessionLost }: { onSessionLost: () => void }) {
+interface UpcomingAppointmentsProps {
+    slug: string;
+    provider: PublicProvider;
+    onSessionLost: () => void;
+}
+
+function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppointmentsProps) {
     const timezone = browserTimezone();
     const { appointments, loading, error, retry } = usePortalAppointments();
+    const [ rescheduling, setRescheduling ] = useState<PortalAppointment | null>(null);
+    const [ cancelling, setCancelling ] = useState<PortalAppointment | null>(null);
+    const [ status, setStatus ] = useState<string | null>(null);
+    const statusRef = useRef<HTMLParagraphElement>(null);
     const sessionLost = error?.status === 401;
 
     useEffect(() => { if (sessionLost) onSessionLost(); }, [ sessionLost, onSessionLost ]);
+    useEffect(() => { if (status) statusRef.current?.focus(); }, [ status ]);
 
-    if (loading || sessionLost) {
-        return <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
+    /** Shows a result and reloads the list: the server decides what remains. */
+    const settle = (message: string) => {
+        setRescheduling(null);
+        setCancelling(null);
+        setStatus(message);
+        retry();
+    };
+
+    if (rescheduling) {
+        return (
+            <RescheduleFlow
+                slug={slug}
+                provider={provider}
+                appointment={rescheduling}
+                timezone={timezone}
+                onDone={() => settle("Tu cita quedó reprogramada. Te enviamos la confirmación a tu correo.")}
+                onBack={() => setRescheduling(null)}
+                onGone={settle}
+                onSessionLost={onSessionLost}
+            />
+        );
     }
-    if (error) return <ErrorState error={error} onRetry={retry} inline />;
-    if (!appointments?.length) return <p className={styles.lead}>No tienes citas próximas.</p>;
+
+    // The result line stays mounted (same position) while the list reloads behind it, so it keeps the
+    // focus it was given; otherwise focus would drop to the page when the skeleton replaced it.
+    const statusLine = status && (
+        <p ref={statusRef} tabIndex={-1} className={styles.notice} role="status">{status}</p>
+    );
+
+    let body: React.ReactNode;
+    if (loading || sessionLost) {
+        body = <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
+    } else if (error) {
+        body = <ErrorState error={error} onRetry={retry} inline />;
+    } else if (!appointments?.length) {
+        body = <p className={styles.lead}>No tienes citas próximas.</p>;
+    } else {
+        body = (
+            <>
+                <ul className={styles.appts} aria-label="Próximas citas">
+                    {appointments.map((a) => (
+                        <li key={a.id}>
+                            <PortalAppointmentCard
+                                appointment={a}
+                                timezone={timezone}
+                                actions={(a.canReschedule || a.canCancel) && (
+                                    <>
+                                        {a.canReschedule && (
+                                            <button type="button" className="btn-secondary" onClick={() => { setStatus(null); setRescheduling(a); }}>
+                                                Reprogramar
+                                            </button>
+                                        )}
+                                        {a.canCancel && (
+                                            <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`}
+                                                onClick={() => { setStatus(null); setCancelling(a); }}>
+                                                Cancelar cita
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            />
+                        </li>
+                    ))}
+                </ul>
+                <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+                {cancelling && (
+                    <CancelDialog
+                        appointment={cancelling}
+                        timezone={timezone}
+                        onClose={() => setCancelling(null)}
+                        onCancelled={() => settle("Tu cita quedó cancelada. Te enviamos la confirmación a tu correo.")}
+                        onGone={settle}
+                        onSessionLost={onSessionLost}
+                    />
+                )}
+            </>
+        );
+    }
+
+    return <>{statusLine}{body}</>;
+}
+
+interface CancelDialogProps {
+    appointment: PortalAppointment;
+    timezone: string;
+    onClose: () => void;
+    onCancelled: () => void;
+    onGone: (message: string) => void;
+    onSessionLost: () => void;
+}
+
+/** In-app confirmation (never `window.confirm`). A failure other than "gone" keeps the dialog open with the error. */
+function CancelDialog({ appointment, timezone, onClose, onCancelled, onGone, onSessionLost }: CancelDialogProps) {
+    const { cancelAppointment, loading, error } = useCancelAppointment();
+    const when = `${fmtLongDay(localDayOf(appointment.startUtc, timezone))}, ${fmtTime(appointment.startUtc, timezone)}`;
+
+    const confirm = async () => {
+        try {
+            await cancelAppointment(appointment.id);
+        } catch (err) {
+            if (!(err instanceof ApiClientError)) return;
+            if (err.status === 401) onSessionLost();
+            else if (err.status === 404) onGone(err.message);
+            return;
+        }
+        onCancelled();
+    };
+
+    // Public pages sit outside the provider layout, so the dialog brings its own focus-trap registry.
     return (
-        <>
-            <ul className={styles.appts} aria-label="Próximas citas">
-                {appointments.map((a) => <li key={a.id}><PortalAppointmentCard appointment={a} timezone={timezone} /></li>)}
-            </ul>
-            <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
-        </>
+        <FocusTrapProvider>
+            <ConfirmDialog
+                icon={CalendarX}
+                title="¿Cancelar esta cita?"
+                cancelLabel="Volver"
+                confirmLabel="Sí, cancelar cita"
+                loadingLabel="Cancelando…"
+                loading={loading}
+                error={error}
+                onClose={() => { if (!loading) onClose(); }}
+                onConfirm={() => void confirm()}
+            >
+                <p className={styles.lead}>Tu cita del {when} quedará cancelada y el horario se liberará.</p>
+            </ConfirmDialog>
+        </FocusTrapProvider>
     );
 }
 

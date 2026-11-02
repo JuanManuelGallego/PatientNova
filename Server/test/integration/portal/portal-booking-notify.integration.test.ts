@@ -120,6 +120,129 @@ describe('provider notice', () => {
   });
 });
 
+describe('cancellation notices', () => {
+  const START = '2027-01-20T15:00:00Z';
+  const cancel = (id: string) => prisma.appointment.update({ where: { id }, data: { status: AppointmentStatus.CANCELLED } });
+
+  it('tells the patient in their zone, with a link to book again', async () => {
+    const { appt, patient, user } = await bookedAppointment({ startAt: START });
+    await cancel(appt.id);
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-cancellation' });
+
+    const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
+    expect(channel).toBe(Channel.EMAIL);
+    expect(opts.to).toBe(patient.email);
+    expect(opts.subject).toBe('Cita cancelada con Dra. Ana Pública');
+    expect(opts.body).toContain('del miércoles, 20 de enero de 2027, 04:00 p. m. (hora de Europe/Madrid) quedó cancelada');
+    expect(opts.body).toContain(`${config.portal.url}/book/${user.bookingSlug}`);
+    expect(opts.body).not.toContain('/appointments');
+  });
+
+  it('tells the provider on WHATSAPP with the cancel template and no patient details', async () => {
+    const { appt } = await bookedAppointment({
+      startAt: START, provider: { reminderActive: true, reminderChannel: Channel.WHATSAPP, whatsappNumber: '+573001112233' },
+    });
+    await cancel(appt.id);
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'provider-cancel-notice' });
+
+    expect(mocks.dispatch).toHaveBeenCalledWith(Channel.WHATSAPP, {
+      to: '+573001112233',
+      contentSid: config.twilio.portalCancelSid,
+      contentVariables: { '1': 'Dra. Ana Pública', '2': 'miércoles, 20 de enero de 2027', '3': '10:00 a. m.' },
+    });
+  });
+
+  it('tells the provider on SMS in the provider zone', async () => {
+    const { appt } = await bookedAppointment({
+      startAt: START, provider: { reminderActive: true, reminderChannel: Channel.SMS, phoneNumber: '+573004445566' },
+    });
+    await cancel(appt.id);
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'provider-cancel-notice' });
+
+    const [ , opts ] = mocks.dispatch.mock.calls[0]!;
+    expect(opts.body).toContain('Un paciente canceló en línea su cita del miércoles, 20 de enero de 2027, 10:00 a. m.; ese horario');
+    expect(opts.body).not.toMatch(/Lucia|Rojas|Madrid/);
+  });
+
+  it('is skipped while the appointment is still active (the cancel rolled back)', async () => {
+    const { appt } = await bookedAppointment({ startAt: START, provider: { reminderActive: true, reminderChannel: Channel.EMAIL } });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-cancellation' });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'provider-cancel-notice' });
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('reschedule notices', () => {
+  const START = '2027-01-22T20:00:00Z';
+  const PREVIOUS = '2027-01-20T15:00:00Z';
+
+  it('tells the patient the new and previous times in their zone', async () => {
+    const { appt, user } = await bookedAppointment({ startAt: START });
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: PREVIOUS });
+
+    const [ , opts ] = mocks.dispatch.mock.calls[0]!;
+    expect(opts.subject).toBe('Cita reprogramada con Dra. Ana Pública');
+    expect(opts.body).toContain('Nueva fecha y hora: viernes, 22 de enero de 2027, 09:00 p. m. (hora de Europe/Madrid)');
+    expect(opts.body).toContain('Fecha anterior: miércoles, 20 de enero de 2027, 04:00 p. m.');
+    expect(opts.body).toContain('Puedes ver, cancelar o reprogramar tus citas');
+    expect(opts.body).toContain(`${config.portal.url}/book/${user.bookingSlug}/appointments`);
+  });
+
+  it('tells the provider on WHATSAPP with the reschedule template', async () => {
+    const { appt } = await bookedAppointment({
+      startAt: START, provider: { reminderActive: true, reminderChannel: Channel.WHATSAPP, whatsappNumber: '+573001112233' },
+    });
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'provider-reschedule-notice', previousStartAt: PREVIOUS });
+
+    expect(mocks.dispatch).toHaveBeenCalledWith(Channel.WHATSAPP, {
+      to: '+573001112233',
+      contentSid: config.twilio.portalRescheduleSid,
+      contentVariables: {
+        '1': 'Dra. Ana Pública',
+        '2': 'miércoles, 20 de enero de 2027, 10:00 a. m.',
+        '3': 'viernes, 22 de enero de 2027',
+        '4': '03:00 p. m.',
+      },
+    });
+  });
+
+  it('goes to the provider email with a subject and both times', async () => {
+    const { appt, user } = await bookedAppointment({ startAt: START, provider: { reminderActive: true, reminderChannel: Channel.EMAIL } });
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'provider-reschedule-notice', previousStartAt: PREVIOUS });
+
+    expect(mocks.dispatch).toHaveBeenCalledWith(Channel.EMAIL, expect.objectContaining({
+      to: user.email,
+      subject: 'Cita reprogramada en línea',
+      body: expect.stringContaining('Antes: miércoles, 20 de enero de 2027, 10:00 a. m.\nAhora: viernes, 22 de enero de 2027, 03:00 p. m.\n'),
+    }));
+  });
+
+  it('is skipped once a later move superseded it (that move sends its own)', async () => {
+    const { appt } = await bookedAppointment({ startAt: START });
+    const superseded = '2027-01-21T15:00:00Z';
+    for (const kind of [ 'patient-reschedule', 'provider-reschedule-notice' ] as const) {
+      await deliverBookingNotification({ appointmentId: appt.id, kind, previousStartAt: PREVIOUS, startAt: superseded });
+    }
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: superseded, startAt: START });
+    expect(mocks.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('is skipped once the appointment was cancelled', async () => {
+    const { appt } = await bookedAppointment({ startAt: START });
+    await prisma.appointment.update({ where: { id: appt.id }, data: { status: AppointmentStatus.CANCELLED } });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: PREVIOUS });
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+});
+
 describe('delivery rules', () => {
   it('skips cancelled and deleted appointments', async () => {
     const cancelled = await bookedAppointment({ startAt: '2027-01-20T15:00:00Z' });

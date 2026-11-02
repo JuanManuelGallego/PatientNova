@@ -37,6 +37,10 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /booking limit reached/i, "Ya tienes 3 citas próximas reservadas en línea. Para reservar otra, comunícate con el consultorio." ],
     [ /online booking unavailable/i, "No pudimos completar tu reserva en línea. Comunícate con el consultorio." ],
     [ /^(appointment type|location) not found$/i, "Esa opción ya no está disponible. Recarga la página e inténtalo de nuevo." ],
+    // Patient portal: one answer for any appointment the patient can no longer change (provider side says "with id ...").
+    [ /^appointment not found$/i, "Esta cita ya no se puede modificar. Actualizamos la lista." ],
+    [ /reschedule unavailable/i, "Esta cita ya no se puede reprogramar en línea. Comunícate con el consultorio." ],
+    [ /new time must differ/i, "Elige un horario distinto al de tu cita actual." ],
 ];
 
 /** `statusMessages` replaces the status fallback (not a matched server message) where context differs. */

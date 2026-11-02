@@ -31,6 +31,12 @@ body:json {
   }
 }
 
+script:post-response {
+  // Used by Cancel Appointment and Reschedule Appointment.
+  const id = res.body?.data?.appointment?.id;
+  if (id) bru.setVar("portalAppointmentId", id);
+}
+
 docs {
   Books `startUtc` (run Public Booking > Get Slots first; it stores the first free slot in
   `slotStartUtc`) for the session's email. Needs the session cookie, the exact Origin and the CSRF

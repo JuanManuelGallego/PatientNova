@@ -355,3 +355,33 @@
 .account .linkButton {
   margin-left: -4px;
 }
+
+.apptActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-gray-100);
+}
+
+.apptActions :global(.btn-secondary) {
+  min-height: 44px;
+}
+
+.dangerLink {
+  color: var(--c-error-text);
+}
+
+.reschedule {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionLabel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-500);
+}

@@ -103,8 +103,12 @@ describe('POST /v1/portal/bookings', () => {
     expect(res.status).toBe(201);
     expect(res.headers['cache-control']).toBe('no-store');
     const dto = res.body.data.appointment;
-    expect(Object.keys(dto).sort()).toEqual([ 'durationMinutes', 'endUtc', 'id', 'location', 'price', 'startUtc', 'status', 'type' ]);
-    expect(dto).toMatchObject({ startUtc: start, durationMinutes: 60, status: 'CONFIRMED', price: 150000 });
+    expect(Object.keys(dto).sort()).toEqual([
+      'canCancel', 'canReschedule', 'durationMinutes', 'endUtc', 'id', 'location', 'price', 'startUtc', 'status', 'type',
+    ]);
+    expect(dto).toMatchObject({ startUtc: start, durationMinutes: 60, status: 'CONFIRMED', price: 150000, canCancel: true, canReschedule: true });
+    expect(Object.keys(dto.type).sort()).toEqual([ 'id', 'name' ]);
+    expect(dto.type.id).toBe(provider.typeId);
     expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'instructions', 'name' ]);
 
     const [ patient, ...others ] = await patientByEmail(provider.id, email);

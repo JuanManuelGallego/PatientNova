@@ -61,7 +61,7 @@ They use the `integration` vitest project (`test/integration/**/*.test.ts`).
   inspecting `res`.
 
 ## Integration coverage matrix (Scope A)
-Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
+Suite: `55` files, `705` tests, all against real Postgres, `tsc --noEmit` clean.
 
 | Area | File | Covers |
 |------|------|--------|
@@ -87,8 +87,10 @@ Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
 | Portal OTP (routes) | `test/integration/portal/portal-otp.integration.test.ts` | `POST /v1/public/providers/:slug/otp` + `POST /v1/portal/:slug/otp/verify` on an app wired like `app.ts` (Brevo `transactional.js` mocked, Turnstile siteverify stubbed): identical 202 `{challenge}` for new/patient/deleted-only/revoked emails, only hashes stored (no email, code not in subject), email normalization, resend cooldown replaces the code, per-email hourly cap + new window, per-provider cap (other provider unaffected), public-page 404 for unknown/not-live slugs, CAPTCHA 400/503, strict body 400; verify sets the cookie (HttpOnly/Secure/Lax/path/2h) with `{userId,email,sid}` and a sid-bound CSRF token, attempt lock (right code rejected after 5 misses), expired/reused/never-requested give one error, code not valid on another provider, concurrent verifies give one session, exact Origin (no CSRF), 10kb limit, malformed code not counted; challenge: wrong challenge never counts an attempt, throttled 202 carries an unused challenge, lock recovery + second login; daily failure cap across resends (stops sending, right code rejected, window reset); `purgePortalOtpsWorker` |
 | Portal session (routes) | `test/integration/portal/portal-session.integration.test.ts` | `GET /v1/portal/session`, `POST /v1/portal/consent`, `POST /v1/portal/logout` on an app wired like `app.ts`: one 401 for missing/tampered/expired/wrong-audience/wrong-secret/claim-less tokens and provider tokens (Bearer or cookie), portal token rejected on provider routes, 401 once the provider is not live (disabled/deleted/portal off); identical session keys and types for none/patient/revoked/inactive/deleted-only, `consentRequired` false only with a consent at the current policy version (version bump re-requires it), email change stops resolving, other provider's patient never resolves; consent 204 in every case, one row + one `PUBLIC_PORTAL` audit row even under concurrency, nothing for non-patients, CSRF/Origin/strict body (no client `policyVersion`); logout clears the cookie on the same path even without a valid session, foreign Origin 403 |
 | Portal booking (routes) | `test/integration/portal/portal-booking.integration.test.ts` | `POST /v1/portal/bookings` + `GET /v1/portal/appointments` on an app wired like `app.ts`: new patient (PORTAL source, EMAIL channel, session email) + consent + CONFIRMED portal appointment (type price, `confirmedAt`, `patientTimezone`) with `PUBLIC_PORTAL` audits; existing patient never modified, consent reused; one neutral 409 for revoked/inactive/deleted-only; concurrent same-slot bookings and portal-vs-admin races (one winner, loser fully rolled back); same new email twice at once → one patient; slot rejections (buffer, taken, blocked, off-grid, outside/overrunning the window, lead, horizon) as one 409 without the other appointment's times; non-bookable/inactive/virtual/foreign type or location 404; strict body 400 (no client price/end/status, IANA zone); 3-upcoming portal cap (provider-created, cancelled, past not counted); rollback of patient/consent/appointment/audits on a later failure; CSRF/session/Origin guards, approval mode 404; list: same shape for none/unavailable/unconsented, own upcoming active only, soonest first |
-| Portal booking (notifications) | `test/integration/portal/portal-booking.integration.test.ts`, `portal-booking-notify.integration.test.ts` | confirmation to the patient in their zone (and across a DST change in that zone), provider zone fallback, address/location/appointments link; provider notice on WhatsApp (template SID) / SMS / EMAIL without patient details, skipped when `reminderActive` is off or no contact; scheduler on: reminder + both notify jobs sent with `db` inside the booking `tx`; scheduler off: sent after commit, nothing on rollback, a failed send keeps the booking; 24h EMAIL reminder in the patient zone, none under 24h; inactive/deleted appointments skipped; failed send throws (worker retry) (dispatch + `getBoss` mocked) |
-| Appointments (reminder scheduling) | `test/integration/appointments/appointment.reminder-scheduling.integration.test.ts` | linked SCHEDULED reminder enqueued with `startAfter` on `tx`, IMMEDIATE without; re-enqueued only when an update moves `sendAt`; nothing without the scheduler; `send-reminder` skips a stale job before `sendAt` and sends when due (`getBoss` + dispatch mocked) |
+| Portal booking (notifications) | `test/integration/portal/portal-booking.integration.test.ts`, `portal-booking-notify.integration.test.ts` | confirmation to the patient in their zone (and across a DST change in that zone), provider zone fallback, address/location/appointments link; provider notice on WhatsApp (template SID) / SMS / EMAIL without patient details, skipped when `reminderActive` is off or no contact; scheduler on: reminder + both notify jobs sent with `db` inside the booking `tx`; scheduler off: sent after commit, nothing on rollback, a failed send keeps the booking; 24h EMAIL reminder in the patient zone, none under 24h; inactive/deleted appointments skipped; cancellation notices (patient email with a book-again link, provider WhatsApp cancel template / SMS / EMAIL) only for CANCELLED appointments; reschedule notices (patient email with new + previous time in the patient zone, provider WhatsApp reschedule template / EMAIL with both times) skipped once cancelled or superseded by a later move; failed send throws (worker retry) (dispatch + `getBoss` mocked) |
+| Portal appointment cancel (routes) | `test/integration/portal/portal-appointment-cancel.integration.test.ts` | `POST /v1/portal/appointments/:id/cancel` on an app wired like `app.ts`: 204 + CANCELLED/`cancelledBy=PATIENT`/`paid=false`, slot freed, linked reminder CANCELLED, `PUBLIC_PORTAL` audits, patient + provider notices; provider-created appointments cancellable (not reschedulable); one identical 404 for another patient's/provider's/unknown/past/cancelled/deleted/completed ids and for none/revoked/unconsented sessions; concurrent double cancel (one 204, one audit); scheduler on: both notify jobs on `tx` + queued reminder job removed after commit; rollback of status/reminder/audits on a later failure; a failed notice keeps the cancel; session/CSRF/Origin/uuid/strict empty body; `canCancel`/`canReschedule` flags (type no longer bookable, approval mode); provider `setStatus`/`update` to CANCELLED cancel a PENDING linked reminder, never a SENT one |
+| Portal appointment reschedule (routes) | `test/integration/portal/portal-appointment-reschedule.integration.test.ts` | `POST /v1/portal/appointments/:id/reschedule` on an app wired like `app.ts`: in-place move (same id, type duration, price/status/`confirmedAt` kept, `patientTimezone` updated, one `PUBLIC_PORTAL` APPOINTMENT audit, patient + provider notices with the previous time), old slot freed / new taken; linked reminder moved and re-rendered, cancelled under 24h, a SENT one unlinked and replaced, one added when the booking was under 24h; moving next to its own old time with a buffer; reschedule-vs-booking race (one winner); taken/blocked/off-grid/beyond-horizon/past as one 409 without the other appointment's times; same start 400; provider-created or no-longer-bookable type 409 `Reschedule unavailable`; approval mode 404; not-theirs/cancelled/unknown 404; scheduler on: `send-reminder` + both notify jobs on `tx`, rollback on a failed enqueue; session/CSRF/Origin/uuid/strict body (no client end/type/price, IANA zone); a PENDING reminder keeps its channel/address; the settled-reminder unlink is audited; `GET .../:id/slots` offers the times next to the appointment that the public slots hide (not its own start), same 404/409s as the move, session/uuid/strict range |
+| Appointments (reminder scheduling) | `test/integration/appointments/appointment.reminder-scheduling.integration.test.ts` | linked SCHEDULED reminder enqueued with `startAfter` on `tx`, IMMEDIATE without; re-enqueued only when an update moves `sendAt`; nothing without the scheduler; `send-reminder` skips a stale job before `sendAt` and sends when due (`getBoss` + dispatch mocked); cancels (never sends) a due PENDING reminder of a cancelled/completed/deleted appointment, audited as JOB |
 | Booking settings (routes) | `test/integration/booking-settings/booking-settings.routes.integration.test.ts` | `GET/PATCH /booking/settings` (defaults, slug normalize/reserved 400/taken 409, lead time reaching the horizon 422 (merged with stored values), enable needs slug + availability + bookable type + in-person location 422, clearing slug disables, deleting the last bookable location leaves it enabled but `live: false`), slug suggestion, `PUT /booking/availability` whole-week replace (overlap 400, empty-while-enabled 422, one audit row, tenant isolation), `bookableOnline` on locations/types (virtual + bookable 400 both ways) |
 | Twilio webhook (svc) | `test/integration/twilio/webhook.integration.test.ts` | quick-reply confirm/cancel under the provider lock, stale replies (cancelled/completed/deleted/rebooked slot) leave the appointment untouched, `cancelledBy=PATIENT`, unknown intent |
 | Twilio webhook (route) | `test/integration/twilio/webhook.routes.integration.test.ts` | HMAC auth middleware: valid sig → 200 + process; missing/bad/tampered sig → 403; service mocked |
@@ -253,15 +255,45 @@ Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
   (`AppointmentConflictError`, blocked time, the 23P01 backstop) surface as the neutral `SlotUnavailableError`, never
   with the other appointment's times. Patient-facing lists go through the allow-listed `PortalAppointmentDto`.
 - Booking notifications (`src/portal/portal-booking-notifications.ts`): the patient confirmation and the provider notice
-  are `portal-booking-notify` jobs (`{ appointmentId, kind }`, ids only) enqueued on the booking `tx` with
+  (and the cancel/reschedule pairs) are `portal-booking-notify` jobs (`{ appointmentId, kind, previousStartAt? }`, ids
+  and timestamps only) enqueued on the booking `tx` with
   `fromPrisma(tx)`, so a rollback drops them; without the scheduler they are sent after commit, best effort. The
-  handler re-reads the appointment, skips inactive/deleted ones and throws on a failed send (pg-boss retries). Provider
+  handler re-reads the appointment, skips deleted ones and those not in the state the kind needs (CANCELLED for
+  cancellation notices, active otherwise) and throws on a failed send (pg-boss retries). Provider
   notices carry no patient details. Patient-facing times (confirmation, linked reminders) use
   `Appointment.patientTimezone ?? User.timezone`; provider-facing text stays in `User.timezone`.
 - Linked reminders: `createWithin`/`update` enqueue `send-reminder` on `tx` (`startAfter: sendAt` for SCHEDULED) when the
   reminder is created or its `sendAt`/`sendMode` actually changes. A moved reminder keeps its old job; `send-reminder`
   skips a SCHEDULED job that fires more than a minute before `sendAt`. Never enqueue a second job for an unchanged
   `sendAt`: two jobs firing together can both read PENDING and send twice.
+  Cancelling an appointment by any path (`setStatus`, `update`, the portal) calls `cancelLinkedReminder(tx, ...)`, which
+  marks a PENDING linked reminder CANCELLED on the same `tx` (a reactivated appointment does not get it back). As a
+  backstop, `send-reminder` marks CANCELLED (never sends) a reminder whose linked appointment is deleted or not in `ACTIVE_STATUSES`.
+- Patient self-service (`src/portal/portal-appointment.service.ts`, `POST /v1/portal/appointments/:id/cancel` behind
+  `portal-change-ip` + `portalSessionGuard`): one transaction, `withProviderLock` → `requireConsentedPatient` (a
+  consented `patient` only) → `portalBookingRepository.findOwn(userId, patientId, id, tx)` → `canCancel`
+  (`src/portal/portal-appointment-actions.ts`). Every miss is the same `PortalAppointmentNotFoundError` (404), never a
+  different status for "not yours". A patient may cancel any upcoming active appointment (no cutoff) and reschedule only
+  `source=PORTAL` ones whose type and location are still bookable; `PortalAppointmentDto` carries `canCancel`/
+  `canReschedule` from the same functions, and the Portal shows actions only from those flags. Patient changes notify
+  through `enqueuePortalNotifications(event, id, tx, previousStartAt?)` (`booked`/`cancelled`/`rescheduled`); provider
+  WhatsApp notices use `TWILIO_WHATSAPP_USER_PORTAL_{BOOKING,CANCEL,RESCHEDULE}_SID`. Formatted times end in
+  "a. m."/"p. m.": never put a full stop right after one.
+- Patient reschedule (`POST /v1/portal/appointments/:id/reschedule`, same limiter and guard, strict body
+  `{ startUtc, patientTimezone }`): moves the appointment in place, one transaction in this order: `withProviderLock` →
+  `isBookingLive` + `AUTO_CONFIRM` (else the unknown-provider 404) → `requireConsentedPatient` → `findOwn` + `canCancel`
+  (404) → `source=PORTAL` with a still-bookable type and location (else 409 `PortalRescheduleUnavailableError`) → new
+  start differs (400) → `isSlotAvailable` with the type's current duration on `loadBusy(..., { excludeAppointmentId })`
+  (the moved appointment must not block itself through the buffer) → `updateWithin(tx, id, { startAt, endAt, reminder },
+  userId, { patientTimezone, replaceSettledReminder: true })`. `updateWithin` is `appointmentService.update` on the
+  caller's `tx`; use it to compose an appointment edit with other steps. Price, status and `confirmedAt` never change;
+  the per-patient cap is not re-checked. The linked reminder follows the move: PENDING → new `sendAt` with its channel
+  and address kept (or cancelled under 24h); a SENT/FAILED/CANCELLED one is unlinked (audited) and a new email reminder
+  linked (`replaceSettledReminder`), never rewritten. The preconditions up to the bookable type/location are one
+  function (`loadReschedulable`), shared with `GET /v1/portal/appointments/:id/slots` (same guard, strict `{ from, to }`),
+  which lists times through `computeSlots` (`src/public-booking/public-booking.service.ts`, also behind the public slots)
+  with `excludeAppointmentId` and drops the current start. Reschedule notice jobs carry the new `startAt`; a notice
+  whose appointment has since moved again is skipped (the later move sends its own).
 - Public Portal pages (`src/app/book/[slug]`, outside `(provider)`: no `AuthProvider`, no `/users/me` probe, `noindex`)
   read only through `publicApi` via `usePublicQuery` (`src/api/base/useClientQuery.ts`), never `useApiQuery`/`fetchWithAuth`;
   the booking form's session check and `POST /bookings` are the only `portalApi` calls on `/book/[slug]` (`BookingForm`,
@@ -280,7 +312,14 @@ Suite: `53` files, `665` tests, all against real Postgres, `tsc --noEmit` clean.
   next week on the shared seeded calendar (each run takes the first free one). Keep OTP requests in e2e minimal:
   `otp-request-ip` allows 10 per IP per 15 minutes. Patient portal pages (`/book/[slug]/appointments`) use `portalApi`
   via `usePortalSession`/`usePortalQuery`/`src/api/portal/` only; a 401 from `/session` means "no session", never an
-  error, and a 401 from `/appointments` returns to the login. Specs strip the Vercel bypass headers from API calls, since
+  error, and a 401 from `/appointments` returns to the login. "Mis citas" shows "Reprogramar"/"Cancelar cita" only from the
+  server's `canReschedule`/`canCancel` flags (never re-derived), cancels through an in-app `ConfirmDialog` (never
+  `window.confirm`; public pages have no provider layout, so it brings its own `FocusTrapProvider`), and keeps the
+  appointment being moved in component state, never in the URL. Booking and rescheduling share the week/day/time picker
+  (`useSlotPicker` + `SlotSteps`, `src/components/PublicBooking/SlotPicker.tsx`) so both follow the same device-zone and
+  paging rules; rescheduling passes the appointment id so times come from the session's `/appointments/:id/slots`
+  (`useRescheduleSlots`), never the public slots (which would hide the times next to it). A 401 there returns to the
+  login and a 404/409 returns to the list with the server's message. A 404 on cancel/reschedule closes the action and refreshes the list with the server's message. Specs strip the Vercel bypass headers from API calls, since
   the anonymous CORS refuses them.
 - Calendar days (birth dates, evolution-note dates) are not instants: they are stored as UTC midnight
   (`calendarDayToIso`, `DateTimePicker mode="calendarDay"`) and read by their UTC date (`calendarDayOf`,

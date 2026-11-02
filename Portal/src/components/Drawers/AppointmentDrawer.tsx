@@ -103,6 +103,11 @@ export function AppointmentDrawer({
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <AppointmentStatusPill status={appointment.status} />
           {appointment.source === "PORTAL" && <OnlineBadge testId="appointment-drawer-portal-badge" label="Reservada en línea" />}
+          {appointment.status === "CANCELLED" && appointment.cancelledBy === "PATIENT" && (
+            <span data-testid="appointment-drawer-cancelled-by-patient" style={{ fontSize: 12, color: "var(--c-gray-500)" }}>
+              Cancelada por el paciente
+            </span>
+          )}
         </span>
       }
       footer={footer}

@@ -16,9 +16,11 @@ interface PortalAppointmentCardProps {
     appointment: PortalAppointment;
     timezone: string;
     inset?: boolean;
+    /** Buttons for the patient's actions, shown at the foot of the card. */
+    actions?: React.ReactNode;
 }
 
-export function PortalAppointmentCard({ appointment: a, timezone, inset = false }: PortalAppointmentCardProps) {
+export function PortalAppointmentCard({ appointment: a, timezone, inset = false, actions }: PortalAppointmentCardProps) {
     const dayId = useId();
     return (
         <article className={inset ? `${styles.appt} ${styles.inset}` : styles.appt} aria-labelledby={dayId}>
@@ -37,6 +39,7 @@ export function PortalAppointmentCard({ appointment: a, timezone, inset = false 
                 </p>
             )}
             {a.location?.instructions && <p className={styles.apptInstructions}>{a.location.instructions}</p>}
+            {actions && <div className={styles.apptActions}>{actions}</div>}
         </article>
     );
 }

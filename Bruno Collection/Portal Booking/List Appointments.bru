@@ -10,9 +10,19 @@ get {
   auth: none
 }
 
+script:post-response {
+  // The soonest appointment, used by Cancel Appointment and Reschedule Appointment.
+  const first = res.body?.data?.appointments?.[0]?.id;
+  if (first) bru.setVar("portalAppointmentId", first);
+}
+
 docs {
   Needs the `portal_session` cookie. Returns `{ appointments, consentRequired }`: the session
   patient's upcoming active appointments (at most 50, soonest first) once they have accepted the
   current privacy policy, otherwise `{ appointments: [], consentRequired: true }` with the same shape
   whether or not the email belongs to a patient.
+
+  Each appointment carries `canCancel` and `canReschedule`, computed on the server: cancel for any
+  upcoming active appointment; reschedule only for online bookings whose type and location are still
+  bookable online, while the provider takes bookings in auto-confirm mode.
 }

@@ -7,7 +7,6 @@ import {
   ReminderMode,
   ReminderStatus,
 } from '../../generated/prisma/enums.js';
-import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
@@ -31,43 +30,16 @@ import { ensureCurrentConsent, type ConsentRequestMeta } from '../patient-consen
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
-import { portalAppointmentSelect, portalBookingRepository } from './portal-booking.repository.js';
+import { portalBookingRepository } from './portal-booking.repository.js';
+import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
-import { deliverBookingNotificationsNow, enqueueBookingNotifications } from './portal-booking-notifications.js';
+import { deliverPortalNotificationsNow, enqueuePortalNotifications } from './portal-booking-notifications.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
 
-export interface PortalAppointmentDto {
-  id: string;
-  startUtc: string;
-  endUtc: string;
-  durationMinutes: number;
-  status: AppointmentStatus;
-  price: number;
-  type: { name: string } | null;
-  location: { name: string; address: string | null; instructions: string | null } | null;
-}
-
-type PortalAppointmentRow = Prisma.AppointmentGetPayload<{ select: typeof portalAppointmentSelect }>;
-
-function toPortalAppointmentDto(a: PortalAppointmentRow): PortalAppointmentDto {
-  return {
-    id: a.id,
-    startUtc: a.startAt.toISOString(),
-    endUtc: a.endAt.toISOString(),
-    durationMinutes: Math.round((a.endAt.getTime() - a.startAt.getTime()) / ONE_MINUTE_MS),
-    status: a.status,
-    price: a.price,
-    type: a.appointmentType ? { name: a.appointmentType.name } : null,
-    location: a.appointmentLocation
-      ? { name: a.appointmentLocation.name, address: a.appointmentLocation.address, instructions: a.appointmentLocation.instructions }
-      : null,
-  };
-}
-
-function toPortalError(err: unknown): unknown {
+export function toPortalError(err: unknown): unknown {
   if (
     err instanceof AppointmentConflictError
     || err instanceof AppointmentBlockedTimeConflictError
@@ -157,11 +129,11 @@ export const portalBookingService = {
             },
           }),
         }, userId, { source: RecordSource.PORTAL, patientTimezone: body.patientTimezone });
-        await enqueueBookingNotifications(appointment.id, tx);
-        return appointment;
+        await enqueuePortalNotifications('booked', appointment.id, tx);
+        return portalBookingRepository.findForDto(appointment.id, tx);
       }, { timeout: 10000 }));
-      await deliverBookingNotificationsNow(created.id);
-      return toPortalAppointmentDto(created);
+      await deliverPortalNotificationsNow('booked', created.id);
+      return toPortalAppointmentDto(created, { now: new Date(), canBook: true });
     } catch (err) {
       throw toPortalError(err);
     }
@@ -171,7 +143,12 @@ export const portalBookingService = {
     const resolution = await resolvePortalPatient(session);
     const consentRequired = await isConsentRequired(resolution);
     if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], consentRequired: true };
-    const rows = await portalBookingRepository.listUpcoming(session.userId, resolution.patientId, new Date());
-    return { appointments: rows.map(toPortalAppointmentDto), consentRequired };
+    const now = new Date();
+    const [ rows, settings ] = await Promise.all([
+      portalBookingRepository.listUpcoming(session.userId, resolution.patientId, now),
+      bookingSettingsRepository.getSettings(session.userId),
+    ]);
+    const ctx = { now, canBook: settings.bookingApprovalMode === BookingApprovalMode.AUTO_CONFIRM };
+    return { appointments: rows.map((row) => toPortalAppointmentDto(row, ctx)), consentRequired };
   },
 };
