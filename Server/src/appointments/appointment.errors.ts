@@ -36,6 +36,13 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
+/** A live pending booking-request hold covers the time; the provider resolves the request first. */
+export class AppointmentHoldConflictError extends ApiError {
+  constructor() {
+    super('Hay una solicitud de reserva pendiente en ese horario', 409)
+  }
+}
+
 export class AppointmentOverlapError extends ApiError {
   constructor() {
     super('Appointment overlaps with another appointment of this provider', 409)

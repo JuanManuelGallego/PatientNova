@@ -39,6 +39,9 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
   Reminder: new Set([ "to", "subject", "body" ]),
   AuditLog: new Set([ "actorDisplayName", "description", "ipAddress", "fieldsBefore", "fieldsAfter" ]),
   GoogleConnection: new Set([ "refreshToken" ]),
+  // Short-lived (holds expire in <= 48h, purged later): not in PII_VERSIONED_MODELS or backfill-pii.ts, so a
+  // BLIND_INDEX_KEY rotation does not rehash pending rows (the rotation runbook must be done at a quiet time).
+  BookingRequest: new Set([ "email", "name", "lastName", "phone" ]),
 };
 
 /**
@@ -62,6 +65,9 @@ export const BLIND_INDEXES: Record<string, Record<string, { column: string; deri
   },
   MedicalRecord: {
     name: { column: "nameTokens", derive: nameTokens },
+  },
+  BookingRequest: {
+    email: { column: "emailHash", derive: emailHash },
   },
 };
 

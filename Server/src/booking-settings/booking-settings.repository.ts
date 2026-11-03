@@ -35,7 +35,7 @@ export const bookingSettingsRepository = {
     const data = buildUpdateData(
       dto,
       [
-        'bookingSlug', 'bookingEnabled', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
+        'bookingSlug', 'bookingEnabled', 'bookingApprovalMode', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
         'maxPatientReschedules', 'minRescheduleNoticeHours',
       ],
     );

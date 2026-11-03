@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BookingApprovalMode } from '../../generated/prisma/client.ts';
 import { isReservedSlug, isValidSlugFormat, SLUG_MAX_LENGTH, SLUG_MIN_LENGTH } from './slug.js';
 
 export const SLOT_INTERVAL_OPTIONS = [ 5, 10, 15, 20, 30, 45, 60, 90, 120 ] as const;
@@ -21,6 +22,7 @@ export const updateBookingSettingsSchema = z
   .object({
     bookingSlug: bookingSlugSchema.nullable().optional(),
     bookingEnabled: z.boolean().optional(),
+    bookingApprovalMode: z.enum(BookingApprovalMode).optional(),
     slotIntervalMinutes: z.number().int().refine(
       (n) => (SLOT_INTERVAL_OPTIONS as readonly number[]).includes(n),
       { message: `slotIntervalMinutes must be one of ${SLOT_INTERVAL_OPTIONS.join(', ')}` },

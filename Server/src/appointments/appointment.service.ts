@@ -4,6 +4,7 @@ import { appointmentRepository, type CreateAppointmentOptions, type UpdateAppoin
 import { ACTIVE_STATUSES } from './appointment-status.js';
 import {
   AppointmentConflictError,
+  AppointmentHoldConflictError,
   AppointmentPatientNotFoundError,
   AppointmentReminderNotFoundError,
   AppointmentStatusTransitionError,
@@ -14,6 +15,7 @@ import {
 import { LocationNotFoundError } from '../utils/errors/errors.js';
 import { AppointmentTypeNotFoundError } from '../appointment-types/appointment-type.errors.js';
 import type { CreateAppointmentDto, UpdateAppointmentDto, ListAppointmentsQuery, AppointmentStatsQuery } from './appointment.schemas.ts';
+import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
 import { appointmentMeetingService } from './appointment-meeting.service.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.ts';
 import { withProviderLock } from '../utils/prisma/provider-lock.ts';
@@ -289,6 +291,7 @@ async function checkConflict(
   startAt: string | Date,
   endAt: string | Date,
   excludeId?: string,
+  excludeRequestId?: string,
 ): Promise<void> {
   const conflict = await tx.appointment.findFirst({
     where: {
@@ -304,6 +307,9 @@ async function checkConflict(
   if (conflict) {
     throw new AppointmentConflictError(conflict.startAt.toISOString(), conflict.endAt.toISOString());
   }
+  // A live pending booking-request hold also owns its time (approval excludes its own request).
+  const hold = await bookingRequestRepository.findLiveHoldOverlap(userId, new Date(startAt), new Date(endAt), new Date(), tx, { excludeRequestId });
+  if (hold) throw new AppointmentHoldConflictError();
 }
 
 async function checkBlockedTimeConflict(
@@ -372,7 +378,7 @@ export async function createWithin(
   await validateType(tx, dto.typeId, userId);
   const reminderContext = await getReminderContext(tx, userId);
 
-  await checkConflict(tx, userId, dto.startAt, dto.endAt);
+  await checkConflict(tx, userId, dto.startAt, dto.endAt, undefined, opts.excludeRequestId);
   await checkBlockedTimeConflict(tx, userId, dto.startAt, dto.endAt);
 
   const meeting = appointmentMeetingService.resolveMeeting({

@@ -18,6 +18,7 @@ body:json {
   {
     "bookingSlug": "consulta-ejemplo",
     "bookingEnabled": false,
+    "bookingApprovalMode": "AUTO_CONFIRM",
     "slotIntervalMinutes": 30,
     "bufferMinutes": 0,
     "minLeadMinutes": 120,
@@ -28,6 +29,8 @@ body:json {
 }
 
 docs {
+  `bookingApprovalMode` is `AUTO_CONFIRM` or `REQUIRE_APPROVAL`. Portal bookings only work in
+  `AUTO_CONFIRM` until the request flow ships (Phase 6.2); do not switch real providers yet.
   `maxPatientReschedules` (0-10, 0 = patients cannot reschedule online) caps portal reschedules per
   appointment; `minRescheduleNoticeHours` (0-168) refuses a reschedule once the current start is that
   close. Cancelling has no cutoff.

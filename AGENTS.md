@@ -31,8 +31,11 @@ pnpm run test:integration
   - `patients_userId_emailHash_active_key`: unique `(userId, emailHash) WHERE isDeleted = false`, migration `20261019000000_encrypt_patient_pii`.
   - `appointments_no_provider_overlap`: exclusion constraint, migration `20261007000000_appointment_no_overlap`; requires `btree_gist`.
   - `patient_consents_active_key`: unique `(patientId, kind, policyVersion) WHERE revokedAt IS NULL`, migration `20261101000000_portal_auth`.
+  - `booking_requests_no_hold_overlap`: exclusion constraint over PENDING `booking_requests` per provider (`tsrange(startAt, endAt, '[)')`), migration `20261106000000_booking_requests`; requires `btree_gist`. It cannot see the clock, so `bookingRequestService.createHoldWithin` first expires stale holds under the lock.
 - Transactions creating/moving appointments or blocked time call `withProviderLock(tx, userId)` FIRST (`src/utils/prisma/provider-lock.ts`), then validate and write on that same `tx`. Compose with `createWithin`/`updateWithin`.
-- Conflicts are provider-wide over non-deleted SCHEDULED/CONFIRMED appointments (`ACTIVE_STATUSES`), using half-open intervals. Map the exclusion backstop through `isAppointmentOverlapViolation` to a neutral 409.
+- Conflicts are provider-wide over non-deleted SCHEDULED/CONFIRMED appointments (`ACTIVE_STATUSES`), using half-open intervals. Map the exclusion backstop (appointments and holds) through `isAppointmentOverlapViolation` to a neutral 409.
+- A live hold (`BookingRequest` PENDING with `holdExpiresAt > now`, `src/booking-requests/`) blocks its slot like an appointment: `loadLiveHolds` feeds the slot engine's `holds` (buffer included) and `checkConflict` throws `AppointmentHoldConflictError` (mapped to `SlotUnavailableError` on portal paths). Expiry is by clock, never by the cron. Pass `excludeRequestId` (`slotRules` options, `createWithin` opts) only when resolving that same request. Holds last `min(now + 48h, startAt)`.
+- `BookingRequest.email/name/lastName/phone` are encrypted with an `emailHash` blind index; audit rows for requests never carry them.
 - Transactional `logAudit` calls require both `tx` and `required: true`; swallowing an audit error leaves the transaction aborted. Best-effort audit is only for non-transactional legacy paths.
 - Portal actions use `runInAuditContext(portalPatientAuditContext({...}), fn)` for `ActionSource.PUBLIC_PORTAL` and a hashed actor id.
 

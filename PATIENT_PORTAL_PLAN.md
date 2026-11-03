@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete except the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"). **Updated:** 2026-11-02
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"). **Updated:** 2026-11-02
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -906,6 +906,60 @@ As planned:
 - **6.5 Expiry cron.** Release holds after about 48h, 24h nudge, patient expiry email.
 - **6.6 Review routing.** Inactive and deleted-only matches become requests; the inbox lists all deleted candidates for that normalized email; actions: restore one, create new, reject.
 
+#### Phase 6 implementation plan (prepared 2026-11-02)
+**Starting point (checked in code):**
+- `User.bookingApprovalMode` exists (`schema.prisma:254`) but `updateBookingSettingsSchema` does not accept it and the Portal has no control for it. `requireSelfBooking` (`portal-booking.service.ts:47`) 404s unless `AUTO_CONFIRM`.
+- `EntityType.BOOKING_REQUEST` and `ActionSource.PUBLIC_PORTAL` exist; there is no `BookingRequest` model.
+- The slot engine already takes `busy.holds`; `public-booking.service.ts:149` hard-codes `[]` and `loadBusy` returns no holds.
+- `renderBookingRequestReceivedEmail` exists and is unused. `portal-booking-notify` jobs are keyed by `appointmentId`, so requests need their own queue. `ensureCurrentConsent` stamps `acceptedAt = now`; approval must keep the original time.
+- Latest migration: `20261105000000_appointment_meeting_status`.
+
+**Decisions (defaults, prepared 2026-11-02):**
+1. `holdExpiresAt = min(now + 48h, startAt)`. Slot engine and conflict checks ignore holds past `holdExpiresAt`, so correctness never depends on the cron; lists show such rows as EXPIRED.
+2. A provider-created appointment over another request's live hold gets a neutral 409; the provider resolves the request first.
+3. Approval re-checks overlap only (appointments, blocked time, other holds) via `createWithin`; it does not re-apply grid, lead or horizon.
+4. Caps: 3 PENDING requests per email per provider, 50 per provider (neutral `PortalBookingLimitError`).
+5. The request path never looks up patients and returns one response shape. The patient is resolved only on approval (reuse an active match, never modify it).
+6. Reschedule stays blocked in approval mode (`canBook` already false); cancel works for appointments and pending requests.
+7. Rejection email is neutral; provider notices carry no patient details.
+8. Pending requests survive mode switches and paused booking and stay resolvable; approval does not need `isBookingLive`.
+9. The approval-mode toggle ships in 6.3 with the inbox; do not offer it to providers before 6.4 and 6.5 are on staging.
+
+**PR 6.1 — Server: model, holds, settings API (no patient-visible change).**
+- Migration `20261106000000_booking_requests` (`--create-only`, read the SQL). `BookingRequest`: `id`, `userId`, `kind` (`NEW`; `REVIEW` reserved for 6.6), `status` (`PENDING | APPROVED | REJECTED | EXPIRED | CANCELLED`), `emailHash`, encrypted `email`/`name`/`lastName`/`phone?`, type and location ids, `startAt`, `endAt`, `patientTimezone`, `holdExpiresAt`, `nudgedAt?`, consent evidence (`policyVersion`, `consentAcceptedAt`, `consentIp`, `consentUserAgent`), `resolvedAt?`, `resolvedBy?`, `appointmentId?`, `patientId?`. Indexes `(userId, status, holdExpiresAt)`, `(userId, emailHash, status)`, `(userId, startAt)`.
+- Raw `booking_requests_no_hold_overlap`: `EXCLUDE USING gist ("userId" WITH =, tsrange("startAt","endAt",'[)') WITH &&) WHERE (status = 'PENDING')`. Add to the AGENTS.md raw-object list. Because it cannot use `now()`, creation first marks the provider's expired PENDING rows EXPIRED under the lock.
+- Encryption: add the four PII fields to `ENCRYPTED_FIELDS` and `emailHash` to `BLIND_INDEXES`; check `backfill-pii.ts`.
+- `src/booking-requests/` (repository, service, errors, constants): `createHoldWithin(tx, …)` (requires the lock), `expireStaleWithin`.
+- `loadBusy` returns live holds with an `excludeRequestId` option; remove `holds: []`; `checkConflict` and the blocked-time check count holds.
+- Settings API accepts, diffs and returns `bookingApprovalMode`.
+- Tests: held slot hidden and unbookable, provider appointment over a hold 409, hold vs appointment `Promise.all` race, expired holds ignored and swept, 23P01 mapping, PII ciphertext at rest, settings audit.
+
+**PR 6.2 — Server + Portal: request creation and patient experience.**
+- `bookingMode(userId, tx)` replaces the 404 in `book` (reschedule still requires AUTO). The approval branch, in one transaction: lock → live → bookable type/location → `isSlotAvailable` with holds → caps → `createHoldWithin` → required `BOOKING_REQUEST` audit under `portalPatientAuditContext`. No Patient or consent row. Returns 202 `{ request: PortalRequestDto }` (allow-list: id, start/end, duration, type, location, `holdExpiresAt`, status). Public provider DTO gains `approvalRequired`.
+- `GET /v1/portal/appointments` returns `{appointments, requests, consentRequired}`; requests are scoped by session `(userId, emailHash)` and always returned.
+- `POST /v1/portal/requests/:id/cancel` (`portal-change-ip` + `portalSessionGuard`): lock → own PENDING → CANCELLED + audit; every miss is `PortalRequestNotFoundError` (404).
+- Received email via `renderBookingRequestReceivedEmail`, after commit.
+- Portal: `usePortalBooking` returns a union; `RequestSent` screen; "Enviar solicitud" label; "Solicitudes pendientes" in "Mis citas" with cancel through `ConfirmDialog`.
+- Tests: creation, caps, same shape for matching and non-matching emails, no Patient/consent, cancel auth and cross-email 404, reschedule 404 in approval mode, hold released; Portal unit tests.
+
+**PR 6.3 — Server + Portal: inbox, approve/reject, calendar, settings toggle.**
+- `/v1/booking-requests` (provider auth, CSRF on writes, `requirePortalEnabled`, ADMIN/SUPER_ADMIN only): `GET /` (status tab, `from`/`to`, pagination, effective status), `GET /:id` (adds `existingPatient` computed at view time), `GET /count`, `POST /:id/approve`, `POST /:id/reject`.
+- Approve: lock → PENDING and unexpired → resolve patient (reuse active match by `emailHash`, else create `source: PORTAL`, respect the cap) → `ensureCurrentConsent` with optional `acceptedAt` and request evidence → `createPortalAppointmentWithin` (extracted from `book`; meeting-pending, `provision-meet`, reminder; `excludeRequestId`) → APPROVED with ids → required audits → `enqueuePortalNotifications('booked', …)`. A conflict gives a neutral 409 and leaves the request PENDING.
+- Portal: `/requests` page (`TabNav` Pendientes / Resueltas / Vencidas, `DataTable`, `RequestDrawer`), sidebar entry, third `requestHolds` list through the calendar hooks and views with `PendingHoldBlock`/`PendingHoldChip` (dashed, "Pendiente de revisión") and a legend swatch, `ApprovalSection` in `OnlineBookingTab.tsx`.
+- Tests: atomic approve and full rollback on forced audit/consent failure, existing patient untouched, approve vs provider-created appointment race, reject releases slot, VIEWER 403, cross-tenant 404; Portal unit tests; e2e with a second seeded provider `e2e-aprobacion` in approval mode (`RequestsPage.ts`, `requests.spec.ts`, a `public` spec).
+
+**PR 6.4 — Provider notifications.**
+- Queue `booking-request-notify` (`{requestId, event: received | approved | rejected | expired | nudge}`), enqueued with `fromPrisma(tx)`, workers reread and skip stale states. Provider notice via `dispatchMessage` on `reminderChannel` (generic text, link to `/requests`). New `TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID` in `config.ts`, `.env.test`, `ci.yml` and `.env.example`. New rejected and expired patient templates.
+- Portal: sidebar badge (`useFetchPendingRequestsCount`), `PendingRequestsAlert` in `ProviderAlerts` (admins, `portalEnabled`), dashboard `dash-card`.
+
+**PR 6.5 — Expiry cron.**
+- `sweep-booking-requests` every 15 min (like `sweep-pending-meetings`, `ActionSource.JOB`): flip expired PENDING to EXPIRED with audit and patient email; one provider `nudge` at about 24h (`nudgedAt`). The daily purge deletes non-PENDING requests older than 90 days.
+
+**PR 6.6 — Review routing.**
+- Deleted-only and inactive matches create a `kind = REVIEW` request in both modes; `portalAccessEnabled=false` stays a generic failure. Inbox detail lists all deleted candidates for the normalized email; actions: restore one (409 on unique collision), create new, reject. The patient learns only about their own record, which is accepted since they proved control of the email.
+
+**Cross-cutting:** AGENTS.md gets the new rules in the same PRs; the Bruno collection is updated in the PR where each API becomes final (6.2 portal, 6.3 provider). Order: 6.1 gates all; 6.4, 6.5 and 6.6 follow 6.3.
+
 ### Phase 7: Provider controls and hardening
 - **7.1 Per-patient portal access toggle** (`portalAccessEnabled`) on the patient screen.
 - **7.2 Consent management.** Re-consent prompt when a new privacy policy version is published, consent revocation flow, provider view of each patient's portal consent history.
@@ -914,7 +968,7 @@ As planned:
 
 ### Phase 8: Operational follow-ups (not portal features; can start any time)
 - **8.1 Encryption key rotation (was 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
-- **8.2 Google Meet connection UX.** Today the connection expires silently. The refresh token's death (`invalid_grant`, `src/google/google-meet.service.ts:28`) is only discovered when the provider clicks "Generar Google Meet": then the connection is marked disconnected and the modal switches to "Reconectar". Until that moment `GET /v1/google/connection` reports `connected: true` from the stored row, so Settings and the appointment modal show a healthy connection that isn't. Build:
+- **8.2 Google Meet connection UX.** *(Done 2026-11-02: (a)–(e) built and the manual (a) check completed.)* Originally: today the connection expires silently. The refresh token's death (`invalid_grant`, `src/google/google-meet.service.ts:28`) is only discovered when the provider clicks "Generar Google Meet": then the connection is marked disconnected and the modal switches to "Reconectar". Until that moment `GET /v1/google/connection` reports `connected: true` from the stored row, so Settings and the appointment modal show a healthy connection that isn't. Build:
   - (a) **Find the cause first.** If the OAuth consent screen is in "Testing" publishing status, Google expires refresh tokens after 7 days; moving it to "In production" (with verification for the Meet scope if required) fixes the root cause. Also check password changes, the 50-token-per-client limit and user revocation. Record the finding in `docs/operations.md`.
   - (b) **Check validity proactively.** A daily pg-boss job (and an optional `?verify=true` on the status endpoint, rate-limited) refreshes the access token for each active connection. On `invalid_grant` it reuses the existing mark-disconnected + audit path. Requires `ENABLE_SCHEDULER`; without it the status endpoint check is the only signal.
   - (c) **Tell the provider before they need it.** A persistent banner in the provider layout ("Tu conexión con Google expiró. Reconéctala para generar enlaces de Meet.") with a one-click reconnect, an outbound notice on the provider's `reminderChannel` when a connection is lost, and a status in Settings that distinguishes "connected", "expired, reconnect" and "never connected" (with `lastUsedAt`/last checked time).

@@ -46,6 +46,7 @@ function mockTx(existingOverride?: Record<string, unknown>) {
     user: { findUniqueOrThrow: vi.fn().mockResolvedValue({ displayName: 'Dr. Test', firstName: 'Test', lastName: 'Doctor' }) },
     appointmentLocation: { findFirst: vi.fn().mockResolvedValue({ id: 'loc-1', isVirtual: false }) },
     appointmentType: { findFirst: vi.fn().mockResolvedValue({ id: 'type-1' }) },
+    bookingRequest: { findFirst: vi.fn().mockResolvedValue(null) },
     reminder: {
       findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'reminder-new-1', contentVariables: {} }),

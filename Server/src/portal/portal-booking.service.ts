@@ -24,7 +24,7 @@ import {
   PublicLocationNotFoundError,
 } from '../public-booking/public-booking.errors.js';
 import { createWithin } from '../appointments/appointment.service.js';
-import { AppointmentBlockedTimeConflictError, AppointmentConflictError } from '../appointments/appointment.errors.js';
+import { AppointmentBlockedTimeConflictError, AppointmentConflictError, AppointmentHoldConflictError } from '../appointments/appointment.errors.js';
 import { createPatientWithin } from '../patients/patient.service.js';
 import { PatientEmailConflictError, PatientLimitReachedError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
@@ -64,6 +64,7 @@ export function toPortalError(err: unknown): unknown {
   if (
     err instanceof AppointmentConflictError
     || err instanceof AppointmentBlockedTimeConflictError
+    || err instanceof AppointmentHoldConflictError
     || isAppointmentOverlapViolation(err)
   ) return new SlotUnavailableError();
   if (err instanceof PatientLimitReachedError || err instanceof PatientEmailConflictError) return new PortalBookingUnavailableError();
