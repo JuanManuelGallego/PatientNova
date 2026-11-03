@@ -38,7 +38,6 @@ beforeEach(() => {
 
 const MEET = 'https://meet.google.com/abc-defg-hij';
 
-/** A PENDING portal appointment: a provider with Google connected and a bookable virtual location. */
 async function pendingBooking() {
   const provider = await createLiveProvider();
   await prisma.appointmentLocation.update({ where: { id: provider.locationId }, data: { bookableOnline: false } });

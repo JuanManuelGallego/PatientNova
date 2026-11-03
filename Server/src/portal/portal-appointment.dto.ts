@@ -14,7 +14,6 @@ export interface PortalAppointmentDto {
   price: number;
   type: { name: string } | null;
   location: { name: string; address: string | null; instructions: string | null; isVirtual: boolean } | null;
-  /** Video call only: the link once it is set, otherwise pending (being created, or the provider will add it). */
   meeting: PortalMeetingDto | null;
   /** Computed on the server; the Portal shows actions only from these flags. */
   canCancel: boolean;

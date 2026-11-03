@@ -5,7 +5,6 @@ import { provisionMeet, type ProvisionMeetJob } from '../../portal/portal-meetin
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker', source: ActionSource.JOB };
 
-/** `provision-meet`: Google API errors rethrow (pg-boss retries); the final attempt hands the link to the provider. */
 export async function provisionMeetWorker([ job ]: Array<{ data: ProvisionMeetJob; retryCount?: number }>): Promise<void> {
   if (!job) return;
   const finalAttempt = (job.retryCount ?? 0) >= PROVISION_MEET_RETRY_LIMIT - 1;

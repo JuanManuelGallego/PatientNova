@@ -123,7 +123,6 @@ export function AppointmentModal({
       setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }));
 
   const selectedLocation = locations.find((l) => l.id === form.locationId);
-  // A portal booking still waiting for its video-call link may be saved without one (the provider adds it later).
   const linkMayWait = !!appt && isWaitingForLink(appt.meetingStatus) && form.locationId === appt.locationId;
 
   // Reminders go out on the selected patient's own channel.
@@ -165,7 +164,7 @@ export function AppointmentModal({
             "2": getUserName(user) || "su profesional de salud",
             "3": fmtDate(form.startAt, timezone),
             "4": fmtTime(form.startAt, timezone),
-            "5": form.meetingUrl || MEETING_LINK_PENDING_TEXT, // the server re-renders linked reminders on save
+            "5": form.meetingUrl || MEETING_LINK_PENDING_TEXT,
           }
         }),
         ...((channel === Channel.SMS || channel === Channel.EMAIL) && {

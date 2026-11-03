@@ -20,10 +20,6 @@ export function providerDisplayName(p: { displayName: string | null; firstName: 
   return p.displayName?.trim() || [ p.firstName, p.lastName ].filter(Boolean).join(' ');
 }
 
-/**
- * What a slug must resolve to: `reachable` (portal pages, login, images: patients keep access to their appointments
- * while booking is paused or not ready) or `live` (choosing a slot).
- */
 export type ProviderRequirement = 'reachable' | 'live';
 
 export const publicBookingService = {
@@ -39,7 +35,6 @@ export const publicBookingService = {
     return provider;
   },
 
-  /** While booking is closed (`bookingOpen: false`) nothing bookable is listed: the page only links to "Mis citas". */
   async getProfile(slug: string) {
     const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const bookingOpen = await bookingSettingsService.isBookingLive(provider.id);
@@ -63,7 +58,6 @@ export const publicBookingService = {
         durationMinutes: t.defaultDuration,
         price: t.defaultPrice,
       })),
-      // A virtual location has no address to show: the patient sees "Videollamada".
       locations: locations.map((l) => ({ id: l.id, name: l.name, address: l.isVirtual ? null : l.address, isVirtual: l.isVirtual })),
     };
   },

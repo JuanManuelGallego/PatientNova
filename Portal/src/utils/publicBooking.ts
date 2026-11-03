@@ -4,7 +4,6 @@ import type { PublicSlot } from "@/src/types/PublicBooking";
 
 export const WEEK_DAYS = 7;
 
-/** Secondary line for a location: "Videollamada" for video calls, otherwise the address (if any). */
 export function locationDetail(l: { isVirtual: boolean; address: string | null }): string | null {
     return l.isVirtual ? "Videollamada" : l.address || null;
 }

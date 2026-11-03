@@ -72,7 +72,6 @@ export async function initializePgBoss(): Promise<void> {
     retryDelayMax: 900,
   });
 
-  // No dead-letter queue: the final attempt hands the link to the provider (NEEDS_LINK) instead of failing.
   await boss.createQueue('provision-meet', {
     retryLimit: PROVISION_MEET_RETRY_LIMIT,
     retryDelay: 30,

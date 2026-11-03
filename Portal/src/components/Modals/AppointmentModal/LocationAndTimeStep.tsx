@@ -37,7 +37,6 @@ interface Props {
   selectedPatient: Patient | undefined;
   reminderChannel: Channel | undefined;
   locations: AppointmentLocation[];
-  /** A portal booking still waiting for its link: the URL may stay empty for now. */
   linkMayWait?: boolean;
 }
 

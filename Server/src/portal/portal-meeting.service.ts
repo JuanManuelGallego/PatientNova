@@ -16,15 +16,12 @@ import { googleConnectionRepository, isConnectionUsable } from '../google/google
 import { deliverPortalNotificationsNow, enqueuePortalNotifications } from './portal-booking-notifications.js';
 
 export const PROVISION_MEET_QUEUE = 'provision-meet';
-/** A `PENDING` link older than this is handed to the provider (`NEEDS_LINK`) by the sweep. */
 export const PENDING_MEETING_TIMEOUT_MS = 30 * ONE_MINUTE_MS;
 
-/** Job payload: the appointment id only. */
 export interface ProvisionMeetJob {
   appointmentId: string;
 }
 
-/** Google cannot create a link for this provider (no connection, no scope, revoked, not configured): no retry helps. */
 const NO_RETRY_CODES = new Set([ 'GOOGLE_CONNECTION_NOT_FOUND', 'GOOGLE_SCOPE_MISSING', 'GOOGLE_TOKEN_REVOKED', 'GOOGLE_CONFIG_MISSING' ]);
 
 const isWaitingForMeet = (a: { meetingStatus: MeetingStatus; status: AppointmentStatus; isDeleted: boolean } | null) =>
@@ -32,25 +29,16 @@ const isWaitingForMeet = (a: { meetingStatus: MeetingStatus; status: Appointment
 
 const waitingSelect = { userId: true, meetingStatus: true, status: true, isDeleted: true } as const;
 
-/**
- * How a portal booking at a virtual location gets its link: `auto` (the `provision-meet` job creates a Meet) when the
- * scheduler runs and the provider's Google connection is usable, otherwise `manual` (the provider adds any link).
- */
 export async function meetingPendingMode(userId: string, tx: TransactionClient): Promise<MeetingPending> {
   if (!config.scheduler.enabled) return 'manual';
   return isConnectionUsable(await googleConnectionRepository.findByUserId(userId, tx)) ? 'auto' : 'manual';
 }
 
-/** Enqueued on the booking `tx`, so a rollback drops it. One job per appointment. */
 export async function enqueueProvisionMeet(appointmentId: string, tx: TransactionClient): Promise<void> {
   const job: ProvisionMeetJob = { appointmentId };
   await getBoss().send(PROVISION_MEET_QUEUE, job, { db: fromPrisma(tx), singletonKey: appointmentId });
 }
 
-/**
- * The provider must add the link: a `PENDING` appointment becomes `NEEDS_LINK` and the held confirmation goes out
- * (saying the link will follow). No-op unless it is still `PENDING`, active and not deleted.
- */
 export async function markNeedsLink(appointmentId: string, reason: string): Promise<boolean> {
   const changed = await prisma.$transaction(async (tx) => {
     const appt = await tx.appointment.findUnique({ where: { id: appointmentId }, select: waitingSelect });
@@ -85,12 +73,6 @@ export async function markNeedsLink(appointmentId: string, reason: string): Prom
 
 export type ProvisionOutcome = 'ready' | 'needs-link' | 'skipped';
 
-/**
- * Creates the Meet link of a `PENDING` portal appointment. Google is called outside any transaction; the link is
- * then set through `updateWithin` under the provider lock (re-rendered reminder, audit, held confirmation). A
- * provider-side failure falls back to `NEEDS_LINK` at once; a Google API error is rethrown for a retry, and falls back
- * on the final attempt. A space created for an appointment cancelled meanwhile is left unused.
- */
 export async function provisionMeet(appointmentId: string, finalAttempt: boolean): Promise<ProvisionOutcome> {
   const appt = await prisma.appointment.findUnique({ where: { id: appointmentId }, select: waitingSelect });
   if (!appt || !isWaitingForMeet(appt)) return 'skipped';
@@ -123,7 +105,6 @@ export async function provisionMeet(appointmentId: string, finalAttempt: boolean
   return 'ready';
 }
 
-/** Backstop for jobs that never ran: `PENDING` for longer than the timeout is handed to the provider. */
 export async function sweepPendingMeetings(now = new Date()): Promise<number> {
   const stale = await prisma.appointment.findMany({
     where: {
@@ -146,7 +127,6 @@ export async function sweepPendingMeetings(now = new Date()): Promise<number> {
   return moved;
 }
 
-/** Upcoming active appointments whose video-call link the provider still has to add (admin banner). */
 export async function findNeedsMeetingLink(userId: string, now = new Date()) {
   const where = {
     userId,

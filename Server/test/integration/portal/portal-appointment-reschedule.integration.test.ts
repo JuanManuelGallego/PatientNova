@@ -334,7 +334,6 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect(third.body.error).toBe('Reschedule unavailable');
     expect((await appointment(appointmentId)).startAt.toISOString()).toBe(c);
 
-    // A provider move never uses up the patient's reschedules.
     const end = new Date(new Date(a!).getTime() + HOUR).toISOString();
     await appointmentService.update(appointmentId, { startAt: a!, endAt: end }, provider.id);
     expect((await appointment(appointmentId)).patientRescheduleCount).toBe(2);

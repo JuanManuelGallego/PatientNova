@@ -24,12 +24,10 @@ export function renderOtpEmail(params: { code: string; providerName: string; ttl
   };
 }
 
-/** Where the appointment takes place: an address in person; for a video call its link, or a note that it will follow. */
 interface PlaceParams {
   locationName?: string | null;
   address?: string | null;
   meetingUrl?: string | null;
-  /** Video call whose link is not ready yet. */
   meetingPending?: boolean;
 }
 
@@ -66,7 +64,6 @@ export function renderBookingConfirmationEmail(params: PlaceParams & {
   };
 }
 
-/** The video-call link of a portal appointment, sent when it is set after the confirmation. */
 export function renderPortalMeetingLinkEmail(params: {
   providerName: string;
   whenLocal: string;

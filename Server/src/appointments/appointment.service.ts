@@ -592,11 +592,6 @@ export async function updateWithin(
 
 type MeetingState = Pick<AppointmentWithRelations, 'meetingUrl' | 'meetingStatus'>;
 
-/**
- * A portal appointment just got its video-call link (or a new one): the patient hears about it. From `PENDING` the
- * held booking confirmation goes out (now with the link); from `NEEDS_LINK` or `READY` a separate link email. Enqueued
- * on `tx` (dropped on rollback); without the scheduler it is sent after commit through `afterCommit`.
- */
 async function onMeetingLinkSet(
   tx: TransactionClient,
   before: MeetingState,

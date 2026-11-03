@@ -119,15 +119,10 @@ export const bookingSettingsService = {
     return result;
   },
 
-  /**
-   * Patients can reach the provider's portal (log in, see and cancel their appointments): the portal is on and the
-   * provider is active, not deleted and has a booking link. Booking itself may be paused or not ready.
-   */
   async isPortalReachable(userId: string, tx?: TransactionClient): Promise<boolean> {
     return (await reachableState(userId, tx)) !== null;
   },
 
-  /** Patients can choose a slot (slots, booking, reschedule): reachable, booking enabled and ready. */
   async isBookingLive(userId: string, tx?: TransactionClient): Promise<boolean> {
     const state = await reachableState(userId, tx);
     if (!state || !state.bookingEnabled) return false;

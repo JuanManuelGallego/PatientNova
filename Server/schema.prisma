@@ -148,7 +148,6 @@ model Appointment {
   paid  Boolean @default(false)
 
   meetingUrl    String?       @db.VarChar(500)
-  /// Video-call link state; only portal bookings at a virtual location may be PENDING or NEEDS_LINK.
   meetingStatus MeetingStatus @default(NOT_REQUIRED)
   notes         String?       @db.Text
 
@@ -162,7 +161,6 @@ model Appointment {
   source      RecordSource @default(PROVIDER)
   cancelledBy CancelledBy?
   patientTimezone String? @db.VarChar(50)
-  /// Times the patient moved this appointment from the portal (provider edits never count).
   patientRescheduleCount Int @default(0)
 
   patientId  String  @db.Uuid
@@ -196,8 +194,6 @@ enum RecordSource {
 }
 
 /// Who cancelled an appointment (set together with status CANCELLED).
-/// NOT_REQUIRED: in person. PENDING: the provision-meet job is creating a Meet link. NEEDS_LINK: the provider must add
-/// a link (no Google, scheduler off or provisioning failed). READY: the link is set.
 enum MeetingStatus {
   NOT_REQUIRED
   PENDING
@@ -260,9 +256,7 @@ model User {
   bufferMinutes       Int                 @default(0)
   minLeadMinutes      Int                 @default(120)
   maxHorizonDays      Int                 @default(60)
-  /// Portal reschedules allowed per appointment; 0 = patients cannot reschedule.
   maxPatientReschedules    Int @default(2)
-  /// Hours before the current start after which a patient can no longer reschedule.
   minRescheduleNoticeHours Int @default(0)
 
   lastPasswordChange  DateTime?

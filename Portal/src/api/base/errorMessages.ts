@@ -40,8 +40,6 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^appointment not found$/i, "Esta cita ya no se puede modificar. Actualizamos la lista." ],
     [ /reschedule unavailable/i, "Esta cita ya no se puede reprogramar en línea. Comunícate con el consultorio." ],
     [ /new time must differ/i, "Elige un horario distinto al de tu cita actual." ],
-    // Public pages render this 404 as their own "no disponible" page; elsewhere (login, booking or rescheduling while the
-    // provider paused booking) it surfaces as this message.
     [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],
 ];
 

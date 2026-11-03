@@ -25,7 +25,6 @@ export function ProviderAlerts() {
   );
 }
 
-/** Online bookings at a video-call location that still need a link from the provider (Google not connected or failed). */
 function NeedsMeetingLinkAlert() {
   const timezone = useDisplayTimezone();
   const { data } = useFetchNeedsMeetingLink();

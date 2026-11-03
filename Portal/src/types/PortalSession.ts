@@ -4,7 +4,6 @@ export interface PortalSession {
     csrfToken: string;
     providerSlug: string;
     consentRequired: boolean;
-    /** Booking is live: the patient may book or reschedule. While false they can still see and cancel. */
     bookingOpen: boolean;
 }
 

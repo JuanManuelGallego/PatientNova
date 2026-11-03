@@ -116,7 +116,6 @@ export const portalBookingService = {
         await ensureCurrentConsent(tx, { patientId, userId }, PRIVACY_POLICY_VERSION, meta);
 
         const reminder = portalReminder(start, now, session.email);
-        // A video call gets its link from the Meet job (Google connected) or from the provider; never inside this lock.
         const meetingPending = location.isVirtual ? await meetingPendingMode(userId, tx) : undefined;
         const appointment = await createWithin(tx, {
           startAt: start.toISOString(),
@@ -135,7 +134,6 @@ export const portalBookingService = {
         });
         const linkPending = appointment.meetingStatus === MeetingStatus.PENDING;
         if (linkPending) await enqueueProvisionMeet(appointment.id, tx);
-        // The confirmation waits for the Meet link; the provider notice goes out now.
         const event: PortalEvent = linkPending ? 'booked-link-pending' : 'booked';
         await enqueuePortalNotifications(event, appointment.id, tx);
         return { created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
@@ -152,7 +150,6 @@ export const portalBookingService = {
     const consentRequired = await isConsentRequired(resolution);
     if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], consentRequired: true };
     const now = new Date();
-    // The session only needs a reachable portal; reschedule flags also need booking to be live.
     const [ rows, settings, live ] = await Promise.all([
       portalBookingRepository.listUpcoming(session.userId, resolution.patientId, now),
       bookingSettingsRepository.getSettings(session.userId),

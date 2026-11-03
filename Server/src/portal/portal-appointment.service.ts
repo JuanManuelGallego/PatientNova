@@ -81,8 +81,7 @@ async function reminderPatch(
 /**
  * Everything a reschedule needs before a slot is chosen, in order: booking live in auto-confirm (else the
  * unknown-provider 404), a consented patient, their own upcoming active appointment (else 404), booked online
- * with a still-bookable type and location, within the provider's reschedule limit and notice (else 409).
- * Shared by the slot list and the move itself.
+ * with a still-bookable type and location (else 409). Shared by the slot list and the move itself.
  */
 async function loadReschedulable(tx: TransactionClient, session: PortalSessionContext, appointmentId: string, now: Date) {
   const { userId } = session;
@@ -179,7 +178,6 @@ export const portalAppointmentService = {
           endAt: end.toISOString(),
           ...(await reminderPatch(tx, appt.id, start, now, session.email)),
         }, userId, { patientTimezone: body.patientTimezone, replaceSettledReminder: true });
-        // Counted only here: provider edits never use up the patient's reschedules.
         await tx.appointment.update({ where: { id: appt.id, userId }, data: { patientRescheduleCount: { increment: 1 } } });
         const move = { previousStartAt: appt.startAt, startAt: start };
         await enqueuePortalNotifications('rescheduled', appt.id, tx, move);

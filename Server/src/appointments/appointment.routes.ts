@@ -36,7 +36,6 @@ appointmentRouter.get<ParamsDictionary, unknown, unknown, AppointmentStatsQuery 
   }),
 );
 
-// Before '/:id' (its uuid validator would answer 400). Admins only: it feeds the provider alert banner.
 appointmentRouter.get(
   '/needs-meeting-link',
   requireAdmin,

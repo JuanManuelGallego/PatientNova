@@ -16,12 +16,7 @@ import { formatDate, formatTime } from '../appointments/appointment-reminder.ren
 import { providerDisplayName } from '../public-booking/public-booking.service.js';
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
 
-/**
- * What happened to a portal appointment. A patient action sends one patient email and one provider notice; a booking
- * whose Meet link is being created holds the confirmation (`booked-link-pending`) until the link is ready
- * (`meeting-ready`, or the "link will follow" version when provisioning falls back). A link added later by the
- * provider is `meeting-link`.
- */
+/** What the patient did in the portal; each event sends one patient email and one provider notice. */
 export type PortalEvent = 'booked' | 'booked-link-pending' | 'cancelled' | 'rescheduled' | 'meeting-ready' | 'meeting-link';
 
 const EVENT_KINDS = {
@@ -89,7 +84,6 @@ function isDeliverable(appt: BookedAppointment | null, job: BookingNotificationJ
   if (job.startAt && appt.startAt.getTime() !== new Date(job.startAt).getTime()) return false;
   if (CANCELLATION_KINDS.has(job.kind)) return appt.status === AppointmentStatus.CANCELLED;
   if (!ACTIVE_STATUSES.has(appt.status)) return false;
-  // The confirmation waits while the Meet link is being created; it goes out once the link is set or falls back.
   if (job.kind === 'patient-confirmation') return appt.meetingStatus !== MeetingStatus.PENDING;
   if (job.kind === 'patient-meeting-link') {
     return appt.meetingStatus === MeetingStatus.READY && !!appt.meetingUrl && appt.startAt.getTime() > Date.now();
@@ -97,7 +91,6 @@ function isDeliverable(appt: BookedAppointment | null, job: BookingNotificationJ
   return true;
 }
 
-/** Where the patient goes: an address in person; for a video call the link, or a note that it will follow. */
 function placeOf(appt: BookedAppointment) {
   const loc = appt.appointmentLocation;
   if (!loc?.isVirtual) return { locationName: loc?.name ?? null, address: loc?.address ?? null };

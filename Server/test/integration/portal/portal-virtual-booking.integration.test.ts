@@ -43,7 +43,6 @@ beforeEach(() => {
 const HOUR = 3600_000;
 const LINK = 'https://zoom.example/j/123';
 
-/** A live provider whose only bookable location is a video call. */
 async function virtualProvider(opts: { google?: boolean } = {}) {
   const provider = await createLiveProvider();
   await prisma.appointmentLocation.update({ where: { id: provider.locationId }, data: { bookableOnline: false } });

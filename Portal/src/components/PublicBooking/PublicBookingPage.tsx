@@ -31,7 +31,6 @@ export function PublicBookingPage({ slug }: { slug: string }) {
 
 const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
 
-/** Booking is paused or not set up: patients can still manage (see and cancel) the appointments they have. */
 function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvider }) {
     return (
         <>

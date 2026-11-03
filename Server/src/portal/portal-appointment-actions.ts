@@ -22,20 +22,16 @@ export interface PortalActionContext {
   now: Date;
   /** Booking is live and in auto-confirm mode: the only mode in which a patient may pick a new slot. */
   canBook: boolean;
-  /** Provider policy: portal reschedules allowed per appointment (0 = none). */
   maxReschedules: number;
-  /** Provider policy: no reschedule once the current start is this close. */
   minNoticeMs: number;
 }
 
-/** The provider settings the action flags depend on. */
 export interface PortalActionSettings {
   bookingApprovalMode: BookingApprovalMode;
   maxPatientReschedules: number;
   minRescheduleNoticeHours: number;
 }
 
-/** One place that turns the provider's settings and booking liveness into the action context. */
 export function portalActionContext(settings: PortalActionSettings, bookingLive: boolean, now: Date): PortalActionContext {
   return {
     now,
@@ -54,8 +50,7 @@ export function canCancel(a: Pick<ActionableAppointment, 'status' | 'isDeleted' 
 
 /**
  * Only the patient's own online bookings, and only while their type and location are still bookable,
- * so a provider's appointment is never moved into a slot the provider did not open. The provider's policy
- * caps how many times one appointment can be moved and how close to its current start.
+ * so a provider's appointment is never moved into a slot the provider did not open.
  */
 export function canReschedule(a: ActionableAppointment, ctx: PortalActionContext): boolean {
   return ctx.canBook

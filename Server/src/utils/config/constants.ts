@@ -18,7 +18,6 @@ export const REMINDER_POLL_CONCURRENCY = 10;
  * sendReminder worker uses this to mark the reminder FAILED on the final retry.
  */
 export const REMINDER_SEND_RETRY_LIMIT = 3;
-/** Attempts at creating a portal Meet link before the provider is asked to add one. */
 export const PROVISION_MEET_RETRY_LIMIT = 5;
 
 /** Default locale used for date/time formatting in user-facing messages. */

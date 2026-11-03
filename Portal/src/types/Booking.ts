@@ -17,9 +17,7 @@ export interface BookingSettings {
     bufferMinutes: number;
     minLeadMinutes: number;
     maxHorizonDays: number;
-    /** Portal reschedules allowed per appointment; 0 = patients cannot reschedule online. */
     maxPatientReschedules: number;
-    /** No patient reschedule once the current start is this many hours away. */
     minRescheduleNoticeHours: number;
     readiness: BookingReadiness;
     live: boolean;

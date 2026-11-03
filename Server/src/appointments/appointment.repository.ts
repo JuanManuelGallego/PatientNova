@@ -21,9 +21,7 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>
 export interface CreateAppointmentOptions {
   source?: RecordSource;
   patientTimezone?: string;
-  /** Portal booking at a virtual location: create without a URL (`PENDING` for the job, `NEEDS_LINK` by hand). */
   meetingPending?: MeetingPending;
-  /** Set by the service from `resolveMeeting`; never by callers. */
   meetingStatus?: MeetingStatus;
 }
 
@@ -32,12 +30,7 @@ export interface UpdateAppointmentOptions {
   patientTimezone?: string;
   /** Portal reschedule: a non-PENDING linked reminder is unlinked and replaced instead of rewritten. */
   replaceSettledReminder?: boolean;
-  /**
-   * Collects work to run after the caller's transaction commits (portal notices without the scheduler). Callers
-   * that own the transaction run it; `appointmentService.update` does.
-   */
   afterCommit?: (() => Promise<void>)[];
-  /** Set by the service from `resolveMeeting`; never by callers. */
   meetingStatus?: MeetingStatus;
 }
 

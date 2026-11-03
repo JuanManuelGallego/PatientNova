@@ -54,7 +54,6 @@ export async function requirePortalSession(req: Request, res: Response, next: Ne
   }
   if (!isPortalClaims(claims)) return deny(res);
 
-  // Reachable, not live: a paused booking page still lets patients see and cancel their appointments.
   if (!(await bookingSettingsService.isPortalReachable(claims.userId))) {
     logger.info({ userId: claims.userId }, 'Portal session rejected: provider not reachable');
     return deny(res);

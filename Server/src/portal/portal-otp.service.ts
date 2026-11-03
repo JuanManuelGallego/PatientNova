@@ -54,7 +54,6 @@ export interface PortalLogin {
 
 export const portalOtpService = {
   async request(slug: string, rawEmail: string): Promise<{ challenge: string }> {
-    // Reachable, not live: patients log in to see and cancel their appointments while booking is paused.
     const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const email = normalizeEmail(rawEmail);
     const hash = emailHash(email);
