@@ -5,7 +5,6 @@ import type { Interval } from '../public-booking/slot-engine.js';
 const MINUTE_MS = 60_000;
 
 export interface LiveHoldOptions {
-  /** The request being resolved: it must not block itself. */
   excludeRequestId?: string | undefined;
 }
 
@@ -28,7 +27,6 @@ export interface CreateBookingRequestData {
   consentUserAgent?: string | null;
 }
 
-/** What a patient sees of their own request (allow-list); never contact data or consent evidence. */
 export const requestForDtoSelect = {
   id: true,
   status: true,
@@ -39,7 +37,6 @@ export const requestForDtoSelect = {
   location: { select: { name: true, address: true, isVirtual: true } },
 } as const;
 
-/** A hold is live while PENDING and before `holdExpiresAt`; the cron only finalizes the rest. */
 function liveHoldWhere(userId: string, now: Date, opts: LiveHoldOptions) {
   return {
     userId,
@@ -50,7 +47,6 @@ function liveHoldWhere(userId: string, now: Date, opts: LiveHoldOptions) {
 }
 
 export const bookingRequestRepository = {
-  /** Live holds overlapping `[start, end)` widened by the buffer on both sides, like appointments. */
   async loadLiveHolds(
     userId: string,
     start: Date,
@@ -72,7 +68,6 @@ export const bookingRequestRepository = {
     return holds.map((h) => ({ start: h.startAt, end: h.endAt }));
   },
 
-  /** First live hold overlapping `[start, end)` exactly (no buffer), or null. */
   async findLiveHoldOverlap(
     userId: string,
     start: Date,
@@ -87,7 +82,6 @@ export const bookingRequestRepository = {
     });
   },
 
-  /** PENDING rows whose hold has run out, oldest first. */
   async findStale(userId: string, now: Date, tx: TransactionClient) {
     return tx.bookingRequest.findMany({
       where: { userId, status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
@@ -104,14 +98,12 @@ export const bookingRequestRepository = {
     });
   },
 
-  /** Live pending requests of the provider, optionally of one email (blind index). Used by the caps. */
   async countLive(userId: string, now: Date, tx: TransactionClient, emailHash?: string): Promise<number> {
     return tx.bookingRequest.count({
       where: { ...liveHoldWhere(userId, now, {}), ...(emailHash !== undefined && { emailHash }) },
     });
   },
 
-  /** The email's live pending requests with what the patient may see. */
   async listLiveForEmail(userId: string, emailHash: string, now: Date, tx?: TransactionClient) {
     return (tx ?? prisma).bookingRequest.findMany({
       where: { ...liveHoldWhere(userId, now, {}), emailHash },

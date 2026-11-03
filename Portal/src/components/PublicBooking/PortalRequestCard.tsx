@@ -11,10 +11,6 @@ interface PortalRequestCardProps {
     actions?: React.ReactNode;
 }
 
-/**
- * A booking the provider has not answered yet. It must never pass for an appointment: dashed card,
- * warning-toned badge, and the time the held slot is released.
- */
 export function PortalRequestCard({ request: r, timezone, inset = false, actions }: PortalRequestCardProps) {
     const dayId = useId();
     const className = [ styles.appt, styles.request, inset && styles.inset ].filter(Boolean).join(" ");

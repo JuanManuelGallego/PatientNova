@@ -68,9 +68,6 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
 
     const sessionKey = `${session.email}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
-        // Pending requests belong to the verified email and never depend on consent (the server always
-        // returns them), so they stay visible and cancellable, above the consent prompt: they are what a
-        // patient who just sent one came to see.
         const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
         return (
             <>
@@ -189,7 +186,6 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
     } else if (!appointments?.length && !requests?.length) {
         body = <p className={styles.lead}>No tienes citas próximas.</p>;
     } else {
-        // With both kinds on screen, visible headings keep requests from reading as part of the appointments.
         const both = !!requests?.length && !!appointments?.length;
         body = (
             <>
@@ -277,10 +273,6 @@ function RequestList({ requests, timezone, onCancel }: {
     );
 }
 
-/**
- * The session email's pending requests while consent is still asked for. Renders nothing unless there are
- * requests (or the result of cancelling one), so a session without requests sees only the consent prompt.
- */
 function PendingRequestsOnly({ onSessionLost }: { onSessionLost: () => void }) {
     const timezone = browserTimezone();
     const { requests, error, retry } = usePortalAppointments();
@@ -378,7 +370,6 @@ interface CancelRequestDialogProps {
     onSessionLost: () => void;
 }
 
-/** Same in-app confirmation as appointments; a 404 means the provider already answered or the hold ran out. */
 function CancelRequestDialog({ request, timezone, onClose, onCancelled, onGone, onSessionLost }: CancelRequestDialogProps) {
     const { cancelRequest, loading, error } = useCancelRequest();
     const when = fmtLongDayTime(request.startUtc, timezone);

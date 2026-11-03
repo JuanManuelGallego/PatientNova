@@ -52,7 +52,6 @@ export const publicBookingService = {
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
-      /** The form adapts its copy; not sensitive. Bookings then become requests the provider reviews. */
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
@@ -125,7 +124,6 @@ export async function isSlotFree(
 
 interface SlotOptions {
   excludeAppointmentId?: string | undefined;
-  /** A pending booking request being resolved: its own hold must not block it. */
   excludeRequestId?: string | undefined;
   tx?: TransactionClient | undefined;
 }
@@ -142,7 +140,6 @@ async function slotRules(
   const [ rules, busy, holds ] = await Promise.all([
     bookingSettingsRepository.listRules(userId, tx),
     publicBookingRepository.loadBusy(userId, from, to, settings.bufferMinutes, tx, { excludeAppointmentId }),
-    // Live holds of pending booking requests block like appointments (buffer included); expired ones are ignored.
     bookingRequestRepository.loadLiveHolds(userId, from, to, settings.bufferMinutes, now, tx, { excludeRequestId }),
   ]);
   return {

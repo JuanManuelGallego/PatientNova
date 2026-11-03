@@ -5,7 +5,6 @@ export interface PublicProvider {
     hasLogo: boolean;
     timezone: string;
     bookingOpen: boolean;
-    /** Bookings become requests the provider reviews before they are confirmed. */
     approvalRequired: boolean;
     lastBookableDate: string;
     types: PublicAppointmentType[];

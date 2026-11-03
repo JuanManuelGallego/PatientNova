@@ -360,7 +360,6 @@ describe("PublicBookingPage booking", () => {
         expect(screen.getByTestId("request-sent")).toHaveTextContent(/El consultorio la revisará/);
         expect(screen.getByTestId("portal-request-card")).toHaveTextContent(/Guardamos este horario para ti hasta el/);
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
-        // The body is the same as for an instant booking: the server decides, the client never sends a mode.
         expect(Object.keys(JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body))).sort()).toEqual([
             "consentAccepted", "locationId", "patient", "patientTimezone", "startUtc", "typeId",
         ]);

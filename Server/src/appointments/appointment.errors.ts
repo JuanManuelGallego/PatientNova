@@ -36,10 +36,8 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
-/** A live pending booking-request hold covers the time; the provider resolves the request first. */
 export class AppointmentHoldConflictError extends ApiError {
   constructor() {
-    // English like the other server messages; the Portal maps it (errorMessages.ts) to its own Spanish text.
     super('Appointment overlaps with a pending booking request', 409)
   }
 }

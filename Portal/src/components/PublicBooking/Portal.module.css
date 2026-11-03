@@ -339,7 +339,6 @@
   color: var(--c-brand);
 }
 
-/* A request is not an appointment yet: warning tone, and a dashed card (like the provider's hold blocks). */
 .status[data-status="PENDING"] {
   background: var(--c-warning-surface);
   color: var(--c-warning-dark);

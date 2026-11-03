@@ -22,7 +22,6 @@ export interface PortalAppointment {
     canReschedule: boolean;
 }
 
-/** A booking awaiting the provider's approval (approval mode). It holds the slot until `holdExpiresAt`. */
 export interface PortalPendingRequest {
     id: string;
     status: "PENDING";
@@ -34,7 +33,6 @@ export interface PortalPendingRequest {
     location: { name: string; address: string | null; isVirtual: boolean };
 }
 
-/** Auto-confirm creates an appointment (201); approval mode creates a request for the provider to review (202). */
 export type PortalBookingOutcome = { appointment: PortalAppointment } | { request: PortalPendingRequest };
 
 export interface PortalRescheduleRequest {

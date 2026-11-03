@@ -3,14 +3,12 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { ONE_MINUTE_MS } from '../utils/config/constants.js';
 import type { requestForDtoSelect } from '../booking-requests/booking-request.repository.js';
 
-/** The only booking-request shape a patient ever sees (allow-list): no contact data, no consent evidence. */
 export interface PortalRequestDto {
   id: string;
   status: BookingRequestStatus;
   startUtc: string;
   endUtc: string;
   durationMinutes: number;
-  /** When the held slot is released if the provider has not answered. */
   holdExpiresAt: string;
   type: { name: string };
   location: { name: string; address: string | null; isVirtual: boolean };
@@ -26,7 +24,6 @@ export function toPortalRequestDto(r: PortalRequestRow): PortalRequestDto {
     endUtc: r.endAt.toISOString(),
     durationMinutes: Math.round((r.endAt.getTime() - r.startAt.getTime()) / ONE_MINUTE_MS),
     holdExpiresAt: r.holdExpiresAt.toISOString(),
-    // Required relations (ON DELETE RESTRICT): a request always has its type and location.
     type: { name: r.type.name },
     location: { name: r.location.name, address: r.location.isVirtual ? null : r.location.address, isVirtual: r.location.isVirtual },
   };

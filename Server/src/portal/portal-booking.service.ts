@@ -44,7 +44,6 @@ import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
 
-/** An auto-confirmed booking (201) or, in approval mode, a request the provider will review (202). */
 export type PortalBookingResult = { appointment: PortalAppointmentDto } | { request: PortalRequestDto };
 
 /**
@@ -57,10 +56,6 @@ export async function requireSelfBooking(userId: string, tx: TransactionClient) 
   return settings;
 }
 
-/**
- * Booking must be live (else the unknown-provider 404). `approval` says the provider reviews each booking:
- * a patient then creates a request instead of an appointment, and cannot reschedule.
- */
 export async function resolveBookingMode(userId: string, tx: TransactionClient) {
   if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
   const settings = await bookingSettingsRepository.getSettings(userId, tx);
@@ -175,8 +170,6 @@ export const portalBookingService = {
   async listAppointments(
     session: PortalSessionContext,
   ): Promise<{ appointments: PortalAppointmentDto[]; requests: PortalRequestDto[]; consentRequired: boolean }> {
-    // Pending requests belong to the verified email itself, so they never depend on a patient or a consent
-    // and load alongside the patient resolution.
     const [ requests, { resolution, consentRequired } ] = await Promise.all([
       portalRequestService.list(session),
       resolvePortalPatient(session).then(async (resolution) => ({ resolution, consentRequired: await isConsentRequired(resolution) })),

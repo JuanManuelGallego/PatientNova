@@ -281,7 +281,6 @@ describe("PortalAppointmentsPage", () => {
             const path = url.replace(/^.*\/v1/, "");
             if (path === `/public/providers/${SLUG}`) return ok(200, provider);
             if (path === "/portal/session") return ok(200, server.session);
-            // The pending-request list under the consent prompt still loads; only consent answers 401.
             if (path === "/portal/appointments") return ok(200, { appointments: [], requests: [], consentRequired: true });
             return fail(401, "Invalid session");
         });

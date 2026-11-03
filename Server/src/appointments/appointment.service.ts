@@ -307,7 +307,6 @@ async function checkConflict(
   if (conflict) {
     throw new AppointmentConflictError(conflict.startAt.toISOString(), conflict.endAt.toISOString());
   }
-  // A live pending booking-request hold also owns its time (approval excludes its own request).
   const hold = await bookingRequestRepository.findLiveHoldOverlap(userId, new Date(startAt), new Date(endAt), new Date(), tx, { excludeRequestId });
   if (hold) throw new AppointmentHoldConflictError();
 }

@@ -10,17 +10,11 @@ import { holdExpiry } from './booking-request.constants.js';
 export type NewBookingRequest = Omit<CreateBookingRequestData, 'userId' | 'holdExpiresAt'>;
 
 export const bookingRequestService = {
-  /**
-   * Flips the provider's PENDING requests whose hold ran out to EXPIRED, with an audit row each, on `tx`.
-   * Takes the provider lock. Run before inserting a hold: the exclusion constraint cannot look at the clock, so a
-   * stale PENDING row would otherwise block its slot until the cron sweeps it.
-   */
   async expireStaleWithin(tx: TransactionClient, userId: string, now: Date): Promise<string[]> {
     await withProviderLock(tx, userId);
     const stale = await bookingRequestRepository.findStale(userId, now, tx);
     const ids = stale.map((s) => s.id);
     await bookingRequestRepository.markExpired(ids, now, tx);
-    // A system actor, never the caller's context (on the portal path that is another patient).
     await runInAuditContext(bookingRequestExpiryAuditContext(userId), async () => {
       for (const id of ids) {
         await logAudit({
@@ -40,11 +34,6 @@ export const bookingRequestService = {
     return ids;
   },
 
-  /**
-   * Inserts a PENDING request that holds its slot, on `tx`. Takes the provider lock FIRST; the caller has already
-   * validated the slot (`isSlotAvailable`, which counts holds). Audits the creation (required).
-   * An exclusion violation (23P01) reaching the caller maps to the neutral slot-unavailable error.
-   */
   async createHoldWithin(tx: TransactionClient, userId: string, input: NewBookingRequest, now: Date) {
     await bookingRequestService.expireStaleWithin(tx, userId, now);
     const request = await bookingRequestRepository.create(

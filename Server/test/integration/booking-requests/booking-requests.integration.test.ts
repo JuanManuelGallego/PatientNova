@@ -49,7 +49,6 @@ function holdInput(p: LiveProvider, start: Date, email = 'lucia@example.com') {
   };
 }
 
-/** What the booking flow will do: lock, check the slot (holds included), then hold it. */
 async function requestHold(p: LiveProvider, start: Date, email?: string) {
   return prisma.$transaction(async (tx) => {
     await withProviderLock(tx, p.id);
@@ -120,7 +119,6 @@ describe('booking request holds', () => {
 
     expect(await slotStarts(p)).not.toContain(held);
     expect(await isSlotFree(p.id, settings(), DURATION_MIN, new Date(held), new Date())).toBe(false);
-    // The request being resolved does not block itself.
     expect(await isSlotFree(p.id, settings(), DURATION_MIN, new Date(held), new Date(), { excludeRequestId: request.id })).toBe(true);
 
     await expireNow(request.id);
@@ -142,7 +140,6 @@ describe('booking request holds', () => {
     await prisma.user.update({ where: { id: p.id }, data: { slotIntervalMinutes: 60 } });
     await requestHold(p, new Date(starts[2]!));
     const after = await slotStarts(p);
-    // The neighbours at +-60 min fall inside the 30 min buffer of a 60 min hold on a 60 min grid.
     expect(after).not.toContain(starts[1]!);
     expect(after).not.toContain(starts[3]!);
   });
@@ -207,7 +204,6 @@ describe('hold overlap backstop and expiry', () => {
     const p = await createLiveProvider();
     const start = await firstStart(p);
     await requestHold(p, start);
-    // Bypass the slot check to prove the database refuses what the application missed.
     const err = await prisma.$transaction(async (tx) => {
       await withProviderLock(tx, p.id);
       return bookingRequestRepository.create({ ...holdInput(p, start, 'x@example.com'), userId: p.id, holdExpiresAt: new Date(Date.now() + HOUR_MS) }, tx);

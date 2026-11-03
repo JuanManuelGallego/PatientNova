@@ -11,7 +11,6 @@ export const APPOINTMENT_OVERLAP_CONSTRAINT = 'appointments_no_provider_overlap'
 
 export const BOOKING_HOLD_OVERLAP_CONSTRAINT = 'booking_requests_no_hold_overlap';
 
-/** The exclusion backstop for appointments or for pending booking-request holds (both map to a neutral 409). */
 export function isAppointmentOverlapViolation(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) return false;
   const meta = (err as { meta?: { driverAdapterError?: { cause?: Record<string, unknown> } } }).meta;

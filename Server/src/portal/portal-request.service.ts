@@ -29,12 +29,6 @@ import { toPortalRequestDto, type PortalRequestDto } from './portal-request.dto.
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
-/**
- * Approval mode: the patient's booking becomes a PENDING request that holds the slot. Runs inside the booking
- * transaction AFTER the provider lock, the live/mode gate and the bookable type/location checks.
- * Never looks up or creates a patient or a consent row (those happen on approval), so the answer is the same
- * whether or not the email belongs to a patient.
- */
 export async function holdSlotWithin(
   tx: TransactionClient,
   session: PortalSessionContext,
@@ -53,7 +47,6 @@ export async function holdSlotWithin(
     bookingRequestRepository.countLive(userId, now, tx, hash),
     bookingRequestRepository.countLive(userId, now, tx),
   ]);
-  // Distinct errors: the email's own cap is about this patient; the provider-wide cap must not claim it is.
   if (forEmail >= MAX_PENDING_REQUESTS_PER_EMAIL) throw new PortalRequestLimitError();
   if (forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalRequestCapacityError();
 
@@ -75,10 +68,6 @@ export async function holdSlotWithin(
   return toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx));
 }
 
-/**
- * "We received your request" email, after commit. Best effort and never throws: the request is already
- * saved, so a failure here (provider lookup included) must not turn the 202 into an error the patient retries.
- */
 export async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
   try {
     const provider = await prisma.user.findUnique({
@@ -99,7 +88,6 @@ export async function sendRequestReceivedEmail(userId: string, to: string): Prom
 }
 
 export const portalRequestService = {
-  /** The session email's live pending requests. Independent of patient/consent state: the data is their own. */
   async list(session: PortalSessionContext): Promise<PortalRequestDto[]> {
     const hash = emailHash(session.email);
     if (!hash) return [];
@@ -107,7 +95,6 @@ export const portalRequestService = {
     return rows.map(toPortalRequestDto);
   },
 
-  /** Cancels the session email's own pending request and releases its hold. Every miss is the same 404. */
   async cancel(session: PortalSessionContext, requestId: string, meta: ConsentRequestMeta): Promise<void> {
     const { userId } = session;
     const hash = emailHash(session.email);

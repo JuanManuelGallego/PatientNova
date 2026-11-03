@@ -122,7 +122,6 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     }
     expect(new Set(shapes.map((s) => JSON.stringify(s))).size).toBe(1);
     expect(shapes[0]!.status).toBe(202);
-    // Still nobody was created or changed for the existing patients.
     expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(2);
     expect(await prisma.appointment.count({ where: { userId: provider.id } })).toBe(0);
   });
@@ -150,7 +149,6 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     const over = await postBooking(session, portalBookingBody(provider, starts[MAX_PENDING_REQUESTS_PER_EMAIL]!));
     expect(over.status).toBe(409);
     expect(over.body.error).toBe('Request limit reached');
-    // Another email still can.
     expect((await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, starts[5]!))).status).toBe(202);
   });
 
@@ -168,7 +166,6 @@ describe('POST /v1/portal/bookings in approval mode', () => {
   it('caps live requests per provider with an error that says nothing about this patient', async () => {
     const provider = await approvalProvider();
     const [ start ] = await slotStarts(provider);
-    // Fill the provider cap with other emails' live holds in a past range, so no slot is blocked.
     const base = Date.now() - 400 * 24 * 3_600_000;
     for (let i = 0; i < MAX_PENDING_REQUESTS_PER_PROVIDER; i++) {
       await prisma.bookingRequest.create({
@@ -277,7 +274,6 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
 
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: id } });
     expect(audits.map((a) => a.description)).toContain('Solicitud de reserva cancelada por el paciente desde el portal');
-    // The same slot can be requested again right away.
     expect((await postBooking(sessionFor(provider.id, unique('otro@test.local')), portalBookingBody(provider, start!))).status).toBe(202);
   });
 
@@ -342,7 +338,6 @@ describe('reschedule in approval mode', () => {
     const res = await portalPost(app, `/v1/portal/appointments/${appointmentId}/reschedule`, session, { startUtc: later, patientTimezone: 'America/Bogota' });
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Provider not found');
-    // Cancelling an existing appointment remains possible.
     expect((await portalPost(app, `/v1/portal/appointments/${appointmentId}/cancel`, session)).status).toBe(204);
   });
 });

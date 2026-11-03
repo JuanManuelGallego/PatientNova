@@ -40,12 +40,10 @@ export function createPortalBookingRoutes(): Router {
     asyncHandler(async (req: Request, res: Response) => {
       const result = await portalBookingService.book(req.portal!, req.body as CreatePortalBookingBody, requestMeta(req));
       res.set('Cache-Control', 'no-store');
-      // 202: approval mode accepted a request for the provider to review; 201: the appointment exists.
       ok(res, result, 'request' in result ? 202 : 201);
     }),
   );
 
-  // A pending request has no appointment yet, so it is cancelled on its own route (same budget and guard).
   router.post(
     '/requests/:id/cancel',
     changeLimiter,

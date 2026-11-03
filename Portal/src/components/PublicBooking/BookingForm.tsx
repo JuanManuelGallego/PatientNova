@@ -72,7 +72,6 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
 
 interface PatientStepProps {
     slug: string;
-    /** The provider reviews each booking: the form sends a request instead of reserving. */
     approvalRequired: boolean;
     typeId: string;
     locationId: string;

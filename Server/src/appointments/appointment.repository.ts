@@ -23,7 +23,6 @@ export interface CreateAppointmentOptions {
   patientTimezone?: string;
   meetingPending?: MeetingPending;
   meetingStatus?: MeetingStatus;
-  /** Approval of a booking request: that request's own hold must not conflict with the appointment it becomes. */
   excludeRequestId?: string;
 }
 

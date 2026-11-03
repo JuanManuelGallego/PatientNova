@@ -375,8 +375,6 @@ enum BookingRequestStatus {
   CANCELLED
 }
 
-// A portal booking awaiting the provider's approval. While PENDING and before `holdExpiresAt` it holds its slot.
-// Raw-SQL object (see AGENTS.md): booking_requests_no_hold_overlap, migration 20261106000000_booking_requests.
 model BookingRequest {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
@@ -385,7 +383,6 @@ model BookingRequest {
   kind   BookingRequestKind   @default(NEW)
   status BookingRequestStatus @default(PENDING)
 
-  // Encrypted PII (ENCRYPTED_FIELDS); emailHash is a blind index maintained by the Prisma extension.
   email     String  @db.Text
   name      String  @db.Text
   lastName  String  @db.Text
@@ -398,7 +395,6 @@ model BookingRequest {
   holdExpiresAt   DateTime
   nudgedAt        DateTime?
 
-  // Consent evidence captured at request time and copied to PatientConsent on approval.
   policyVersion      String   @db.VarChar(20)
   consentAcceptedAt  DateTime
   consentIp          String?  @db.VarChar(64)
