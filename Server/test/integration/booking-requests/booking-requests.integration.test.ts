@@ -244,9 +244,9 @@ describe('hold overlap backstop and expiry', () => {
     const sweeper = portalPatientAuditContext({ userId: p.id, email: 'otra@example.com', ipAddress: '198.51.100.7' });
     await runInAuditContext(sweeper, () => requestHold(p, start, 'otra@example.com'));
 
-    const expiry = await prisma.auditLog.findFirstOrThrow({
-      where: { entityType: EntityType.BOOKING_REQUEST, entityId: old.id, description: 'Solicitud de reserva vencida' },
-    });
+    // `description` is encrypted at rest, so it cannot be used in `where`.
+    const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: old.id } });
+    const expiry = audits.find((a) => a.description === 'Solicitud de reserva vencida');
     expect(expiry).toMatchObject({ actorId: 'booking-request-expiry', source: ActionSource.JOB, ipAddress: null });
   });
 
