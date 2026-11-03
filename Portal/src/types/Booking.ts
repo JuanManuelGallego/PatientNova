@@ -17,12 +17,18 @@ export interface BookingSettings {
     bufferMinutes: number;
     minLeadMinutes: number;
     maxHorizonDays: number;
+    maxPatientReschedules: number;
+    minRescheduleNoticeHours: number;
     readiness: BookingReadiness;
     live: boolean;
 }
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
-    "bookingSlug" | "bookingEnabled" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays">>;
+    "bookingSlug" | "bookingEnabled" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
+    | "maxPatientReschedules" | "minRescheduleNoticeHours">>;
+
+export const MAX_PATIENT_RESCHEDULES = 10;
+export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
 
 export interface AvailabilityRule {
     weekday: number;

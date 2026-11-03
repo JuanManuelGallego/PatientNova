@@ -1,6 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import { config } from '../utils/config/config.js';
-import { REMINDER_SEND_RETRY_LIMIT, BULK_SEND_CONCURRENCY } from '../utils/config/constants.js';
+import { REMINDER_SEND_RETRY_LIMIT, BULK_SEND_CONCURRENCY, PROVISION_MEET_RETRY_LIMIT } from '../utils/config/constants.js';
 import { logger } from '../utils/api/logger.js';
 import { sendReminderWorker } from './workers/send-reminder.js';
 import { trackDeliveryWorker } from './workers/track-delivery.js';
@@ -10,6 +10,8 @@ import { bulkSendWorker } from './workers/bulk-send-message.js';
 import { purgePortalOtpsWorker } from './workers/purge-portal-otps.js';
 import { portalBookingNotifyWorker } from './workers/portal-booking-notify.js';
 import { checkGoogleConnectionsWorker } from './workers/check-google-connections.js';
+import { provisionMeetWorker } from './workers/provision-meet.js';
+import { sweepPendingMeetingsWorker } from './workers/sweep-pending-meetings.js';
 
 let boss: PgBoss | null = null;
 
@@ -70,6 +72,14 @@ export async function initializePgBoss(): Promise<void> {
     retryDelayMax: 900,
   });
 
+  await boss.createQueue('provision-meet', {
+    retryLimit: PROVISION_MEET_RETRY_LIMIT,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 600,
+  });
+  await boss.createQueue('sweep-pending-meetings', { retryLimit: 2, retryDelay: 60 });
+
   boss.work('send-reminder', sendReminderWorker);
   boss.work('bulk-send-message', { batchSize: BULK_SEND_CONCURRENCY, concurrency: BULK_SEND_CONCURRENCY }, bulkSendWorker);
   boss.work('track-delivery', { batchSize: 100 }, trackDeliveryWorker);
@@ -78,10 +88,13 @@ export async function initializePgBoss(): Promise<void> {
   boss.work('purge-portal-otps', purgePortalOtpsWorker);
   boss.work('portal-booking-notify', portalBookingNotifyWorker);
   boss.work('check-google-connections', checkGoogleConnectionsWorker);
+  boss.work('provision-meet', provisionMeetWorker);
+  boss.work('sweep-pending-meetings', sweepPendingMeetingsWorker);
 
   await boss.schedule('track-delivery', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('daily-reminder', '0 * * * *', null, { key: 'every-hour' });
   await boss.schedule('complete-appointments', '*/15 * * * *', null, { key: 'every-15min' });
+  await boss.schedule('sweep-pending-meetings', '*/15 * * * *', null, { key: 'every-15min' });
   await boss.schedule('purge-portal-otps', '30 3 * * *', null, { key: 'daily' });
   // 11:00 UTC = 06:00 in Bogotá: expired connections show up before the working day.
   await boss.schedule('check-google-connections', '0 11 * * *', null, { key: 'daily' });

@@ -54,8 +54,8 @@ export async function requirePortalSession(req: Request, res: Response, next: Ne
   }
   if (!isPortalClaims(claims)) return deny(res);
 
-  if (!(await bookingSettingsService.isBookingLive(claims.userId))) {
-    logger.info({ userId: claims.userId }, 'Portal session rejected: provider not live');
+  if (!(await bookingSettingsService.isPortalReachable(claims.userId))) {
+    logger.info({ userId: claims.userId }, 'Portal session rejected: provider not reachable');
     return deny(res);
   }
 

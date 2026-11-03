@@ -127,6 +127,7 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(409, "Booking limit reached")).toMatch(/3 citas próximas/);
     expect(toSpanishMessage(409, "Online booking unavailable")).toMatch(/Comunícate con el consultorio/);
     expect(toSpanishMessage(404, "Location not found")).toMatch(/Esa opción ya no está disponible/);
+    expect(toSpanishMessage(404, "Provider not found")).toBe("Las reservas en línea no están disponibles en este momento.");
     expect(toSpanishMessage(404, 'Appointment location with id "x" not found')).toBe("No encontramos lo que buscas.");
     expect(toSpanishMessage(401, "Account temporarily locked", { 401: "x" })).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(418)).toBe("No pudimos completar la acción. Inténtalo de nuevo.");

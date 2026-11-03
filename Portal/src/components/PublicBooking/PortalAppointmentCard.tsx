@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtLongDay, localDayOf } from "@/src/utils/publicBooking";
+import { fmtLongDay, localDayOf, locationDetail } from "@/src/utils/publicBooking";
 import styles from "./Portal.module.css";
 
 const STATUS_LABEL: Record<PortalAppointment[ "status" ], string> = {
@@ -35,7 +35,19 @@ export function PortalAppointmentCard({ appointment: a, timezone, inset = false,
             {a.location && (
                 <p className={styles.apptMeta}>
                     {a.location.name}
-                    {a.location.address && <>, {a.location.address}</>}
+                    {locationDetail(a.location) && <>, {locationDetail(a.location)}</>}
+                </p>
+            )}
+            {a.meeting?.status === "ready" && (
+                <p className={styles.apptMeta}>
+                    <a href={a.meeting.url} target="_blank" rel="noopener noreferrer" className={styles.apptLink} data-testid="portal-appointment-meeting-link">
+                        Unirse a la videollamada
+                    </a>
+                </p>
+            )}
+            {a.meeting?.status === "pending" && (
+                <p className={styles.apptInstructions} data-testid="portal-appointment-meeting-pending">
+                    El enlace de la videollamada llegará a tu correo.
                 </p>
             )}
             {a.location?.instructions && <p className={styles.apptInstructions}>{a.location.instructions}</p>}

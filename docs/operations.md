@@ -108,6 +108,20 @@ rest). A refresh token can stop working without any action in PatientNova.
   Settings → Integraciones ("Verificar ahora", `POST /v1/google/connection/verify`, 5 per minute).
 - **Recovery.** The provider reconnects from the banner or from Settings. Nothing else is needed.
 
+### Video-call links for online bookings
+
+- A patient booking at a virtual location gets a Meet link from the `provision-meet` job when the
+  scheduler runs and the provider's Google connection is usable (the appointment is `PENDING` and the
+  patient confirmation waits for the link). Otherwise, or when Google refuses (no connection, revoked
+  token, missing scope or configuration) or still fails after 5 attempts, the appointment becomes
+  `NEEDS_LINK`: the patient is told the link will follow, and the provider sees it in the banner
+  ("citas en línea necesitan un enlace") and in the appointment drawer.
+- `sweep-pending-meetings` runs every 15 minutes and hands any link still `PENDING` after 30 minutes to the
+  provider, so a stuck job never leaves a patient without a confirmation.
+- Recovery: the provider adds any video-call link (Meet, Zoom, ...) by editing the appointment. The
+  patient gets it by email and the linked reminder is re-rendered. To find affected appointments:
+  `GET /v1/appointments/needs-meeting-link` (admins).
+
 ## CSP rollout (Portal)
 
 The Content-Security-Policy ships as `Content-Security-Policy-Report-Only`. After a staging soak with

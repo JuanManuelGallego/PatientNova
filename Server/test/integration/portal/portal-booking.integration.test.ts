@@ -86,11 +86,12 @@ describe('POST /v1/portal/bookings', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     const dto = res.body.data.appointment;
     expect(Object.keys(dto).sort()).toEqual([
-      'canCancel', 'canReschedule', 'durationMinutes', 'endUtc', 'id', 'location', 'price', 'startUtc', 'status', 'type',
+      'canCancel', 'canReschedule', 'durationMinutes', 'endUtc', 'id', 'location', 'meeting', 'price', 'startUtc', 'status', 'type',
     ]);
+    expect(dto.meeting).toBeNull();
     expect(dto).toMatchObject({ startUtc: start, durationMinutes: 60, status: 'CONFIRMED', price: 150000, canCancel: true, canReschedule: true });
     expect(Object.keys(dto.type)).toEqual([ 'name' ]);
-    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'instructions', 'name' ]);
+    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'instructions', 'isVirtual', 'name' ]);
 
     const [ patient, ...others ] = await patientByEmail(provider.id, email);
     expect(others).toHaveLength(0);
@@ -274,8 +275,7 @@ describe('POST /v1/portal/bookings', () => {
     const [ start ] = await slotStarts(provider);
     const session = sessionFor(provider.id, unique('tipo@test.local'));
     const hiddenType = await createTestAppointmentType(provider.id);
-    const virtual = await createTestLocation(provider.id, { isVirtual: true });
-    await prisma.appointmentLocation.update({ where: { id: virtual.id }, data: { bookableOnline: true } });
+    const hiddenLocation = await createTestLocation(provider.id);
     const inactiveType = await createTestAppointmentType(provider.id);
     await prisma.appointmentType.update({ where: { id: inactiveType.id }, data: { bookableOnline: true, isActive: false } });
 
@@ -283,7 +283,7 @@ describe('POST /v1/portal/bookings', () => {
       [ { typeId: hiddenType.id }, 'Appointment type not found' ],
       [ { typeId: inactiveType.id }, 'Appointment type not found' ],
       [ { typeId: other.typeId }, 'Appointment type not found' ],
-      [ { locationId: virtual.id }, 'Location not found' ],
+      [ { locationId: hiddenLocation.id }, 'Location not found' ],
       [ { locationId: other.locationId }, 'Location not found' ],
     ];
     for (const [ override, error ] of cases) {

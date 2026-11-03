@@ -5,14 +5,21 @@ import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
 import type { GoogleConnectionStatus } from "@/src/types/Google";
 
 let role: string | undefined = "ADMIN";
+let portalEnabled = false;
 let connection: Partial<GoogleConnectionStatus> | undefined;
+let needsLink: { count: number; appointments: { id: string; startAt: string }[] } | undefined;
+const useFetchNeedsMeetingLink = vi.fn();
 const fetchConnection = vi.fn();
 const startOAuth = vi.fn();
 const useFetchGoogleConnection = vi.fn();
 
 vi.mock("@/src/providers/AuthContext", () => ({
-  useAuthContext: () => ({ user: role ? { role } : null }),
+  useAuthContext: () => ({ user: role ? { role, portalEnabled } : null }),
 }));
+vi.mock("@/src/api/appointments/useFetchNeedsMeetingLink", () => ({
+  useFetchNeedsMeetingLink: (...args: unknown[]) => useFetchNeedsMeetingLink(...args),
+}));
+vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
 vi.mock("@/src/api/google/useFetchGoogleConnection", () => ({
   useFetchGoogleConnection: (...args: unknown[]) => useFetchGoogleConnection(...args),
 }));
@@ -23,12 +30,47 @@ vi.mock("@/src/api/google/useStartGoogleOAuth", () => ({
 beforeEach(() => {
   vi.restoreAllMocks();
   role = "ADMIN";
+  portalEnabled = false;
   connection = undefined;
+  needsLink = undefined;
+  useFetchNeedsMeetingLink.mockReset().mockImplementation(() => ({ data: needsLink, loading: false, error: null, refetch: vi.fn() }));
   fetchConnection.mockReset().mockResolvedValue(undefined);
   startOAuth.mockReset().mockResolvedValue({ authUrl: "https://accounts.google.test" });
   useFetchGoogleConnection.mockReset().mockImplementation(() => ({
     data: connection, loading: false, error: null, fetchConnection,
   }));
+});
+
+describe("ProviderAlerts: online bookings without a video-call link", () => {
+  it("tells admins how many online bookings need a link, and when the next one is", () => {
+    portalEnabled = true;
+    needsLink = { count: 2, appointments: [ { id: "a1", startAt: "2099-01-20T15:00:00.000Z" }, { id: "a2", startAt: "2099-01-21T15:00:00.000Z" } ] };
+    render(<ProviderAlerts />);
+    const banner = screen.getByTestId("needs-meeting-link-banner");
+    expect(banner).toHaveTextContent("2 citas reservadas en línea necesitan un enlace de videollamada.");
+    expect(banner).toHaveTextContent(/La próxima es a las 10:00 a\. m\., el .*20.*enero.*2099\./);
+    expect(screen.getByRole("link", { name: "Ver citas" })).toHaveAttribute("href", "/appointments");
+  });
+
+  it("uses the singular for one and hides when none", () => {
+    portalEnabled = true;
+    needsLink = { count: 1, appointments: [ { id: "a1", startAt: "2099-01-20T15:00:00.000Z" } ] };
+    const { unmount } = render(<ProviderAlerts />);
+    expect(screen.getByTestId("needs-meeting-link-banner")).toHaveTextContent("1 cita reservada en línea necesita un enlace");
+    unmount();
+    needsLink = { count: 0, appointments: [] };
+    render(<ProviderAlerts />);
+    expect(screen.queryByTestId("needs-meeting-link-banner")).not.toBeInTheDocument();
+  });
+
+  it("never asks for it with the portal off or for viewers", () => {
+    render(<ProviderAlerts />);
+    expect(useFetchNeedsMeetingLink).not.toHaveBeenCalled();
+    portalEnabled = true;
+    role = "VIEWER";
+    render(<ProviderAlerts />);
+    expect(useFetchNeedsMeetingLink).not.toHaveBeenCalled();
+  });
 });
 
 describe("ProviderAlerts", () => {

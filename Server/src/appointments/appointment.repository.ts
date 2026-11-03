@@ -1,4 +1,5 @@
-import { AppointmentStatus, CancelledBy, Prisma, type Appointment, type RecordSource } from '../../generated/prisma/client.ts';
+import { AppointmentStatus, CancelledBy, Prisma, type Appointment, type MeetingStatus, type RecordSource } from '../../generated/prisma/client.ts';
+import type { MeetingPending } from './appointment-meeting.service.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import {
   type CreateAppointmentDto,
@@ -20,6 +21,8 @@ type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[ 0 ]>
 export interface CreateAppointmentOptions {
   source?: RecordSource;
   patientTimezone?: string;
+  meetingPending?: MeetingPending;
+  meetingStatus?: MeetingStatus;
 }
 
 export interface UpdateAppointmentOptions {
@@ -27,6 +30,8 @@ export interface UpdateAppointmentOptions {
   patientTimezone?: string;
   /** Portal reschedule: a non-PENDING linked reminder is unlinked and replaced instead of rewritten. */
   replaceSettledReminder?: boolean;
+  afterCommit?: (() => Promise<void>)[];
+  meetingStatus?: MeetingStatus;
 }
 
 export const appointmentRepository = {
@@ -50,6 +55,7 @@ export const appointmentRepository = {
         status: dto.status,
         ...(dto.status === AppointmentStatus.CONFIRMED && { confirmedAt: new Date() }),
         ...(opts.source && { source: opts.source }),
+        ...(opts.meetingStatus && { meetingStatus: opts.meetingStatus }),
         patientTimezone: opts.patientTimezone ?? null,
         patientId: dto.patientId,
         userId,
@@ -135,7 +141,7 @@ export const appointmentRepository = {
     dto: UpdateAppointmentDto,
     userId: string,
     tx?: TransactionClient,
-    opts: Pick<UpdateAppointmentOptions, 'patientTimezone'> = {},
+    opts: Pick<UpdateAppointmentOptions, 'patientTimezone' | 'meetingStatus'> = {},
   ): Promise<AppointmentWithRelations> {
     const client = tx ?? prisma;
     const data: Prisma.AppointmentUpdateInput = buildUpdateData(
@@ -162,6 +168,7 @@ export const appointmentRepository = {
     }
 
     if (opts.patientTimezone) data.patientTimezone = opts.patientTimezone;
+    if (opts.meetingStatus) data.meetingStatus = opts.meetingStatus;
 
     if (dto.reminderId !== undefined) {
       data.reminder = dto.reminderId

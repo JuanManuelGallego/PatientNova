@@ -2112,6 +2112,27 @@ body {
   flex-shrink: 0;
 }
 
+.form-fieldset-plain {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.form-fieldset-legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.drawer-meeting-note {
+  margin: 0;
+  font-size: 13px;
+}
+
+.drawer-meeting-note--warning {
+  font-weight: 600;
+  color: var(--c-warning-dark);
+}
+
 .warning-banner__link {
   font-size: 13px;
   font-weight: 500;

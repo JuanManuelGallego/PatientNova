@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { AppointmentStatus, RecordSource } from '../../../generated/prisma/enums.js';
-import { canCancel, canReschedule, type ActionableAppointment } from '../../../src/portal/portal-appointment-actions.js';
+import { AppointmentStatus, BookingApprovalMode, RecordSource } from '../../../generated/prisma/enums.js';
+import {
+  canCancel,
+  canReschedule,
+  portalActionContext,
+  type ActionableAppointment,
+  type PortalActionContext,
+} from '../../../src/portal/portal-appointment-actions.js';
 
 const NOW = new Date('2026-11-02T15:00:00Z');
+const HOUR = 3_600_000;
 const bookable = { bookableOnline: true, isActive: true, isDeleted: false };
 
 function appt(overrides: Partial<ActionableAppointment> = {}): ActionableAppointment {
@@ -11,13 +18,14 @@ function appt(overrides: Partial<ActionableAppointment> = {}): ActionableAppoint
     isDeleted: false,
     startAt: new Date('2026-11-05T15:00:00Z'),
     source: RecordSource.PORTAL,
+    patientRescheduleCount: 0,
     appointmentType: { ...bookable },
-    appointmentLocation: { ...bookable, isVirtual: false },
+    appointmentLocation: { ...bookable },
     ...overrides,
   };
 }
 
-const ctx = { now: NOW, canBook: true };
+const ctx: PortalActionContext = { now: NOW, canBook: true, maxReschedules: 2, minNoticeMs: 0 };
 
 describe('canCancel', () => {
   it('allows any upcoming active appointment, with no cutoff', () => {
@@ -52,18 +60,45 @@ describe('canReschedule', () => {
   it('refuses when the type or location stopped being bookable, or is missing', () => {
     for (const change of [ { bookableOnline: false }, { isActive: false }, { isDeleted: true } ]) {
       expect(canReschedule(appt({ appointmentType: { ...bookable, ...change } }), ctx)).toBe(false);
-      expect(canReschedule(appt({ appointmentLocation: { ...bookable, isVirtual: false, ...change } }), ctx)).toBe(false);
+      expect(canReschedule(appt({ appointmentLocation: { ...bookable, ...change } }), ctx)).toBe(false);
     }
     expect(canReschedule(appt({ appointmentType: null }), ctx)).toBe(false);
     expect(canReschedule(appt({ appointmentLocation: null }), ctx)).toBe(false);
   });
 
-  it('refuses virtual locations until 5.4', () => {
-    expect(canReschedule(appt({ appointmentLocation: { ...bookable, isVirtual: true } }), ctx)).toBe(false);
+
+  it('caps reschedules per appointment at the provider\'s limit (0 = none)', () => {
+    expect(canReschedule(appt({ patientRescheduleCount: 1 }), ctx)).toBe(true);
+    expect(canReschedule(appt({ patientRescheduleCount: 2 }), ctx)).toBe(false);
+    expect(canReschedule(appt(), { ...ctx, maxReschedules: 0 })).toBe(false);
+  });
+
+  it('refuses once the current start is within the provider\'s notice; cancelling has no notice', () => {
+    const startAt = new Date(NOW.getTime() + 24 * HOUR);
+    expect(canReschedule(appt({ startAt }), { ...ctx, minNoticeMs: 23 * HOUR })).toBe(true);
+    expect(canReschedule(appt({ startAt }), { ...ctx, minNoticeMs: 24 * HOUR })).toBe(false);
+    expect(canCancel(appt({ startAt }), NOW)).toBe(true);
   });
 
   it('refuses whatever cannot be cancelled', () => {
     expect(canReschedule(appt({ status: AppointmentStatus.CANCELLED }), ctx)).toBe(false);
     expect(canReschedule(appt({ startAt: NOW }), ctx)).toBe(false);
+  });
+});
+
+describe('portalActionContext', () => {
+  const settings = {
+    bookingApprovalMode: BookingApprovalMode.AUTO_CONFIRM,
+    maxPatientReschedules: 3,
+    minRescheduleNoticeHours: 12,
+  };
+
+  it('maps the provider settings and liveness', () => {
+    expect(portalActionContext(settings, true, NOW)).toEqual({ now: NOW, canBook: true, maxReschedules: 3, minNoticeMs: 12 * HOUR });
+  });
+
+  it('cannot book while booking is paused or in approval mode', () => {
+    expect(portalActionContext(settings, false, NOW).canBook).toBe(false);
+    expect(portalActionContext({ ...settings, bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL }, true, NOW).canBook).toBe(false);
   });
 });

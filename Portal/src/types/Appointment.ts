@@ -14,6 +14,7 @@ export interface Appointment {
   paid: boolean;
 
   meetingUrl?: string | null;
+  meetingStatus?: MeetingStatus;
   notes?: string | null;
 
   status: AppointmentStatus;
@@ -34,6 +35,12 @@ export interface Appointment {
   appointmentLocation: AppointmentLocation;
   appointmentType: AppointmentType;
 }
+
+export type MeetingStatus = "NOT_REQUIRED" | "PENDING" | "NEEDS_LINK" | "READY";
+
+export const isWaitingForLink = (status: MeetingStatus | undefined): boolean => status === "PENDING" || status === "NEEDS_LINK";
+
+export const MEETING_LINK_PENDING_TEXT = "Te enviaremos el enlace por correo";
 
 export interface AppointmentForm {
   startAt: string;

@@ -4,6 +4,7 @@ export interface PublicProvider {
     hasAvatar: boolean;
     hasLogo: boolean;
     timezone: string;
+    bookingOpen: boolean;
     lastBookableDate: string;
     types: PublicAppointmentType[];
     locations: PublicLocation[];
@@ -21,6 +22,7 @@ export interface PublicLocation {
     id: string;
     name: string;
     address: string | null;
+    isVirtual: boolean;
 }
 
 export interface PublicSlot {

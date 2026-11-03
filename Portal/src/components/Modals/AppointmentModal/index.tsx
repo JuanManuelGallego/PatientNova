@@ -13,6 +13,8 @@ import {
   AppointmentDuration,
   AppointmentPaidStatus,
   DEFAULT_APPT_STATUS,
+  MEETING_LINK_PENDING_TEXT,
+  isWaitingForLink,
 } from "@/src/types/Appointment";
 import {
   ReminderType,
@@ -121,6 +123,7 @@ export function AppointmentModal({
       setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }));
 
   const selectedLocation = locations.find((l) => l.id === form.locationId);
+  const linkMayWait = !!appt && isWaitingForLink(appt.meetingStatus) && form.locationId === appt.locationId;
 
   // Reminders go out on the selected patient's own channel.
   const reminderChannel = selectedPatient?.reminderChannel;
@@ -137,8 +140,8 @@ export function AppointmentModal({
           && (form.reminderType !== ReminderType.MANUAL
           || (!!form.reminderSendAt
             && (form.reminderSendAt === appt?.reminder?.sendAt || new Date(form.reminderSendAt) > new Date())))
-          && (locations.find((l) => l.id === form.locationId)?.isVirtual 
-          ? !!form.meetingUrl && validateHttpUrl(form.meetingUrl)
+          && (locations.find((l) => l.id === form.locationId)?.isVirtual
+          ? (form.meetingUrl ? validateHttpUrl(form.meetingUrl) : linkMayWait)
           : true)
         : !!form.price;
 
@@ -161,7 +164,7 @@ export function AppointmentModal({
             "2": getUserName(user) || "su profesional de salud",
             "3": fmtDate(form.startAt, timezone),
             "4": fmtTime(form.startAt, timezone),
-            "5": form.meetingUrl || "{{5}}", // backend will populate when creating the meetink link if not provided
+            "5": form.meetingUrl || MEETING_LINK_PENDING_TEXT,
           }
         }),
         ...((channel === Channel.SMS || channel === Channel.EMAIL) && {
@@ -170,7 +173,7 @@ export function AppointmentModal({
             .replace("{{2}}", getUserName(user) || "su profesional de salud")
             .replace("{{3}}", fmtDate(form.startAt, timezone))
             .replace("{{4}}", fmtTime(form.startAt, timezone))
-            .replace("{{5}}", form.meetingUrl || "{{5}}"),
+            .replace("{{5}}", form.meetingUrl || MEETING_LINK_PENDING_TEXT),
         }),
         channel: channel,
         sendMode,
@@ -346,6 +349,7 @@ export function AppointmentModal({
             selectedPatient={selectedPatient}
             reminderChannel={reminderChannel}
             locations={locations}
+            linkMayWait={linkMayWait}
           />
         )}
         {step === 3 && (

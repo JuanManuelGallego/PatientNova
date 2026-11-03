@@ -300,6 +300,73 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect(res.body.error).toBe('Provider not found');
   });
 
+  it('answers as an unknown provider while booking is paused (cancel still works)', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 4);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
+
+    const res = await postReschedule(session, appointmentId, moveTo(to!));
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Provider not found');
+    expect((await appointment(appointmentId)).startAt.toISOString()).toBe(from);
+  });
+
+  it('allows the provider\'s number of reschedules per appointment, counting only successful patient moves', async () => {
+    const provider = await createLiveProvider();
+    const [ a, b, c ] = await slotStarts(provider, 3);
+    const { session, appointmentId } = await bookAt(provider, a!);
+
+    expect((await postReschedule(session, appointmentId, moveTo(a!))).status).toBe(400);
+    expect((await appointment(appointmentId)).patientRescheduleCount).toBe(0);
+
+    const first = await postReschedule(session, appointmentId, moveTo(b!));
+    expect(first.status).toBe(200);
+    expect(first.body.data.appointment.canReschedule).toBe(true);
+    const second = await postReschedule(session, appointmentId, moveTo(c!));
+    expect(second.status).toBe(200);
+    expect(second.body.data.appointment.canReschedule).toBe(false);
+    expect((await appointment(appointmentId)).patientRescheduleCount).toBe(2);
+
+    const third = await postReschedule(session, appointmentId, moveTo(a!));
+    expect(third.status).toBe(409);
+    expect(third.body.error).toBe('Reschedule unavailable');
+    expect((await appointment(appointmentId)).startAt.toISOString()).toBe(c);
+
+    const end = new Date(new Date(a!).getTime() + HOUR).toISOString();
+    await appointmentService.update(appointmentId, { startAt: a!, endAt: end }, provider.id);
+    expect((await appointment(appointmentId)).patientRescheduleCount).toBe(2);
+  });
+
+  it('refuses every reschedule when the provider allows none', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 4);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    await prisma.user.update({ where: { id: provider.id }, data: { maxPatientReschedules: 0 } });
+
+    const res = await postReschedule(session, appointmentId, moveTo(to!));
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Reschedule unavailable');
+  });
+
+  it('refuses once the current start is within the provider\'s minimum notice', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 4);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    const hoursAway = Math.floor((new Date(from!).getTime() - Date.now()) / HOUR);
+
+    await prisma.user.update({ where: { id: provider.id }, data: { minRescheduleNoticeHours: hoursAway + 1 } });
+    const tooLate = await postReschedule(session, appointmentId, moveTo(to!));
+    expect(tooLate.status).toBe(409);
+    expect(tooLate.body.error).toBe('Reschedule unavailable');
+
+    await prisma.user.update({ where: { id: provider.id }, data: { minRescheduleNoticeHours: hoursAway - 1 } });
+    expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
+  });
+
   it('answers the cancel 404 for appointments that are not the patient\'s upcoming active ones', async () => {
     const provider = await createLiveProvider();
     const [ a, b ] = await slotStarts(provider, 3);
@@ -331,6 +398,7 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(500);
     expect((await appointment(appointmentId)).startAt.toISOString()).toBe(from);
     expect((await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).sendAt).toEqual(reminder.sendAt);
+    expect((await appointment(appointmentId)).patientRescheduleCount).toBe(0);
 
     mocks.send.mockReset().mockResolvedValue('job-1');
     expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);

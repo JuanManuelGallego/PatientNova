@@ -322,4 +322,28 @@ describe('appointment routes (integration)', () => {
       expect((res.body as any).data.meetingUrl).toBe('https://meet.google.com/manual-url');
     });
   });
+
+  describe('GET /needs-meeting-link', () => {
+    it('lists upcoming active virtual appointments still waiting for a link, for admins only', async () => {
+      const created = await invokeRoute(
+        appointmentRouter,
+        'post',
+        '/',
+        baseReq({ body: createBody({ locationId: virtualLocationId, meetingUrl: 'https://meet.google.com/x' }) }),
+      );
+      const id = (created.body as any).data.id as string;
+      await prisma.appointment.update({ where: { id }, data: { meetingUrl: null, meetingStatus: 'NEEDS_LINK' } });
+
+      const res = await invokeRoute(appointmentRouter, 'get', '/needs-meeting-link', {
+        ...baseReq(), user: { id: userId, timezone: 'America/Bogota', role: 'ADMIN' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect((res.body as any).data).toEqual({ count: 1, appointments: [ { id, startAt: expect.any(Date) } ] });
+
+      const viewer = await invokeRoute(appointmentRouter, 'get', '/needs-meeting-link', {
+        ...baseReq(), user: { id: userId, timezone: 'America/Bogota', role: 'VIEWER' },
+      });
+      expect(viewer.statusCode).toBe(403);
+    });
+  });
 });

@@ -2,6 +2,7 @@ import {
   AppointmentStatus,
   BookingApprovalMode,
   Channel,
+  MeetingStatus,
   PatientStatus,
   RecordSource,
   ReminderMode,
@@ -32,8 +33,10 @@ import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
+import { portalActionContext } from './portal-appointment-actions.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
-import { deliverPortalNotificationsNow, enqueuePortalNotifications } from './portal-booking-notifications.js';
+import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from './portal-booking-notifications.js';
+import { enqueueProvisionMeet, meetingPendingMode } from './portal-meeting.service.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
@@ -93,7 +96,7 @@ export const portalBookingService = {
     const start = new Date(body.startUtc);
 
     try {
-      const created = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
+      const { created, settings, event } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
         const settings = await requireSelfBooking(userId, tx);
 
@@ -113,6 +116,7 @@ export const portalBookingService = {
         await ensureCurrentConsent(tx, { patientId, userId }, PRIVACY_POLICY_VERSION, meta);
 
         const reminder = portalReminder(start, now, session.email);
+        const meetingPending = location.isVirtual ? await meetingPendingMode(userId, tx) : undefined;
         const appointment = await createWithin(tx, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),
@@ -123,12 +127,19 @@ export const portalBookingService = {
           locationId: location.id,
           typeId: type.id,
           ...(reminder && { reminder }),
-        }, userId, { source: RecordSource.PORTAL, patientTimezone: body.patientTimezone });
-        await enqueuePortalNotifications('booked', appointment.id, tx);
-        return portalBookingRepository.findForDto(appointment.id, tx);
+        }, userId, {
+          source: RecordSource.PORTAL,
+          patientTimezone: body.patientTimezone,
+          ...(meetingPending && { meetingPending }),
+        });
+        const linkPending = appointment.meetingStatus === MeetingStatus.PENDING;
+        if (linkPending) await enqueueProvisionMeet(appointment.id, tx);
+        const event: PortalEvent = linkPending ? 'booked-link-pending' : 'booked';
+        await enqueuePortalNotifications(event, appointment.id, tx);
+        return { created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
       }, { timeout: 10000 }));
-      await deliverPortalNotificationsNow('booked', created.id);
-      return toPortalAppointmentDto(created, { now: new Date(), canBook: true });
+      await deliverPortalNotificationsNow(event, created.id);
+      return toPortalAppointmentDto(created, portalActionContext(settings, true, new Date()));
     } catch (err) {
       throw toPortalError(err);
     }
@@ -139,11 +150,12 @@ export const portalBookingService = {
     const consentRequired = await isConsentRequired(resolution);
     if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], consentRequired: true };
     const now = new Date();
-    const [ rows, settings ] = await Promise.all([
+    const [ rows, settings, live ] = await Promise.all([
       portalBookingRepository.listUpcoming(session.userId, resolution.patientId, now),
       bookingSettingsRepository.getSettings(session.userId),
+      bookingSettingsService.isBookingLive(session.userId),
     ]);
-    const ctx = { now, canBook: settings.bookingApprovalMode === BookingApprovalMode.AUTO_CONFIRM };
+    const ctx = portalActionContext(settings, live, now);
     return { appointments: rows.map((row) => toPortalAppointmentDto(row, ctx)), consentRequired };
   },
 };

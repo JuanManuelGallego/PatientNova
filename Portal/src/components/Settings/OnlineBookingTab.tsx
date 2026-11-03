@@ -14,7 +14,14 @@ import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSett
 import { useFetchSlugSuggestion } from "@/src/api/booking/useFetchSlugSuggestion";
 import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
-import { AvailabilityRule, BookingSettings, BookingSettingsUpdate, SLOT_INTERVAL_OPTIONS } from "@/src/types/Booking";
+import {
+    AvailabilityRule,
+    BookingSettings,
+    BookingSettingsUpdate,
+    MAX_PATIENT_RESCHEDULES,
+    MAX_RESCHEDULE_NOTICE_HOURS,
+    SLOT_INTERVAL_OPTIONS,
+} from "@/src/types/Booking";
 import {
     MINUTES_PER_DAY,
     WEEKDAYS_ES,
@@ -40,7 +47,7 @@ const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label:
     { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
     { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
     { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: "/settings?tab=Tipos+de+Cita" },
-    { key: "hasBookableLocation", label: "Una ubicación presencial disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
+    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
 ];
 
 function ErrorLine({ message }: { message: string }) {
@@ -158,11 +165,11 @@ function StatusSection({ settings, onToggle, error }: {
                         testId="online-booking-enabled-toggle"
                     />
                 </div>
-                {!settings.bookingEnabled && (
-                    <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
-                        Permite que tus pacientes reserven citas desde tu enlace público, según tu disponibilidad semanal.
-                    </span>
-                )}
+                <span className="form-input-hint" style={{ alignSelf: "flex-start" }} data-testid="online-booking-status-hint">
+                    {settings.bookingEnabled
+                        ? "Si la desactivas, tus pacientes aún pueden ver y cancelar sus citas."
+                        : "Permite que tus pacientes reserven desde tu enlace público, según tu disponibilidad semanal."}
+                </span>
                 {!ready && (
                     <>
                         {!canToggle && (
@@ -551,6 +558,8 @@ function RulesSection({ settings, save, onSaved }: {
     const [ bufferText, setBuffer ] = useState(String(settings.bufferMinutes));
     const [ leadText, setLeadHours ] = useState(String(settings.minLeadMinutes / 60));
     const [ horizonText, setHorizon ] = useState(String(settings.maxHorizonDays));
+    const [ reschedulesText, setReschedules ] = useState(String(settings.maxPatientReschedules));
+    const [ noticeText, setNotice ] = useState(String(settings.minRescheduleNoticeHours));
     const [ error, setError ] = useState<string | null>(null);
     const [ saving, setSaving ] = useState(false);
     const [ saved, setSaved ] = useState(false);
@@ -564,16 +573,30 @@ function RulesSection({ settings, save, onSaved }: {
     const horizonError = !(Number.isInteger(horizon) && horizon >= 1 && horizon <= 365) ? "Escribe un número entero entre 1 y 365."
         : !leadError && leadMinutes >= horizon * 24 * 60 ? "Debe ser mayor que la anticipación mínima, o no habrá horarios disponibles."
         : null;
-    const invalid = !!(bufferError || leadError || horizonError);
+    const reschedules = toNumber(reschedulesText);
+    const notice = toNumber(noticeText);
+    const reschedulesError = Number.isInteger(reschedules) && reschedules >= 0 && reschedules <= MAX_PATIENT_RESCHEDULES
+        ? null : `Escribe un número entero entre 0 y ${MAX_PATIENT_RESCHEDULES}.`;
+    const noticeError = Number.isInteger(notice) && notice >= 0 && notice <= MAX_RESCHEDULE_NOTICE_HOURS
+        ? null : `Escribe un número entero entre 0 y ${MAX_RESCHEDULE_NOTICE_HOURS} horas (7 días).`;
+    const invalid = !!(bufferError || leadError || horizonError || reschedulesError || noticeError);
     const changed = interval !== settings.slotIntervalMinutes || buffer !== settings.bufferMinutes
-        || leadMinutes !== settings.minLeadMinutes || horizon !== settings.maxHorizonDays;
+        || leadMinutes !== settings.minLeadMinutes || horizon !== settings.maxHorizonDays
+        || reschedules !== settings.maxPatientReschedules || notice !== settings.minRescheduleNoticeHours;
 
     async function handleSave() {
         setSaving(true);
         setError(null);
         setSaved(false);
         try {
-            onSaved(await save({ slotIntervalMinutes: interval, bufferMinutes: buffer, minLeadMinutes: leadMinutes, maxHorizonDays: horizon }));
+            onSaved(await save({
+                slotIntervalMinutes: interval,
+                bufferMinutes: buffer,
+                minLeadMinutes: leadMinutes,
+                maxHorizonDays: horizon,
+                maxPatientReschedules: reschedules,
+                minRescheduleNoticeHours: notice,
+            }));
             setSaved(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : ERR_SAVE);
@@ -637,6 +660,23 @@ function RulesSection({ settings, save, onSaved }: {
                         value: horizonText, onChange: setHorizon, err: horizonError, min: 1, max: 365, testId: "online-booking-horizon",
                     })}
                 </div>
+                <fieldset className="form-stack form-fieldset-plain">
+                    <legend className="form-label form-fieldset-legend">Reprogramación por pacientes</legend>
+                    <div className="form-grid-2">
+                        {numberField({
+                            key: "reschedules", label: "Reprogramaciones por cita",
+                            hint: "Cuántas veces un paciente puede mover en línea una cita que reservó. Con 0 no puede reprogramar; siempre puede cancelar.",
+                            value: reschedulesText, onChange: setReschedules, err: reschedulesError, min: 0, max: MAX_PATIENT_RESCHEDULES,
+                            step: 1, testId: "online-booking-max-reschedules",
+                        })}
+                        {numberField({
+                            key: "notice", label: "Aviso mínimo para reprogramar (horas)",
+                            hint: "Después de este momento antes de la cita, el paciente ya no puede reprogramarla en línea.",
+                            value: noticeText, onChange: setNotice, err: noticeError, min: 0, max: MAX_RESCHEDULE_NOTICE_HOURS,
+                            step: 1, testId: "online-booking-reschedule-notice",
+                        })}
+                    </div>
+                </fieldset>
                 {error && <ErrorLine message={error} />}
                 {saved && <SuccessBanner message="Reglas de reserva actualizadas." />}
                 <div>

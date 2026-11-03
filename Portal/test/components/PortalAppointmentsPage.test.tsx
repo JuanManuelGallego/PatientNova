@@ -36,6 +36,7 @@ const provider = {
     hasAvatar: false,
     hasLogo: false,
     timezone: "America/Bogota",
+    bookingOpen: true,
     lastBookableDate: "2099-12-31",
     types: [],
     locations: [],
@@ -46,6 +47,7 @@ const session = (overrides: Record<string, unknown> = {}) => ({
     csrfToken: "csrf-from-session",
     providerSlug: SLUG,
     consentRequired: false,
+    bookingOpen: true,
     ...overrides,
 });
 
@@ -55,6 +57,7 @@ const fail = (status: number, error: string) => new Response(JSON.stringify({ su
 
 interface Server {
     profileStatus: number;
+    profile: typeof provider;
     session: ReturnType<typeof session> | null;
     verify: () => Response;
     otp: () => Response;
@@ -76,6 +79,7 @@ beforeEach(() => {
     csrfStore.clear();
     server = {
         profileStatus: 200,
+        profile: provider,
         session: null,
         verify: () => {
             server.session = session({ consentRequired: true });
@@ -95,7 +99,7 @@ beforeEach(() => {
     fetchMock.mockImplementation(async (url: string, init: RequestInit = {}) => {
         const path = url.replace(/^.*\/v1/, "").toLowerCase();
         if (path === `/public/providers/${SLUG}`) {
-            return server.profileStatus === 200 ? ok(200, provider) : fail(server.profileStatus, "Provider not found");
+            return server.profileStatus === 200 ? ok(200, server.profile) : fail(server.profileStatus, "Provider not found");
         }
         if (path === `/public/providers/${SLUG}/otp`) return server.otp();
         if (path === `/portal/${SLUG}/otp/verify`) return server.verify();
@@ -361,7 +365,8 @@ describe("PortalAppointmentsPage upcoming appointments", () => {
         status: "CONFIRMED",
         price: 150000,
         type: { name: "Primera consulta" },
-        location: { name: "Consultorio Centro", address: "Calle 10", instructions: "Timbre 2" },
+        location: { name: "Consultorio Centro", address: "Calle 10", instructions: "Timbre 2", isVirtual: false },
+        meeting: null,
     });
 
     it("lists the appointments in the device zone, across its DST change", async () => {
@@ -421,7 +426,8 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         status: "CONFIRMED",
         price: 150000,
         type: { name: "Primera consulta" },
-        location: { name: "Consultorio Centro", address: "Calle 10", instructions: null },
+        location: { name: "Consultorio Centro", address: "Calle 10", instructions: null, isVirtual: false },
+        meeting: null,
         canCancel: true,
         canReschedule: true,
         ...overrides,
@@ -453,6 +459,37 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         cleanup();
         render(<PortalAppointmentsPage slug={SLUG} />);
         expect(within(await cardOf(0)).queryByRole("button")).toBeNull();
+    });
+
+    it("shows the video-call link when it is ready, and says it will arrive by email otherwise", async () => {
+        const virtual = { name: "Sala virtual", address: null, instructions: null, isVirtual: true };
+        listed = [
+            appt("v1", { location: virtual, meeting: { status: "ready", url: "https://meet.example/abc" } }),
+            appt("v2", { location: virtual, meeting: { status: "pending" }, startUtc: "2099-02-20T15:00:00.000Z", endUtc: "2099-02-20T16:00:00.000Z" }),
+        ];
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        const [ ready, pending ] = [ await cardOf(0), await cardOf(1) ];
+        expect(ready).toHaveTextContent("Sala virtual, Videollamada");
+        expect(within(ready).getByRole("link", { name: "Unirse a la videollamada" })).toHaveAttribute("href", "https://meet.example/abc");
+        expect(within(pending).queryByRole("link", { name: "Unirse a la videollamada" })).toBeNull();
+        expect(pending).toHaveTextContent("El enlace de la videollamada llegará a tu correo.");
+    });
+
+    it("still lists and cancels while booking is paused, without offering a new booking", async () => {
+        server.profile = { ...provider, bookingOpen: false };
+        server.session = session({ bookingOpen: false });
+        listed = [ appt("a1", { canReschedule: false }) ];
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const card = await cardOf(0);
+        expect(within(card).queryByRole("button", { name: "Reprogramar" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Reservar una cita" })).toBeNull();
+        expect(screen.getByTestId("portal-booking-paused")).toHaveTextContent(/en pausa/);
+
+        await user.click(within(card).getByRole("button", { name: "Cancelar cita" }));
+        await user.click(await screen.findByRole("button", { name: /Sí, cancelar/ }));
+        await waitFor(() => expect(call("/portal/appointments/a1/cancel")).toHaveLength(1));
     });
 
     it("asks before cancelling, keeps the appointment on 'Volver' and cancels on confirm", async () => {

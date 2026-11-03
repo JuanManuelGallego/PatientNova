@@ -162,6 +162,23 @@ export function AppointmentDrawer({
             <span>Unirse a la videollamada</span>
           </a>
         )}
+        {!appointment.meetingUrl && appointment.meetingStatus === "PENDING" && (
+          <p className="text-muted drawer-meeting-note" data-testid="appointment-drawer-meeting-pending">
+            Enlace pendiente: estamos creando la videollamada de Google Meet.
+          </p>
+        )}
+        {!appointment.meetingUrl && appointment.meetingStatus === "NEEDS_LINK" && (
+          <div className="drawer-action-row" data-testid="appointment-drawer-meeting-needs-link">
+            <span className="drawer-meeting-note drawer-meeting-note--warning">
+              Falta el enlace de la videollamada. Agrégalo para que le llegue al paciente.
+            </span>
+            {onEdit && (
+              <button type="button" className="btn-secondary" onClick={onEdit} data-testid="appointment-drawer-add-meeting-link">
+                Agregar enlace
+              </button>
+            )}
+          </div>
+        )}
       </Section>
 
       <Section title="Pago" testId="appointment-drawer-section-pago">

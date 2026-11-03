@@ -147,8 +147,9 @@ model Appointment {
   price Int
   paid  Boolean @default(false)
 
-  meetingUrl String? @db.VarChar(500)
-  notes      String? @db.Text
+  meetingUrl    String?       @db.VarChar(500)
+  meetingStatus MeetingStatus @default(NOT_REQUIRED)
+  notes         String?       @db.Text
 
   status      AppointmentStatus @default(SCHEDULED)
   confirmedAt DateTime?
@@ -160,6 +161,7 @@ model Appointment {
   source      RecordSource @default(PROVIDER)
   cancelledBy CancelledBy?
   patientTimezone String? @db.VarChar(50)
+  patientRescheduleCount Int @default(0)
 
   patientId  String  @db.Uuid
   userId     String
@@ -192,6 +194,13 @@ enum RecordSource {
 }
 
 /// Who cancelled an appointment (set together with status CANCELLED).
+enum MeetingStatus {
+  NOT_REQUIRED
+  PENDING
+  NEEDS_LINK
+  READY
+}
+
 enum CancelledBy {
   PROVIDER
   PATIENT
@@ -247,6 +256,8 @@ model User {
   bufferMinutes       Int                 @default(0)
   minLeadMinutes      Int                 @default(120)
   maxHorizonDays      Int                 @default(60)
+  maxPatientReschedules    Int @default(2)
+  minRescheduleNoticeHours Int @default(0)
 
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)

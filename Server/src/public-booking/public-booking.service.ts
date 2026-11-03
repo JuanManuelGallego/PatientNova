@@ -20,21 +20,28 @@ export function providerDisplayName(p: { displayName: string | null; firstName: 
   return p.displayName?.trim() || [ p.firstName, p.lastName ].filter(Boolean).join(' ');
 }
 
+export type ProviderRequirement = 'reachable' | 'live';
+
 export const publicBookingService = {
-  async resolveProvider(rawSlug: string) {
+  async resolveProvider(rawSlug: string, require: ProviderRequirement = 'live') {
     const slug = bookingSlugSchema.safeParse(rawSlug);
     if (!slug.success) throw new ProviderNotFoundError();
     const provider = await publicBookingRepository.findProviderBySlug(slug.data);
-    if (!provider || !(await bookingSettingsService.isBookingLive(provider.id))) throw new ProviderNotFoundError();
+    if (!provider) throw new ProviderNotFoundError();
+    const ok = require === 'live'
+      ? await bookingSettingsService.isBookingLive(provider.id)
+      : await bookingSettingsService.isPortalReachable(provider.id);
+    if (!ok) throw new ProviderNotFoundError();
     return provider;
   },
 
   async getProfile(slug: string) {
-    const provider = await publicBookingService.resolveProvider(slug);
+    const provider = await publicBookingService.resolveProvider(slug, 'reachable');
+    const bookingOpen = await bookingSettingsService.isBookingLive(provider.id);
     const [ images, types, locations ] = await Promise.all([
       publicBookingRepository.getImages(provider.id),
-      publicBookingRepository.listBookableTypes(provider.id),
-      publicBookingRepository.listBookableLocations(provider.id),
+      bookingOpen ? publicBookingRepository.listBookableTypes(provider.id) : [],
+      bookingOpen ? publicBookingRepository.listBookableLocations(provider.id) : [],
     ]);
     return {
       displayName: providerDisplayName(provider),
@@ -42,6 +49,7 @@ export const publicBookingService = {
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
+      bookingOpen,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,
@@ -50,12 +58,12 @@ export const publicBookingService = {
         durationMinutes: t.defaultDuration,
         price: t.defaultPrice,
       })),
-      locations,
+      locations: locations.map((l) => ({ id: l.id, name: l.name, address: l.isVirtual ? null : l.address, isVirtual: l.isVirtual })),
     };
   },
 
   async getImage(slug: string, kind: ProviderImageKind): Promise<{ contentType: string; bytes: Buffer }> {
-    const provider = await publicBookingService.resolveProvider(slug);
+    const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const dataUrl = await publicBookingRepository.getImage(provider.id, kind);
     const match = dataUrl ? IMAGE_DATA_URL.exec(dataUrl) : null;
     if (!dataUrl || !match) throw new ProviderImageNotFoundError();

@@ -52,6 +52,13 @@ function toResponse(settings: Settings, readiness: BookingReadiness) {
   };
 }
 
+async function reachableState(userId: string, tx?: TransactionClient) {
+  if (!config.portal.patientEnabled) return null;
+  const state = await bookingSettingsRepository.getBookingState(userId, tx);
+  if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || state.bookingSlug === null) return null;
+  return state;
+}
+
 function toRuleView(r: { weekday: number; startMinute: number; endMinute: number }) {
   return { weekday: r.weekday, startMinute: r.startMinute, endMinute: r.endMinute };
 }
@@ -112,10 +119,13 @@ export const bookingSettingsService = {
     return result;
   },
 
+  async isPortalReachable(userId: string, tx?: TransactionClient): Promise<boolean> {
+    return (await reachableState(userId, tx)) !== null;
+  },
+
   async isBookingLive(userId: string, tx?: TransactionClient): Promise<boolean> {
-    if (!config.portal.patientEnabled) return false;
-    const state = await bookingSettingsRepository.getBookingState(userId, tx);
-    if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || !state.bookingEnabled) return false;
+    const state = await reachableState(userId, tx);
+    if (!state || !state.bookingEnabled) return false;
     return isReady(await bookingSettingsRepository.getReadiness(userId, state.bookingSlug, tx));
   },
 

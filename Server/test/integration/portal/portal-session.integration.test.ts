@@ -18,7 +18,7 @@ import {
   signPortalToken,
 } from '../../../src/auth/tokens.js';
 import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
-import { ActionSource, EntityType, PatientStatus } from '../../../generated/prisma/enums.js';
+import { ActionSource, AdminStatus, EntityType, PatientStatus } from '../../../generated/prisma/enums.js';
 import { createTestPatient, unique } from '../helpers.js';
 import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider, sessionFor, type TestSession } from './portal-helpers.js';
 
@@ -99,15 +99,33 @@ describe('requirePortalSession', () => {
     expect(asPortalCookie.status).toBe(401);
   });
 
-  it('answers 401 once the provider is no longer live (disabled, deleted, inactive, portal off)', async () => {
-    const disabled = await createLiveProvider();
+  it('keeps the session while booking is paused or not ready, reporting bookingOpen: false', async () => {
+    const paused = await createLiveProvider();
+    const notReady = await createLiveProvider();
+    const sPaused = sessionFor(paused.id, unique('p@test.local'));
+    const sNotReady = sessionFor(notReady.id, unique('p@test.local'));
+    await prisma.user.update({ where: { id: paused.id }, data: { bookingEnabled: false } });
+    await prisma.appointmentType.update({ where: { id: notReady.typeId }, data: { bookableOnline: false } });
+    for (const s of [ sPaused, sNotReady ]) {
+      const res = await getSession(s);
+      expect(res.status).toBe(200);
+      expect(res.body.data.bookingOpen).toBe(false);
+    }
+  });
+
+  it('answers 401 once the provider is no longer reachable (deleted, inactive, no slug, portal off)', async () => {
     const deleted = await createLiveProvider();
-    const sDisabled = sessionFor(disabled.id, unique('p@test.local'));
+    const inactive = await createLiveProvider();
+    const slugless = await createLiveProvider();
     const sDeleted = sessionFor(deleted.id, unique('p@test.local'));
-    await prisma.user.update({ where: { id: disabled.id }, data: { bookingEnabled: false } });
+    const sInactive = sessionFor(inactive.id, unique('p@test.local'));
+    const sSlugless = sessionFor(slugless.id, unique('p@test.local'));
     await prisma.user.update({ where: { id: deleted.id }, data: { deletedAt: new Date() } });
-    expect((await getSession(sDisabled)).status).toBe(401);
+    await prisma.user.update({ where: { id: inactive.id }, data: { status: AdminStatus.INACTIVE } });
+    await prisma.user.update({ where: { id: slugless.id }, data: { bookingSlug: null, bookingEnabled: false } });
     expect((await getSession(sDeleted)).status).toBe(401);
+    expect((await getSession(sInactive)).status).toBe(401);
+    expect((await getSession(sSlugless)).status).toBe(401);
 
     const live = await createLiveProvider();
     const sLive = sessionFor(live.id, unique('p@test.local'));
@@ -141,6 +159,7 @@ describe('GET /v1/portal/session', () => {
 
     const expectedShape = {
       email: 'string', expiresAt: 'string', csrfToken: 'string', providerSlug: 'string', consentRequired: 'boolean',
+      bookingOpen: 'boolean',
     };
     for (const res of responses) {
       expect(res.status).toBe(200);
@@ -149,6 +168,7 @@ describe('GET /v1/portal/session', () => {
       expect(shapeOf(res.body.data)).toEqual(expectedShape);
       expect(res.body.data.consentRequired).toBe(true);
       expect(res.body.data.providerSlug).toBe(provider.slug);
+      expect(res.body.data.bookingOpen).toBe(true);
     }
   });
 
@@ -310,7 +330,7 @@ describe('POST /v1/portal/logout', () => {
   it('clears the cookie even when the session no longer validates', async () => {
     const provider = await createLiveProvider();
     const session = sessionFor(provider.id, unique('p@test.local'));
-    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
+    await prisma.user.update({ where: { id: provider.id }, data: { deletedAt: new Date() } });
     const clears = (res: request.Response) => ([] as string[]).concat(res.headers[ 'set-cookie' ] ?? [])
       .some((c) => c.startsWith(`${PORTAL_COOKIE_NAME}=;`));
 

@@ -22,7 +22,7 @@ import { hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
-import { canCancel, canReschedule } from './portal-appointment-actions.js';
+import { canCancel, canReschedule, portalActionContext } from './portal-appointment-actions.js';
 import {
   PortalAppointmentNotFoundError,
   PortalRescheduleUnavailableError,
@@ -91,7 +91,7 @@ async function loadReschedulable(tx: TransactionClient, session: PortalSessionCo
   const appt = await portalBookingRepository.findOwn(userId, patientId, appointmentId, tx);
   if (!appt || !canCancel(appt, now)) throw new PortalAppointmentNotFoundError();
   // Same rule as the `canReschedule` flag the patient sees, so the button and the endpoint never disagree.
-  if (!canReschedule(appt, { now, canBook: true })) throw new PortalRescheduleUnavailableError();
+  if (!canReschedule(appt, portalActionContext(settings, true, now))) throw new PortalRescheduleUnavailableError();
   return { settings, appt, durationMinutes: appt.appointmentType!.defaultDuration };
 }
 
@@ -163,7 +163,7 @@ export const portalAppointmentService = {
     const start = new Date(body.startUtc);
 
     try {
-      const { moved, move } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
+      const { moved, move, settings } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
         const now = new Date();
         const { settings, appt, durationMinutes } = await loadReschedulable(tx, session, appointmentId, now);
@@ -178,14 +178,15 @@ export const portalAppointmentService = {
           endAt: end.toISOString(),
           ...(await reminderPatch(tx, appt.id, start, now, session.email)),
         }, userId, { patientTimezone: body.patientTimezone, replaceSettledReminder: true });
+        await tx.appointment.update({ where: { id: appt.id, userId }, data: { patientRescheduleCount: { increment: 1 } } });
         const move = { previousStartAt: appt.startAt, startAt: start };
         await enqueuePortalNotifications('rescheduled', appt.id, tx, move);
-        return { moved: await portalBookingRepository.findForDto(appt.id, tx), move };
+        return { moved: await portalBookingRepository.findForDto(appt.id, tx), move, settings };
       }, { timeout: 10000 }));
 
       logger.info({ appointmentId, userId }, 'Appointment rescheduled by the patient in the portal');
       await deliverPortalNotificationsNow('rescheduled', appointmentId, move);
-      return toPortalAppointmentDto(moved, { now: new Date(), canBook: true });
+      return toPortalAppointmentDto(moved, portalActionContext(settings, true, new Date()));
     } catch (err) {
       throw toPortalError(err);
     }

@@ -4,6 +4,7 @@ import { createCsrfToken } from '../utils/security/csrf.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
+import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { ensureCurrentConsent, hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient, type PortalPatientResolution } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
@@ -15,6 +16,7 @@ export interface PortalSessionView {
   csrfToken: string;
   providerSlug: string;
   consentRequired: boolean;
+  bookingOpen: boolean;
 }
 
 export async function isConsentRequired(resolution: PortalPatientResolution): Promise<boolean> {
@@ -24,9 +26,10 @@ export async function isConsentRequired(resolution: PortalPatientResolution): Pr
 
 export const portalSessionService = {
   async getSession(session: PortalSessionContext): Promise<PortalSessionView> {
-    const [ state, resolution ] = await Promise.all([
+    const [ state, resolution, bookingOpen ] = await Promise.all([
       bookingSettingsRepository.getBookingState(session.userId),
       resolvePortalPatient(session),
+      bookingSettingsService.isBookingLive(session.userId),
     ]);
     const consentRequired = await isConsentRequired(resolution);
     return {
@@ -35,6 +38,7 @@ export const portalSessionService = {
       csrfToken: createCsrfToken(session.sid, portalSecret()),
       providerSlug: state?.bookingSlug ?? '',
       consentRequired,
+      bookingOpen,
     };
   },
 

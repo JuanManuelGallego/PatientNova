@@ -1,5 +1,5 @@
 import { fromPrisma } from 'pg-boss';
-import { AppointmentStatus, Channel } from '../../generated/prisma/enums.js';
+import { AppointmentStatus, Channel, MeetingStatus } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
@@ -8,6 +8,7 @@ import { dispatchMessage, type DispatchOpts } from '../scheduler/dispatch.js';
 import {
   renderBookingConfirmationEmail,
   renderPortalCancellationEmail,
+  renderPortalMeetingLinkEmail,
   renderPortalRescheduleEmail,
 } from '../brevo/email-templates.js';
 import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
@@ -16,13 +17,16 @@ import { providerDisplayName } from '../public-booking/public-booking.service.js
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
 
 /** What the patient did in the portal; each event sends one patient email and one provider notice. */
-export type PortalEvent = 'booked' | 'cancelled' | 'rescheduled';
+export type PortalEvent = 'booked' | 'booked-link-pending' | 'cancelled' | 'rescheduled' | 'meeting-ready' | 'meeting-link';
 
 const EVENT_KINDS = {
   booked: [ 'patient-confirmation', 'provider-notice' ],
+  'booked-link-pending': [ 'provider-notice' ],
   cancelled: [ 'patient-cancellation', 'provider-cancel-notice' ],
   rescheduled: [ 'patient-reschedule', 'provider-reschedule-notice' ],
-} as const satisfies Record<PortalEvent, readonly [string, string]>;
+  'meeting-ready': [ 'patient-confirmation' ],
+  'meeting-link': [ 'patient-meeting-link' ],
+} as const satisfies Record<PortalEvent, readonly string[]>;
 
 export type BookingNotificationKind = typeof EVENT_KINDS[PortalEvent][number];
 
@@ -57,8 +61,10 @@ async function loadAppointment(appointmentId: string) {
       status: true,
       isDeleted: true,
       patientTimezone: true,
+      meetingUrl: true,
+      meetingStatus: true,
       patient: { select: { email: true } },
-      appointmentLocation: { select: { name: true, address: true } },
+      appointmentLocation: { select: { name: true, address: true, isVirtual: true } },
       user: {
         select: {
           displayName: true, firstName: true, lastName: true, timezone: true, bookingSlug: true,
@@ -76,7 +82,19 @@ type Message = { channel: Channel; opts: DispatchOpts };
 function isDeliverable(appt: BookedAppointment | null, job: BookingNotificationJob): appt is BookedAppointment {
   if (!appt || appt.isDeleted) return false;
   if (job.startAt && appt.startAt.getTime() !== new Date(job.startAt).getTime()) return false;
-  return CANCELLATION_KINDS.has(job.kind) ? appt.status === AppointmentStatus.CANCELLED : ACTIVE_STATUSES.has(appt.status);
+  if (CANCELLATION_KINDS.has(job.kind)) return appt.status === AppointmentStatus.CANCELLED;
+  if (!ACTIVE_STATUSES.has(appt.status)) return false;
+  if (job.kind === 'patient-confirmation') return appt.meetingStatus !== MeetingStatus.PENDING;
+  if (job.kind === 'patient-meeting-link') {
+    return appt.meetingStatus === MeetingStatus.READY && !!appt.meetingUrl && appt.startAt.getTime() > Date.now();
+  }
+  return true;
+}
+
+function placeOf(appt: BookedAppointment) {
+  const loc = appt.appointmentLocation;
+  if (!loc?.isVirtual) return { locationName: loc?.name ?? null, address: loc?.address ?? null };
+  return { locationName: loc.name, address: null, meetingUrl: appt.meetingUrl, meetingPending: !appt.meetingUrl };
 }
 
 function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
@@ -86,11 +104,14 @@ function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): M
   const portalRoot = config.portal.url.replace(/\/+$/, '');
   const providerName = providerDisplayName(appt.user);
   const whenLocal = formatWhen(appt.startAt, timezone);
-  const location = { locationName: appt.appointmentLocation?.name ?? null, address: appt.appointmentLocation?.address ?? null };
+  const location = placeOf(appt);
   const appointmentsUrl = bookPage ? `${bookPage}/appointments` : portalRoot;
 
   let email;
-  if (job.kind === 'patient-cancellation') {
+  if (job.kind === 'patient-meeting-link') {
+    if (!appt.meetingUrl) return null;
+    email = renderPortalMeetingLinkEmail({ providerName, whenLocal, timezone, meetingUrl: appt.meetingUrl, appointmentsUrl });
+  } else if (job.kind === 'patient-cancellation') {
     email = renderPortalCancellationEmail({ providerName, whenLocal, timezone, bookingUrl: bookPage ?? portalRoot });
   } else if (job.kind === 'patient-reschedule') {
     if (!job.previousStartAt) return null;

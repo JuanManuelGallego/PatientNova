@@ -4,6 +4,7 @@ export interface PortalSession {
     csrfToken: string;
     providerSlug: string;
     consentRequired: boolean;
+    bookingOpen: boolean;
 }
 
 export interface OtpChallenge {

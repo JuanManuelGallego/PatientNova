@@ -34,12 +34,13 @@ describe("LocationModal bookable toggle", () => {
         expect(updateLocation.mock.calls[ 0 ][ 1 ]).not.toHaveProperty("bookableOnline");
     });
 
-    it("clears a stored flag when made virtual with the portal off", async () => {
+    it("never sends the flag when made virtual with the portal off", async () => {
         portalEnabled = false;
         render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Sala", isVirtual: false, address: "x", instructions: "y", bookableOnline: true }} />);
         await userEvent.click(screen.getByTestId("location-virtual-checkbox"));
         await userEvent.click(screen.getByTestId("location-modal-submit-button"));
-        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true, bookableOnline: false }));
+        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true }));
+        expect(updateLocation.mock.calls[ 0 ][ 1 ]).not.toHaveProperty("bookableOnline");
     });
 
     it("sends bookableOnline for an in-person location", async () => {
@@ -52,16 +53,15 @@ describe("LocationModal bookable toggle", () => {
         expect(createLocation).toHaveBeenCalledWith(expect.objectContaining({ bookableOnline: true, isVirtual: false }));
     });
 
-    it("is disabled and cleared for virtual locations", async () => {
+    it("stays available for virtual locations and explains where the link comes from", async () => {
         render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Sala", isVirtual: false, address: "x", instructions: "y", bookableOnline: true }} />);
         const toggle = screen.getByTestId("location-bookable-online-checkbox");
-        expect(toggle).toBeChecked();
         await userEvent.click(screen.getByTestId("location-virtual-checkbox"));
-        expect(toggle).toBeDisabled();
-        expect(toggle).not.toBeChecked();
-        expect(screen.getByText(/virtuales estarán disponibles más adelante/)).toBeInTheDocument();
+        expect(toggle).toBeEnabled();
+        expect(toggle).toBeChecked();
+        expect(screen.getByText(/crearemos el enlace de Meet; si no, deberás agregarlo tú/)).toBeInTheDocument();
         await userEvent.click(screen.getByTestId("location-modal-submit-button"));
-        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true, bookableOnline: false }));
+        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true, bookableOnline: true }));
     });
 });
 

@@ -9,3 +9,9 @@ get {
   body: none
   auth: none
 }
+
+docs {
+  Answers for any provider patients can reach (portal on, active, has a slug). `bookingOpen` is false
+  while booking is paused or not ready: `types` and `locations` are then empty and `/slots` answers 404,
+  but login and "Mis citas" keep working. Unknown, deleted or inactive providers get the same 404.
+}

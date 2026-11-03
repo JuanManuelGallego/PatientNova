@@ -33,12 +33,13 @@ const provider = {
     hasAvatar: false,
     hasLogo: false,
     timezone: TZ,
+    bookingOpen: true,
     lastBookableDate: "2099-12-31",
     types: [
         { id: "t1", name: "Primera consulta", description: null, durationMinutes: 60, price: 150000 },
         { id: "t2", name: "Control", description: null, durationMinutes: 30, price: null },
     ],
-    locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10" } ],
+    locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10", isVirtual: false } ],
 };
 
 let slots = {
@@ -57,7 +58,9 @@ function routeFetch(profileStatus = 200, slotsStatus = 200) {
                 ? json(200, { success: true, data: slots })
                 : json(slotsStatus, { success: false, error: "Provider not found" });
         }
-        if (profileStatus !== 200) return json(profileStatus, { success: false, error: "Provider not found" });
+        if (profileStatus !== 200) {
+            return json(profileStatus, { success: false, error: profileStatus === 404 ? "Provider not found" : "Internal server error" });
+        }
         return json(200, { success: true, data: provider });
     });
 }
@@ -160,6 +163,27 @@ describe("PublicBookingPage", () => {
         expect(await screen.findByText("Esta página de reservas no está disponible")).toBeInTheDocument();
     });
 
+    it("shows a video-call location as 'Videollamada', without an address", async () => {
+        fetchMock.mockImplementation(async (url: string) => (url.includes("/slots?")
+            ? json(200, { success: true, data: slots })
+            : json(200, { success: true, data: { ...provider, locations: [ { id: "v1", name: "Sala virtual", address: null, isVirtual: true } ] } })));
+        render(<PublicBookingPage slug="dra-ana" />);
+        const places = await screen.findByRole("list", { name: "Dónde atiende" });
+        expect(within(places).getByText("Sala virtual")).toBeInTheDocument();
+        expect(within(places).getByText("Videollamada")).toBeInTheDocument();
+    });
+
+    it("shows the paused notice with a link to Mis citas while booking is closed, without asking for slots", async () => {
+        fetchMock.mockImplementation(async () => json(200, { success: true, data: { ...provider, bookingOpen: false, types: [], locations: [] } }));
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByRole("heading", { name: "Las reservas en línea están en pausa" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+        expect(screen.queryByRole("group", { name: "Días de la semana" })).not.toBeInTheDocument();
+        expect(fetchMock.mock.calls.some(([ u ]) => String(u).includes("/slots?"))).toBe(false);
+    });
+
     it("shows the unavailable page when the slots answer 404 (booking turned off meanwhile)", async () => {
         routeFetch(200, 404);
         render(<PublicBookingPage slug="dra-ana" />);
@@ -204,7 +228,8 @@ describe("PublicBookingPage booking", () => {
         status: "CONFIRMED",
         price: 150000,
         type: { name: "Primera consulta" },
-        location: { name: "Consultorio Centro", address: "Calle 10", instructions: "Timbre 2" },
+        location: { name: "Consultorio Centro", address: "Calle 10", instructions: "Timbre 2", isVirtual: false },
+        meeting: null,
     };
 
     interface BookServer {
@@ -374,7 +399,7 @@ describe("PublicBookingPage booking", () => {
     });
 
     it("lets the patient choose among several locations", async () => {
-        server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100" } ] };
+        server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100", isVirtual: false } ] };
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
