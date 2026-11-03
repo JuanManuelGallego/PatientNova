@@ -7,7 +7,7 @@ import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
-import { fmtCop, fmtLongDayTime, isE164, normalizePhone } from "@/src/utils/publicBooking";
+import { fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
@@ -44,7 +44,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 {location && (
                     <div>
                         <dt>Lugar</dt>
-                        <dd>{location.name}{location.isVirtual ? " · Videollamada" : location.address && `, ${location.address}`}</dd>
+                        <dd>{location.name}{locationDetail(location) && `, ${locationDetail(location)}`}</dd>
                     </div>
                 )}
             </dl>
@@ -57,9 +57,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                             <button key={l.id} type="button" className={styles.option} aria-pressed={l.id === locationId}
                                 onClick={() => setLocationId(l.id)}>
                                 <span className={styles.optionName}>{l.name}</span>
-                                {l.isVirtual
-                                    ? <span className={styles.optionMeta}>Videollamada</span>
-                                    : l.address && <span className={styles.optionMeta}>{l.address}</span>}
+                                {locationDetail(l) && <span className={styles.optionMeta}>{locationDetail(l)}</span>}
                             </button>
                         ))}
                     </div>

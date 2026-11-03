@@ -469,7 +469,7 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         ];
         render(<PortalAppointmentsPage slug={SLUG} />);
         const [ ready, pending ] = [ await cardOf(0), await cardOf(1) ];
-        expect(ready).toHaveTextContent("Sala virtual · Videollamada");
+        expect(ready).toHaveTextContent("Sala virtual, Videollamada");
         expect(within(ready).getByRole("link", { name: "Unirse a la videollamada" })).toHaveAttribute("href", "https://meet.example/abc");
         expect(within(pending).queryByRole("link", { name: "Unirse a la videollamada" })).toBeNull();
         expect(pending).toHaveTextContent("El enlace de la videollamada llegará a tu correo.");

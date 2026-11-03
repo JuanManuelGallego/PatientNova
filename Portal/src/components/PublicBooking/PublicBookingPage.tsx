@@ -8,7 +8,7 @@ import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicP
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
-import { fmtCop, timezoneName } from "@/src/utils/publicBooking";
+import { fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
@@ -154,9 +154,7 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
                                 : <MapPin size={18} aria-hidden="true" className={styles.locationIcon} />}
                             <span>
                                 <span className={styles.locationName}>{l.name}</span>
-                                {l.isVirtual
-                                    ? <span className={styles.address}>Videollamada</span>
-                                    : l.address && <span className={styles.address}>{l.address}</span>}
+                                {locationDetail(l) && <span className={styles.address}>{locationDetail(l)}</span>}
                             </span>
                         </li>
                     ))}

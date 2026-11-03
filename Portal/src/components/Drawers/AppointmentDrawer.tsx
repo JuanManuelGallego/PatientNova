@@ -163,13 +163,13 @@ export function AppointmentDrawer({
           </a>
         )}
         {!appointment.meetingUrl && appointment.meetingStatus === "PENDING" && (
-          <p className="text-muted" data-testid="appointment-drawer-meeting-pending" style={{ margin: 0, fontSize: 13 }}>
+          <p className="text-muted drawer-meeting-note" data-testid="appointment-drawer-meeting-pending">
             Enlace pendiente: estamos creando la videollamada de Google Meet.
           </p>
         )}
         {!appointment.meetingUrl && appointment.meetingStatus === "NEEDS_LINK" && (
           <div className="drawer-action-row" data-testid="appointment-drawer-meeting-needs-link">
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--c-warning-dark)" }}>
+            <span className="drawer-meeting-note drawer-meeting-note--warning">
               Falta el enlace de la videollamada. Agrégalo para que le llegue al paciente.
             </span>
             {onEdit && (

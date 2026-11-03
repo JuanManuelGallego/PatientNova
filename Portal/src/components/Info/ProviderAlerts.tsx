@@ -37,12 +37,12 @@ function NeedsMeetingLinkAlert() {
     : `${data.count} citas reservadas en línea necesitan un enlace de videollamada.`;
 
   return (
-    <section className="warning-banner" aria-labelledby="needs-meeting-link-text" data-testid="needs-meeting-link-banner">
+    <section className="warning-banner" aria-label="Citas sin enlace de videollamada" data-testid="needs-meeting-link-banner">
       <STATUS_ICONS.warning size={18} aria-hidden="true" className="warning-banner__icon" />
       <div className="warning-banner__body">
-        <p id="needs-meeting-link-text" className="warning-banner__text">
+        <p className="warning-banner__text">
           {text}
-          {next && <> La próxima es el {fmtDate(next.startAt, timezone)} a las {fmtTime(next.startAt, timezone)}</>}
+          {next && <> La próxima es a las {fmtTime(next.startAt, timezone)}, el {fmtDate(next.startAt, timezone)}.</>}
         </p>
       </div>
       <div className="warning-banner__actions">

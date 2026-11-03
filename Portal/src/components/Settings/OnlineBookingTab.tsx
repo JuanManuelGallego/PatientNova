@@ -167,8 +167,8 @@ function StatusSection({ settings, onToggle, error }: {
                 </div>
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }} data-testid="online-booking-status-hint">
                     {settings.bookingEnabled
-                        ? "Si la desactivas, tus pacientes aún pueden ver y cancelar sus citas desde tu enlace."
-                        : "Permite que tus pacientes reserven citas desde tu enlace público, según tu disponibilidad semanal. Mientras está desactivada, pueden ver y cancelar sus citas."}
+                        ? "Si la desactivas, tus pacientes aún pueden ver y cancelar sus citas."
+                        : "Permite que tus pacientes reserven desde tu enlace público, según tu disponibilidad semanal."}
                 </span>
                 {!ready && (
                     <>
@@ -660,8 +660,8 @@ function RulesSection({ settings, save, onSaved }: {
                         value: horizonText, onChange: setHorizon, err: horizonError, min: 1, max: 365, testId: "online-booking-horizon",
                     })}
                 </div>
-                <fieldset className="form-stack" style={{ border: 0, padding: 0, margin: 0 }}>
-                    <legend className="form-label" style={{ fontWeight: 600, marginBottom: 8 }}>Reprogramación por pacientes</legend>
+                <fieldset className="form-stack form-fieldset-plain">
+                    <legend className="form-label form-fieldset-legend">Reprogramación por pacientes</legend>
                     <div className="form-grid-2">
                         {numberField({
                             key: "reschedules", label: "Reprogramaciones por cita",

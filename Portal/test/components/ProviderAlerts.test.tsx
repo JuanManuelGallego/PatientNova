@@ -48,7 +48,7 @@ describe("ProviderAlerts: online bookings without a video-call link", () => {
     render(<ProviderAlerts />);
     const banner = screen.getByTestId("needs-meeting-link-banner");
     expect(banner).toHaveTextContent("2 citas reservadas en línea necesitan un enlace de videollamada.");
-    expect(banner).toHaveTextContent(/La próxima es el .*20.*enero.*2099 a las 10:00 a\. m\./);
+    expect(banner).toHaveTextContent(/La próxima es a las 10:00 a\. m\., el .*20.*enero.*2099\./);
     expect(screen.getByRole("link", { name: "Ver citas" })).toHaveAttribute("href", "/appointments");
   });
 
