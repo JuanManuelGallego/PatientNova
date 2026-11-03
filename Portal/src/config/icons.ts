@@ -65,6 +65,7 @@ import {
   Loader2,
   type LucideIcon,
   Inbox,
+  TimerOff,
   Copy,
   Download,
 } from "lucide-react";
@@ -113,6 +114,7 @@ export const STATUS_ICONS = {
   failed: AlertCircle,
   cancelled: Ban,
   none: BellOff,
+  expired: TimerOff,
   scheduled: CalendarClock,
   confirmed: CalendarCheck,
   completed: CheckCheck,

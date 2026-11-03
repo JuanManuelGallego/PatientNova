@@ -36,15 +36,18 @@ function CandidateCard({ c, timezone }: { c: RequestCandidate; timezone: string 
   const state = c.isDeleted
     ? `Eliminado${c.deletedAt ? ` el ${fmtDate(c.deletedAt, timezone)}` : ""}`
     : c.status === "INACTIVE" ? "Inactivo" : "Activo";
+  const facts = [
+    state,
+    c.lastVisitAt ? `Última cita el ${fmtDate(c.lastVisitAt, timezone)}` : "Sin citas anteriores",
+    c.whatsappNumber,
+    c.portalAccessEnabled ? null : "Acceso al portal desactivado",
+  ].filter(Boolean);
   return (
-    <span style={{ display: "block" }}>
-      <span style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>{candidateName(c)}</span>{" "}
-      <span className="form-input-hint">· {state}</span>
-      <span className="form-input-hint" style={{ display: "block" }}>
-        {c.lastVisitAt ? `Última cita: ${fmtDate(c.lastVisitAt, timezone)}` : "Sin citas anteriores"}
-        {c.whatsappNumber ? ` · ${c.whatsappNumber}` : ""}
-        {!c.portalAccessEnabled ? " · Acceso al portal desactivado" : ""}
-      </span>
+    <span style={{ display: "block" }} data-testid={`request-candidate-${c.id}`}>
+      <span style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>{candidateName(c)}</span>
+      {facts.map((fact) => (
+        <span key={fact} className="form-input-hint" style={{ display: "block" }}>{fact}</span>
+      ))}
     </span>
   );
 }
@@ -111,11 +114,14 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
   const { approve, reject, loading: resolving, error: resolveError } = useResolveBookingRequest();
   const [ choice, setChoice ] = useState<PatientChoice>("");
   const [ confirmReject, setConfirmReject ] = useState(false);
+  const [ done, setDone ] = useState<string | null>(null);
 
-  async function run(action: () => Promise<unknown>) {
+  async function run(action: () => Promise<unknown>, doneMessage: string) {
+    setDone(null);
     try {
       await action();
       setConfirmReject(false);
+      setDone(doneMessage);
     } catch {
       // The error is shown from `resolveError`; a request that is no longer pending still refreshes below.
     } finally {
@@ -140,7 +146,10 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
         type="button"
         className="btn-primary"
         disabled={resolving}
-        onClick={() => run(() => approve(requestId, choice ? { restorePatientId: choice } : {}))}
+        onClick={() => run(
+          () => approve(requestId, choice ? { restorePatientId: choice } : {}),
+          "Solicitud aprobada. La cita quedó en tu agenda y le avisamos al paciente.",
+        )}
         data-testid="request-approve"
       >
         {resolving ? "Guardando…" : "Aprobar y crear la cita"}
@@ -165,7 +174,10 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
         {request && (
           <>
             {resolveError && (
-              <p className="warning-banner__error" role="alert" data-testid="request-error">{resolveError}</p>
+              <div className="error-inline" role="alert" data-testid="request-error">{resolveError}</div>
+            )}
+            {done && !resolveError && (
+              <p className="form-input-hint" role="status" data-testid="request-done">{done}</p>
             )}
             {request.kind === "REVIEW" && pending && (
               <p className="form-input-hint" data-testid="request-review-reason">
@@ -211,7 +223,7 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
           nested
           testId="request-reject-confirm"
           onClose={() => setConfirmReject(false)}
-          onConfirm={() => run(() => reject(requestId))}
+          onConfirm={() => run(() => reject(requestId), "Solicitud rechazada. El horario quedó libre.")}
         >
           El horario quedará libre y le avisaremos al paciente por correo, sin indicar un motivo.
         </ConfirmDialog>

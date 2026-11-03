@@ -13,7 +13,7 @@ import { RequestDrawer } from "@/src/components/Drawers/RequestDrawer";
 import { useFetchBookingRequests } from "@/src/api/booking-requests/useFetchBookingRequests";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
+import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { PAGE_SIZE } from "@/src/utils/listQuery";
 import type { BookingRequestTab } from "@/src/types/BookingRequest";
 
@@ -51,8 +51,8 @@ function RequestsPageContent() {
     { label: "Paciente" },
     { label: "Cita solicitada" },
     { label: "Tipo y lugar" },
-    { label: "Estado" },
-    { label: tab === "pending" ? "Vence" : tab === "resolved" ? "Resuelta" : "Venció" },
+    ...(tab === "resolved" ? [ { label: "Estado" } ] : []),
+    { label: tab === "pending" ? "Vence en" : tab === "resolved" ? "Resuelta" : "Venció" },
   ], [ tab ]);
 
   return (
@@ -85,20 +85,26 @@ function RequestsPageContent() {
             <tr key={r.id} className="table-row" onClick={() => setOpenId(r.id)} data-testid={`request-row-${r.id}`}>
               <td className="td">
                 <div className="td-name__primary">{r.name} {r.lastName}</div>
-                <div className="td-name__secondary">{r.email}</div>
+                <div className="td-name__secondary">
+                  {r.email}
+                  {r.kind === "REVIEW" && <> (paciente inactivo o eliminado)</>}
+                </div>
               </td>
               <td className="td td--date">{fmtDateTime(r.startAt, timezone)}</td>
               <td className="td">
                 <div>{r.type.name}</div>
                 <div className="td-name__secondary">{r.location.name}</div>
               </td>
-              <td className="td">
-                <RequestStatusPill status={r.status} />
-                {r.kind === "REVIEW" && <div className="td-name__secondary">Para revisar</div>}
-              </td>
-              <td className="td td--subtle">
-                {fmtDateTime(tab === "pending" ? r.holdExpiresAt : (r.resolvedAt ?? r.holdExpiresAt), timezone)}
-              </td>
+              {tab === "resolved" && (
+                <td className="td">
+                  <RequestStatusPill status={r.status} />
+                </td>
+              )}
+              {tab === "pending" ? (
+                <td className="td td--date" title={fmtDateTime(r.holdExpiresAt, timezone)}>{fmtRelative(r.holdExpiresAt)}</td>
+              ) : (
+                <td className="td td--subtle">{fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</td>
+              )}
             </tr>
           )}
           footer={

@@ -5,7 +5,7 @@ const ICON: Record<BookingRequestStatus, { Icon: LucideIcon; color: string }> = 
   PENDING: { Icon: STATUS_ICONS.pending, color: "var(--c-warning-dark)" },
   APPROVED: { Icon: STATUS_ICONS.success, color: "var(--c-success)" },
   REJECTED: { Icon: STATUS_ICONS.danger, color: "var(--c-error)" },
-  EXPIRED: { Icon: STATUS_ICONS.none, color: "var(--c-gray-500)" },
+  EXPIRED: { Icon: STATUS_ICONS.expired, color: "var(--c-gray-500)" },
   CANCELLED: { Icon: STATUS_ICONS.cancelled, color: "var(--c-gray-500)" },
 };
 

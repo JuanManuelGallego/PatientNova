@@ -4950,19 +4950,30 @@ thead tr {
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: var(--c-warning-bg);
+  background: var(--c-warning-border);
   color: var(--c-warning-dark);
-  border: 1px solid var(--c-warning);
   font-size: 11px;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 20px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A slot held by a pending booking request: dashed, "Pendiente de revisión". */
 .cal-hold {
-  border: 1px dashed var(--c-warning);
-  background: var(--c-warning-bg);
+  border: 1px dashed var(--c-warning-border);
+  background: var(--c-warning-surface);
   color: var(--c-warning-dark);
+  font: inherit;
   cursor: pointer;
+}
+
+.cal-hold:focus-visible {
+  outline: 2px solid var(--c-warning-dark);
+  outline-offset: 1px;
+}
+
+button.cal-day-panel__blocked-item {
+  width: 100%;
+  text-align: left;
 }

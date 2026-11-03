@@ -31,14 +31,14 @@ function PendingRequestsAlert() {
   const { pending } = usePendingRequests();
   if (pending === 0) return null;
   const text = pending === 1
-    ? "Tienes 1 solicitud de cita en línea esperando tu respuesta."
-    : `Tienes ${pending} solicitudes de cita en línea esperando tu respuesta.`;
+    ? "1 solicitud de cita en línea espera tu respuesta."
+    : `${pending} solicitudes de cita en línea esperan tu respuesta.`;
   return (
     <section className="warning-banner" aria-label="Solicitudes pendientes" data-testid="pending-requests-banner">
       <STATUS_ICONS.pending size={18} aria-hidden="true" className="warning-banner__icon" />
       <div className="warning-banner__body">
         <p className="warning-banner__text">
-          {text} Si no respondes, el horario se libera solo cuando venza.
+          {text} Cada una guarda su horario hasta que la apruebes, la rechaces o venza.
         </p>
       </div>
       <div className="warning-banner__actions">

@@ -80,12 +80,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Icon size={18} />
                 {item.label}
                 {item.id === "requests" && inbox.pending > 0 && (
-                  <span
-                    className="nav-badge"
-                    aria-label={`${inbox.pending} pendientes`}
-                    data-testid="sidebar-requests-badge"
-                  >
-                    {inbox.pending > 99 ? "99+" : inbox.pending}
+                  <span className="nav-badge" data-testid="sidebar-requests-badge">
+                    <span aria-hidden="true">{inbox.pending > 99 ? "99+" : inbox.pending}</span>
+                    <span className="sr-only">, {inbox.pending} pendientes</span>
                   </span>
                 )}
               </div>

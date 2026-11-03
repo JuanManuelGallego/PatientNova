@@ -162,7 +162,7 @@ describe("ProviderAlerts: pending booking requests", () => {
     portalEnabled = true;
     pendingRequests = 2;
     render(<ProviderAlerts />);
-    expect(screen.getByTestId("pending-requests-banner")).toHaveTextContent("Tienes 2 solicitudes de cita en línea esperando tu respuesta.");
+    expect(screen.getByTestId("pending-requests-banner")).toHaveTextContent("2 solicitudes de cita en línea esperan tu respuesta.");
     expect(screen.getByTestId("pending-requests-link")).toHaveAttribute("href", "/requests");
   });
 

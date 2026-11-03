@@ -1,0 +1,24 @@
+meta {
+  name: Reject Booking Request
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/booking-requests/{{bookingRequestId}}/reject
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+docs {
+  Releases the slot and emails the patient a neutral notice (no reason). 409 when the request is no
+  longer pending. Cookie requests need `X-CSRF-Token`.
+}

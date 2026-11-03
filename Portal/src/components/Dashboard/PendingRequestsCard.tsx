@@ -5,7 +5,7 @@ import { CheckCircle } from "lucide-react";
 import { useFetchBookingRequests } from "@/src/api/booking-requests/useFetchBookingRequests";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtDateTime, fmtRelative } from "@/src/utils/TimeUtils";
 
 const FILTERS = { status: "pending" as const, page: 1, pageSize: 5 };
 
@@ -56,7 +56,9 @@ export function PendingRequestsCard() {
                   </div>
                 </div>
                 <div className="dash-list-item__right">
-                  <span className="dash-list-item__meta">Vence {fmtDateTime(r.holdExpiresAt, timezone)}</span>
+                  <span className="dash-list-item__meta" title={fmtDateTime(r.holdExpiresAt, timezone)}>
+                    Vence en {fmtRelative(r.holdExpiresAt)}
+                  </span>
                 </div>
               </Link>
             ))}

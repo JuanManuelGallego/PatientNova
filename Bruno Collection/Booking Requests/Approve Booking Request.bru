@@ -1,0 +1,31 @@
+meta {
+  name: Approve Booking Request
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/booking-requests/{{bookingRequestId}}/approve
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+docs {
+  Creates the appointment in one transaction: the email's active patient (reactivated if inactive,
+  otherwise untouched), else a new PORTAL patient from the typed details; the consent with the
+  request's original time and evidence; a CONFIRMED appointment with an email reminder. The patient
+  gets the confirmation (for a virtual location once the Meet link is ready).
+
+  `{ "restorePatientId": "<uuid>" }` restores one of the request's deleted candidates instead (409
+  while an active patient holds the email). 409 "Booking request is no longer pending" for a resolved
+  or expired request; a slot conflict is also 409 and leaves the request PENDING. Cookie requests
+  need `X-CSRF-Token`.
+}
