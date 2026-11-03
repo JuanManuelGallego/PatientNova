@@ -175,10 +175,12 @@ export const portalBookingService = {
   async listAppointments(
     session: PortalSessionContext,
   ): Promise<{ appointments: PortalAppointmentDto[]; requests: PortalRequestDto[]; consentRequired: boolean }> {
-    const resolution = await resolvePortalPatient(session);
-    const consentRequired = await isConsentRequired(resolution);
-    // Pending requests belong to the verified email itself, so they never depend on a patient or a consent.
-    const requests = await portalRequestService.list(session);
+    // Pending requests belong to the verified email itself, so they never depend on a patient or a consent
+    // and load alongside the patient resolution.
+    const [ requests, { resolution, consentRequired } ] = await Promise.all([
+      portalRequestService.list(session),
+      resolvePortalPatient(session).then(async (resolution) => ({ resolution, consentRequired: await isConsentRequired(resolution) })),
+    ]);
     if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], requests, consentRequired: true };
     const now = new Date();
     const [ rows, settings, live ] = await Promise.all([

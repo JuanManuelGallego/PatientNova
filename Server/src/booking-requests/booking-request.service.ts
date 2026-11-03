@@ -1,5 +1,7 @@
 import { ActionType, BookingRequestStatus, EntityType } from '../../generated/prisma/enums.ts';
 import { logAudit } from '../audit-log/audit-log.utils.js';
+import { runInAuditContext } from '../audit-log/audit-log-context.js';
+import { bookingRequestExpiryAuditContext } from '../audit-log/audit-actors.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { bookingRequestRepository, type CreateBookingRequestData } from './booking-request.repository.js';
@@ -18,20 +20,23 @@ export const bookingRequestService = {
     const stale = await bookingRequestRepository.findStale(userId, now, tx);
     const ids = stale.map((s) => s.id);
     await bookingRequestRepository.markExpired(ids, now, tx);
-    for (const id of ids) {
-      await logAudit({
-        entityType: EntityType.BOOKING_REQUEST,
-        entityId: id,
-        userId,
-        actionType: ActionType.UPDATE,
-        description: 'Solicitud de reserva vencida',
-        affectedFields: [ 'status' ],
-        fieldsBefore: { status: BookingRequestStatus.PENDING },
-        fieldsAfter: { status: BookingRequestStatus.EXPIRED },
-        tx,
-        required: true,
-      });
-    }
+    // A system actor, never the caller's context (on the portal path that is another patient).
+    await runInAuditContext(bookingRequestExpiryAuditContext(userId), async () => {
+      for (const id of ids) {
+        await logAudit({
+          entityType: EntityType.BOOKING_REQUEST,
+          entityId: id,
+          userId,
+          actionType: ActionType.UPDATE,
+          description: 'Solicitud de reserva vencida',
+          affectedFields: [ 'status' ],
+          fieldsBefore: { status: BookingRequestStatus.PENDING },
+          fieldsAfter: { status: BookingRequestStatus.EXPIRED },
+          tx,
+          required: true,
+        });
+      }
+    });
     return ids;
   },
 

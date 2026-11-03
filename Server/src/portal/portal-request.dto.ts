@@ -12,8 +12,8 @@ export interface PortalRequestDto {
   durationMinutes: number;
   /** When the held slot is released if the provider has not answered. */
   holdExpiresAt: string;
-  type: { name: string } | null;
-  location: { name: string; address: string | null; isVirtual: boolean } | null;
+  type: { name: string };
+  location: { name: string; address: string | null; isVirtual: boolean };
 }
 
 export type PortalRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof requestForDtoSelect }>;
@@ -26,9 +26,8 @@ export function toPortalRequestDto(r: PortalRequestRow): PortalRequestDto {
     endUtc: r.endAt.toISOString(),
     durationMinutes: Math.round((r.endAt.getTime() - r.startAt.getTime()) / ONE_MINUTE_MS),
     holdExpiresAt: r.holdExpiresAt.toISOString(),
-    type: r.type ? { name: r.type.name } : null,
-    location: r.location
-      ? { name: r.location.name, address: r.location.isVirtual ? null : r.location.address, isVirtual: r.location.isVirtual }
-      : null,
+    // Required relations (ON DELETE RESTRICT): a request always has its type and location.
+    type: { name: r.type.name },
+    location: { name: r.location.name, address: r.location.isVirtual ? null : r.location.address, isVirtual: r.location.isVirtual },
   };
 }

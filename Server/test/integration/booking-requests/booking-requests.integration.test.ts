@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { config } from '../../../src/utils/config/config.js';
-import { BookingApprovalMode, BookingRequestStatus, EntityType } from '../../../generated/prisma/enums.js';
+import { ActionSource, BookingApprovalMode, BookingRequestStatus, EntityType } from '../../../generated/prisma/enums.js';
+import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
+import { portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
 import { bookingRequestRepository } from '../../../src/booking-requests/booking-request.repository.js';
@@ -237,6 +239,21 @@ describe('hold overlap backstop and expiry', () => {
     expect(audits.map((a) => a.description)).toContain('Solicitud de reserva vencida');
   });
 
+  it('audits an expiry as the system, not as the patient whose booking swept it', async () => {
+    const p = await createLiveProvider();
+    const start = await firstStart(p);
+    const old = await requestHold(p, start);
+    await expireNow(old.id);
+
+    const sweeper = portalPatientAuditContext({ userId: p.id, email: 'otra@example.com', ipAddress: '198.51.100.7' });
+    await runInAuditContext(sweeper, () => requestHold(p, start, 'otra@example.com'));
+
+    const expiry = await prisma.auditLog.findFirstOrThrow({
+      where: { entityType: EntityType.BOOKING_REQUEST, entityId: old.id, description: 'Solicitud de reserva vencida' },
+    });
+    expect(expiry).toMatchObject({ actorId: 'booking-request-expiry', source: ActionSource.JOB, ipAddress: null });
+  });
+
   it('expireStaleWithin leaves live holds and other providers\' rows alone', async () => {
     const a = await createLiveProvider();
     const b = await createLiveProvider();
@@ -262,17 +279,19 @@ describe('hold overlap backstop and expiry', () => {
 });
 
 describe('bookingApprovalMode setting', () => {
-  it('accepts a valid mode, persists it and audits the change', async () => {
+  it('switches back to AUTO_CONFIRM, persists it and audits the change', async () => {
     const p = await createLiveProvider();
-    const result = await bookingSettingsService.updateSettings(p.id, { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL });
-    expect(result.bookingApprovalMode).toBe(BookingApprovalMode.REQUIRE_APPROVAL);
-    expect((await bookingSettingsService.getSettings(p.id)).bookingApprovalMode).toBe(BookingApprovalMode.REQUIRE_APPROVAL);
+    await prisma.user.update({ where: { id: p.id }, data: { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL } });
+    const result = await bookingSettingsService.updateSettings(p.id, { bookingApprovalMode: BookingApprovalMode.AUTO_CONFIRM });
+    expect(result.bookingApprovalMode).toBe(BookingApprovalMode.AUTO_CONFIRM);
+    expect((await bookingSettingsService.getSettings(p.id)).bookingApprovalMode).toBe(BookingApprovalMode.AUTO_CONFIRM);
 
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.USER, entityId: p.id } });
     expect(audits.some((a) => (a.affectedFields as string[]).includes('bookingApprovalMode'))).toBe(true);
   });
 
-  it('rejects an unknown mode in the schema', () => {
+  it('the API schema refuses REQUIRE_APPROVAL until the inbox ships (6.3) and any unknown mode', () => {
+    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).success).toBe(false);
     expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'MAYBE' }).success).toBe(false);
     expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'AUTO_CONFIRM' }).success).toBe(true);
   });

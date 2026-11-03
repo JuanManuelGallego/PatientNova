@@ -2,7 +2,7 @@ import { ActionType, BookingRequestStatus, EntityType } from '../../generated/pr
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { ONE_MINUTE_MS } from '../utils/config/constants.js';
-import { logger } from '../utils/api/logger.js';
+import { logger, maskEmail } from '../utils/api/logger.js';
 import { emailHash } from '../utils/encryption/blind-index.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
@@ -19,7 +19,12 @@ import { bookingUrl } from '../booking-settings/booking-settings.service.js';
 import { isSlotFree, providerDisplayName, type SlotSettings } from '../public-booking/public-booking.service.js';
 import type { ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
-import { PortalBookingLimitError, PortalRequestNotFoundError, SlotUnavailableError } from './portal-booking.errors.js';
+import {
+  PortalRequestCapacityError,
+  PortalRequestLimitError,
+  PortalRequestNotFoundError,
+  SlotUnavailableError,
+} from './portal-booking.errors.js';
 import { toPortalRequestDto, type PortalRequestDto } from './portal-request.dto.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
@@ -43,12 +48,14 @@ export async function holdSlotWithin(
   if (!(await isSlotFree(userId, slot.settings, slot.durationMinutes, slot.start, now, { tx }))) throw new SlotUnavailableError();
 
   const hash = emailHash(session.email);
-  if (!hash) throw new PortalBookingLimitError();
+  if (!hash) throw new PortalRequestLimitError();
   const [ forEmail, forProvider ] = await Promise.all([
     bookingRequestRepository.countLive(userId, now, tx, hash),
     bookingRequestRepository.countLive(userId, now, tx),
   ]);
-  if (forEmail >= MAX_PENDING_REQUESTS_PER_EMAIL || forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalBookingLimitError();
+  // Distinct errors: the email's own cap is about this patient; the provider-wide cap must not claim it is.
+  if (forEmail >= MAX_PENDING_REQUESTS_PER_EMAIL) throw new PortalRequestLimitError();
+  if (forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalRequestCapacityError();
 
   const request = await bookingRequestService.createHoldWithin(tx, userId, {
     email: session.email,
@@ -68,19 +75,27 @@ export async function holdSlotWithin(
   return toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx));
 }
 
-/** "We received your request" email, after commit. Best effort: the helper never throws. */
+/**
+ * "We received your request" email, after commit. Best effort and never throws: the request is already
+ * saved, so a failure here (provider lookup included) must not turn the 202 into an error the patient retries.
+ */
 export async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
-  const provider = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { displayName: true, firstName: true, lastName: true, bookingSlug: true },
-  });
-  if (!provider) return;
-  const page = bookingUrl(provider.bookingSlug);
-  const email = renderBookingRequestReceivedEmail({
-    providerName: providerDisplayName(provider),
-    appointmentsUrl: page ? `${page}/appointments` : '',
-  });
-  await sendTransactionalEmail(to, email);
+  try {
+    const provider = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { displayName: true, firstName: true, lastName: true, bookingSlug: true },
+    });
+    if (!provider) return;
+    const page = bookingUrl(provider.bookingSlug);
+    const email = renderBookingRequestReceivedEmail({
+      providerName: providerDisplayName(provider),
+      appointmentsUrl: page ? `${page}/appointments` : '',
+    });
+    await sendTransactionalEmail(to, email);
+  } catch (err) {
+    logger.error({ userId, maskedTo: maskEmail(to), errorName: err instanceof Error ? err.name : undefined },
+      'Booking request received email failed');
+  }
 }
 
 export const portalRequestService = {

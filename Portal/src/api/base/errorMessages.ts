@@ -6,6 +6,7 @@
 
 const PATTERNS: Array<[ RegExp, string ]> = [
     [ /overlaps with another appointment|conflicts with an existing appointment/i, "Ya existe una cita en ese horario." ],
+    [ /overlaps with a pending booking request/i, "Un paciente tiene una solicitud de reserva pendiente en ese horario. Elige otro horario." ],
     // Anchored to the overlap wording: "Blocked time with id ... not found" (404) must fall through.
     [ /appointment overlaps with blocked time/i, "Ese horario está bloqueado en la agenda." ],
     [ /blocked time overlaps with an existing blocked slot/i, "Ya existe un bloqueo en ese horario." ],
@@ -34,10 +35,13 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],
     [ /slot no longer available/i, "Ese horario ya no está disponible. Elige otro." ],
     [ /booking limit reached/i, "Ya tienes 3 citas próximas reservadas en línea. Para reservar otra, comunícate con el consultorio." ],
-    [ /online booking unavailable/i, "No pudimos completar tu reserva en línea. Comunícate con el consultorio." ],
+    [ /^request limit reached$/i, "Ya tienes 3 solicitudes pendientes con este consultorio. Espera su respuesta o cancela una para enviar otra." ],
+    [ /^request capacity reached$/i, "El consultorio no está recibiendo más solicitudes en línea por ahora. Inténtalo más tarde o comunícate con el consultorio." ],
+    [ /online booking unavailable/i,"No pudimos completar tu reserva en línea. Comunícate con el consultorio." ],
     [ /^(appointment type|location) not found$/i, "Esa opción ya no está disponible. Recarga la página e inténtalo de nuevo." ],
     // Patient portal: one answer for any appointment the patient can no longer change (provider side says "with id ...").
     [ /^appointment not found$/i, "Esta cita ya no se puede modificar. Actualizamos la lista." ],
+    [ /^request not found$/i, "Esta solicitud ya no está pendiente: fue respondida o venció. Actualizamos la lista." ],
     [ /reschedule unavailable/i, "Esta cita ya no se puede reprogramar en línea. Comunícate con el consultorio." ],
     [ /new time must differ/i, "Elige un horario distinto al de tu cita actual." ],
     [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],

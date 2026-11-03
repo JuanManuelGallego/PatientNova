@@ -11,7 +11,10 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
 import { BookingApprovalMode, BookingRequestStatus, EntityType, ActionSource } from '../../../generated/prisma/enums.js';
-import { MAX_PENDING_REQUESTS_PER_EMAIL } from '../../../src/booking-requests/booking-request.constants.js';
+import {
+  MAX_PENDING_REQUESTS_PER_EMAIL,
+  MAX_PENDING_REQUESTS_PER_PROVIDER,
+} from '../../../src/booking-requests/booking-request.constants.js';
 import { createTestPatient, unique } from '../helpers.js';
 import {
   ALLOWED_ORIGIN, buildPortalApp, createConsentedPatient, createLiveProvider, portalBookingBody, portalPost, sessionFor, slotStarts,
@@ -146,9 +149,49 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     }
     const over = await postBooking(session, portalBookingBody(provider, starts[MAX_PENDING_REQUESTS_PER_EMAIL]!));
     expect(over.status).toBe(409);
-    expect(over.body.error).toBe('Booking limit reached');
+    expect(over.body.error).toBe('Request limit reached');
     // Another email still can.
     expect((await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, starts[5]!))).status).toBe(202);
+  });
+
+  it('still answers 202 when the receipt email fails after commit', async () => {
+    const provider = await approvalProvider();
+    const [ start ] = await slotStarts(provider);
+    mocks.email.mockRejectedValueOnce(new Error('pool timeout'));
+
+    const res = await postBooking(sessionFor(provider.id, unique('correo@test.local')), portalBookingBody(provider, start!));
+
+    expect(res.status).toBe(202);
+    expect(await prisma.bookingRequest.count({ where: { userId: provider.id, status: BookingRequestStatus.PENDING } })).toBe(1);
+  });
+
+  it('caps live requests per provider with an error that says nothing about this patient', async () => {
+    const provider = await approvalProvider();
+    const [ start ] = await slotStarts(provider);
+    // Fill the provider cap with other emails' live holds in a past range, so no slot is blocked.
+    const base = Date.now() - 400 * 24 * 3_600_000;
+    for (let i = 0; i < MAX_PENDING_REQUESTS_PER_PROVIDER; i++) {
+      await prisma.bookingRequest.create({
+        data: {
+          userId: provider.id,
+          email: `lleno${i}@test.local`,
+          name: 'Otra',
+          lastName: 'Persona',
+          typeId: provider.typeId,
+          locationId: provider.locationId,
+          startAt: new Date(base + i * 3_600_000),
+          endAt: new Date(base + (i + 1) * 3_600_000),
+          patientTimezone: 'America/Bogota',
+          holdExpiresAt: new Date(Date.now() + 3_600_000),
+          policyVersion: 'test',
+          consentAcceptedAt: new Date(),
+        },
+      });
+    }
+
+    const res = await postBooking(sessionFor(provider.id, unique('nueva@test.local')), portalBookingBody(provider, start!));
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Request capacity reached');
   });
 
   it('rejects a start off the grid and an unknown type like the auto flow', async () => {

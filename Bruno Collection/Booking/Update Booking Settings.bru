@@ -29,9 +29,9 @@ body:json {
 }
 
 docs {
-  `bookingApprovalMode` is `AUTO_CONFIRM` or `REQUIRE_APPROVAL`. In `REQUIRE_APPROVAL` a portal booking
-  becomes a pending request that holds its slot (202); there is no inbox to answer it yet (Phase 6.3),
-  so do not switch real providers.
+  `bookingApprovalMode` accepts only `AUTO_CONFIRM` for now (400 otherwise). `REQUIRE_APPROVAL`, where a
+  portal booking becomes a pending request that holds its slot (202), opens with the provider inbox in
+  Phase 6.3.
   `maxPatientReschedules` (0-10, 0 = patients cannot reschedule online) caps portal reschedules per
   appointment; `minRescheduleNoticeHours` (0-168) refuses a reschedule once the current start is that
   close. Cancelling has no cutoff.

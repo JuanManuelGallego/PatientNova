@@ -30,8 +30,8 @@ export interface PortalPendingRequest {
     endUtc: string;
     durationMinutes: number;
     holdExpiresAt: string;
-    type: { name: string } | null;
-    location: { name: string; address: string | null; isVirtual: boolean } | null;
+    type: { name: string };
+    location: { name: string; address: string | null; isVirtual: boolean };
 }
 
 /** Auto-confirm creates an appointment (201); approval mode creates a request for the provider to review (202). */

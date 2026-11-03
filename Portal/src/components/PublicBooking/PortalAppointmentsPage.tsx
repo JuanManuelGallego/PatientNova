@@ -68,11 +68,14 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
 
     const sessionKey = `${session.email}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
+        // Pending requests belong to the verified email and never depend on consent (the server always
+        // returns them), so they stay visible and cancellable under the consent prompt.
+        const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
         return (
-            <PortalConsent
-                onAccepted={() => setConsentedFor(sessionKey)}
-                onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
-            />
+            <>
+                <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
+                <PendingRequestsOnly onSessionLost={onSessionLost} />
+            </>
         );
     }
     return (
@@ -188,22 +191,7 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
         body = (
             <>
                 {!!requests?.length && (
-                    <ul className={styles.appts} aria-label="Solicitudes pendientes">
-                        {requests.map((r) => (
-                            <li key={r.id}>
-                                <PortalRequestCard
-                                    request={r}
-                                    timezone={timezone}
-                                    actions={(
-                                        <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`}
-                                            onClick={() => { setStatus(null); setCancellingRequest(r); }}>
-                                            Cancelar solicitud
-                                        </button>
-                                    )}
-                                />
-                            </li>
-                        ))}
-                    </ul>
+                    <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
                 )}
                 {!!appointments?.length && (
                 <ul className={styles.appts} aria-label="Próximas citas">
@@ -258,6 +246,74 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
     }
 
     return <>{statusLine}{body}</>;
+}
+
+function RequestList({ requests, timezone, onCancel }: {
+    requests: PortalPendingRequest[]; timezone: string; onCancel: (request: PortalPendingRequest) => void;
+}) {
+    return (
+        <ul className={styles.appts} aria-label="Solicitudes pendientes">
+            {requests.map((r) => (
+                <li key={r.id}>
+                    <PortalRequestCard
+                        request={r}
+                        timezone={timezone}
+                        actions={(
+                            <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`} onClick={() => onCancel(r)}>
+                                Cancelar solicitud
+                            </button>
+                        )}
+                    />
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+/**
+ * The session email's pending requests while consent is still asked for. Renders nothing unless there are
+ * requests (or the result of cancelling one), so a session without requests sees only the consent prompt.
+ */
+function PendingRequestsOnly({ onSessionLost }: { onSessionLost: () => void }) {
+    const timezone = browserTimezone();
+    const { requests, error, retry } = usePortalAppointments();
+    const [ cancelling, setCancelling ] = useState<PortalPendingRequest | null>(null);
+    const [ status, setStatus ] = useState<string | null>(null);
+    const statusRef = useRef<HTMLParagraphElement>(null);
+    const sessionLost = error?.status === 401;
+
+    useEffect(() => { if (sessionLost) onSessionLost(); }, [ sessionLost, onSessionLost ]);
+    useEffect(() => { if (status) statusRef.current?.focus(); }, [ status ]);
+
+    const settle = (message: string) => {
+        setCancelling(null);
+        setStatus(message);
+        retry();
+    };
+
+    if (!requests?.length && !status) return null;
+    return (
+        <section className={`dash-card ${styles.card}`} aria-labelledby="portal-pending-requests">
+            <h2 id="portal-pending-requests" className={styles.title}>Solicitudes pendientes</h2>
+            {status && <p ref={statusRef} tabIndex={-1} className={styles.notice} role="status">{status}</p>}
+            {!!requests?.length && (
+                <>
+                    <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancelling(r); }} />
+                    <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+                </>
+            )}
+            {cancelling && (
+                <CancelRequestDialog
+                    request={cancelling}
+                    timezone={timezone}
+                    onClose={() => setCancelling(null)}
+                    onCancelled={() => settle("Tu solicitud quedó cancelada y el horario se liberó.")}
+                    onGone={settle}
+                    onSessionLost={onSessionLost}
+                />
+            )}
+        </section>
+    );
 }
 
 interface CancelDialogProps {

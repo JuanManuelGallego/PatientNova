@@ -24,13 +24,11 @@ export function PortalRequestCard({ request: r, timezone, inset = false, actions
                 </div>
                 <span className={styles.status} data-status="PENDING">Pendiente de confirmación</span>
             </div>
-            {r.type && <p className={styles.apptMeta}>{r.type.name} · {r.durationMinutes} minutos</p>}
-            {r.location && (
-                <p className={styles.apptMeta}>
-                    {r.location.name}
-                    {locationDetail(r.location) && <>, {locationDetail(r.location)}</>}
-                </p>
-            )}
+            <p className={styles.apptMeta}>{r.type.name} · {r.durationMinutes} minutos</p>
+            <p className={styles.apptMeta}>
+                {r.location.name}
+                {locationDetail(r.location) && <>, {locationDetail(r.location)}</>}
+            </p>
             <p className={styles.apptInstructions}>Reservamos este horario para ti. Te avisaremos por correo cuando tu proveedor la confirme.</p>
             {actions && <div className={styles.apptActions}>{actions}</div>}
         </article>

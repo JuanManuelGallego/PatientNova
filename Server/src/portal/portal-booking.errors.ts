@@ -18,6 +18,20 @@ export class PortalBookingLimitError extends ApiError {
   }
 }
 
+/** Approval mode: the session email already has the maximum of live pending requests with this provider. */
+export class PortalRequestLimitError extends ApiError {
+  constructor() {
+    super('Request limit reached', 409);
+  }
+}
+
+/** Approval mode: the provider has too many live pending requests overall; says nothing about this patient. */
+export class PortalRequestCapacityError extends ApiError {
+  constructor() {
+    super('Request capacity reached', 409);
+  }
+}
+
 /** One answer for every appointment the session may not act on: not theirs, unknown, past, inactive or deleted. */
 export class PortalAppointmentNotFoundError extends ApiError {
   constructor() {
