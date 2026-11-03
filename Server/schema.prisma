@@ -49,6 +49,7 @@ model Patient {
   reminders     Reminder[]     @relation("PatientReminders")
   medicalRecord MedicalRecord?
   consents      PatientConsent[]
+  bookingRequests BookingRequest[]
 
   @@index([userId])
   @@index([userId, status])
@@ -171,6 +172,7 @@ model Appointment {
   patient             Patient              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
   user                User                 @relation("UserAppointments", fields: [userId], references: [id])
   reminder            Reminder?            @relation("AppointmentReminder")
+  bookingRequests     BookingRequest[]
   appointmentLocation AppointmentLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   appointmentType     AppointmentType?     @relation(fields: [typeId], references: [id], onDelete: SetNull)
 
@@ -279,6 +281,7 @@ model User {
   availabilityRules    AvailabilityRule[]
   portalOtps           PortalOtp[]
   patientConsents      PatientConsent[]
+  bookingRequests      BookingRequest[]
 
   @@index([email])
   @@index([status])
@@ -359,6 +362,64 @@ model PatientConsent {
   @@map("patient_consents")
 }
 
+enum BookingRequestKind {
+  NEW
+  REVIEW
+}
+
+enum BookingRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+model BookingRequest {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kind   BookingRequestKind   @default(NEW)
+  status BookingRequestStatus @default(PENDING)
+
+  email     String  @db.Text
+  name      String  @db.Text
+  lastName  String  @db.Text
+  phone     String? @db.Text
+  emailHash String? @db.VarChar(64)
+
+  startAt         DateTime
+  endAt           DateTime
+  patientTimezone String   @db.VarChar(50)
+  holdExpiresAt   DateTime
+  nudgedAt        DateTime?
+
+  policyVersion      String   @db.VarChar(20)
+  consentAcceptedAt  DateTime
+  consentIp          String?  @db.VarChar(64)
+  consentUserAgent   String?  @db.VarChar(512)
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  typeId        String              @db.Uuid
+  type          AppointmentType     @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  locationId    String              @db.Uuid
+  location      AppointmentLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  patientId     String?             @db.Uuid
+  patient       Patient?            @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  appointmentId String?             @db.Uuid
+  appointment   Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, holdExpiresAt])
+  @@index([userId, emailHash, status])
+  @@index([userId, startAt])
+  @@map("booking_requests")
+}
+
 // ─── Google Connection ──────────────────────────────────────────────────────────
 
 model GoogleConnection {
@@ -414,6 +475,7 @@ model AppointmentLocation {
   userId       String
   user         User          @relation(fields: [userId], references: [id])
   appointments Appointment[]
+  bookingRequests BookingRequest[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -441,6 +503,7 @@ model AppointmentType {
   user         User          @relation(fields: [userId], references: [id])
   appointments Appointment[]
   patients     Patient[]
+  bookingRequests BookingRequest[]
 
   @@unique([userId, name])
   @@index([userId])

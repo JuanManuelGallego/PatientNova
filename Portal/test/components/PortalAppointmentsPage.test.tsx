@@ -37,6 +37,7 @@ const provider = {
     hasLogo: false,
     timezone: "America/Bogota",
     bookingOpen: true,
+    approvalRequired: false,
     lastBookableDate: "2099-12-31",
     types: [],
     locations: [],
@@ -66,6 +67,7 @@ interface Server {
     appointments: () => Response;
     slots: () => Response;
     cancel: (id: string) => Response;
+    cancelRequest: (id: string) => Response;
     reschedule: (id: string, body: unknown) => Response;
 }
 let server: Server;
@@ -93,6 +95,7 @@ beforeEach(() => {
         appointments: () => ok(200, { appointments: [], consentRequired: true }),
         slots: () => ok(200, { timezone: "America/Bogota", slots: [] }),
         cancel: () => ok(204),
+        cancelRequest: () => ok(204),
         reschedule: () => fail(500, "unexpected"),
     };
     fetchMock.mockReset();
@@ -108,6 +111,8 @@ beforeEach(() => {
         if (path === "/portal/appointments") return server.appointments();
         if (path.startsWith(`/public/providers/${SLUG}/slots?`)) throw new Error("reschedule must not use the public slots");
         if (/^\/portal\/appointments\/[^/]+\/slots\?/.test(path)) return server.slots();
+        const requestCancel = path.match(/^\/portal\/requests\/([^/]+)\/cancel$/);
+        if (requestCancel) return server.cancelRequest(requestCancel[ 1 ]);
         const action = path.match(/^\/portal\/appointments\/([^/]+)\/(cancel|reschedule)$/);
         if (action) {
             return action[ 2 ] === "cancel" ? server.cancel(action[ 1 ]) : server.reschedule(action[ 1 ], JSON.parse(String(init.body)));
@@ -276,6 +281,7 @@ describe("PortalAppointmentsPage", () => {
             const path = url.replace(/^.*\/v1/, "");
             if (path === `/public/providers/${SLUG}`) return ok(200, provider);
             if (path === "/portal/session") return ok(200, server.session);
+            if (path === "/portal/appointments") return ok(200, { appointments: [], requests: [], consentRequired: true });
             return fail(401, "Invalid session");
         });
         const user = userEvent.setup();
@@ -443,6 +449,99 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
             timezone: "America/Bogota",
             slots: [ morning, afternoon ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
         });
+    });
+
+    const pending = (id: string, overrides: Record<string, unknown> = {}) => ({
+        id,
+        status: "PENDING",
+        startUtc: "2099-02-21T15:00:00.000Z",
+        endUtc: "2099-02-21T16:00:00.000Z",
+        durationMinutes: 60,
+        holdExpiresAt: "2099-02-19T15:00:00.000Z",
+        type: { name: "Control" },
+        location: { name: "Consultorio Centro", address: "Calle 10", isVirtual: false },
+        ...overrides,
+    });
+
+    it("lists pending requests apart from appointments and cancels one after confirming", async () => {
+        let requests = [ pending("r1") ];
+        server.appointments = () => ok(200, { consentRequired: false, appointments: listed, requests });
+        server.cancelRequest = (id) => {
+            requests = requests.filter((r) => r.id !== id);
+            return ok(204);
+        };
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const list = await screen.findByRole("list", { name: "Solicitudes pendientes" });
+        const card = within(list).getByRole("article");
+        expect(card).toHaveTextContent("Pendiente");
+        expect(screen.getByRole("heading", { name: "Solicitudes pendientes" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Próximas citas" })).toBeInTheDocument();
+        expect(card).toHaveTextContent("Control · 60 minutos");
+        expect(within(card).queryByRole("button", { name: "Reprogramar" })).toBeNull();
+        expect(within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")).toHaveLength(2);
+
+        await user.click(within(card).getByRole("button", { name: "Cancelar solicitud" }));
+        const dialog = await screen.findByRole("alertdialog", { name: "¿Cancelar esta solicitud?" });
+        await user.click(within(dialog).getByRole("button", { name: "Sí, cancelar solicitud" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Tu solicitud quedó cancelada y el horario se liberó.");
+        await waitFor(() => expect(screen.queryByRole("list", { name: "Solicitudes pendientes" })).toBeNull());
+        expect(call("/portal/requests/r1/cancel")).toHaveLength(1);
+    });
+
+    it("keeps pending requests visible and cancellable while consent is still asked for", async () => {
+        server.session = session({ consentRequired: true });
+        let requests = [ pending("r3") ];
+        server.appointments = () => ok(200, { consentRequired: true, appointments: [], requests });
+        server.cancelRequest = (id) => {
+            requests = requests.filter((r) => r.id !== id);
+            return ok(204);
+        };
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        expect(await screen.findByRole("heading", { name: "Antes de continuar" })).toBeInTheDocument();
+        const list = await screen.findByRole("list", { name: "Solicitudes pendientes" });
+        expect(within(list).getByRole("article")).toHaveTextContent("Control · 60 minutos");
+
+        await user.click(within(list).getByRole("button", { name: "Cancelar solicitud" }));
+        await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Sí, cancelar solicitud" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Tu solicitud quedó cancelada y el horario se liberó.");
+        await waitFor(() => expect(screen.queryByRole("list", { name: "Solicitudes pendientes" })).toBeNull());
+        expect(screen.getByRole("heading", { name: "Antes de continuar" })).toBeInTheDocument();
+        expect(call("/portal/requests/r3/cancel")).toHaveLength(1);
+    });
+
+    it("shows no request section under the consent prompt when there are none", async () => {
+        server.session = session({ consentRequired: true });
+        server.appointments = () => ok(200, { consentRequired: true, appointments: [], requests: [] });
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        expect(await screen.findByRole("heading", { name: "Antes de continuar" })).toBeInTheDocument();
+        await waitFor(() => expect(call("/portal/appointments")).toHaveLength(1));
+        expect(screen.queryByRole("heading", { name: "Solicitudes pendientes" })).toBeNull();
+    });
+
+    it("shows only requests when there are no appointments, and closes the action with the server message on 404", async () => {
+        server.appointments = () => ok(200, { consentRequired: false, appointments: [], requests: [ pending("r2") ] });
+        server.cancelRequest = () => fail(404, "Request not found");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const list = await screen.findByRole("list", { name: "Solicitudes pendientes" });
+        expect(screen.queryByText("No tienes citas próximas.")).toBeNull();
+        expect(screen.queryByRole("list", { name: "Próximas citas" })).toBeNull();
+
+        server.appointments = () => ok(200, { consentRequired: false, appointments: [], requests: [] });
+        await user.click(within(list).getByRole("button", { name: "Cancelar solicitud" }));
+        await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Sí, cancelar solicitud" }));
+
+        expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
+        expect(screen.queryByRole("alertdialog")).toBeNull();
+        expect(screen.getByRole("status")).toHaveTextContent("Esta solicitud ya no está pendiente: fue respondida o venció.");
     });
 
     const cardOf = async (index: number) => within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")[ index ];

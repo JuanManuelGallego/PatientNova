@@ -11,6 +11,7 @@ import type { ConsentRequestMeta } from '../patient-consents/patient-consent.ser
 import { portalSessionGuard } from './portal-session.middleware.js';
 import { portalBookingService } from './portal-booking.service.js';
 import { portalAppointmentService } from './portal-appointment.service.js';
+import { portalRequestService } from './portal-request.service.js';
 import {
   createPortalBookingSchema,
   reschedulePortalAppointmentSchema,
@@ -37,9 +38,22 @@ export function createPortalBookingRoutes(): Router {
     ...portalSessionGuard,
     validateBody(createPortalBookingSchema),
     asyncHandler(async (req: Request, res: Response) => {
-      const appointment = await portalBookingService.book(req.portal!, req.body as CreatePortalBookingBody, requestMeta(req));
+      const result = await portalBookingService.book(req.portal!, req.body as CreatePortalBookingBody, requestMeta(req));
       res.set('Cache-Control', 'no-store');
-      ok(res, { appointment }, 201);
+      ok(res, result, 'request' in result ? 202 : 201);
+    }),
+  );
+
+  router.post(
+    '/requests/:id/cancel',
+    changeLimiter,
+    ...portalSessionGuard,
+    validateParams(uuidParamSchema),
+    validateBody(cancelBodySchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      await portalRequestService.cancel(req.portal!, req.params.id as string, requestMeta(req));
+      res.set('Cache-Control', 'no-store');
+      res.status(204).end();
     }),
   );
 

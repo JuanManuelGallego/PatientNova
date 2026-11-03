@@ -18,10 +18,28 @@ export class PortalBookingLimitError extends ApiError {
   }
 }
 
+export class PortalRequestLimitError extends ApiError {
+  constructor() {
+    super('Request limit reached', 409);
+  }
+}
+
+export class PortalRequestCapacityError extends ApiError {
+  constructor() {
+    super('Request capacity reached', 409);
+  }
+}
+
 /** One answer for every appointment the session may not act on: not theirs, unknown, past, inactive or deleted. */
 export class PortalAppointmentNotFoundError extends ApiError {
   constructor() {
     super('Appointment not found', 404);
+  }
+}
+
+export class PortalRequestNotFoundError extends ApiError {
+  constructor() {
+    super('Request not found', 404);
   }
 }
 

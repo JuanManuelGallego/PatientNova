@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { BookingApprovalMode } from '../../generated/prisma/enums.js';
 import { bookingSlugSchema } from '../booking-settings/booking-settings.schemas.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
@@ -6,6 +7,7 @@ import { localToUtc } from '../utils/time/time-utils.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { generateSlots, isSlotAvailable, type SlotRules } from './slot-engine.js';
 import { publicBookingRepository, type ProviderImageKind } from './public-booking.repository.js';
+import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
 import { ProviderImageNotFoundError, ProviderNotFoundError, PublicAppointmentTypeNotFoundError } from './public-booking.errors.js';
 import type { SlotsQuery } from './public-booking.schemas.js';
 
@@ -50,6 +52,7 @@ export const publicBookingService = {
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
+      approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,
@@ -121,6 +124,7 @@ export async function isSlotFree(
 
 interface SlotOptions {
   excludeAppointmentId?: string | undefined;
+  excludeRequestId?: string | undefined;
   tx?: TransactionClient | undefined;
 }
 
@@ -131,11 +135,12 @@ async function slotRules(
   from: Date,
   to: Date,
   now: Date,
-  { excludeAppointmentId, tx }: SlotOptions,
+  { excludeAppointmentId, excludeRequestId, tx }: SlotOptions,
 ): Promise<SlotRules> {
-  const [ rules, busy ] = await Promise.all([
+  const [ rules, busy, holds ] = await Promise.all([
     bookingSettingsRepository.listRules(userId, tx),
     publicBookingRepository.loadBusy(userId, from, to, settings.bufferMinutes, tx, { excludeAppointmentId }),
+    bookingRequestRepository.loadLiveHolds(userId, from, to, settings.bufferMinutes, now, tx, { excludeRequestId }),
   ]);
   return {
     timezone: settings.timezone,
@@ -146,6 +151,6 @@ async function slotRules(
     minLeadMinutes: settings.minLeadMinutes,
     maxHorizonDays: settings.maxHorizonDays,
     now,
-    busy: { ...busy, holds: [] },
+    busy: { ...busy, holds },
   };
 }

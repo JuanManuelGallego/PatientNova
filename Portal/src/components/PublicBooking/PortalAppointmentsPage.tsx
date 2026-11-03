@@ -7,8 +7,8 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useLogout } from "@/src/api/portal/usePortalAuth";
-import { useCancelAppointment, usePortalAppointments } from "@/src/api/portal/usePortalBooking";
-import type { PortalAppointment } from "@/src/types/PortalBooking";
+import { useCancelAppointment, useCancelRequest, usePortalAppointments } from "@/src/api/portal/usePortalBooking";
+import type { PortalAppointment, PortalPendingRequest } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
 import { browserTimezone } from "@/src/utils/TimeUtils";
@@ -18,6 +18,7 @@ import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
+import { PortalRequestCard } from "./PortalRequestCard";
 import { PortalConsent } from "./PortalConsent";
 import { ProviderAvatar } from "./ProviderAvatar";
 import { RescheduleFlow } from "./RescheduleFlow";
@@ -67,11 +68,12 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
 
     const sessionKey = `${session.email}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
+        const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
         return (
-            <PortalConsent
-                onAccepted={() => setConsentedFor(sessionKey)}
-                onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
-            />
+            <>
+                <PendingRequestsOnly onSessionLost={onSessionLost} />
+                <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
+            </>
         );
     }
     return (
@@ -111,7 +113,7 @@ function SignedIn({ slug, provider, session, onLoggedOut, onSessionLost }: Signe
             <UpcomingAppointments slug={slug} provider={provider} onSessionLost={onSessionLost} />
             {provider.bookingOpen ? (
                 <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
-                    Reservar una cita
+                    {provider.approvalRequired ? "Solicitar una cita" : "Reservar una cita"}
                 </Link>
             ) : (
                 <p className={styles.muted} data-testid="portal-booking-paused">Las reservas en línea están en pausa por ahora.</p>
@@ -135,9 +137,10 @@ interface UpcomingAppointmentsProps {
 
 function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppointmentsProps) {
     const timezone = browserTimezone();
-    const { appointments, loading, error, retry } = usePortalAppointments();
+    const { appointments, requests, loading, error, retry } = usePortalAppointments();
     const [ rescheduling, setRescheduling ] = useState<PortalAppointment | null>(null);
     const [ cancelling, setCancelling ] = useState<PortalAppointment | null>(null);
+    const [ cancellingRequest, setCancellingRequest ] = useState<PortalPendingRequest | null>(null);
     const [ status, setStatus ] = useState<string | null>(null);
     const statusRef = useRef<HTMLParagraphElement>(null);
     const sessionLost = error?.status === 401;
@@ -149,6 +152,7 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
     const settle = (message: string) => {
         setRescheduling(null);
         setCancelling(null);
+        setCancellingRequest(null);
         setStatus(message);
         retry();
     };
@@ -179,11 +183,20 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
         body = <div className="skeleton-bar" style={{ width: "100%", height: 96 }} aria-busy="true" aria-label="Cargando citas" />;
     } else if (error) {
         body = <ErrorState error={error} onRetry={retry} inline />;
-    } else if (!appointments?.length) {
+    } else if (!appointments?.length && !requests?.length) {
         body = <p className={styles.lead}>No tienes citas próximas.</p>;
     } else {
+        const both = !!requests?.length && !!appointments?.length;
         body = (
             <>
+                {!!requests?.length && (
+                    <>
+                        {both && <h2 className={styles.listHeading}>Solicitudes pendientes</h2>}
+                        <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
+                    </>
+                )}
+                {both && <h2 className={styles.listHeading}>Próximas citas</h2>}
+                {!!appointments?.length && (
                 <ul className={styles.appts} aria-label="Próximas citas">
                     {appointments.map((a) => (
                         <li key={a.id}>
@@ -209,7 +222,18 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
                         </li>
                     ))}
                 </ul>
+                )}
                 <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+                {cancellingRequest && (
+                    <CancelRequestDialog
+                        request={cancellingRequest}
+                        timezone={timezone}
+                        onClose={() => setCancellingRequest(null)}
+                        onCancelled={() => settle("Tu solicitud quedó cancelada y el horario se liberó.")}
+                        onGone={settle}
+                        onSessionLost={onSessionLost}
+                    />
+                )}
                 {cancelling && (
                     <CancelDialog
                         appointment={cancelling}
@@ -225,6 +249,70 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
     }
 
     return <>{statusLine}{body}</>;
+}
+
+function RequestList({ requests, timezone, onCancel }: {
+    requests: PortalPendingRequest[]; timezone: string; onCancel: (request: PortalPendingRequest) => void;
+}) {
+    return (
+        <ul className={styles.appts} aria-label="Solicitudes pendientes">
+            {requests.map((r) => (
+                <li key={r.id}>
+                    <PortalRequestCard
+                        request={r}
+                        timezone={timezone}
+                        actions={(
+                            <button type="button" className={`${styles.linkButton} ${styles.dangerLink}`} onClick={() => onCancel(r)}>
+                                Cancelar solicitud
+                            </button>
+                        )}
+                    />
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function PendingRequestsOnly({ onSessionLost }: { onSessionLost: () => void }) {
+    const timezone = browserTimezone();
+    const { requests, error, retry } = usePortalAppointments();
+    const [ cancelling, setCancelling ] = useState<PortalPendingRequest | null>(null);
+    const [ status, setStatus ] = useState<string | null>(null);
+    const statusRef = useRef<HTMLParagraphElement>(null);
+    const sessionLost = error?.status === 401;
+
+    useEffect(() => { if (sessionLost) onSessionLost(); }, [ sessionLost, onSessionLost ]);
+    useEffect(() => { if (status) statusRef.current?.focus(); }, [ status ]);
+
+    const settle = (message: string) => {
+        setCancelling(null);
+        setStatus(message);
+        retry();
+    };
+
+    if (!requests?.length && !status) return null;
+    return (
+        <section className={`dash-card ${styles.card}`} aria-labelledby="portal-pending-requests">
+            <h2 id="portal-pending-requests" className={styles.title}>Solicitudes pendientes</h2>
+            {status && <p ref={statusRef} tabIndex={-1} className={styles.notice} role="status">{status}</p>}
+            {!!requests?.length && (
+                <>
+                    <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancelling(r); }} />
+                    <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+                </>
+            )}
+            {cancelling && (
+                <CancelRequestDialog
+                    request={cancelling}
+                    timezone={timezone}
+                    onClose={() => setCancelling(null)}
+                    onCancelled={() => settle("Tu solicitud quedó cancelada y el horario se liberó.")}
+                    onGone={settle}
+                    onSessionLost={onSessionLost}
+                />
+            )}
+        </section>
+    );
 }
 
 interface CancelDialogProps {
@@ -268,6 +356,50 @@ function CancelDialog({ appointment, timezone, onClose, onCancelled, onGone, onS
                 onConfirm={() => void confirm()}
             >
                 <p className={styles.lead}>Tu cita del {when} quedará cancelada y el horario se liberará.</p>
+            </ConfirmDialog>
+        </FocusTrapProvider>
+    );
+}
+
+interface CancelRequestDialogProps {
+    request: PortalPendingRequest;
+    timezone: string;
+    onClose: () => void;
+    onCancelled: () => void;
+    onGone: (message: string) => void;
+    onSessionLost: () => void;
+}
+
+function CancelRequestDialog({ request, timezone, onClose, onCancelled, onGone, onSessionLost }: CancelRequestDialogProps) {
+    const { cancelRequest, loading, error } = useCancelRequest();
+    const when = fmtLongDayTime(request.startUtc, timezone);
+
+    const confirm = async () => {
+        try {
+            await cancelRequest(request.id);
+        } catch (err) {
+            if (!(err instanceof ApiClientError)) return;
+            if (err.status === 401) onSessionLost();
+            else if (err.status === 404) onGone(err.message);
+            return;
+        }
+        onCancelled();
+    };
+
+    return (
+        <FocusTrapProvider>
+            <ConfirmDialog
+                icon={CalendarX}
+                title="¿Cancelar esta solicitud?"
+                cancelLabel="Volver"
+                confirmLabel="Sí, cancelar solicitud"
+                loadingLabel="Cancelando…"
+                loading={loading}
+                error={error}
+                onClose={() => { if (!loading) onClose(); }}
+                onConfirm={() => void confirm()}
+            >
+                <p className={styles.lead}>Tu solicitud para el {when} quedará cancelada y el horario se liberará.</p>
             </ConfirmDialog>
         </FocusTrapProvider>
     );

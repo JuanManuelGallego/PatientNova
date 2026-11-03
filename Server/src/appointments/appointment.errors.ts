@@ -36,6 +36,12 @@ export class AppointmentConflictError extends ApiError {
   }
 }
 
+export class AppointmentHoldConflictError extends ApiError {
+  constructor() {
+    super('Appointment overlaps with a pending booking request', 409)
+  }
+}
+
 export class AppointmentOverlapError extends ApiError {
   constructor() {
     super('Appointment overlaps with another appointment of this provider', 409)

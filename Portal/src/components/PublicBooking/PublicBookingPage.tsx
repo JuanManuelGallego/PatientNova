@@ -6,14 +6,15 @@ import Link from "next/link";
 import { MapPin, Video } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import type { PortalAppointment } from "@/src/types/PortalBooking";
+import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
-import { fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
+import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
 import { BookingForm } from "./BookingForm";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
+import { PortalRequestCard } from "./PortalRequestCard";
 import { reveal, SlotSteps, Step, useSlotPicker } from "./SlotPicker";
 
 export function PublicBookingPage({ slug }: { slug: string }) {
@@ -49,7 +50,7 @@ function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvi
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
     const timezone = browserTimezone();
     const [ typeId, setTypeId ] = useState<string | null>(null);
-    const [ booked, setBooked ] = useState<PortalAppointment | null>(null);
+    const [ booked, setBooked ] = useState<PortalBookingOutcome | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
     const picker = useSlotPicker(slug, provider, { typeId: type?.id ?? null }, timezone);
@@ -85,7 +86,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             <>
                 {nav}
                 <ProviderHero slug={slug} provider={provider} />
-                <BookingDone slug={slug} appointment={booked} timezone={timezone} onBookAnother={bookAnother} />
+                {"request" in booked
+                    ? <RequestSent slug={slug} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
+                    : <BookingDone slug={slug} appointment={booked.appointment} timezone={timezone} onBookAnother={bookAnother} />}
             </>
         );
     }
@@ -96,6 +99,12 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             <ProviderHero slug={slug} provider={provider} />
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
+                {provider.approvalRequired && (
+                    <p className={styles.approvalNotice} data-testid="approval-notice">
+                        Este consultorio confirma cada cita antes de reservarla. Eliges un horario, lo guardamos para ti
+                        y te avisamos por correo cuando la confirmen.
+                    </p>
+                )}
                 <Step number={1} title="Tipo de cita">
                     <div className={styles.options}>
                         {provider.types.map((t) => (
@@ -120,7 +129,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 <SlotSteps picker={picker} firstStep={2} noticeRef={slotNoticeRef} />
 
                 {slot && type && (
-                    <Step number={4} title="Confirma tu cita" stepRef={confirmStep}>
+                    <Step number={4} title={provider.approvalRequired ? "Envía tu solicitud" : "Confirma tu cita"} stepRef={confirmStep}>
                         <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
                             onBooked={setBooked} onSlotTaken={picker.slotTaken} />
                     </Step>
@@ -176,6 +185,25 @@ function BookingDone({ slug, appointment, timezone, onBookAnother }: {
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
             <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Reservar otra cita</button>
+        </section>
+    );
+}
+
+function RequestSent({ slug, request, timezone, onBookAnother }: {
+    slug: string; request: PortalPendingRequest; timezone: string; onBookAnother: () => void;
+}) {
+    const heading = useRef<HTMLHeadingElement>(null);
+    useEffect(() => { heading.current?.focus(); }, []);
+    return (
+        <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="request-sent" data-testid="request-sent">
+            <h2 id="request-sent" ref={heading} tabIndex={-1} className={styles.doneTitle}>Solicitud enviada</h2>
+            <p className={styles.muted}>
+                El consultorio la revisará. Mientras tanto guardamos el horario para ti. {APPROVAL_FOLLOW_UP}
+            </p>
+            <PortalRequestCard request={request} timezone={timezone} inset />
+            <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+            <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
+            <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Enviar otra solicitud</button>
         </section>
     );
 }

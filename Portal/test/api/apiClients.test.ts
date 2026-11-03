@@ -125,6 +125,11 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(401, undefined, { 401: "Correo o contraseña incorrectos." })).toBe("Correo o contraseña incorrectos.");
     expect(toSpanishMessage(409, "Slot no longer available")).toBe("Ese horario ya no está disponible. Elige otro.");
     expect(toSpanishMessage(409, "Booking limit reached")).toMatch(/3 citas próximas/);
+    expect(toSpanishMessage(409, "Request limit reached")).toMatch(/3 solicitudes pendientes/);
+    expect(toSpanishMessage(409, "Request capacity reached")).toMatch(/no está recibiendo más solicitudes/);
+    expect(toSpanishMessage(409, "Request capacity reached")).not.toMatch(/Ya tienes/);
+    expect(toSpanishMessage(404, "Request not found")).toMatch(/solicitud ya no está pendiente/);
+    expect(toSpanishMessage(409, "Appointment overlaps with a pending booking request")).toMatch(/solicitud de reserva pendiente/);
     expect(toSpanishMessage(409, "Online booking unavailable")).toMatch(/Comunícate con el consultorio/);
     expect(toSpanishMessage(404, "Location not found")).toMatch(/Esa opción ya no está disponible/);
     expect(toSpanishMessage(404, "Provider not found")).toBe("Las reservas en línea no están disponibles en este momento.");

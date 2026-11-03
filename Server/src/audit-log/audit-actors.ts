@@ -3,6 +3,15 @@ import { maskEmail } from '../utils/api/logger.js';
 import { portalActorHash } from '../utils/encryption/blind-index.js';
 import type { AuditContext } from './audit-log-context.js';
 
+export function bookingRequestExpiryAuditContext(userId: string): AuditContext {
+  return {
+    actorId: 'booking-request-expiry',
+    actorDisplayName: 'Sistema (vencimiento de solicitudes)',
+    userId,
+    source: ActionSource.JOB,
+  };
+}
+
 export function portalPatientAuditContext(params: {
   userId: string;
   email: string;

@@ -33,9 +33,10 @@ describe('updateBookingSettingsSchema', () => {
     expect(updateBookingSettingsSchema.safeParse({ bufferMinutes: 10, minLeadMinutes: 0, maxHorizonDays: 365 }).success).toBe(true);
   });
 
-  it('does not accept the approval mode yet', () => {
-    const r = updateBookingSettingsSchema.parse({ bookingEnabled: false, bookingApprovalMode: 'REQUIRE_APPROVAL' } as Record<string, unknown>);
-    expect(r).not.toHaveProperty('bookingApprovalMode');
+  it('accepts only AUTO_CONFIRM until the approval inbox ships', () => {
+    expect(updateBookingSettingsSchema.parse({ bookingApprovalMode: 'AUTO_CONFIRM' }).bookingApprovalMode).toBe('AUTO_CONFIRM');
+    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).success).toBe(false);
+    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'MAYBE' }).success).toBe(false);
   });
 });
 

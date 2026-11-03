@@ -1,0 +1,31 @@
+meta {
+  name: Cancel Request
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/portal/requests/{{portalRequestId}}/cancel
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Origin: {{portalOrigin}}
+  X-CSRF-Token: {{portalCsrfToken}}
+}
+
+body:json {
+  {}
+}
+
+docs {
+  Cancels one of the session email's pending booking requests (approval mode). Run Create Booking
+  against a provider in `REQUIRE_APPROVAL` mode first; it stores `portalRequestId`. Needs the
+  session cookie, the exact Origin and the CSRF token. The body is an empty object (or none).
+
+  204 on success: the request becomes CANCELLED and its slot is released. Every other case (not
+  theirs, another provider's, unknown, already resolved, expired) is the same 404 "Request not
+  found". It works even while booking is paused.
+}

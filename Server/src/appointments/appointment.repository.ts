@@ -23,6 +23,7 @@ export interface CreateAppointmentOptions {
   patientTimezone?: string;
   meetingPending?: MeetingPending;
   meetingStatus?: MeetingStatus;
+  excludeRequestId?: string;
 }
 
 export interface UpdateAppointmentOptions {

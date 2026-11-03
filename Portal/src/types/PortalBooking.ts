@@ -22,6 +22,19 @@ export interface PortalAppointment {
     canReschedule: boolean;
 }
 
+export interface PortalPendingRequest {
+    id: string;
+    status: "PENDING";
+    startUtc: string;
+    endUtc: string;
+    durationMinutes: number;
+    holdExpiresAt: string;
+    type: { name: string };
+    location: { name: string; address: string | null; isVirtual: boolean };
+}
+
+export type PortalBookingOutcome = { appointment: PortalAppointment } | { request: PortalPendingRequest };
+
 export interface PortalRescheduleRequest {
     startUtc: string;
     patientTimezone: string;
@@ -29,5 +42,6 @@ export interface PortalRescheduleRequest {
 
 export interface PortalAppointments {
     appointments: PortalAppointment[];
+    requests: PortalPendingRequest[];
     consentRequired: boolean;
 }

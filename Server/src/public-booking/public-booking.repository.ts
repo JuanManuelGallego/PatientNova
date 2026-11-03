@@ -23,6 +23,7 @@ export const publicBookingRepository = {
         bufferMinutes: true,
         minLeadMinutes: true,
         maxHorizonDays: true,
+        bookingApprovalMode: true,
       },
     });
   },

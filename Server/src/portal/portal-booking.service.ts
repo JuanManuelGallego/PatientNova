@@ -24,7 +24,7 @@ import {
   PublicLocationNotFoundError,
 } from '../public-booking/public-booking.errors.js';
 import { createWithin } from '../appointments/appointment.service.js';
-import { AppointmentBlockedTimeConflictError, AppointmentConflictError } from '../appointments/appointment.errors.js';
+import { AppointmentBlockedTimeConflictError, AppointmentConflictError, AppointmentHoldConflictError } from '../appointments/appointment.errors.js';
 import { createPatientWithin } from '../patients/patient.service.js';
 import { PatientEmailConflictError, PatientLimitReachedError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
@@ -34,6 +34,8 @@ import { isConsentRequired } from './portal-session.service.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import { portalActionContext } from './portal-appointment-actions.js';
+import { holdSlotWithin, portalRequestService, sendRequestReceivedEmail } from './portal-request.service.js';
+import type { PortalRequestDto } from './portal-request.dto.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from './portal-booking-notifications.js';
 import { enqueueProvisionMeet, meetingPendingMode } from './portal-meeting.service.js';
@@ -42,15 +44,22 @@ import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export const MAX_UPCOMING_PORTAL_BOOKINGS = 3;
 
+export type PortalBookingResult = { appointment: PortalAppointmentDto } | { request: PortalRequestDto };
+
 /**
  * The gate for a patient choosing a slot (booking or reschedule): booking live and in auto-confirm mode,
  * else the unknown-provider 404. Returns the settings the slot check needs.
  */
 export async function requireSelfBooking(userId: string, tx: TransactionClient) {
+  const { settings, approval } = await resolveBookingMode(userId, tx);
+  if (approval) throw new ProviderNotFoundError();
+  return settings;
+}
+
+export async function resolveBookingMode(userId: string, tx: TransactionClient) {
   if (!(await bookingSettingsService.isBookingLive(userId, tx))) throw new ProviderNotFoundError();
   const settings = await bookingSettingsRepository.getSettings(userId, tx);
-  if (settings.bookingApprovalMode !== BookingApprovalMode.AUTO_CONFIRM) throw new ProviderNotFoundError();
-  return settings;
+  return { settings, approval: settings.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL };
 }
 
 /** The email reminder of a portal appointment: 24h before it, or none when that time has already passed. */
@@ -64,6 +73,7 @@ export function toPortalError(err: unknown): unknown {
   if (
     err instanceof AppointmentConflictError
     || err instanceof AppointmentBlockedTimeConflictError
+    || err instanceof AppointmentHoldConflictError
     || isAppointmentOverlapViolation(err)
   ) return new SlotUnavailableError();
   if (err instanceof PatientLimitReachedError || err instanceof PatientEmailConflictError) return new PortalBookingUnavailableError();
@@ -90,20 +100,27 @@ async function resolveOrCreatePatient(
 }
 
 export const portalBookingService = {
-  async book(session: PortalSessionContext, body: CreatePortalBookingBody, meta: ConsentRequestMeta): Promise<PortalAppointmentDto> {
+  async book(session: PortalSessionContext, body: CreatePortalBookingBody, meta: ConsentRequestMeta): Promise<PortalBookingResult> {
     const { userId } = session;
     const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
     const start = new Date(body.startUtc);
 
     try {
-      const { created, settings, event } = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
+      const outcome = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
         await withProviderLock(tx, userId);
-        const settings = await requireSelfBooking(userId, tx);
+        const { settings, approval } = await resolveBookingMode(userId, tx);
 
         const type = await publicBookingRepository.findBookableType(userId, body.typeId, tx);
         if (!type) throw new PublicAppointmentTypeNotFoundError();
         const location = await publicBookingRepository.findBookableLocation(userId, body.locationId, tx);
         if (!location) throw new PublicLocationNotFoundError();
+
+        if (approval) {
+          const request = await holdSlotWithin(tx, session, body, meta, {
+            settings, typeId: type.id, locationId: location.id, durationMinutes: type.defaultDuration, start,
+          });
+          return { kind: 'request' as const, request };
+        }
 
         const now = new Date();
         const end = new Date(start.getTime() + type.defaultDuration * ONE_MINUTE_MS);
@@ -136,19 +153,28 @@ export const portalBookingService = {
         if (linkPending) await enqueueProvisionMeet(appointment.id, tx);
         const event: PortalEvent = linkPending ? 'booked-link-pending' : 'booked';
         await enqueuePortalNotifications(event, appointment.id, tx);
-        return { created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
+        return { kind: 'appointment' as const, created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
       }, { timeout: 10000 }));
+      if (outcome.kind === 'request') {
+        await sendRequestReceivedEmail(userId, session.email);
+        return { request: outcome.request };
+      }
+      const { created, settings, event } = outcome;
       await deliverPortalNotificationsNow(event, created.id);
-      return toPortalAppointmentDto(created, portalActionContext(settings, true, new Date()));
+      return { appointment: toPortalAppointmentDto(created, portalActionContext(settings, true, new Date())) };
     } catch (err) {
       throw toPortalError(err);
     }
   },
 
-  async listAppointments(session: PortalSessionContext): Promise<{ appointments: PortalAppointmentDto[]; consentRequired: boolean }> {
-    const resolution = await resolvePortalPatient(session);
-    const consentRequired = await isConsentRequired(resolution);
-    if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], consentRequired: true };
+  async listAppointments(
+    session: PortalSessionContext,
+  ): Promise<{ appointments: PortalAppointmentDto[]; requests: PortalRequestDto[]; consentRequired: boolean }> {
+    const [ requests, { resolution, consentRequired } ] = await Promise.all([
+      portalRequestService.list(session),
+      resolvePortalPatient(session).then(async (resolution) => ({ resolution, consentRequired: await isConsentRequired(resolution) })),
+    ]);
+    if (resolution.kind !== 'patient' || consentRequired) return { appointments: [], requests, consentRequired: true };
     const now = new Date();
     const [ rows, settings, live ] = await Promise.all([
       portalBookingRepository.listUpcoming(session.userId, resolution.patientId, now),
@@ -156,6 +182,6 @@ export const portalBookingService = {
       bookingSettingsService.isBookingLive(session.userId),
     ]);
     const ctx = portalActionContext(settings, live, now);
-    return { appointments: rows.map((row) => toPortalAppointmentDto(row, ctx)), consentRequired };
+    return { appointments: rows.map((row) => toPortalAppointmentDto(row, ctx)), requests, consentRequired };
   },
 };

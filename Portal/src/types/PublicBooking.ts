@@ -5,6 +5,7 @@ export interface PublicProvider {
     hasLogo: boolean;
     timezone: string;
     bookingOpen: boolean;
+    approvalRequired: boolean;
     lastBookableDate: string;
     types: PublicAppointmentType[];
     locations: PublicLocation[];

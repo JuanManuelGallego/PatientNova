@@ -145,6 +145,7 @@ describe('GET /v1/public/providers/:slug', () => {
       hasLogo: false,
       timezone: TZ,
       bookingOpen: true,
+      approvalRequired: false,
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],
       locations: [ { id: p.locationId, name: expect.any(String), address: 'Calle 1', isVirtual: false } ],
