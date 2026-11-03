@@ -334,10 +334,29 @@
   font-weight: 600;
 }
 
-.status[data-status="SCHEDULED"],
-.status[data-status="PENDING"] {
+.status[data-status="SCHEDULED"] {
   background: var(--c-brand-light);
   color: var(--c-brand);
+}
+
+/* A request is not an appointment yet: warning tone, and a dashed card (like the provider's hold blocks). */
+.status[data-status="PENDING"] {
+  background: var(--c-warning-surface);
+  color: var(--c-warning-dark);
+  box-shadow: inset 0 0 0 1px var(--c-warning-border);
+}
+
+.appt.request,
+.appt.request.inset {
+  border-style: dashed;
+  border-color: var(--c-warning-border);
+}
+
+.listHeading {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-gray-700);
 }
 
 .status[data-status="COMPLETED"],

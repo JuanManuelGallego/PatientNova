@@ -476,7 +476,9 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
 
         const list = await screen.findByRole("list", { name: "Solicitudes pendientes" });
         const card = within(list).getByRole("article");
-        expect(card).toHaveTextContent("Pendiente de confirmación");
+        expect(card).toHaveTextContent("Pendiente");
+        expect(screen.getByRole("heading", { name: "Solicitudes pendientes" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Próximas citas" })).toBeInTheDocument();
         expect(card).toHaveTextContent("Control · 60 minutos");
         expect(within(card).queryByRole("button", { name: "Reprogramar" })).toBeNull();
         expect(within(await screen.findByRole("list", { name: "Próximas citas" })).getAllByRole("article")).toHaveLength(2);

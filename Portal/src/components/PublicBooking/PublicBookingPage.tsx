@@ -8,7 +8,7 @@ import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicP
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
-import { fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
+import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
@@ -99,6 +99,12 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             <ProviderHero slug={slug} provider={provider} />
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
+                {provider.approvalRequired && (
+                    <p className={styles.approvalNotice} data-testid="approval-notice">
+                        Este consultorio confirma cada cita antes de reservarla. Eliges un horario, lo guardamos para ti
+                        y te avisamos por correo cuando la confirmen.
+                    </p>
+                )}
                 <Step number={1} title="Tipo de cita">
                     <div className={styles.options}>
                         {provider.types.map((t) => (
@@ -123,7 +129,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 <SlotSteps picker={picker} firstStep={2} noticeRef={slotNoticeRef} />
 
                 {slot && type && (
-                    <Step number={4} title="Confirma tu cita" stepRef={confirmStep}>
+                    <Step number={4} title={provider.approvalRequired ? "Envía tu solicitud" : "Confirma tu cita"} stepRef={confirmStep}>
                         <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
                             onBooked={setBooked} onSlotTaken={picker.slotTaken} />
                     </Step>
@@ -192,12 +198,12 @@ function RequestSent({ slug, request, timezone, onBookAnother }: {
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="request-sent" data-testid="request-sent">
             <h2 id="request-sent" ref={heading} tabIndex={-1} className={styles.doneTitle}>Solicitud enviada</h2>
             <p className={styles.muted}>
-                Tu proveedor la revisará. Mientras tanto reservamos el horario para ti y te avisaremos por correo cuando sea confirmada.
+                El consultorio la revisará. Mientras tanto guardamos el horario para ti. {APPROVAL_FOLLOW_UP}
             </p>
             <PortalRequestCard request={request} timezone={timezone} inset />
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
-            <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Hacer otra solicitud</button>
+            <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Enviar otra solicitud</button>
         </section>
     );
 }

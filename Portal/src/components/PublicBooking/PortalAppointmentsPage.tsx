@@ -69,12 +69,13 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
     const sessionKey = `${session.email}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
         // Pending requests belong to the verified email and never depend on consent (the server always
-        // returns them), so they stay visible and cancellable under the consent prompt.
+        // returns them), so they stay visible and cancellable, above the consent prompt: they are what a
+        // patient who just sent one came to see.
         const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
         return (
             <>
-                <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
                 <PendingRequestsOnly onSessionLost={onSessionLost} />
+                <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
             </>
         );
     }
@@ -115,7 +116,7 @@ function SignedIn({ slug, provider, session, onLoggedOut, onSessionLost }: Signe
             <UpcomingAppointments slug={slug} provider={provider} onSessionLost={onSessionLost} />
             {provider.bookingOpen ? (
                 <Link href={`/book/${encodeURIComponent(slug)}`} className={`btn-primary ${styles.submit} ${styles.linkCta}`}>
-                    Reservar una cita
+                    {provider.approvalRequired ? "Solicitar una cita" : "Reservar una cita"}
                 </Link>
             ) : (
                 <p className={styles.muted} data-testid="portal-booking-paused">Las reservas en línea están en pausa por ahora.</p>
@@ -188,11 +189,17 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
     } else if (!appointments?.length && !requests?.length) {
         body = <p className={styles.lead}>No tienes citas próximas.</p>;
     } else {
+        // With both kinds on screen, visible headings keep requests from reading as part of the appointments.
+        const both = !!requests?.length && !!appointments?.length;
         body = (
             <>
                 {!!requests?.length && (
-                    <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
+                    <>
+                        {both && <h2 className={styles.listHeading}>Solicitudes pendientes</h2>}
+                        <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
+                    </>
                 )}
+                {both && <h2 className={styles.listHeading}>Próximas citas</h2>}
                 {!!appointments?.length && (
                 <ul className={styles.appts} aria-label="Próximas citas">
                     {appointments.map((a) => (

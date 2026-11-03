@@ -93,6 +93,9 @@ export function fmtLongDayTime(iso: string, zone: string): string {
     return `${fmtLongDay(localDayOf(iso, zone))}, ${fmtTime(iso, zone)}`;
 }
 
+/** Approval mode: the one way patient pages say what happens after a request (form, receipt and card). */
+export const APPROVAL_FOLLOW_UP = "Te avisaremos por correo cuando el consultorio confirme tu cita.";
+
 export function normalizePhone(value: string): string {
     return value.replace(/[\s()-]/g, "");
 }

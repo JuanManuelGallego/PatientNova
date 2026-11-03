@@ -265,7 +265,7 @@ describe("PublicBookingPage booking", () => {
     async function pickMorningSlot(user: ReturnType<typeof userEvent.setup>) {
         const morning = await screen.findByRole("list", { name: "Mañana" });
         await user.click(within(morning).getByRole("button"));
-        return screen.findByRole("heading", { name: /Confirma tu cita/ });
+        return screen.findByRole("heading", { name: /Confirma tu cita|Envía tu solicitud/ });
     }
 
     async function fillDetails(user: ReturnType<typeof userEvent.setup>) {
@@ -344,25 +344,28 @@ describe("PublicBookingPage booking", () => {
         server.book = () => json(202, { success: true, data: { request } });
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
-        await pickMorningSlot(user);
+        expect(await screen.findByTestId("approval-notice")).toHaveTextContent(/confirma cada cita antes de reservarla/);
+        expect(await pickMorningSlot(user)).toHaveTextContent("Envía tu solicitud");
         await fillDetails(user);
 
-        expect(await screen.findByTestId("booking-approval-note")).toHaveTextContent(/revisa cada solicitud/);
+        expect(await screen.findByTestId("booking-approval-note")).toHaveTextContent(/mientras el consultorio revisa tu solicitud/);
+        expect(screen.getByText(/Enviarás la solicitud con el correo/)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reservar cita" })).not.toBeInTheDocument();
         await user.click(screen.getByRole("checkbox"));
         await user.click(screen.getByRole("button", { name: "Enviar solicitud" }));
 
         expect(await screen.findByRole("heading", { name: "Solicitud enviada" })).toHaveFocus();
         expect(screen.queryByRole("heading", { name: "Tu cita quedó reservada" })).not.toBeInTheDocument();
-        expect(screen.getByText("Pendiente de confirmación")).toBeInTheDocument();
-        expect(screen.getByText(/cuando sea confirmada/)).toBeInTheDocument();
+        expect(within(screen.getByTestId("portal-request-card")).getByText("Pendiente")).toBeInTheDocument();
+        expect(screen.getByTestId("request-sent")).toHaveTextContent(/El consultorio la revisará/);
+        expect(screen.getByTestId("portal-request-card")).toHaveTextContent(/Guardamos este horario para ti hasta el/);
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
         // The body is the same as for an instant booking: the server decides, the client never sends a mode.
         expect(Object.keys(JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body))).sort()).toEqual([
             "consentAccepted", "locationId", "patient", "patientTimezone", "startUtc", "typeId",
         ]);
 
-        await user.click(screen.getByRole("button", { name: "Hacer otra solicitud" }));
+        await user.click(screen.getByRole("button", { name: "Enviar otra solicitud" }));
         expect(await screen.findByRole("list", { name: "Mañana" })).toBeInTheDocument();
     });
 

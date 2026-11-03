@@ -7,7 +7,7 @@ import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
-import { fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
+import { APPROVAL_FOLLOW_UP, fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
@@ -159,12 +159,13 @@ function PatientDetails({ email, approvalRequired, typeId, locationId, slot, tim
     return (
         <form className={portal.form} onSubmit={onSubmit} noValidate>
             <p className={portal.lead}>
-                Reservarás con el correo <strong className={portal.email}>{email}</strong>.{" "}
+                {approvalRequired ? "Enviarás la solicitud con el correo" : "Reservarás con el correo"}{" "}
+                <strong className={portal.email}>{email}</strong>.{" "}
                 Si ya eres paciente del consultorio, usaremos los datos que tiene registrados.
             </p>
             {approvalRequired && (
                 <p className={portal.lead} data-testid="booking-approval-note">
-                    Este consultorio revisa cada solicitud. Reservaremos el horario para ti y te avisaremos por correo cuando sea confirmado.
+                    Guardaremos este horario mientras el consultorio revisa tu solicitud. {APPROVAL_FOLLOW_UP}
                 </p>
             )}
             <div>

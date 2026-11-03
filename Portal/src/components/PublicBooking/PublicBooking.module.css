@@ -494,6 +494,18 @@
   margin: 0;
 }
 
+/* Approval mode, said once before the first step: the same warning tone as a pending request's badge. */
+.approvalNotice {
+  margin: 12px 0 4px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px dashed var(--c-warning-border);
+  background: var(--c-warning-surface);
+  color: var(--c-gray-700);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .empty {
   display: flex;
   flex-direction: column;
