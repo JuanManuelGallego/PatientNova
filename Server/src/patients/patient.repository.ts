@@ -133,6 +133,8 @@ export const patientRepository = {
     return {
       active: rows.find((r) => !r.isDeleted) ?? null,
       hasDeleted: rows.some((r) => r.isDeleted),
+      /** A deleted record whose portal access was revoked first: the email stays blocked, never reviewable. */
+      deletedRevoked: rows.some((r) => r.isDeleted && !r.portalAccessEnabled),
     };
   },
 

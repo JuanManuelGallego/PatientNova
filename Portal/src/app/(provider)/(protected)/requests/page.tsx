@@ -1,5 +1,6 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import { Inbox, RefreshCw } from "lucide-react";
 import PageLayout from "@/src/components/PageLayout";
@@ -120,13 +121,22 @@ function RequestsPageContent() {
         />
       </PageLayout>
       {openId && (
-        <RequestDrawer requestId={openId} onClose={() => setOpenId(null)} onResolved={refresh} />
+        <RequestDrawer key={openId} requestId={openId} onClose={() => setOpenId(null)} onResolved={refresh} />
       )}
     </>
   );
 }
 
 export default function RequestsPage() {
+  const { enabled } = usePendingRequests();
+  const router = useRouter();
+
+  // VIEWERs and providers with the portal off have no inbox (the API answers 403/404): send them home instead.
+  useEffect(() => {
+    if (!enabled) router.replace("/dashboard");
+  }, [ enabled, router ]);
+
+  if (!enabled) return null;
   return (
     <Suspense fallback={null}>
       <RequestsPageContent />

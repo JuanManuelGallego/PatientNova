@@ -13,9 +13,8 @@ import { logger } from '../utils/api/logger.js';
 import { buildPaginatedResult, type Paginated } from '../utils/api/pagination.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { getAuditContext } from '../audit-log/audit-log-context.js';
-import { createPatientWithin } from '../patients/patient.service.js';
-import { MAX_PATIENTS_PER_PROVIDER, patientRepository } from '../patients/patient.repository.js';
-import { PatientEmailConflictError, PatientLimitReachedError } from '../patients/patient.errors.js';
+import { createPatientWithin, restorePatientWithin, updatePatientWithin } from '../patients/patient.service.js';
+import { PatientEmailConflictError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent } from '../patient-consents/patient-consent.service.js';
 import { createPortalAppointmentWithin } from '../portal/portal-booking.service.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from '../portal/portal-booking-notifications.js';
@@ -107,40 +106,17 @@ async function logRequestResolution(
   });
 }
 
-/** An existing record the provider chose to use is made usable: restored and/or reactivated, each with an audit. */
+/** An existing record the provider chose to use is made usable through the patient service, each step audited. */
 async function restorePatient(tx: TransactionClient, userId: string, patientId: string) {
-  const restored = await patientRepository.restore(patientId, userId, tx);
-  if (await patientRepository.countActive(userId, tx) > MAX_PATIENTS_PER_PROVIDER) {
-    throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
-  }
-  await logAudit({
-    entityType: EntityType.PATIENT,
-    entityId: patientId,
-    userId,
-    actionType: ActionType.RESTORE,
+  const restored = await restorePatientWithin(tx, patientId, userId, {
     description: 'Paciente restaurado al aprobar una solicitud de reserva',
-    affectedFields: [ 'isDeleted' ],
-    fieldsBefore: { isDeleted: true },
-    fieldsAfter: { isDeleted: false },
-    tx,
-    required: true,
   });
   return restored.status;
 }
 
 async function reactivatePatient(tx: TransactionClient, userId: string, patientId: string) {
-  await tx.patient.update({ where: { id: patientId }, data: { status: PatientStatus.ACTIVE } });
-  await logAudit({
-    entityType: EntityType.PATIENT,
-    entityId: patientId,
-    userId,
-    actionType: ActionType.UPDATE,
+  await updatePatientWithin(tx, patientId, { status: PatientStatus.ACTIVE }, userId, {
     description: 'Paciente reactivado al aprobar una solicitud de reserva',
-    affectedFields: [ 'status' ],
-    fieldsBefore: { status: PatientStatus.INACTIVE },
-    fieldsAfter: { status: PatientStatus.ACTIVE },
-    tx,
-    required: true,
   });
 }
 

@@ -20,14 +20,15 @@ export type PortalPatientResolution =
 type PortalMatch = Awaited<ReturnType<typeof patientRepository.findPortalMatch>>;
 
 export function classifyPortalMatch(match: PortalMatch): PortalPatientResolution {
-  const { active, hasDeleted } = match;
+  const { active, hasDeleted, deletedRevoked } = match;
   if (active) {
     if (!active.portalAccessEnabled) return { kind: 'unavailable', review: false };
     return active.status === PatientStatus.ACTIVE
       ? { kind: 'patient', patientId: active.id }
       : { kind: 'unavailable', review: true };
   }
-  return hasDeleted ? { kind: 'unavailable', review: true } : { kind: 'none' };
+  if (!hasDeleted) return { kind: 'none' };
+  return { kind: 'unavailable', review: !deletedRevoked };
 }
 
 export async function resolvePortalPatient(identity: PortalIdentity, tx?: TransactionClient): Promise<PortalPatientResolution> {

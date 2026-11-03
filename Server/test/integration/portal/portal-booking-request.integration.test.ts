@@ -152,6 +152,24 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     expect((await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, starts[5]!))).status).toBe(202);
   });
 
+  it('without the scheduler, emails the patient whose stale hold this booking expired', async () => {
+    const provider = await approvalProvider();
+    const [ start ] = await slotStarts(provider);
+    const stale = unique('vencida@test.local');
+    const first = await postBooking(sessionFor(provider.id, stale), portalBookingBody(provider, start!));
+    await prisma.bookingRequest.update({ where: { id: first.body.data.request.id }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
+    mocks.dispatch.mockClear();
+
+    const res = await postBooking(sessionFor(provider.id, unique('nueva@test.local')), portalBookingBody(provider, start!));
+
+    expect(res.status).toBe(202);
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: first.body.data.request.id } })).status)
+      .toBe(BookingRequestStatus.EXPIRED);
+    const toStale = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === stale);
+    expect(toStale).toHaveLength(1);
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+
   it('still answers 202 when the receipt email fails after commit', async () => {
     const provider = await approvalProvider();
     const [ start ] = await slotStarts(provider);

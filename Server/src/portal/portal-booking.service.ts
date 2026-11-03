@@ -153,25 +153,22 @@ export const portalBookingService = {
         const location = await publicBookingRepository.findBookableLocation(userId, body.locationId, tx);
         if (!location) throw new PublicLocationNotFoundError();
 
+        // Checked once for both paths: live holds count as busy, so a request never overlaps another hold either.
+        const now = new Date();
+        if (!(await isSlotFree(userId, settings, type.defaultDuration, start, now, { tx }))) throw new SlotUnavailableError();
+        const slot = { typeId: type.id, locationId: location.id, durationMinutes: type.defaultDuration, start };
+
         if (approval) {
-          const request = await holdSlotWithin(tx, session, body, meta, {
-            settings, typeId: type.id, locationId: location.id, durationMinutes: type.defaultDuration, start,
-          });
-          return { kind: 'request' as const, request };
+          return { kind: 'request' as const, held: await holdSlotWithin(tx, session, body, meta, slot, now) };
         }
 
-        const now = new Date();
         const end = new Date(start.getTime() + type.defaultDuration * ONE_MINUTE_MS);
-        if (!(await isSlotFree(userId, settings, type.defaultDuration, start, now, { tx }))) throw new SlotUnavailableError();
-
         const resolution = await resolvePortalPatient(session, tx);
         if (resolution.kind === 'unavailable') {
           if (!resolution.review) throw new PortalBookingUnavailableError();
           // An inactive or deleted-only record: the provider decides through a REVIEW request (6.6).
-          const request = await holdSlotWithin(tx, session, body, meta, {
-            settings, typeId: type.id, locationId: location.id, durationMinutes: type.defaultDuration, start,
-          }, BookingRequestKind.REVIEW);
-          return { kind: 'request' as const, request };
+          const held = await holdSlotWithin(tx, session, body, meta, slot, now, BookingRequestKind.REVIEW);
+          return { kind: 'request' as const, held };
         }
         const patientId = resolution.kind === 'patient' ? resolution.patientId : await createPortalPatient(tx, session, body.patient);
         if (await portalBookingRepository.countUpcomingPortal(userId, patientId, now, tx) >= MAX_UPCOMING_PORTAL_BOOKINGS) {
@@ -196,8 +193,8 @@ export const portalBookingService = {
         return { kind: 'appointment' as const, created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
       }, { timeout: 10000 }));
       if (outcome.kind === 'request') {
-        await afterRequestCreated(userId, session.email, outcome.request.id);
-        return { request: outcome.request };
+        await afterRequestCreated(userId, session.email, outcome.held);
+        return { request: outcome.held.request };
       }
       const { created, settings, event } = outcome;
       await deliverPortalNotificationsNow(event, created.id);

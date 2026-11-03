@@ -17,31 +17,36 @@ import {
   MAX_PENDING_REQUESTS_PER_PROVIDER,
 } from '../booking-requests/booking-request.constants.js';
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
-import { isSlotFree, providerDisplayName, type SlotSettings } from '../public-booking/public-booking.service.js';
+import { providerDisplayName } from '../public-booking/public-booking.service.js';
 import type { ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import {
   PortalRequestCapacityError,
   PortalRequestLimitError,
   PortalRequestNotFoundError,
-  SlotUnavailableError,
 } from './portal-booking.errors.js';
 import { toPortalRequestDto, type PortalRequestDto } from './portal-request.dto.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
+export interface HeldSlot {
+  request: PortalRequestDto;
+  /** Stale holds expired on the way; delivered after commit by `afterRequestCreated`. */
+  expiredIds: string[];
+}
+
+/** The caller holds the provider lock and has already checked `isSlotFree` (holds counted) on this `tx`. */
 export async function holdSlotWithin(
   tx: TransactionClient,
   session: PortalSessionContext,
   body: CreatePortalBookingBody,
   meta: ConsentRequestMeta,
-  slot: { settings: SlotSettings; typeId: string; locationId: string; durationMinutes: number; start: Date },
+  slot: { typeId: string; locationId: string; durationMinutes: number; start: Date },
+  now: Date,
   kind: BookingRequestKind = BookingRequestKind.NEW,
-): Promise<PortalRequestDto> {
+): Promise<HeldSlot> {
   const { userId } = session;
-  const now = new Date();
   const end = new Date(slot.start.getTime() + slot.durationMinutes * ONE_MINUTE_MS);
-  if (!(await isSlotFree(userId, slot.settings, slot.durationMinutes, slot.start, now, { tx }))) throw new SlotUnavailableError();
 
   const hash = emailHash(session.email);
   if (!hash) throw new PortalRequestLimitError();
@@ -52,7 +57,7 @@ export async function holdSlotWithin(
   if (forEmail >= MAX_PENDING_REQUESTS_PER_EMAIL) throw new PortalRequestLimitError();
   if (forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalRequestCapacityError();
 
-  const request = await bookingRequestService.createHoldWithin(tx, userId, {
+  const { request, expiredIds } = await bookingRequestService.createHoldWithin(tx, userId, {
     kind,
     email: session.email,
     name: body.patient.name,
@@ -68,7 +73,7 @@ export async function holdSlotWithin(
     consentIp: meta.ipAddress ?? null,
     consentUserAgent: meta.userAgent ?? null,
   }, now);
-  return toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx));
+  return { request: toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx)), expiredIds };
 }
 
 async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
@@ -90,10 +95,14 @@ async function sendRequestReceivedEmail(userId: string, to: string): Promise<voi
   }
 }
 
-/** After commit: the patient's receipt and, without the scheduler, the provider notice. Both best effort. */
-export async function afterRequestCreated(userId: string, to: string, requestId: string): Promise<void> {
+/**
+ * After commit: the patient's receipt and, without the scheduler, the provider notice and the `expired` notices for
+ * holds expired on the way. All best effort.
+ */
+export async function afterRequestCreated(userId: string, to: string, held: HeldSlot): Promise<void> {
   await sendRequestReceivedEmail(userId, to);
-  await deliverBookingRequestNotificationsNow('received', [ requestId ]);
+  await deliverBookingRequestNotificationsNow('received', [ held.request.id ]);
+  await deliverBookingRequestNotificationsNow('expired', held.expiredIds);
 }
 
 export const portalRequestService = {

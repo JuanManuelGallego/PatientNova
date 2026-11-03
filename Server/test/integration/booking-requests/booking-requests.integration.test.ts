@@ -54,7 +54,7 @@ async function requestHold(p: LiveProvider, start: Date, email?: string) {
     await withProviderLock(tx, p.id);
     const now = new Date();
     if (!(await isSlotFree(p.id, settings(), DURATION_MIN, start, now, { tx }))) throw new Error('slot taken');
-    return bookingRequestService.createHoldWithin(tx, p.id, holdInput(p, start, email), now);
+    return (await bookingRequestService.createHoldWithin(tx, p.id, holdInput(p, start, email), now)).request;
   });
 }
 
@@ -233,6 +233,20 @@ describe('hold overlap backstop and expiry', () => {
     expect(reloaded.resolvedAt).not.toBeNull();
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: old.id } });
     expect(audits.map((a) => a.description)).toContain('Solicitud de reserva vencida');
+  });
+
+  it('createHoldWithin reports the stale holds it expired', async () => {
+    const p = await createLiveProvider();
+    const start = await firstStart(p);
+    const old = await requestHold(p, start);
+    await expireNow(old.id);
+
+    const { request, expiredIds } = await prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, p.id);
+      return bookingRequestService.createHoldWithin(tx, p.id, holdInput(p, start, 'otra@example.com'), new Date());
+    });
+    expect(expiredIds).toEqual([ old.id ]);
+    expect(request.id).not.toBe(old.id);
   });
 
   it('audits an expiry as the system, not as the patient whose booking swept it', async () => {

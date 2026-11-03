@@ -67,7 +67,7 @@ const bearer = (p: { id: string; email: string; role: string }) => ({ Authorizat
 async function seedRequest(p: LiveProvider, opts: { start?: string | undefined; email?: string | undefined; now?: Date | undefined; kind?: BookingRequestKind | undefined } = {}) {
   const start = new Date(opts.start ?? (await slotStarts(p))[ 0 ]!);
   const now = opts.now ?? new Date();
-  return prisma.$transaction((tx) => bookingRequestService.createHoldWithin(tx, p.id, {
+  return prisma.$transaction(async (tx) => (await bookingRequestService.createHoldWithin(tx, p.id, {
     kind: opts.kind ?? BookingRequestKind.NEW,
     email: opts.email ?? unique('solicitud@test.local').toLowerCase(),
     name: 'Lucia',
@@ -82,7 +82,7 @@ async function seedRequest(p: LiveProvider, opts: { start?: string | undefined; 
     consentAcceptedAt: new Date(now.getTime() - 5 * 60_000),
     consentIp: '203.0.113.9',
     consentUserAgent: 'test-agent',
-  }, now));
+  }, now)).request);
 }
 
 const api = '/v1/booking-requests';
@@ -369,16 +369,41 @@ describe('booking-request-notify', () => {
     expect(opts.body).not.toContain(req.email);
   });
 
-  it('uses the request template on WhatsApp', async () => {
+  it('uses the request template on WhatsApp, and a separate nudge template that says when the slot is released', async () => {
     const p = await provider();
     await prisma.user.update({ where: { id: p.id }, data: { reminderActive: true, reminderChannel: Channel.WHATSAPP, whatsappNumber: '+573009998877' } });
     const req = await seedRequest(p);
     mocks.dispatch.mockClear();
+    await deliverBookingRequestNotification({ requestId: req.id, event: 'received' });
     await deliverBookingRequestNotification({ requestId: req.id, event: 'nudge' });
-    const [ channel, opts ] = mocks.dispatch.mock.calls[ 0 ]!;
-    expect(channel).toBe(Channel.WHATSAPP);
-    expect(opts.contentSid).toBe(config.twilio.portalRequestSid);
-    expect(Object.keys(opts.contentVariables)).toEqual([ '1', '2', '3' ]);
+
+    const [ receivedChannel, received ] = mocks.dispatch.mock.calls[ 0 ]!;
+    const [ nudgeChannel, nudge ] = mocks.dispatch.mock.calls[ 1 ]!;
+    expect(receivedChannel).toBe(Channel.WHATSAPP);
+    expect(received.contentSid).toBe(config.twilio.portalRequestSid);
+    expect(Object.keys(received.contentVariables)).toEqual([ '1', '2', '3' ]);
+    expect(nudgeChannel).toBe(Channel.WHATSAPP);
+    expect(nudge.contentSid).toBe(config.twilio.portalRequestNudgeSid);
+    expect(nudge.contentSid).not.toBe(config.twilio.portalRequestSid);
+    expect(Object.keys(nudge.contentVariables)).toEqual([ '1', '2', '3', '4' ]);
+  });
+
+  it('links the provider to /requests without a double slash when PORTAL_URL ends in one', async () => {
+    const p = await provider();
+    await prisma.user.update({ where: { id: p.id }, data: { reminderActive: true, reminderChannel: Channel.EMAIL } });
+    const req = await seedRequest(p);
+    const portalConfig = config.portal as { url: string };
+    const urlWas = portalConfig.url;
+    portalConfig.url = 'https://app.example.com/';
+    try {
+      mocks.dispatch.mockClear();
+      await deliverBookingRequestNotification({ requestId: req.id, event: 'received' });
+    } finally {
+      portalConfig.url = urlWas;
+    }
+    const [ , opts ] = mocks.dispatch.mock.calls[ 0 ]!;
+    expect(opts.body).toContain('https://app.example.com/requests');
+    expect(opts.body).not.toContain('//requests');
   });
 
   it('skips stale jobs and throws on failed sends so pg-boss retries', async () => {

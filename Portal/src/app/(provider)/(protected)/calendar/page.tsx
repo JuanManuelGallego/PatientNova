@@ -257,6 +257,7 @@ function CalendarContent() {
       />
       {openRequestId && (
         <RequestDrawer
+          key={openRequestId}
           requestId={openRequestId}
           onClose={() => setOpenRequestId(null)}
           onResolved={() => {

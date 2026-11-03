@@ -158,15 +158,21 @@ describe('POST /v1/portal/bookings', () => {
       where: { id: revokedInactive.id },
       data: { portalAccessEnabled: false, status: PatientStatus.INACTIVE },
     });
+    // Revoked first, then deleted: deletion must not turn the block into a reviewable request.
+    const revokedDeleted = await createTestPatient(provider.id);
+    await prisma.patient.update({
+      where: { id: revokedDeleted.id },
+      data: { portalAccessEnabled: false, isDeleted: true, deletedAt: new Date() },
+    });
 
-    for (const p of [ revoked, revokedInactive ]) {
+    for (const p of [ revoked, revokedInactive, revokedDeleted ]) {
       const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, start!));
       expect(res.status).toBe(409);
       expect(res.body.error).toBe('Online booking unavailable');
     }
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
     expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(2);
+    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(3);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
   });
 

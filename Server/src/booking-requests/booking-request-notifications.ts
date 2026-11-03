@@ -63,13 +63,15 @@ function isDeliverable(request: LoadedRequest | null, event: BookingRequestEvent
   }
 }
 
+const portalBase = (): string => config.portal.url.replace(/\/+$/, '');
+
 function patientMessage(request: LoadedRequest, event: BookingRequestEvent): Message {
   const timezone = request.patientTimezone;
   const params = {
     providerName: providerDisplayName(request.user),
     whenLocal: formatWhen(request.startAt, timezone),
     timezone,
-    bookingUrl: bookingUrl(request.user.bookingSlug) ?? config.portal.url.replace(/\/+$/, ''),
+    bookingUrl: bookingUrl(request.user.bookingSlug) ?? portalBase(),
   };
   const email = event === 'rejected' ? renderBookingRequestRejectedEmail(params) : renderBookingRequestExpiredEmail(params);
   return { channel: Channel.EMAIL, opts: { to: request.email, subject: email.subject, body: email.body } };
@@ -84,14 +86,12 @@ function providerMessage(request: LoadedRequest, event: BookingRequestEvent): Me
   const name = providerDisplayName(user);
   const tz = user.timezone;
   if (channel === Channel.WHATSAPP) {
-    return {
-      channel,
-      opts: {
-        to,
-        contentSid: config.twilio.portalRequestSid,
-        contentVariables: { '1': name, '2': formatDate(request.startAt, tz, true), '3': formatTime(request.startAt, tz) },
-      },
-    };
+    const slot = { '1': name, '2': formatDate(request.startAt, tz, true), '3': formatTime(request.startAt, tz) };
+    // The nudge has its own template so it reads as a reminder, not as a second new request.
+    const opts = event === 'nudge'
+      ? { contentSid: config.twilio.portalRequestNudgeSid, contentVariables: { ...slot, '4': formatWhen(request.holdExpiresAt, tz) } }
+      : { contentSid: config.twilio.portalRequestSid, contentVariables: slot };
+    return { channel, opts: { to, ...opts } };
   }
   const when = formatWhen(request.startAt, tz);
   const lines = event === 'nudge'
@@ -108,7 +108,7 @@ function providerMessage(request: LoadedRequest, event: BookingRequestEvent): Me
     '',
     ...lines,
     '',
-    `Revísala en PatientNova: ${config.portal.url}/requests`,
+    `Revísala en PatientNova: ${portalBase()}/requests`,
   ].join('\n');
   const subject = event === 'nudge' ? 'Solicitud de cita pendiente de revisión' : 'Nueva solicitud de cita en línea';
   return { channel, opts: { to, body, ...(channel === Channel.EMAIL && { subject }) } };

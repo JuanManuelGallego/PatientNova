@@ -6,7 +6,8 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js
 import { logger } from '../utils/api/logger.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { bookingRequestRepository, type CreateBookingRequestData } from './booking-request.repository.js';
-import { HOUR_MS, NUDGE_HOURS, RESOLVED_RETENTION_DAYS, holdExpiry, isNudgeDue } from './booking-request.constants.js';
+import { ONE_DAY_MS, ONE_HOUR_MS } from '../utils/config/constants.js';
+import { NUDGE_HOURS, RESOLVED_RETENTION_DAYS, holdExpiry, isNudgeDue } from './booking-request.constants.js';
 import { enqueueBookingRequestNotifications } from './booking-request-notifications.js';
 
 export type NewBookingRequest = Omit<CreateBookingRequestData, 'userId' | 'holdExpiresAt'>;
@@ -37,8 +38,12 @@ export const bookingRequestService = {
     return ids;
   },
 
+  /**
+   * `expiredIds`: stale holds this call expired first. Without the scheduler the caller must deliver their `expired`
+   * notices after commit (`deliverBookingRequestNotificationsNow`).
+   */
   async createHoldWithin(tx: TransactionClient, userId: string, input: NewBookingRequest, now: Date) {
-    await bookingRequestService.expireStaleWithin(tx, userId, now);
+    const expiredIds = await bookingRequestService.expireStaleWithin(tx, userId, now);
     const request = await bookingRequestRepository.create(
       { ...input, userId, holdExpiresAt: holdExpiry(now, input.startAt) },
       tx,
@@ -62,7 +67,7 @@ export const bookingRequestService = {
       required: true,
     });
     await enqueueBookingRequestNotifications('received', [ request.id ], tx);
-    return request;
+    return { request, expiredIds };
   },
 
   /**
@@ -82,7 +87,7 @@ export const bookingRequestService = {
     }
 
     let nudged = 0;
-    const candidates = await bookingRequestRepository.findNudgeCandidates(now, NUDGE_HOURS * HOUR_MS);
+    const candidates = await bookingRequestRepository.findNudgeCandidates(now, NUDGE_HOURS * ONE_HOUR_MS);
     for (const c of candidates.filter((c) => isNudgeDue(c.createdAt, c.holdExpiresAt, now))) {
       const claimed = await prisma.$transaction(async (tx) => {
         if (!(await bookingRequestRepository.markNudged(c.id, now, tx))) return false;
@@ -95,6 +100,6 @@ export const bookingRequestService = {
   },
 
   async purgeResolved(now: Date = new Date()): Promise<number> {
-    return bookingRequestRepository.purgeResolvedBefore(new Date(now.getTime() - RESOLVED_RETENTION_DAYS * 24 * HOUR_MS));
+    return bookingRequestRepository.purgeResolvedBefore(new Date(now.getTime() - RESOLVED_RETENTION_DAYS * ONE_DAY_MS));
   },
 };
