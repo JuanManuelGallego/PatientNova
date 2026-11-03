@@ -334,7 +334,8 @@
   font-weight: 600;
 }
 
-.status[data-status="SCHEDULED"] {
+.status[data-status="SCHEDULED"],
+.status[data-status="PENDING"] {
   background: var(--c-brand-light);
   color: var(--c-brand);
 }

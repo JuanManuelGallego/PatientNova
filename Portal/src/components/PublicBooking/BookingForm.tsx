@@ -6,7 +6,7 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
-import type { PortalAppointment } from "@/src/types/PortalBooking";
+import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
 import { fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
@@ -21,7 +21,7 @@ interface BookingFormProps {
     type: PublicAppointmentType;
     slot: PublicSlot;
     timezone: string;
-    onBooked: (appointment: PortalAppointment) => void;
+    onBooked: (outcome: PortalBookingOutcome) => void;
     onSlotTaken: (message: string) => void;
 }
 
@@ -64,7 +64,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 </div>
             )}
 
-            <PatientStep slug={slug} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
+            <PatientStep slug={slug} approvalRequired={provider.approvalRequired} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
                 onBooked={onBooked} onSlotTaken={onSlotTaken} />
         </div>
     );
@@ -72,11 +72,13 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
 
 interface PatientStepProps {
     slug: string;
+    /** The provider reviews each booking: the form sends a request instead of reserving. */
+    approvalRequired: boolean;
     typeId: string;
     locationId: string;
     slot: PublicSlot;
     timezone: string;
-    onBooked: (appointment: PortalAppointment) => void;
+    onBooked: (outcome: PortalBookingOutcome) => void;
     onSlotTaken: (message: string) => void;
 }
 
@@ -97,7 +99,7 @@ function PatientStep({ slug, ...rest }: PatientStepProps) {
 
 type Field = "name" | "lastName" | "phone" | "consent";
 
-function PatientDetails({ email, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
+function PatientDetails({ email, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
     Omit<PatientStepProps, "slug"> & { email: string; onSessionLost: () => void }) {
     const [ name, setName ] = useState("");
     const [ lastName, setLastName ] = useState("");
@@ -138,7 +140,7 @@ function PatientDetails({ email, typeId, locationId, slot, timezone, onBooked, o
             return;
         }
         try {
-            const appointment = await createBooking({
+            const outcome = await createBooking({
                 typeId,
                 locationId,
                 startUtc: slot.startUtc,
@@ -146,7 +148,7 @@ function PatientDetails({ email, typeId, locationId, slot, timezone, onBooked, o
                 consentAccepted: true,
                 patient: { name: name.trim(), lastName: lastName.trim(), ...(phoneValue && { phone: phoneValue }) },
             });
-            onBooked(appointment);
+            onBooked(outcome);
         } catch (err) {
             if (!(err instanceof ApiClientError)) return;
             if (err.status === 401) onSessionLost();
@@ -160,6 +162,11 @@ function PatientDetails({ email, typeId, locationId, slot, timezone, onBooked, o
                 Reservarás con el correo <strong className={portal.email}>{email}</strong>.{" "}
                 Si ya eres paciente del consultorio, usaremos los datos que tiene registrados.
             </p>
+            {approvalRequired && (
+                <p className={portal.lead} data-testid="booking-approval-note">
+                    Este consultorio revisa cada solicitud. Reservaremos el horario para ti y te avisaremos por correo cuando sea confirmado.
+                </p>
+            )}
             <div>
                 <label className="form-label">
                     Nombre
@@ -206,7 +213,7 @@ function PatientDetails({ email, typeId, locationId, slot, timezone, onBooked, o
             </div>
             {error && <p className={`error-inline ${portal.error}`} role="alert">{error}</p>}
             <button type="submit" className={`btn-primary ${portal.submit}`} disabled={loading} aria-busy={loading || undefined}>
-                {loading ? "Reservando…" : "Reservar cita"}
+                {loading ? (approvalRequired ? "Enviando…" : "Reservando…") : (approvalRequired ? "Enviar solicitud" : "Reservar cita")}
             </button>
         </form>
     );

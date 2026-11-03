@@ -934,7 +934,7 @@ As planned:
 - Settings API accepts, diffs and returns `bookingApprovalMode`.
 - Tests: held slot hidden and unbookable, provider appointment over a hold 409, hold vs appointment `Promise.all` race, expired holds ignored and swept, 23P01 mapping, PII ciphertext at rest, settings audit.
 
-**PR 6.2 — Server + Portal: request creation and patient experience.**
+**PR 6.2 — Server + Portal: request creation and patient experience.** *(Built 2026-11-02: `holdSlotWithin` and `portalRequestService` in `src/portal/portal-request.service.ts`, `resolveBookingMode`, 202 `{ request }`, `requests` in `GET /appointments`, `POST /requests/:id/cancel`, `approvalRequired` in the public profile; Portal `RequestSent`, `PortalRequestCard`, pending list with cancel. The receipt email is sent after commit with `sendTransactionalEmail`; the `booking-request-notify` queue stays in 6.4.)*
 - `bookingMode(userId, tx)` replaces the 404 in `book` (reschedule still requires AUTO). The approval branch, in one transaction: lock → live → bookable type/location → `isSlotAvailable` with holds → caps → `createHoldWithin` → required `BOOKING_REQUEST` audit under `portalPatientAuditContext`. No Patient or consent row. Returns 202 `{ request: PortalRequestDto }` (allow-list: id, start/end, duration, type, location, `holdExpiresAt`, status). Public provider DTO gains `approvalRequired`.
 - `GET /v1/portal/appointments` returns `{appointments, requests, consentRequired}`; requests are scoped by session `(userId, emailHash)` and always returned.
 - `POST /v1/portal/requests/:id/cancel` (`portal-change-ip` + `portalSessionGuard`): lock → own PENDING → CANCELLED + audit; every miss is `PortalRequestNotFoundError` (404).

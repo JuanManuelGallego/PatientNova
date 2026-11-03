@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { BookingApprovalMode } from '../../generated/prisma/enums.js';
 import { bookingSlugSchema } from '../booking-settings/booking-settings.schemas.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
@@ -51,6 +52,8 @@ export const publicBookingService = {
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
+      /** The form adapts its copy; not sensitive. Bookings then become requests the provider reviews. */
+      approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,

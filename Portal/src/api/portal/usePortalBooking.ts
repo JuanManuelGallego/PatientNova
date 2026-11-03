@@ -1,13 +1,15 @@
 import { useCallback } from "react";
 import { usePortalMutation } from "@/src/api/base/useClientMutation";
 import { usePortalQuery } from "@/src/api/base/useClientQuery";
-import type { PortalAppointment, PortalAppointments, PortalBookingRequest, PortalRescheduleRequest } from "@/src/types/PortalBooking";
+import type {
+    PortalAppointment, PortalAppointments, PortalBookingOutcome, PortalBookingRequest, PortalRescheduleRequest,
+} from "@/src/types/PortalBooking";
 import type { PublicSlots } from "@/src/types/PublicBooking";
 
 export function useCreateBooking() {
-    const { mutate, ...rest } = usePortalMutation<{ appointment: PortalAppointment }>();
+    const { mutate, ...rest } = usePortalMutation<PortalBookingOutcome>();
     const createBooking = useCallback(
-        async (body: PortalBookingRequest) => (await mutate("/bookings", body)).appointment,
+        (body: PortalBookingRequest) => mutate("/bookings", body),
         [ mutate ],
     );
     return { createBooking, ...rest };
@@ -15,7 +17,7 @@ export function useCreateBooking() {
 
 export function usePortalAppointments() {
     const { data, ...rest } = usePortalQuery<PortalAppointments>("/appointments");
-    return { appointments: data?.appointments, ...rest };
+    return { appointments: data?.appointments, requests: data?.requests, ...rest };
 }
 
 const appointmentPath = (id: string) => `/appointments/${encodeURIComponent(id)}`;
@@ -24,6 +26,12 @@ export function useCancelAppointment() {
     const { mutate, ...rest } = usePortalMutation<void>();
     const cancelAppointment = useCallback((id: string) => mutate(`${appointmentPath(id)}/cancel`, {}), [ mutate ]);
     return { cancelAppointment, ...rest };
+}
+
+export function useCancelRequest() {
+    const { mutate, ...rest } = usePortalMutation<void>();
+    const cancelRequest = useCallback((id: string) => mutate(`/requests/${encodeURIComponent(id)}/cancel`, {}), [ mutate ]);
+    return { cancelRequest, ...rest };
 }
 
 /**

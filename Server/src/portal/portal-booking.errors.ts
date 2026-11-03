@@ -25,6 +25,13 @@ export class PortalAppointmentNotFoundError extends ApiError {
   }
 }
 
+/** One answer for every booking request the session may not act on: not theirs, unknown, resolved or expired. */
+export class PortalRequestNotFoundError extends ApiError {
+  constructor() {
+    super('Request not found', 404);
+  }
+}
+
 /** The patient's appointment exists but can no longer be moved online (provider-created, or no longer bookable). */
 export class PortalRescheduleUnavailableError extends ApiError {
   constructor() {

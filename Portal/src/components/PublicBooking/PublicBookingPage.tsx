@@ -6,7 +6,7 @@ import Link from "next/link";
 import { MapPin, Video } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import type { PortalAppointment } from "@/src/types/PortalBooking";
+import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
@@ -14,6 +14,7 @@ import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
 import { BookingForm } from "./BookingForm";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
+import { PortalRequestCard } from "./PortalRequestCard";
 import { reveal, SlotSteps, Step, useSlotPicker } from "./SlotPicker";
 
 export function PublicBookingPage({ slug }: { slug: string }) {
@@ -49,7 +50,7 @@ function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvi
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
     const timezone = browserTimezone();
     const [ typeId, setTypeId ] = useState<string | null>(null);
-    const [ booked, setBooked ] = useState<PortalAppointment | null>(null);
+    const [ booked, setBooked ] = useState<PortalBookingOutcome | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
     const picker = useSlotPicker(slug, provider, { typeId: type?.id ?? null }, timezone);
@@ -85,7 +86,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             <>
                 {nav}
                 <ProviderHero slug={slug} provider={provider} />
-                <BookingDone slug={slug} appointment={booked} timezone={timezone} onBookAnother={bookAnother} />
+                {"request" in booked
+                    ? <RequestSent slug={slug} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
+                    : <BookingDone slug={slug} appointment={booked.appointment} timezone={timezone} onBookAnother={bookAnother} />}
             </>
         );
     }
@@ -176,6 +179,25 @@ function BookingDone({ slug, appointment, timezone, onBookAnother }: {
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
             <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Reservar otra cita</button>
+        </section>
+    );
+}
+
+function RequestSent({ slug, request, timezone, onBookAnother }: {
+    slug: string; request: PortalPendingRequest; timezone: string; onBookAnother: () => void;
+}) {
+    const heading = useRef<HTMLHeadingElement>(null);
+    useEffect(() => { heading.current?.focus(); }, []);
+    return (
+        <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="request-sent" data-testid="request-sent">
+            <h2 id="request-sent" ref={heading} tabIndex={-1} className={styles.doneTitle}>Solicitud enviada</h2>
+            <p className={styles.muted}>
+                Tu proveedor la revisará. Mientras tanto reservamos el horario para ti y te avisaremos por correo cuando sea confirmada.
+            </p>
+            <PortalRequestCard request={request} timezone={timezone} inset />
+            <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
+            <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
+            <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Hacer otra solicitud</button>
         </section>
     );
 }

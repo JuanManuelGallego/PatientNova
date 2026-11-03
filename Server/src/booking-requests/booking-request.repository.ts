@@ -28,6 +28,17 @@ export interface CreateBookingRequestData {
   consentUserAgent?: string | null;
 }
 
+/** What a patient sees of their own request (allow-list); never contact data or consent evidence. */
+export const requestForDtoSelect = {
+  id: true,
+  status: true,
+  startAt: true,
+  endAt: true,
+  holdExpiresAt: true,
+  type: { select: { name: true } },
+  location: { select: { name: true, address: true, isVirtual: true } },
+} as const;
+
 /** A hold is live while PENDING and before `holdExpiresAt`; the cron only finalizes the rest. */
 function liveHoldWhere(userId: string, now: Date, opts: LiveHoldOptions) {
   return {
@@ -90,6 +101,40 @@ export const bookingRequestRepository = {
     await tx.bookingRequest.updateMany({
       where: { id: { in: ids }, status: BookingRequestStatus.PENDING },
       data: { status: BookingRequestStatus.EXPIRED, resolvedAt: now },
+    });
+  },
+
+  /** Live pending requests of the provider, optionally of one email (blind index). Used by the caps. */
+  async countLive(userId: string, now: Date, tx: TransactionClient, emailHash?: string): Promise<number> {
+    return tx.bookingRequest.count({
+      where: { ...liveHoldWhere(userId, now, {}), ...(emailHash !== undefined && { emailHash }) },
+    });
+  },
+
+  /** The email's live pending requests with what the patient may see. */
+  async listLiveForEmail(userId: string, emailHash: string, now: Date, tx?: TransactionClient) {
+    return (tx ?? prisma).bookingRequest.findMany({
+      where: { ...liveHoldWhere(userId, now, {}), emailHash },
+      select: requestForDtoSelect,
+      orderBy: { startAt: 'asc' },
+    });
+  },
+
+  async findForDto(id: string, tx: TransactionClient) {
+    return tx.bookingRequest.findUniqueOrThrow({ where: { id }, select: requestForDtoSelect });
+  },
+
+  async findLiveOwn(userId: string, emailHash: string, id: string, now: Date, tx: TransactionClient) {
+    return tx.bookingRequest.findFirst({
+      where: { ...liveHoldWhere(userId, now, {}), emailHash, id },
+      select: { id: true, startAt: true, endAt: true },
+    });
+  },
+
+  async cancel(id: string, now: Date, tx: TransactionClient): Promise<void> {
+    await tx.bookingRequest.update({
+      where: { id },
+      data: { status: BookingRequestStatus.CANCELLED, resolvedAt: now, resolvedBy: 'patient' },
     });
   },
 

@@ -17,10 +17,13 @@ script:post-response {
 }
 
 docs {
-  Needs the `portal_session` cookie. Returns `{ appointments, consentRequired }`: the session
+  Needs the `portal_session` cookie. Returns `{ appointments, requests, consentRequired }`: the session
   patient's upcoming active appointments (at most 50, soonest first) once they have accepted the
-  current privacy policy, otherwise `{ appointments: [], consentRequired: true }` with the same shape
+  current privacy policy, otherwise `{ appointments: [], requests, consentRequired: true }` with the same shape
   whether or not the email belongs to a patient.
+
+  `requests` are the session email's live PENDING booking requests (approval mode), listed even when
+  `consentRequired` is true because they belong to the verified email itself.
 
   Each appointment carries `canCancel` and `canReschedule`, computed on the server: cancel for any
   upcoming active appointment; reschedule only for online bookings whose type and location are still

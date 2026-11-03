@@ -28,7 +28,6 @@ import { appointmentService } from '../../../src/appointments/appointment.servic
 import {
   ActionSource,
   AppointmentStatus,
-  BookingApprovalMode,
   Channel,
   EntityType,
   PatientStatus,
@@ -362,7 +361,7 @@ describe('POST /v1/portal/bookings', () => {
     expect(await prisma.auditLog.count({ where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL } })).toBe(0);
   });
 
-  it('requires a session and the CSRF header, and answers as an unknown provider in approval mode', async () => {
+  it('requires a session and the CSRF header, and rejects a foreign Origin', async () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);
     const session = sessionFor(provider.id, unique('guard@test.local'));
@@ -376,9 +375,6 @@ describe('POST /v1/portal/bookings', () => {
       .send(portalBookingBody(provider, start!));
     expect(foreign.status).toBe(403);
 
-    await prisma.user.update({ where: { id: provider.id }, data: { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL } });
-    const approval = await postBooking(session, portalBookingBody(provider, start!));
-    expect({ status: approval.status, error: approval.body.error }).toEqual({ status: 404, error: 'Provider not found' });
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
   });
 });
@@ -397,7 +393,7 @@ describe('GET /v1/portal/appointments', () => {
       const res = await getAppointments(sessionFor(provider.id, email));
       expect(res.status).toBe(200);
       expect(res.headers['cache-control']).toBe('no-store');
-      expect(res.body.data).toEqual({ appointments: [], consentRequired: true });
+      expect(res.body.data).toEqual({ appointments: [], requests: [], consentRequired: true });
     }
   });
 
@@ -424,7 +420,7 @@ describe('GET /v1/portal/appointments', () => {
 
     const res = await getAppointments(session);
     expect(res.status).toBe(200);
-    expect(shapeOf(res.body.data)).toEqual({ appointments: 'array', consentRequired: 'boolean' });
+    expect(shapeOf(res.body.data)).toEqual({ appointments: 'array', requests: 'array', consentRequired: 'boolean' });
     expect(res.body.data.consentRequired).toBe(false);
     expect(res.body.data.appointments.map((a: { id: string }) => a.id)).toEqual([
       first.body.data.appointment.id,

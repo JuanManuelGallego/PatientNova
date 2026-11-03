@@ -1,0 +1,34 @@
+import type { BookingRequestStatus } from '../../generated/prisma/enums.js';
+import type { Prisma } from '../../generated/prisma/client.js';
+import { ONE_MINUTE_MS } from '../utils/config/constants.js';
+import type { requestForDtoSelect } from '../booking-requests/booking-request.repository.js';
+
+/** The only booking-request shape a patient ever sees (allow-list): no contact data, no consent evidence. */
+export interface PortalRequestDto {
+  id: string;
+  status: BookingRequestStatus;
+  startUtc: string;
+  endUtc: string;
+  durationMinutes: number;
+  /** When the held slot is released if the provider has not answered. */
+  holdExpiresAt: string;
+  type: { name: string } | null;
+  location: { name: string; address: string | null; isVirtual: boolean } | null;
+}
+
+export type PortalRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof requestForDtoSelect }>;
+
+export function toPortalRequestDto(r: PortalRequestRow): PortalRequestDto {
+  return {
+    id: r.id,
+    status: r.status,
+    startUtc: r.startAt.toISOString(),
+    endUtc: r.endAt.toISOString(),
+    durationMinutes: Math.round((r.endAt.getTime() - r.startAt.getTime()) / ONE_MINUTE_MS),
+    holdExpiresAt: r.holdExpiresAt.toISOString(),
+    type: r.type ? { name: r.type.name } : null,
+    location: r.location
+      ? { name: r.location.name, address: r.location.isVirtual ? null : r.location.address, isVirtual: r.location.isVirtual }
+      : null,
+  };
+}
