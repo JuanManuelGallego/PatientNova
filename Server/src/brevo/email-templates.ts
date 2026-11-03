@@ -146,3 +146,44 @@ export function renderBookingRequestReceivedEmail(params: { providerName: string
     ].join('\n'),
   };
 }
+
+const ANOTHER_TIME_LINE = 'Si quieres, puedes solicitar otro horario aquí:';
+
+/** Neutral by design: the patient never learns why the provider did not confirm. */
+export function renderBookingRequestRejectedEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  timezone: string;
+  bookingUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Tu solicitud de cita con ${params.providerName} no fue confirmada`,
+    body: [
+      'Hola,',
+      '',
+      `${params.providerName} no pudo confirmar tu solicitud de cita del ${params.whenLocal} (hora de ${params.timezone}).`,
+      '',
+      ANOTHER_TIME_LINE,
+      params.bookingUrl,
+    ].join('\n'),
+  };
+}
+
+export function renderBookingRequestExpiredEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  timezone: string;
+  bookingUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Tu solicitud de cita con ${params.providerName} venció`,
+    body: [
+      'Hola,',
+      '',
+      `Tu solicitud de cita con ${params.providerName} del ${params.whenLocal} (hora de ${params.timezone}) venció sin ser confirmada.`,
+      '',
+      ANOTHER_TIME_LINE,
+      params.bookingUrl,
+    ].join('\n'),
+  };
+}

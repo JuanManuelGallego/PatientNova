@@ -8,6 +8,7 @@ import { useTheme } from "@/src/providers/ThemeContext";
 import { useRouter } from "next/navigation";
 import { NAV_ICONS, ACTION_ICONS } from "@/src/config/icons";
 import { Moon, Sun } from "lucide-react";
+import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 
 const NAV_ITEMS = [
   { id: "dashboard" as const, path: "/dashboard", label: "Vista General" },
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { id: "appointments" as const, path: "/appointments", label: "Citas" },
   { id: "calendar" as const, path: "/calendar", label: "Calendario" },
   { id: "reminders" as const, path: "/reminders", label: "Recordatorios" },
+  { id: "requests" as const, path: "/requests", label: "Solicitudes", requiresInbox: true },
   { id: "settings" as const, path: "/settings", label: "Configuración" },
 ];
 
@@ -34,6 +36,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuthContext();
   const { isDark, toggleTheme } = useTheme();
   const LogoutIcon = ACTION_ICONS.logout;
+  const inbox = usePendingRequests();
 
   return (
     <aside
@@ -62,7 +65,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="sidebar-nav" data-testid="sidebar-nav">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !("requiresInbox" in item) || inbox.enabled).map((item) => {
           const isActive = pathname === item.path;
           const Icon = NAV_ICONS[item.id];
           return (
@@ -76,6 +79,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className={`nav-item ${isActive ? "active" : ""}`}>
                 <Icon size={18} />
                 {item.label}
+                {item.id === "requests" && inbox.pending > 0 && (
+                  <span
+                    className="nav-badge"
+                    aria-label={`${inbox.pending} pendientes`}
+                    data-testid="sidebar-requests-badge"
+                  >
+                    {inbox.pending > 99 ? "99+" : inbox.pending}
+                  </span>
+                )}
               </div>
             </Link>
           );

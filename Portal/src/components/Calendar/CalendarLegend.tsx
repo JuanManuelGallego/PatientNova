@@ -1,6 +1,8 @@
 import { APPT_STATUS_CFG } from "@/src/types/Appointment";
 
-export function CalendarLegend() {
+import { HOLD_LABEL } from "./PendingHold";
+
+export function CalendarLegend({ showHolds = false }: { showHolds?: boolean }) {
   return (
     <div
       style={{
@@ -35,6 +37,12 @@ export function CalendarLegend() {
           Horario Bloqueado
         </span>
       </div>
+      {showHolds && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }} data-testid="calendar-legend-hold">
+          <span className="cal-hold" style={{ display: "inline-block", width: 14, height: 14, borderRadius: 2 }} />
+          <span style={{ fontSize: 12, color: "var(--c-gray-600)" }}>{HOLD_LABEL}</span>
+        </div>
+      )}
     </div>
   );
 }

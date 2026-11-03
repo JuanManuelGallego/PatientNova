@@ -20,15 +20,20 @@ describe('classifyPortalMatch', () => {
   });
 
   it('revoked portal access is unavailable', () => {
-    expect(classifyPortalMatch({ active: active({ portalAccessEnabled: false }), hasDeleted: false })).toEqual({ kind: 'unavailable' });
+    expect(classifyPortalMatch({ active: active({ portalAccessEnabled: false }), hasDeleted: false })).toEqual({ kind: 'unavailable', review: false });
   });
 
   it('an INACTIVE patient is unavailable', () => {
-    expect(classifyPortalMatch({ active: active({ status: PatientStatus.INACTIVE }), hasDeleted: false })).toEqual({ kind: 'unavailable' });
+    expect(classifyPortalMatch({ active: active({ status: PatientStatus.INACTIVE }), hasDeleted: false })).toEqual({ kind: 'unavailable', review: true });
+  });
+
+  it('revoked access wins over INACTIVE: not reviewable', () => {
+    expect(classifyPortalMatch({ active: active({ status: PatientStatus.INACTIVE, portalAccessEnabled: false }), hasDeleted: true }))
+      .toEqual({ kind: 'unavailable', review: false });
   });
 
   it('only soft-deleted matches are unavailable', () => {
-    expect(classifyPortalMatch({ active: null, hasDeleted: true })).toEqual({ kind: 'unavailable' });
+    expect(classifyPortalMatch({ active: null, hasDeleted: true })).toEqual({ kind: 'unavailable', review: true });
   });
 
   it('no match is none', () => {

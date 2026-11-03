@@ -24,6 +24,12 @@ import { WeekView } from "@/src/components/Calendar/WeekView";
 import { DayPanel } from "@/src/components/Calendar/DayPanel";
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { useFetchBookingRequests } from "@/src/api/booking-requests/useFetchBookingRequests";
+import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
+import { RequestDrawer } from "@/src/components/Drawers/RequestDrawer";
+
+/** The provider cap on live requests is 50, so one page covers any visible range. */
+const HOLDS_PAGE_SIZE = 100;
 
 function CalendarContent() {
   // One timezone for the whole calendar: fetch window, day buckets, "today" and click-to-create.
@@ -56,7 +62,17 @@ function CalendarContent() {
   const { blockedTimes, loading: loadingBlocked, fetchBlockedTimes } =
     useFetchBlockedTimes(calendarFilters);
 
-  const { rows, weekDays, apptByDate, blockedByDate, holidayMap, cellDate, navLabel, hourRange } =
+  const inbox = usePendingRequests();
+  const { requests: holds, fetchRequests: fetchHolds } = useFetchBookingRequests({
+    status: "pending",
+    from: calendarFilters.dateFrom,
+    to: calendarFilters.dateTo,
+    pageSize: HOLDS_PAGE_SIZE,
+  }, inbox.enabled);
+  const [ openRequestId, setOpenRequestId ] = useState<string | null>(null);
+  const onSelectHold = inbox.enabled ? setOpenRequestId : undefined;
+
+  const { rows, weekDays, apptByDate, blockedByDate, holdByDate, holidayMap, cellDate, navLabel, hourRange } =
     useCalendarData({
       calYear,
       calMonth,
@@ -64,6 +80,7 @@ function CalendarContent() {
       viewMode,
       appointments,
       blockedTimes,
+      holds,
       timezone,
     });
 
@@ -98,6 +115,7 @@ function CalendarContent() {
 
   const selectedDayAppts = selectedDay ? (apptByDate[ selectedDay ] ?? []) : [];
   const selectedDayBlocked = selectedDay ? (blockedByDate[ selectedDay ] ?? []) : [];
+  const selectedDayHolds = selectedDay ? (holdByDate[ selectedDay ] ?? []) : [];
 
   return (
     <>
@@ -149,6 +167,8 @@ function CalendarContent() {
               onDrillToDay={drillToDay}
               onViewAppt={openAppointment}
               onSelectBlockedTime={setEditBlockedTime}
+              holdByDate={holdByDate}
+              onSelectHold={onSelectHold}
             />
           )}
           {viewMode === ViewMode.Week && (
@@ -167,9 +187,11 @@ function CalendarContent() {
                 setShowCreate(true);
               }}
               onSelectBlockedTime={setEditBlockedTime}
+              holdByDate={holdByDate}
+              onSelectHold={onSelectHold}
             />
           )}
-          <CalendarLegend />
+          <CalendarLegend showHolds={inbox.enabled} />
         </div>
       </PageLayout>
 
@@ -178,6 +200,8 @@ function CalendarContent() {
           selectedDay={selectedDay}
           appts={selectedDayAppts}
           blockedTimes={selectedDayBlocked}
+          holds={selectedDayHolds}
+          onSelectHold={onSelectHold}
           onClose={() => setSelectedDay(null)}
           onViewAppt={openAppointment}
           onDrillToDay={drillToDay}
@@ -231,6 +255,17 @@ function CalendarContent() {
           },
         }}
       />
+      {openRequestId && (
+        <RequestDrawer
+          requestId={openRequestId}
+          onClose={() => setOpenRequestId(null)}
+          onResolved={() => {
+            void fetchHolds();
+            void fetchAppointments();
+            void inbox.refetch();
+          }}
+        />
+      )}
       {deleteAppt && (
         <CancelAppointmentModal
           appt={deleteAppt}

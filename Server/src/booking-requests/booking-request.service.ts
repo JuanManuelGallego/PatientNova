@@ -2,10 +2,12 @@ import { ActionType, BookingRequestStatus, EntityType } from '../../generated/pr
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { bookingRequestExpiryAuditContext } from '../audit-log/audit-actors.js';
-import type { TransactionClient } from '../utils/prisma/prisma-client.js';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { logger } from '../utils/api/logger.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { bookingRequestRepository, type CreateBookingRequestData } from './booking-request.repository.js';
-import { holdExpiry } from './booking-request.constants.js';
+import { HOUR_MS, NUDGE_HOURS, RESOLVED_RETENTION_DAYS, holdExpiry, isNudgeDue } from './booking-request.constants.js';
+import { enqueueBookingRequestNotifications } from './booking-request-notifications.js';
 
 export type NewBookingRequest = Omit<CreateBookingRequestData, 'userId' | 'holdExpiresAt'>;
 
@@ -31,6 +33,7 @@ export const bookingRequestService = {
         });
       }
     });
+    await enqueueBookingRequestNotifications('expired', ids, tx);
     return ids;
   },
 
@@ -58,6 +61,40 @@ export const bookingRequestService = {
       tx,
       required: true,
     });
+    await enqueueBookingRequestNotifications('received', [ request.id ], tx);
     return request;
+  },
+
+  /**
+   * The 15-minute sweep: expire stale holds per provider (each under its own lock, emailing the patient), then nudge
+   * each provider once about requests past the middle of their hold. Correctness never depends on it: the clock
+   * already releases expired holds.
+   */
+  async sweep(now: Date = new Date()): Promise<{ expired: number; nudged: number }> {
+    let expired = 0;
+    for (const userId of await bookingRequestRepository.providersWithStale(now)) {
+      try {
+        const ids = await prisma.$transaction((tx) => bookingRequestService.expireStaleWithin(tx, userId, now), { timeout: 10000 });
+        expired += ids.length;
+      } catch (err) {
+        logger.error({ userId, err }, 'Booking request expiry failed for a provider');
+      }
+    }
+
+    let nudged = 0;
+    const candidates = await bookingRequestRepository.findNudgeCandidates(now, NUDGE_HOURS * HOUR_MS);
+    for (const c of candidates.filter((c) => isNudgeDue(c.createdAt, c.holdExpiresAt, now))) {
+      const claimed = await prisma.$transaction(async (tx) => {
+        if (!(await bookingRequestRepository.markNudged(c.id, now, tx))) return false;
+        await enqueueBookingRequestNotifications('nudge', [ c.id ], tx);
+        return true;
+      });
+      if (claimed) nudged++;
+    }
+    return { expired, nudged };
+  },
+
+  async purgeResolved(now: Date = new Date()): Promise<number> {
+    return bookingRequestRepository.purgeResolvedBefore(new Date(now.getTime() - RESOLVED_RETENTION_DAYS * 24 * HOUR_MS));
   },
 };

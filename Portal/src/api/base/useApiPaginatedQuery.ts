@@ -8,7 +8,7 @@ type PaginatedData<T> = {
 };
 
 export function useApiPaginatedQuery<T>(
-    url: string,
+    url: string | null,
     errorMessage?: string
 ) {
     const { data, loading, error, refetch } = useApiRequest<PaginatedData<T>, ApiPaginatedResponse<T>>(

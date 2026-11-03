@@ -286,8 +286,8 @@ describe('bookingApprovalMode setting', () => {
     expect(audits.some((a) => (a.affectedFields as string[]).includes('bookingApprovalMode'))).toBe(true);
   });
 
-  it('the API schema refuses REQUIRE_APPROVAL until the inbox ships (6.3) and any unknown mode', () => {
-    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).success).toBe(false);
+  it('the API schema accepts both modes and refuses an unknown one', () => {
+    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).success).toBe(true);
     expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'MAYBE' }).success).toBe(false);
     expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'AUTO_CONFIRM' }).success).toBe(true);
   });

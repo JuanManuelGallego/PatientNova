@@ -12,12 +12,16 @@ const useFetchNeedsMeetingLink = vi.fn();
 const fetchConnection = vi.fn();
 const startOAuth = vi.fn();
 const useFetchGoogleConnection = vi.fn();
+let pendingRequests = 0;
 
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({ user: role ? { role, portalEnabled } : null }),
 }));
 vi.mock("@/src/api/appointments/useFetchNeedsMeetingLink", () => ({
   useFetchNeedsMeetingLink: (...args: unknown[]) => useFetchNeedsMeetingLink(...args),
+}));
+vi.mock("@/src/providers/PendingRequestsContext", () => ({
+  usePendingRequests: () => ({ enabled: true, pending: pendingRequests, refetch: vi.fn() }),
 }));
 vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
 vi.mock("@/src/api/google/useFetchGoogleConnection", () => ({
@@ -33,6 +37,7 @@ beforeEach(() => {
   portalEnabled = false;
   connection = undefined;
   needsLink = undefined;
+  pendingRequests = 0;
   useFetchNeedsMeetingLink.mockReset().mockImplementation(() => ({ data: needsLink, loading: false, error: null, refetch: vi.fn() }));
   fetchConnection.mockReset().mockResolvedValue(undefined);
   startOAuth.mockReset().mockResolvedValue({ authUrl: "https://accounts.google.test" });
@@ -149,5 +154,31 @@ describe("ProviderAlerts", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Permiso denegado");
     expect(fetchConnection).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProviderAlerts: pending booking requests", () => {
+  it("tells admins how many requests wait for an answer and links to the inbox", () => {
+    portalEnabled = true;
+    pendingRequests = 2;
+    render(<ProviderAlerts />);
+    expect(screen.getByTestId("pending-requests-banner")).toHaveTextContent("Tienes 2 solicitudes de cita en línea esperando tu respuesta.");
+    expect(screen.getByTestId("pending-requests-link")).toHaveAttribute("href", "/requests");
+  });
+
+  it("hides with none, with the portal off and for viewers", () => {
+    portalEnabled = true;
+    const { unmount } = render(<ProviderAlerts />);
+    expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();
+    unmount();
+    pendingRequests = 1;
+    portalEnabled = false;
+    const second = render(<ProviderAlerts />);
+    expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();
+    second.unmount();
+    portalEnabled = true;
+    role = "VIEWER";
+    render(<ProviderAlerts />);
+    expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();
   });
 });

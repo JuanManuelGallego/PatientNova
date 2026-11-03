@@ -7,7 +7,9 @@ import {
 import { Appointment } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { ViewMode } from "./types";
-import { computeHourRange, eventDays, toDateStr } from "./constants";
+import { computeHourRange, eventDays, toDateStr, type HeldSlot } from "./constants";
+
+const NO_HOLDS: HeldSlot[] = [];
 
 interface UseCalendarDataArgs {
   calYear: number;
@@ -16,6 +18,8 @@ interface UseCalendarDataArgs {
   viewMode: ViewMode;
   appointments: Appointment[];
   blockedTimes: BlockedTime[];
+  /** Slots held by pending booking requests (dashed "Pendiente de revisión"). */
+  holds?: HeldSlot[];
   /** Provider timezone: events are placed on the day/hour they fall on there, matching the fetch window. */
   timezone?: string;
 }
@@ -27,6 +31,7 @@ export function useCalendarData({
   viewMode,
   appointments,
   blockedTimes,
+  holds = NO_HOLDS,
   timezone,
 }: UseCalendarDataArgs) {
   const { daysInMonth, startOffset, rows } = useMemo(() => {
@@ -72,6 +77,16 @@ export function useCalendarData({
     return map;
   }, [ blockedTimes, timezone ]);
 
+  const holdByDate = useMemo(() => {
+    const map: Record<string, HeldSlot[]> = {};
+    for (const h of holds) {
+      for (const date of eventDays(h.startAt, h.endAt, timezone)) {
+        (map[ date ] ??= []).push(h);
+      }
+    }
+    return map;
+  }, [ holds, timezone ]);
+
   const holidayMap = useMemo(() => {
     const holidays = getColombianHolidays(calYear);
     const map: Record<string, string> = {};
@@ -94,10 +109,11 @@ export function useCalendarData({
     if (viewMode === ViewMode.Week) {
       const weekAppts = weekDays.flatMap((d) => apptByDate[ toDateStr(d) ] ?? []);
       const weekBlocked = weekDays.flatMap((d) => blockedByDate[ toDateStr(d) ] ?? []);
-      return computeHourRange(weekAppts, weekBlocked, timezone);
+      const weekHolds = weekDays.flatMap((d) => holdByDate[ toDateStr(d) ] ?? []);
+      return computeHourRange(weekAppts, weekBlocked, timezone, weekHolds);
     }
     return computeHourRange([]);
-  }, [viewMode, weekDays, apptByDate, blockedByDate, timezone]);
+  }, [viewMode, weekDays, apptByDate, blockedByDate, holdByDate, timezone]);
 
   return {
     daysInMonth,
@@ -107,6 +123,7 @@ export function useCalendarData({
     weekLabel,
     apptByDate,
     blockedByDate,
+    holdByDate,
     holidayMap,
     cellDate,
     navLabel,

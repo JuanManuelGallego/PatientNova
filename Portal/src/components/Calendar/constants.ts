@@ -94,6 +94,7 @@ export function computeHourRange(
   appointments: import("@/src/types/Appointment").Appointment[],
   blockedTimes: BlockedTime[] = [],
   timezone?: string,
+  holds: HeldSlot[] = [],
 ): HourRange {
   let first = DEFAULT_FIRST_HOUR;
   let last = DEFAULT_LAST_HOUR;
@@ -101,6 +102,7 @@ export function computeHourRange(
   const ranges = [
     ...appointments.map((a) => [a.startAt, a.endAt]),
     ...blockedTimes.map((bt) => [bt.startTimeUtc, bt.endTimeUtc]),
+    ...holds.map((h) => [h.startAt, h.endAt]),
   ];
   for (const [start, end] of ranges) {
     for (const day of eventDays(start, end, timezone)) {
@@ -187,6 +189,27 @@ export function layoutBlockedTimes(
     const endMin = minuteOfDay(bt.endTimeUtc, timezone, d);
     return {
       bt,
+      top: ((startMin - firstHour * 60) / 60) * HOUR_HEIGHT,
+      height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, MIN_CHIP_PX),
+    };
+  });
+}
+
+/** A slot held by a pending booking request (the calendar only needs these fields). */
+export type HeldSlot = Pick<import("@/src/types/BookingRequest").BookingRequest, "id" | "startAt" | "endAt" | "name" | "lastName">;
+
+export interface PositionedHold {
+  hold: HeldSlot;
+  top: number;
+  height: number;
+}
+
+export function layoutHolds(holds: HeldSlot[], firstHour: number, timezone: string | undefined, day: string): PositionedHold[] {
+  return holds.map((hold) => {
+    const startMin = minuteOfDay(hold.startAt, timezone, day);
+    const endMin = minuteOfDay(hold.endAt, timezone, day);
+    return {
+      hold,
       top: ((startMin - firstHour * 60) / 60) * HOUR_HEIGHT,
       height: Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, MIN_CHIP_PX),
     };

@@ -22,9 +22,7 @@ export const updateBookingSettingsSchema = z
   .object({
     bookingSlug: bookingSlugSchema.nullable().optional(),
     bookingEnabled: z.boolean().optional(),
-    bookingApprovalMode: z.literal(BookingApprovalMode.AUTO_CONFIRM, {
-      message: 'bookingApprovalMode REQUIRE_APPROVAL is not available yet',
-    }).optional(),
+    bookingApprovalMode: z.enum(BookingApprovalMode).optional(),
     slotIntervalMinutes: z.number().int().refine(
       (n) => (SLOT_INTERVAL_OPTIONS as readonly number[]).includes(n),
       { message: `slotIntervalMinutes must be one of ${SLOT_INTERVAL_OPTIONS.join(', ')}` },

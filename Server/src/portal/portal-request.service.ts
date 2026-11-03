@@ -1,4 +1,5 @@
-import { ActionType, BookingRequestStatus, EntityType } from '../../generated/prisma/enums.js';
+import { ActionType, BookingRequestKind, BookingRequestStatus, EntityType } from '../../generated/prisma/enums.js';
+import { deliverBookingRequestNotificationsNow } from '../booking-requests/booking-request-notifications.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { ONE_MINUTE_MS } from '../utils/config/constants.js';
@@ -35,6 +36,7 @@ export async function holdSlotWithin(
   body: CreatePortalBookingBody,
   meta: ConsentRequestMeta,
   slot: { settings: SlotSettings; typeId: string; locationId: string; durationMinutes: number; start: Date },
+  kind: BookingRequestKind = BookingRequestKind.NEW,
 ): Promise<PortalRequestDto> {
   const { userId } = session;
   const now = new Date();
@@ -51,6 +53,7 @@ export async function holdSlotWithin(
   if (forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalRequestCapacityError();
 
   const request = await bookingRequestService.createHoldWithin(tx, userId, {
+    kind,
     email: session.email,
     name: body.patient.name,
     lastName: body.patient.lastName,
@@ -68,7 +71,7 @@ export async function holdSlotWithin(
   return toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx));
 }
 
-export async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
+async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
   try {
     const provider = await prisma.user.findUnique({
       where: { id: userId },
@@ -85,6 +88,12 @@ export async function sendRequestReceivedEmail(userId: string, to: string): Prom
     logger.error({ userId, maskedTo: maskEmail(to), errorName: err instanceof Error ? err.name : undefined },
       'Booking request received email failed');
   }
+}
+
+/** After commit: the patient's receipt and, without the scheduler, the provider notice. Both best effort. */
+export async function afterRequestCreated(userId: string, to: string, requestId: string): Promise<void> {
+  await sendRequestReceivedEmail(userId, to);
+  await deliverBookingRequestNotificationsNow('received', [ requestId ]);
 }
 
 export const portalRequestService = {

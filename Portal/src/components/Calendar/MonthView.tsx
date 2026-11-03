@@ -2,6 +2,7 @@ import Image from "next/image";
 import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeChip } from "./BlockedTimeChip";
+import { PendingHoldChip } from "./PendingHold";
 import { DAY_NAMES_ES } from "./constants";
 import { todayFormattedString } from "@/src/utils/TimeUtils";
 import { MonthViewProps } from "./types";
@@ -19,6 +20,8 @@ export function MonthView({
   onDrillToDay,
   onViewAppt,
   onSelectBlockedTime,
+  holdByDate,
+  onSelectHold,
 }: MonthViewProps) {
   const today = todayFormattedString(timezone);
   return (
@@ -44,6 +47,7 @@ export function MonthView({
             const isPast = date !== null && date < today;
             const appts = date ? (apptByDate[ date ] ?? []) : [];
             const blocked = date ? (blockedByDate[ date ] ?? []) : [];
+            const holds = date && onSelectHold ? (holdByDate?.[ date ] ?? []) : [];
             const holiday = date ? holidayMap[ date ] : undefined;
             const noRightBorder = (i + 1) % 7 === 0;
             const noBottomBorder = i >= rows * 7 - 7;
@@ -100,10 +104,13 @@ export function MonthView({
                           onSelectBlockedTime={onSelectBlockedTime}
                         />
                       ))}
+                      {onSelectHold && holds.slice(0, 2).map((h) => (
+                        <PendingHoldChip key={h.id} hold={h} onSelectHold={onSelectHold} />
+                      ))}
                       {appts.slice(0, 3).map((a: Appointment) => (
                         <ApptChip key={a.id} a={a} onViewAppt={onViewAppt} compact/>
                       ))}
-                      {(appts.length > 3 || blocked.length > 2) && (
+                      {(appts.length > 3 || blocked.length > 2 || holds.length > 2) && (
                         <button
                           className="cal-overflow-btn"
                           onClick={(e) => {
@@ -111,7 +118,7 @@ export function MonthView({
                             onSelectDay(date);
                           }}
                         >
-                              +{Math.max(0, appts.length - 3) + Math.max(0, blocked.length - 2)} más
+                              +{Math.max(0, appts.length - 3) + Math.max(0, blocked.length - 2) + Math.max(0, holds.length - 2)} más
                         </button>
                       )}
                     </div>

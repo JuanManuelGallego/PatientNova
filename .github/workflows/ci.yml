@@ -86,6 +86,7 @@ jobs:
       TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID: dummyPortalBookingSid
       TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID: dummyPortalCancelSid
       TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID: dummyPortalRescheduleSid
+      TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID: dummyPortalRequestSid
       TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
       BREVO_API_KEY: xkeysib-dummy
       BREVO_FROM_EMAIL: no-reply@example.com
