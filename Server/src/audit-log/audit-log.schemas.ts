@@ -26,8 +26,10 @@ export const listAuditLogsSchema = z.object({
   entityType: z.union([ entityTypeEnum, z.array(entityTypeEnum) ]).optional(),
   entityId: z.uuid().optional(),
   actionType: z.union([ actionTypeEnum, z.array(actionTypeEnum) ]).optional(),
-  source: actionSourceEnum.optional(),
+  source: z.union([ actionSourceEnum, z.array(actionSourceEnum) ]).optional(),
   actorId: z.string().optional(),
+  /** Portal activity of one patient, matched by the portal actor id of the patient's current email. */
+  portalPatientId: z.uuid().optional(),
   search: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
@@ -35,6 +37,9 @@ export const listAuditLogsSchema = z.object({
   order: z.enum([ 'asc', 'desc' ]).default('desc'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
+}).refine((query) => !(query.actorId && query.portalPatientId), {
+  message: 'actorId and portalPatientId cannot be combined',
+  path: [ 'portalPatientId' ],
 });
 
 export type ListAuditLogsQuery = z.infer<typeof listAuditLogsSchema>;

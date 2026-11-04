@@ -52,6 +52,8 @@ export const QUERY_PARAMS = {
   auditActionType: "actionType",
   auditDate: "dateFilter",
   auditEntityId: "entityId",
+  auditSource: "source",
+  auditPortalPatientId: "portalPatientId",
 
   // settings
   settingsTab: "tab",

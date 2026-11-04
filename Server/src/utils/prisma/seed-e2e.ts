@@ -1,9 +1,8 @@
 import bcrypt from 'bcrypt';
-import { randomBytes } from 'node:crypto';
 import { prisma } from './prisma-client.js';
 import { maskEmail } from '../api/logger.js';
 import { config } from '../config/config.js';
-import { AdminRole, AdminStatus, Channel } from '../../../generated/prisma/client.ts';
+import { AdminRole, AdminStatus, BookingApprovalMode, Channel } from '../../../generated/prisma/client.ts';
 
 /**
  * Deterministic data for the Playwright suite against a throwaway stack. The ids/names match the
@@ -20,6 +19,10 @@ export const E2E_SEED = {
   publicTypeId: '00000000-0000-4000-8000-0000000000b1',
   publicFollowUpTypeId: '00000000-0000-4000-8000-0000000000b3',
   publicLocationId: '00000000-0000-4000-8000-0000000000b2',
+  approvalProviderEmail: 'e2e-approval-provider@example.com',
+  approvalSlug: 'e2e-aprobacion',
+  approvalTypeId: '00000000-0000-4000-8000-0000000000c1',
+  approvalLocationId: '00000000-0000-4000-8000-0000000000c2',
 } as const;
 
 // A complete profile unlocks UI flows that are gated on it (e.g. the patient welcome message).
@@ -80,25 +83,88 @@ async function seedE2e() {
     create: { userId: user.id, name: 'Consentimiento E2E.pdf', content, mimeType: 'application/pdf', sizeBytes: content.length },
   });
 
-  await seedPublicProvider();
+  // Both portal providers log in with the admin password, so the inbox specs need no extra CI variables.
+  const portalPasswordHash = await bcrypt.hash(config.admin.password, config.auth.bcryptRounds);
+  const publicProviderId = await seedPortalProvider({
+    email: E2E_SEED.publicProviderEmail,
+    slug: E2E_SEED.publicSlug,
+    firstName: 'Ana',
+    lastName: 'Pública',
+    displayName: 'Dra. Ana Pública',
+    approvalMode: BookingApprovalMode.AUTO_CONFIRM,
+    passwordHash: portalPasswordHash,
+  });
+  await prisma.appointmentType.upsert({
+    where: { id: E2E_SEED.publicTypeId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicTypeId, name: 'Primera consulta', defaultDuration: 60, defaultPrice: 150000, bookableOnline: true, userId: publicProviderId },
+  });
+  await prisma.appointmentType.upsert({
+    where: { id: E2E_SEED.publicFollowUpTypeId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicFollowUpTypeId, name: 'Control', defaultDuration: 30, defaultPrice: 90000, bookableOnline: true, userId: publicProviderId },
+  });
+  await prisma.appointmentLocation.upsert({
+    where: { id: E2E_SEED.publicLocationId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.publicLocationId, name: 'Consultorio Centro', address: 'Calle 10 # 5-20', bookableOnline: true, userId: publicProviderId },
+  });
+
+  const approvalProviderId = await seedPortalProvider({
+    email: E2E_SEED.approvalProviderEmail,
+    slug: E2E_SEED.approvalSlug,
+    firstName: 'Clara',
+    lastName: 'Aprobación',
+    displayName: 'Dra. Clara Aprobación',
+    approvalMode: BookingApprovalMode.REQUIRE_APPROVAL,
+    passwordHash: portalPasswordHash,
+  });
+  await prisma.appointmentType.upsert({
+    where: { id: E2E_SEED.approvalTypeId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.approvalTypeId, name: 'Consulta inicial', defaultDuration: 60, defaultPrice: 140000, bookableOnline: true, userId: approvalProviderId },
+  });
+  await prisma.appointmentLocation.upsert({
+    where: { id: E2E_SEED.approvalLocationId },
+    update: { isDeleted: false, isActive: true, bookableOnline: true },
+    create: { id: E2E_SEED.approvalLocationId, name: 'Consultorio Norte', address: 'Carrera 7 # 80-10', bookableOnline: true, userId: approvalProviderId },
+  });
+
+  // Local reruns reuse the database: start each run without old holds, so the request caps never fill up.
+  await prisma.bookingRequest.deleteMany({ where: { userId: { in: [ publicProviderId, approvalProviderId ] } } });
 
   console.log(`E2E seed ready for ${maskEmail(email)}`);
 }
 
-async function seedPublicProvider() {
+interface PortalProviderSeed {
+  email: string;
+  slug: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  approvalMode: BookingApprovalMode;
+  passwordHash: string;
+}
+
+/** A provider with a live public booking page: open every day 08:00-18:00, hourly grid, no lead time. */
+async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
   const booking = {
-    bookingSlug: E2E_SEED.publicSlug, bookingEnabled: true, slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60,
+    bookingSlug: seed.slug, bookingEnabled: true, bookingApprovalMode: seed.approvalMode,
+    slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60,
     reminderChannel: Channel.EMAIL, reminderActive: true,
   };
   const provider = await prisma.user.upsert({
-    where: { email: E2E_SEED.publicProviderEmail },
-    update: { status: AdminStatus.ACTIVE, deletedAt: null, isDeleted: false, ...booking },
+    where: { email: seed.email },
+    update: {
+      status: AdminStatus.ACTIVE, deletedAt: null, isDeleted: false, passwordHash: seed.passwordHash,
+      failedLoginAttempts: 0, lockedUntil: null, ...booking,
+    },
     create: {
-      email: E2E_SEED.publicProviderEmail,
-      passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), config.auth.bcryptRounds),
-      firstName: 'Ana',
-      lastName: 'Pública',
-      displayName: 'Dra. Ana Pública',
+      email: seed.email,
+      passwordHash: seed.passwordHash,
+      firstName: seed.firstName,
+      lastName: seed.lastName,
+      displayName: seed.displayName,
       jobTitle: 'Psicóloga',
       role: AdminRole.ADMIN,
       status: AdminStatus.ACTIVE,
@@ -109,21 +175,7 @@ async function seedPublicProvider() {
   await prisma.availabilityRule.createMany({
     data: [ 1, 2, 3, 4, 5, 6, 7 ].map((weekday) => ({ userId: provider.id, weekday, startMinute: 8 * 60, endMinute: 18 * 60 })),
   });
-  await prisma.appointmentType.upsert({
-    where: { id: E2E_SEED.publicTypeId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicTypeId, name: 'Primera consulta', defaultDuration: 60, defaultPrice: 150000, bookableOnline: true, userId: provider.id },
-  });
-  await prisma.appointmentType.upsert({
-    where: { id: E2E_SEED.publicFollowUpTypeId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicFollowUpTypeId, name: 'Control', defaultDuration: 30, defaultPrice: 90000, bookableOnline: true, userId: provider.id },
-  });
-  await prisma.appointmentLocation.upsert({
-    where: { id: E2E_SEED.publicLocationId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicLocationId, name: 'Consultorio Centro', address: 'Calle 10 # 5-20', bookableOnline: true, userId: provider.id },
-  });
+  return provider.id;
 }
 
 seedE2e()

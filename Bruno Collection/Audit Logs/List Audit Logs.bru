@@ -15,9 +15,18 @@ params:query {
   entityId: 
   actionType: CREATE
   source: API
-  actorId: 
+  ~source: PUBLIC_PORTAL
+  actorId:
+  ~portalPatientId:
   orderBy: eventTimeUtc
   order: desc
   page: 1
   pageSize: 20
+}
+
+docs {
+  `source` can repeat (e.g. `source=JOB&source=PUBLIC_PORTAL`).
+  `portalPatientId` lists one patient's portal activity, matched by the portal actor id of the patient's
+  current email (rows written under an earlier email are not found). It cannot be combined with `actorId`;
+  an unknown or foreign patient gives an empty page.
 }

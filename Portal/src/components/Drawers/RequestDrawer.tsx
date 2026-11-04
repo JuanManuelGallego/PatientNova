@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { DrawerShell, DrawerState, Row, Section } from "@/src/components/Drawers/DrawerUtils";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
@@ -9,7 +10,7 @@ import { useFetchBookingRequest } from "@/src/api/booking-requests/useFetchBooki
 import { useResolveBookingRequest } from "@/src/api/booking-requests/useResolveBookingRequest";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { fmtDate, fmtDateTime, fmtTime } from "@/src/utils/TimeUtils";
-import { STATUS_ICONS } from "@/src/config/icons";
+import { DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import type { BookingRequestDetail, RequestCandidate } from "@/src/types/BookingRequest";
 
 /** `""` = no explicit choice: reuse the active record or create a new patient. */
@@ -209,6 +210,15 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
             {pending && (
               <p className="form-input-hint" data-testid="request-outcome">{approvalOutcome(request, choice)}</p>
             )}
+            <Section title="Información del sistema" quiet>
+              <Link
+                href={`/settings?tab=Registro+de+actividad&entityId=${request.id}`}
+                className="drawer-link"
+                data-testid="request-drawer-audit-link"
+              >
+                <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
+              </Link>
+            </Section>
           </>
         )}
       </DrawerShell>

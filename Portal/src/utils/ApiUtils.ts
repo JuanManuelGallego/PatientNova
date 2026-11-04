@@ -90,6 +90,7 @@ export const buildAuditLogQueryString = (filters?: FetchAuditLogsFilters): strin
         entityId: filters?.entityId,
         actionType: filters?.actionType,
         source: filters?.source,
+        portalPatientId: filters?.portalPatientId,
         search: filters?.search,
         dateFrom: filters?.dateFrom,
         dateTo: filters?.dateTo,

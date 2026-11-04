@@ -63,6 +63,8 @@ export default defineConfig({
     },
 
     // No session at all: public/patient-facing pages. Runs without the auth setup.
+    // OTP budget: the API allows 10 code requests per IP per 15 minutes for the whole run. Login and booking
+    // use one each in both projects; approval and review run only here (desktop): 6 in total, 4 left for retries.
     {
       name: 'public',
       testMatch: publicSpecs,

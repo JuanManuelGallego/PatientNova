@@ -162,6 +162,9 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://test:test@localhost:5432/patientnova_e2e
       RATE_LIMIT_MAX: "100000"
+      # The coarse per-IP class limiter (`public-ip`/`portal-ip`, 60/min by default): every e2e request comes
+      # from one IP. The named OTP/booking/change limiters are fixed in code and still apply (see AGENTS.md).
+      PUBLIC_RATE_LIMIT_MAX: "100000"
       ENABLE_SCHEDULER: "false"
       ENABLE_PORTAL: "true"
       ALLOWED_ORIGINS: '["http://localhost:3000"]'

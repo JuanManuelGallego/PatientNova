@@ -1,19 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { Env } from '../../utils/env';
+import { latestCode, stripVercelBypass } from '../../support/portal';
 
 const SLUG = 'e2e-publica';
-const MOCK_BREVO_URL = process.env.MOCK_BREVO_URL ?? 'http://localhost:4010';
-
-async function latestCode(email: string): Promise<string> {
-    let code = '';
-    await expect.poll(async () => {
-        const res = await fetch(`${MOCK_BREVO_URL}/__test/latest-code?email=${encodeURIComponent(email)}`);
-        if (!res.ok) return '';
-        code = ((await res.json()) as { code: string }).code;
-        return code;
-    }, { message: 'OTP email never reached the mock Brevo server', timeout: 15_000 }).toMatch(/^\d{6}$/);
-    return code;
-}
 
 async function requestCode(page: Page, email: string) {
     await page.getByLabel('Correo electrónico').fill(email);
@@ -25,12 +13,7 @@ async function requestCode(page: Page, email: string) {
 
 test.describe('portal login on "Mis citas"', () => {
     test.beforeEach(async ({ page }) => {
-        await page.route(`${new URL(Env.apiBaseUrl).origin}/**`, (route) => {
-            const headers = { ...route.request().headers() };
-            delete headers[ 'x-vercel-protection-bypass' ];
-            delete headers[ 'x-vercel-set-bypass-cookie' ];
-            return route.continue({ headers });
-        });
+        await stripVercelBypass(page);
     });
 
     test('emailed code logs in, consent, reload keeps the session, logout', async ({ page }, testInfo) => {

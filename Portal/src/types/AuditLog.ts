@@ -10,6 +10,8 @@ export enum EntityType {
   CONSENT_DOCUMENT = "CONSENT_DOCUMENT",
   GOOGLE_CONNECTION = "GOOGLE_CONNECTION",
   GOOGLE_MEET_SPACE = "GOOGLE_MEET_SPACE",
+  BOOKING_REQUEST = "BOOKING_REQUEST",
+  PATIENT_CONSENT = "PATIENT_CONSENT",
 }
 
 export enum ActionType {
@@ -46,7 +48,9 @@ export interface FetchAuditLogsFilters {
   entityType?: EntityType | EntityType[];
   entityId?: string;
   actionType?: ActionType | ActionType[];
-  source?: ActionSource;
+  source?: ActionSource | ActionSource[];
+  /** Portal activity of one patient (matched on the server by the patient's current email). */
+  portalPatientId?: string;
   search?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -70,7 +74,12 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.CONSENT_DOCUMENT]: { label: "Consentimiento", color: "#475569", bg: "#F8FAFC" },
   [EntityType.GOOGLE_CONNECTION]: { label: "Conexión Google", color: "#2563EB", bg: "#EFF6FF" },
   [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
+  [EntityType.BOOKING_REQUEST]: { label: "Solicitud de reserva", color: "#B45309", bg: "#FFFBEB" },
+  [EntityType.PATIENT_CONSENT]: { label: "Consentimiento de datos", color: "#334155", bg: "#F1F5F9" },
 };
+
+/** Neutral style for an enum value the server sent before the Portal knew it. */
+export const UNKNOWN_PILL_STYLE = { color: "#4B5563", bg: "#F3F4F6" } as const;
 
 export const ACTION_TYPE_CONFIG: Record<
   ActionType,

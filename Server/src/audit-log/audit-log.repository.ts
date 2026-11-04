@@ -32,7 +32,7 @@ export const auditLogRepository = {
     return log;
   },
 
-  async findMany(userId: string, query: ListAuditLogsQuery): Promise<Paginated<AuditLog>> {
+  async findMany(userId: string, query: Omit<ListAuditLogsQuery, 'portalPatientId'>): Promise<Paginated<AuditLog>> {
     const { entityType, entityId, actionType, source, actorId, search, dateFrom, dateTo, orderBy, order, page, pageSize } = query;
     const eventTimeFilter: Prisma.DateTimeFilter = {
       ...(dateFrom && { gte: new Date(dateFrom) }),
@@ -43,13 +43,14 @@ export const auditLogRepository = {
 
     const entityTypes = entityType ? (Array.isArray(entityType) ? entityType : [ entityType ]) : undefined;
     const actionTypes = actionType ? (Array.isArray(actionType) ? actionType : [ actionType ]) : undefined;
+    const sources = source ? (Array.isArray(source) ? source : [ source ]) : undefined;
 
     const where: Prisma.AuditLogWhereInput = {
       userId,
       ...(entityTypes && { entityType: { in: entityTypes } }),
       ...(entityId && { entityId }),
       ...(actionTypes && { actionType: { in: actionTypes } }),
-      ...(source && { source }),
+      ...(sources && { source: { in: sources } }),
       ...(actorId && { actorId }),
       // Encrypted fields (actorDisplayName, description) cannot be searched via SQL LIKE.
       // When search is provided, it's deferred to in-memory filtering after decryption.

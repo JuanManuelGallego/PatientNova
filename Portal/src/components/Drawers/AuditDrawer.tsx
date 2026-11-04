@@ -9,15 +9,46 @@ import { DETAIL_ICONS } from "@/src/config/icons";
 import { EntityTypePill } from "../Info/EntityTypePill";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
-function formatValue(value: unknown): string {
+/** Spanish labels for the enum values audit rows carry (statuses, who cancelled, meeting state, consent kind). */
+const VALUE_LABELS: Record<string, Record<string, string>> = {
+  status: {
+    SCHEDULED: "Agendada",
+    CONFIRMED: "Confirmada",
+    COMPLETED: "Completada",
+    CANCELLED: "Cancelada",
+    NO_SHOW: "No asistió",
+    PENDING: "Pendiente",
+    APPROVED: "Aprobada",
+    REJECTED: "Rechazada",
+    EXPIRED: "Vencida",
+    SENT: "Enviado",
+    FAILED: "Fallido",
+    QUEUED: "En cola",
+    ACTIVE: "Activo",
+    INACTIVE: "Inactivo",
+  },
+  cancelledBy: { PROVIDER: "Profesional", PATIENT: "Paciente" },
+  meetingStatus: {
+    NOT_REQUIRED: "No requerido",
+    PENDING: "Generándose",
+    NEEDS_LINK: "Falta el enlace",
+    READY: "Listo",
+  },
+  kind: { DATA_PROCESSING: "Tratamiento de datos", NEW: "Nueva", REVIEW: "Para revisar" },
+  source: { PROVIDER: "Profesional", PORTAL: "Portal de pacientes" },
+};
+
+function formatValue(value: unknown, timezone: string, field?: string): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Sí" : "No";
   if (typeof value === "number") return String(value);
   if (typeof value === "string") {
+    const label = field ? VALUE_LABELS[field]?.[value] : undefined;
+    if (label) return label;
     const date = Date.parse(value);
     if (!Number.isNaN(date) && value.length >= 10 && value.length <= 25) {
       try {
-        return fmtDateTime(value);
+        return fmtDateTime(value, timezone);
       } catch {
         // Keep the original value when it only resembles a date.
       }
@@ -67,6 +98,19 @@ const FIELD_LABELS: Record<string, string> = {
   source: "Fuente",
   error: "Error",
   consentDocumentUrl: "Documento",
+  kind: "Tipo",
+  policyVersion: "Versión de la política",
+  acceptedAt: "Aceptado el",
+  holdExpiresAt: "Reserva vence",
+  cancelledBy: "Cancelada por",
+  patientRescheduleCount: "Reprogramaciones del paciente",
+  meetingStatus: "Videollamada",
+  meetingUrl: "Enlace de videollamada",
+  patientTimezone: "Zona horaria del paciente",
+  confirmedAt: "Confirmada el",
+  resolvedAt: "Resuelta el",
+  requestId: "Solicitud",
+  portalAccessEnabled: "Acceso al portal",
 };
 
 function fieldLabel(key: string): string {
@@ -91,7 +135,7 @@ export function AuditDrawer({
 
   return (
     <DrawerShell
-      title={action.label}
+      title={action?.label ?? log.actionType}
       eyebrow="Registro de actividad"
       icon={DETAIL_ICONS.history}
       status={<EntityTypePill entityType={log.entityType} />}
@@ -125,12 +169,12 @@ export function AuditDrawer({
                 <div className="audit-change__comparison">
                   <div className="audit-change__value audit-change__value--before">
                     <span className="audit-change__label">Antes</span>
-                    <span>{formatValue(log.fieldsBefore?.[field])}</span>
+                    <span>{formatValue(log.fieldsBefore?.[field], timezone, field)}</span>
                   </div>
                   <span className="audit-change__arrow" aria-hidden="true">→</span>
                   <div className="audit-change__value audit-change__value--after">
                     <span className="audit-change__label">Después</span>
-                    <span>{formatValue(log.fieldsAfter?.[field])}</span>
+                    <span>{formatValue(log.fieldsAfter?.[field], timezone, field)}</span>
                   </div>
                 </div>
               </div>
@@ -142,7 +186,7 @@ export function AuditDrawer({
       {log.fieldsBefore && !log.fieldsAfter && (
         <Section title="Datos eliminados">
           {Object.entries(log.fieldsBefore).map(([key, value]) => (
-            <Row key={key} icon={DETAIL_ICONS.note} label={fieldLabel(key)} value={formatValue(value)} />
+            <Row key={key} icon={DETAIL_ICONS.note} label={fieldLabel(key)} value={formatValue(value, timezone, key)} />
           ))}
         </Section>
       )}
@@ -150,13 +194,13 @@ export function AuditDrawer({
       {log.fieldsAfter && !log.fieldsBefore && (
         <Section title="Datos creados">
           {Object.entries(log.fieldsAfter).map(([key, value]) => (
-            <Row key={key} icon={null} label={fieldLabel(key)} value={formatValue(value)} />
+            <Row key={key} icon={null} label={fieldLabel(key)} value={formatValue(value, timezone, key)} />
           ))}
         </Section>
       )}
 
       <Section title="Metadata" quiet>
-        <Row icon={DETAIL_ICONS.flag} label="Fuente" value={ACTION_SOURCE_CONFIG[log.source].label} />
+        <Row icon={DETAIL_ICONS.flag} label="Fuente" value={ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source} />
         {log.ipAddress && <Row icon={DETAIL_ICONS.link} label="IP" value={<span className="mono">{log.ipAddress}</span>} />}
         <Row icon={DETAIL_ICONS.id} label="Entidad ID" value={<span className="mono-sm">{log.entityId}</span>} />
       </Section>
