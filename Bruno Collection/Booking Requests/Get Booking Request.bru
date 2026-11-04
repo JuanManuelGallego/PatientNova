@@ -1,0 +1,17 @@
+meta {
+  name: Get Booking Request
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/booking-requests/{{bookingRequestId}}
+  body: none
+  auth: none
+}
+
+docs {
+  One request plus `consent` (policy version and acceptance time) and `candidates`: the patients
+  sharing its email, computed now. The active record comes first (at most one), then deleted ones.
+  404 for another provider's request.
+}

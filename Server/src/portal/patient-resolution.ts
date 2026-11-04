@@ -10,19 +10,25 @@ export interface PortalIdentity {
 
 export type PortalPatientResolution =
   | { kind: 'patient'; patientId: string }
-  | { kind: 'unavailable' }
+  /**
+   * `review`: an inactive or deleted-only match the provider may resolve through a REVIEW request (6.6). Revoked portal
+   * access is never reviewable. Only the booking path reads `review`; every other caller treats both alike.
+   */
+  | { kind: 'unavailable'; review: boolean }
   | { kind: 'none' };
 
 type PortalMatch = Awaited<ReturnType<typeof patientRepository.findPortalMatch>>;
 
 export function classifyPortalMatch(match: PortalMatch): PortalPatientResolution {
-  const { active, hasDeleted } = match;
+  const { active, hasDeleted, deletedRevoked } = match;
   if (active) {
-    return active.status === PatientStatus.ACTIVE && active.portalAccessEnabled
+    if (!active.portalAccessEnabled) return { kind: 'unavailable', review: false };
+    return active.status === PatientStatus.ACTIVE
       ? { kind: 'patient', patientId: active.id }
-      : { kind: 'unavailable' };
+      : { kind: 'unavailable', review: true };
   }
-  return hasDeleted ? { kind: 'unavailable' } : { kind: 'none' };
+  if (!hasDeleted) return { kind: 'none' };
+  return { kind: 'unavailable', review: !deletedRevoked };
 }
 
 export async function resolvePortalPatient(identity: PortalIdentity, tx?: TransactionClient): Promise<PortalPatientResolution> {

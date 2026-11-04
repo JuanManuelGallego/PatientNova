@@ -7,8 +7,11 @@ type PaginatedData<T> = {
     totalPages: number;
 };
 
+/** One shared empty list, so memos keyed on `items` stay stable while a query is disabled or loading. */
+const NO_ITEMS: never[] = [];
+
 export function useApiPaginatedQuery<T>(
-    url: string,
+    url: string | null,
     errorMessage?: string
 ) {
     const { data, loading, error, refetch } = useApiRequest<PaginatedData<T>, ApiPaginatedResponse<T>>(
@@ -25,7 +28,7 @@ export function useApiPaginatedQuery<T>(
     );
 
     return {
-        items: data?.items ?? [],
+        items: data?.items ?? (NO_ITEMS as T[]),
         total: data?.total ?? 0,
         totalPages: data?.totalPages ?? 0,
         loading,

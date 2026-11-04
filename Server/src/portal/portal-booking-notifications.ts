@@ -17,11 +17,20 @@ import { providerDisplayName } from '../public-booking/public-booking.service.js
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
 
 /** What the patient did in the portal; each event sends one patient email and one provider notice. */
-export type PortalEvent = 'booked' | 'booked-link-pending' | 'cancelled' | 'rescheduled' | 'meeting-ready' | 'meeting-link';
+export type PortalEvent =
+  | 'booked'
+  | 'booked-link-pending'
+  | 'approved'
+  | 'cancelled'
+  | 'rescheduled'
+  | 'meeting-ready'
+  | 'meeting-link';
 
 const EVENT_KINDS = {
   booked: [ 'patient-confirmation', 'provider-notice' ],
   'booked-link-pending': [ 'provider-notice' ],
+  // The provider approved it, so only the patient hears about it.
+  approved: [ 'patient-confirmation' ],
   cancelled: [ 'patient-cancellation', 'provider-cancel-notice' ],
   rescheduled: [ 'patient-reschedule', 'provider-reschedule-notice' ],
   'meeting-ready': [ 'patient-confirmation' ],
@@ -51,7 +60,7 @@ export interface PortalMove {
 
 const CANCELLATION_KINDS = new Set<BookingNotificationKind>(EVENT_KINDS.cancelled);
 
-const formatWhen = (at: Date, timezone: string) => `${formatDate(at, timezone, true)}, ${formatTime(at, timezone)}`;
+export const formatWhen = (at: Date, timezone: string) => `${formatDate(at, timezone, true)}, ${formatTime(at, timezone)}`;
 
 async function loadAppointment(appointmentId: string) {
   return prisma.appointment.findUnique({
@@ -166,13 +175,28 @@ function providerText(appt: BookedAppointment, job: BookingNotificationJob, name
   }
 }
 
-/** Provider notices carry no patient details: only that something happened, and when. */
-function providerMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
-  const { user } = appt;
+export interface ProviderContact {
+  reminderActive: boolean;
+  reminderChannel: Channel;
+  whatsappNumber: string | null;
+  phoneNumber: string | null;
+  email: string;
+}
+
+/** Where provider notices go: the provider's reminder channel, or nowhere when reminders are off or it has no address. */
+export function providerDestination(user: ProviderContact): { channel: Channel; to: string } | null {
   if (!user.reminderActive) return null;
   const channel = user.reminderChannel;
   const to = channel === Channel.WHATSAPP ? user.whatsappNumber : channel === Channel.EMAIL ? user.email : user.phoneNumber;
-  if (!to) return null;
+  return to ? { channel, to } : null;
+}
+
+/** Provider notices carry no patient details: only that something happened, and when. */
+function providerMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
+  const { user } = appt;
+  const destination = providerDestination(user);
+  if (!destination) return null;
+  const { channel, to } = destination;
   const name = providerDisplayName(user);
   const text = providerText(appt, job, name);
   if (!text) return null;

@@ -33,7 +33,15 @@ export interface CalendarToolbarProps {
   onChangeView: (v: ViewMode) => void;
 }
 
-export interface MonthViewProps {
+type HeldSlot = import("./constants").HeldSlot;
+
+/** Optional on every view: only admins with the portal on see pending holds. */
+interface HoldProps {
+  holdByDate?: Record<string, HeldSlot[]>;
+  onSelectHold?: (id: string) => void;
+}
+
+export interface MonthViewProps extends HoldProps {
   timezone: string;
   rows: number;
   cellDate: (cell: number) => string | null;
@@ -47,7 +55,7 @@ export interface MonthViewProps {
   onSelectBlockedTime: (bt: BlockedTime) => void;
 }
 
-export interface WeekViewProps {
+export interface WeekViewProps extends HoldProps {
   timezone: string;
   weekDays: Date[];
   apptByDate: Record<string, import("@/src/types/Appointment").Appointment[]>;
@@ -76,6 +84,8 @@ export interface DayViewProps {
 
 export interface DayPanelProps {
   selectedDay: string;
+  holds?: HeldSlot[];
+  onSelectHold?: (id: string) => void;
   appts: import("@/src/types/Appointment").Appointment[];
   blockedTimes: BlockedTime[];
   onClose: () => void;

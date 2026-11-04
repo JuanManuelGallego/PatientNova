@@ -64,6 +64,8 @@ import {
   UserX,
   Loader2,
   type LucideIcon,
+  Inbox,
+  TimerOff,
   Copy,
   Download,
 } from "lucide-react";
@@ -76,6 +78,7 @@ export const NAV_ICONS = {
   appointments: CalendarCheck,
   calendar: CalendarDays,
   reminders: Bell,
+  requests: Inbox,
   settings: Settings,
 } as const satisfies Record<string, LucideIcon>;
 
@@ -111,6 +114,7 @@ export const STATUS_ICONS = {
   failed: AlertCircle,
   cancelled: Ban,
   none: BellOff,
+  expired: TimerOff,
   scheduled: CalendarClock,
   confirmed: CalendarCheck,
   completed: CheckCheck,

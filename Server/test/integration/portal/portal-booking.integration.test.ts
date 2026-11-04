@@ -148,26 +148,53 @@ describe('POST /v1/portal/bookings', () => {
     expect(appt!.patientId).toBe(existing.id);
   });
 
-  it('answers one neutral 409 for revoked, inactive and deleted-only patients and writes nothing', async () => {
+  it('answers a neutral 409 for revoked portal access and writes nothing', async () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);
     const revoked = await createTestPatient(provider.id);
     await prisma.patient.update({ where: { id: revoked.id }, data: { portalAccessEnabled: false } });
+    const revokedInactive = await createTestPatient(provider.id);
+    await prisma.patient.update({
+      where: { id: revokedInactive.id },
+      data: { portalAccessEnabled: false, status: PatientStatus.INACTIVE },
+    });
+    // Revoked first, then deleted: deletion must not turn the block into a reviewable request.
+    const revokedDeleted = await createTestPatient(provider.id);
+    await prisma.patient.update({
+      where: { id: revokedDeleted.id },
+      data: { portalAccessEnabled: false, isDeleted: true, deletedAt: new Date() },
+    });
+
+    for (const p of [ revoked, revokedInactive, revokedDeleted ]) {
+      const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, start!));
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('Online booking unavailable');
+    }
+    expect(await appointmentsOf(provider.id)).toHaveLength(0);
+    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
+    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(3);
+    expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
+  });
+
+  it('routes inactive and deleted-only matches to a REVIEW request and touches no patient (6.6)', async () => {
+    const provider = await createLiveProvider();
+    const starts = await slotStarts(provider);
     const inactive = await createTestPatient(provider.id);
     await prisma.patient.update({ where: { id: inactive.id }, data: { status: PatientStatus.INACTIVE } });
     const deleted = await createTestPatient(provider.id);
     await prisma.patient.update({ where: { id: deleted.id }, data: { isDeleted: true, deletedAt: new Date() } });
 
-    const errors = [];
-    for (const p of [ revoked, inactive, deleted ]) {
-      const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, start!));
-      expect(res.status).toBe(409);
-      errors.push(res.body.error);
+    for (const [ i, p ] of [ inactive, deleted ].entries()) {
+      const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, starts[i]!));
+      expect(res.status).toBe(202);
+      expect(Object.keys(res.body.data)).toEqual([ 'request' ]);
+      const stored = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: res.body.data.request.id } });
+      expect(stored).toMatchObject({ kind: 'REVIEW', status: 'PENDING', email: p.email });
     }
-    expect(new Set(errors)).toEqual(new Set([ 'Online booking unavailable' ]));
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(3);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
+    const after = await prisma.patient.findMany({ where: { userId: provider.id }, orderBy: { createdAt: 'asc' } });
+    expect(after.map((p) => [ p.status, p.isDeleted ])).toEqual([ [ PatientStatus.INACTIVE, false ], [ PatientStatus.ACTIVE, true ] ]);
   });
 
   it('lets exactly one of two concurrent bookings of the same slot win', async () => {

@@ -33,9 +33,9 @@ describe('updateBookingSettingsSchema', () => {
     expect(updateBookingSettingsSchema.safeParse({ bufferMinutes: 10, minLeadMinutes: 0, maxHorizonDays: 365 }).success).toBe(true);
   });
 
-  it('accepts only AUTO_CONFIRM until the approval inbox ships', () => {
+  it('accepts both approval modes and refuses an unknown one', () => {
     expect(updateBookingSettingsSchema.parse({ bookingApprovalMode: 'AUTO_CONFIRM' }).bookingApprovalMode).toBe('AUTO_CONFIRM');
-    expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).success).toBe(false);
+    expect(updateBookingSettingsSchema.parse({ bookingApprovalMode: 'REQUIRE_APPROVAL' }).bookingApprovalMode).toBe('REQUIRE_APPROVAL');
     expect(updateBookingSettingsSchema.safeParse({ bookingApprovalMode: 'MAYBE' }).success).toBe(false);
   });
 });

@@ -42,6 +42,57 @@ export async function createPatientWithin(
   return createdPatient;
 }
 
+/** `description` overrides the default audit text, for callers that change a patient as part of another action. */
+export async function updatePatientWithin(
+  tx: TransactionClient,
+  id: string,
+  dto: UpdatePatientDto,
+  userId: string,
+  opts: { description?: string } = {},
+): Promise<Patient> {
+  const existingPatient = await patientRepository.findById(id, userId, tx);
+  const updatedPatient = await patientRepository.update(id, dto, userId, tx);
+  const diff = computeDiff(existingPatient as unknown as Record<string, unknown>, updatedPatient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
+  await logAudit({
+    entityType: EntityType.PATIENT,
+    entityId: id,
+    userId,
+    actionType: ActionType.UPDATE,
+    description: opts.description ?? `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
+    ...diff,
+    tx,
+    required: true,
+  });
+  return updatedPatient;
+}
+
+/** Restores a soft-deleted patient under the provider lock, enforcing the patient limit. */
+export async function restorePatientWithin(
+  tx: TransactionClient,
+  id: string,
+  userId: string,
+  opts: { description?: string } = {},
+): Promise<Patient> {
+  await withProviderLock(tx, userId);
+  const restoredPatient = await patientRepository.restore(id, userId, tx);
+  if (await patientRepository.countActive(userId, tx) > MAX_PATIENTS_PER_PROVIDER) {
+    throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
+  }
+  await logAudit({
+    entityType: EntityType.PATIENT,
+    entityId: id,
+    userId,
+    actionType: ActionType.RESTORE,
+    description: opts.description ?? `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
+    affectedFields: ['isDeleted'],
+    fieldsBefore: { isDeleted: true },
+    fieldsAfter: { isDeleted: false },
+    tx,
+    required: true,
+  });
+  return restoredPatient;
+}
+
 export const patientService = {
   findById: patientRepository.findById.bind(patientRepository),
 
@@ -66,22 +117,7 @@ export const patientService = {
   },
 
   async update(id: string, dto: UpdatePatientDto, userId: string): Promise<Patient> {
-    return prisma.$transaction(async (tx) => {
-      const existingPatient = await patientRepository.findById(id, userId, tx);
-      const updatedPatient = await patientRepository.update(id, dto, userId, tx);
-      const diff = computeDiff(existingPatient as unknown as Record<string, unknown>, updatedPatient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
-      await logAudit({
-        entityType: EntityType.PATIENT,
-        entityId: id,
-        userId,
-        actionType: ActionType.UPDATE,
-        description: `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
-        ...diff,
-        tx,
-        required: true,
-      });
-      return updatedPatient;
-    });
+    return prisma.$transaction((tx) => updatePatientWithin(tx, id, dto, userId));
   },
 
   async delete(id: string, userId: string): Promise<{ id: string }> {
@@ -104,26 +140,7 @@ export const patientService = {
   },
 
   async restore(id: string, userId: string): Promise<Patient> {
-    return prisma.$transaction(async (tx) => {
-      await withProviderLock(tx, userId);
-      const restoredPatient = await patientRepository.restore(id, userId, tx);
-      if (await patientRepository.countActive(userId, tx) > MAX_PATIENTS_PER_PROVIDER) {
-        throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
-      }
-      await logAudit({
-        entityType: EntityType.PATIENT,
-        entityId: id,
-        userId,
-        actionType: ActionType.RESTORE,
-        description: `Paciente restaurado ${restoredPatient.name} ${restoredPatient.lastName}`,
-        affectedFields: ['isDeleted'],
-        fieldsBefore: { isDeleted: true },
-        fieldsAfter: { isDeleted: false },
-        tx,
-        required: true,
-      });
-      return restoredPatient;
-    });
+    return prisma.$transaction((tx) => restorePatientWithin(tx, id, userId));
   },
 
   async verifyOwnership(patientId: string, userId: string): Promise<void> {

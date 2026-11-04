@@ -11,6 +11,7 @@ import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { StatCard } from "@/src/components/Info/StatCard";
+import { PendingRequestsCard } from "@/src/components/Dashboard/PendingRequestsCard";
 import { PatientStatus } from "@/src/types/Patient";
 import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, fmtRelative, todayFormattedString, todayString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
@@ -314,6 +315,7 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+        <PendingRequestsCard />
       </div>
       <div className="dash-quick-nav fade-in">
         <h3 className="dash-section-title">Acceso Rápido</h3>

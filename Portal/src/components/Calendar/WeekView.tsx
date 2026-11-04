@@ -1,9 +1,10 @@
-import { HOUR_HEIGHT, toDateStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes } from "./constants";
+import { HOUR_HEIGHT, toDateStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes, layoutHolds } from "./constants";
 import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeBlock } from "./BlockedTimeBlock";
+import { PendingHoldBlock } from "./PendingHold";
 import Image from "next/image";
 import { flagUrl } from "../CountryCodeInput";
 
@@ -19,6 +20,8 @@ export function WeekView({
   onViewAppt,
   onCreateAt,
   onSelectBlockedTime,
+  holdByDate,
+  onSelectHold,
 }: WeekViewProps) {
   const { hours, firstHour, lastHour } = hourRange;
   const today = todayFormattedString(timezone);
@@ -182,6 +185,14 @@ export function WeekView({
                         left: 0,
                         right: 0,
                       }}
+                    />
+                  ))}
+                  {onSelectHold && layoutHolds(holdByDate?.[ ds ] ?? [], firstHour, timezone, ds).map((p) => (
+                    <PendingHoldBlock
+                      key={p.hold.id}
+                      hold={p.hold}
+                      onSelectHold={onSelectHold}
+                      style={{ top: p.top, height: p.height, left: 0, right: 4 }}
                     />
                   ))}
                   {showNow && isToday && (

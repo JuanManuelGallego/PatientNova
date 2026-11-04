@@ -11,6 +11,7 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useFetchNeedsMeetingLink } from "@/src/api/appointments/useFetchNeedsMeetingLink";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { STATUS_ICONS } from "@/src/config/icons";
+import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 
 export function ProviderAlerts() {
   const { user } = useAuthContext();
@@ -20,8 +21,32 @@ export function ProviderAlerts() {
   return (
     <>
       <GoogleExpiredAlert />
+      {user?.portalEnabled && <PendingRequestsAlert />}
       {user?.portalEnabled && <NeedsMeetingLinkAlert />}
     </>
+  );
+}
+
+function PendingRequestsAlert() {
+  const { pending } = usePendingRequests();
+  if (pending === 0) return null;
+  const text = pending === 1
+    ? "1 solicitud de cita en línea espera tu respuesta."
+    : `${pending} solicitudes de cita en línea esperan tu respuesta.`;
+  return (
+    <section className="warning-banner" aria-label="Solicitudes pendientes" data-testid="pending-requests-banner">
+      <STATUS_ICONS.pending size={18} aria-hidden="true" className="warning-banner__icon" />
+      <div className="warning-banner__body">
+        <p className="warning-banner__text">
+          {text} Cada una guarda su horario hasta que la apruebes, la rechaces o venza.
+        </p>
+      </div>
+      <div className="warning-banner__actions">
+        <Link href="/requests" className="warning-banner__link" data-testid="pending-requests-link">
+          Revisar solicitudes
+        </Link>
+      </div>
+    </section>
   );
 }
 

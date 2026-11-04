@@ -1,4 +1,5 @@
-import { BookingRequestStatus, type BookingRequestKind } from '../../generated/prisma/client.ts';
+import { BookingRequestStatus, type BookingRequestKind, type Prisma } from '../../generated/prisma/client.ts';
+import type { BookingRequestTab } from './booking-request.schemas.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { Interval } from '../public-booking/slot-engine.js';
 
@@ -36,6 +37,54 @@ export const requestForDtoSelect = {
   type: { select: { name: true } },
   location: { select: { name: true, address: true, isVirtual: true } },
 } as const;
+
+/** Provider inbox rows: typed patient details are shown to the provider (never to other patients or in audits). */
+export const providerRequestSelect = {
+  id: true,
+  kind: true,
+  status: true,
+  createdAt: true,
+  startAt: true,
+  endAt: true,
+  holdExpiresAt: true,
+  resolvedAt: true,
+  name: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  patientTimezone: true,
+  appointmentId: true,
+  patientId: true,
+  type: { select: { id: true, name: true } },
+  location: { select: { id: true, name: true, isVirtual: true } },
+} as const;
+
+export const providerRequestDetailSelect = {
+  ...providerRequestSelect,
+  emailHash: true,
+  policyVersion: true,
+  consentAcceptedAt: true,
+  consentIp: true,
+  consentUserAgent: true,
+} as const;
+
+const RESOLVED_STATUSES = [ BookingRequestStatus.APPROVED, BookingRequestStatus.REJECTED, BookingRequestStatus.CANCELLED ];
+
+function tabWhere(tab: BookingRequestTab, now: Date): Prisma.BookingRequestWhereInput {
+  switch (tab) {
+    case 'pending':
+      return { status: BookingRequestStatus.PENDING, holdExpiresAt: { gt: now } };
+    case 'expired':
+      return {
+        OR: [
+          { status: BookingRequestStatus.EXPIRED },
+          { status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
+        ],
+      };
+    case 'resolved':
+      return { status: { in: RESOLVED_STATUSES } };
+  }
+}
 
 function liveHoldWhere(userId: string, now: Date, opts: LiveHoldOptions) {
   return {
@@ -151,5 +200,94 @@ export const bookingRequestRepository = {
         consentUserAgent: data.consentUserAgent?.slice(0, 512) ?? null,
       },
     });
+  },
+
+  async listForProvider(
+    userId: string,
+    query: { status: BookingRequestTab; from?: string | undefined; to?: string | undefined; page: number; pageSize: number },
+    now: Date,
+  ) {
+    const where: Prisma.BookingRequestWhereInput = {
+      userId,
+      ...tabWhere(query.status, now),
+      ...((query.from || query.to) && {
+        startAt: { ...(query.from && { gte: new Date(query.from) }), ...(query.to && { lt: new Date(query.to) }) },
+      }),
+    };
+    const orderBy: Prisma.BookingRequestOrderByWithRelationInput[] = query.status === 'pending'
+      ? [ { startAt: 'asc' }, { id: 'asc' } ]
+      : [ { updatedAt: 'desc' }, { id: 'asc' } ];
+    const [ rows, total ] = await prisma.$transaction([
+      prisma.bookingRequest.findMany({
+        where,
+        select: providerRequestSelect,
+        orderBy,
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.bookingRequest.count({ where }),
+    ]);
+    return { rows, total };
+  },
+
+  async findForProvider(userId: string, id: string, tx?: TransactionClient) {
+    return (tx ?? prisma).bookingRequest.findFirst({ where: { id, userId }, select: providerRequestDetailSelect });
+  },
+
+  async countPending(userId: string, now: Date): Promise<number> {
+    return prisma.bookingRequest.count({ where: liveHoldWhere(userId, now, {}) });
+  },
+
+  async resolve(
+    id: string,
+    data: {
+      status: typeof BookingRequestStatus.APPROVED | typeof BookingRequestStatus.REJECTED;
+      resolvedAt: Date;
+      resolvedBy: string;
+      appointmentId?: string;
+      patientId?: string;
+    },
+    tx: TransactionClient,
+  ): Promise<void> {
+    await tx.bookingRequest.update({ where: { id }, data });
+  },
+
+  /** Providers holding PENDING rows past expiry; the sweep expires each under its own lock. */
+  async providersWithStale(now: Date): Promise<string[]> {
+    const rows = await prisma.bookingRequest.findMany({
+      where: { status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
+      select: { userId: true },
+      distinct: [ 'userId' ],
+    });
+    return rows.map((r) => r.userId);
+  },
+
+  /** Live, un-nudged holds expiring within `windowMs`; the caller keeps those past the middle of their hold. */
+  async findNudgeCandidates(now: Date, windowMs: number) {
+    return prisma.bookingRequest.findMany({
+      where: {
+        status: BookingRequestStatus.PENDING,
+        nudgedAt: null,
+        holdExpiresAt: { gt: now, lte: new Date(now.getTime() + windowMs) },
+      },
+      select: { id: true, createdAt: true, holdExpiresAt: true },
+    });
+  },
+
+  /** Claims the nudge: only rows still PENDING and un-nudged, so a concurrent sweep cannot nudge twice. */
+  async markNudged(id: string, now: Date, tx: TransactionClient): Promise<boolean> {
+    const { count } = await tx.bookingRequest.updateMany({
+      where: { id, status: BookingRequestStatus.PENDING, nudgedAt: null },
+      data: { nudgedAt: now },
+    });
+    return count === 1;
+  },
+
+  /** Resolved requests are kept for the inbox history, then deleted; PENDING rows are never purged. */
+  async purgeResolvedBefore(before: Date): Promise<number> {
+    const { count } = await prisma.bookingRequest.deleteMany({
+      where: { status: { not: BookingRequestStatus.PENDING }, updatedAt: { lt: before } },
+    });
+    return count;
   },
 };

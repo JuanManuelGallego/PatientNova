@@ -2,6 +2,7 @@ import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { DayPanelProps } from "./types";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { HOLD_LABEL } from "./PendingHold";
 
 export function DayPanel({
   selectedDay,
@@ -13,6 +14,8 @@ export function DayPanel({
   onCreateAt,
   onSelectBlockedTime,
   onCreateBlockedTime,
+  holds = [],
+  onSelectHold,
 }: DayPanelProps) {
   const timezone = useDisplayTimezone();
   return (
@@ -24,7 +27,7 @@ export function DayPanel({
             <ACTION_ICONS.close size={16} />
           </button>
         </div>
-        {appts.length === 0 && blockedTimes.length === 0 ? (
+        {appts.length === 0 && blockedTimes.length === 0 && holds.length === 0 ? (
           <p className="cal-day-panel__empty">No hay citas ni horarios bloqueados para este día.</p>
         ) : (
           <>
@@ -48,6 +51,32 @@ export function DayPanel({
                   </div>
                 ))}
               </div>
+            )}
+            {onSelectHold && holds.length > 0 && (
+              <>
+                <h3 className="cal-day-panel__section-title">Solicitudes pendientes</h3>
+                <div className="cal-day-panel__blocked-list">
+                  {holds.map((h) => (
+                    <button
+                      type="button"
+                      key={h.id}
+                      className="cal-day-panel__blocked-item cal-hold"
+                      data-testid={`calendar-day-hold-${h.id}`}
+                      onClick={() => {
+                        onSelectHold(h.id);
+                        onClose();
+                      }}
+                    >
+                      <span className="cal-day-panel__blocked-time">
+                        {fmtTime(h.startAt, timezone)} - {fmtTime(h.endAt, timezone)}
+                      </span>
+                      <span className="cal-day-panel__blocked-desc">
+                        {HOLD_LABEL} · {h.name} {h.lastName}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
             {blockedTimes.length > 0 && (
               <>

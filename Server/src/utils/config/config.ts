@@ -71,6 +71,8 @@ export const config = {
     portalBookingSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID'),
     portalCancelSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID'),
     portalRescheduleSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID'),
+    portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
+    portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
   },
 
   brevo: {

@@ -16,6 +16,7 @@ import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
 import {
     AvailabilityRule,
+    BookingApprovalMode,
     BookingSettings,
     BookingSettingsUpdate,
     MAX_PATIENT_RESCHEDULES,
@@ -103,6 +104,7 @@ export function OnlineBookingTab() {
                 }}
                 error={statusError}
             />
+            <ApprovalSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <AvailabilitySection
                 timezone={current.timezone}
@@ -194,6 +196,93 @@ function StatusSection({ settings, onToggle, error }: {
                     </>
                 )}
                 {error && <ErrorLine message={error} />}
+            </div>
+        </div>
+    );
+}
+
+const APPROVAL_OPTIONS: { value: BookingApprovalMode; label: string; hint: string }[] = [
+    {
+        value: "AUTO_CONFIRM",
+        label: "Confirmar automáticamente",
+        hint: "La cita queda confirmada en cuanto el paciente reserva.",
+    },
+    {
+        value: "REQUIRE_APPROVAL",
+        label: "Revisar cada solicitud",
+        hint: "El paciente envía una solicitud que reserva el horario hasta 48 horas. Tú la apruebas o la rechazas en Solicitudes.",
+    },
+];
+
+function ApprovalSection({ settings, save, onSaved }: {
+    settings: BookingSettings;
+    save: (body: BookingSettingsUpdate) => Promise<BookingSettings>;
+    onSaved: (s: BookingSettings) => void;
+}) {
+    const [ mode, setMode ] = useState<BookingApprovalMode>(settings.bookingApprovalMode);
+    const [ error, setError ] = useState<string | null>(null);
+    const [ saving, setSaving ] = useState(false);
+    const [ saved, setSaved ] = useState(false);
+    const name = useId();
+
+    async function handleSave() {
+        setSaving(true);
+        setError(null);
+        setSaved(false);
+        try {
+            onSaved(await save({ bookingApprovalMode: mode }));
+            setSaved(true);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : ERR_SAVE);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="dash-card" data-testid="online-booking-approval">
+            <div className="dash-card__header">
+                <span className="dash-card__title">Confirmación de reservas</span>
+            </div>
+            <div className="dash-card__body form-stack">
+                <fieldset className="form-stack form-fieldset-plain">
+                    <legend className="sr-only">Cómo se confirman las reservas en línea</legend>
+                    {APPROVAL_OPTIONS.map((opt) => (
+                        <label key={opt.value} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+                            <input
+                                type="radio"
+                                name={name}
+                                value={opt.value}
+                                checked={mode === opt.value}
+                                onChange={() => { setSaved(false); setMode(opt.value); }}
+                                style={{ marginTop: 3 }}
+                                data-testid={`online-booking-approval-${opt.value.toLowerCase().replace("_", "-")}`}
+                            />
+                            <span>
+                                <span style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>{opt.label}</span>
+                                <span className="form-input-hint" style={{ display: "block" }}>{opt.hint}</span>
+                            </span>
+                        </label>
+                    ))}
+                </fieldset>
+                {settings.bookingApprovalMode === "REQUIRE_APPROVAL" && (
+                    <span className="form-input-hint">
+                        Si vuelves a la confirmación automática, las solicitudes pendientes siguen esperando tu respuesta.
+                    </span>
+                )}
+                {error && <ErrorLine message={error} />}
+                {saved && <SuccessBanner message="Confirmación de reservas actualizada." />}
+                <div>
+                    <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={handleSave}
+                        disabled={saving || mode === settings.bookingApprovalMode}
+                        data-testid="online-booking-approval-save"
+                    >
+                        {saving ? LBL_SAVING : LBL_SAVE}
+                    </button>
+                </div>
             </div>
         </div>
     );

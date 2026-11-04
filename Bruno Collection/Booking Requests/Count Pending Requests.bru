@@ -1,0 +1,15 @@
+meta {
+  name: Count Pending Requests
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/booking-requests/count
+  body: none
+  auth: none
+}
+
+docs {
+  `{ pending }`: live pending requests, for the sidebar badge, the alert and the dashboard card.
+}

@@ -13,6 +13,8 @@ export async function ensureCurrentConsent(
   patient: { patientId: string; userId: string },
   policyVersion: string,
   meta: ConsentRequestMeta = {},
+  /** When the patient accepted; defaults to now. Approval passes the time stored on the booking request. */
+  acceptedAt: Date = new Date(),
 ) {
   const kind = ConsentKind.DATA_PROCESSING;
   const created = await patientConsentRepository.insertIfAbsent(tx, {
@@ -20,7 +22,7 @@ export async function ensureCurrentConsent(
     userId: patient.userId,
     kind,
     policyVersion,
-    acceptedAt: new Date(),
+    acceptedAt,
     ipAddress: meta.ipAddress?.slice(0, 64) ?? null,
     userAgent: meta.userAgent?.slice(0, 512) ?? null,
   });

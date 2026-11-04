@@ -1,0 +1,33 @@
+meta {
+  name: List Booking Requests
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/booking-requests?status=pending&page=1&pageSize=20
+  body: none
+  auth: none
+}
+
+params:query {
+  status: pending
+  page: 1
+  pageSize: 20
+  ~from: 2026-11-01T05:00:00.000Z
+  ~to: 2026-11-08T05:00:00.000Z
+}
+
+script:post-response {
+  const first = res.getBody()?.data?.data?.[0];
+  if (first) bru.setVar("bookingRequestId", first.id);
+}
+
+docs {
+  The inbox, one tab at a time (ADMIN/SUPER_ADMIN only; VIEWER gets 403; 404 with the portal off).
+  `status`: `pending` (live holds, soonest first), `resolved` (approved, rejected or cancelled by the
+  patient) or `expired`. `status` on each row is effective: a PENDING request past `holdExpiresAt`
+  reads EXPIRED even before the sweep flips it. Optional `from`/`to` limit the requested start
+  (the calendar uses them). Rows carry the typed patient details.
+  Stores the first row's id as `bookingRequestId` for the requests below.
+}

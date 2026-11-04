@@ -24,7 +24,7 @@ export interface BookingSettings {
 }
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
-    "bookingSlug" | "bookingEnabled" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
+    "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
     | "maxPatientReschedules" | "minRescheduleNoticeHours">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;

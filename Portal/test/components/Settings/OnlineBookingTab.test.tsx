@@ -376,3 +376,22 @@ describe("OnlineBookingTab: status summary", () => {
         expect(screen.getByText("https://app.test/book/")).toBeInTheDocument();
     });
 });
+
+describe("OnlineBookingTab: approval mode", () => {
+    it("saves the review mode only after a change", async () => {
+        render(<OnlineBookingTab />);
+        const save = screen.getByTestId("online-booking-approval-save");
+        expect(save).toBeDisabled();
+        await userEvent.click(screen.getByTestId("online-booking-approval-require-approval"));
+        await userEvent.click(save);
+        expect(updateSettings).toHaveBeenCalledWith({ bookingApprovalMode: "REQUIRE_APPROVAL" });
+        expect(await screen.findByText("Confirmación de reservas actualizada.")).toBeInTheDocument();
+    });
+
+    it("explains that pending requests survive a switch back to auto-confirm", () => {
+        settings = makeSettings({ bookingApprovalMode: "REQUIRE_APPROVAL" });
+        render(<OnlineBookingTab />);
+        expect(screen.getByTestId("online-booking-approval-require-approval")).toBeChecked();
+        expect(screen.getByText(/las solicitudes pendientes siguen esperando tu respuesta/)).toBeInTheDocument();
+    });
+});
