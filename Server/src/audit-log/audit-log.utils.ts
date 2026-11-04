@@ -34,6 +34,10 @@ type AuditEntryOverrides = Omit<Partial<CreateAuditLogDto>, 'userId'> & Pick<Cre
 
 export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogDto {
   const ctx = getAuditContext();
+  const source = overrides.source ?? ctx?.source ?? ActionSource.API;
+  // A portal-created patient is audited before its id can be bound, so its own row links to itself.
+  const portalPatientId = ctx?.portalPatientId
+    ?? (source === ActionSource.PUBLIC_PORTAL && overrides.entityType === EntityType.PATIENT ? overrides.entityId : undefined);
   return {
     actorId: ctx?.actorId ?? 'system',
     actorDisplayName: ctx?.actorDisplayName ?? 'Sistema',
@@ -45,6 +49,7 @@ export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogD
     ...overrides,
     affectedFields: overrides.affectedFields ?? [],
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
+    portalPatientId: 'portalPatientId' in overrides ? overrides.portalPatientId : portalPatientId,
     userId: overrides.userId,
   };
 }

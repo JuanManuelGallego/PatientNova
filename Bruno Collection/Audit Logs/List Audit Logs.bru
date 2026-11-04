@@ -26,7 +26,8 @@ params:query {
 
 docs {
   `source` can repeat (e.g. `source=JOB&source=PUBLIC_PORTAL`).
-  `portalPatientId` lists one patient's portal activity, matched by the portal actor id of the patient's
-  current email (rows written under an earlier email are not found). It cannot be combined with `actorId`;
-  an unknown or foreign patient gives an empty page.
+  `portalPatientId` lists one patient's portal activity (`PUBLIC_PORTAL` rows only): rows linked to that
+  record, plus unlinked rows (logins, booking requests) of the portal actor of the patient's current email.
+  Linked rows survive email changes and never mix records that share an email. It cannot be combined with
+  `actorId`; an unknown or foreign patient gives an empty page.
 }

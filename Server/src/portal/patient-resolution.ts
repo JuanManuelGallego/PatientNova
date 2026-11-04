@@ -2,6 +2,7 @@ import { PatientStatus } from '../../generated/prisma/enums.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { emailHash } from '../utils/encryption/blind-index.js';
 import { patientRepository } from '../patients/patient.repository.js';
+import { bindAuditPortalPatient } from '../audit-log/audit-log-context.js';
 
 export interface PortalIdentity {
   userId: string;
@@ -34,5 +35,8 @@ export function classifyPortalMatch(match: PortalMatch): PortalPatientResolution
 export async function resolvePortalPatient(identity: PortalIdentity, tx?: TransactionClient): Promise<PortalPatientResolution> {
   const hash = emailHash(identity.email);
   if (!hash) return { kind: 'none' };
-  return classifyPortalMatch(await patientRepository.findPortalMatch(identity.userId, hash, tx));
+  const resolution = classifyPortalMatch(await patientRepository.findPortalMatch(identity.userId, hash, tx));
+  // Every portal match goes through here, so the action's audit rows always carry the record it concerned.
+  if (resolution.kind === 'patient') bindAuditPortalPatient(resolution.patientId);
+  return resolution;
 }

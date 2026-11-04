@@ -288,9 +288,9 @@ export function PatientDrawer({
         <Link href={`/settings?tab=Registro+de+actividad&entityId=${patient.id}`} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>
-        {user?.portalEnabled && patient.email && (
+        {user?.portalEnabled && (
           <Link
-            href={`/settings?tab=Registro+de+actividad&portalPatientId=${patient.id}&source=PUBLIC_PORTAL`}
+            href={`/settings?tab=Registro+de+actividad&portalPatientId=${patient.id}`}
             className="drawer-link"
             data-testid="patient-drawer-portal-activity-link"
           >

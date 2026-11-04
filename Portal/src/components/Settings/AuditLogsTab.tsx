@@ -46,6 +46,9 @@ const SOURCE_OPTIONS: SelectOption[] = withAllOption(
   "Todos",
 );
 
+const ACTION_SOURCES = new Set<string>(Object.values(ActionSource));
+const isActionSource = (value: string): value is ActionSource => ACTION_SOURCES.has(value);
+
 const ACTION_OPTIONS: SelectOption[] = withAllOption(
   Object.values(ActionType),
   (v) => ACTION_TYPE_CONFIG[v].label,
@@ -77,13 +80,16 @@ export function AuditLogsTab() {
     orderDefault: SORT_DIRECTION.desc,
   });
 
+  const validSources = useMemo(() => source.filter(isActionSource), [source]);
+
   const filters = useMemo<FetchAuditLogsFilters>(
     () => {
       return {
       entityType: entityType.length ? (entityType as EntityType[]) : undefined,
       entityId: entityId.trim() || undefined,
       actionType: actionType.length ? (actionType as ActionType[]) : undefined,
-      source: source.length ? (source as ActionSource[]) : undefined,
+      // A stale or hand-edited `?source=` value is ignored rather than turned into a 400 from the API.
+      source: validSources.length ? validSources : undefined,
       portalPatientId: portalPatientId.trim() || undefined,
       search: debouncedSearch.trim() || undefined,
       dateFrom: dateFilter?.[0] ? toUtcRangeFromLocalDay(dateFilter[0], timezone).dateFrom : undefined,
@@ -94,7 +100,7 @@ export function AuditLogsTab() {
       order,
       };
     },
-    [entityType, entityId, actionType, source, portalPatientId, debouncedSearch, dateFilter, page, orderBy, order, timezone],
+    [entityType, entityId, actionType, validSources, portalPatientId, debouncedSearch, dateFilter, page, orderBy, order, timezone],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -216,7 +222,7 @@ export function AuditLogsTab() {
                 <ACTION_ICONS.close size={12} /> Paciente
               </button>
               <span className="form-input-hint">
-                Actividad en el portal según el correo actual del paciente.
+                Actividad en el portal de este paciente; los ingresos y solicitudes se buscan por su correo actual.
               </span>
             </>
           )}
@@ -248,12 +254,7 @@ export function AuditLogsTab() {
               <EntityTypePill entityType={log.entityType} />
             </td>
             <td className="td">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
-            <td className="td td--date">
-              {log.source === ActionSource.PUBLIC_PORTAL && (
-                <span className="pill" style={{ marginRight: 6 }} data-testid="audit-portal-chip">Portal</span>
-              )}
-              {log.description}
-            </td>
+            <td className="td td--date">{log.description}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
         )}

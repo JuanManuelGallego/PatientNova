@@ -1000,9 +1000,10 @@ As planned:
 
 **Decisions (defaults, prepared 2026-11-03):**
 1. 7.3 extends the existing activity log. It adds no new page and no new audit writes.
-2. Per-patient portal activity is matched by the portal actor id, computed on the server from the patient's *current* email.
-   - Rows written under an earlier email are not found. The UI hint says so ("según el correo actual").
-   - The formula lives in one helper, used by both the writer and the filter.
+2. Per-patient portal activity uses a stable link: `AuditLog.portalPatientId`, bound when a portal action resolves (or creates) its patient record.
+   - Revised after review (2026-11-04). Matching only by the actor id of the *current* email lost history after an email change, and it mixed records that share an email (a deleted one and its replacement).
+   - Unlinked rows (OTP logins, booking requests, older rows the migration could not backfill) still match the current email's actor. The UI hint says so.
+   - The actor-id formula lives in one helper, used by both the writer and the filter.
 3. VIEWER read access to the log stays as it is (see Open).
 4. Approval and review e2e run only in the desktop `public` project.
    - The OTP budget becomes 6 of 10, leaving 4 for retries.
@@ -1016,12 +1017,12 @@ As planned:
 - Server: `listAuditLogsSchema.source` accepts one value or an array (`in`), like `entityType`.
 - Portal source filter:
   - `QUERY_PARAMS.auditSource`, plus an "Origen" enum filter column: API, Tarea, Portal de pacientes.
-  - Rows from `PUBLIC_PORTAL` get a small "Portal" chip.
+  - The "Origen" column shows the source; no separate "Portal" chip (dropped after review: it repeated the column).
   - The `entityId` chip pattern is reused for active filters that have no column.
 - `AuditDrawer`:
   - Spanish labels for the portal fields.
   - Value labels for `status`, `cancelledBy`, `meetingStatus`, `kind` and `source`.
-  - `fmtDateTime(value, timezone)` everywhere.
+  - Values formatted by field: full ISO instants with `fmtDateTime(value, timezone)`; calendar days (`dateOfBirth`, `birthDate`, bare `YYYY-MM-DD`) with `fmtCalendarDay`; `policyVersion` verbatim.
 - Tests:
   - Server integration: array `source` filter, plus `PUBLIC_PORTAL` rows from a real portal cancel are listed with `source=PUBLIC_PORTAL`.
   - Portal unit: pill fallback, new labels, source filter → query.
@@ -1032,9 +1033,9 @@ As planned:
 - `listAuditLogsSchema` gains `portalPatientId` (uuid). Sending it together with `actorId` returns 400.
   - The repository loads the patient scoped by `userId`, deleted patients included (history matters), decrypts the email and filters by `actorId = portalActorId(userId, email)`.
   - A foreign or unknown id, or a patient without an email, returns an empty page: the same semantics as any other filter, never 404.
-- Portal `PatientDrawer`: "Actividad en el portal" link to `/settings?tab=Registro+de+actividad&portalPatientId=<id>&source=PUBLIC_PORTAL`.
-  - Shown only when `portalEnabled` and the patient has an email.
-  - On the tab, a "Paciente ✕" chip clears it, with the "según el correo actual" hint.
+- Portal `PatientDrawer`: "Actividad en el portal" link to `/settings?tab=Registro+de+actividad&portalPatientId=<id>` (the filter implies `PUBLIC_PORTAL`).
+  - Shown when `portalEnabled`. Linked rows outlive the patient's email.
+  - On the tab, a "Paciente ✕" chip clears it, with a hint that logins and requests are found by the current email.
 - `RequestDrawer` gets "Ver registros de actividad" (`entityId = request.id`), like `AppointmentDrawer`.
 - Tests:
   - Integration:

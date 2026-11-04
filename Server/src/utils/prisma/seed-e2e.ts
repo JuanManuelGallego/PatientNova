@@ -84,7 +84,6 @@ async function seedE2e() {
   });
 
   // Both portal providers log in with the admin password, so the inbox specs need no extra CI variables.
-  const portalPasswordHash = await bcrypt.hash(config.admin.password, config.auth.bcryptRounds);
   const publicProviderId = await seedPortalProvider({
     email: E2E_SEED.publicProviderEmail,
     slug: E2E_SEED.publicSlug,
@@ -92,22 +91,12 @@ async function seedE2e() {
     lastName: 'Pública',
     displayName: 'Dra. Ana Pública',
     approvalMode: BookingApprovalMode.AUTO_CONFIRM,
-    passwordHash: portalPasswordHash,
-  });
-  await prisma.appointmentType.upsert({
-    where: { id: E2E_SEED.publicTypeId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicTypeId, name: 'Primera consulta', defaultDuration: 60, defaultPrice: 150000, bookableOnline: true, userId: publicProviderId },
-  });
-  await prisma.appointmentType.upsert({
-    where: { id: E2E_SEED.publicFollowUpTypeId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicFollowUpTypeId, name: 'Control', defaultDuration: 30, defaultPrice: 90000, bookableOnline: true, userId: publicProviderId },
-  });
-  await prisma.appointmentLocation.upsert({
-    where: { id: E2E_SEED.publicLocationId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.publicLocationId, name: 'Consultorio Centro', address: 'Calle 10 # 5-20', bookableOnline: true, userId: publicProviderId },
+    passwordHash,
+    types: [
+      { id: E2E_SEED.publicTypeId, name: 'Primera consulta', defaultDuration: 60, defaultPrice: 150000 },
+      { id: E2E_SEED.publicFollowUpTypeId, name: 'Control', defaultDuration: 30, defaultPrice: 90000 },
+    ],
+    locations: [ { id: E2E_SEED.publicLocationId, name: 'Consultorio Centro', address: 'Calle 10 # 5-20' } ],
   });
 
   const approvalProviderId = await seedPortalProvider({
@@ -117,17 +106,9 @@ async function seedE2e() {
     lastName: 'Aprobación',
     displayName: 'Dra. Clara Aprobación',
     approvalMode: BookingApprovalMode.REQUIRE_APPROVAL,
-    passwordHash: portalPasswordHash,
-  });
-  await prisma.appointmentType.upsert({
-    where: { id: E2E_SEED.approvalTypeId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.approvalTypeId, name: 'Consulta inicial', defaultDuration: 60, defaultPrice: 140000, bookableOnline: true, userId: approvalProviderId },
-  });
-  await prisma.appointmentLocation.upsert({
-    where: { id: E2E_SEED.approvalLocationId },
-    update: { isDeleted: false, isActive: true, bookableOnline: true },
-    create: { id: E2E_SEED.approvalLocationId, name: 'Consultorio Norte', address: 'Carrera 7 # 80-10', bookableOnline: true, userId: approvalProviderId },
+    passwordHash,
+    types: [ { id: E2E_SEED.approvalTypeId, name: 'Consulta inicial', defaultDuration: 60, defaultPrice: 140000 } ],
+    locations: [ { id: E2E_SEED.approvalLocationId, name: 'Consultorio Norte', address: 'Carrera 7 # 80-10' } ],
   });
 
   // Local reruns reuse the database: start each run without old holds, so the request caps never fill up.
@@ -144,9 +125,17 @@ interface PortalProviderSeed {
   displayName: string;
   approvalMode: BookingApprovalMode;
   passwordHash: string;
+  /** Bookable online; re-enabled on every run. */
+  types: { id: string; name: string; defaultDuration: number; defaultPrice: number }[];
+  locations: { id: string; name: string; address: string }[];
 }
 
-/** A provider with a live public booking page: open every day 08:00-18:00, hourly grid, no lead time. */
+const BOOKABLE = { isDeleted: false, isActive: true, bookableOnline: true } as const;
+
+/**
+ * A provider with a live public booking page: open every day 08:00-18:00, hourly grid, no lead time, and
+ * its bookable types and locations.
+ */
 async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
   const booking = {
     bookingSlug: seed.slug, bookingEnabled: true, bookingApprovalMode: seed.approvalMode,
@@ -175,6 +164,20 @@ async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
   await prisma.availabilityRule.createMany({
     data: [ 1, 2, 3, 4, 5, 6, 7 ].map((weekday) => ({ userId: provider.id, weekday, startMinute: 8 * 60, endMinute: 18 * 60 })),
   });
+  for (const type of seed.types) {
+    await prisma.appointmentType.upsert({
+      where: { id: type.id },
+      update: BOOKABLE,
+      create: { ...type, bookableOnline: true, userId: provider.id },
+    });
+  }
+  for (const location of seed.locations) {
+    await prisma.appointmentLocation.upsert({
+      where: { id: location.id },
+      update: BOOKABLE,
+      create: { ...location, bookableOnline: true, userId: provider.id },
+    });
+  }
   return provider.id;
 }
 

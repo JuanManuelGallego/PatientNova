@@ -6,6 +6,7 @@ import { auditLogService } from '../../../src/audit-log/audit-log.service.js';
 import { portalActorId, portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
+import { resolvePortalPatient } from '../../../src/portal/patient-resolution.js';
 import { ActionSource, ActionType, EntityType } from '../../../generated/prisma/enums.js';
 import { createTestPatient, createTestUser, invokeRoute, unique } from '../helpers.js';
 
@@ -26,17 +27,22 @@ async function list(query: Record<string, unknown>, ownerId = userId) {
   return { status: res.statusCode, body: res.body as ListBody };
 }
 
-/** Writes one audit row exactly as the portal does: under the portal patient's audit context. */
-async function portalAudit(ownerId: string, email: string, entityId = randomUUID()) {
-  await runInAuditContext(portalPatientAuditContext({ userId: ownerId, email, ipAddress: '203.0.113.7' }), () =>
-    logAudit({
+/**
+ * Writes one audit row exactly as the portal does: under the portal patient's audit context. With
+ * `resolve`, the action first matches the patient record (as cancel/reschedule/book/consent do).
+ */
+async function portalAudit(ownerId: string, email: string, entityId = randomUUID(), opts: { resolve?: boolean } = {}) {
+  await runInAuditContext(portalPatientAuditContext({ userId: ownerId, email, ipAddress: '203.0.113.7' }), async () => {
+    if (opts.resolve) await resolvePortalPatient({ userId: ownerId, email });
+    await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId,
       userId: ownerId,
       actionType: ActionType.UPDATE,
       description: 'Cita cancelada por el paciente desde el portal',
       required: true,
-    }));
+    });
+  });
   return entityId;
 }
 
@@ -119,11 +125,51 @@ describe('audit-log portalPatientId filter', () => {
     expect(foreign.body.data.total).toBe(0);
   });
 
-  it('matches by the current email only', async () => {
+  it('matches unlinked rows by the current email only', async () => {
     const patient = await createTestPatient(userId);
     await portalAudit(userId, patient.email!);
     await prisma.patient.update({ where: { id: patient.id }, data: { email: unique('new@test.local') } });
     expect((await list({ portalPatientId: patient.id })).body.data.total).toBe(0);
+  });
+
+  it('links rows to the resolved patient record', async () => {
+    const patient = await createTestPatient(userId);
+    await portalAudit(userId, patient.email!, randomUUID(), { resolve: true });
+    const row = await prisma.auditLog.findFirstOrThrow({ where: { userId, source: ActionSource.PUBLIC_PORTAL } });
+    expect(row.portalPatientId).toBe(patient.id);
+  });
+
+  it('keeps linked rows after an email change', async () => {
+    const patient = await createTestPatient(userId);
+    const own = await portalAudit(userId, patient.email!, randomUUID(), { resolve: true });
+    await prisma.patient.update({ where: { id: patient.id }, data: { email: unique('new@test.local') } });
+    const res = await list({ portalPatientId: patient.id });
+    expect(res.body.data.data.map((r) => r.entityId)).toEqual([ own ]);
+  });
+
+  it("never shows another record's linked rows, even with the same email", async () => {
+    const email = unique('reused@test.local');
+    const old = await createTestPatient(userId, { email });
+    const oldAction = await portalAudit(userId, email, randomUUID(), { resolve: true });
+    await prisma.patient.update({ where: { id: old.id }, data: { isDeleted: true, deletedAt: new Date() } });
+    const replacement = await createTestPatient(userId, { email });
+    const newAction = await portalAudit(userId, email, randomUUID(), { resolve: true });
+
+    expect((await list({ portalPatientId: replacement.id })).body.data.data.map((r) => r.entityId)).toEqual([ newAction ]);
+    expect((await list({ portalPatientId: old.id })).body.data.data.map((r) => r.entityId)).toEqual([ oldAction ]);
+  });
+
+  it('only returns portal rows, whatever else is linked', async () => {
+    const patient = await createTestPatient(userId);
+    await portalAudit(userId, patient.email!, randomUUID(), { resolve: true });
+    // A provider row never carries the link: binding is a no-op outside a portal context.
+    await runInAuditContext({ actorId: 'provider', actorDisplayName: 'Proveedor', userId, source: ActionSource.API }, async () => {
+      await resolvePortalPatient({ userId, email: patient.email! });
+      await logAudit({ entityType: EntityType.PATIENT, entityId: patient.id, userId, actionType: ActionType.UPDATE, description: 'x', required: true });
+    });
+    const providerRow = await prisma.auditLog.findFirstOrThrow({ where: { userId, source: ActionSource.API } });
+    expect(providerRow.portalPatientId).toBeNull();
+    expect((await list({ portalPatientId: patient.id })).body.data.total).toBe(1);
   });
 
   it('returns an empty page for an unknown patient', async () => {

@@ -49,7 +49,10 @@ export interface FetchAuditLogsFilters {
   entityId?: string;
   actionType?: ActionType | ActionType[];
   source?: ActionSource | ActionSource[];
-  /** Portal activity of one patient (matched on the server by the patient's current email). */
+  /**
+   * Portal activity of one patient: rows linked to the record, plus logins/requests of its current email.
+   * Implies the PUBLIC_PORTAL source on the server.
+   */
   portalPatientId?: string;
   search?: string;
   dateFrom?: string;

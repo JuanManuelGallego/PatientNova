@@ -18,6 +18,7 @@ export const createAuditLogSchema = z.object({
   fieldsBefore: z.record(z.string(), z.unknown()).nullable().optional(),
   fieldsAfter: z.record(z.string(), z.unknown()).nullable().optional(),
   ipAddress: z.string().max(45).nullable().optional(),
+  portalPatientId: z.uuid().nullable().optional(),
 });
 
 export type CreateAuditLogDto = z.infer<typeof createAuditLogSchema>;
@@ -28,7 +29,10 @@ export const listAuditLogsSchema = z.object({
   actionType: z.union([ actionTypeEnum, z.array(actionTypeEnum) ]).optional(),
   source: z.union([ actionSourceEnum, z.array(actionSourceEnum) ]).optional(),
   actorId: z.string().optional(),
-  /** Portal activity of one patient, matched by the portal actor id of the patient's current email. */
+  /**
+   * Portal activity of one patient: rows linked to the record, plus unlinked rows (logins, requests) of the
+   * portal actor of the patient's current email. Implies `source=PUBLIC_PORTAL`.
+   */
   portalPatientId: z.uuid().optional(),
   search: z.string().optional(),
   dateFrom: z.string().optional(),

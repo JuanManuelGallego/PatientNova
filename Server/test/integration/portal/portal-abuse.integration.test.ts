@@ -1,5 +1,5 @@
 import type express from 'express';
-import type { Router } from 'express';
+import { Router as ExpressRouter } from 'express';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -153,21 +153,39 @@ describe('class limiters run before body parsing', () => {
 });
 
 describe('no secrets in URLs', () => {
-  type Layer = { route?: { path: string }; handle?: { stack?: Layer[] } };
-
-  function routePaths(router: Router): string[] {
-    const walk = (stack: Layer[]): string[] => stack.flatMap((layer) => {
-      if (layer.route) return [ layer.route.path ];
-      return layer.handle?.stack ? walk(layer.handle.stack) : [];
-    });
-    return walk((router as unknown as { stack: Layer[] }).stack);
+  /**
+   * Every path registered while building the routers: route paths (`get`/`post`/... go through `route`) and
+   * mount paths given to `use`. Router 2 compiles paths into closures, so a walk over `stack` cannot see
+   * the parameters of a `router.use('/x/:param', sub)` mount; recording the registrations can.
+   */
+  function registeredPaths(build: () => unknown): string[] {
+    // A router function's prototype is its own Router instance; the shared methods live one level up.
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(ExpressRouter())) as {
+      use: (...args: unknown[]) => unknown;
+      route: (path: unknown) => unknown;
+    };
+    const use = vi.spyOn(proto, 'use');
+    const route = vi.spyOn(proto, 'route');
+    try {
+      build();
+      const firsts = [ ...use.mock.calls.map((args) => args[ 0 ]), ...route.mock.calls.map((args) => args[ 0 ]) ];
+      return firsts.flat().filter((p): p is string => typeof p === 'string');
+    } finally {
+      use.mockRestore();
+      route.mockRestore();
+    }
   }
 
   it('public and session routes take only a slug or a record id as path parameters', () => {
-    const paths = [ ...routePaths(createPublicApiRouter()), ...routePaths(createPortalSessionRouter()) ];
+    const paths = registeredPaths(() => { createPublicApiRouter(); createPortalSessionRouter(); });
     expect(paths.length).toBeGreaterThan(5);
     const params = new Set(paths.flatMap((p) => [ ...p.matchAll(/:(\w+)/g) ].map((m) => m[ 1 ]!)));
     expect([ ...params ].sort()).toEqual([ 'id', 'slug' ]);
+  });
+
+  it('the path recorder sees parameters in mount paths', () => {
+    const paths = registeredPaths(() => ExpressRouter().use('/x/:token', ExpressRouter().get('/y', () => undefined)));
+    expect(paths).toEqual(expect.arrayContaining([ '/x/:token', '/y' ]));
   });
 
   it('otp/verify reads the code and challenge from the body only', async () => {

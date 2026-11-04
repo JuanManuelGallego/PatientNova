@@ -106,6 +106,8 @@ describe('POST /v1/portal/appointments/:id/cancel', () => {
       where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL, entityId: { in: [ appointmentId, reminder.id ] }, eventTimeUtc: { gte: before } },
     });
     expect(audits.map((a) => a.entityType).sort()).toEqual([ EntityType.APPOINTMENT, EntityType.REMINDER ]);
+    // Linked to the record, so the patient's portal activity survives an email change.
+    expect(audits.map((a) => a.portalPatientId)).toEqual([ appt.patientId, appt.patientId ]);
 
     expect(mocks.dispatch).toHaveBeenCalledTimes(2);
     const toPatient = mocks.dispatch.mock.calls[0]![1];

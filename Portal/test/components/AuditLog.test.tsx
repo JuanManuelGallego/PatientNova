@@ -6,7 +6,7 @@ import { ActionPill } from "@/src/components/Info/ActionPill";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ActionSource, ActionType, EntityType, type AuditLog } from "@/src/types/AuditLog";
 import { buildAuditLogQueryString } from "@/src/utils/ApiUtils";
-import { fmtDateTime } from "@/src/utils/TimeUtils";
+import { fmtCalendarDay, fmtDateTime } from "@/src/utils/TimeUtils";
 
 vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/New_York" }));
 
@@ -75,6 +75,29 @@ describe("AuditDrawer", () => {
     expect(screen.getByText("Versión de la política")).toBeInTheDocument();
     expect(screen.getByText("Tratamiento de datos")).toBeInTheDocument();
     expect(screen.getAllByText(fmtDateTime(acceptedAt, "America/New_York")).length).toBeGreaterThan(0);
+  });
+
+  it("shows a date-named policy version verbatim", () => {
+    renderDrawer(makeLog({
+      entityType: EntityType.PATIENT_CONSENT,
+      actionType: ActionType.CREATE,
+      affectedFields: [ "policyVersion" ],
+      fieldsBefore: null,
+      fieldsAfter: { policyVersion: "2026-10-19" },
+    }));
+    expect(screen.getByText("2026-10-19")).toBeInTheDocument();
+  });
+
+  it("shows calendar days without shifting them through the timezone", () => {
+    renderDrawer(makeLog({
+      entityType: EntityType.PATIENT,
+      affectedFields: [ "dateOfBirth" ],
+      fieldsBefore: { dateOfBirth: "1990-05-10T00:00:00.000Z" },
+      fieldsAfter: { dateOfBirth: "1990-05-11" },
+    }));
+    expect(screen.getByText(fmtCalendarDay("1990-05-10"))).toBeInTheDocument();
+    expect(screen.getByText(fmtCalendarDay("1990-05-11"))).toBeInTheDocument();
+    expect(screen.getByText(fmtCalendarDay("1990-05-10"))).toHaveTextContent("10 de mayo de 1990");
   });
 });
 
