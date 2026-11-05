@@ -40,7 +40,7 @@ describe("audit pills", () => {
   it("label the portal entity types", () => {
     render(<><EntityTypePill entityType={EntityType.BOOKING_REQUEST} /><EntityTypePill entityType={EntityType.PATIENT_CONSENT} /></>);
     expect(screen.getByText("Solicitud de reserva")).toBeInTheDocument();
-    expect(screen.getByText("Consentimiento de datos")).toBeInTheDocument();
+    expect(screen.getByText("Consentimiento")).toBeInTheDocument();
   });
 
   it("show an unknown value instead of crashing", () => {

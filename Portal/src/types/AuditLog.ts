@@ -74,7 +74,7 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.GOOGLE_CONNECTION]: { label: "Conexión Google", color: "#2563EB", bg: "#EFF6FF" },
   [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
   [EntityType.BOOKING_REQUEST]: { label: "Solicitud de reserva", color: "#B45309", bg: "#FFFBEB" },
-  [EntityType.PATIENT_CONSENT]: { label: "Consentimiento de datos", color: "#334155", bg: "#F1F5F9" },
+  [EntityType.PATIENT_CONSENT]: { label: "Consentimiento", color: "#334155", bg: "#F1F5F9" },
 };
 
 export const UNKNOWN_PILL_STYLE = { color: "#4B5563", bg: "#F3F4F6" } as const;

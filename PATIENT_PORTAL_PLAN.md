@@ -1012,7 +1012,7 @@ As planned:
    - The portal providers reuse `ADMIN_PASSWORD`, so CI gets no new variables. The seed's database-name guard still applies.
 
 **PR 7.3-A — Server + Portal: fix the crash, source filter, drawer labels (ship first; small).**
-- Portal `EntityType`/`ENTITY_TYPE_CONFIG`: add `BOOKING_REQUEST` ("Solicitud de reserva") and `PATIENT_CONSENT` ("Consentimiento de datos").
+- Portal `EntityType`/`ENTITY_TYPE_CONFIG`: add `BOOKING_REQUEST` ("Solicitud de reserva") and `PATIENT_CONSENT` ("Consentimiento").
   - `EntityTypePill` and `ActionPill` fall back to a neutral pill showing the raw value, so a server enum can grow before the Portal does.
 - Server: `listAuditLogsSchema.source` accepts one value or an array (`in`), like `entityType`.
 - Portal source filter:

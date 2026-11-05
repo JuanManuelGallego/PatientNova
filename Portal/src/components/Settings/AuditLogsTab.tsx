@@ -128,6 +128,7 @@ export function AuditLogsTab() {
           triggerTestId: "audit-entity-filter-trigger",
         },
       },
+      { label: "Descripcion" },
       {
         label: "Origen",
         filter: {
@@ -139,7 +140,6 @@ export function AuditLogsTab() {
           triggerTestId: "audit-source-filter-trigger",
         },
       },
-      { label: "Descripcion" },
       {
         label: "Fecha",
         sortKey: "eventTimeUtc",
@@ -252,8 +252,8 @@ export function AuditLogsTab() {
             <td className="td">
               <EntityTypePill entityType={log.entityType} />
             </td>
-            <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{log.description}</td>
+            <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
         )}
