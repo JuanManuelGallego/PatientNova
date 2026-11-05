@@ -1,7 +1,7 @@
 import { CircleAlert, SearchX } from "lucide-react";
 import type { ApiClientError } from "@/src/api/base/apiClients";
 import styles from "./PublicBooking.module.css";
-import { StateIcon } from "./PublicChrome";
+import { PublicHeader, StateIcon, TrustStrip } from "./PublicChrome";
 
 export function Unavailable() {
     return (
@@ -23,10 +23,18 @@ export function ErrorState({ error, onRetry, inline = false }: { error: ApiClien
     );
 }
 
-export function PublicPageShell({ children }: { children: React.ReactNode }) {
+export function PublicPageShell({ children, slug, current }: {
+    children: React.ReactNode; slug: string; current: "book" | "appointments";
+}) {
     return (
-        <main className={styles.page}>
-            <div className={styles.container}>{children}</div>
-        </main>
+        <>
+            <PublicHeader slug={slug} current={current} />
+            <main className={styles.page}>
+                <div className={styles.container}>
+                    {children}
+                    <TrustStrip />
+                </div>
+            </main>
+        </>
     );
 }

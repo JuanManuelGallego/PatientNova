@@ -1,20 +1,27 @@
+import Link from "next/link";
 import { Lock, MailCheck, ShieldCheck, type LucideIcon } from "lucide-react";
 import styles from "./PublicChrome.module.css";
 
 const LEGAL_LINK_TARGET = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-export function PublicHeader() {
+export function PublicHeader({ slug, current }: { slug: string; current: "book" | "appointments" }) {
     return (
         <header className={styles.header}>
             <div className={styles.headerInner}>
                 <span className={styles.brand}>
-                    <span className={styles.brandMark} aria-hidden="true"><ShieldCheck size={16} /></span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className={styles.logo} src="/favicon.ico" alt="" width={32} height={32} />
                     Patient Nova
                 </span>
-                <span className={styles.secure}>
-                    <Lock size={14} aria-hidden="true" />
-                    Reserva segura
-                </span>
+                <div className={styles.headerEnd}>
+                    {current === "book" && (
+                        <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.navLink}>Mis citas</Link>
+                    )}
+                    <span className={styles.secure}>
+                        <Lock size={14} aria-hidden="true" />
+                        Reserva segura
+                    </span>
+                </div>
             </div>
         </header>
     );

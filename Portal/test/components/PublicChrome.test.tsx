@@ -3,10 +3,21 @@ import { describe, expect, it } from "vitest";
 import { PublicFooter, PublicHeader, TrustStrip } from "@/src/components/PublicBooking/PublicChrome";
 
 describe("public booking chrome", () => {
-  it("shows the Patient Nova brand and secure badge in the header", () => {
-    render(<PublicHeader />);
+  it("shows the Patient Nova brand, logo and secure badge in the header", () => {
+    const { container } = render(<PublicHeader slug="dra-ana" current="book" />);
     expect(screen.getByText("Patient Nova")).toBeInTheDocument();
     expect(screen.getByText("Reserva segura")).toBeInTheDocument();
+    expect(container.querySelector("img")).toHaveAttribute("src", "/favicon.ico");
+  });
+
+  it("links to the patient's appointments from the booking page header", () => {
+    render(<PublicHeader slug="dra-ana" current="book" />);
+    expect(screen.getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+  });
+
+  it("omits the appointments link on the appointments page", () => {
+    render(<PublicHeader slug="dra-ana" current="appointments" />);
+    expect(screen.queryByRole("link", { name: "Mis citas" })).not.toBeInTheDocument();
   });
 
   it("links the legal pages and contact from the footer", () => {

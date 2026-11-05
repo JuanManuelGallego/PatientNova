@@ -52,7 +52,7 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
         );
     }
 
-    return <PublicPageShell>{body}</PublicPageShell>;
+    return <PublicPageShell slug={slug} current="appointments">{body}</PublicPageShell>;
 }
 
 function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider }) {

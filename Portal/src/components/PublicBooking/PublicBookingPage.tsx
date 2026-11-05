@@ -12,7 +12,7 @@ import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, timezoneName } from "@/src/
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
-import { StateIcon, TrustStrip } from "./PublicChrome";
+import { StateIcon } from "./PublicChrome";
 import { BookingForm } from "./BookingForm";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalRequestCard } from "./PortalRequestCard";
@@ -28,7 +28,7 @@ export function PublicBookingPage({ slug }: { slug: string }) {
     else if (!provider.bookingOpen) body = <BookingPaused slug={slug} provider={provider} />;
     else body = <BookingView slug={slug} provider={provider} />;
 
-    return <PublicPageShell>{body}</PublicPageShell>;
+    return <PublicPageShell slug={slug} current="book">{body}</PublicPageShell>;
 }
 
 const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
@@ -77,16 +77,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
         picker.retry();
     };
 
-    const nav = (
-        <nav className={styles.topNav} aria-label="Cuenta">
-            <Link href={appointmentsPath(slug)} className={styles.topLink}>Mis citas</Link>
-        </nav>
-    );
-
     if (booked) {
         return (
             <>
-                {nav}
                 <ProviderHero slug={slug} provider={provider} />
                 {"request" in booked
                     ? <RequestSent slug={slug} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
@@ -97,7 +90,6 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     return (
         <>
-            {nav}
             <ProviderHero slug={slug} provider={provider} />
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
@@ -170,7 +162,6 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
                     ))}
                 </ul>
             )}
-            <TrustStrip />
         </section>
     );
 }
