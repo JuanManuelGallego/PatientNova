@@ -767,8 +767,6 @@ model AuditLog {
   fieldsBefore      Json?
   fieldsAfter       Json?
   ipAddress         String?
-  /// The patient record a portal action concerned, when one was resolved (null for logins, requests and
-  /// non-portal rows). Stable across email changes and distinct between records sharing an email.
   portalPatientId   String?
 
   @@index([entityType, entityId])

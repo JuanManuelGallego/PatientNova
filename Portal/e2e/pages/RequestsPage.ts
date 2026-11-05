@@ -2,7 +2,6 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export type RequestsTab = 'pending' | 'resolved' | 'expired';
 
-/** The provider's "Solicitudes" inbox (`/requests`) and its drawer. */
 export class RequestsPage {
     readonly badge: Locator;
     readonly drawer: Locator;
@@ -21,7 +20,6 @@ export class RequestsPage {
         await this.page.getByTestId(`requests-tab-${tab}`).click();
     }
 
-    /** Rows of the current tab for one patient email. */
     rowsFor(email: string): Locator {
         return this.page.getByTestId(/^request-row-/).filter({ hasText: email });
     }

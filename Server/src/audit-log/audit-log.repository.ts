@@ -6,16 +6,11 @@ import { AuditLogNotFoundError } from './audit-log.errors.js';
 import { paginate, buildPaginatedResult, type Paginated } from '../utils/api/pagination.js';
 import { ActionSource } from '../../generated/prisma/enums.js';
 
-/** One patient's portal activity: `actorId` is the portal actor of the patient's current email, if any. */
 export interface PortalPatientFilter {
   patientId: string;
   actorId: string | null;
 }
 
-/**
- * Rows linked to the record, plus unlinked rows (logins, requests, rows written before the link existed)
- * of the patient's current email. A row linked to another record never matches, even with the same email.
- */
 function portalPatientMatch({ patientId, actorId }: PortalPatientFilter): Prisma.AuditLogWhereInput[] {
   return [
     { portalPatientId: patientId },

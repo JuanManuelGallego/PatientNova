@@ -125,7 +125,6 @@ describe('POST /v1/portal/bookings', () => {
     expect(audits.map((a) => a.entityType).sort()).toEqual(
       [ EntityType.APPOINTMENT, EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.REMINDER, EntityType.REMINDER ].sort(),
     );
-    // The new patient's own row links to itself; the rows after it are bound to the created record.
     expect(new Set(audits.map((a) => a.portalPatientId))).toEqual(new Set([ patient!.id ]));
   });
 

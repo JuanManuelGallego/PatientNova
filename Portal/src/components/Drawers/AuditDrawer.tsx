@@ -9,7 +9,6 @@ import { DETAIL_ICONS } from "@/src/config/icons";
 import { EntityTypePill } from "../Info/EntityTypePill";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
-/** Spanish labels for the enum values audit rows carry (statuses, who cancelled, meeting state, consent kind). */
 const VALUE_LABELS: Record<string, Record<string, string>> = {
   status: {
     SCHEDULED: "Agendada",
@@ -38,10 +37,8 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   source: { PROVIDER: "Profesional", PORTAL: "Portal de pacientes" },
 };
 
-/** Fields shown verbatim even when they look like a date (a policy version is named after its date). */
 const TEXT_FIELDS = new Set(["policyVersion"]);
 
-/** Calendar days stored as UTC midnight: formatted as a day, never through a timezone. */
 const CALENDAR_DAY_FIELDS = new Set(["dateOfBirth", "birthDate"]);
 
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
@@ -51,7 +48,6 @@ function formatString(value: string, timezone: string, field?: string): string {
   const label = field ? VALUE_LABELS[field]?.[value] : undefined;
   if (label) return label;
   if (field && TEXT_FIELDS.has(field)) return value;
-  // A bare "YYYY-MM-DD" is a calendar day too, whatever the field.
   if ((field && CALENDAR_DAY_FIELDS.has(field)) || BARE_DATE.test(value)) {
     return calendarDayOf(value) ? fmtCalendarDay(value) : value;
   }

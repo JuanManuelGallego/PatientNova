@@ -49,10 +49,6 @@ export interface FetchAuditLogsFilters {
   entityId?: string;
   actionType?: ActionType | ActionType[];
   source?: ActionSource | ActionSource[];
-  /**
-   * Portal activity of one patient: rows linked to the record, plus logins/requests of its current email.
-   * Implies the PUBLIC_PORTAL source on the server.
-   */
   portalPatientId?: string;
   search?: string;
   dateFrom?: string;
@@ -81,7 +77,6 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.PATIENT_CONSENT]: { label: "Consentimiento de datos", color: "#334155", bg: "#F1F5F9" },
 };
 
-/** Neutral style for an enum value the server sent before the Portal knew it. */
 export const UNKNOWN_PILL_STYLE = { color: "#4B5563", bg: "#F3F4F6" } as const;
 
 export const ACTION_TYPE_CONFIG: Record<

@@ -7,11 +7,6 @@ import type { CreateAuditLogDto, ListAuditLogsQuery } from './audit-log.schemas.
 import type { AuditLog } from '../../generated/prisma/client.ts';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 
-/**
- * The portal-activity filter of a patient of this provider: rows linked to the record, plus unlinked rows of
- * the actor of its current (decrypted) email. Deleted patients are included: their history still matters.
- * Null when the patient is not this provider's, so the caller answers with an empty page like any other filter.
- */
 async function portalPatientFilter(userId: string, patientId: string): Promise<PortalPatientFilter | null> {
   const patient = await prisma.patient.findFirst({ where: { id: patientId, userId }, select: { email: true } });
   if (!patient) return null;

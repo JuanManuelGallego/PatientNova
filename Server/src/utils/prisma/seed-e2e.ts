@@ -83,7 +83,6 @@ async function seedE2e() {
     create: { userId: user.id, name: 'Consentimiento E2E.pdf', content, mimeType: 'application/pdf', sizeBytes: content.length },
   });
 
-  // Both portal providers log in with the admin password, so the inbox specs need no extra CI variables.
   const publicProviderId = await seedPortalProvider({
     email: E2E_SEED.publicProviderEmail,
     slug: E2E_SEED.publicSlug,
@@ -111,7 +110,6 @@ async function seedE2e() {
     locations: [ { id: E2E_SEED.approvalLocationId, name: 'Consultorio Norte', address: 'Carrera 7 # 80-10' } ],
   });
 
-  // Local reruns reuse the database: start each run without old holds, so the request caps never fill up.
   await prisma.bookingRequest.deleteMany({ where: { userId: { in: [ publicProviderId, approvalProviderId ] } } });
 
   console.log(`E2E seed ready for ${maskEmail(email)}`);
@@ -125,17 +123,12 @@ interface PortalProviderSeed {
   displayName: string;
   approvalMode: BookingApprovalMode;
   passwordHash: string;
-  /** Bookable online; re-enabled on every run. */
   types: { id: string; name: string; defaultDuration: number; defaultPrice: number }[];
   locations: { id: string; name: string; address: string }[];
 }
 
 const BOOKABLE = { isDeleted: false, isActive: true, bookableOnline: true } as const;
 
-/**
- * A provider with a live public booking page: open every day 08:00-18:00, hourly grid, no lead time, and
- * its bookable types and locations.
- */
 async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
   const booking = {
     bookingSlug: seed.slug, bookingEnabled: true, bookingApprovalMode: seed.approvalMode,

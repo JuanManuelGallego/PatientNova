@@ -88,7 +88,6 @@ export function AuditLogsTab() {
       entityType: entityType.length ? (entityType as EntityType[]) : undefined,
       entityId: entityId.trim() || undefined,
       actionType: actionType.length ? (actionType as ActionType[]) : undefined,
-      // A stale or hand-edited `?source=` value is ignored rather than turned into a 400 from the API.
       source: validSources.length ? validSources : undefined,
       portalPatientId: portalPatientId.trim() || undefined,
       search: debouncedSearch.trim() || undefined,

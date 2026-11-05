@@ -14,12 +14,6 @@ import { TURNSTILE_SITEVERIFY_URL } from '../../../src/captcha/turnstile.js';
 import { createPortalSessionRouter, createPublicApiRouter } from '../../../src/portal/portal-routers.js';
 import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider } from './portal-helpers.js';
 
-/**
- * Abuse protection as wired in the real routers: every named per-IP limiter answers a JSON 429 at its
- * documented budget, the class limiters run before body parsing, and no public route takes a secret
- * in its path or query string. A fresh app per test gives fresh in-memory buckets; tests that compare
- * clients set their own `X-Forwarded-For` (trust proxy is exactly one hop).
- */
 
 const FIFTEEN_MIN_LIMITS = { otpRequest: 10, otpVerify: 20, booking: 10, change: 10 } as const;
 
@@ -76,7 +70,6 @@ describe('otp-request-ip', () => {
     expect(sendTransactionalEmail.mock.calls.length).toBe(sendsBefore);
     expect(await prisma.portalOtp.count({ where: { userId: provider.id, emailHash: emailHash(email)! } })).toBe(0);
 
-    // The bucket is per IP: another client is unaffected.
     expect((await postFrom('198.51.100.11', path).send({ email, captchaToken: 'good' })).status).toBe(202);
   });
 });
@@ -120,10 +113,8 @@ describe('portal-change-ip', () => {
     }
     for (const path of paths) expectJson429(await postFrom(ip, path).send({}));
 
-    // Reads stay outside the change budget.
     const slots = await request(app).get(`/v1/portal/appointments/${id}/slots`).set('X-Forwarded-For', ip);
     expect(slots.status).toBe(401);
-    // Booking has its own budget.
     expect((await postFrom(ip, '/v1/portal/bookings').send({})).status).toBe(401);
   });
 });
@@ -153,13 +144,7 @@ describe('class limiters run before body parsing', () => {
 });
 
 describe('no secrets in URLs', () => {
-  /**
-   * Every path registered while building the routers: route paths (`get`/`post`/... go through `route`) and
-   * mount paths given to `use`. Router 2 compiles paths into closures, so a walk over `stack` cannot see
-   * the parameters of a `router.use('/x/:param', sub)` mount; recording the registrations can.
-   */
   function registeredPaths(build: () => unknown): string[] {
-    // A router function's prototype is its own Router instance; the shared methods live one level up.
     const proto = Object.getPrototypeOf(Object.getPrototypeOf(ExpressRouter())) as {
       use: (...args: unknown[]) => unknown;
       route: (path: unknown) => unknown;

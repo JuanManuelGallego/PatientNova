@@ -1,11 +1,6 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
 import { Env } from '../utils/env';
 
-/**
- * Shared steps for the public booking specs. OTP budget: `otp-request-ip` allows 10 code requests per
- * IP per 15 minutes for the whole run (every project and retry), so each spec requests at most one code
- * and reuses the session afterwards.
- */
 
 export const MOCK_BREVO_URL = process.env.MOCK_BREVO_URL ?? 'http://localhost:4010';
 
@@ -31,7 +26,6 @@ export async function latestCode(email: string): Promise<string> {
     return code;
 }
 
-/** Anonymous API calls must not carry the Vercel bypass headers (they are only for the Portal origin). */
 export async function stripVercelBypass(page: Page) {
     await page.route(`${new URL(Env.apiBaseUrl).origin}/**`, (route) => {
         const headers = { ...route.request().headers() };
@@ -41,14 +35,12 @@ export async function stripVercelBypass(page: Page) {
     });
 }
 
-/** A per-run, per-project address, so reruns and parallel projects never share a mailbox. */
 export function patientEmail(prefix: string, testInfo: TestInfo): string {
     return `${prefix}-${testInfo.project.name}-${Date.now()}@example.com`;
 }
 
 export interface PickedSlot { dayName: string; timeText: string }
 
-/** Next week on the public page, the selected day, the `index`-th free time of the day. */
 export async function pickSlot(page: Page, slug: string, index = 0): Promise<PickedSlot> {
     await page.goto(`/book/${slug}`);
     await page.getByRole('button', { name: 'Semana siguiente' }).click();
@@ -58,12 +50,10 @@ export async function pickSlot(page: Page, slug: string, index = 0): Promise<Pic
     const time = page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button').nth(index);
     const timeText = (await time.textContent())!.trim();
     await time.click();
-    // "Envía tu solicitud" in approval mode.
     await expect(page.getByRole('heading', { name: /Confirma tu cita|Envía tu solicitud/ })).toBeVisible();
     return { dayName, timeText };
 }
 
-/** Whether `slot` is offered on the public page right now (next week, same day). */
 export async function slotOffered(page: Page, slug: string, slot: PickedSlot): Promise<number> {
     await page.goto(`/book/${slug}`);
     await page.getByRole('button', { name: 'Semana siguiente' }).click();
@@ -71,7 +61,6 @@ export async function slotOffered(page: Page, slug: string, slot: PickedSlot): P
     return page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button', { name: slot.timeText, exact: true }).count();
 }
 
-/** The booking form's email step: request a code and log in with it (one OTP request). */
 export async function verifyEmail(page: Page, email: string) {
     await page.getByLabel('Correo electrónico').fill(email);
     const send = page.getByRole('button', { name: 'Enviar código' });
@@ -81,7 +70,6 @@ export async function verifyEmail(page: Page, email: string) {
     await page.getByRole('button', { name: 'Ingresar' }).click();
 }
 
-/** The booking form's details step, for a signed-in session. */
 export async function submitDetails(page: Page, submitLabel: 'Reservar cita' | 'Enviar solicitud') {
     await page.getByLabel('Nombre').fill('Paciente');
     await page.getByLabel('Apellidos').fill('E2E');

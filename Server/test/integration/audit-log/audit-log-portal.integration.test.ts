@@ -27,10 +27,6 @@ async function list(query: Record<string, unknown>, ownerId = userId) {
   return { status: res.statusCode, body: res.body as ListBody };
 }
 
-/**
- * Writes one audit row exactly as the portal does: under the portal patient's audit context. With
- * `resolve`, the action first matches the patient record (as cancel/reschedule/book/consent do).
- */
 async function portalAudit(ownerId: string, email: string, entityId = randomUUID(), opts: { resolve?: boolean } = {}) {
   await runInAuditContext(portalPatientAuditContext({ userId: ownerId, email, ipAddress: '203.0.113.7' }), async () => {
     if (opts.resolve) await resolvePortalPatient({ userId: ownerId, email });
@@ -86,7 +82,6 @@ describe('audit-log portalPatientId filter', () => {
     await portalAudit(userId, email);
     const row = await prisma.auditLog.findFirstOrThrow({ where: { userId, source: ActionSource.PUBLIC_PORTAL } });
     expect(row.actorId).toBe(portalActorId(userId, email));
-    // Normalized like every email lookup.
     expect(portalActorId(userId, `  ${email.toUpperCase()} `)).toBe(row.actorId);
   });
 
@@ -117,9 +112,7 @@ describe('audit-log portalPatientId filter', () => {
     const theirs = await createTestPatient(otherProvider, { email });
     await portalAudit(otherProvider, email);
 
-    // Same email at another provider: a different actor id, so nothing of theirs shows up here.
     expect((await list({ portalPatientId: mine.id })).body.data.total).toBe(0);
-    // Another provider's patient id: an empty page, not a 404.
     const foreign = await list({ portalPatientId: theirs.id });
     expect(foreign.status).toBe(200);
     expect(foreign.body.data.total).toBe(0);
@@ -162,7 +155,6 @@ describe('audit-log portalPatientId filter', () => {
   it('only returns portal rows, whatever else is linked', async () => {
     const patient = await createTestPatient(userId);
     await portalAudit(userId, patient.email!, randomUUID(), { resolve: true });
-    // A provider row never carries the link: binding is a no-op outside a portal context.
     await runInAuditContext({ actorId: 'provider', actorDisplayName: 'Proveedor', userId, source: ActionSource.API }, async () => {
       await resolvePortalPatient({ userId, email: patient.email! });
       await logAudit({ entityType: EntityType.PATIENT, entityId: patient.id, userId, actionType: ActionType.UPDATE, description: 'x', required: true });

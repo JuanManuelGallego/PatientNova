@@ -36,7 +36,6 @@ export async function resolvePortalPatient(identity: PortalIdentity, tx?: Transa
   const hash = emailHash(identity.email);
   if (!hash) return { kind: 'none' };
   const resolution = classifyPortalMatch(await patientRepository.findPortalMatch(identity.userId, hash, tx));
-  // Every portal match goes through here, so the action's audit rows always carry the record it concerned.
   if (resolution.kind === 'patient') bindAuditPortalPatient(resolution.patientId);
   return resolution;
 }
