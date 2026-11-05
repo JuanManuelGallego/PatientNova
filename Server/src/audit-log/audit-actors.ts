@@ -1,6 +1,6 @@
 import { ActionSource } from '../../generated/prisma/enums.js';
-import { maskEmail } from '../utils/api/logger.js';
 import { portalActorHash } from '../utils/encryption/blind-index.js';
+import { maskContact, type PortalContact } from '../portal/portal-contact.js';
 import type { AuditContext } from './audit-log-context.js';
 
 export function bookingRequestExpiryAuditContext(userId: string): AuditContext {
@@ -12,18 +12,18 @@ export function bookingRequestExpiryAuditContext(userId: string): AuditContext {
   };
 }
 
-export function portalActorId(userId: string, email: string): string {
-  return `portal:${portalActorHash(userId, email).slice(0, 24)}`;
+export function portalActorId(userId: string, contact: string): string {
+  return `portal:${portalActorHash(userId, contact).slice(0, 24)}`;
 }
 
 export function portalPatientAuditContext(params: {
   userId: string;
-  email: string;
+  contact: PortalContact;
   ipAddress?: string | undefined;
 }): AuditContext {
   return {
-    actorId: portalActorId(params.userId, params.email),
-    actorDisplayName: `Paciente (portal) ${maskEmail(params.email)}`,
+    actorId: portalActorId(params.userId, params.contact.value),
+    actorDisplayName: `Paciente (portal) ${maskContact(params.contact)}`,
     ipAddress: params.ipAddress,
     userId: params.userId,
     source: ActionSource.PUBLIC_PORTAL,

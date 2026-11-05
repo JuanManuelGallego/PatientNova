@@ -3,6 +3,7 @@ import { config } from '../../../src/utils/config/config.js';
 import { ActionSource, BookingApprovalMode, BookingRequestStatus, EntityType } from '../../../generated/prisma/enums.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
+import { emailContact } from '../../../src/portal/portal-contact.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
 import { bookingRequestRepository } from '../../../src/booking-requests/booking-request.repository.js';
@@ -255,7 +256,7 @@ describe('hold overlap backstop and expiry', () => {
     const old = await requestHold(p, start);
     await expireNow(old.id);
 
-    const sweeper = portalPatientAuditContext({ userId: p.id, email: 'otra@example.com', ipAddress: '198.51.100.7' });
+    const sweeper = portalPatientAuditContext({ userId: p.id, contact: emailContact('otra@example.com'), ipAddress: '198.51.100.7' });
     await runInAuditContext(sweeper, () => requestHold(p, start, 'otra@example.com'));
 
     // `description` is encrypted at rest, so it cannot be used in `where`.

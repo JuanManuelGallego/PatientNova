@@ -14,7 +14,11 @@ export interface BookingRequest {
     resolvedAt: string | null;
     name: string;
     lastName: string;
-    email: string;
+    /** How the patient proved who they are: `email`, or `verifiedPhone` on this channel. */
+    contactChannel: "EMAIL" | "WHATSAPP" | "SMS";
+    email: string | null;
+    verifiedPhone: string | null;
+    /** Typed in the booking form, never proven. */
     phone: string | null;
     patientTimezone: string;
     appointmentId: string | null;
@@ -23,13 +27,17 @@ export interface BookingRequest {
     location: { id: string; name: string; isVirtual: boolean };
 }
 
-/** A patient of the provider sharing the request's email, computed when the request is opened. */
+/** A patient of the provider sharing the request's verified contact, computed when the request is opened. */
 export interface RequestCandidate {
     id: string;
     name: string;
     lastName: string;
     email: string | null;
     whatsappNumber: string | null;
+    smsNumber: string | null;
+    whatsappUnverified: boolean;
+    /** The match is only a number typed in the booking form, so it proves nothing about this record. */
+    unverifiedMatch: boolean;
     status: "ACTIVE" | "INACTIVE";
     portalAccessEnabled: boolean;
     isDeleted: boolean;
@@ -40,11 +48,12 @@ export interface RequestCandidate {
 
 export interface BookingRequestDetail extends BookingRequest {
     consent: { policyVersion: string; acceptedAt: string };
-    /** The active record first (at most one), then deleted ones. */
+    /** Active records first (at most one for an email, several for a shared number), then deleted ones. */
     candidates: RequestCandidate[];
 }
 
 export interface ApproveBookingRequestBody {
+    existingPatientId?: string;
     restorePatientId?: string;
 }
 

@@ -5,7 +5,7 @@ export const HOLD_HOURS = 48;
 export const NUDGE_HOURS = 24;
 /** Resolved requests stay in the inbox history this long, then the daily purge deletes them. */
 export const RESOLVED_RETENTION_DAYS = 90;
-export const MAX_PENDING_REQUESTS_PER_EMAIL = 3;
+export const MAX_PENDING_REQUESTS_PER_CONTACT = 3;
 export const MAX_PENDING_REQUESTS_PER_PROVIDER = 50;
 
 export function holdExpiry(now: Date, startAt: Date): Date {

@@ -94,11 +94,11 @@ describe('renderAppointmentReminder', () => {
     const pending = { meetingUrl: null, meetingStatus: 'NEEDS_LINK' };
     for (const channel of [ 'EMAIL', 'SMS' ]) {
       const rendered = renderAppointmentReminder(appointment({ ...pending, reminder: { ...appointment().reminder, channel } }), 'Dra. Rivera', 'America/Bogota');
-      expect(rendered?.body).toContain('Enlace de la reunión: Te enviaremos el enlace por correo');
+      expect(rendered?.body).toContain('Enlace de la reunión: Te enviaremos el enlace pronto');
       expect(rendered?.body).not.toMatch(/\{\{\d+\}\}/);
     }
     const whatsapp = renderAppointmentReminder(appointment(pending), 'Dra. Rivera', 'America/Bogota');
-    expect(whatsapp?.contentVariables['5']).toBe('Te enviaremos el enlace por correo');
+    expect(whatsapp?.contentVariables['5']).toBe('Te enviaremos el enlace pronto');
   });
 
   it('renders an EMAIL with the "Asunto" line as subject, not body text', () => {
@@ -111,6 +111,20 @@ describe('renderAppointmentReminder', () => {
     expect(rendered?.body).not.toContain('Asunto:');
     expect(rendered?.body?.startsWith('Buen día Ana')).toBe(true);
     expect(rendered?.body).toContain('https://meet.google.com/final-room');
+  });
+
+  it('keeps a portal SMS reminder to one line with no patient details', () => {
+    const rendered = renderAppointmentReminder(appointment({
+      source: 'PORTAL',
+      reminder: { ...appointment().reminder, channel: 'SMS' },
+    }), 'Dra. Pérez', 'America/Bogota');
+
+    expect(rendered?.body).toContain('tu cita con Dra. Pérez');
+    expect(rendered?.body).toContain('https://meet.google.com/final-room');
+    expect(rendered?.body).not.toMatch(/\n/);
+    expect(rendered?.body).not.toContain('Asunto');
+    expect(rendered?.body).not.toContain(appointment().patient.name);
+    expect(rendered?.body).not.toMatch(/[ap]\. m\.\./);
   });
 
   it('keeps the SMS body unchanged and leaves subject null', () => {

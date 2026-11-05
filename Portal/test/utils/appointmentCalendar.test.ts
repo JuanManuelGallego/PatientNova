@@ -57,7 +57,7 @@ describe("buildAppointmentIcs", () => {
             meeting: { status: "pending" },
         }), "Dra. Ana", NOW));
         expect(ics).toContain("LOCATION:Virtual\r\n");
-        expect(ics).toContain("El enlace de la videollamada llegará a tu correo.");
+        expect(ics).toContain("Te enviaremos el enlace de la videollamada.");
     });
 
     it("omits the optional lines when there is nothing to say", () => {

@@ -12,6 +12,13 @@ export class PortalBookingUnavailableError extends ApiError {
   }
 }
 
+/** A phone session's number is the one it proved; a typed one would be a second, unproven identity. */
+export class PortalPhoneFieldError extends ApiError {
+  constructor() {
+    super('The phone number comes from the session', 400);
+  }
+}
+
 export class PortalBookingLimitError extends ApiError {
   constructor() {
     super('Booking limit reached', 409);

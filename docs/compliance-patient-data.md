@@ -46,7 +46,8 @@ checklist items in section 5.
 
 1. **What is encrypted** (AES-256-GCM, `ENCRYPTION_KEY`, random IV): `Patient.name`, `lastName`,
    `email`, `whatsappNumber`, `smsNumber`; `Reminder.to`, `subject` (it can carry the patient's
-   name); `MedicalRecord.name`, `birthPlace` (the record's own copy of the patient's identity).
+   name); `MedicalRecord.name`, `birthPlace` (the record's own copy of the patient's identity);
+   `BookingRequest.email`, `verifiedPhone`, `name`, `lastName`, `phone`.
    The columns became `TEXT`; length limits live in the zod schemas.
 2. **Keys.** `BLIND_INDEX_KEY` (32 bytes hex, distinct from `ENCRYPTION_KEY`, required in production)
    is kept in the secret manager and backed up separately from database backups. Every blind index
@@ -55,7 +56,8 @@ checklist items in section 5.
    patient's `whatsappHash` for the same number, which is how the WhatsApp webhook finds a reminder.
 3. **Index columns, written only by the Prisma extension** from the plaintext on every write that
    sets the source field (so they cannot drift): `Patient.emailHash`, `whatsappHash`, `smsHash`,
-   `nameTokens`, `lastNameTokens`; `Reminder.toHash`; `MedicalRecord.nameTokens`. Normalization:
+   `nameTokens`, `lastNameTokens`; `Reminder.toHash`; `MedicalRecord.nameTokens`;
+   `BookingRequest.emailHash`, `verifiedPhoneHash`. Normalization:
    email trimmed + lower-cased; phone digits only (drops `whatsapp:`, `+`, spaces, punctuation);
    names lower-cased, accents removed (NFD), split on anything that is not a letter or digit.
 4. **Uniqueness and matching.** Raw-SQL partial unique index `patients_userId_emailHash_active_key`
@@ -114,6 +116,18 @@ read everything; the keys must never be stored with the backups.
   reminders. Open question for counsel: whether sensitive data needs its own separate checkbox;
   if yes, add a second one (the data model supports it via `kind`).
 
+**Phone login and messages.** A number is personal data the patient proves with a code before it
+acts as an identity. `BookingRequest.verifiedPhone` keeps the proven number of a request (encrypted,
+with a blind index) and is deleted with the request after 90 days. A number typed in the booking form
+is flagged `Patient.whatsappUnverified`: it receives no automated portal message and is not accepted at
+login until the provider endorses it. A provider can still choose it by hand for a reminder. SMS is not
+end-to-end encrypted and both phone channels show on lock screens, so portal notices and portal SMS
+reminders carry only the provider, the time and the place or link, never the appointment type, notes or
+the patient's name.
+
+**Exception to review:** WhatsApp reminders reuse the existing approved template, which greets the patient
+by name and includes the address and instructions. Removing the name needs a new template.
+
 ## 5. Checklist (owner: controller, with counsel)
 
 - [ ] Controller identity published: legal name, NIT, address, and Colombian representative if needed
@@ -122,6 +136,9 @@ read everything; the keys must never be stored with the backups.
 - [ ] Data processing / transmission contracts with each processor (Twilio, Brevo, Google, hosting,
       Sentry, named in the policy on 2026-10-18) and a list of them in the policy (done in text; contracts
       pending; for Sentry, review and accept its DPA in the organization's legal settings).
+- [ ] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
+      or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
+      but not Meta and not phone login: counsel to confirm before `ENABLE_PORTAL_PHONE_LOGIN` is turned on.
 - [ ] International transfer basis per processor (adequacy list, authorization, or contract).
 - [ ] The `privacidad@` mailbox is monitored; internal runbook for the 10/15 business-day deadlines.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.

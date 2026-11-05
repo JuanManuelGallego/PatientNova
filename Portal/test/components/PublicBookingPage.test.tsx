@@ -340,7 +340,8 @@ describe("PublicBookingPage", () => {
 
 describe("PublicBookingPage booking", () => {
     const SESSION = {
-        email: "ana@example.com",
+        contact: "ana@example.com",
+        contactChannel: "EMAIL",
         expiresAt: "2099-01-01T02:00:00.000Z",
         csrfToken: "csrf-from-session",
         providerSlug: "dra-ana",
@@ -360,7 +361,7 @@ describe("PublicBookingPage booking", () => {
     };
 
     interface BookServer {
-        provider: typeof provider;
+        provider: typeof provider & { loginChannels?: string[] };
         session: typeof SESSION | null;
         book: (body: unknown) => Response;
     }
@@ -378,7 +379,7 @@ describe("PublicBookingPage booking", () => {
             if (path === "/public/providers/dra-ana/otp") return json(202, { success: true, data: { challenge: "challenge-1" } });
             if (path === "/portal/dra-ana/otp/verify") {
                 server.session = SESSION;
-                return json(200, { success: true, data: { email: SESSION.email, expiresAt: SESSION.expiresAt, csrfToken: "csrf-from-verify" } });
+                return json(200, { success: true, data: { contact: SESSION.contact, contactChannel: SESSION.contactChannel, expiresAt: SESSION.expiresAt, csrfToken: "csrf-from-verify" } });
             }
             if (path === "/portal/session") {
                 return server.session ? json(200, { success: true, data: server.session }) : json(401, { success: false, error: "Invalid session" });
@@ -398,6 +399,37 @@ describe("PublicBookingPage booking", () => {
         await user.type(await screen.findByLabelText("Nombre"), "  Lucía ");
         await user.type(screen.getByLabelText("Apellidos"), "Rojas");
     }
+
+    it("a phone session shows its number, no phone field and no email field, and sends no phone", async () => {
+        server.session = { ...SESSION, contact: "+573001112233", contactChannel: "WHATSAPP" };
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+        await fillDetails(user);
+
+        expect(screen.getByText(/Reservarás con el número/)).toBeInTheDocument();
+        expect(screen.getByText("+57 300 111 2233")).toBeInTheDocument();
+        expect(screen.queryByLabelText("Teléfono (opcional)")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/correo/i)).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole("checkbox"));
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+
+        await waitFor(() => expect(calls("/portal/bookings")).toHaveLength(1));
+        const body = JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body));
+        expect(body.patient).toEqual({ name: "Lucía", lastName: "Rojas" });
+    });
+
+    it("offers the provider's login channels in the booking step", async () => {
+        server.session = null;
+        server.provider = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP", "SMS" ] };
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+
+        expect(await screen.findByRole("heading", { level: 3, name: "Confirma que eres tú" })).toBeInTheDocument();
+        expect(screen.getByRole("group", { name: "Recibir el código por" })).toBeInTheDocument();
+    });
 
     it("asks for the email first and keeps the chosen time through the login", async () => {
         server.session = null;

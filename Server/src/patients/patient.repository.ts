@@ -65,6 +65,8 @@ async function sortByDecryptedField(
 
 export interface CreatePatientOptions {
   source?: RecordSource;
+  /** The WhatsApp number came from the booking form: unproven until the provider endorses it. */
+  whatsappUnverified?: boolean;
 }
 
 export const patientRepository = {
@@ -73,6 +75,7 @@ export const patientRepository = {
       return await (tx ?? prisma).patient.create({
         data: {
           ...(opts.source && { source: opts.source }),
+          ...(opts.whatsappUnverified && dto.whatsappNumber && { whatsappUnverified: true }),
           name: dto.name,
           lastName: dto.lastName,
           whatsappNumber: dto.whatsappNumber ?? null,
@@ -138,6 +141,16 @@ export const patientRepository = {
     };
   },
 
+  /** Numbers are not unique, so a family can share one. Deleted records included: see `classifyPhoneMatch`. */
+  async findPhoneMatches(userId: string, hash: string, tx?: TransactionClient) {
+    return (tx ?? prisma).patient.findMany({
+      where: { userId, OR: [ { whatsappHash: hash }, { smsHash: hash } ] },
+      select: {
+        id: true, status: true, portalAccessEnabled: true, isDeleted: true, whatsappHash: true, smsHash: true, whatsappUnverified: true,
+      },
+    });
+  },
+
   async findById(id: string, userId: string, tx?: TransactionClient): Promise<Patient> {
     const patient = await (tx ?? prisma).patient.findFirst({ where: { id, userId } });
     if (!patient) throw new PatientNotFoundError(id);
@@ -195,7 +208,13 @@ export const patientRepository = {
     );
   },
 
-  async update(id: string, dto: UpdatePatientDto, userId: string, tx?: TransactionClient): Promise<Patient> {
+  async update(
+    id: string,
+    dto: UpdatePatientDto,
+    userId: string,
+    tx?: TransactionClient,
+    extra: Pick<Prisma.PatientUpdateInput, 'whatsappUnverified'> = {},
+  ): Promise<Patient> {
     await patientRepository.findById(id, userId, tx);
 
     try {
@@ -213,7 +232,7 @@ export const patientRepository = {
 
       return await (tx ?? prisma).patient.update({
         where: { id },
-        data,
+        data: { ...data, ...extra },
       });
     } catch (err) {
       if (isPrismaUniqueConstraintError(err)) {

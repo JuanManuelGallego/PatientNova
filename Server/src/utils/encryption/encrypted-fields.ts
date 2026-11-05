@@ -39,7 +39,7 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
   Reminder: new Set([ "to", "subject", "body" ]),
   AuditLog: new Set([ "actorDisplayName", "description", "ipAddress", "fieldsBefore", "fieldsAfter" ]),
   GoogleConnection: new Set([ "refreshToken" ]),
-  BookingRequest: new Set([ "email", "name", "lastName", "phone" ]),
+  BookingRequest: new Set([ "email", "verifiedPhone", "name", "lastName", "phone" ]),
 };
 
 /**
@@ -66,6 +66,7 @@ export const BLIND_INDEXES: Record<string, Record<string, { column: string; deri
   },
   BookingRequest: {
     email: { column: "emailHash", derive: emailHash },
+    verifiedPhone: { column: "verifiedPhoneHash", derive: phoneHash },
   },
 };
 

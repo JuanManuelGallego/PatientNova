@@ -176,7 +176,7 @@ describe('patientService.update', () => {
     mockRepo.findById.mockResolvedValue(fakePatient as any);
     mockRepo.update.mockResolvedValue({ ...fakePatient, ...dto } as any);
     const result = await patientService.update('patient-1', dto, 'user-1');
-    expect(mockRepo.update).toHaveBeenCalledWith('patient-1', dto, 'user-1', expect.anything());
+    expect(mockRepo.update).toHaveBeenCalledWith('patient-1', dto, 'user-1', expect.anything(), {});
     expect(result.name).toBe('Updated');
   });
 

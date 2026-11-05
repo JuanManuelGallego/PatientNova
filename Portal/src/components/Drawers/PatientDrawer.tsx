@@ -166,7 +166,7 @@ export function PatientDrawer({
     >
       <Section title="Información de Contacto">
         {patient.email && <Row icon={DETAIL_ICONS.mail} label="Correo" value={<a href={`mailto:${patient.email}`} className="td-email-link">{patient.email}</a>} />}
-        {patient.whatsappNumber && <Row icon={CHANNEL_ICONS.WHATSAPP} label="WhatsApp" testId="patient-drawer-whatsapp" value={<span className="mono">{patient.whatsappNumber}</span>} />}
+        {patient.whatsappNumber && <Row icon={CHANNEL_ICONS.WHATSAPP} label="WhatsApp" testId="patient-drawer-whatsapp" value={<span className="mono">{patient.whatsappNumber}{patient.whatsappUnverified && <span className="form-input-hint" data-testid="patient-drawer-whatsapp-unverified"> Número sin verificar</span>}</span>} />}
         {patient.smsNumber && <Row icon={CHANNEL_ICONS.SMS} label="SMS" testId="patient-drawer-sms" value={<span className="mono">{patient.smsNumber}</span>} />}
         {!patient.email && !patient.whatsappNumber && !patient.smsNumber && (
           <div className="drawer-empty" role="status">Sin información de contacto registrada</div>

@@ -111,7 +111,7 @@ function lastCodeFor(email: string): string {
 const withoutVolatile = (body: Record<string, unknown>) => ({ ...body, timestamp: undefined, data: { challenge: '' } });
 
 const otpRow = (userId: string, email: string) =>
-  prisma.portalOtp.findUnique({ where: { userId_emailHash: { userId, emailHash: emailHash(email)! } } });
+  prisma.portalOtp.findUnique({ where: { userId_contactHash: { userId, contactHash: emailHash(email)! } } });
 
 const wrongCode = (code: string) => String((Number(code) + 1) % 1_000_000).padStart(6, '0');
 
@@ -212,7 +212,7 @@ describe('POST /v1/public/providers/:slug/otp', () => {
     await prisma.portalOtp.createMany({
       data: Array.from({ length: PORTAL_OTP_LIMITS.perProviderPerHour }, (_, i) => ({
         userId: provider.id,
-        emailHash: `${i}`.padStart(64, '0'),
+        contactHash: `${i}`.padStart(64, '0'),
         codeHash: '',
         expiresAt: now,
         lastSentAt: now,
@@ -292,6 +292,8 @@ describe('POST /v1/portal/:slug/otp/verify', () => {
     expect(claims.sid).toMatch(/^[0-9a-f-]{36}$/);
     expect(res.body.data).toEqual({
       email,
+      contact: email,
+      contactChannel: 'EMAIL',
       expiresAt: expect.any(String),
       csrfToken: createCsrfToken(claims.sid, config.auth.portalJwtSecret),
     });
@@ -336,7 +338,7 @@ describe('POST /v1/portal/:slug/otp/verify', () => {
 
     const other = newEmail();
     await requestOtp(provider.slug, other);
-    await prisma.portalOtp.updateMany({ where: { emailHash: emailHash(other)! }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await prisma.portalOtp.updateMany({ where: { contactHash: emailHash(other)! }, data: { expiresAt: new Date(Date.now() - 1000) } });
     const expired = await verifyOtp(provider.slug, other, lastCodeFor(other));
     const never = await verifyOtp(provider.slug, newEmail(), '123456');
 
@@ -504,7 +506,7 @@ describe('purgePortalOtpsWorker', () => {
     await prisma.portalOtp.create({
       data: {
         userId: provider.id,
-        emailHash: 'f'.repeat(64),
+        contactHash: 'f'.repeat(64),
         codeHash: '',
         expiresAt: now,
         lastSentAt: new Date(now.getTime() - 25 * 60 * 60 * 1000),
@@ -514,6 +516,6 @@ describe('purgePortalOtpsWorker', () => {
 
     await purgePortalOtpsWorker();
     const left = await prisma.portalOtp.findMany({ where: { userId: provider.id } });
-    expect(left.map((r) => r.emailHash)).toEqual([ emailHash(recent) ]);
+    expect(left.map((r) => r.contactHash)).toEqual([ emailHash(recent) ]);
   });
 });

@@ -1,4 +1,4 @@
-import { BookingRequestStatus, type BookingRequestKind, type PatientStatus } from '../../generated/prisma/enums.js';
+import { BookingRequestStatus, type BookingRequestKind, type Channel, type PatientStatus } from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { providerRequestDetailSelect, providerRequestSelect } from './booking-request.repository.js';
 
@@ -17,7 +17,11 @@ export interface ProviderRequestDto {
   resolvedAt: string | null;
   name: string;
   lastName: string;
-  email: string;
+  /** How the patient proved who they are: `email`, or `verifiedPhone` on this channel. */
+  contactChannel: Channel;
+  email: string | null;
+  verifiedPhone: string | null;
+  /** Typed in the booking form, never proven. */
   phone: string | null;
   patientTimezone: string;
   appointmentId: string | null;
@@ -26,13 +30,17 @@ export interface ProviderRequestDto {
   location: { id: string; name: string; isVirtual: boolean };
 }
 
-/** A patient sharing the request's email, computed at view time. */
+/** A patient sharing the request's verified contact, computed at view time. */
 export interface RequestCandidate {
   id: string;
   name: string;
   lastName: string;
   email: string | null;
   whatsappNumber: string | null;
+  smsNumber: string | null;
+  whatsappUnverified: boolean;
+  /** The match is only a number typed in the booking form, so it proves nothing about this record. */
+  unverifiedMatch: boolean;
   status: PatientStatus;
   portalAccessEnabled: boolean;
   isDeleted: boolean;
@@ -43,7 +51,7 @@ export interface RequestCandidate {
 
 export interface ProviderRequestDetailDto extends ProviderRequestDto {
   consent: { policyVersion: string; acceptedAt: string };
-  /** The active record first (at most one), then deleted ones, newest deletion first. */
+  /** Active records first (at most one for an email, several for a shared number), then deleted ones, newest deletion first. */
   candidates: RequestCandidate[];
 }
 
@@ -63,7 +71,9 @@ export function toProviderRequestDto(r: ProviderRequestRow, now: Date): Provider
     resolvedAt: r.resolvedAt?.toISOString() ?? null,
     name: r.name,
     lastName: r.lastName,
+    contactChannel: r.contactChannel,
     email: r.email,
+    verifiedPhone: r.verifiedPhone,
     phone: r.phone,
     patientTimezone: r.patientTimezone,
     appointmentId: r.appointmentId,

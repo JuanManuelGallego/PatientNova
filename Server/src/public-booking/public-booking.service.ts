@@ -8,6 +8,7 @@ import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { generateSlots, isSlotAvailable, type SlotRules } from './slot-engine.js';
 import { publicBookingRepository, type ProviderImageKind } from './public-booking.repository.js';
 import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
+import { portalLoginChannels } from '../portal/portal-contact.js';
 import { ProviderImageNotFoundError, ProviderNotFoundError, PublicAppointmentTypeNotFoundError } from './public-booking.errors.js';
 import type { SlotsQuery } from './public-booking.schemas.js';
 
@@ -59,6 +60,7 @@ export const publicBookingService = {
       timezone: provider.timezone,
       bookingOpen,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
+      loginChannels: portalLoginChannels(),
       reschedulePolicy: selfBooking
         ? { maxReschedules: provider.maxPatientReschedules, minNoticeHours: provider.minRescheduleNoticeHours }
         : null,

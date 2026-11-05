@@ -27,6 +27,28 @@ function portalAuthSecret(): string {
   return secret;
 }
 
+const PHONE_LOGIN_CHANNELS = [ 'WHATSAPP', 'SMS' ];
+
+function csvEnv(key: string, fallback: string): string[] {
+  return (process.env[ key ]?.trim() || fallback).split(',').map((v) => v.trim()).filter(Boolean);
+}
+
+function phoneLoginChannels(): string[] {
+  const channels = csvEnv('PORTAL_LOGIN_PHONE_CHANNELS', PHONE_LOGIN_CHANNELS.join(','));
+  const unknown = channels.find((c) => !PHONE_LOGIN_CHANNELS.includes(c));
+  if (unknown) throw new Error(`PORTAL_LOGIN_PHONE_CHANNELS only accepts ${PHONE_LOGIN_CHANNELS.join(', ')}`);
+  return channels;
+}
+
+/** Fails at boot: this guards money, and `count >= NaN` would silently remove the limit. */
+function positiveIntEnv(key: string, fallback: number): number {
+  const raw = process.env[ key ]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${key} must be a positive integer`);
+  return value;
+}
+
 const HEX_256 = /^[0-9a-f]{64}$/i;
 const DEV_BLIND_INDEX_KEY = '6465762d6f6e6c792d626c696e642d696e6465782d6b65792d6e6f742d736563';
 
@@ -73,6 +95,15 @@ export const config = {
     portalRescheduleSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID'),
     portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
     portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
+    patientPortal: {
+      otpSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID'),
+      confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
+      cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
+      rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
+      requestReceivedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID'),
+      requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
+      requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
+    },
   },
 
   brevo: {
@@ -142,6 +173,10 @@ export const config = {
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
+    phoneLoginEnabled: process.env.ENABLE_PORTAL_PHONE_LOGIN === 'true',
+    phoneLoginChannels: phoneLoginChannels(),
+    otpPhoneCountryCodes: csvEnv('PORTAL_OTP_PHONE_COUNTRY_CODES', '57'),
+    otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 300),
   },
 
   captcha: captchaConfig(),

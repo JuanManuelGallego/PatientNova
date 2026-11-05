@@ -5,15 +5,18 @@ import Link from "next/link";
 import { ApiClientError } from "@/src/api/base/apiClients";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
-import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
+import type { LoginChannel, PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
-import { APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
+import {
+    APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtContact, fmtCop, fmtLongDayTime, isE164, isPhoneChannel, locationDetail, normalizePhone,
+    PHONE_FORMAT_HINT,
+} from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
 import styles from "./PublicBooking.module.css";
 
-const LOGIN_LEAD = "Ingresa tu correo y te enviaremos un código de 6 dígitos para confirmar tu reserva. A ese correo llegarán también la confirmación y los avisos de tu cita. No necesitas contraseña.";
+const LOGIN_LEAD = "Te enviaremos un código de 6 dígitos para confirmar tu reserva. No necesitas contraseña.";
 
 interface BookingFormProps {
     slug: string;
@@ -65,8 +68,8 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 </div>
             )}
 
-            <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
-                onBooked={onBooked} onSlotTaken={onSlotTaken} />
+            <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} loginChannels={provider.loginChannels}
+                typeId={type.id} locationId={locationId} slot={slot} timezone={timezone} onBooked={onBooked} onSlotTaken={onSlotTaken} />
         </div>
     );
 }
@@ -75,6 +78,7 @@ interface PatientStepProps {
     slug: string;
     providerName: string;
     approvalRequired: boolean;
+    loginChannels?: LoginChannel[] | undefined;
     typeId: string;
     locationId: string;
     slot: PublicSlot;
@@ -83,7 +87,7 @@ interface PatientStepProps {
     onSlotTaken: (message: string) => void;
 }
 
-function PatientStep({ slug, ...rest }: PatientStepProps) {
+function PatientStep({ slug, loginChannels, ...rest }: PatientStepProps) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     const [ notice, setNotice ] = useState<string | undefined>();
 
@@ -91,17 +95,20 @@ function PatientStep({ slug, ...rest }: PatientStepProps) {
     if (error) return <ErrorState error={error} onRetry={refetch} inline />;
     if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
         return (
-            <PortalLogin slug={slug} embedded title="Verifica tu correo" lead={LOGIN_LEAD} notice={notice}
-                onLoggedIn={() => { setNotice(undefined); refetch(); }} />
+            <PortalLogin slug={slug} embedded title={(loginChannels?.length ?? 1) > 1 ? "Confirma que eres tú" : "Verifica tu correo"} lead={LOGIN_LEAD}
+                notice={notice} channels={loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />
         );
     }
-    return <PatientDetails email={session.email} {...rest} onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }} />;
+    return (
+        <PatientDetails contact={session.contact} contactChannel={session.contactChannel} {...rest}
+            onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }} />
+    );
 }
 
 type Field = "name" | "lastName" | "phone" | "consent";
 
-function PatientDetails({ email, providerName, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
-    Omit<PatientStepProps, "slug"> & { email: string; onSessionLost: () => void }) {
+function PatientDetails({ contact, contactChannel, providerName, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
+    Omit<PatientStepProps, "slug" | "loginChannels"> & { contact: string; contactChannel: LoginChannel; onSessionLost: () => void }) {
     const [ name, setName ] = useState("");
     const [ lastName, setLastName ] = useState("");
     const [ phone, setPhone ] = useState("");
@@ -115,7 +122,10 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
     const consentRef = useRef<HTMLInputElement>(null);
     const { createBooking, loading, error } = useCreateBooking();
 
-    const phoneValue = normalizePhone(phone);
+    // A phone session's number is the one it proved, so it is never asked for or sent.
+    const onPhone = isPhoneChannel(contactChannel);
+    const phoneValue = onPhone ? "" : normalizePhone(phone);
+    const contactKind = onPhone ? "el número" : "el correo";
     const invalid: Record<Field, boolean> = {
         name: !name.trim(),
         lastName: !lastName.trim(),
@@ -160,8 +170,8 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
     return (
         <form className={portal.form} onSubmit={onSubmit} noValidate>
             <p className={portal.lead}>
-                {approvalRequired ? "Enviarás la solicitud con el correo" : "Reservarás con el correo"}{" "}
-                <strong className={portal.email}>{email}</strong>.{" "}
+                {approvalRequired ? `Enviarás la solicitud con ${contactKind}` : `Reservarás con ${contactKind}`}{" "}
+                <strong className={portal.email}>{fmtContact(contact, contactChannel)}</strong>.{" "}
                 Si ya eres paciente de {providerName}, usaremos los datos que tiene registrados.
             </p>
             {approvalRequired && (
@@ -187,17 +197,19 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
                 </label>
                 {shown.lastName && <span id={errorId("lastName")} className={portal.fieldError}>Escribe tus apellidos.</span>}
             </div>
-            <div>
-                <label className="form-label">
-                    Teléfono (opcional)
-                    <input ref={phoneRef} className="form-input" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={24}
-                        placeholder="+57 300 123 4567" aria-invalid={shown.phone || undefined} aria-describedby={errorId("phone")}
-                        value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setPhoneTouched(true)} />
-                </label>
-                <span id={errorId("phone")} className={shown.phone ? portal.fieldError : portal.fieldHint}>
-                    {shown.phone ? "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567." : "Con el indicativo del país."}
-                </span>
-            </div>
+            {!onPhone && (
+                <div>
+                    <label className="form-label">
+                        Teléfono (opcional)
+                        <input ref={phoneRef} className="form-input" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={24}
+                            placeholder="+57 300 123 4567" aria-invalid={shown.phone || undefined} aria-describedby={errorId("phone")}
+                            value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setPhoneTouched(true)} />
+                    </label>
+                    <span id={errorId("phone")} className={shown.phone ? portal.fieldError : portal.fieldHint}>
+                        {shown.phone ? PHONE_FORMAT_HINT : "Con el indicativo del país."}
+                    </span>
+                </div>
+            )}
             <div>
                 <label className={portal.checkbox}>
                     <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}

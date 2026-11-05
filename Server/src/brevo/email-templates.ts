@@ -24,7 +24,7 @@ export function renderOtpEmail(params: { code: string; providerName: string; ttl
   };
 }
 
-interface PlaceParams {
+export interface PlaceParams {
   locationName?: string | null;
   address?: string | null;
   meetingUrl?: string | null;

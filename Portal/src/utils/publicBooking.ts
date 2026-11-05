@@ -1,5 +1,5 @@
 import { COMMON_TIMEZONES, fmtTime, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
-import type { PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
+import type { LoginChannel, PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
 
 
 export const WEEK_DAYS = 7;
@@ -95,7 +95,9 @@ export function fmtLongDayTime(iso: string, zone: string): string {
     return `${fmtLongDay(localDayOf(iso, zone))}, ${fmtTime(iso, zone)}`;
 }
 
-export const APPROVAL_FOLLOW_UP = "Te avisaremos por correo cuando tu cita quede confirmada.";
+export const APPROVAL_FOLLOW_UP = "Te avisaremos cuando tu cita quede confirmada.";
+
+export const PENDING_MEETING_LINK_NOTE = "Te enviaremos el enlace de la videollamada.";
 
 export function normalizePhone(value: string): string {
     return value.replace(/[\s()-]/g, "");
@@ -103,10 +105,16 @@ export function normalizePhone(value: string): string {
 
 export const isE164 = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
 
+export const PHONE_FORMAT_HINT = "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567.";
+
+export const isPhoneChannel = (channel: LoginChannel) => channel !== "EMAIL";
+
 export function fmtPhone(phone: string): string {
     const parts = /^\+57(\d{3})(\d{3})(\d{4})$/.exec(phone);
     return parts ? `+57 ${parts[ 1 ]} ${parts[ 2 ]} ${parts[ 3 ]}` : phone;
 }
+
+export const fmtContact = (contact: string, channel: LoginChannel) => (isPhoneChannel(channel) ? fmtPhone(contact) : contact);
 
 export const whatsappUrl = (phone: string) => `https://wa.me/${phone.replace(/\D/g, "")}`;
 

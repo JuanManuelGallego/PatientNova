@@ -26,6 +26,9 @@ function candidate(overrides: Partial<RequestCandidate> = {}): RequestCandidate 
     lastName: "Rojas",
     email: "lucia@test.local",
     whatsappNumber: null,
+    smsNumber: null,
+    whatsappUnverified: false,
+    unverifiedMatch: false,
     status: "ACTIVE",
     portalAccessEnabled: true,
     isDeleted: false,
@@ -48,7 +51,9 @@ function makeRequest(overrides: Partial<BookingRequestDetail> = {}): BookingRequ
     resolvedAt: null,
     name: "Lucia",
     lastName: "Rojas",
+    contactChannel: "EMAIL",
     email: "lucia@test.local",
+    verifiedPhone: null,
     phone: "+573001112233",
     patientTimezone: "America/New_York",
     appointmentId: null,
@@ -94,6 +99,66 @@ describe("RequestDrawer", () => {
     expect(screen.getByTestId("request-review-reason")).toBeInTheDocument();
     expect(screen.getByTestId("request-outcome")).toHaveTextContent("Lucia Rojas, que se reactivará");
     expect(screen.queryByTestId("request-choice-new")).not.toBeInTheDocument();
+  });
+
+  describe("a request from a phone session", () => {
+    const phoneRequest = (overrides: Partial<BookingRequestDetail> = {}) => makeRequest({
+      contactChannel: "WHATSAPP", email: null, verifiedPhone: "+573001112233", phone: null, ...overrides,
+    });
+
+    it("shows the proven number and no email or typed phone rows", () => {
+      request = phoneRequest();
+      renderDrawer();
+      expect(screen.getByTestId("request-verified-phone")).toHaveTextContent("WhatsApp (verificado)");
+      expect(screen.getByTestId("request-verified-phone")).toHaveTextContent("+573001112233");
+      expect(screen.queryByText("Correo (verificado)")).not.toBeInTheDocument();
+      expect(screen.queryByText("Teléfono (sin verificar)")).not.toBeInTheDocument();
+    });
+
+    it("says a new patient will be created when nothing matches", () => {
+      request = phoneRequest();
+      renderDrawer();
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("Se creará un paciente nuevo");
+    });
+
+    it("reuses a single trusted record with no choice to make", async () => {
+      request = phoneRequest({ candidates: [ candidate() ] });
+      renderDrawer();
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("La cita se creará para Lucia Rojas");
+      expect(screen.queryByTestId("request-choice-new")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByTestId("request-approve"));
+      expect(approve).toHaveBeenCalledWith("r1", {});
+    });
+
+    it("offers every active record of a shared number and never preselects one", async () => {
+      request = phoneRequest({ candidates: [ candidate(), candidate({ id: "p2", name: "Ana" }) ] });
+      renderDrawer();
+      expect(screen.getByTestId("request-choice-new")).toBeChecked();
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("Se creará un paciente nuevo");
+
+      await userEvent.click(screen.getByTestId("request-choice-existing-p2"));
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("La cita se creará para Ana Rojas");
+      await userEvent.click(screen.getByTestId("request-approve"));
+      expect(approve).toHaveBeenCalledWith("r1", { existingPatientId: "p2" });
+    });
+
+    it("marks a record matched only by a typed number, and says picking it verifies the number", async () => {
+      request = phoneRequest({ candidates: [ candidate({ whatsappUnverified: true, unverifiedMatch: true }) ] });
+      renderDrawer();
+      expect(screen.getByText("Número sin verificar")).toBeInTheDocument();
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("Se creará un paciente nuevo");
+
+      await userEvent.click(screen.getByTestId("request-choice-existing-p1"));
+      expect(screen.getByTestId("request-outcome")).toHaveTextContent("su número quedará verificado");
+    });
+
+    it("can restore a deleted record while another active one shares the number", async () => {
+      request = phoneRequest({ candidates: [ candidate(), candidate({ id: "p2", isDeleted: true }) ] });
+      renderDrawer();
+      await userEvent.click(screen.getByTestId("request-choice-restore-p2"));
+      await userEvent.click(screen.getByTestId("request-approve"));
+      expect(approve).toHaveBeenCalledWith("r1", { restorePatientId: "p2" });
+    });
   });
 
   it("lets the provider restore a deleted patient instead of creating one", async () => {

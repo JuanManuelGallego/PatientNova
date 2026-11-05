@@ -2,7 +2,6 @@ import {
   ActionType,
   AppointmentStatus,
   BookingRequestStatus,
-  Channel,
   EntityType,
   PatientStatus,
   RecordSource,
@@ -23,7 +22,10 @@ import {
   deliverBookingRequestNotificationsNow,
   enqueueBookingRequestNotifications,
 } from './booking-request-notifications.js';
+import { isTrustedPhoneMatch } from '../portal/patient-resolution.js';
+import { newPatientContact, requestContact, typedPhoneIsUnverified } from '../portal/portal-contact.js';
 import {
+  BookingRequestCandidateError,
   BookingRequestNotFoundError,
   BookingRequestNotPendingError,
   BookingRequestRestoreCandidateError,
@@ -39,17 +41,24 @@ import type { ApproveBookingRequestBody, ListBookingRequestsQuery } from './book
 
 const LAST_VISIT_STATUSES = [ AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED ];
 
-/** Every patient of this provider sharing the request's email blind index, computed at view or approval time. */
-async function findCandidates(userId: string, hash: string | null, now: Date, tx?: TransactionClient): Promise<RequestCandidate[]> {
-  if (!hash) return [];
+type RequestContact = { emailHash: string | null; verifiedPhoneHash: string | null };
+
+/** Every patient of this provider sharing the request's verified contact, computed at view or approval time. */
+async function findCandidates(userId: string, contact: RequestContact, now: Date, tx?: TransactionClient): Promise<RequestCandidate[]> {
+  const phone = contact.verifiedPhoneHash;
+  if (!phone && !contact.emailHash) return [];
   const rows = await (tx ?? prisma).patient.findMany({
-    where: { userId, emailHash: hash },
+    where: { userId, ...(phone ? { OR: [ { whatsappHash: phone }, { smsHash: phone } ] } : { emailHash: contact.emailHash }) },
     select: {
       id: true,
       name: true,
       lastName: true,
       email: true,
       whatsappNumber: true,
+      smsNumber: true,
+      whatsappHash: true,
+      smsHash: true,
+      whatsappUnverified: true,
       status: true,
       portalAccessEnabled: true,
       isDeleted: true,
@@ -64,8 +73,9 @@ async function findCandidates(userId: string, hash: string | null, now: Date, tx
     },
     orderBy: [ { isDeleted: 'asc' }, { deletedAt: 'desc' }, { createdAt: 'desc' } ],
   });
-  return rows.map(({ appointments, deletedAt, createdAt, ...p }) => ({
+  return rows.map(({ appointments, deletedAt, createdAt, whatsappHash, smsHash, ...p }) => ({
     ...p,
+    unverifiedMatch: !!phone && !isTrustedPhoneMatch({ whatsappHash, smsHash, whatsappUnverified: p.whatsappUnverified }, phone),
     deletedAt: deletedAt?.toISOString() ?? null,
     createdAt: createdAt.toISOString(),
     lastVisitAt: appointments[ 0 ]?.startAt.toISOString() ?? null,
@@ -121,8 +131,21 @@ async function reactivatePatient(tx: TransactionClient, userId: string, patientI
 }
 
 /**
- * The patient the appointment is for: a chosen deleted record (restored), else the email's active record (reactivated
- * when inactive, otherwise untouched), else a new PORTAL patient from the typed details.
+ * The request proved this number and the provider linked it to the record, so it stops being an unverified one. A pick on
+ * an email request, or a record matched by another number, says nothing about a typed number, so the flag stays.
+ */
+async function endorseProvenNumber(tx: TransactionClient, userId: string, chosen: RequestCandidate, proven: boolean) {
+  if (!proven || !chosen.unverifiedMatch) return;
+  await updatePatientWithin(tx, chosen.id, {}, userId, {
+    description: 'Número de WhatsApp verificado al aprobar una solicitud de reserva',
+    endorseWhatsapp: true,
+  });
+}
+
+/**
+ * The patient the appointment is for: the record the provider chose (restored or reactivated as needed), else the contact's
+ * single active match, else a new PORTAL patient from the request. For a number that match has to be trusted, like at
+ * login: a shared or unverified number never picks a record on its own.
  */
 async function resolveApprovalPatient(
   tx: TransactionClient,
@@ -131,31 +154,44 @@ async function resolveApprovalPatient(
   body: ApproveBookingRequestBody,
   now: Date,
 ): Promise<string> {
-  const candidates = await findCandidates(userId, request.emailHash, now, tx);
-  const active = candidates.find((c) => !c.isDeleted);
+  const candidates = await findCandidates(userId, request, now, tx);
+  const active = candidates.filter((c) => !c.isDeleted);
+  const proven = !!request.verifiedPhone;
+
+  if (body?.existingPatientId) {
+    const chosen = active.find((c) => c.id === body.existingPatientId);
+    if (!chosen) throw new BookingRequestCandidateError();
+    if (chosen.status !== PatientStatus.ACTIVE) await reactivatePatient(tx, userId, chosen.id);
+    await endorseProvenNumber(tx, userId, chosen, proven);
+    return chosen.id;
+  }
 
   if (body?.restorePatientId) {
     const chosen = candidates.find((c) => c.isDeleted && c.id === body.restorePatientId);
     if (!chosen) throw new BookingRequestRestoreCandidateError();
-    if (active) throw new PatientEmailConflictError();
+    // Only an email is unique among active patients; a number can be shared.
+    if (!proven && active.length > 0) throw new PatientEmailConflictError();
     const status = await restorePatient(tx, userId, chosen.id);
     if (status !== PatientStatus.ACTIVE) await reactivatePatient(tx, userId, chosen.id);
+    await endorseProvenNumber(tx, userId, chosen, proven);
     return chosen.id;
   }
 
-  if (active) {
-    if (active.status !== PatientStatus.ACTIVE) await reactivatePatient(tx, userId, active.id);
-    return active.id;
+  const trusted = active.filter((c) => !c.unverifiedMatch);
+  const match = proven ? (trusted.length === 1 ? trusted[ 0 ] : undefined) : active[ 0 ];
+  if (match) {
+    if (match.status !== PatientStatus.ACTIVE) await reactivatePatient(tx, userId, match.id);
+    return match.id;
   }
 
+  const contact = requestContact(request);
+  if (!contact) throw new Error('Booking request has no contact');
   const patient = await createPatientWithin(tx, {
     name: request.name,
     lastName: request.lastName,
-    whatsappNumber: request.phone || null,
-    email: request.email,
-    reminderChannel: Channel.EMAIL,
+    ...newPatientContact(contact, request.phone),
     status: PatientStatus.ACTIVE,
-  }, userId, { source: RecordSource.PORTAL });
+  }, userId, { source: RecordSource.PORTAL, whatsappUnverified: typedPhoneIsUnverified(contact, request.phone) });
   return patient.id;
 }
 
@@ -174,7 +210,7 @@ export const bookingRequestReviewService = {
     const now = new Date();
     const request = await bookingRequestRepository.findForProvider(userId, id);
     if (!request) throw new BookingRequestNotFoundError();
-    const candidates = await findCandidates(userId, request.emailHash, now);
+    const candidates = await findCandidates(userId, request, now);
     return toProviderRequestDetailDto(request, candidates, now);
   },
 
@@ -202,7 +238,6 @@ export const bookingRequestReviewService = {
       const { appointment, linkPending } = await createPortalAppointmentWithin(tx, {
         userId,
         patientId,
-        email: request.email,
         typeId: request.type.id,
         locationId: request.location.id,
         isVirtual: request.location.isVirtual,

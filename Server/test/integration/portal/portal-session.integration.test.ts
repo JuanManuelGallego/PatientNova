@@ -21,6 +21,7 @@ import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
 import { ActionSource, AdminStatus, EntityType, PatientStatus } from '../../../generated/prisma/enums.js';
 import { createTestPatient, unique } from '../helpers.js';
 import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider, sessionFor, type TestSession } from './portal-helpers.js';
+import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 
 const ALLOWED = ALLOWED_ORIGIN;
 const DEFAULT_POLICY = '2026-10-19';
@@ -66,7 +67,7 @@ describe('requirePortalSession', () => {
     const sign = (claims: object, opts: jwt.SignOptions, secret = portalSecret()) =>
       `${PORTAL_COOKIE_NAME}=${jwt.sign(claims, secret, { algorithm: 'HS256', issuer: TOKEN_ISSUER, ...opts })}`;
     const claims = { userId: provider.id, email, sid: 'sid-x', typ: 'portal' };
-    const valid = signPortalToken({ userId: provider.id, email, sid: 'sid-x' });
+    const valid = signPortalToken({ userId: provider.id, email, sid: 'sid-x', channel: 'EMAIL' });
     const [ header, payload ] = valid.split('.');
     const forged = `${header}.${payload}.${'A'.repeat(43)}`;
 
@@ -81,6 +82,9 @@ describe('requirePortalSession', () => {
       request(app).get('/v1/portal/session').set('Cookie', sign(claims, { audience: PORTAL_AUDIENCE, expiresIn: 60 }, config.auth.jwtSecret)),
       request(app).get('/v1/portal/session').set('Cookie', sign({ ...claims, typ: undefined }, { audience: PORTAL_AUDIENCE, expiresIn: 60 })),
       request(app).get('/v1/portal/session').set('Cookie', sign({ ...claims, sid: undefined }, { audience: PORTAL_AUDIENCE, expiresIn: 60 })),
+      request(app).get('/v1/portal/session').set('Cookie', sign({ ...claims, email: undefined }, { audience: PORTAL_AUDIENCE, expiresIn: 60 })),
+      request(app).get('/v1/portal/session').set('Cookie', sign({ ...claims, phone: '+573001112233', channel: 'WHATSAPP' }, { audience: PORTAL_AUDIENCE, expiresIn: 60 })),
+      request(app).get('/v1/portal/session').set('Cookie', sign({ ...claims, channel: 'SMS' }, { audience: PORTAL_AUDIENCE, expiresIn: 60 })),
     ];
     for (const res of await Promise.all(rejected)) {
       expect(res.status).toBe(401);
@@ -88,9 +92,24 @@ describe('requirePortalSession', () => {
     }
   });
 
+  it('keeps a session issued before phone login working: a token with only an email reads as an email session', async () => {
+    const provider = await createLiveProvider();
+    const email = unique('p@test.local');
+    const sid = 'sid-legacy';
+    const legacy = jwt.sign({ userId: provider.id, email, sid, typ: 'portal' }, portalSecret(), {
+      algorithm: 'HS256', issuer: TOKEN_ISSUER, audience: PORTAL_AUDIENCE, expiresIn: 60,
+    });
+
+    const res = await request(app).get('/v1/portal/session').set('Origin', ALLOWED_ORIGIN).set('Cookie', `${PORTAL_COOKIE_NAME}=${legacy}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.email).toBe(email);
+    expect(res.body.data.csrfToken).toBe(createCsrfToken(sid, portalSecret()));
+  });
+
   it('a portal session is rejected on provider routes', async () => {
     const provider = await createLiveProvider();
-    const token = signPortalToken({ userId: provider.id, email: unique('p@test.local'), sid: 's' });
+    const token = signPortalToken({ userId: provider.id, email: unique('p@test.local'), sid: 's', channel: 'EMAIL' });
     const asBearer = await request(app).get('/v1/users/me').set('Authorization', `Bearer ${token}`);
     const asProviderCookie = await request(app).get('/v1/users/me').set('Cookie', `token=${token}`);
     const asPortalCookie = await request(app).get('/v1/users/me').set('Cookie', `${PORTAL_COOKIE_NAME}=${token}`);
@@ -158,8 +177,8 @@ describe('GET /v1/portal/session', () => {
       .map((email) => getSession(sessionFor(provider.id, email))));
 
     const expectedShape = {
-      email: 'string', expiresAt: 'string', csrfToken: 'string', providerSlug: 'string', consentRequired: 'boolean',
-      bookingOpen: 'boolean',
+      email: 'string', contact: 'string', contactChannel: 'string', expiresAt: 'string', csrfToken: 'string',
+      providerSlug: 'string', consentRequired: 'boolean', bookingOpen: 'boolean',
     };
     for (const res of responses) {
       expect(res.status).toBe(200);

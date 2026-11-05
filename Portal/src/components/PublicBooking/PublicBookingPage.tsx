@@ -105,7 +105,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 {provider.approvalRequired && (
                     <p className={styles.approvalNotice} data-testid="approval-notice">
                         {provider.displayName} confirma cada cita antes de reservarla. Eliges un horario, lo guardamos
-                        para ti y te avisamos por correo cuando la confirme.
+                        para ti y te avisamos cuando la confirme.
                     </p>
                 )}
                 <Step number={1} title="Tipo de cita">
@@ -243,7 +243,7 @@ function BookingDone({ slug, providerName, appointment, timezone, onBookAnother 
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="booking-done">
             <StateIcon icon={CircleCheck} />
             <h2 id="booking-done" ref={heading} tabIndex={-1} className={styles.doneTitle}>Tu cita quedó reservada</h2>
-            <p className={styles.muted}>Te enviamos la confirmación a tu correo.</p>
+            <p className={styles.muted}>Te enviamos la confirmación.</p>
             <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>

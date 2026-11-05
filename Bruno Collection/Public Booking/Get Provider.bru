@@ -17,5 +17,6 @@ docs {
   booking (`REQUIRE_APPROVAL`): the form then sends a request instead of reserving. Unknown, deleted or inactive providers get the same 404.
   `specialty`, `professionalLicense`, `bio`, `phone` and `whatsapp` are optional, also shown while paused.
   `reschedulePolicy` is `{ maxReschedules, minNoticeHours }` only while patients can reschedule (booking open,
-  auto-confirm); otherwise null.
+  auto-confirm); otherwise null. `loginChannels` is what the login offers: `["EMAIL"]` while
+  `ENABLE_PORTAL_PHONE_LOGIN` is off, then also `WHATSAPP` and `SMS` as `PORTAL_LOGIN_PHONE_CHANNELS` allows.
 }

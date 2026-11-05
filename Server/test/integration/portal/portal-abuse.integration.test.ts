@@ -68,7 +68,7 @@ describe('otp-request-ip', () => {
     expectJson429(await postFrom(ip, path).send({ email, captchaToken: 'good' }));
     expect(siteverifyCalls).toBe(verifiesBefore);
     expect(sendTransactionalEmail.mock.calls.length).toBe(sendsBefore);
-    expect(await prisma.portalOtp.count({ where: { userId: provider.id, emailHash: emailHash(email)! } })).toBe(0);
+    expect(await prisma.portalOtp.count({ where: { userId: provider.id, contactHash: emailHash(email)! } })).toBe(0);
 
     expect((await postFrom('198.51.100.11', path).send({ email, captchaToken: 'good' })).status).toBe(202);
   });

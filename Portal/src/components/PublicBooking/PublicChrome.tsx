@@ -51,7 +51,7 @@ export function TrustStrip() {
         <ul className={styles.trust} aria-label="Garantías de la reserva">
             <li><ShieldCheck size={16} aria-hidden="true" />Datos protegidos</li>
             <li><KeyRound size={16} aria-hidden="true" />Sin contraseña</li>
-            <li><MailCheck size={16} aria-hidden="true" />Confirmación por correo</li>
+            <li><MailCheck size={16} aria-hidden="true" />Confirmación por mensaje</li>
         </ul>
     );
 }

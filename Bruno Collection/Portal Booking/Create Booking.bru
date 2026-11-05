@@ -42,19 +42,20 @@ script:post-response {
 
 docs {
   Books `startUtc` (run Public Booking > Get Slots first; it stores the first free slot in
-  `slotStartUtc`) for the session's email. Needs the session cookie, the exact Origin and the CSRF
+  `slotStartUtc`) for the session's contact. Needs the session cookie, the exact Origin and the CSRF
   token from Verify OTP or Get Session. The type and location must be bookable online.
 
   The body is strict: price, duration, end time and status come from the server (type price,
-  type duration, CONFIRMED). `patient` is used only when the email has no patient yet; an existing
-  patient is never changed. `patientTimezone` is the device's IANA zone, used for the patient's
-  emails.
+  type duration, CONFIRMED). `patient` is used only when the contact has no patient yet; an existing
+  patient is never changed. A phone session must not send `patient.phone` (400): the number comes from
+  the session. A number typed by an email session is flagged unverified until the provider endorses it. `patientTimezone` is the device's IANA zone, used for the patient's
+  messages.
 
   201 `{ appointment }`. If the provider is in `REQUIRE_APPROVAL` mode (Update Booking Settings) the
   answer is 202 `{ request }` instead: a PENDING request that holds the slot for up to 48 hours (never
   past the start) until the provider answers. No patient, consent or appointment is created yet, and the
-  answer has the same shape whether or not the email belongs to a patient. At most 3 pending requests
-  per email. 409 "Slot no longer available" (taken, off-grid, outside the window, lead
+  answer has the same shape whether or not the contact belongs to a patient. At most 3 pending requests
+  per contact. 409 "Slot no longer available" (taken, off-grid, outside the window, lead
   time or horizon), 409 "Booking limit reached" (3 upcoming portal bookings), 409 "Online booking
   unavailable" (portal access not available for this email), 404 for a type, location or provider
   that is not bookable.

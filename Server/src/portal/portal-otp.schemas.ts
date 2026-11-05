@@ -1,17 +1,30 @@
 import { z } from 'zod';
+import { Channel } from '../../generated/prisma/enums.js';
+import { config } from '../utils/config/config.js';
+import { e164Regex } from '../utils/validation/middleware.js';
+import { portalLoginChannels } from './portal-contact.js';
 
 const portalEmail = z.string().trim().toLowerCase().max(254).pipe(z.email('Must be a valid email address'));
+const portalPhone = z.string().trim().regex(e164Regex, 'Phone must be E.164 format (e.g. +573001234567)');
+const captchaToken = z.string().max(2048).optional();
 
-export const requestOtpSchema = z.strictObject({
-  email: portalEmail,
-  captchaToken: z.string().max(2048).optional(),
-});
-
-export const verifyOtpSchema = z.strictObject({
-  email: portalEmail,
+const verifyFields = {
   code: z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits'),
   challenge: z.string().regex(/^[A-Za-z0-9_-]{32}$/, 'Invalid challenge'),
-});
+};
+
+export const requestOtpSchema = z.union([
+  z.strictObject({ email: portalEmail, captchaToken }),
+  z.strictObject({ phone: portalPhone, channel: z.enum([ Channel.WHATSAPP, Channel.SMS ]), captchaToken })
+    .refine((body) => portalLoginChannels().includes(body.channel), { message: 'Login channel not available' }),
+]);
+
+/** The channel is not sent: the session's channel comes from the OTP row, never from the client. */
+export const verifyOtpSchema = z.union([
+  z.strictObject({ email: portalEmail, ...verifyFields }),
+  z.strictObject({ phone: portalPhone, ...verifyFields })
+    .refine(() => config.portal.phoneLoginEnabled, { message: 'Login channel not available' }),
+]);
 
 export type RequestOtpBody = z.infer<typeof requestOtpSchema>;
 export type VerifyOtpBody = z.infer<typeof verifyOtpSchema>;

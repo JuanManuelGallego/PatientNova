@@ -3,12 +3,17 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
 import { useRequestOtp, useVerifyOtp } from "@/src/api/portal/usePortalAuth";
+import type { LoginChannel } from "@/src/types/PublicBooking";
+import { fmtPhone, isE164, isPhoneChannel, normalizePhone, PHONE_FORMAT_HINT } from "@/src/utils/publicBooking";
 import styles from "./Portal.module.css";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
 export const OTP_CAPTCHA_ACTION = "otp-request";
-export const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo con tu correo.";
+export const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo.";
 const CODE_LENGTH = 6;
+const EMAIL_ONLY: LoginChannel[] = [ "EMAIL" ];
+
+const CHANNEL_LABELS: Record<LoginChannel, string> = { EMAIL: "Correo", WHATSAPP: "WhatsApp", SMS: "SMS" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
@@ -29,22 +34,32 @@ interface PortalLoginProps {
     title?: string;
     lead?: string;
     embedded?: boolean;
+    /** What this provider offers; the choice stays hidden when only email is. */
+    channels?: LoginChannel[] | undefined;
 }
 
-const DEFAULT_LEAD = "Ingresa tu correo y te enviaremos un código para entrar. No necesitas contraseña.";
+interface SentCode {
+    channel: LoginChannel;
+    contact: string;
+    challenge: string;
+}
 
-export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false }: PortalLoginProps) {
+const DEFAULT_LEAD = "Te enviaremos un código para entrar. No necesitas contraseña.";
+
+export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false, channels = EMAIL_ONLY }: PortalLoginProps) {
     const Heading = embedded ? "h3" : "h1";
     const ids = useId();
     const widget = useRef<TurnstileHandle>(null);
     const codeInput = useRef<HTMLInputElement>(null);
-    const [ step, setStep ] = useState<"email" | "code">("email");
+    const [ step, setStep ] = useState<"contact" | "code">("contact");
+    const [ channel, setChannel ] = useState<LoginChannel>("EMAIL");
     const [ email, setEmail ] = useState("");
+    const [ phone, setPhone ] = useState("");
+    const [ phoneTouched, setPhoneTouched ] = useState(false);
     const [ code, setCode ] = useState("");
     const [ captchaToken, setCaptchaToken ] = useState<string | null>(null);
     const [ captchaFailed, setCaptchaFailed ] = useState(false);
-    const [ challenge, setChallenge ] = useState<string | null>(null);
-    const [ sentTo, setSentTo ] = useState<string | null>(null);
+    const [ sent, setSent ] = useState<SentCode | null>(null);
     const [ cooldown, setCooldown ] = useCountdown();
     const request = useRequestOtp(slug);
     const onCaptchaToken = (token: string | null) => {
@@ -53,14 +68,19 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
     };
     const verify = useVerifyOtp(slug);
 
-    const sendCode = async () => {
+    const onPhone = isPhoneChannel(channel);
+    const contact = onPhone ? normalizePhone(phone) : normalizeEmail(email);
+    const contactValid = onPhone ? isE164(contact) : contact !== "";
+    const phoneError = onPhone && phoneTouched && !contactValid;
+
+    const sendCode = async (target: LoginChannel, to: string) => {
         if (!captchaToken || request.loading) return;
         verify.reset();
         try {
-            const address = normalizeEmail(email);
-            const result = await request.requestOtp(address, captchaToken);
-            setChallenge(result.challenge);
-            setSentTo(address);
+            const body = isPhoneChannel(target) ? { phone: to, channel: target } : { email: to };
+            const result = await request.requestOtp(body, captchaToken);
+            setSent({ channel: target, contact: to, challenge: result.challenge });
+            setChannel(target);
             setCode("");
             setStep("code");
             setCooldown(RESEND_COOLDOWN_SECONDS);
@@ -70,23 +90,26 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         }
     };
 
-    const codeAlreadySent = challenge !== null && sentTo === normalizeEmail(email);
+    // WhatsApp and SMS share one code and one cooldown: a request inside it would answer with a challenge
+    // that matches nothing and break the code already sent, so the patient goes back to that code instead.
+    const codeAlreadySent = sent !== null && sent.contact === contact
+        && (sent.channel === channel || (onPhone && isPhoneChannel(sent.channel) && cooldown > 0));
 
-    const onSubmitEmail = (e: FormEvent) => {
+    const onSubmitContact = (e: FormEvent) => {
         e.preventDefault();
         if (codeAlreadySent) {
             request.reset();
             setStep("code");
             return;
         }
-        void sendCode();
+        void sendCode(channel, contact);
     };
 
     const onSubmitCode = async (e: FormEvent) => {
         e.preventDefault();
-        if (!challenge || !sentTo || code.length !== CODE_LENGTH || verify.loading) return;
+        if (!sent || code.length !== CODE_LENGTH || verify.loading) return;
         try {
-            await verify.verifyOtp(sentTo, code, challenge);
+            await verify.verifyOtp(isPhoneChannel(sent.channel) ? { phone: sent.contact } : { email: sent.contact }, code, sent.challenge);
             onLoggedIn();
         } catch {
             setCode("");
@@ -94,13 +117,20 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         }
     };
 
-    const changeEmail = () => {
-        setStep("email");
+    const changeContact = () => {
+        setStep("contact");
         setCode("");
         request.reset();
         verify.reset();
     };
 
+    const chooseChannel = (next: LoginChannel) => {
+        setChannel(next);
+        request.reset();
+    };
+
+    const sentByPhone = sent !== null && isPhoneChannel(sent.channel);
+    const otherPhoneChannel = sent && sentByPhone ? channels.find((c) => isPhoneChannel(c) && c !== sent.channel) : undefined;
     const error = request.error ?? verify.error;
 
     return (
@@ -108,26 +138,65 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
             <Heading id={`${ids}-title`} className={styles.title}>{title}</Heading>
             {notice && <p className={styles.notice} role="status">{notice}</p>}
 
-            {step === "email" ? (
-                <form className={styles.form} onSubmit={onSubmitEmail}>
+            {step === "contact" ? (
+                <form className={styles.form} onSubmit={onSubmitContact} noValidate={onPhone}>
                     <p className={styles.lead}>{lead}</p>
-                    <label className="form-label">
-                        Correo electrónico
-                        <input
-                            className="form-input"
-                            type="email"
-                            name="email"
-                            autoComplete="email"
-                            inputMode="email"
-                            required
-                            maxLength={254}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </label>
+                    {channels.length > 1 && (
+                        <div role="group" aria-labelledby={`${ids}-channels`}>
+                            <p id={`${ids}-channels`} className={styles.channelLabel}>Recibir el código por</p>
+                            <div className={styles.channels}>
+                                {channels.map((c) => (
+                                    <button key={c} type="button" className={styles.channel} aria-pressed={c === channel}
+                                        onClick={() => chooseChannel(c)}>
+                                        {CHANNEL_LABELS[ c ]}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {onPhone ? (
+                        <div>
+                            <label className="form-label">
+                                Número de celular
+                                <input
+                                    className="form-input"
+                                    type="tel"
+                                    name="phone"
+                                    autoComplete="tel"
+                                    inputMode="tel"
+                                    required
+                                    maxLength={24}
+                                    placeholder="+57 300 123 4567"
+                                    aria-invalid={phoneError || undefined}
+                                    aria-describedby={`${ids}-phone-hint`}
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    onBlur={() => setPhoneTouched(true)}
+                                />
+                            </label>
+                            <span id={`${ids}-phone-hint`} className={phoneError ? styles.fieldError : styles.fieldHint}>
+                                {phoneError ? PHONE_FORMAT_HINT : "Con el indicativo del país."}
+                            </span>
+                        </div>
+                    ) : (
+                        <label className="form-label">
+                            Correo electrónico
+                            <input
+                                className="form-input"
+                                type="email"
+                                name="email"
+                                autoComplete="email"
+                                inputMode="email"
+                                required
+                                maxLength={254}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                            />
+                        </label>
+                    )}
                     {error && <p className={`error-inline ${styles.error}`} role="alert">{error}</p>}
                     <button type="submit" className={`btn-primary ${styles.submit}`}
-                        disabled={!email.trim() || request.loading || (!codeAlreadySent && !captchaToken)}>
+                        disabled={!contactValid || request.loading || (!codeAlreadySent && !captchaToken)}>
                         {request.loading ? "Enviando…" : codeAlreadySent ? "Ingresar el código enviado" : "Enviar código"}
                     </button>
                     {!captchaToken && !captchaFailed && !codeAlreadySent && (
@@ -136,10 +205,17 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                 </form>
             ) : (
                 <form className={styles.form} onSubmit={onSubmitCode}>
-                    <p className={styles.lead} aria-live="polite">
-                        Si el correo es válido, te enviamos un código a <strong className={styles.email}>{sentTo}</strong>.
-                        Revisa también la carpeta de spam.
-                    </p>
+                    {sent && sentByPhone ? (
+                        <p className={styles.lead} aria-live="polite">
+                            Si el número es válido, te enviamos un código por {CHANNEL_LABELS[ sent.channel ]} a{" "}
+                            <strong className={styles.email}>{fmtPhone(sent.contact)}</strong>.
+                        </p>
+                    ) : (
+                        <p className={styles.lead} aria-live="polite">
+                            Si el correo es válido, te enviamos un código a <strong className={styles.email}>{sent?.contact}</strong>.
+                            Revisa también la carpeta de spam.
+                        </p>
+                    )}
                     <label className="form-label">
                         Código de 6 dígitos
                         <input
@@ -165,10 +241,19 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                     <div className={styles.secondaryActions}>
                         <button type="button" className={styles.linkButton}
                             disabled={cooldown > 0 || !captchaToken || request.loading}
-                            onClick={() => void sendCode()}>
+                            onClick={() => { if (sent) void sendCode(sent.channel, sent.contact); }}>
                             {cooldown > 0 ? `Reenviar código (${cooldown} s)` : "Reenviar código"}
                         </button>
-                        <button type="button" className={styles.linkButton} onClick={changeEmail}>Cambiar correo</button>
+                        {sent && otherPhoneChannel && cooldown === 0 && (
+                            <button type="button" className={styles.linkButton}
+                                disabled={!captchaToken || request.loading}
+                                onClick={() => void sendCode(otherPhoneChannel, sent.contact)}>
+                                Enviar por {CHANNEL_LABELS[ otherPhoneChannel ]}
+                            </button>
+                        )}
+                        <button type="button" className={styles.linkButton} onClick={changeContact}>
+                            {sentByPhone ? "Cambiar número" : "Cambiar correo"}
+                        </button>
                     </div>
                 </form>
             )}

@@ -2,7 +2,6 @@ import {
   AppointmentStatus,
   BookingApprovalMode,
   BookingRequestKind,
-  Channel,
   MeetingStatus,
   PatientStatus,
   RecordSource,
@@ -33,11 +32,13 @@ import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
+import { loadPatientRoute, type PatientRoute } from './patient-route.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import { portalActionContext } from './portal-appointment-actions.js';
 import { afterRequestCreated, holdSlotWithin, portalRequestService } from './portal-request.service.js';
 import type { PortalRequestDto } from './portal-request.dto.js';
-import { PortalBookingLimitError, PortalBookingUnavailableError, SlotUnavailableError } from './portal-booking.errors.js';
+import { PortalBookingLimitError, PortalBookingUnavailableError, PortalPhoneFieldError, SlotUnavailableError } from './portal-booking.errors.js';
+import { isPhoneContact, newPatientContact, typedPhoneIsUnverified } from './portal-contact.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from './portal-booking-notifications.js';
 import { enqueueProvisionMeet, meetingPendingMode } from './portal-meeting.service.js';
 import type { CreatePortalBookingBody } from './portal-booking.schemas.js';
@@ -63,11 +64,11 @@ export async function resolveBookingMode(userId: string, tx: TransactionClient) 
   return { settings, approval: settings.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL };
 }
 
-/** The email reminder of a portal appointment: 24h before it, or none when that time has already passed. */
-export function portalReminder(start: Date, now: Date, to: string, channel: Channel = Channel.EMAIL) {
+/** The reminder of a portal appointment: 24h before it, or none when that time has passed or no route exists. */
+export function portalReminder(start: Date, now: Date, route: PatientRoute | null) {
   const sendAt = new Date(start.getTime() - ONE_DAY_MS);
-  if (sendAt <= now) return undefined;
-  return { channel, to, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
+  if (!route || sendAt <= now) return undefined;
+  return { ...route, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
 }
 
 export function toPortalError(err: unknown): unknown {
@@ -84,8 +85,6 @@ export function toPortalError(err: unknown): unknown {
 export interface PortalAppointmentInput {
   userId: string;
   patientId: string;
-  /** Address of the email reminder: the verified session email, or the request's email on approval. */
-  email: string;
   typeId: string;
   locationId: string;
   isVirtual: boolean;
@@ -98,11 +97,11 @@ export interface PortalAppointmentInput {
 }
 
 /**
- * Creates a CONFIRMED portal appointment on `tx` (the caller holds the provider lock): email reminder, meeting
- * provisioning for a virtual location, and the job that will confirm it. Shared by `book` and request approval.
+ * Creates a CONFIRMED portal appointment on `tx` (the caller holds the provider lock): a reminder on the patient's
+ * route, meeting provisioning for a virtual location, and the job that will confirm it. Shared by `book` and approval.
  */
 export async function createPortalAppointmentWithin(tx: TransactionClient, input: PortalAppointmentInput, now: Date) {
-  const reminder = portalReminder(input.start, now, input.email);
+  const reminder = portalReminder(input.start, now, await loadPatientRoute(input.userId, input.patientId, tx));
   const meetingPending = input.isVirtual ? await meetingPendingMode(input.userId, tx) : undefined;
   const appointment = await createWithin(tx, {
     startAt: input.start.toISOString(),
@@ -129,11 +128,9 @@ async function createPortalPatient(tx: TransactionClient, session: PortalSession
   const patient = await createPatientWithin(tx, {
     name: typed.name,
     lastName: typed.lastName,
-    whatsappNumber: typed.phone || null,
-    email: session.email,
-    reminderChannel: Channel.EMAIL,
+    ...newPatientContact(session.contact, typed.phone),
     status: PatientStatus.ACTIVE,
-  }, session.userId, { source: RecordSource.PORTAL });
+  }, session.userId, { source: RecordSource.PORTAL, whatsappUnverified: typedPhoneIsUnverified(session.contact, typed.phone) });
   bindAuditPortalPatient(patient.id);
   return patient.id;
 }
@@ -141,7 +138,8 @@ async function createPortalPatient(tx: TransactionClient, session: PortalSession
 export const portalBookingService = {
   async book(session: PortalSessionContext, body: CreatePortalBookingBody, meta: ConsentRequestMeta): Promise<PortalBookingResult> {
     const { userId } = session;
-    const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
+    if (isPhoneContact(session.contact) && body.patient.phone) throw new PortalPhoneFieldError();
+    const auditContext = portalPatientAuditContext({ userId, contact: session.contact, ipAddress: meta.ipAddress });
     const start = new Date(body.startUtc);
 
     try {
@@ -180,7 +178,6 @@ export const portalBookingService = {
         const { appointment, linkPending } = await createPortalAppointmentWithin(tx, {
           userId,
           patientId,
-          email: session.email,
           typeId: type.id,
           locationId: location.id,
           isVirtual: location.isVirtual,
@@ -194,7 +191,7 @@ export const portalBookingService = {
         return { kind: 'appointment' as const, created: await portalBookingRepository.findForDto(appointment.id, tx), settings, event };
       }, { timeout: 10000 }));
       if (outcome.kind === 'request') {
-        await afterRequestCreated(userId, session.email, outcome.held);
+        await afterRequestCreated(outcome.held);
         return { request: outcome.held.request };
       }
       const { created, settings, event } = outcome;

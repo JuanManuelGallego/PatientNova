@@ -5,7 +5,7 @@ import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStat
 import { updatePatientSchema } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
-import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
+import { ActionType, Channel, EntityType } from '../../generated/prisma/enums.ts';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
@@ -15,7 +15,14 @@ type PatientWithRelations = Patient & {
   reminders: { id: string }[];
 };
 
-const PATIENT_DIFF_FIELDS = schemaKeys(updatePatientSchema);
+const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema), 'whatsappUnverified' ];
+
+/** The provider endorses a number typed in the booking form by changing it or by choosing WhatsApp for this patient. */
+function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
+  if (!existing.whatsappUnverified) return false;
+  const numberChanged = dto.whatsappNumber !== undefined && (dto.whatsappNumber || null) !== existing.whatsappNumber;
+  return numberChanged || dto.reminderChannel === Channel.WHATSAPP;
+}
 
 export async function createPatientWithin(
   tx: TransactionClient,
@@ -42,16 +49,25 @@ export async function createPatientWithin(
   return createdPatient;
 }
 
-/** `description` overrides the default audit text, for callers that change a patient as part of another action. */
+/**
+ * `description` overrides the default audit text, for callers that change a patient as part of another action.
+ * `endorseWhatsapp`: the provider linked this record to a request that proved its number.
+ */
 export async function updatePatientWithin(
   tx: TransactionClient,
   id: string,
   dto: UpdatePatientDto,
   userId: string,
-  opts: { description?: string } = {},
+  opts: { description?: string; endorseWhatsapp?: boolean } = {},
 ): Promise<Patient> {
   const existingPatient = await patientRepository.findById(id, userId, tx);
-  const updatedPatient = await patientRepository.update(id, dto, userId, tx);
+  const updatedPatient = await patientRepository.update(
+    id,
+    dto,
+    userId,
+    tx,
+    opts.endorseWhatsapp || endorsesWhatsapp(existingPatient, dto) ? { whatsappUnverified: false } : {},
+  );
   const diff = computeDiff(existingPatient as unknown as Record<string, unknown>, updatedPatient as unknown as Record<string, unknown>, PATIENT_DIFF_FIELDS);
   await logAudit({
     entityType: EntityType.PATIENT,

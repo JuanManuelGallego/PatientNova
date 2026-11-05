@@ -13,6 +13,12 @@ export class BookingRequestNotPendingError extends ApiError {
   }
 }
 
+export class BookingRequestCandidateError extends ApiError {
+  constructor() {
+    super('Patient not found for this request', 404);
+  }
+}
+
 export class BookingRequestRestoreCandidateError extends ApiError {
   constructor() {
     super('Patient to restore not found for this request', 404);

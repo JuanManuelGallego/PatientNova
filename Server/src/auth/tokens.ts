@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../utils/config/config.js';
+import type { Channel } from '../../generated/prisma/enums.js';
 
 /**
  * Single place that signs and verifies every JWT the server issues.
@@ -32,10 +33,13 @@ export interface RefreshTokenClaims {
   sid: string;
 }
 
+/** Exactly one of `email` or `phone`, matching `channel`. See `contactClaims`. */
 export interface PortalTokenClaims {
   userId: string;
-  email: string;
   sid: string;
+  channel: Channel;
+  email?: string;
+  phone?: string;
 }
 
 export const PORTAL_SESSION_TTL_SECONDS = 2 * 60 * 60;
