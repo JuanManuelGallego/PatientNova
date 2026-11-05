@@ -11,7 +11,6 @@ export interface PublicProvider {
     timezone: string;
     bookingOpen: boolean;
     approvalRequired: boolean;
-    /** Null when patients cannot reschedule online (booking paused or approval mode). */
     reschedulePolicy: ReschedulePolicy | null;
     lastBookableDate: string;
     types: PublicAppointmentType[];

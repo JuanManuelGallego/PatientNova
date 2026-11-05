@@ -103,7 +103,6 @@ export function normalizePhone(value: string): string {
 
 export const isE164 = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
 
-/** Groups a Colombian number for reading; other countries keep the stored E.164 form. */
 export function fmtPhone(phone: string): string {
     const parts = /^\+57(\d{3})(\d{3})(\d{4})$/.exec(phone);
     return parts ? `+57 ${parts[ 1 ]} ${parts[ 2 ]} ${parts[ 3 ]}` : phone;
@@ -116,7 +115,6 @@ export const mapUrl = (address: string) =>
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** What the patient may do after booking. A null policy means rescheduling is not offered online. */
 export function fmtBookingPolicy(policy: ReschedulePolicy | null): string {
     const cancel = "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita";
     if (!policy) return `${cancel}.`;

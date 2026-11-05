@@ -261,7 +261,6 @@ model User {
   maxPatientReschedules    Int @default(2)
   minRescheduleNoticeHours Int @default(0)
 
-  // Shown on the public booking page. Deliberately public, unlike phoneNumber/whatsappNumber.
   bio                 String? @db.VarChar(600)
   specialty           String? @db.VarChar(120)
   professionalLicense String? @db.VarChar(60)

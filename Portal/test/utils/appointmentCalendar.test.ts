@@ -90,7 +90,6 @@ describe("downloadAppointmentIcs", () => {
             download = this.download;
         });
 
-        // 01:00 UTC on the 11th is still the 10th in Bogotá.
         downloadAppointmentIcs(appointment({ startUtc: "2026-11-11T01:00:00.000Z", endUtc: "2026-11-11T02:00:00.000Z" }), "Dra. Ana", "America/Bogota");
 
         expect(download).toBe("cita-2026-11-10.ics");

@@ -141,8 +141,6 @@
   color: var(--c-brand);
 }
 
-/* The top edge of the booking card. It sticks to the viewport so the patient keeps their place on a
-   long page; the --flow-* values come from .flow, whose padding it cancels to run edge to edge. */
 .progress {
   position: sticky;
   top: 0;

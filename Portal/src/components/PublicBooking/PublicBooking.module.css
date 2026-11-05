@@ -77,7 +77,6 @@
   overflow-wrap: anywhere;
 }
 
-/* A long presentation must not push the booking steps off the first screen. */
 .bioClamped {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -175,8 +174,6 @@
   padding: var(--flow-top) var(--flow-x) 20px;
 }
 
-/* Doubled to outrank .dash-card. `clip` keeps the rounded corners without making the card a scroll
-   container, which `hidden` would, and that would stop the progress strip from sticking. */
 .flow.flow {
   overflow: clip;
 }

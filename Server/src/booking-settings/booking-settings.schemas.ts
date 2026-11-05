@@ -13,7 +13,6 @@ export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
 export const MAX_LICENSE_LENGTH = 60;
 
-/** Optional public text: blank clears the stored value. */
 const publicText = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable().optional();
 const publicPhone = z.string().trim().regex(e164Regex).or(z.literal('')).transform((v) => v || null).nullable().optional();
 

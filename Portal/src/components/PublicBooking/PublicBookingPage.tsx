@@ -192,7 +192,6 @@ function ProviderBio({ bio }: { bio: string }) {
     const [ expanded, setExpanded ] = useState(false);
     const [ cutOff, setCutOff ] = useState(false);
 
-    // Measured, not counted: how much fits in three lines depends on the width of the screen.
     useEffect(() => {
         const el = text.current;
         if (!el || expanded || typeof ResizeObserver === "undefined") return;

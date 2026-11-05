@@ -59,7 +59,6 @@ export const publicBookingService = {
       timezone: provider.timezone,
       bookingOpen,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
-      // Patients can only move an appointment in auto-confirm (see `portalActionContext`).
       reschedulePolicy: selfBooking
         ? { maxReschedules: provider.maxPatientReschedules, minNoticeHours: provider.minRescheduleNoticeHours }
         : null,

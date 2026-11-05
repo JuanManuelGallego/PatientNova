@@ -10,7 +10,6 @@ const icsDate = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, ""
 const escapeText = (value: string) =>
     value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 
-/** RFC 5545 folding: lines of at most 75 octets, never splitting a character. */
 function foldLine(line: string): string {
     const parts: string[] = [];
     let current = "";
