@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ApiClientError } from "@/src/api/base/apiClients";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
-import type { LoginChannel, PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
+import type { LoginChannel, PublicAppointmentType, PublicLocation, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
 import {
     APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtContact, fmtCop, fmtLongDayTime, isE164, isPhoneChannel, locationDetail, normalizePhone,
@@ -22,17 +22,14 @@ interface BookingFormProps {
     slug: string;
     provider: PublicProvider;
     type: PublicAppointmentType;
+    location: PublicLocation;
     slot: PublicSlot;
     timezone: string;
     onBooked: (outcome: PortalBookingOutcome) => void;
     onSlotTaken: (message: string) => void;
 }
 
-export function BookingForm({ slug, provider, type, slot, timezone, onBooked, onSlotTaken }: BookingFormProps) {
-    const [ locationId, setLocationId ] = useState(provider.locations[ 0 ]?.id ?? "");
-    const location = provider.locations.find((l) => l.id === locationId);
-    const placesLabelId = useId();
-
+export function BookingForm({ slug, provider, type, location, slot, timezone, onBooked, onSlotTaken }: BookingFormProps) {
     return (
         <div className={styles.confirm}>
             <dl className={styles.summary}>
@@ -44,32 +41,15 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                     <dt>Fecha</dt>
                     <dd>{fmtLongDayTime(slot.startUtc, timezone)}</dd>
                 </div>
-                {location && (
-                    <div>
-                        <dt>Lugar</dt>
-                        <dd>{location.name}{locationDetail(location) && `, ${locationDetail(location)}`}</dd>
-                    </div>
-                )}
+                <div>
+                    <dt>Lugar</dt>
+                    <dd>{location.name}{locationDetail(location) && `, ${locationDetail(location)}`}</dd>
+                </div>
             </dl>
             <p className={styles.policy} data-testid="booking-policy">{fmtBookingPolicy(provider.reschedulePolicy)}</p>
 
-            {provider.locations.length > 1 && (
-                <div role="group" aria-labelledby={placesLabelId}>
-                    <p id={placesLabelId} className={styles.period}>Elige el lugar</p>
-                    <div className={styles.options}>
-                        {provider.locations.map((l) => (
-                            <button key={l.id} type="button" className={styles.option} aria-pressed={l.id === locationId}
-                                onClick={() => setLocationId(l.id)}>
-                                <span className={styles.optionName}>{l.name}</span>
-                                {locationDetail(l) && <span className={styles.optionMeta}>{locationDetail(l)}</span>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} loginChannels={provider.loginChannels}
-                typeId={type.id} locationId={locationId} slot={slot} timezone={timezone} onBooked={onBooked} onSlotTaken={onSlotTaken} />
+                typeId={type.id} locationId={location.id} slot={slot} timezone={timezone} onBooked={onBooked} onSlotTaken={onSlotTaken} />
         </div>
     );
 }
@@ -143,10 +123,10 @@ function PatientDetails({ contact, contactChannel, providerName, approvalRequire
         e.preventDefault();
         if (loading) return;
         const firstInvalid = (Object.keys(invalid) as Field[]).find((f) => invalid[ f ]);
-        if (firstInvalid || !locationId) {
+        if (firstInvalid) {
             setAttempted(true);
             const refs = { name: nameRef, lastName: lastNameRef, phone: phoneRef, consent: consentRef };
-            if (firstInvalid) refs[ firstInvalid ].current?.focus();
+            refs[ firstInvalid ].current?.focus();
             return;
         }
         try {

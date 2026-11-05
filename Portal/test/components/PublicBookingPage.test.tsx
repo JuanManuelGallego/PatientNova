@@ -600,14 +600,24 @@ describe("PublicBookingPage booking", () => {
         expect(screen.getByRole("status")).toHaveTextContent("Tu sesión expiró");
     });
 
-    it("lets the patient choose among several locations", async () => {
+    it("asks for the place as its own step before confirming when there are several locations", async () => {
         server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100", isVirtual: false } ] };
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
-        await pickMorningSlot(user);
-        const places = screen.getByRole("group", { name: "Elige el lugar" });
-        expect(within(places).getByRole("button", { name: /Consultorio Centro/ })).toHaveAttribute("aria-pressed", "true");
+        const morning = await screen.findByRole("list", { name: "Mañana" });
+        expect(screen.queryByRole("group", { name: "Elige el lugar" })).not.toBeInTheDocument();
+        await user.click(within(morning).getByRole("button"));
+
+        const places = await screen.findByRole("group", { name: "Elige el lugar" });
+        expect(within(places).getByRole("heading", { name: "Elige el lugar" })).toHaveTextContent("4");
+        expect(within(places).getByRole("button", { name: /Consultorio Centro/ })).toHaveAttribute("aria-pressed", "false");
+        expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 4 de 5: Elige el lugar");
+        expect(screen.queryByRole("heading", { name: "Confirma tu cita" })).not.toBeInTheDocument();
+
         await user.click(within(places).getByRole("button", { name: /Sede Norte/ }));
+        const confirm = await screen.findByRole("heading", { name: "Confirma tu cita" });
+        expect(confirm).toHaveTextContent("5");
+        expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 5 de 5: Confirma tu cita");
         expect(screen.getByText("Sede Norte, Calle 100")).toBeInTheDocument();
         await fillDetails(user);
         await user.click(screen.getByRole("checkbox"));
@@ -650,6 +660,30 @@ describe("PublicBookingPage booking", () => {
             const heading = await pickMorningSlot(user);
             expect(scroll).toHaveBeenCalledTimes(1);
             expect(scroll.mock.contexts[ 0 ]).toBe(heading.closest("[role=group]"));
+        } finally {
+            delete (Element.prototype as Partial<Element>).scrollIntoView;
+        }
+    });
+
+    it("scrolls to the place first, then to the confirmation, when there are several locations", async () => {
+        server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100", isVirtual: false } ] };
+        const scroll = vi.fn();
+        Element.prototype.scrollIntoView = scroll;
+        try {
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+            await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+            const places = await screen.findByRole("group", { name: "Elige el lugar" });
+            expect(scroll).toHaveBeenCalledTimes(1);
+            expect(scroll.mock.contexts[ 0 ]).toBe(places);
+
+            await user.click(within(places).getByRole("button", { name: /Sede Norte/ }));
+            const confirm = await screen.findByRole("group", { name: "Confirma tu cita" });
+            expect(scroll).toHaveBeenCalledTimes(2);
+            expect(scroll.mock.contexts[ 1 ]).toBe(confirm);
+
+            await user.click(within(places).getByRole("button", { name: /Consultorio Centro/ }));
+            expect(scroll).toHaveBeenCalledTimes(2);
         } finally {
             delete (Element.prototype as Partial<Element>).scrollIntoView;
         }
