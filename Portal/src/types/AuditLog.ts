@@ -10,6 +10,8 @@ export enum EntityType {
   CONSENT_DOCUMENT = "CONSENT_DOCUMENT",
   GOOGLE_CONNECTION = "GOOGLE_CONNECTION",
   GOOGLE_MEET_SPACE = "GOOGLE_MEET_SPACE",
+  BOOKING_REQUEST = "BOOKING_REQUEST",
+  PATIENT_CONSENT = "PATIENT_CONSENT",
 }
 
 export enum ActionType {
@@ -46,7 +48,8 @@ export interface FetchAuditLogsFilters {
   entityType?: EntityType | EntityType[];
   entityId?: string;
   actionType?: ActionType | ActionType[];
-  source?: ActionSource;
+  source?: ActionSource | ActionSource[];
+  portalPatientId?: string;
   search?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -70,23 +73,28 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.CONSENT_DOCUMENT]: { label: "Consentimiento", color: "#475569", bg: "#F8FAFC" },
   [EntityType.GOOGLE_CONNECTION]: { label: "Conexión Google", color: "#2563EB", bg: "#EFF6FF" },
   [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
+  [EntityType.BOOKING_REQUEST]: { label: "Solicitud de reserva", color: "#B45309", bg: "#FFFBEB" },
+  [EntityType.PATIENT_CONSENT]: { label: "Consentimiento", color: "#334155", bg: "#F1F5F9" },
 };
 
-export const ACTION_TYPE_CONFIG: Record<
-  ActionType,
-  { label: string; color: string; bg: string }
-> = {
-  [ActionType.CREATE]: { label: "Creación", color: "#059669", bg: "#F0FDF4" },
-  [ActionType.UPDATE]: { label: "Actualización", color: "#0284C7", bg: "#F0F9FF" },
-  [ActionType.DELETE]: { label: "Eliminación", color: "#E11D48", bg: "#FFF1F2" },
-  [ActionType.RESTORE]: { label: "Restauración", color: "#0D9488", bg: "#F0FDFA" },
+export const UNKNOWN_PILL_STYLE = { color: "#4B5563", bg: "#F3F4F6" } as const;
+
+export const ACTION_TYPE_CONFIG: Record<ActionType, { label: string; color: string }> = {
+  [ActionType.CREATE]: { label: "Creación", color: "#059669" },
+  [ActionType.UPDATE]: { label: "Actualización", color: "#0284C7" },
+  [ActionType.DELETE]: { label: "Eliminación", color: "#E11D48" },
+  [ActionType.RESTORE]: { label: "Restauración", color: "#0D9488" },
 };
+
+export const actionTypeLabel = (action: ActionType): string => ACTION_TYPE_CONFIG[action]?.label ?? action;
+
+export const entityTypeLabel = (entityType: EntityType): string => ENTITY_TYPE_CONFIG[entityType]?.label ?? entityType;
 
 export const ACTION_SOURCE_CONFIG: Record<
   ActionSource,
   { label: string }
 > = {
-  [ActionSource.API]: { label: "API" },
+  [ActionSource.API]: { label: "Tú" },
   [ActionSource.JOB]: { label: "Tarea" },
   [ActionSource.PUBLIC_PORTAL]: { label: "Portal de pacientes" },
 };

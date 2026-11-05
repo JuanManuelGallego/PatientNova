@@ -68,7 +68,38 @@ import {
   TimerOff,
   Copy,
   Download,
+  RotateCcw,
+  User,
+  UserCog,
+  Tag,
+  CalendarX,
+  Link2,
+  Video,
+  ShieldCheck,
 } from "lucide-react";
+
+export const AUDIT_ACTION_ICONS: Record<string, LucideIcon> = {
+  CREATE: Plus,
+  UPDATE: Pencil,
+  DELETE: Trash2,
+  RESTORE: RotateCcw,
+};
+
+export const AUDIT_ENTITY_ICONS: Record<string, LucideIcon> = {
+  USER: UserCog,
+  APPOINTMENT: CalendarCheck,
+  PATIENT: User,
+  REMINDER: Bell,
+  MEDICAL_RECORD: ClipboardList,
+  APPOINTMENT_TYPE: Tag,
+  APPOINTMENT_LOCATION: MapPin,
+  BLOCKED_TIME: CalendarX,
+  CONSENT_DOCUMENT: FileText,
+  GOOGLE_CONNECTION: Link2,
+  GOOGLE_MEET_SPACE: Video,
+  BOOKING_REQUEST: Inbox,
+  PATIENT_CONSENT: ShieldCheck,
+};
 
 /* ── Sidebar Navigation ─────────────────────────────────────────────────── */
 export const NAV_ICONS = {

@@ -13,7 +13,7 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
 import { ONE_DAY_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
-import { runInAuditContext } from '../audit-log/audit-log-context.js';
+import { bindAuditPortalPatient, runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
@@ -134,6 +134,7 @@ async function createPortalPatient(tx: TransactionClient, session: PortalSession
     reminderChannel: Channel.EMAIL,
     status: PatientStatus.ACTIVE,
   }, session.userId, { source: RecordSource.PORTAL });
+  bindAuditPortalPatient(patient.id);
   return patient.id;
 }
 

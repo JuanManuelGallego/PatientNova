@@ -767,7 +767,9 @@ model AuditLog {
   fieldsBefore      Json?
   fieldsAfter       Json?
   ipAddress         String?
+  portalPatientId   String?
 
   @@index([entityType, entityId])
   @@index([eventTimeUtc])
+  @@index([userId, portalPatientId])
 }

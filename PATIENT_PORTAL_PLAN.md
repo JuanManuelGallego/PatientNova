@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode still pending). **Updated:** 2026-11-02
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"). **Updated:** 2026-11-03
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -296,7 +296,7 @@ Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
   - `PatientConsent`:
     - Fields: `id`, `patientId` (→ Patient, Restrict, since patients are soft-deleted), `userId`, `kind ConsentKind (DATA_PROCESSING)`, `policyVersion VarChar(20)`, `acceptedAt`, `ipAddress?`, `userAgent? VarChar(512)`, `revokedAt?`, `createdAt`.
     - Raw partial unique index `patient_consents_active_key` on `("patientId", kind, "policyVersion") WHERE "revokedAt" IS NULL`. Add it to the AGENTS.md raw-only list.
-    - The repository offers only insert and select. Rows are immutable; revocation comes in 7.2.
+    - The repository offers only insert and select. Rows are immutable; revocation is not in the plan (7.2 was removed).
   - `PRIVACY_POLICY_VERSION = '2026-10-19'` in `src/portal/privacy-policy.ts`. The server is the only authority; the client never sends a version.
 - **`POST /v1/public/providers/:slug/otp`** (anonymous class).
   - Body `{ email, captchaToken }`, strict zod. The email is normalized like the patient schema does.
@@ -899,12 +899,13 @@ As planned:
 - An expired Google connection shows up in the banner within a day, or right away with "Verificar ahora".
 
 ### Phase 6: Approval mode and review inbox
-- **6.1 `BookingRequest` model + holds.** Slot engine and lock count active holds. Tests: held slot not bookable, hold creation races with appointment creation.
+*Status (2026-11-03): all six PRs are built. The approval-mode Playwright project moved to 7.4. Test suites were not re-run for this status.*
+- **6.1 `BookingRequest` model + holds.** Slot engine and lock count active holds. Tests: held slot not bookable, hold creation races with appointment creation. *(Built: migration `20261106000000_booking_requests`, `src/booking-requests/`.)*
 - **6.2 Approval mode in the booking flow.** Provider setting, request creation carrying consent evidence, patient "pending confirmation" state.
 - **6.3 Solicitudes inbox.** List and detail API and UI, approve and reject, Patient and `PatientConsent` created on approval, appointment created in the same transaction. Calendar shows dashed pending blocks.
-- **6.4 Provider notifications.** Sidebar badge and dashboard card, outbound message on `reminderChannel`, new Twilio template.
-- **6.5 Expiry cron.** Release holds after about 48h, 24h nudge, patient expiry email.
-- **6.6 Review routing.** Inactive and deleted-only matches become requests; the inbox lists all deleted candidates for that normalized email; actions: restore one, create new, reject.
+- **6.4 Provider notifications.** Sidebar badge and dashboard card, outbound message on `reminderChannel`, new Twilio template. *(Built: `booking-request-notify` queue and worker registered in `scheduler/pg-boss.ts`; badge via `PendingRequestsContext`; `PendingRequestsAlert` in `ProviderAlerts`.)*
+- **6.5 Expiry cron.** Release holds after about 48h, 24h nudge, patient expiry email. *(Built: `sweep-booking-requests` every 15 min, `purge-booking-requests` daily.)*
+- **6.6 Review routing.** Inactive and deleted-only matches become requests; the inbox lists all deleted candidates for that normalized email; actions: restore one, create new, reject. *(Built: `review` flag from `resolvePortalPatient`, REVIEW holds in `portal-booking.service.ts`.)*
 
 #### Phase 6 implementation plan (prepared 2026-11-02)
 **Starting point (checked in code):**
@@ -942,7 +943,7 @@ As planned:
 - Portal: `usePortalBooking` returns a union; `RequestSent` screen; "Enviar solicitud" label; "Solicitudes pendientes" in "Mis citas" with cancel through `ConfirmDialog`.
 - Tests: creation, caps, same shape for matching and non-matching emails, no Patient/consent, cancel auth and cross-email 404, reschedule 404 in approval mode, hold released; Portal unit tests.
 
-**PR 6.3 — Server + Portal: inbox, approve/reject, calendar, settings toggle.** *(Built 2026-11-02 together with 6.4–6.6: `booking-request-review.service.ts`, `/v1/booking-requests`, `createPortalAppointmentWithin`, `ensureCurrentConsent(..., acceptedAt)`; Portal `/requests`, `RequestDrawer`, calendar `PendingHoldBlock`/`PendingHoldChip`, `ApprovalSection`, shared `PendingRequestsProvider` for badge, alert and dashboard card. Not built yet: the `e2e-aprobacion` Playwright project.)*
+**PR 6.3 — Server + Portal: inbox, approve/reject, calendar, settings toggle.** *(Built 2026-11-02 together with 6.4–6.6: `booking-request-review.service.ts`, `/v1/booking-requests`, `createPortalAppointmentWithin`, `ensureCurrentConsent(..., acceptedAt)`; Portal `/requests`, `RequestDrawer`, calendar `PendingHoldBlock`/`PendingHoldChip`, `ApprovalSection`, shared `PendingRequestsProvider` for badge, alert and dashboard card. The `e2e-aprobacion` Playwright project moved to 7.4.)*
 - `/v1/booking-requests` (provider auth, CSRF on writes, `requirePortalEnabled`, ADMIN/SUPER_ADMIN only): `GET /` (status tab, `from`/`to`, pagination, effective status), `GET /:id` (adds `existingPatient` computed at view time), `GET /count`, `POST /:id/approve`, `POST /:id/reject`.
 - Approve: lock → PENDING and unexpired → resolve patient (reuse active match by `emailHash`, else create `source: PORTAL`, respect the cap) → `ensureCurrentConsent` with optional `acceptedAt` and request evidence → `createPortalAppointmentWithin` (extracted from `book`; meeting-pending, `provision-meet`, reminder; `excludeRequestId`) → APPROVED with ids → required audits → `enqueuePortalNotifications('booked', …)`. A conflict gives a neutral 409 and leaves the request PENDING.
 - Portal: `/requests` page (`TabNav` Pendientes / Resueltas / Vencidas, `DataTable`, `RequestDrawer`), sidebar entry, third `requestHolds` list through the calendar hooks and views with `PendingHoldBlock`/`PendingHoldChip` (dashed, "Pendiente de revisión") and a legend swatch, `ApprovalSection` in `OnlineBookingTab.tsx`.
@@ -961,10 +962,160 @@ As planned:
 **Cross-cutting:** AGENTS.md gets the new rules in the same PRs; the Bruno collection is updated in the PR where each API becomes final (6.2 portal, 6.3 provider). Order: 6.1 gates all; 6.4, 6.5 and 6.6 follow 6.3.
 
 ### Phase 7: Provider controls and hardening
-- **7.1 Per-patient portal access toggle** (`portalAccessEnabled`) on the patient screen.
-- **7.2 Consent management.** Re-consent prompt when a new privacy policy version is published, consent revocation flow, provider view of each patient's portal consent history.
+*Status (2026-11-03): built on `phase7/audit-quality-gates` (7.3-A, 7.3-B, 7.4-A, 7.4-B). Server integration, Portal unit tests and the local self-contained e2e run (`public`, `public-mobile`, provider `settings`/`patients`) pass. Changes from the plan below:*
+- *7.4-A uses `buildPortalApp()` (the real public/session routers), not the real `app`: `.env.test` keeps `ENABLE_PORTAL=false`. The "429 before parsing" check holds only for the class limiters (`public-ip`/`portal-ip`). The named limiters run after the 10kb parser. Uniform OTP responses and token separation were already covered and were not duplicated.*
+- *7.4-B creates the deleted review patient per run through the provider API (create + delete) instead of seeding it, so retries and reruns are independent of seeded state. The seed adds only `e2e-aprobacion`, gives both portal providers `ADMIN_PASSWORD` and clears their booking requests.*
+- *The e2e job sets `PUBLIC_RATE_LIMIT_MAX` (the coarse 60/min `public-ip` limit tripped locally once the new specs ran).*
 - **7.3 Audit view** for portal-originated actions.
-- **7.4 Quality gates.** Playwright e2e for booking, cancel and review flows in `Portal/e2e`, and abuse and rate-limit tests.
+- **7.4 Quality gates.** Playwright e2e for booking, cancel and review flows in `Portal/e2e`, and abuse and rate-limit tests. Includes the approval-mode e2e deferred from 6.3: a second seeded provider `e2e-aprobacion` in approval mode (`RequestsPage.ts`, `requests.spec.ts`, a `public` spec).
+
+#### Phase 7 implementation plan (prepared 2026-11-03)
+**Starting point (checked in code):**
+- **Portal actions are already audited.**
+  - `portalPatientAuditContext` (`src/audit-log/audit-actors.ts`) stamps `source = PUBLIC_PORTAL`, `actorId = portal:<24 hex of portalActorHash(userId, email)>` and `actorDisplayName = "Paciente (portal) <masked email>"`.
+  - Booking, cancel, reschedule, consent and request create/cancel write required audits on `tx`. Expiry runs as `source = JOB` (`bookingRequestExpiryAuditContext`).
+- **The API already filters.** `GET /v1/audit-logs` (`authenticate` + `requireAdminForWrites`, so VIEWER can read) filters by `entityType[]`, `actionType[]`, `entityId`, `actorId`, dates and a single `source`.
+  - `search` decrypts at most 1000 rows in memory. `actorDisplayName`, `description`, `ipAddress` and `fieldsBefore`/`fieldsAfter` are ciphertext.
+- **The UI.** Settings → "Registro de actividad" (`AuditLogsTab.tsx`, `AuditDrawer.tsx`) has action, entity, date and `entityId` filters. `AppointmentDrawer` deep-links with `entityId`. There is no source filter or source column.
+- **Bug: the tab crashes on portal rows.**
+  - The Portal `EntityType` (`src/types/AuditLog.ts`) has no `BOOKING_REQUEST` or `PATIENT_CONSENT`.
+  - `EntityTypePill` reads `ENTITY_TYPE_CONFIG[...]` without a fallback, so the first consent or request row throws a `TypeError` while rendering. Every first portal booking writes a consent row.
+  - Both values are also missing from the entity filter.
+- **The drawer lacks portal detail.**
+  - `FIELD_LABELS` has no portal fields (`policyVersion`, `kind`, `acceptedAt`, `holdExpiresAt`, `cancelledBy`, `patientRescheduleCount`, `meetingStatus`, `patientTimezone`).
+  - Enum values (`PENDING`, `CANCELLED`, `PATIENT`) show raw.
+  - `formatValue` calls `fmtDateTime(value)` without the display timezone, which AGENTS.md forbids in React components.
+- **E2E today.**
+  - Projects: `setup`, `chromium`, `mobile`, `public`, `public-mobile`, with `workers: 1` and `retries: 2`.
+  - Public specs: `book`, `booking` (auto-confirm book → reschedule → cancel), `portal-login`, `public-pages`.
+  - The seeded `e2e-publica` provider has a random password, so no spec can log in as it.
+  - `auth.setup.ts` covers only the SUPER_ADMIN e2e user.
+- **The OTP budget is tight.** `otp-request-ip` allows 10 per IP per 15 minutes, shared by every project and retry. Today's specs use 4: two specs in two projects.
+- **Abuse coverage today.**
+  - `portal-otp.integration.test.ts`: OTP domain limits (cooldown, per-provider hourly cap, `failedCount`).
+  - `portal-booking-request.integration.test.ts`: request caps.
+  - `public-api.integration.test.ts`: the generic limiter's 429, on a synthetic router.
+  - Not covered: the named limiters mounted in the real app (`otp-request-ip` 10, `otp-verify-ip` 20, `portal-booking-ip` 10, `portal-change-ip` 10, `public-ip`/`portal-ip` at `PUBLIC_RATE_LIMIT_MAX`).
+  - The Hardening rule "add a test that no public route reads tokens from path/query" has no test.
+
+**Decisions (defaults, prepared 2026-11-03):**
+1. 7.3 extends the existing activity log. It adds no new page and no new audit writes.
+2. Per-patient portal activity uses a stable link: `AuditLog.portalPatientId`, bound when a portal action resolves (or creates) its patient record.
+   - Revised after review (2026-11-04). Matching only by the actor id of the *current* email lost history after an email change, and it mixed records that share an email (a deleted one and its replacement).
+   - Unlinked rows (OTP logins, booking requests, older rows the migration could not backfill) still match the current email's actor. The UI hint says so.
+   - The actor-id formula lives in one helper, used by both the writer and the filter.
+3. VIEWER read access to the log stays as it is (see Open).
+4. Approval and review e2e run only in the desktop `public` project.
+   - The OTP budget becomes 6 of 10, leaving 4 for retries.
+   - Abuse and rate-limit checks are integration tests (supertest on the real app). E2E must never trip a limiter.
+5. Provider-side e2e logs in as the seeded portal providers, never as the shared SUPER_ADMIN user. Holds and portal rows then stay off the `chromium` calendar.
+   - The portal providers reuse `ADMIN_PASSWORD`, so CI gets no new variables. The seed's database-name guard still applies.
+
+**PR 7.3-A — Server + Portal: fix the crash, source filter, drawer labels (ship first; small).**
+- Portal `EntityType`/`ENTITY_TYPE_CONFIG`: add `BOOKING_REQUEST` ("Solicitud de reserva") and `PATIENT_CONSENT` ("Consentimiento").
+  - `EntityTypePill` and `ActionPill` fall back to a neutral pill showing the raw value, so a server enum can grow before the Portal does.
+- Server: `listAuditLogsSchema.source` accepts one value or an array (`in`), like `entityType`.
+- Portal source filter:
+  - `QUERY_PARAMS.auditSource`, plus an "Origen" enum filter column: API, Tarea, Portal de pacientes.
+  - The "Origen" column shows the source; no separate "Portal" chip (dropped after review: it repeated the column).
+  - The `entityId` chip pattern is reused for active filters that have no column.
+- `AuditDrawer`:
+  - Spanish labels for the portal fields.
+  - Value labels for `status`, `cancelledBy`, `meetingStatus`, `kind` and `source`.
+  - Values formatted by field: full ISO instants with `fmtDateTime(value, timezone)`; calendar days (`dateOfBirth`, `birthDate`, bare `YYYY-MM-DD`) with `fmtCalendarDay`; `policyVersion` verbatim.
+- Tests:
+  - Server integration: array `source` filter, plus `PUBLIC_PORTAL` rows from a real portal cancel are listed with `source=PUBLIC_PORTAL`.
+  - Portal unit: pill fallback, new labels, source filter → query.
+- Bruno: `Audit Logs/List Audit Logs` documents the array `source`.
+
+**PR 7.3-B — Server + Portal: per-patient portal activity.**
+- Extract `portalActorId(userId, email)` from `portalPatientAuditContext` and use it in both places.
+- `listAuditLogsSchema` gains `portalPatientId` (uuid). Sending it together with `actorId` returns 400.
+  - The repository loads the patient scoped by `userId`, deleted patients included (history matters), decrypts the email and filters by `actorId = portalActorId(userId, email)`.
+  - A foreign or unknown id, or a patient without an email, returns an empty page: the same semantics as any other filter, never 404.
+- Portal `PatientDrawer`: "Actividad en el portal" link to `/settings?tab=Registro+de+actividad&portalPatientId=<id>` (the filter implies `PUBLIC_PORTAL`).
+  - Shown when `portalEnabled`. Linked rows outlive the patient's email.
+  - On the tab, a "Paciente ✕" chip clears it, with a hint that logins and requests are found by the current email.
+- `RequestDrawer` gets "Ver registros de actividad" (`entityId = request.id`), like `AppointmentDrawer`.
+- Tests:
+  - Integration:
+    - Only the patient's own portal rows are returned, not another patient's with the same provider.
+    - Another tenant's patient with the same email returns an empty page.
+    - After an email change, the old rows are not matched.
+    - `portalActorId` equals the actor written by a real portal cancel.
+    - Both filters together return 400.
+  - Portal unit: link visibility.
+- Bruno: `portalPatientId` in `List Audit Logs`.
+
+**PR 7.4-A — Server: abuse, rate-limit and URL-secret tests (tests only; production code changes only if a test finds a gap).**
+- New `test/integration/app/portal-abuse.integration.test.ts`, supertest on the real `app` with `ENABLE_PORTAL` on, like `public-api.integration.test.ts`.
+  - `trust proxy` is one hop, so each test sends its own `X-Forwarded-For` IP. The in-memory buckets then never bleed between tests.
+- `otp-request-ip`:
+  - 10 requests with the test CAPTCHA token get the uniform 202. The 11th gets a JSON 429.
+  - The blocked request writes no `PortalOtp` row and makes no Brevo `fetch` (the limiter runs before parsing and CAPTCHA).
+  - Another IP still gets 202.
+- The other limiters:
+  - `otp-verify-ip`: 20 attempts, then 429.
+  - `portal-booking-ip`: 10, then 429.
+  - `portal-change-ip`: one bucket shared by appointment cancel, reschedule and request cancel. 10 mixed calls, then each of the three is 429.
+  - `public-ip`/`portal-ip` at the configured maximum.
+- On a blocked IP, an oversized or malformed body is still 429 (not 413/400), and the response has no `Set-Cookie`.
+- Uniform responses:
+  - OTP request for an unknown slug, a live slug with an existing patient's email and one with a new email: identical status, body and headers, ignoring `Date`, `RateLimit-*` and the request id.
+  - Add this only where `portal-otp.integration.test.ts` lacks a byte-level comparison.
+- No secrets in URLs:
+  - Walk the stacks of `createPublicApiRouter()`/`createPortalSessionRouter()`. Assert no route path has a `:token`, `:code`, `:challenge` or `:otp` parameter.
+  - `otp/verify` with `code`/`challenge` only in the query string is 400 (they are body-only).
+- Token separation (provider JWT in `portal_session`, portal JWT as provider Bearer, wrong audience): extend `portal-session.integration.test.ts` only for cases it misses.
+
+**PR 7.4-B — E2E: approval mode and review routing.**
+- Seed (`seed-e2e.ts`, idempotent):
+  - New `E2E_SEED` ids: `approvalSlug = 'e2e-aprobacion'`, `approvalProviderEmail = 'e2e-approval-provider@example.com'`, and type and location ids `…c1`/`…c2`.
+  - The approval provider: `bookingApprovalMode: REQUIRE_APPROVAL`, the same weekly availability, `reminderChannel: EMAIL`. Both portal providers get `config.admin.password`.
+  - On `e2e-publica`, one soft-deleted patient `e2e-revision@example.com`, written through the extended client so ciphertext and `emailHash` are right. Every seed sets `isDeleted: true` again.
+  - On every seed, delete both portal providers' `BookingRequest` rows, so local reruns never reach the per-email (3) or per-provider (50) caps. CI is fresh anyway.
+- Shared helpers:
+  - `e2e/support/portal.ts`: `inbox`, `latestCode`, the Vercel-header strip route and `loginWithOtp`, extracted from `booking.spec.ts`/`portal-login.spec.ts`.
+  - `e2e/support/provider-context.ts`: opens a second `browser.newContext()` and logs in with `LoginPage`. The `public` project keeps running without the `setup` dependency.
+- `pages/RequestsPage.ts` (POM):
+  - Tabs Pendientes/Resueltas/Vencidas, and rows.
+  - Drawer actions: `request-approve`, `request-reject` (+ `ConfirmDialog`), `request-choice-restore-<id>`, `request-choice-new`.
+  - Outcomes: `request-done`, `request-review-reason`.
+- `tests/public/approval.spec.ts` (desktop only, one OTP):
+  - Patient: on `/book/e2e-aprobacion`, "Enviar solicitud" shows the `RequestSent` screen. An anonymous reload no longer offers that time (hold).
+  - Patient: "Mis citas" lists it under "Solicitudes pendientes". Cancelling it through `ConfirmDialog` releases the time.
+  - Patient: sends requests A and B at different times.
+  - Provider: `/requests` Pendientes shows both, and the sidebar badge shows 2. The "received" notices in the mock inbox contain no patient name.
+  - Provider: approving A moves it to Resueltas, and it appears on the calendar. Rejecting B goes through `ConfirmDialog`.
+  - Patient: after a reload, A is under "Próximas citas" and B is gone. The approved and the neutral rejected emails arrived.
+  - Cleanup: the patient cancels A.
+- `tests/public/review.spec.ts` (desktop only, one OTP, `e2e-revision@example.com` on auto-confirm `e2e-publica`):
+  - Patient: "Reservar cita" shows the request-sent screen (202 review), not a confirmation.
+  - Provider: the request shows the deleted candidate and `request-review-reason`. The provider chooses "Restaurar a …" and approves.
+  - Patient: "Mis citas" shows the appointment.
+  - Cleanup: the patient cancels it. The next seed deletes the patient again.
+- Budget:
+  - Totals: login 2 + booking 2 + approval 1 + review 1 = 6 OTPs per run. Note it in `playwright.config.ts` and the AGENTS.md e2e line.
+  - The `public-ip` coarse limiter (60/min) is untouched. If CI shows 429s, set `PUBLIC_RATE_LIMIT_MAX` in the e2e job's `env` only.
+- `requests.spec.ts` in `chromium` is dropped from the original 6.3 list. The inbox needs a portal provider, so it lives in the two specs above.
+
+**Cross-cutting:**
+- AGENTS.md:
+  - Portal actor ids come only from `portalActorId`.
+  - The e2e line names `e2e-aprobacion`, the review patient and the OTP budget.
+  - Abuse tests use a distinct `X-Forwarded-For` per test.
+- Order: 7.3-A first (it fixes a crash that every provider with portal activity hits), then 7.3-B. 7.4-A and 7.4-B are independent of 7.3 and of each other.
+
+**Phase 7 exit criteria:**
+- The activity log renders every entity type, can be narrowed to portal actions and to one patient's portal activity, and shows portal fields in Spanish.
+- The approval and review flows pass e2e on a fresh CI stack within the OTP budget.
+- Every named public limiter has an app-level 429 test.
+- The no-secrets-in-URLs rule has a test.
+- Bruno and AGENTS.md match the code.
+
+**Open:**
+- Should VIEWER keep read access to portal rows (masked emails, IP addresses)? Today VIEWER reads the whole log.
+- Is a provider-facing consent history per patient worth adding later? 7.2 was removed, so it is not in this phase.
 
 ### Phase 8: Operational follow-ups (not portal features; can start any time)
 - **8.1 Encryption key rotation (was 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
@@ -982,7 +1133,7 @@ As planned:
 - **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Dependency summary
-`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; 7.1 depends on 3; 7.2 depends on 4. Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
+`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
 
 ## Verification
 - Integration tests per `AGENTS.md` (real Postgres, mocked Twilio/Brevo/dispatch), including the concurrent-booking race, admin vs portal vs blocked-time races, cross-tenant slug isolation, portal vs provider token rejection, uniform responses regardless of patient existence, and email-normalization collisions.

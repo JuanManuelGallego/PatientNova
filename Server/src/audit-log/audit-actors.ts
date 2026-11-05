@@ -12,14 +12,17 @@ export function bookingRequestExpiryAuditContext(userId: string): AuditContext {
   };
 }
 
+export function portalActorId(userId: string, email: string): string {
+  return `portal:${portalActorHash(userId, email).slice(0, 24)}`;
+}
+
 export function portalPatientAuditContext(params: {
   userId: string;
   email: string;
   ipAddress?: string | undefined;
 }): AuditContext {
-  const actorId = `portal:${portalActorHash(params.userId, params.email).slice(0, 24)}`;
   return {
-    actorId,
+    actorId: portalActorId(params.userId, params.email),
     actorDisplayName: `Paciente (portal) ${maskEmail(params.email)}`,
     ipAddress: params.ipAddress,
     userId: params.userId,

@@ -76,7 +76,7 @@ describe('verifyConnection', () => {
     expect(conn!.lastCheckedAt).toBeNull();
     const audits = await expiryAudits(userId);
     expect(audits).toHaveLength(1);
-    expect(audits[0]!.source).toBe(ActionSource.API);
+    expect(audits[0]!.source).toBe(ActionSource.JOB);
   });
 
   it('leaves the connection alone on a transient failure', async () => {

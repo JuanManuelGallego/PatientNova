@@ -122,7 +122,7 @@ describe('buildAuditEntry', () => {
     expect(entry.entityType).toBe('PATIENT');
     expect(entry.entityId).toBe('p-1');
     expect(entry.actionType).toBe('CREATE');
-    expect(entry.source).toBe('API');
+    expect(entry.source).toBe('JOB');
     expect(entry.description).toBe('Created patient');
     expect(entry.userId).toBe('owner-1');
     expect(entry.affectedFields).toEqual([]);

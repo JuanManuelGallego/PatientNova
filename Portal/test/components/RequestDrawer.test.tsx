@@ -123,6 +123,12 @@ describe("RequestDrawer", () => {
     expect(fetchRequest).toHaveBeenCalled();
   });
 
+  it("links to the request's activity log", () => {
+    renderDrawer();
+    expect(screen.getByTestId("request-drawer-audit-link"))
+      .toHaveAttribute("href", "/settings?tab=Registro+de+actividad&entityId=r1");
+  });
+
   it("offers no actions on a resolved request", () => {
     request = makeRequest({ status: "APPROVED", resolvedAt: "2099-01-19T15:00:00.000Z" });
     renderDrawer();

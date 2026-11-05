@@ -90,6 +90,7 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: dto.id } });
     expect(audits).toHaveLength(1);
     expect(audits[0]!.source).toBe(ActionSource.PUBLIC_PORTAL);
+    expect(audits[0]!.portalPatientId).toBeNull();
     expect(JSON.stringify(audits[0])).not.toContain(email);
   });
 

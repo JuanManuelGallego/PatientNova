@@ -34,17 +34,21 @@ type AuditEntryOverrides = Omit<Partial<CreateAuditLogDto>, 'userId'> & Pick<Cre
 
 export function buildAuditEntry(overrides: AuditEntryOverrides): CreateAuditLogDto {
   const ctx = getAuditContext();
+  const source = overrides.source ?? ctx?.source ?? (ctx ? ActionSource.API : ActionSource.JOB);
+  const portalPatientId = ctx?.portalPatientId
+    ?? (source === ActionSource.PUBLIC_PORTAL && overrides.entityType === EntityType.PATIENT ? overrides.entityId : undefined);
   return {
     actorId: ctx?.actorId ?? 'system',
     actorDisplayName: ctx?.actorDisplayName ?? 'Sistema',
     entityType: EntityType.USER,
     entityId: '',
     actionType: ActionType.CREATE,
-    source: ctx?.source ?? ActionSource.API,
     description: '',
     ...overrides,
+    source,
     affectedFields: overrides.affectedFields ?? [],
     ipAddress: 'ipAddress' in overrides ? overrides.ipAddress : ctx?.ipAddress,
+    portalPatientId: 'portalPatientId' in overrides ? overrides.portalPatientId : portalPatientId,
     userId: overrides.userId,
   };
 }

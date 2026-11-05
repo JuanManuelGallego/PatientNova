@@ -1,5 +1,6 @@
 import { useFetchAuditLogs } from "@/src/api/audit-logs/useFetchAuditLogs";
-import { AuditLog, EntityType, ActionType, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
+import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
+import { ActionLabel, EntityTypeLabel } from "@/src/components/Info/AuditLabels";
 import { SelectOption } from "@/src/components/CustomSelect";
 import {
   DataTable,
@@ -8,7 +9,6 @@ import {
 } from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
-import { ActionPill } from "@/src/components/Info/ActionPill";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 import { fmtTimestamp } from "@/src/utils/TimeUtils";
@@ -20,7 +20,6 @@ import {
   parseAsArrayOf,
 } from "nuqs";
 import { Clock } from "lucide-react";
-import { EntityTypePill } from "../Info/EntityTypePill";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { withAllOption } from "@/src/utils/options";
@@ -40,6 +39,15 @@ const ENTITY_OPTIONS: SelectOption[] = withAllOption(
   "Todas",
 );
 
+const SOURCE_OPTIONS: SelectOption[] = withAllOption(
+  Object.values(ActionSource),
+  (v) => ACTION_SOURCE_CONFIG[v].label,
+  "Todos",
+);
+
+const ACTION_SOURCES = new Set<string>(Object.values(ActionSource));
+const isActionSource = (value: string): value is ActionSource => ACTION_SOURCES.has(value);
+
 const ACTION_OPTIONS: SelectOption[] = withAllOption(
   Object.values(ActionType),
   (v) => ACTION_TYPE_CONFIG[v].label,
@@ -53,6 +61,8 @@ export function AuditLogsTab() {
   const [actionType, setActionType] = useQueryState(QUERY_PARAMS.auditActionType, parseAsArrayOf(parseAsString).withDefault([]));
   const { range: dateFilter, setRange: setDateFilter } = useDateRangeFilter(QUERY_PARAMS.auditDate);
   const [entityId, setEntityId] = useQueryState(QUERY_PARAMS.auditEntityId, parseAsString.withDefault(""));
+  const [source, setSource] = useQueryState(QUERY_PARAMS.auditSource, parseAsArrayOf(parseAsString).withDefault([]));
+  const [portalPatientId, setPortalPatientId] = useQueryState(QUERY_PARAMS.auditPortalPatientId, parseAsString.withDefault(""));
 
   const {
     page,
@@ -69,12 +79,16 @@ export function AuditLogsTab() {
     orderDefault: SORT_DIRECTION.desc,
   });
 
+  const validSources = useMemo(() => source.filter(isActionSource), [source]);
+
   const filters = useMemo<FetchAuditLogsFilters>(
     () => {
       return {
       entityType: entityType.length ? (entityType as EntityType[]) : undefined,
       entityId: entityId.trim() || undefined,
       actionType: actionType.length ? (actionType as ActionType[]) : undefined,
+      source: validSources.length ? validSources : undefined,
+      portalPatientId: portalPatientId.trim() || undefined,
       search: debouncedSearch.trim() || undefined,
       dateFrom: dateFilter?.[0] ? toUtcRangeFromLocalDay(dateFilter[0], timezone).dateFrom : undefined,
       dateTo: dateFilter?.[1] ? toUtcRangeFromLocalDay(dateFilter[1], timezone).dateTo : undefined,
@@ -84,7 +98,7 @@ export function AuditLogsTab() {
       order,
       };
     },
-    [entityType, entityId, actionType, debouncedSearch, dateFilter, page, orderBy, order, timezone],
+    [entityType, entityId, actionType, validSources, portalPatientId, debouncedSearch, dateFilter, page, orderBy, order, timezone],
   );
 
   const columns = useMemo<ColumnDef[]>(
@@ -115,6 +129,17 @@ export function AuditLogsTab() {
       },
       { label: "Descripcion" },
       {
+        label: "Origen",
+        filter: {
+          kind: "enum",
+          options: SOURCE_OPTIONS,
+          value: source,
+          onChange: (v: string[]) => { setSource(v); setPage(1); },
+          testId: "audit-source-filter",
+          triggerTestId: "audit-source-filter-trigger",
+        },
+      },
+      {
         label: "Fecha",
         sortKey: "eventTimeUtc",
         filter: {
@@ -126,7 +151,7 @@ export function AuditLogsTab() {
         },
       },
     ],
-    [actionType, entityType, dateFilter, setActionType, setEntityType, setDateFilter, setPage],
+    [actionType, entityType, source, dateFilter, setActionType, setEntityType, setSource, setDateFilter, setPage],
   );
 
   const { auditLogs, loading, error, fetchAuditLogs, totalPages, total } = useFetchAuditLogs(filters);
@@ -173,14 +198,33 @@ export function AuditLogsTab() {
         placeholder="Buscar por actor, descripcion o entidad…"
         testId="audit-search-input"
       />
-      {entityId && (
-        <button
-          onClick={() => { setEntityId(""); setPage(1); }}
-          className="btn-secondary btn-secondary--sm"
-          style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <ACTION_ICONS.close size={12} /> Entidad
-        </button>
+      {(entityId || portalPatientId) && (
+        <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {entityId && (
+            <button
+              onClick={() => { setEntityId(""); setPage(1); }}
+              className="btn-secondary btn-secondary--sm"
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <ACTION_ICONS.close size={12} /> Entidad
+            </button>
+          )}
+          {portalPatientId && (
+            <>
+              <button
+                onClick={() => { setPortalPatientId(""); setPage(1); }}
+                className="btn-secondary btn-secondary--sm"
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+                data-testid="audit-portal-patient-chip"
+              >
+                <ACTION_ICONS.close size={12} /> Paciente
+              </button>
+              <span className="form-input-hint">
+                Actividad en el portal de este paciente; los ingresos y solicitudes se buscan por su correo actual.
+              </span>
+            </>
+          )}
+        </div>
       )}
 
       {error && (
@@ -201,13 +245,10 @@ export function AuditLogsTab() {
           total={total}
         renderRow={(log) => (
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
-            <td className="td">
-              <ActionPill action={log.actionType} />
-            </td>
-            <td className="td">
-              <EntityTypePill entityType={log.entityType} />
-            </td>
-            <td className="td td--date" >{log.description}</td>
+            <td className="td td--date"><ActionLabel action={log.actionType} /></td>
+            <td className="td td--date"><EntityTypeLabel entityType={log.entityType} /></td>
+            <td className="td td--date">{log.description}</td>
+            <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
         )}

@@ -4,6 +4,19 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js
 import type { CreateAuditLogDto, ListAuditLogsQuery } from './audit-log.schemas.js';
 import { AuditLogNotFoundError } from './audit-log.errors.js';
 import { paginate, buildPaginatedResult, type Paginated } from '../utils/api/pagination.js';
+import { ActionSource } from '../../generated/prisma/enums.js';
+
+export interface PortalPatientFilter {
+  patientId: string;
+  actorId: string | null;
+}
+
+function portalPatientMatch({ patientId, actorId }: PortalPatientFilter): Prisma.AuditLogWhereInput[] {
+  return [
+    { portalPatientId: patientId },
+    ...(actorId ? [ { portalPatientId: null, actorId } ] : []),
+  ];
+}
 
 export const auditLogRepository = {
   async create(dto: CreateAuditLogDto, tx?: TransactionClient): Promise<AuditLog> {
@@ -22,6 +35,7 @@ export const auditLogRepository = {
         fieldsBefore: (dto.fieldsBefore as Prisma.InputJsonValue) ?? Prisma.DbNull,
         fieldsAfter: (dto.fieldsAfter as Prisma.InputJsonValue) ?? Prisma.DbNull,
         ipAddress: dto.ipAddress ?? null,
+        portalPatientId: dto.portalPatientId ?? null,
       },
     });
   },
@@ -32,7 +46,11 @@ export const auditLogRepository = {
     return log;
   },
 
-  async findMany(userId: string, query: ListAuditLogsQuery): Promise<Paginated<AuditLog>> {
+  async findMany(
+    userId: string,
+    query: Omit<ListAuditLogsQuery, 'portalPatientId'>,
+    portalPatient?: PortalPatientFilter,
+  ): Promise<Paginated<AuditLog>> {
     const { entityType, entityId, actionType, source, actorId, search, dateFrom, dateTo, orderBy, order, page, pageSize } = query;
     const eventTimeFilter: Prisma.DateTimeFilter = {
       ...(dateFrom && { gte: new Date(dateFrom) }),
@@ -43,14 +61,16 @@ export const auditLogRepository = {
 
     const entityTypes = entityType ? (Array.isArray(entityType) ? entityType : [ entityType ]) : undefined;
     const actionTypes = actionType ? (Array.isArray(actionType) ? actionType : [ actionType ]) : undefined;
+    const sources = source ? (Array.isArray(source) ? source : [ source ]) : undefined;
 
     const where: Prisma.AuditLogWhereInput = {
       userId,
       ...(entityTypes && { entityType: { in: entityTypes } }),
       ...(entityId && { entityId }),
       ...(actionTypes && { actionType: { in: actionTypes } }),
-      ...(source && { source }),
+      ...(sources && { source: { in: sources } }),
       ...(actorId && { actorId }),
+      ...(portalPatient && { AND: [ { source: ActionSource.PUBLIC_PORTAL }, { OR: portalPatientMatch(portalPatient) } ] }),
       // Encrypted fields (actorDisplayName, description) cannot be searched via SQL LIKE.
       // When search is provided, it's deferred to in-memory filtering after decryption.
       ...(Object.keys(eventTimeFilter).length > 0 && { eventTimeUtc: eventTimeFilter }),

@@ -162,6 +162,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://test:test@localhost:5432/patientnova_e2e
       RATE_LIMIT_MAX: "100000"
+      PUBLIC_RATE_LIMIT_MAX: "100000"
       ENABLE_SCHEDULER: "false"
       ENABLE_PORTAL: "true"
       ALLOWED_ORIGINS: '["http://localhost:3000"]'

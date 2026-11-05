@@ -1,36 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { Env } from '../../utils/env';
+import { inbox, latestCode, stripVercelBypass } from '../../support/portal';
 
 const SLUG = 'e2e-publica';
 const PROVIDER_EMAIL = 'e2e-public-provider@example.com';
-const MOCK_BREVO_URL = process.env.MOCK_BREVO_URL ?? 'http://localhost:4010';
-
-interface MockEmail { subject: string; textContent: string }
-
-async function inbox(email: string): Promise<MockEmail[]> {
-    const res = await fetch(`${MOCK_BREVO_URL}/__test/messages?email=${encodeURIComponent(email)}`);
-    return ((await res.json()) as { messages: MockEmail[] }).messages;
-}
-
-async function latestCode(email: string): Promise<string> {
-    let code = '';
-    await expect.poll(async () => {
-        const res = await fetch(`${MOCK_BREVO_URL}/__test/latest-code?email=${encodeURIComponent(email)}`);
-        if (!res.ok) return '';
-        code = ((await res.json()) as { code: string }).code;
-        return code;
-    }, { message: 'OTP email never reached the mock Brevo server', timeout: 15_000 }).toMatch(/^\d{6}$/);
-    return code;
-}
 
 test.describe('self-booking on the public page', () => {
     test.beforeEach(async ({ page }) => {
-        await page.route(`${new URL(Env.apiBaseUrl).origin}/**`, (route) => {
-            const headers = { ...route.request().headers() };
-            delete headers[ 'x-vercel-protection-bypass' ];
-            delete headers[ 'x-vercel-set-bypass-cookie' ];
-            return route.continue({ headers });
-        });
+        await stripVercelBypass(page);
     });
 
     test('pick a time, verify the email, book, and find it in "Mis citas"', async ({ page }, testInfo) => {
