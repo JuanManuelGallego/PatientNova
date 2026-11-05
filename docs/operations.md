@@ -125,8 +125,8 @@ rest). A refresh token can stop working without any action in PatientNova.
 ## Patient messages and login by WhatsApp and SMS
 
 Portal notices and reminders follow each patient's `reminderChannel`, falling back to email, WhatsApp
-and SMS. A patient on WhatsApp who logs in with email gets WhatsApp. Phone login is separate and off
-until `ENABLE_PORTAL_PHONE_LOGIN=true`.
+and SMS. A patient on WhatsApp who logs in with email gets WhatsApp. Phone login is separate and
+always on while the portal is.
 
 ### Templates
 
@@ -146,24 +146,24 @@ All are required at start: the API does not boot without them. In Spanish, `util
 A formatted time ends in "a. m."/"p. m.", so a template must not put a full stop right after a time
 variable. The place is the location and address, the meeting link, or "Te enviaremos el enlace pronto".
 
-### Before turning on phone login
+### Before phone login reaches production
 
 1. Send real SMS and WhatsApp codes to the main Colombian carriers. Check delivery, delay and how the
-   sender appears. If SMS is poor, set `PORTAL_LOGIN_PHONE_CHANNELS=WHATSAPP`; nothing else changes.
-2. In the Twilio Console: Geo Permissions limited to the allowed countries, SMS Pumping Protection on,
-   and a usage alert.
+   sender appears.
+2. In the Twilio Console: Geo Permissions on for every country patients may log in from (the server
+   accepts any country, and a blocked one still answers 202 while the code never arrives), SMS Pumping
+   Protection on, and a usage alert.
 3. Counsel confirms the privacy policy covers login codes over WhatsApp and SMS, and names Meta. Any
    text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
-4. Check a full login, booking and message on a real phone, then set `ENABLE_PORTAL_PHONE_LOGIN=true`.
+4. Check a full login, booking and message on a real phone.
 
-Setting it back to `false` stops new codes and verifications at once. Sessions already open keep
-working until they expire, at most 2 hours.
+Phone login has no off switch: the login always offers email, WhatsApp and SMS. Dropping a channel is a
+code change in `portalLoginChannels`.
 
 ### Limits
 
 | Limit | Value | Change it with |
 |---|---|---|
-| Countries allowed | `57` | `PORTAL_OTP_PHONE_COUNTRY_CODES` (comma-separated calling codes) |
 | Numbers per day, all providers | 300 | `PORTAL_OTP_PAID_DAILY_CAP` |
 | Numbers per provider per hour | 30 | `PORTAL_OTP_LIMITS.perProviderPaidPerHour` (code) |
 | Sends per number per hour | 3 | `PORTAL_OTP_LIMITS.perPhonePerHour` (code) |

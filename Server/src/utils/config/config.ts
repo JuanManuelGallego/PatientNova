@@ -27,19 +27,6 @@ function portalAuthSecret(): string {
   return secret;
 }
 
-const PHONE_LOGIN_CHANNELS = [ 'WHATSAPP', 'SMS' ];
-
-function csvEnv(key: string, fallback: string): string[] {
-  return (process.env[ key ]?.trim() || fallback).split(',').map((v) => v.trim()).filter(Boolean);
-}
-
-function phoneLoginChannels(): string[] {
-  const channels = csvEnv('PORTAL_LOGIN_PHONE_CHANNELS', PHONE_LOGIN_CHANNELS.join(','));
-  const unknown = channels.find((c) => !PHONE_LOGIN_CHANNELS.includes(c));
-  if (unknown) throw new Error(`PORTAL_LOGIN_PHONE_CHANNELS only accepts ${PHONE_LOGIN_CHANNELS.join(', ')}`);
-  return channels;
-}
-
 /** Fails at boot: this guards money, and `count >= NaN` would silently remove the limit. */
 function positiveIntEnv(key: string, fallback: number): number {
   const raw = process.env[ key ]?.trim();
@@ -173,9 +160,6 @@ export const config = {
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
-    phoneLoginEnabled: process.env.ENABLE_PORTAL_PHONE_LOGIN === 'true',
-    phoneLoginChannels: phoneLoginChannels(),
-    otpPhoneCountryCodes: csvEnv('PORTAL_OTP_PHONE_COUNTRY_CODES', '57'),
     otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 300),
   },
 

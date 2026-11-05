@@ -29,12 +29,11 @@ script:post-response {
 }
 
 docs {
-  Needs `ENABLE_PORTAL_PHONE_LOGIN=true`; while it is off, and for a channel left out of
-  `loginChannels`, the body answers 400. `phone` is E.164 and `channel` is `WHATSAPP` or `SMS`: both
+  `phone` is E.164 and `channel` is `WHATSAPP` or `SMS`: both
   share one row, cooldown and failure count, and a resend on the other channel replaces the code.
 
   Same 202 `{ challenge }` for every number, patient or not. A hit cap (3 per number per hour, 30 per
   provider per hour, `PORTAL_OTP_PAID_DAILY_CAP` numbers per day overall) answers the same 202 without
-  sending. 400 "Phone country not supported" for a prefix outside `PORTAL_OTP_PHONE_COUNTRY_CODES`.
+  sending.
   This sends a real, paid message: use your own number.
 }

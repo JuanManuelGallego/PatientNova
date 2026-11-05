@@ -1,6 +1,5 @@
 import { Channel } from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { config } from '../utils/config/config.js';
 import { maskEmail, maskPhone } from '../utils/api/logger.js';
 import { emailHash, phoneHash } from '../utils/encryption/blind-index.js';
 import { normalizeEmail } from '../utils/validation/normalize-email.js';
@@ -16,15 +15,11 @@ export const emailContact = (email: string): PortalContact => ({ channel: Channe
 
 export const isPhoneContact = (contact: PortalContact): boolean => contact.channel !== Channel.EMAIL;
 
-/** What a patient may log in with. Read on each request, so the flag takes effect without touching any session. */
+/** What a patient may log in with. */
 export function portalLoginChannels(): Channel[] {
-  if (!config.portal.phoneLoginEnabled) return [ Channel.EMAIL ];
-  return [ Channel.EMAIL, ...(config.portal.phoneLoginChannels as Channel[]) ];
+  return [ Channel.EMAIL, Channel.WHATSAPP, Channel.SMS ];
 }
 
-export function isAllowedPhoneCountry(phone: string): boolean {
-  return config.portal.otpPhoneCountryCodes.some((code) => phone.startsWith(`+${code}`));
-}
 
 export function contactHashOf(contact: PortalContact): string | null {
   return isPhoneContact(contact) ? phoneHash(contact.value) : emailHash(contact.value);

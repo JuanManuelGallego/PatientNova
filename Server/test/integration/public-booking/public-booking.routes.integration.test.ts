@@ -151,7 +151,7 @@ describe('GET /v1/public/providers/:slug', () => {
       timezone: TZ,
       bookingOpen: true,
       approvalRequired: false,
-      loginChannels: [ 'EMAIL' ],
+      loginChannels: [ 'EMAIL', 'WHATSAPP', 'SMS' ],
       reschedulePolicy: { maxReschedules: 2, minNoticeHours: 0 },
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],

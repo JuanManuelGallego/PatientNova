@@ -48,7 +48,6 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^booking request not found$/i, "No encontramos esta solicitud. Actualizamos la lista." ],
     [ /^patient to restore not found for this request$/i, "Ese paciente ya no se puede restaurar para esta solicitud." ],
     [ /^patient not found for this request$/i, "Ese paciente ya no coincide con esta solicitud. Actualizamos la lista." ],
-    [ /^phone country not supported$/i, "Por ahora no enviamos códigos a números de ese país. Ingresa con tu correo." ],
     [ /^the phone number comes from the session$/i, "Usa el número con el que ingresaste." ],
     [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],
 ];

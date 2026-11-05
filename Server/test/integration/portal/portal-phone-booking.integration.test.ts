@@ -33,10 +33,10 @@ import {
   type LiveProvider, type TestSession,
 } from './portal-helpers.js';
 
-const portal = config.portal as { patientEnabled: boolean; phoneLoginEnabled: boolean };
+const portal = config.portal as { patientEnabled: boolean };
 const scheduler = config.scheduler as { enabled: boolean };
 const was = { portal: { ...portal }, scheduler: scheduler.enabled };
-beforeAll(() => { portal.patientEnabled = true; portal.phoneLoginEnabled = true; });
+beforeAll(() => { portal.patientEnabled = true; });
 afterAll(() => { Object.assign(portal, was.portal); scheduler.enabled = was.scheduler; });
 
 let app: express.Express;

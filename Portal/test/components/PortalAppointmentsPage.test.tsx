@@ -380,20 +380,6 @@ describe("PortalAppointmentsPage", () => {
             expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(0);
         });
 
-        it("shows the Spanish message for a country that is not allowed", async () => {
-            withPhoneLogin();
-            server.otp = () => fail(400, "Phone country not supported");
-            const user = userEvent.setup();
-            render(<PortalAppointmentsPage slug={SLUG} />);
-
-            await user.click(await choice("WhatsApp"));
-            await user.type(screen.getByLabelText("Número de celular"), "+14155550123");
-            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
-            await user.click(screen.getByRole("button", { name: "Enviar código" }));
-
-            expect(await screen.findByRole("alert")).toHaveTextContent("no enviamos códigos a números de ese país");
-        });
-
         it("offers the other channel only after the countdown, and it needs a fresh CAPTCHA", async () => {
             withPhoneLogin();
             vi.useFakeTimers({ shouldAdvanceTime: true });

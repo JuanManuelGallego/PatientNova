@@ -21,8 +21,8 @@ test.describe('portal login on "Mis citas"', () => {
         await page.goto(`/book/${SLUG}`);
         await page.getByRole('link', { name: 'Mis citas' }).click();
         await expect(page).toHaveURL(new RegExp(`/book/${SLUG}/appointments$`));
-        // ENABLE_PORTAL_PHONE_LOGIN stays off here, so only email is offered.
-        await expect(page.getByRole('group', { name: 'Recibir el código por' })).toHaveCount(0);
+        // Email stays the default channel; there is no Twilio mock, so phone channels are only shown here.
+        await expect(page.getByRole('group', { name: 'Recibir el código por' })).toBeVisible();
 
         await requestCode(page, email);
         const code = await latestCode(email);

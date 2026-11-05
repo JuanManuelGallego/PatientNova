@@ -20,9 +20,6 @@ import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider, type LiveProvider }
 
 const portal = config.portal as {
   patientEnabled: boolean;
-  phoneLoginEnabled: boolean;
-  phoneLoginChannels: string[];
-  otpPhoneCountryCodes: string[];
   otpPaidDailyCap: number;
 };
 const was = { ...portal };
@@ -39,7 +36,7 @@ const realFetch = globalThis.fetch;
 
 beforeEach(() => {
   app = buildPortalApp();
-  Object.assign(portal, was, { patientEnabled: true, phoneLoginEnabled: true });
+  Object.assign(portal, was, { patientEnabled: true });
   mocks.sendWhatsApp.mockReset().mockResolvedValue({ success: true, messageSid: 'wa-1' });
   mocks.sendSms.mockReset().mockResolvedValue({ success: true, messageSid: 'sms-1' });
   mocks.sendEmail.mockReset().mockResolvedValue({ sent: true });
@@ -192,41 +189,13 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
   });
 
   describe('validation', () => {
-    it('rejects a number from a country that is not allowed before any row is written', async () => {
+    it('accepts a number from any country', async () => {
       const provider = await createLiveProvider();
-      const phone = '+14155550123';
 
-      const res = await requestPhoneOtp(provider.slug, phone);
+      const res = await requestPhoneOtp(provider.slug, '+14155550123');
 
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Phone country not supported');
-      expect(await prisma.portalOtp.count({ where: { userId: provider.id } })).toBe(0);
-      expect(mocks.sendWhatsApp).not.toHaveBeenCalled();
-    });
-
-    it('accepts every configured country code', async () => {
-      const provider = await createLiveProvider();
-      portal.otpPhoneCountryCodes = [ '57', '1' ];
-      expect((await requestPhoneOtp(provider.slug, '+14155550123')).status).toBe(202);
-    });
-
-    it('rejects the phone body while the flag is off, without writing a row or sending', async () => {
-      const provider = await createLiveProvider();
-      portal.phoneLoginEnabled = false;
-
-      const res = await requestPhoneOtp(provider.slug, newPhone());
-
-      expect(res.status).toBe(400);
-      expect(await prisma.portalOtp.count({ where: { userId: provider.id } })).toBe(0);
-      expect(mocks.sendWhatsApp).not.toHaveBeenCalled();
-    });
-
-    it('rejects a channel left out of the login channels', async () => {
-      const provider = await createLiveProvider();
-      portal.phoneLoginChannels = [ 'WHATSAPP' ];
-
-      expect((await requestPhoneOtp(provider.slug, newPhone(), Channel.SMS)).status).toBe(400);
-      expect((await requestPhoneOtp(provider.slug, newPhone(), Channel.WHATSAPP)).status).toBe(202);
+      expect(res.status).toBe(202);
+      expect(mocks.sendWhatsApp).toHaveBeenCalledTimes(1);
     });
 
     it.each([
@@ -240,12 +209,10 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
       expect((await requestOtp(provider.slug, body)).status).toBe(400);
     });
 
-    it('keeps accepting the email body, with the flag on or off', async () => {
+    it('keeps accepting the email body', async () => {
       const provider = await createLiveProvider();
       expect((await requestOtp(provider.slug, { email: newEmail() })).status).toBe(202);
-      portal.phoneLoginEnabled = false;
-      expect((await requestOtp(provider.slug, { email: newEmail() })).status).toBe(202);
-      expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -401,33 +368,5 @@ describe('POST /v1/portal/:slug/otp/verify with a phone', () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Invalid or expired code');
     }
-  });
-
-  it('rejects a phone verify while the flag is off', async () => {
-    const provider = await createLiveProvider();
-    const phone = newPhone();
-    const { body } = await requestPhoneOtp(provider.slug, phone);
-    portal.phoneLoginEnabled = false;
-
-    const res = await verifyOtp(provider.slug, { phone, code: whatsappCode(), challenge: body.data.challenge });
-
-    expect(res.status).toBe(400);
-  });
-});
-
-describe('GET /v1/public/providers/:slug', () => {
-  const profile = (slug: string) => request(app).get(`/v1/public/providers/${slug}`).set('Origin', ALLOWED_ORIGIN);
-
-  it('offers only email while the flag is off', async () => {
-    const provider = await createLiveProvider();
-    portal.phoneLoginEnabled = false;
-    expect((await profile(provider.slug)).body.data.loginChannels).toEqual([ Channel.EMAIL ]);
-  });
-
-  it('offers the configured phone channels with the flag on', async () => {
-    const provider = await createLiveProvider();
-    expect((await profile(provider.slug)).body.data.loginChannels).toEqual([ Channel.EMAIL, Channel.WHATSAPP, Channel.SMS ]);
-    portal.phoneLoginChannels = [ 'WHATSAPP' ];
-    expect((await profile(provider.slug)).body.data.loginChannels).toEqual([ Channel.EMAIL, Channel.WHATSAPP ]);
   });
 });

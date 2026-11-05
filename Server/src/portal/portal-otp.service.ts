@@ -23,12 +23,11 @@ import { portalOtpRepository } from './portal-otp.repository.js';
 import {
   contactClaims,
   contactHashOf,
-  isAllowedPhoneCountry,
   isPhoneContact,
   maskContact,
   type PortalContact,
 } from './portal-contact.js';
-import { InvalidPortalOtpError, PortalOtpCountryError } from './portal-otp.errors.js';
+import { InvalidPortalOtpError } from './portal-otp.errors.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -103,7 +102,6 @@ export const portalOtpService = {
   async request(slug: string, contact: PortalContact): Promise<{ challenge: string }> {
     const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const paid = isPhoneContact(contact);
-    if (paid && !isAllowedPhoneCountry(contact.value)) throw new PortalOtpCountryError();
     const hash = contactHashOf(contact);
     const challenge = newChallenge();
     if (!hash) return { challenge };

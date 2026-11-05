@@ -138,7 +138,7 @@ by name and includes the address and instructions. Removing the name needs a new
       pending; for Sentry, review and accept its DPA in the organization's legal settings).
 - [ ] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
       or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
-      but not Meta and not phone login: counsel to confirm before `ENABLE_PORTAL_PHONE_LOGIN` is turned on.
+      but not Meta and not phone login: counsel to confirm before phone login reaches production.
 - [ ] International transfer basis per processor (adequacy list, authorization, or contract).
 - [ ] The `privacidad@` mailbox is monitored; internal runbook for the 10/15 business-day deadlines.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.
