@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
@@ -22,6 +22,7 @@ import { MedicalRecordCard } from "@/src/components/MedicalRecord/MedicalRecordC
 import { useCreateMedicalRecord } from "@/src/api/medical-records/useCreateMedicalRecord";
 import { useUpdateMedicalRecord } from "@/src/api/medical-records/useUpdateMedicalRecord";
 import { LBL_LOADING } from "@/src/constants/ui";
+import { STATUS_ICONS } from "@/src/config/icons";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecord/MedicalRecordPDF";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -32,6 +33,9 @@ import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpec
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 const MEDICAL_RECORD_AUTOSAVE_MS = 1500;
+
+/** The card whose header shows the autosave state: the one edited last. */
+type RecordSection = "general" | "family" | "details" | "evolution" | "documents";
 
 function MedicalRecordsPageContent() {
   const timezone = useDisplayTimezone();
@@ -46,10 +50,12 @@ function MedicalRecordsPageContent() {
   const { updateMedicalRecord } = useUpdateMedicalRecord();
   // The record id travels with the form, so a pending edit still lands on its own record after switching patients.
   // No dedupe: the form can embed documents, too large to serialise on every keystroke.
-  const { schedule: scheduleSave, status: saveStatus } = useDebouncedSave<{ id: string; form: FormValues }>(
+  const autosave = useDebouncedSave<{ id: string; form: FormValues }>(
     ({ id, form: values }) => updateMedicalRecord(id, values),
     { delay: MEDICAL_RECORD_AUTOSAVE_MS, dedupe: false },
   );
+  const { schedule: scheduleSave } = autosave;
+  const [ activeSection, setActiveSection ] = useState<RecordSection | null>(null);
 
   const { patient: selectedPatient } = useFetchPatient(selectedPatientId || null);
 
@@ -94,15 +100,39 @@ function MedicalRecordsPageContent() {
     formRef.current = loaded;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(loaded);
+    setActiveSection(null);
   }, [ medicalRecord ]);
 
   const recordId = medicalRecord?.id;
-  const updateField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[ K ]) => {
+  const updateField = useCallback(<K extends keyof FormValues>(section: RecordSection, key: K, value: FormValues[ K ]) => {
     const next = { ...formRef.current, [ key ]: value };
     formRef.current = next;
     setForm(next);
-    if (recordId) scheduleSave({ id: recordId, form: next });
+    if (!recordId) return;
+    setActiveSection(section);
+    scheduleSave({ id: recordId, form: next });
   }, [ recordId, scheduleSave ]);
+  // One stable onChange per card, so its header can show the autosave state.
+  const fieldsIn = useMemo(() => {
+    const inSection = (section: RecordSection) =>
+      <K extends keyof FormValues>(key: K, value: FormValues[ K ]) => updateField(section, key, value);
+    return {
+      general: inSection("general"),
+      family: inSection("family"),
+      details: inSection("details"),
+      evolution: inSection("evolution"),
+      documents: inSection("documents"),
+    };
+  }, [ updateField ]);
+
+  const saveIndicator = (section: RecordSection) => activeSection === section
+    ? <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} />
+    : null;
+  const saveError = (section: RecordSection) => activeSection === section && autosave.error ? (
+    <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+      <STATUS_ICONS.warning size={14} /> {autosave.error}
+    </div>
+  ) : null;
 
   const handleCreateRecord = useCallback(async (isFamily: boolean) => {
     await createMedicalRecord({
@@ -171,48 +201,53 @@ function MedicalRecordsPageContent() {
         )}
         {showRecord && (
           <>
-            <MedicalRecordCard title="Datos Generales">
-              <GeneralDataSection form={form} onChange={updateField} />
+            <MedicalRecordCard title="Datos Generales" actions={saveIndicator("general")}>
+              <GeneralDataSection form={form} onChange={fieldsIn.general} />
+              {saveError("general")}
             </MedicalRecordCard>
-            <MedicalRecordCard title="Composición Familiar">
+            <MedicalRecordCard title="Composición Familiar" actions={saveIndicator("family")}>
               <FamilyTable
                 familyMembers={form.familyMembers ?? []}
-                onChange={(familyMembers) => updateField("familyMembers", familyMembers)}
+                onChange={(familyMembers) => fieldsIn.family("familyMembers", familyMembers)}
               />
               {!form.isFamily && <label className="form-label" style={{ gridColumn: "1 / -1", paddingTop: 16 }}>
                 Observaciones
                 <textarea
                   className="form-input form-input--textarea"
                   value={form.familyObservations}
-                  onChange={(e) => updateField("familyObservations", e.target.value)}
+                  onChange={(e) => fieldsIn.family("familyObservations", e.target.value)}
                   placeholder="Observaciones generales sobre la composición familiar"
                 />
               </label>}
+              {saveError("family")}
             </MedicalRecordCard>
             {form.isFamily ?
-              <MedicalRecordCard title="Aspectos específicos de la familia">
-                <FamilySpecificSection form={form} onChange={updateField} />
+              <MedicalRecordCard title="Aspectos específicos de la familia" actions={saveIndicator("details")}>
+                <FamilySpecificSection form={form} onChange={fieldsIn.details} />
+                {saveError("details")}
               </MedicalRecordCard>
-              : <MedicalRecordCard title="Antecedentes">
-                <AntecedentsSection form={form} onChange={updateField} />
+              : <MedicalRecordCard title="Antecedentes" actions={saveIndicator("details")}>
+                <AntecedentsSection form={form} onChange={fieldsIn.details} />
+                {saveError("details")}
               </MedicalRecordCard>
             }
-            <MedicalRecordCard title="Notas de Evolución">
+            <MedicalRecordCard title="Notas de Evolución" actions={saveIndicator("evolution")}>
               <EvolutionNotes
                 evolutionNotes={form.evolutionNotes ?? []}
-                onChange={(evolutionNotes) => updateField("evolutionNotes", evolutionNotes)}
+                onChange={(evolutionNotes) => fieldsIn.evolution("evolutionNotes", evolutionNotes)}
               />
+              {saveError("evolution")}
             </MedicalRecordCard>
-            <MedicalRecordCard title="Documentos relacionados">
+            <MedicalRecordCard title="Documentos relacionados" actions={saveIndicator("documents")}>
               <DocumentsSection
                 documents={form.documents ?? []}
-                onChange={(documents) => updateField("documents", documents)}
+                onChange={(documents) => fieldsIn.documents("documents", documents)}
               />
+              {saveError("documents")}
             </MedicalRecordCard>
           </>
         )}
       </div>
-      <SaveStatusIndicator status={saveStatus} showText={false} />
     </PageLayout>
   );
 }

@@ -41,8 +41,8 @@ test.describe('Settings', () => {
       const testValue = originalValue === 'Test' ? 'Updated' : 'Test';
       await firstNameInput.fill(testValue);
 
-      const saveIndicator = page.getByText('Cambios guardados');
-      await expect(saveIndicator).toBeVisible({ timeout: 5000 });
+      const saveIndicator = page.getByTestId('profile-save-state');
+      await expect(saveIndicator).toHaveAttribute('data-status', 'saved', { timeout: 5000 });
 
       await page.reload();
 

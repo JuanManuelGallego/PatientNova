@@ -1,8 +1,7 @@
-import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { useState } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { useAutoSaveProfile, useUpdateProfile } from "@/src/api/users/useUpdateProfile";
+import { useAutoSaveProfile } from "@/src/api/users/useUpdateProfile";
 import { User } from "@/src/types/User";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
@@ -25,9 +24,26 @@ export function RemindersTab() {
     user?.reminderChannel ?? undefined,
   );
 
-  const { schedule: scheduleProfileSave, status: saveStatus } = useAutoSaveProfile();
-  const { updateProfile } = useUpdateProfile()
+  const autosave = useAutoSaveProfile();
   const [ error, setError ] = useState<string | null>(null);
+
+  // A number the provider is still fixing is left out, so a channel/toggle change never sends it.
+  const validNumber = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed && validatePhoneNumber(trimmed) ? trimmed : undefined;
+  };
+
+  /** Discrete controls (channel, toggle) have nothing to wait for: save through the same autosave, at once. */
+  function saveNow(overrides: Partial<User>) {
+    autosave.schedule({
+      phoneNumber: validNumber(phoneNumber),
+      whatsappNumber: validNumber(whatsappNumber),
+      reminderActive,
+      reminderChannel,
+      ...overrides,
+    });
+    autosave.flush();
+  }
 
   function handleFieldChange(overrides: Partial<User> = {}) {
     setError(null);
@@ -44,7 +60,7 @@ export function RemindersTab() {
       setError("Por favor, ingresa un número de SMS válido (formato E.164).");
       return;
     }
-    scheduleProfileSave({
+    autosave.schedule({
       phoneNumber: resolvedPhone.trim() || undefined,
       whatsappNumber: resolvedWhatsapp.trim() || undefined,
       reminderActive: overrides.reminderActive ?? reminderActive,
@@ -60,6 +76,12 @@ export function RemindersTab() {
           <span className="dash-card__title">
             Canal y preferencias de recordatorios
           </span>
+          <SaveStatusIndicator
+            saving={autosave.saving}
+            status={autosave.status}
+            error={autosave.error}
+            testId="reminders-save-state"
+          />
         </div>
         <div className="dash-card__body">
           <div style={{ paddingTop: 5 }}>
@@ -70,7 +92,7 @@ export function RemindersTab() {
                 onChange={(value) => {
                   const channel = value as Channel;
                   setReminderChannel(channel);
-                  updateProfile({ reminderChannel: channel });
+                  saveNow({ reminderChannel: channel });
                 }}
                 options={Object.values(Channel).map((ch) => ({
                   value: ch,
@@ -106,7 +128,7 @@ export function RemindersTab() {
                 checked={reminderActive}
                 onChange={(checked) => {
                   setReminderActive(checked);
-                  updateProfile({ reminderActive: checked, whatsappNumber, phoneNumber });
+                  saveNow({ reminderActive: checked });
                 }}
                 label="Recordatorios automáticos"
                 onText="Activados"
@@ -173,10 +195,11 @@ export function RemindersTab() {
                 <STATUS_ICONS.warning size={14} /> {error}
               </div>
             )}
-            {saveStatus === "saved" && (
-              <SuccessBanner message="Preferencias de recordatorios actualizadas." />
+            {autosave.error && (
+              <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <STATUS_ICONS.warning size={14} /> {autosave.error}
+              </div>
             )}
-            <SaveStatusIndicator status={saveStatus} showPill={false} />
           </div>
         </div>
       </div>

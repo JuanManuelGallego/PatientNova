@@ -35,9 +35,9 @@ import {
 import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
-import type { SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
+import { SaveStatusIndicator, type SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVED, LBL_SAVING } from "@/src/constants/ui";
+import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVING } from "@/src/constants/ui";
 import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 
@@ -77,23 +77,6 @@ function WarningHint({ testId, children }: { testId: string; children: ReactNode
             <STATUS_ICONS.warning size={14} />
             {children}
         </div>
-    );
-}
-
-/** Card-header autosave state: "Guardando…" while a save is in flight, "Guardado" briefly after. Errors render in the card body. */
-function SaveState({ saving, status, testId }: { saving: boolean; status: SaveStatus; testId: string }) {
-    const showSaved = !saving && status === "saved";
-    return (
-        <span
-            role="status"
-            aria-live="polite"
-            data-testid={testId}
-            data-status={saving ? "saving" : status}
-            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--c-gray-500)", minHeight: 20 }}
-        >
-            {showSaved && <STATUS_ICONS.success size={12} aria-hidden="true" style={{ color: "var(--c-success)" }} />}
-            {saving ? LBL_SAVING : showSaved ? LBL_SAVED : null}
-        </span>
     );
 }
 
@@ -261,7 +244,7 @@ function ApprovalSection({ settings, save, onSaved }: { settings: BookingSetting
     return (
         <div className="dash-card" data-testid="online-booking-approval">
             <CardHeader title="Confirmación de reservas">
-                <SaveState saving={autosave.saving} status={autosave.status} testId="online-booking-approval-save-state" />
+                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-approval-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack">
                 <fieldset className="form-stack form-fieldset-plain">
@@ -346,7 +329,7 @@ function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; s
     return (
         <div className="dash-card" id={LINK_SECTION_ID}>
             <CardHeader title="Enlace de reserva">
-                <SaveState saving={false} status={status} testId="online-booking-slug-save-state" />
+                <SaveStatusIndicator saving={false} status={status} testId="online-booking-slug-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack">
                 {settings.bookingSlug && settings.bookingUrl ? (
@@ -610,7 +593,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     return (
         <div className="dash-card" id={AVAILABILITY_SECTION_ID}>
             <CardHeader title="Disponibilidad semanal">
-                <SaveState saving={autosave.saving} status={autosave.status} testId="availability-save-state" />
+                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="availability-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack" data-testid="online-booking-availability">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
@@ -793,7 +776,7 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
     return (
         <div className="dash-card">
             <CardHeader title="Reglas de reserva">
-                <SaveState saving={autosave.saving} status={autosave.status} testId="online-booking-rules-save-state" />
+                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-rules-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack">
                 <div className="form-grid-2">
