@@ -103,6 +103,12 @@ export function normalizePhone(value: string): string {
 
 export const isE164 = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
 
+/** Groups a Colombian number for reading; other countries keep the stored E.164 form. */
+export function fmtPhone(phone: string): string {
+    const parts = /^\+57(\d{3})(\d{3})(\d{4})$/.exec(phone);
+    return parts ? `+57 ${parts[ 1 ]} ${parts[ 2 ]} ${parts[ 3 ]}` : phone;
+}
+
 export const whatsappUrl = (phone: string) => `https://wa.me/${phone.replace(/\D/g, "")}`;
 
 export const mapUrl = (address: string) =>
@@ -112,11 +118,11 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 /** What the patient may do after booking. A null policy means rescheduling is not offered online. */
 export function fmtBookingPolicy(policy: ReschedulePolicy | null): string {
-    const cancel = "Puedes cancelar desde Mis citas en cualquier momento antes de la cita.";
-    if (!policy) return cancel;
-    if (policy.maxReschedules === 0) return `${cancel} Esta cita no se puede reprogramar en línea.`;
+    const cancel = "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita";
+    if (!policy) return `${cancel}.`;
+    if (policy.maxReschedules === 0) return `${cancel}. No se puede reprogramar en línea.`;
     const notice = policy.minNoticeHours > 0 ? `, con al menos ${plural(policy.minNoticeHours, "hora", "horas")} de anticipación` : "";
-    return `${cancel} Puedes reprogramarla hasta ${plural(policy.maxReschedules, "vez", "veces")}${notice}.`;
+    return `${cancel} y reprogramarla hasta ${plural(policy.maxReschedules, "vez", "veces")}${notice}.`;
 }
 
 export function fmtWeekRange(from: string, to: string): string {

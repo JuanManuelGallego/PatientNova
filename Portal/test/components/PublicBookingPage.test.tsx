@@ -110,14 +110,45 @@ describe("PublicBookingPage", () => {
         });
         render(<PublicBookingPage slug="dra-ana" />);
 
-        expect(await screen.findByText("Psicóloga · Psicología clínica")).toBeInTheDocument();
+        expect(await screen.findByText("Psicología clínica")).toBeInTheDocument();
+        expect(screen.getByText("Psicóloga")).toBeInTheDocument();
         expect(screen.getByText("Tarjeta profesional TP 12345")).toBeInTheDocument();
         expect(screen.getByText("Atiendo adultos.")).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "+573001112222" })).toHaveAttribute("href", "tel:+573001112222");
+        expect(screen.getByRole("link", { name: "+57 300 111 2222" })).toHaveAttribute("href", "tel:+573001112222");
         const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
         expect(whatsapp).toHaveAttribute("href", "https://wa.me/573003334444");
         expect(whatsapp).toHaveAttribute("rel", "noopener noreferrer");
         expect(screen.getByRole("link", { name: "Ver en el mapa" })).toHaveAttribute("href", expect.stringContaining("query=Calle%2010"));
+    });
+
+    it("collapses a presentation that does not fit, and expands it on request", async () => {
+        class FiringResizeObserver {
+            constructor(private readonly callback: () => void) {}
+            observe() { this.callback(); }
+            disconnect() {}
+        }
+        vi.stubGlobal("ResizeObserver", FiringResizeObserver);
+        const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(200);
+        routeFetch(200, 200, { ...provider, bio: "Una presentación larga." });
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        await user.click(await screen.findByRole("button", { name: "Ver más" }));
+        expect(screen.getByRole("button", { name: "Ver menos" })).toHaveAttribute("aria-expanded", "true");
+        expect(screen.getByText("Una presentación larga.").className).not.toMatch(/bioClamped/);
+
+        await user.click(screen.getByRole("button", { name: "Ver menos" }));
+        expect(screen.getByRole("button", { name: "Ver más" })).toHaveAttribute("aria-expanded", "false");
+        expect(screen.getByText("Una presentación larga.").className).toMatch(/bioClamped/);
+        height.mockRestore();
+    });
+
+    it("offers no 'Ver más' when the presentation fits", async () => {
+        routeFetch(200, 200, { ...provider, bio: "Atiendo adultos." });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Atiendo adultos.")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Ver más" })).not.toBeInTheDocument();
     });
 
     it("shows no empty profile lines or contact list when nothing was filled in", async () => {
@@ -142,7 +173,7 @@ describe("PublicBookingPage", () => {
         render(<PublicBookingPage slug="dra-ana" />);
 
         expect(await screen.findByTestId("booking-paused")).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "+573001112222" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "+57 300 111 2222" })).toBeInTheDocument();
         expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     });
 
@@ -417,6 +448,8 @@ describe("PublicBookingPage booking", () => {
         expect((init.headers as Record<string, string>)[ "X-CSRF-Token" ]).toBe("csrf-from-session");
         expect(screen.getByText("Timbre 2")).toBeInTheDocument();
         expect(screen.getByText("Confirmada")).toBeInTheDocument();
+        expect(screen.queryByRole("list", { name: "Dónde atiende" })).not.toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
 
         await user.click(screen.getByRole("button", { name: "Reservar otra cita" }));
@@ -595,7 +628,7 @@ describe("PublicBookingPage booking", () => {
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
         expect(screen.getByTestId("booking-policy")).toHaveTextContent(
-            "Puedes cancelar desde Mis citas en cualquier momento antes de la cita. Puedes reprogramarla hasta 2 veces, con al menos 24 horas de anticipación.",
+            "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita y reprogramarla hasta 2 veces, con al menos 24 horas de anticipación.",
         );
     });
 

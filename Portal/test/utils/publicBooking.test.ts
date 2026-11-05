@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-    addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtBookingPolicy, fmtCop, fmtDayParts, fmtLongDay, fmtWeekRange, groupSlotsByDay,
+    addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtBookingPolicy, fmtCop, fmtDayParts, fmtLongDay, fmtPhone, fmtWeekRange, groupSlotsByDay,
     isE164, localDayOf, mapUrl, normalizePhone, weekPage, whatsappUrl,
 } from "@/src/utils/publicBooking";
 
@@ -8,24 +8,29 @@ const slot = (startUtc: string) => ({ startUtc, endUtc: startUtc });
 const starts = (slots: { startUtc: string }[]) => slots.map((s) => s.startUtc);
 
 describe("fmtBookingPolicy", () => {
-    const CANCEL = "Puedes cancelar desde Mis citas en cualquier momento antes de la cita.";
+    const CANCEL = "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita";
 
     it("only mentions cancelling when rescheduling is not offered online", () => {
-        expect(fmtBookingPolicy(null)).toBe(CANCEL);
+        expect(fmtBookingPolicy(null)).toBe(`${CANCEL}.`);
     });
 
     it("says so when the provider allows no reschedules", () => {
-        expect(fmtBookingPolicy({ maxReschedules: 0, minNoticeHours: 24 })).toBe(`${CANCEL} Esta cita no se puede reprogramar en línea.`);
+        expect(fmtBookingPolicy({ maxReschedules: 0, minNoticeHours: 24 })).toBe(`${CANCEL}. No se puede reprogramar en línea.`);
     });
 
     it("states the limit, in singular or plural, and the notice only when there is one", () => {
-        expect(fmtBookingPolicy({ maxReschedules: 1, minNoticeHours: 0 })).toBe(`${CANCEL} Puedes reprogramarla hasta 1 vez.`);
-        expect(fmtBookingPolicy({ maxReschedules: 2, minNoticeHours: 1 })).toBe(`${CANCEL} Puedes reprogramarla hasta 2 veces, con al menos 1 hora de anticipación.`);
-        expect(fmtBookingPolicy({ maxReschedules: 3, minNoticeHours: 24 })).toBe(`${CANCEL} Puedes reprogramarla hasta 3 veces, con al menos 24 horas de anticipación.`);
+        expect(fmtBookingPolicy({ maxReschedules: 1, minNoticeHours: 0 })).toBe(`${CANCEL} y reprogramarla hasta 1 vez.`);
+        expect(fmtBookingPolicy({ maxReschedules: 2, minNoticeHours: 1 })).toBe(`${CANCEL} y reprogramarla hasta 2 veces, con al menos 1 hora de anticipación.`);
+        expect(fmtBookingPolicy({ maxReschedules: 3, minNoticeHours: 24 })).toBe(`${CANCEL} y reprogramarla hasta 3 veces, con al menos 24 horas de anticipación.`);
     });
 });
 
 describe("provider contact links", () => {
+    it("groups a Colombian mobile number and leaves other numbers as stored", () => {
+        expect(fmtPhone("+573001112222")).toBe("+57 300 111 2222");
+        expect(fmtPhone("+14155552671")).toBe("+14155552671");
+    });
+
     it("builds a WhatsApp chat link from digits only", () => {
         expect(whatsappUrl("+573001112222")).toBe("https://wa.me/573001112222");
     });

@@ -77,6 +77,31 @@
   overflow-wrap: anywhere;
 }
 
+/* A long presentation must not push the booking steps off the first screen. */
+.bioClamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.textButton {
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-brand);
+  cursor: pointer;
+}
+
+.textButton:hover {
+  text-decoration: underline;
+}
+
 .locations {
   list-style: none;
   margin: 0;
@@ -114,7 +139,7 @@
 
 .mapLink {
   display: inline-block;
-  margin-top: 2px;
+  padding: 4px 0;
   font-size: 14px;
   color: var(--c-brand);
 }
@@ -145,7 +170,15 @@
 }
 
 .flow {
-  padding: 8px 20px 20px;
+  --flow-top: 8px;
+  --flow-x: 20px;
+  padding: var(--flow-top) var(--flow-x) 20px;
+}
+
+/* Doubled to outrank .dash-card. `clip` keeps the rounded corners without making the card a scroll
+   container, which `hidden` would, and that would stop the progress strip from sticking. */
+.flow.flow {
+  overflow: clip;
 }
 
 .notice {
@@ -164,7 +197,7 @@
 
 .step {
   padding-top: 20px;
-  scroll-margin-top: 84px;
+  scroll-margin-top: 48px;
 }
 
 .step + .step {
@@ -603,7 +636,9 @@
   }
 
   .flow {
-    padding: 4px 14px 16px;
+    --flow-top: 4px;
+    --flow-x: 14px;
+    padding-bottom: 16px;
   }
 
   .days {

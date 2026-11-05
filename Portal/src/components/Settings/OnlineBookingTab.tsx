@@ -760,7 +760,7 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
                 <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-profile-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack" data-testid="online-booking-profile">
-                <span className="form-input-hint">
+                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Opcional. Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
                 </span>
                 <div className="form-grid-2">

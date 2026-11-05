@@ -9,7 +9,7 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
-import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, mapUrl, timezoneName, whatsappUrl } from "@/src/utils/publicBooking";
+import { APPROVAL_FOLLOW_UP, fmtCop, fmtPhone, locationDetail, mapUrl, timezoneName, whatsappUrl } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
@@ -82,7 +82,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     if (booked) {
         return (
             <>
-                <ProviderHero slug={slug} provider={provider} />
+                <ProviderHero slug={slug} provider={provider} compact />
                 {"request" in booked
                     ? <RequestSent slug={slug} providerName={provider.displayName} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
                     : <BookingDone slug={slug} providerName={provider.displayName} appointment={booked.appointment} timezone={timezone} onBookAnother={bookAnother} />}
@@ -100,9 +100,8 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 <TrustStrip />
             </ProviderHero>
 
-            <BookingProgress steps={[ "Tipo de cita", "Día", "Hora", confirmTitle ]} current={currentStep} />
-
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
+                <BookingProgress steps={[ "Tipo de cita", "Día", "Hora", confirmTitle ]} current={currentStep} />
                 {provider.approvalRequired && (
                     <p className={styles.approvalNotice} data-testid="approval-notice">
                         {provider.displayName} confirma cada cita antes de reservarla. Eliges un horario, lo guardamos
@@ -143,9 +142,10 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     );
 }
 
-function ProviderHero({ slug, provider, children }: { slug: string; provider: PublicProvider; children?: React.ReactNode }) {
+function ProviderHero({ slug, provider, compact = false, children }: {
+    slug: string; provider: PublicProvider; compact?: boolean; children?: React.ReactNode;
+}) {
     const [ logoFailed, setLogoFailed ] = useState(false);
-    const roles = [ provider.jobTitle, provider.specialty ].filter(Boolean).join(" · ");
     return (
         <section className={styles.hero}>
             {provider.hasLogo && !logoFailed && (
@@ -155,14 +155,15 @@ function ProviderHero({ slug, provider, children }: { slug: string; provider: Pu
                 <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
                 <div>
                     <h1 className={styles.name}>{provider.displayName}</h1>
-                    {roles && <p className={styles.jobTitle}>{roles}</p>}
+                    {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}
+                    {provider.specialty && <p className={styles.jobTitle}>{provider.specialty}</p>}
                     {provider.professionalLicense && (
                         <p className={styles.license}>Tarjeta profesional {provider.professionalLicense}</p>
                     )}
                 </div>
             </div>
-            {provider.bio && <p className={styles.bio}>{provider.bio}</p>}
-            {provider.locations.length > 0 && (
+            {provider.bio && !compact && <ProviderBio bio={provider.bio} />}
+            {provider.locations.length > 0 && !compact && (
                 <ul className={styles.locations} aria-label="Dónde atiende">
                     {provider.locations.map((l) => (
                         <li key={l.id} className={styles.location}>
@@ -186,6 +187,32 @@ function ProviderHero({ slug, provider, children }: { slug: string; provider: Pu
     );
 }
 
+function ProviderBio({ bio }: { bio: string }) {
+    const text = useRef<HTMLParagraphElement>(null);
+    const [ expanded, setExpanded ] = useState(false);
+    const [ cutOff, setCutOff ] = useState(false);
+
+    // Measured, not counted: how much fits in three lines depends on the width of the screen.
+    useEffect(() => {
+        const el = text.current;
+        if (!el || expanded || typeof ResizeObserver === "undefined") return;
+        const observer = new ResizeObserver(() => setCutOff(el.scrollHeight > el.clientHeight));
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [ expanded ]);
+
+    return (
+        <div>
+            <p ref={text} className={expanded ? styles.bio : `${styles.bio} ${styles.bioClamped}`}>{bio}</p>
+            {(cutOff || expanded) && (
+                <button type="button" className={styles.textButton} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+                    {expanded ? "Ver menos" : "Ver más"}
+                </button>
+            )}
+        </div>
+    );
+}
+
 function ProviderContact({ provider: { phone, whatsapp } }: { provider: PublicProvider }) {
     if (!phone && !whatsapp) return null;
     return (
@@ -193,7 +220,7 @@ function ProviderContact({ provider: { phone, whatsapp } }: { provider: PublicPr
             {phone && (
                 <li>
                     <a href={`tel:${phone}`} className={styles.contactLink}>
-                        <Phone size={16} aria-hidden="true" />{phone}
+                        <Phone size={16} aria-hidden="true" />{fmtPhone(phone)}
                     </a>
                 </li>
             )}
