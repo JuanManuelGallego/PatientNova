@@ -16,7 +16,7 @@ import { createCsrfToken } from '../utils/security/csrf.js';
 import { safeEqual } from '../utils/security/safe-equal.js';
 import { PORTAL_SESSION_TTL_SECONDS, portalSecret, signPortalToken } from '../auth/tokens.js';
 import { sendTransactionalEmail } from '../brevo/transactional.js';
-import { dispatchMessage, type DispatchOpts } from '../scheduler/dispatch.js';
+import { dispatchMessage } from '../scheduler/dispatch.js';
 import { renderOtpEmail } from '../brevo/email-templates.js';
 import { providerDisplayName, publicBookingService } from '../public-booking/public-booking.service.js';
 import { portalOtpRepository } from './portal-otp.repository.js';
@@ -53,17 +53,6 @@ function ttlMinutes(): number {
   return Math.round(PORTAL_OTP_LIMITS.ttlMs / 60_000);
 }
 
-function phoneOtpMessage(contact: PortalContact, code: string, providerName: string): DispatchOpts {
-  if (contact.channel === Channel.WHATSAPP) {
-    return { to: contact.value, contentSid: config.twilio.patientPortal.otpSid, contentVariables: { '1': code } };
-  }
-  // The sender is overwritten on the way to Colombian phones, so the text has to say what the code is for.
-  return {
-    to: contact.value,
-    body: `Tu código para continuar con tu cita con ${providerName} es ${code}. Vence en ${ttlMinutes()} minutos. No lo compartas.`,
-  };
-}
-
 /** Runs after commit and never throws: the patient recovers by asking again, and the answer does not depend on it. */
 async function sendPortalOtp(contact: PortalContact, code: string, providerName: string): Promise<boolean> {
   if (!isPhoneContact(contact)) {
@@ -72,7 +61,7 @@ async function sendPortalOtp(contact: PortalContact, code: string, providerName:
   }
   const { channel } = contact;
   try {
-    const { success } = await dispatchMessage(channel, phoneOtpMessage(contact, code, providerName));
+    const { success } = await dispatchMessage(channel, { to: contact.value, contentSid: config.twilio.patientPortal.otpSid, contentVariables: { '1': code } });
     if (!success) logger.error({ maskedTo: maskContact(contact), channel }, 'Portal OTP was not accepted');
     return success;
   } catch (err) {

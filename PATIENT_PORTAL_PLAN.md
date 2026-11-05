@@ -1133,7 +1133,7 @@ As planned:
 - **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Phase 9: All channels for patient login and messages
-*Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot.*
+*Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot. SMS was dropped from login the same day: the login offers email and WhatsApp, and SMS stays for reminders and notices. Text below about SMS codes describes what was first built.*
 
 **Still to do before phone login reaches production (9.0):** real test sends to the Colombian carriers, the Twilio Console settings, counsel's review of the policy (with a `PRIVACY_POLICY_VERSION` bump if the text changes), and a manual check on a real phone. See `docs/operations.md`. After the Portal that reads `contact` is deployed, drop the transitional `email` from the session and verify responses.
 
@@ -1143,7 +1143,7 @@ As planned:
 - The flag clears on an inbox pick only when the request proved that same number. A pick on an email request, or on a record matched by another number, says nothing about a typed phone.
 - With no pick, a phone request reuses only a single trusted record, otherwise it creates a new patient. Restoring a deleted record is allowed alongside active ones sharing the number, since only email is unique.
 - The backfill skips patients already on `reminderChannel = WHATSAPP`: the provider already endorsed that number, by the same rule that clears the flag.
-- The login always offers WhatsApp and SMS: there is no setting to leave one out.
+- The login always offers email and WhatsApp: there is no setting to leave one out.
 - `?portalPatientId=` leaves out an unverified number's actor, so a stranger's activity never shows under a record they typed a number into. On a shared, trusted number the unlinked rows show under every record holding it: the provider sees them either way, and they carry no PII.
 - An active revoked record fails closed for the whole number even when its number is unverified, as the table says. Trusting it less would let a revoked patient get a new record by logging in with that number.
 - Portal SMS reminders are one short line. WhatsApp reminders keep the approved template, which greets by name; removing that needs a new template.
@@ -1179,7 +1179,7 @@ As planned:
 5. **Phone sessions never collect an email.** A typed email would become a login identity, and it could hit `patients_userId_emailHash_active_key`, revealing that the patient exists. This mirrors today's rule that the email comes from the session.
 6. **Keep our own `PortalOtp`; do not move to Twilio Verify.** One code path keeps the challenge, the daily failure cap and all limits under `lockRow`, for every channel. Verify would take over code generation and checking for phones only. Revisit if pumping protection on Messaging falls short.
 7. **One route for every patient message.** It follows `Patient.reminderChannel`, since the provider already set that per patient. A patient has no preference screen in this phase, because "the portal never updates an existing Patient".
-8. **No automatic fallback in this phase.** At login the patient recovers ("Enviar por SMS") after the cooldown. For later messages the appointment still shows in "Mis citas", and a failed reminder still alerts the provider. See Open.
+8. **No automatic fallback in this phase.** At login the patient recovers with email. For later messages the appointment still shows in "Mis citas", and a failed reminder still alerts the provider. See Open.
 9. **Message text is minimal.** SMS is not end-to-end encrypted and both channels show on lock screens. Messages carry the provider's name, the time and the place or link, never the appointment type, notes or the patient's name.
 
 **9.0 — Prerequisites (no code; start first, they have lead time).**
@@ -1196,8 +1196,8 @@ As planned:
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID` | Request expired (neutral) | provider, date, time |
 
 - `patient-meeting-link` reuses `TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID` if its variables fit; otherwise it becomes an eighth template.
-- Send real test SMS and WhatsApp codes to the main Colombian carriers. Confirm delivery, delay and how the sender appears. If SMS is poor, leave it out of `loginChannels` (9.3); no other change is needed.
-- In the Twilio Console: Geo Permissions on for every country patients may log in from, SMS Pumping Protection on, and a usage alert.
+- Send real test WhatsApp codes to the main Colombian carriers. Confirm delivery, delay and how the sender appears.
+- In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS reminders.
 - Counsel confirms the policy covers login codes over WhatsApp and SMS. It names Twilio and SMS/WhatsApp "por instrucción de la clínica", but not Meta and not phone login. Any text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
 
 **PR 9.1 — Server: patient message routing (no login change).** Useful on its own: existing patients get portal messages on their WhatsApp or SMS.

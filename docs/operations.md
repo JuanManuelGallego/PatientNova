@@ -122,7 +122,7 @@ rest). A refresh token can stop working without any action in PatientNova.
   patient gets it on their channel and the linked reminder is re-rendered. To find affected appointments:
   `GET /v1/appointments/needs-meeting-link` (admins).
 
-## Patient messages and login by WhatsApp and SMS
+## Patient messages and login by WhatsApp
 
 Portal notices and reminders follow each patient's `reminderChannel`, falling back to email, WhatsApp
 and SMS. A patient on WhatsApp who logs in with email gets WhatsApp. Phone login is separate and
@@ -148,16 +148,15 @@ variable. The place is the location and address, the meeting link, or "Te enviar
 
 ### Before phone login reaches production
 
-1. Send real SMS and WhatsApp codes to the main Colombian carriers. Check delivery, delay and how the
+1. Send real WhatsApp codes to the main Colombian carriers. Check delivery, delay and how the
    sender appears.
-2. In the Twilio Console: Geo Permissions on for every country patients may log in from (the server
-   accepts any country, and a blocked one still answers 202 while the code never arrives), SMS Pumping
-   Protection on, and a usage alert.
-3. Counsel confirms the privacy policy covers login codes over WhatsApp and SMS, and names Meta. Any
+2. In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS
+   reminders. SMS no longer carries login codes.
+3. Counsel confirms the privacy policy covers login codes over WhatsApp, and names Meta. Any
    text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
 4. Check a full login, booking and message on a real phone.
 
-Phone login has no off switch: the login always offers email, WhatsApp and SMS. Dropping a channel is a
+Phone login has no off switch: the login always offers email and WhatsApp. Dropping a channel is a
 code change in `portalLoginChannels`.
 
 ### Limits
@@ -177,12 +176,9 @@ is what rotating numbers inflates: each number can still receive 3 codes an hour
 be sent is about three times the cap. They can also overshoot slightly under concurrency.
 A non-numeric `PORTAL_OTP_PAID_DAILY_CAP` stops the API at boot, so the cap can never silently vanish.
 
-Spanish accents outside the GSM-7 alphabet (such as the "ó" of "código") make an SMS Unicode, which fits
-70 characters per segment instead of 160, so a login code usually bills as 2 segments.
-
 A number without WhatsApp fails after Twilio accepts the message (63024). Neither the code nor a notice
-learns about it: at login the patient recovers with "Enviar por SMS", and later the appointment still
-shows in "Mis citas".
+learns about it: at login the patient recovers with email, and later the appointment still shows in
+"Mis citas".
 
 ## CSP rollout (Portal)
 

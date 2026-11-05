@@ -29,8 +29,8 @@ script:post-response {
 }
 
 docs {
-  `phone` is E.164 and `channel` is `WHATSAPP` or `SMS`: both
-  share one row, cooldown and failure count, and a resend on the other channel replaces the code.
+  `phone` is E.164 and `channel` must be `WHATSAPP`; `SMS` gets a 400. One row per number holds
+  the cooldown and failure count, and a resend replaces the code.
 
   Same 202 `{ challenge }` for every number, patient or not. A hit cap (3 per number per hour, 30 per
   provider per hour, `PORTAL_OTP_PAID_DAILY_CAP` numbers per day overall) answers the same 202 without

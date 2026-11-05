@@ -1,4 +1,4 @@
-export type LoginChannel = "EMAIL" | "WHATSAPP" | "SMS";
+export type LoginChannel = "EMAIL" | "WHATSAPP";
 
 export interface PublicProvider {
     displayName: string;

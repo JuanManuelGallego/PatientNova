@@ -13,7 +13,7 @@ export const SESSION_LOST_NOTICE = "Tu sesión expiró. Ingresa de nuevo.";
 const CODE_LENGTH = 6;
 const EMAIL_ONLY: LoginChannel[] = [ "EMAIL" ];
 
-const CHANNEL_LABELS: Record<LoginChannel, string> = { EMAIL: "Correo", WHATSAPP: "WhatsApp", SMS: "SMS" };
+const CHANNEL_LABELS: Record<LoginChannel, string> = { EMAIL: "Correo", WHATSAPP: "WhatsApp" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
@@ -90,10 +90,9 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         }
     };
 
-    // WhatsApp and SMS share one code and one cooldown: a request inside it would answer with a challenge
-    // that matches nothing and break the code already sent, so the patient goes back to that code instead.
-    const codeAlreadySent = sent !== null && sent.contact === contact
-        && (sent.channel === channel || (onPhone && isPhoneChannel(sent.channel) && cooldown > 0));
+    // A request inside the cooldown would answer with a challenge that matches nothing and break the code
+    // already sent, so the patient goes back to that code instead.
+    const codeAlreadySent = sent !== null && sent.contact === contact && sent.channel === channel;
 
     const onSubmitContact = (e: FormEvent) => {
         e.preventDefault();
@@ -130,7 +129,6 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
     };
 
     const sentByPhone = sent !== null && isPhoneChannel(sent.channel);
-    const otherPhoneChannel = sent && sentByPhone ? channels.find((c) => isPhoneChannel(c) && c !== sent.channel) : undefined;
     const error = request.error ?? verify.error;
 
     return (
@@ -244,13 +242,6 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                             onClick={() => { if (sent) void sendCode(sent.channel, sent.contact); }}>
                             {cooldown > 0 ? `Reenviar código (${cooldown} s)` : "Reenviar código"}
                         </button>
-                        {sent && otherPhoneChannel && cooldown === 0 && (
-                            <button type="button" className={styles.linkButton}
-                                disabled={!captchaToken || request.loading}
-                                onClick={() => void sendCode(otherPhoneChannel, sent.contact)}>
-                                Enviar por {CHANNEL_LABELS[ otherPhoneChannel ]}
-                            </button>
-                        )}
                         <button type="button" className={styles.linkButton} onClick={changeContact}>
                             {sentByPhone ? "Cambiar número" : "Cambiar correo"}
                         </button>

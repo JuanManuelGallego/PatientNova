@@ -308,7 +308,7 @@ describe("PortalAppointmentsPage", () => {
 
     describe("login channels", () => {
         const PHONE = "+573001112233";
-        const withPhoneLogin = () => { server.profile = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP", "SMS" ] }; };
+        const withPhoneLogin = () => { server.profile = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP" ] }; };
         const choice = (name: string) => screen.findByRole("button", { name });
 
         async function requestPhoneCode(user: ReturnType<typeof userEvent.setup>, channel = "WhatsApp") {
@@ -370,7 +370,7 @@ describe("PortalAppointmentsPage", () => {
             const user = userEvent.setup();
             render(<PortalAppointmentsPage slug={SLUG} />);
 
-            await user.click(await choice("SMS"));
+            await user.click(await choice("WhatsApp"));
             await user.type(screen.getByLabelText("Número de celular"), "3001112233");
             await user.tab();
             await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
@@ -380,41 +380,13 @@ describe("PortalAppointmentsPage", () => {
             expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(0);
         });
 
-        it("offers the other channel only after the countdown, and it needs a fresh CAPTCHA", async () => {
-            withPhoneLogin();
-            vi.useFakeTimers({ shouldAdvanceTime: true });
-            const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-            render(<PortalAppointmentsPage slug={SLUG} />);
-            await requestPhoneCode(user);
-            expect(screen.queryByRole("button", { name: "Enviar por SMS" })).not.toBeInTheDocument();
-
-            for (let i = 0; i < RESEND_COOLDOWN_SECONDS; i++) await act(async () => { vi.advanceTimersByTime(1000); });
-
-            const sms = screen.getByRole("button", { name: "Enviar por SMS" });
-            expect(sms).toBeDisabled();
-            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
-            expect(sms).toBeEnabled();
-            await user.click(sms);
-
-            await waitFor(() => expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(2));
-            expect(bodyOf(`/public/providers/${SLUG}/otp`, 1)).toEqual({ phone: PHONE, channel: "SMS", captchaToken: "captcha-otp-request" });
-            expect(await screen.findByText(/te enviamos un código por SMS/)).toBeInTheDocument();
-            expect(screen.queryByRole("button", { name: "Enviar por WhatsApp" })).not.toBeInTheDocument();
-
-            await user.type(screen.getByLabelText("Código de 6 dígitos"), "654321");
-            await user.click(screen.getByRole("button", { name: "Ingresar" }));
-            await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
-            expect(bodyOf(`/portal/${SLUG}/otp/verify`).challenge).toBe("challenge-2");
-        });
-
-        it("going back to the same number on the other channel inside the cooldown returns to the code, with no request", async () => {
+        it("going back to the same number returns to the code, with no request", async () => {
             withPhoneLogin();
             const user = userEvent.setup();
             render(<PortalAppointmentsPage slug={SLUG} />);
             await requestPhoneCode(user);
 
             await user.click(screen.getByRole("button", { name: "Cambiar número" }));
-            await user.click(await choice("SMS"));
             await user.click(screen.getByRole("button", { name: "Ingresar el código enviado" }));
 
             await screen.findByLabelText("Código de 6 dígitos");

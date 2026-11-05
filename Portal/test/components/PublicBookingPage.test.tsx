@@ -422,7 +422,7 @@ describe("PublicBookingPage booking", () => {
 
     it("offers the provider's login channels in the booking step", async () => {
         server.session = null;
-        server.provider = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP", "SMS" ] };
+        server.provider = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP" ] };
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);

@@ -5,7 +5,7 @@ import { emailHash, phoneHash } from '../utils/encryption/blind-index.js';
 import { normalizeEmail } from '../utils/validation/normalize-email.js';
 import type { PortalTokenClaims } from '../auth/tokens.js';
 
-/** What a portal session proved control of. WhatsApp and SMS prove the same number. */
+/** What a portal session proved control of. SMS is no longer offered, but a session issued on it stays valid. */
 export interface PortalContact {
   channel: Channel;
   value: string;
@@ -17,7 +17,7 @@ export const isPhoneContact = (contact: PortalContact): boolean => contact.chann
 
 /** What a patient may log in with. */
 export function portalLoginChannels(): Channel[] {
-  return [ Channel.EMAIL, Channel.WHATSAPP, Channel.SMS ];
+  return [ Channel.EMAIL, Channel.WHATSAPP ];
 }
 
 

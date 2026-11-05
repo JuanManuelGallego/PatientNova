@@ -58,7 +58,7 @@ const requestOtp = (slug: string, body: object) =>
 const verifyOtp = (slug: string, body: object) =>
   request(app).post(`/v1/portal/${slug}/otp/verify`).set('Origin', ALLOWED_ORIGIN).send(body);
 
-const requestPhoneOtp = (slug: string, phone: string, channel: Channel = Channel.WHATSAPP) => requestOtp(slug, { phone, channel });
+const requestPhoneOtp = (slug: string, phone: string) => requestOtp(slug, { phone, channel: Channel.WHATSAPP });
 
 const otpRow = (userId: string, phone: string) =>
   prisma.portalOtp.findUnique({ where: { userId_contactHash: { userId, contactHash: phoneHash(phone)! } } });
@@ -69,7 +69,6 @@ const skipCooldown = (userId: string) => prisma.portalOtp.updateMany({
 });
 
 const whatsappCode = (call = -1): string => mocks.sendWhatsApp.mock.calls.at(call)![0].contentVariables['1'];
-const smsCode = (call = -1): string => /\b(\d{6})\b/.exec(mocks.sendSms.mock.calls.at(call)![0].body as string)![1]!;
 
 const wrong = (code: string) => String((Number(code) + 1) % 1_000_000).padStart(6, '0');
 
@@ -116,21 +115,6 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('says in the SMS what the code is for and for which provider, because the sender is overwritten', async () => {
-    const provider = await createLiveProvider();
-    await prisma.user.update({ where: { id: provider.id }, data: { displayName: 'Dra. Ana Pública' } });
-    const phone = newPhone();
-
-    await requestPhoneOtp(provider.slug, phone, Channel.SMS);
-
-    const { to, body } = mocks.sendSms.mock.calls[0]![0] as { to: string; body: string };
-    expect(to).toBe(phone);
-    expect(body).toContain('Dra. Ana Pública');
-    expect(body).toMatch(/\b\d{6}\b/);
-    expect(body).toContain('10 minutos');
-    expect(mocks.sendWhatsApp).not.toHaveBeenCalled();
-  });
-
   it('answers byte-identically for a new number, a patient\'s number and a revoked number', async () => {
     const provider = await createLiveProvider();
     const [ fresh, known, revoked, flagged ] = [ newPhone(), newPhone(), newPhone(), newPhone() ];
@@ -162,8 +146,8 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
     await requestPhoneOtp(provider.slug, phone);
     const code = whatsappCode();
     await skipCooldown(provider.id);
-    await requestPhoneOtp(provider.slug, phone, Channel.SMS);
-    const second = smsCode();
+    await requestPhoneOtp(provider.slug, phone);
+    const second = whatsappCode();
 
     const row = await otpRow(provider.id, phone);
     expect(JSON.stringify(row)).not.toContain(second);
@@ -201,9 +185,10 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
     it.each([
       [ 'no channel', { phone: '+573001112233' } ],
       [ 'the email channel', { phone: '+573001112233', channel: 'EMAIL' } ],
-      [ 'a number that is not E.164', { phone: '3001112233', channel: 'SMS' } ],
-      [ 'an email and a phone together', { email: 'a@test.local', phone: '+573001112233', channel: 'SMS' } ],
-      [ 'an unknown field', { phone: '+573001112233', channel: 'SMS', extra: 1 } ],
+      [ 'the SMS channel', { phone: '+573001112233', channel: 'SMS' } ],
+      [ 'a number that is not E.164', { phone: '3001112233', channel: 'WHATSAPP' } ],
+      [ 'an email and a phone together', { email: 'a@test.local', phone: '+573001112233', channel: 'WHATSAPP' } ],
+      [ 'an unknown field', { phone: '+573001112233', channel: 'WHATSAPP', extra: 1 } ],
     ])('rejects %s', async (_name, body) => {
       const provider = await createLiveProvider();
       expect((await requestOtp(provider.slug, body)).status).toBe(400);
@@ -221,15 +206,15 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
       return lines.filter(([ level ]) => level === 'error');
     }
 
-    it('WhatsApp and SMS share one row, one cooldown and one failure count', async () => {
+    it('keeps one row, one cooldown and one failure count per number', async () => {
       const provider = await createLiveProvider();
       const phone = newPhone();
 
       await requestPhoneOtp(provider.slug, phone);
-      const inCooldown = await requestPhoneOtp(provider.slug, phone, Channel.SMS);
+      const inCooldown = await requestPhoneOtp(provider.slug, phone);
 
       expect(inCooldown.status).toBe(202);
-      expect(mocks.sendSms).not.toHaveBeenCalled();
+      expect(mocks.sendWhatsApp).toHaveBeenCalledTimes(1);
       expect(await prisma.portalOtp.count({ where: { userId: provider.id } })).toBe(1);
 
       const first = await verifyOtp(provider.slug, { phone, code: wrong(whatsappCode()), challenge: 'x'.repeat(32) });
@@ -237,8 +222,8 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
 
       await prisma.portalOtp.updateMany({ where: { userId: provider.id }, data: { failedCount: PORTAL_OTP_LIMITS.maxFailuresPerDay } });
       await skipCooldown(provider.id);
-      await requestPhoneOtp(provider.slug, phone, Channel.SMS);
-      expect(mocks.sendSms).not.toHaveBeenCalled();
+      await requestPhoneOtp(provider.slug, phone);
+      expect(mocks.sendWhatsApp).toHaveBeenCalledTimes(1);
     });
 
     it('caps sends per number, answering the usual 202 and reporting it without PII', async () => {
@@ -247,17 +232,16 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
       const phone = newPhone();
 
       for (let i = 0; i < PORTAL_OTP_LIMITS.perPhonePerHour; i++) {
-        expect((await requestPhoneOtp(provider.slug, phone, i % 2 ? Channel.SMS : Channel.WHATSAPP)).status).toBe(202);
+        expect((await requestPhoneOtp(provider.slug, phone)).status).toBe(202);
         await skipCooldown(provider.id);
       }
-      const sent = mocks.sendWhatsApp.mock.calls.length + mocks.sendSms.mock.calls.length;
-      expect(sent).toBe(PORTAL_OTP_LIMITS.perPhonePerHour);
+      expect(mocks.sendWhatsApp).toHaveBeenCalledTimes(PORTAL_OTP_LIMITS.perPhonePerHour);
 
       const capped = await requestPhoneOtp(provider.slug, phone);
 
       expect(capped.status).toBe(202);
       expect(capped.body.data.challenge).toMatch(/^[A-Za-z0-9_-]{32}$/);
-      expect(mocks.sendWhatsApp.mock.calls.length + mocks.sendSms.mock.calls.length).toBe(sent);
+      expect(mocks.sendWhatsApp).toHaveBeenCalledTimes(PORTAL_OTP_LIMITS.perPhonePerHour);
       const errors = errorLines(lines);
       expect(errors).toHaveLength(1);
       expect(errors[ 0 ]![2]).toBe('Portal OTP paid cap reached: phone-cap');
@@ -312,46 +296,44 @@ describe('POST /v1/portal/:slug/otp/verify with a phone', () => {
   it('starts a phone session whose channel comes from the row', async () => {
     const provider = await createLiveProvider();
     const phone = newPhone();
-    const { body } = await requestPhoneOtp(provider.slug, phone, Channel.SMS);
+    const { body } = await requestPhoneOtp(provider.slug, phone);
 
-    const res = await verifyOtp(provider.slug, { phone, code: smsCode(), challenge: body.data.challenge });
+    const res = await verifyOtp(provider.slug, { phone, code: whatsappCode(), challenge: body.data.challenge });
 
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.SMS });
+    expect(res.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.WHATSAPP });
     const cookie = (res.headers[ 'set-cookie' ] as unknown as string[]).find((c) => c.startsWith(`${PORTAL_COOKIE_NAME}=`))!;
     const claims = verifyPortalToken(cookie.split(';')[ 0 ]!.split('=')[ 1 ]!) as Record<string, unknown>;
-    expect(claims).toMatchObject({ channel: Channel.SMS, phone, userId: provider.id });
+    expect(claims).toMatchObject({ channel: Channel.WHATSAPP, phone, userId: provider.id });
     expect(claims.email).toBeUndefined();
 
     const session = await request(app).get('/v1/portal/session').set('Origin', ALLOWED_ORIGIN).set('Cookie', cookie.split(';')[ 0 ]!);
-    expect(session.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.SMS });
+    expect(session.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.WHATSAPP });
   });
 
   it('a client cannot choose the channel of the session', async () => {
     const provider = await createLiveProvider();
     const phone = newPhone();
-    const { body } = await requestPhoneOtp(provider.slug, phone, Channel.SMS);
+    const { body } = await requestPhoneOtp(provider.slug, phone);
 
-    const res = await verifyOtp(provider.slug, { phone, channel: Channel.WHATSAPP, code: smsCode(), challenge: body.data.challenge });
+    const res = await verifyOtp(provider.slug, { phone, channel: Channel.SMS, code: whatsappCode(), challenge: body.data.challenge });
 
     expect(res.status).toBe(400);
   });
 
-  it('a resend on the other channel replaces the code and the channel', async () => {
+  it('a resend replaces the code', async () => {
     const provider = await createLiveProvider();
     const phone = newPhone();
-    const first = await requestPhoneOtp(provider.slug, phone, Channel.WHATSAPP);
+    const first = await requestPhoneOtp(provider.slug, phone);
     const firstCode = whatsappCode();
     await skipCooldown(provider.id);
 
-    const second = await requestPhoneOtp(provider.slug, phone, Channel.SMS);
+    const second = await requestPhoneOtp(provider.slug, phone);
 
-    expect((await otpRow(provider.id, phone))!.channel).toBe(Channel.SMS);
     const stale = await verifyOtp(provider.slug, { phone, code: firstCode, challenge: first.body.data.challenge });
     expect(stale.status).toBe(400);
-    const res = await verifyOtp(provider.slug, { phone, code: smsCode(), challenge: second.body.data.challenge });
+    const res = await verifyOtp(provider.slug, { phone, code: whatsappCode(), challenge: second.body.data.challenge });
     expect(res.status).toBe(200);
-    expect(res.body.data.contactChannel).toBe(Channel.SMS);
   });
 
   it('gives one answer for a wrong code, a wrong challenge and an unknown number', async () => {
