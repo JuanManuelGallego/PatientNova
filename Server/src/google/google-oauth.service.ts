@@ -141,7 +141,7 @@ export const googleOAuthService = {
           entityId: connection.id,
           actionType: existing ? ActionType.UPDATE : ActionType.CREATE,
           description: existing ? 'Google connection updated' : 'Google connection created',
-          source: ActionSource.API,
+          source: ActionSource.JOB,
           userId,
           affectedFields: ['connected', 'grantedScopes', 'connectedAt'],
           fieldsBefore: existing ? { connected: Boolean(existing.refreshToken && !existing.disconnectedAt) } : null,

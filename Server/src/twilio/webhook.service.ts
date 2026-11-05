@@ -132,7 +132,7 @@ export class TwilioWebhookService {
                 entityId: reminder.appointmentId!,
                 userId: reminder.userId,
                 actionType: ActionType.UPDATE,
-                source: ActionSource.API,
+                source: ActionSource.JOB,
                 description: intent === 'confirm'
                     ? 'Cita confirmada via respuesta rápida de WhatsApp'
                     : 'Cita cancelada via respuesta rápida de WhatsApp',

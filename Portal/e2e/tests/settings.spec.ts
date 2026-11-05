@@ -342,7 +342,7 @@ test.describe('Settings', () => {
       await drawer.expectAction('Creación');
       await drawer.expectEntityType('Paciente');
       await drawer.expectEntityId(patient.data.id);
-      await drawer.expectSource('API');
+      await drawer.expectSource('Tú');
       await drawer.close();
       await drawer.expectNotVisible();
     });

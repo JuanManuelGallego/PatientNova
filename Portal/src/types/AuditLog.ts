@@ -93,7 +93,7 @@ export const ACTION_SOURCE_CONFIG: Record<
   ActionSource,
   { label: string }
 > = {
-  [ActionSource.API]: { label: "API" },
+  [ActionSource.API]: { label: "Tú" },
   [ActionSource.JOB]: { label: "Tarea" },
   [ActionSource.PUBLIC_PORTAL]: { label: "Portal de pacientes" },
 };
