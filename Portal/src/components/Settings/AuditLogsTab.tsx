@@ -1,5 +1,5 @@
 import { useFetchAuditLogs } from "@/src/api/audit-logs/useFetchAuditLogs";
-import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
+import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters, actionTypeLabel, entityTypeLabel } from "@/src/types/AuditLog";
 import { SelectOption } from "@/src/components/CustomSelect";
 import {
   DataTable,
@@ -8,7 +8,6 @@ import {
 } from "@/src/components/DataTable";
 import { EmptyState } from "@/src/components/EmptyState";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
-import { ActionPill } from "@/src/components/Info/ActionPill";
 import { FilterBar } from "@/src/components/FilterBar";
 import { useDelayedLoading } from "@/src/hooks/useDelayedLoading";
 import { fmtTimestamp } from "@/src/utils/TimeUtils";
@@ -20,7 +19,6 @@ import {
   parseAsArrayOf,
 } from "nuqs";
 import { Clock } from "lucide-react";
-import { EntityTypePill } from "../Info/EntityTypePill";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { withAllOption } from "@/src/utils/options";
@@ -246,12 +244,8 @@ export function AuditLogsTab() {
           total={total}
         renderRow={(log) => (
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
-            <td className="td">
-              <ActionPill action={log.actionType} />
-            </td>
-            <td className="td">
-              <EntityTypePill entityType={log.entityType} />
-            </td>
+            <td className="td td--date">{actionTypeLabel(log.actionType)}</td>
+            <td className="td td--date">{entityTypeLabel(log.entityType)}</td>
             <td className="td td--date">{log.description}</td>
             <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>

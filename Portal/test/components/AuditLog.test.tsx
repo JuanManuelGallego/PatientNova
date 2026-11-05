@@ -2,9 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
 import { EntityTypePill } from "@/src/components/Info/EntityTypePill";
-import { ActionPill } from "@/src/components/Info/ActionPill";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
-import { ActionSource, ActionType, EntityType, type AuditLog } from "@/src/types/AuditLog";
+import { ActionSource, ActionType, EntityType, actionTypeLabel, entityTypeLabel, type AuditLog } from "@/src/types/AuditLog";
 import { buildAuditLogQueryString } from "@/src/utils/ApiUtils";
 import { fmtCalendarDay, fmtDateTime } from "@/src/utils/TimeUtils";
 
@@ -44,12 +43,11 @@ describe("audit pills", () => {
   });
 
   it("show an unknown value instead of crashing", () => {
-    render(<>
-      <EntityTypePill entityType={"SOMETHING_NEW" as EntityType} />
-      <ActionPill action={"ARCHIVE" as ActionType} />
-    </>);
+    render(<EntityTypePill entityType={"SOMETHING_NEW" as EntityType} />);
     expect(screen.getByText("SOMETHING_NEW")).toBeInTheDocument();
-    expect(screen.getByText("ARCHIVE")).toBeInTheDocument();
+    expect(entityTypeLabel("SOMETHING_NEW" as EntityType)).toBe("SOMETHING_NEW");
+    expect(actionTypeLabel("ARCHIVE" as ActionType)).toBe("ARCHIVE");
+    expect(actionTypeLabel(ActionType.CREATE)).toBe("Creación");
   });
 });
 
