@@ -5,10 +5,6 @@ import { useApiMutation } from "@/src/api/base/useApiMutation";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
 
-/**
- * Debounced autosave of the signed-in user's profile (`useDebouncedSave`). `schedule(data)` updates the auth
- * context optimistically right away; the PATCH follows the debounce.
- */
 export const useAutoSaveProfile = () => {
     const { mutate } = useApiMutation<User>("PATCH", "Error al guardar");
     const { user, updateUser } = useAuthContext();

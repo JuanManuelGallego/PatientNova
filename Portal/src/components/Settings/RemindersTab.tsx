@@ -27,13 +27,11 @@ export function RemindersTab() {
   const autosave = useAutoSaveProfile();
   const [ error, setError ] = useState<string | null>(null);
 
-  // A number the provider is still fixing is left out, so a channel/toggle change never sends it.
   const validNumber = (value: string) => {
     const trimmed = value.trim();
     return trimmed && validatePhoneNumber(trimmed) ? trimmed : undefined;
   };
 
-  /** Discrete controls (channel, toggle) have nothing to wait for: save through the same autosave, at once. */
   function saveNow(overrides: Partial<User>) {
     autosave.schedule({
       phoneNumber: validNumber(phoneNumber),

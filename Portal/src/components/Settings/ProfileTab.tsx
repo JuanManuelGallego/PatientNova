@@ -26,7 +26,6 @@ type EditableFields = {
   bankingKey: string;
 };
 
-/** The card whose header shows the autosave state: the one edited last. */
 type ProfileSection = "photo" | "personal" | "logos" | "banking";
 
 // ─── Avatar fallback ────────────────────────────────────────────────────────
@@ -172,7 +171,7 @@ export function ProfileTab() {
     }
   }
 
-  // ── Timezone: saved at once (no typing to wait for), through the same autosave ──
+  // ── Timezone (immediate save, kept as-is) ───────────────────────────────────
 
   function handleTimezoneChange(value: string) {
     setTimezone(value);

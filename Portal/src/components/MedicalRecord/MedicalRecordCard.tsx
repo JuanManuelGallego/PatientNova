@@ -2,7 +2,6 @@ export const MedicalRecordCard = ({ children, title, icon, actions }: {
   children: React.ReactNode;
   title: string;
   icon?: string;
-  /** Right side of the header, e.g. the autosave `SaveStatusIndicator`. */
   actions?: React.ReactNode;
 }) => (
   <div style={{

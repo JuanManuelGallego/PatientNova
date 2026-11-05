@@ -77,13 +77,10 @@ const WITH_LINK = { bookingSlug: "dra", bookingUrl: "https://app.test/book/dra" 
 
 const renderTab = () => render(<FocusTrapProvider><OnlineBookingTab /></FocusTrapProvider>);
 
-/** Lets the autosave debounce elapse and the resulting saves settle. */
 async function settle(ms = AUTO_SAVE_DEBOUNCE_MS) {
     await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
 
-// RTL drains each act() with setTimeout(0) and only advances it under Jest's fake timers; let it drive Vitest's
-// clock so the debounce elapses only when a test calls settle().
 const testGlobal = globalThis as { jest?: unknown };
 beforeAll(() => { testGlobal.jest = { advanceTimersByTime: (ms: number) => vi.advanceTimersByTime(ms) }; });
 afterAll(() => { delete testGlobal.jest; });

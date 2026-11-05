@@ -278,11 +278,6 @@ function ApprovalSection({ settings, save, onSaved }: { settings: BookingSetting
     );
 }
 
-/**
- * The slug is the one setting that is not autosaved: every intermediate value would break the shared link,
- * claim or release a public address and write an audit row, and an empty field turns booking off. It is
- * created or changed deliberately in a modal, like the rest of the app's explicit saves.
- */
 function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const { suggestion } = useFetchSlugSuggestion(!settings.bookingSlug);
     const [ editing, setEditing ] = useState(false);
@@ -406,7 +401,6 @@ function SlugModal({ settings, suggestion, save, onSaved, onClose }: {
     const titleId = useId();
     const hintId = useId();
 
-    // After the focus trap's own first-focus, so the field (not the close button) has focus with its text selected.
     useEffect(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -543,7 +537,6 @@ function TimeField({ value, onChange, label, invalid, testId }: {
 function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved: () => Promise<void> }) {
     const { availability, loading, error: loadError } = useFetchAvailability();
     const { saveAvailability } = useSaveAvailability();
-    // The working copy after the first edit; it stays in place after saving so open pickers and row order don't jump.
     const [ draft, setDraft ] = useState<AvailabilityRule[] | null>(null);
     const dirty = draft !== null;
     const rules = draft ?? availability?.rules ?? null;

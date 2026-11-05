@@ -8,26 +8,11 @@ const SAVE_STATUS_CLEAR_MS = 3000;
 const keyOf = (value: unknown) => JSON.stringify(value);
 
 type Options<T> = {
-    /** The value already on the server; scheduling it again saves nothing. */
     initial?: T;
     delay?: number;
-    /**
-     * Skip a value equal to the last one sent. Compares by JSON, so turn it off for payloads too large to
-     * serialise on every keystroke (e.g. medical records with embedded documents).
-     */
     dedupe?: boolean;
 };
 
-/**
- * The app's one debounced autosave (profile, reminders, medical records, online booking).
- *
- * - `schedule(value)` restarts the debounce; with `dedupe`, a value equal to the last one sent (or `initial`) cancels the pending save.
- * - `cancel()` drops the pending save (e.g. the form became invalid).
- * - Saves run one at a time, in order: a slow response never overwrites a newer one, and `useApiMutation`'s
- *   in-flight guard never rejects an overlapping save.
- * - A pending save is flushed on unmount, so leaving the page within the debounce keeps the change.
- * - `error` keeps the server's message until the next change or successful save.
- */
 export function useDebouncedSave<T>(
     save: (value: T) => Promise<unknown>,
     { initial, delay = AUTO_SAVE_DEBOUNCE_MS, dedupe = true }: Options<T> = {},
@@ -63,7 +48,6 @@ export function useDebouncedSave<T>(
                 setError(null);
                 setStatus("saved");
             } catch (err) {
-                // Let the same value be retried.
                 if (key !== undefined && committed.current === key) committed.current = undefined;
                 if (!mounted.current) return;
                 setError(err instanceof Error ? err.message : ERR_SAVE);

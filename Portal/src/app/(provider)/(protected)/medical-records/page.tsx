@@ -34,7 +34,6 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 const MEDICAL_RECORD_AUTOSAVE_MS = 1500;
 
-/** The card whose header shows the autosave state: the one edited last. */
 type RecordSection = "general" | "family" | "details" | "evolution" | "documents";
 
 function MedicalRecordsPageContent() {
@@ -43,13 +42,10 @@ function MedicalRecordsPageContent() {
   const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState(QUERY_PARAMS.recordPatientId, parseAsString.withDefault(""));
   const [ form, setForm ] = useState<FormValues>(createEmptyForm());
-  // The latest form, so consecutive edits in one tick build on each other before React re-renders.
   const formRef = useRef(form);
 
   const { createMedicalRecord } = useCreateMedicalRecord();
   const { updateMedicalRecord } = useUpdateMedicalRecord();
-  // The record id travels with the form, so a pending edit still lands on its own record after switching patients.
-  // No dedupe: the form can embed documents, too large to serialise on every keystroke.
   const autosave = useDebouncedSave<{ id: string; form: FormValues }>(
     ({ id, form: values }) => updateMedicalRecord(id, values),
     { delay: MEDICAL_RECORD_AUTOSAVE_MS, dedupe: false },
@@ -62,7 +58,6 @@ function MedicalRecordsPageContent() {
   const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
   const medicalRecord = medicalRecords?.[ 0 ];
 
-  // Loading a record only fills the form; saves are scheduled by edits (updateField), never by this.
   useEffect(() => {
     const loaded: FormValues = medicalRecord ? {
       name: medicalRecord.name || "",
@@ -112,7 +107,6 @@ function MedicalRecordsPageContent() {
     setActiveSection(section);
     scheduleSave({ id: recordId, form: next });
   }, [ recordId, scheduleSave ]);
-  // One stable onChange per card, so its header can show the autosave state.
   const fieldsIn = useMemo(() => {
     const inSection = (section: RecordSection) =>
       <K extends keyof FormValues>(key: K, value: FormValues[ K ]) => updateField(section, key, value);
