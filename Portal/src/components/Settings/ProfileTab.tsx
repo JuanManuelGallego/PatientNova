@@ -1,6 +1,5 @@
-import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/users/useUpdateProfile";
+import { useAutoSaveProfile } from "@/src/api/users/useUpdateProfile";
 import { useConsentDocument } from "@/src/api/consent/useConsentDocument";
-import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { TextField } from "@/src/components/Form/TextField";
 import { ImageField } from "@/src/components/Form/ImageField";
@@ -26,6 +25,8 @@ type EditableFields = {
   nationalId: string;
   bankingKey: string;
 };
+
+type ProfileSection = "photo" | "personal" | "logos" | "banking";
 
 // ─── Avatar fallback ────────────────────────────────────────────────────────
 
@@ -72,9 +73,8 @@ export function ProfileTab() {
   const [ logo, setLogo ] = useState<string | null>(user?.logo ?? null);
   const [ altLogo, setAltLogo ] = useState<string | null>(user?.altLogo ?? null);
 
-  const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
-  const saveStatus = useUpdateProfileWithDebounce(userPayload);
-  const { updateProfile } = useUpdateProfile();
+  const autosave = useAutoSaveProfile();
+  const [ activeSection, setActiveSection ] = useState<ProfileSection | null>(null);
   const [ error, setError ] = useState<string | null>(null);
 
   const {
@@ -99,9 +99,24 @@ export function ProfileTab() {
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
-  function scheduleSave(overrides: Partial<User> = {}) {
+  function saveIndicator(section: ProfileSection) {
+    if (activeSection !== section) return null;
+    return <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="profile-save-state" />;
+  }
+
+  function saveError(section: ProfileSection) {
+    if (activeSection !== section || !autosave.error) return null;
+    return (
+      <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+        <STATUS_ICONS.warning size={14} /> {autosave.error}
+      </div>
+    );
+  }
+
+  function scheduleSave(section: ProfileSection, overrides: Partial<User> = {}) {
     setError(null);
-    setUserPayload({
+    setActiveSection(section);
+    autosave.schedule({
       firstName: (overrides.firstName ?? fields.firstName).trim() || undefined,
       lastName: (overrides.lastName ?? fields.lastName).trim() || undefined,
       displayName: (overrides.displayName ?? fields.displayName).trim() || undefined,
@@ -118,9 +133,9 @@ export function ProfileTab() {
     });
   }
 
-  function setField<K extends keyof EditableFields>(key: K, value: string) {
+  function setField<K extends keyof EditableFields>(section: ProfileSection, key: K, value: string) {
     setFields((prev) => ({ ...prev, [ key ]: value }));
-    scheduleSave({ [ key ]: value } as Partial<User>);
+    scheduleSave(section, { [ key ]: value } as Partial<User>);
   }
 
   function handleImageError(message: string) {
@@ -160,7 +175,8 @@ export function ProfileTab() {
 
   function handleTimezoneChange(value: string) {
     setTimezone(value);
-    updateProfile({ timezone: value });
+    scheduleSave("personal", { timezone: value });
+    autosave.flush();
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -178,6 +194,7 @@ export function ProfileTab() {
       <div className="dash-card" style={{ height: "fit-content" }}>
         <div className="dash-card__header">
           <span className="dash-card__title">Foto de perfil</span>
+          {saveIndicator("photo")}
         </div>
         <div
           className="dash-card__body"
@@ -194,7 +211,7 @@ export function ProfileTab() {
             fallback={<AvatarFallback initials={initials} />}
             onChange={(value) => {
               setAvatar(value);
-              scheduleSave({ avatar: value ?? undefined });
+              scheduleSave("photo", { avatar: value ?? undefined });
             }}
             onError={handleImageError}
             maxSide={256}
@@ -215,6 +232,7 @@ export function ProfileTab() {
                 {user?.email}
               </p>
             </label>
+            {saveError("photo")}
           </div>
         </div>
       </div>
@@ -223,6 +241,7 @@ export function ProfileTab() {
       <div className="dash-card">
         <div className="dash-card__header">
           <span className="dash-card__title">Información personal</span>
+          {saveIndicator("personal")}
         </div>
         <div className="dash-card__body">
           <div className="form-stack">
@@ -231,28 +250,28 @@ export function ProfileTab() {
                 testId="profile-first-name-input"
                 label="Nombre"
                 value={fields.firstName}
-                onChange={(v) => setField("firstName", v)}
+                onChange={(v) => setField("personal", "firstName", v)}
                 placeholder="Juan"
               />
               <TextField
                 testId="profile-last-name-input"
                 label="Apellido"
                 value={fields.lastName}
-                onChange={(v) => setField("lastName", v)}
+                onChange={(v) => setField("personal", "lastName", v)}
                 placeholder="García"
               />
             </div>
             <TextField
               label="Nombre en pantalla"
               value={fields.displayName}
-              onChange={(v) => setField("displayName", v)}
+              onChange={(v) => setField("personal", "displayName", v)}
               placeholder="Dr. Juan García"
               hint="Aparece en la barra lateral y en el dashboard"
             />
             <TextField
               label="Cargo"
               value={fields.jobTitle}
-              onChange={(v) => setField("jobTitle", v)}
+              onChange={(v) => setField("personal", "jobTitle", v)}
               placeholder="Médico general"
             />
             <label className="form-label">
@@ -270,6 +289,7 @@ export function ProfileTab() {
               </span>
             </label>
           </div>
+          {saveError("personal")}
         </div>
       </div>
 
@@ -277,6 +297,7 @@ export function ProfileTab() {
       <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
         <div className="dash-card__header">
           <span className="dash-card__title">Logos</span>
+          {saveIndicator("logos")}
         </div>
         <div className="dash-card__body">
           <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
@@ -292,7 +313,7 @@ export function ProfileTab() {
               value={logo}
               onChange={(value) => {
                 setLogo(value);
-                scheduleSave({ logo: value ?? undefined });
+                scheduleSave("logos", { logo: value ?? undefined });
               }}
               onError={handleImageError}
               maxSide={800}
@@ -306,7 +327,7 @@ export function ProfileTab() {
               value={altLogo}
               onChange={(value) => {
                 setAltLogo(value);
-                scheduleSave({ altLogo: value ?? undefined });
+                scheduleSave("logos", { altLogo: value ?? undefined });
               }}
               onError={handleImageError}
               maxSide={800}
@@ -315,6 +336,7 @@ export function ProfileTab() {
               removeLabel="Eliminar"
             />
           </div>
+          {saveError("logos")}
         </div>
       </div>
 
@@ -322,6 +344,7 @@ export function ProfileTab() {
       <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
         <div className="dash-card__header">
           <span className="dash-card__title">Información Bancaria</span>
+          {saveIndicator("banking")}
         </div>
         <div className="dash-card__body">
           <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
@@ -335,28 +358,29 @@ export function ProfileTab() {
               testId="profile-bank-name-input"
               label="Nombre del banco"
               value={fields.bankName}
-              onChange={(v) => setField("bankName", v)}
+              onChange={(v) => setField("banking", "bankName", v)}
               placeholder="Bancolombia"
             />
             <TextField
               label="Numero de cuenta"
               value={fields.accountNumber}
-              onChange={(v) => setField("accountNumber", v)}
+              onChange={(v) => setField("banking", "accountNumber", v)}
               placeholder="123465789"
             />
             <TextField
               label="Cedula"
               value={fields.nationalId}
-              onChange={(v) => setField("nationalId", v)}
+              onChange={(v) => setField("banking", "nationalId", v)}
               placeholder="123456789"
             />
             <TextField
               label="Llave"
               value={fields.bankingKey}
-              onChange={(v) => setField("bankingKey", v)}
+              onChange={(v) => setField("banking", "bankingKey", v)}
               placeholder="@llaveBancolombia"
             />
           </div>
+          {saveError("banking")}
         </div>
       </div>
 
@@ -497,10 +521,6 @@ export function ProfileTab() {
           <STATUS_ICONS.warning size={14} /> {consentError}
         </div>
       )}
-      {saveStatus === "saved" && (
-        <SuccessBanner message="Cambios guardados correctamente" />
-      )}
-      <SaveStatusIndicator status={saveStatus} />
     </div>
   );
 }

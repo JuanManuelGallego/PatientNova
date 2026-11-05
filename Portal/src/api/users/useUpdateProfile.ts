@@ -1,41 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { API_BASE } from "@/src/config/api";
 import { User } from "@/src/types/User";
 import { useApiMutation } from "@/src/api/base/useApiMutation";
 import { useAuthContext } from "@/src/providers/AuthContext";
+import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
 
-const AUTO_SAVE_DEBOUNCE_MS = 1000;
-const SAVE_STATUS_CLEAR_MS = 3000;
-
-type SaveStatus = "idle" | "saved" | "error";
-
-export const useUpdateProfileWithDebounce = (userData: Partial<User> | null): SaveStatus => {
-    const [ saveStatus, setSaveStatus ] = useState<SaveStatus>("idle");
+export const useAutoSaveProfile = () => {
     const { mutate } = useApiMutation<User>("PATCH", "Error al guardar");
     const { user, updateUser } = useAuthContext();
+    const { schedule: scheduleSave, ...autosave } = useDebouncedSave<Partial<User>>(
+        (userData) => mutate(`${API_BASE}/users/me`, userData),
+    );
 
-    useEffect(() => {
-        if (!userData) return;
+    const schedule = useCallback((userData: Partial<User>) => {
+        updateUser({ ...user, ...userData } as User); // Optimistic update
+        scheduleSave(userData);
+    }, [ scheduleSave, updateUser, user ]);
 
-        // Optimistic update fires immediately, before the debounce
-        updateUser({ ...user, ...userData } as User);
-
-        const timeout = setTimeout(async () => {
-            try {
-                await mutate(`${API_BASE}/users/me`, userData);
-                setSaveStatus("saved");
-            } catch {
-                setSaveStatus("error");
-            } finally {
-                setTimeout(() => setSaveStatus("idle"), SAVE_STATUS_CLEAR_MS);
-            }
-        }, AUTO_SAVE_DEBOUNCE_MS);
-
-        return () => clearTimeout(timeout);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ userData, updateUser, mutate ]);
-
-    return saveStatus;
+    return { ...autosave, schedule };
 };
 
 

@@ -1,34 +1,38 @@
-import { LBL_SAVED, LBL_SAVE_ERROR } from "@/src/constants/ui";
+import { STATUS_ICONS } from "@/src/config/icons";
+import { LBL_SAVED, LBL_SAVE_ERROR, LBL_SAVING } from "@/src/constants/ui";
 
 export type SaveStatus = "idle" | "saved" | "error";
 
 interface SaveStatusIndicatorProps {
+  saving: boolean;
   status: SaveStatus;
-  showPill?: boolean;
-  showText?: boolean;
+  error?: string | null;
+  testId?: string;
 }
 
-export function SaveStatusIndicator({
-  status,
-  showPill = true,
-  showText = true,
-}: SaveStatusIndicatorProps) {
+export function SaveStatusIndicator({ saving, status, error = null, testId = "save-status-indicator" }: SaveStatusIndicatorProps) {
+  const state = saving ? "saving" : error || status === "error" ? "error" : status;
   return (
-    <>
-      {showPill && (
-        <div className="save-status-pill" data-status={status} data-testid="save-status-indicator">
-          {status === "saved" && <>{LBL_SAVED}</>}
-          {status === "error" && <>{LBL_SAVE_ERROR}</>}
-        </div>
-      )}
-      {showText && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: "var(--c-gray-400)", alignSelf: "center" }}>
-          {status === "saved" && "Guardado"}
-          {status === "error" && "Error al guardar"}
-        </span>
-        </div>
-      )}
-    </>
+    <span
+      role="status"
+      aria-live="polite"
+      data-testid={testId}
+      data-status={state}
+      title={state === "error" && error ? error : undefined}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        flexShrink: 0,
+        minHeight: 20,
+        fontSize: 12,
+        fontWeight: 400,
+        color: state === "error" ? "var(--c-error)" : "var(--c-gray-500)",
+      }}
+    >
+      {state === "saved" && <STATUS_ICONS.success size={12} aria-hidden="true" style={{ color: "var(--c-success)" }} />}
+      {state === "error" && <STATUS_ICONS.warning size={12} aria-hidden="true" />}
+      {state === "saving" ? LBL_SAVING : state === "saved" ? LBL_SAVED : state === "error" ? LBL_SAVE_ERROR : null}
+    </span>
   );
 }

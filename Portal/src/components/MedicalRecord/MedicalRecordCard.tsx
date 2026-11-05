@@ -1,4 +1,9 @@
-export const MedicalRecordCard = ({ children, title, icon }: { children: React.ReactNode; title: string; icon?: string }) => (
+export const MedicalRecordCard = ({ children, title, icon, actions }: {
+  children: React.ReactNode;
+  title: string;
+  icon?: string;
+  actions?: React.ReactNode;
+}) => (
   <div style={{
     background: "var(--c-surface)",
     borderRadius: "var(--r-3xl)",
@@ -16,6 +21,7 @@ export const MedicalRecordCard = ({ children, title, icon }: { children: React.R
     }}>
       {icon && <span style={{ fontSize: 20 }}>{icon}</span>}
       {title}
+      {actions && <span style={{ marginLeft: "auto" }}>{actions}</span>}
     </div>
     {children}
   </div>
