@@ -28,14 +28,6 @@
   background: var(--c-page-bg);
 }
 
-/* One serif voice for headings and the wordmark; body stays DM Sans. */
-.frame :global(h1),
-.frame :global(h2) {
-  font-family: var(--font-display), Georgia, serif;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
 /* Flat surfaces: a hairline border replaces the generic drop shadow. */
 .frame :global(.dash-card) {
   box-shadow: none;
@@ -63,10 +55,8 @@
   align-items: center;
   gap: 10px;
   white-space: nowrap;
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 19px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--c-gray-900);
 }
 
