@@ -97,7 +97,6 @@ export function renderAppointmentReminder(
     return { contentSid: null, contentVariables: variables, body, subject };
   }
 
-  // SMS is not end-to-end encrypted and shows on lock screens: a portal reminder carries only the provider, time and place.
   const smsBody = appointment.source === RecordSource.PORTAL
     ? `Recordatorio: tu cita con ${doctorName} es el ${date}, ${time} - Lugar: ${variables[ '5' ]}`
     : rendered;

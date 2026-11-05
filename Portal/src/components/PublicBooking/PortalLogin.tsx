@@ -34,7 +34,6 @@ interface PortalLoginProps {
     title?: string;
     lead?: string;
     embedded?: boolean;
-    /** What this provider offers; the choice stays hidden when only email is. */
     channels?: LoginChannel[] | undefined;
 }
 
@@ -90,8 +89,6 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         }
     };
 
-    // A request inside the cooldown would answer with a challenge that matches nothing and break the code
-    // already sent, so the patient goes back to that code instead.
     const codeAlreadySent = sent !== null && sent.contact === contact && sent.channel === channel;
 
     const onSubmitContact = (e: FormEvent) => {

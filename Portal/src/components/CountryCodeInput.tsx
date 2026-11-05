@@ -86,7 +86,6 @@ export function CountryCodeInput({
     function handleLocalChange(e: React.ChangeEvent<HTMLInputElement>) {
         const raw = e.target.value.trim();
         const digits = raw.replace(/[^\d]/g, "");
-        // A pasted or autofilled number already carries its code; prefixing it again would still look valid.
         if (raw.startsWith("+") && digits) {
             const full = `+${digits}`;
             if (!full.startsWith(countryCode)) setSelectedIso(parsePhone(full).iso);

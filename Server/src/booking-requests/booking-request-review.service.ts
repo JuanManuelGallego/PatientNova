@@ -130,10 +130,6 @@ async function reactivatePatient(tx: TransactionClient, userId: string, patientI
   });
 }
 
-/**
- * The request proved this number and the provider linked it to the record, so it stops being an unverified one. A pick on
- * an email request, or a record matched by another number, says nothing about a typed number, so the flag stays.
- */
 async function endorseProvenNumber(tx: TransactionClient, userId: string, chosen: RequestCandidate, proven: boolean) {
   if (!proven || !chosen.unverifiedMatch) return;
   await updatePatientWithin(tx, chosen.id, {}, userId, {
@@ -169,7 +165,6 @@ async function resolveApprovalPatient(
   if (body?.restorePatientId) {
     const chosen = candidates.find((c) => c.isDeleted && c.id === body.restorePatientId);
     if (!chosen) throw new BookingRequestRestoreCandidateError();
-    // Only an email is unique among active patients; a number can be shared.
     if (!proven && active.length > 0) throw new PatientEmailConflictError();
     const status = await restorePatient(tx, userId, chosen.id);
     if (status !== PatientStatus.ACTIVE) await reactivatePatient(tx, userId, chosen.id);

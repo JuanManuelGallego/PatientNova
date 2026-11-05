@@ -37,7 +37,6 @@ export const PORTAL_OTP_LIMITS = {
   maxAttempts: ONE_TIME_CODE_DEFAULTS.maxAttempts,
   resendCooldownMs: ONE_TIME_CODE_DEFAULTS.resendCooldownMs,
   perEmailPerHour: 5,
-  /** Every code on a phone channel costs money and can be triggered anonymously, so these are lower. */
   perPhonePerHour: 3,
   perProviderPerHour: 100,
   perProviderPaidPerHour: 30,
@@ -46,14 +45,12 @@ export const PORTAL_OTP_LIMITS = {
 
 type SkipReason = 'failure-cap' | 'cooldown' | 'email-cap' | 'provider-cap' | 'phone-cap' | 'provider-paid-cap' | 'paid-daily-cap';
 
-/** Reaching one means an attack or a limit set too low, so these reach error tracking; the others are routine. */
 const PAID_CAPS = new Set<SkipReason>([ 'phone-cap', 'provider-paid-cap', 'paid-daily-cap' ]);
 
 function ttlMinutes(): number {
   return Math.round(PORTAL_OTP_LIMITS.ttlMs / 60_000);
 }
 
-/** Runs after commit and never throws: the patient recovers by asking again, and the answer does not depend on it. */
 async function sendPortalOtp(contact: PortalContact, code: string, providerName: string): Promise<boolean> {
   if (!isPhoneContact(contact)) {
     const { sent } = await sendTransactionalEmail(contact.value, renderOtpEmail({ code, providerName, ttlMinutes: ttlMinutes() }));
@@ -135,7 +132,6 @@ export const portalOtpService = {
 
     if ('skipped' in outcome) {
       const reason = outcome.skipped;
-      // Error tracking only receives the message, so the reason goes in it. No contact: this line reaches Sentry.
       if (PAID_CAPS.has(reason)) logger.error({ userId: provider.id, channel: contact.channel, reason }, `Portal OTP paid cap reached: ${reason}`);
       else logger.info({ maskedTo: maskContact(contact), userId: provider.id, reason }, 'Portal OTP not sent');
       return { challenge };
@@ -145,7 +141,6 @@ export const portalOtpService = {
     return { challenge };
   },
 
-  /** `claimed.channel` only says whether it is a phone: the session takes its channel from the row the code was sent on. */
   async verify(slug: string, claimed: PortalContact, code: string, challenge: string): Promise<PortalLogin> {
     const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const hash = contactHashOf(claimed);

@@ -33,7 +33,6 @@ export interface RefreshTokenClaims {
   sid: string;
 }
 
-/** Exactly one of `email` or `phone`, matching `channel`. See `contactClaims`. */
 export interface PortalTokenClaims {
   userId: string;
   sid: string;

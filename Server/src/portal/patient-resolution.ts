@@ -34,16 +34,10 @@ export function classifyPortalMatch(match: PortalMatch): PortalPatientResolution
 
 type PhoneMatch = Awaited<ReturnType<typeof patientRepository.findPhoneMatches>>[number];
 
-/** The number on this record is an identity: set by the provider, or endorsed. A number typed in the form never is. */
 export function isTrustedPhoneMatch(row: Pick<PhoneMatch, 'whatsappHash' | 'smsHash' | 'whatsappUnverified'>, hash: string): boolean {
   return row.smsHash === hash || (row.whatsappHash === hash && !row.whatsappUnverified);
 }
 
-/**
- * A phone identifies a patient only when exactly one trusted active record has it. Several never auto-pick: a "who are you?"
- * would show one family member's name, and that they are a patient, to whoever holds the phone. Any revoked record fails
- * closed for the whole number.
- */
 export function classifyPhoneMatch(rows: PhoneMatch[], hash: string): PortalPatientResolution {
   const active = rows.filter((r) => !r.isDeleted);
   if (active.some((r) => !r.portalAccessEnabled)) return { kind: 'unavailable', review: false };

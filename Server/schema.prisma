@@ -19,7 +19,6 @@ model Patient {
   smsNumber      String? @db.Text
   email          String? @db.Text
 
-  /// Typed in the booking form and not yet endorsed by the provider: never an identity or a message route.
   whatsappUnverified Boolean @default(false)
 
   emailHash      String?  @db.VarChar(64)
@@ -394,13 +393,11 @@ model BookingRequest {
   kind   BookingRequestKind   @default(NEW)
   status BookingRequestStatus @default(PENDING)
 
-  /// The contact the session proved: `email`, or `verifiedPhone` on the channel it used. Exactly one is set.
   contactChannel    Channel @default(EMAIL)
   email             String? @db.Text
   verifiedPhone     String? @db.Text
   name              String  @db.Text
   lastName          String  @db.Text
-  /// Typed in the form, never proven: it is never queried.
   phone             String? @db.Text
   emailHash         String? @db.VarChar(64)
   verifiedPhoneHash String? @db.VarChar(64)

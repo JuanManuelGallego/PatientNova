@@ -27,7 +27,6 @@ function portalAuthSecret(): string {
   return secret;
 }
 
-/** Fails at boot: this guards money, and `count >= NaN` would silently remove the limit. */
 function positiveIntEnv(key: string, fallback: number): number {
   const raw = process.env[ key ]?.trim();
   if (!raw) return fallback;

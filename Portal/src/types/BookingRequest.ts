@@ -14,11 +14,9 @@ export interface BookingRequest {
     resolvedAt: string | null;
     name: string;
     lastName: string;
-    /** How the patient proved who they are: `email`, or `verifiedPhone` on this channel. */
     contactChannel: "EMAIL" | "WHATSAPP" | "SMS";
     email: string | null;
     verifiedPhone: string | null;
-    /** Typed in the booking form, never proven. */
     phone: string | null;
     patientTimezone: string;
     appointmentId: string | null;
@@ -36,7 +34,6 @@ export interface RequestCandidate {
     whatsappNumber: string | null;
     smsNumber: string | null;
     whatsappUnverified: boolean;
-    /** The match is only a number typed in the booking form, so it proves nothing about this record. */
     unverifiedMatch: boolean;
     status: "ACTIVE" | "INACTIVE";
     portalAccessEnabled: boolean;

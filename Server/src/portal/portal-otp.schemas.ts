@@ -16,7 +16,6 @@ export const requestOtpSchema = z.union([
   z.strictObject({ phone: portalPhone, channel: z.literal(Channel.WHATSAPP), captchaToken }),
 ]);
 
-/** The channel is not sent: the session's channel comes from the OTP row, never from the client. */
 export const verifyOtpSchema = z.union([
   z.strictObject({ email: portalEmail, ...verifyFields }),
   z.strictObject({ phone: portalPhone, ...verifyFields }),

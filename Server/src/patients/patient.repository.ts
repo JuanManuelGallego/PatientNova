@@ -65,7 +65,6 @@ async function sortByDecryptedField(
 
 export interface CreatePatientOptions {
   source?: RecordSource;
-  /** The WhatsApp number came from the booking form: unproven until the provider endorses it. */
   whatsappUnverified?: boolean;
 }
 
@@ -141,7 +140,6 @@ export const patientRepository = {
     };
   },
 
-  /** Numbers are not unique, so a family can share one. Deleted records included: see `classifyPhoneMatch`. */
   async findPhoneMatches(userId: string, hash: string, tx?: TransactionClient) {
     return (tx ?? prisma).patient.findMany({
       where: { userId, OR: [ { whatsappHash: hash }, { smsHash: hash } ] },

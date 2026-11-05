@@ -37,7 +37,6 @@ export function emailHash(email: string | null | undefined): string | null {
   return normalized ? hmac('email', normalized) : null;
 }
 
-/** The email form must never change: audit rows already store it, and `?portalPatientId=` looks them up by this value. */
 export function portalActorHash(userId: string, contact: string): string {
   const normalized = contact.includes('@') ? normalizeEmail(contact) : normalizePhone(contact);
   return hmac('portal-actor', `${userId}:${normalized}`);

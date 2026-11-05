@@ -152,7 +152,6 @@ export const bookingRequestRepository = {
     });
   },
 
-  /** `own`, from `ownRequestWhere`, limits the count to one contact. */
   async countLive(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput = {}): Promise<number> {
     return tx.bookingRequest.count({ where: { ...liveHoldWhere(userId, now, {}), ...own } });
   },

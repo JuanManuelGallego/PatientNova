@@ -22,7 +22,6 @@ function candidateName(c: RequestCandidate) {
 
 const isPhoneRequest = (request: BookingRequestDetail) => !!request.verifiedPhone;
 
-/** The record approving reuses with no choice, as the server does: for a number, only a single trusted one. */
 function defaultMatch(request: BookingRequestDetail): RequestCandidate | undefined {
   const active = request.candidates.filter((c) => !c.isDeleted);
   if (!isPhoneRequest(request)) return active[ 0 ];

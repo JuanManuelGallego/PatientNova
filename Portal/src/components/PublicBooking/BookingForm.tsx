@@ -122,7 +122,6 @@ function PatientDetails({ contact, contactChannel, providerName, approvalRequire
     const consentRef = useRef<HTMLInputElement>(null);
     const { createBooking, loading, error } = useCreateBooking();
 
-    // A phone session's number is the one it proved, so it is never asked for or sent.
     const onPhone = isPhoneChannel(contactChannel);
     const phoneValue = onPhone ? "" : normalizePhone(phone);
     const contactKind = onPhone ? "el número" : "el correo";

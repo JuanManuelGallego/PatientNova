@@ -35,10 +35,6 @@ function addressFor(patient: PatientRouteFields, channel: Channel): string | nul
   }
 }
 
-/**
- * The one route for every patient message: `reminderChannel` when it has an address, else email, WhatsApp, SMS. A number
- * typed in the booking form is never messaged until the provider endorses it. Null: nowhere to send, so callers skip.
- */
 export function resolvePatientRoute(patient: PatientRouteFields): PatientRoute | null {
   for (const channel of [ patient.reminderChannel, ...FALLBACK_ORDER ]) {
     const to = addressFor(patient, channel);

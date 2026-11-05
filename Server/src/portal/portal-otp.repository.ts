@@ -48,7 +48,6 @@ export const portalOtpRepository = {
     return tx.portalOtp.count({ where: { userId, lastSentAt: { gte: since } } });
   },
 
-  /** Rows, not sends: this is what number rotation inflates, and a row only exists for a day. All providers without `userId`. */
   countPaidSentSince(tx: TransactionClient, since: Date, userId?: string): Promise<number> {
     return tx.portalOtp.count({
       where: { channel: { in: [ Channel.WHATSAPP, Channel.SMS ] }, lastSentAt: { gte: since }, ...(userId && { userId }) },

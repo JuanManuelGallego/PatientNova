@@ -7,7 +7,6 @@ import type { CreateAuditLogDto, ListAuditLogsQuery } from './audit-log.schemas.
 import type { AuditLog } from '../../generated/prisma/client.ts';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 
-/** Every contact the patient can log in with. A number typed in the form proves nothing, so its activity is not theirs. */
 async function portalPatientFilter(userId: string, patientId: string): Promise<PortalPatientFilter | null> {
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, userId },

@@ -15,7 +15,6 @@ import {
 import type { DispatchOpts } from '../scheduler/dispatch.js';
 import type { PatientRoute } from './patient-route.js';
 
-/** `at` is rendered in `timezone`: the appointment's patient zone, or the provider's. */
 interface Timed {
   providerName: string;
   at: Date;
@@ -45,7 +44,6 @@ interface NoticeTemplate<P> {
   sms: (p: P) => string;
 }
 
-/** Meta rejects a template variable with a line break, a tab or a run of spaces. */
 const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
 
 const emailTimes = (p: Timed) => ({
@@ -60,17 +58,12 @@ const slotVariables = (p: Timed) => ({
   '3': formatTime(p.at, p.timezone),
 });
 
-/** Never empty: a template variable cannot be, so a missing link or address has its own text. */
 function placeText(p: PlaceParams): string {
   if (p.meetingUrl) return p.meetingUrl;
   if (p.meetingPending) return MEETING_LINK_PENDING_TEXT;
   return oneLine([ p.locationName, p.address ].filter(Boolean).join(', ')) || 'Por confirmar';
 }
 
-/**
- * Minimal on purpose: SMS is not end-to-end encrypted and both phone channels show on lock screens, so these carry only
- * the provider, the time and the place or link. Formatted times end in "a. m."/"p. m.", so no full stop ever follows one.
- */
 const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]> } = {
   confirmation: {
     email: (p) => renderBookingConfirmationEmail({ ...p, ...emailTimes(p) }),
@@ -124,7 +117,6 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   },
 };
 
-/** One notice on the patient's route. Email keeps the full templates; WhatsApp uses the approved ones; SMS is one line. */
 export function renderPatientNotice<K extends PatientNoticeKind>(kind: K, params: PatientNoticeParams[K], route: PatientRoute): DispatchOpts {
   const notice = NOTICES[kind];
   switch (route.channel) {

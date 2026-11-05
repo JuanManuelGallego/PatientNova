@@ -13,7 +13,6 @@ export interface PublicProvider {
     timezone: string;
     bookingOpen: boolean;
     approvalRequired: boolean;
-    /** Absent from an API older than the Portal, which means email only. */
     loginChannels?: LoginChannel[];
     reschedulePolicy: ReschedulePolicy | null;
     lastBookableDate: string;

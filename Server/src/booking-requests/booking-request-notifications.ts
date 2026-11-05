@@ -69,7 +69,6 @@ function isDeliverable(request: LoadedRequest | null, event: BookingRequestEvent
 
 const portalBase = (): string => config.portal.url.replace(/\/+$/, '');
 
-/** A request has no patient yet, so its notices go to the contact that sent it. */
 function requestRoute(request: LoadedRequest): PatientRoute | null {
   const contact = requestContact(request);
   return contact && { channel: contact.channel, to: contact.value };
@@ -141,7 +140,6 @@ export async function deliverBookingRequestNotification(job: BookingRequestNotif
   logger.info({ requestId, event, channel: message.channel, messageId: result.messageSid }, 'Booking request notification sent');
 }
 
-/** The patient's receipt, after commit. Best effort and never throws: the request already exists. */
 export async function sendRequestReceipt(requestId: string): Promise<void> {
   try {
     const request = await loadRequest(requestId);

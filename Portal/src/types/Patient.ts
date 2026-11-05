@@ -22,7 +22,6 @@ export interface Patient {
   lastName: string;
 
   whatsappNumber?: string | null;
-  /** Typed in the booking form and not yet endorsed by the provider. */
   whatsappUnverified?: boolean;
   smsNumber?: string | null;
   email?: string | null;

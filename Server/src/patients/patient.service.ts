@@ -17,7 +17,6 @@ type PatientWithRelations = Patient & {
 
 const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema), 'whatsappUnverified' ];
 
-/** The provider endorses a number typed in the booking form by changing it or by choosing WhatsApp for this patient. */
 function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
   if (!existing.whatsappUnverified) return false;
   const numberChanged = dto.whatsappNumber !== undefined && (dto.whatsappNumber || null) !== existing.whatsappNumber;
@@ -49,10 +48,7 @@ export async function createPatientWithin(
   return createdPatient;
 }
 
-/**
- * `description` overrides the default audit text, for callers that change a patient as part of another action.
- * `endorseWhatsapp`: the provider linked this record to a request that proved its number.
- */
+/** `description` overrides the default audit text, for callers that change a patient as part of another action. */
 export async function updatePatientWithin(
   tx: TransactionClient,
   id: string,
