@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
 import { EntityTypePill } from "@/src/components/Info/EntityTypePill";
+import { ActionLabel, EntityTypeLabel } from "@/src/components/Info/AuditLabels";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ActionSource, ActionType, EntityType, actionTypeLabel, entityTypeLabel, type AuditLog } from "@/src/types/AuditLog";
 import { buildAuditLogQueryString } from "@/src/utils/ApiUtils";
@@ -48,6 +49,18 @@ describe("audit pills", () => {
     expect(entityTypeLabel("SOMETHING_NEW" as EntityType)).toBe("SOMETHING_NEW");
     expect(actionTypeLabel("ARCHIVE" as ActionType)).toBe("ARCHIVE");
     expect(actionTypeLabel(ActionType.CREATE)).toBe("Creación");
+  });
+
+  it("render table labels with a colored icon, falling back to the raw value", () => {
+    const { container } = render(<>
+      <ActionLabel action={ActionType.DELETE} />
+      <EntityTypeLabel entityType={EntityType.BOOKING_REQUEST} />
+      <ActionLabel action={"ARCHIVE" as ActionType} />
+    </>);
+    expect(screen.getByText("Eliminación")).toBeInTheDocument();
+    expect(screen.getByText("Solicitud de reserva")).toBeInTheDocument();
+    expect(screen.getByText("ARCHIVE")).toBeInTheDocument();
+    expect(container.querySelectorAll("svg")).toHaveLength(2);
   });
 });
 

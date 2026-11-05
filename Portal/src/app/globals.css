@@ -2318,6 +2318,16 @@ tr:hover td {
   white-space: nowrap;
 }
 
+.td-icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.td-icon-label svg {
+  flex-shrink: 0;
+}
+
 .td-name__primary {
   font-size: 14px;
   font-weight: 600;

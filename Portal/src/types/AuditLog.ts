@@ -79,11 +79,11 @@ export const ENTITY_TYPE_CONFIG: Record<
 
 export const UNKNOWN_PILL_STYLE = { color: "#4B5563", bg: "#F3F4F6" } as const;
 
-export const ACTION_TYPE_CONFIG: Record<ActionType, { label: string }> = {
-  [ActionType.CREATE]: { label: "Creación" },
-  [ActionType.UPDATE]: { label: "Actualización" },
-  [ActionType.DELETE]: { label: "Eliminación" },
-  [ActionType.RESTORE]: { label: "Restauración" },
+export const ACTION_TYPE_CONFIG: Record<ActionType, { label: string; color: string }> = {
+  [ActionType.CREATE]: { label: "Creación", color: "#059669" },
+  [ActionType.UPDATE]: { label: "Actualización", color: "#0284C7" },
+  [ActionType.DELETE]: { label: "Eliminación", color: "#E11D48" },
+  [ActionType.RESTORE]: { label: "Restauración", color: "#0D9488" },
 };
 
 export const actionTypeLabel = (action: ActionType): string => ACTION_TYPE_CONFIG[action]?.label ?? action;

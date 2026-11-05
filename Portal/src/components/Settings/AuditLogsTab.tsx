@@ -1,5 +1,6 @@
 import { useFetchAuditLogs } from "@/src/api/audit-logs/useFetchAuditLogs";
-import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters, actionTypeLabel, entityTypeLabel } from "@/src/types/AuditLog";
+import { AuditLog, EntityType, ActionType, ActionSource, ENTITY_TYPE_CONFIG, ACTION_TYPE_CONFIG, ACTION_SOURCE_CONFIG, FetchAuditLogsFilters } from "@/src/types/AuditLog";
+import { ActionLabel, EntityTypeLabel } from "@/src/components/Info/AuditLabels";
 import { SelectOption } from "@/src/components/CustomSelect";
 import {
   DataTable,
@@ -244,8 +245,8 @@ export function AuditLogsTab() {
           total={total}
         renderRow={(log) => (
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
-            <td className="td td--date">{actionTypeLabel(log.actionType)}</td>
-            <td className="td td--date">{entityTypeLabel(log.entityType)}</td>
+            <td className="td td--date"><ActionLabel action={log.actionType} /></td>
+            <td className="td td--date"><EntityTypeLabel entityType={log.entityType} /></td>
             <td className="td td--date">{log.description}</td>
             <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
