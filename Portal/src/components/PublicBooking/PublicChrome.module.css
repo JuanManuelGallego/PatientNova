@@ -141,6 +141,55 @@
   color: var(--c-brand);
 }
 
+/* Stays in view through the steps, so the patient keeps their place on a long page. */
+.progress {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--c-gray-200);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+}
+
+.progressLabel {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-gray-700);
+}
+
+.progressLabel strong {
+  color: var(--c-gray-900);
+  font-weight: 700;
+}
+
+.progressTrack {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+}
+
+.progressSegment {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-gray-200);
+  transition: background 0.2s;
+}
+
+.progressSegment[data-done] {
+  background: var(--c-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressSegment {
+    transition: none;
+  }
+}
+
 .iconBubble {
   width: 48px;
   height: 48px;

@@ -66,6 +66,11 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         maxHorizonDays: 60,
         maxPatientReschedules: 2,
         minRescheduleNoticeHours: 0,
+        bio: null,
+        specialty: null,
+        professionalLicense: null,
+        publicPhone: null,
+        publicWhatsapp: null,
         readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
         live: false,
         ...overrides,
@@ -526,6 +531,45 @@ describe("OnlineBookingTab: status summary", () => {
         renderTab();
         await user.click(screen.getByTestId("online-booking-slug-edit"));
         expect(screen.getByText("https://app.test/book/")).toBeInTheDocument();
+    });
+});
+
+describe("OnlineBookingTab: public profile", () => {
+    it("loads the stored profile and autosaves changes, trimmed, with blanks as null", async () => {
+        settings = makeSettings({ specialty: "Psicología", publicPhone: "+573001112222" });
+        renderTab();
+        expect(screen.getByTestId("online-booking-specialty")).toHaveValue("Psicología");
+
+        await user.type(screen.getByTestId("online-booking-bio"), "  Atiendo adultos  ");
+        expect(updateSettings).not.toHaveBeenCalled();
+        await settle();
+
+        expect(updateSettings).toHaveBeenCalledWith({
+            specialty: "Psicología", professionalLicense: null, bio: "Atiendo adultos", publicPhone: "+573001112222", publicWhatsapp: null,
+        });
+        expect(screen.getByTestId("online-booking-profile-save-state")).toHaveTextContent("Guardado");
+    });
+
+    it("normalizes a phone typed with spaces", async () => {
+        renderTab();
+        await user.type(screen.getByTestId("online-booking-public-whatsapp"), "+57 300 111 2222");
+        await settle();
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ publicWhatsapp: "+573001112222" }));
+    });
+
+    it("never saves a phone without its country code", async () => {
+        renderTab();
+        const phone = screen.getByTestId("online-booking-public-phone");
+        await user.type(phone, "3001112222");
+        await settle();
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(phone).toHaveAttribute("aria-invalid", "true");
+        expect(screen.getByRole("alert")).toHaveTextContent(/indicativo del país/);
+    });
+
+    it("warns that the profile is public", () => {
+        renderTab();
+        expect(screen.getByTestId("online-booking-profile")).toHaveTextContent(/visible para cualquier persona/);
     });
 });
 

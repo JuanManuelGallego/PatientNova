@@ -51,6 +51,11 @@ const settings = {
   maxHorizonDays: 60,
   maxPatientReschedules: 2,
   minRescheduleNoticeHours: 0,
+  bio: null,
+  specialty: null,
+  professionalLicense: null,
+  publicPhone: null,
+  publicWhatsapp: null,
 };
 const ready = { hasSlug: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
 

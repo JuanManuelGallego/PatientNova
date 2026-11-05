@@ -24,6 +24,13 @@ export const publicBookingRepository = {
         minLeadMinutes: true,
         maxHorizonDays: true,
         bookingApprovalMode: true,
+        maxPatientReschedules: true,
+        minRescheduleNoticeHours: true,
+        bio: true,
+        specialty: true,
+        professionalLicense: true,
+        publicPhone: true,
+        publicWhatsapp: true,
       },
     });
   },

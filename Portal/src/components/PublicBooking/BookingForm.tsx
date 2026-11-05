@@ -7,13 +7,13 @@ import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
-import { APPROVAL_FOLLOW_UP, fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
+import { APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
 import styles from "./PublicBooking.module.css";
 
-const LOGIN_LEAD = "Ingresa tu correo y te enviaremos un código para confirmar tu reserva. No necesitas contraseña.";
+const LOGIN_LEAD = "Ingresa tu correo y te enviaremos un código de 6 dígitos para confirmar tu reserva. A ese correo llegarán también la confirmación y los avisos de tu cita. No necesitas contraseña.";
 
 interface BookingFormProps {
     slug: string;
@@ -48,6 +48,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                     </div>
                 )}
             </dl>
+            <p className={styles.policy} data-testid="booking-policy">{fmtBookingPolicy(provider.reschedulePolicy)}</p>
 
             {provider.locations.length > 1 && (
                 <div role="group" aria-labelledby={placesLabelId}>
@@ -64,7 +65,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                 </div>
             )}
 
-            <PatientStep slug={slug} approvalRequired={provider.approvalRequired} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
+            <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
                 onBooked={onBooked} onSlotTaken={onSlotTaken} />
         </div>
     );
@@ -72,6 +73,7 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
 
 interface PatientStepProps {
     slug: string;
+    providerName: string;
     approvalRequired: boolean;
     typeId: string;
     locationId: string;
@@ -98,7 +100,7 @@ function PatientStep({ slug, ...rest }: PatientStepProps) {
 
 type Field = "name" | "lastName" | "phone" | "consent";
 
-function PatientDetails({ email, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
+function PatientDetails({ email, providerName, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
     Omit<PatientStepProps, "slug"> & { email: string; onSessionLost: () => void }) {
     const [ name, setName ] = useState("");
     const [ lastName, setLastName ] = useState("");
@@ -160,11 +162,11 @@ function PatientDetails({ email, approvalRequired, typeId, locationId, slot, tim
             <p className={portal.lead}>
                 {approvalRequired ? "Enviarás la solicitud con el correo" : "Reservarás con el correo"}{" "}
                 <strong className={portal.email}>{email}</strong>.{" "}
-                Si ya eres paciente del consultorio, usaremos los datos que tiene registrados.
+                Si ya eres paciente de {providerName}, usaremos los datos que tiene registrados.
             </p>
             {approvalRequired && (
                 <p className={portal.lead} data-testid="booking-approval-note">
-                    Guardaremos este horario mientras el consultorio revisa tu solicitud. {APPROVAL_FOLLOW_UP}
+                    Guardaremos este horario mientras {providerName} revisa tu solicitud. {APPROVAL_FOLLOW_UP}
                 </p>
             )}
             <div>

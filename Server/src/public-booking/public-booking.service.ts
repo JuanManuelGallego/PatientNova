@@ -45,14 +45,24 @@ export const publicBookingService = {
       bookingOpen ? publicBookingRepository.listBookableTypes(provider.id) : [],
       bookingOpen ? publicBookingRepository.listBookableLocations(provider.id) : [],
     ]);
+    const selfBooking = bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.AUTO_CONFIRM;
     return {
       displayName: providerDisplayName(provider),
       jobTitle: provider.jobTitle,
+      specialty: provider.specialty,
+      professionalLicense: provider.professionalLicense,
+      bio: provider.bio,
+      phone: provider.publicPhone,
+      whatsapp: provider.publicWhatsapp,
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
+      // Patients can only move an appointment in auto-confirm (see `portalActionContext`).
+      reschedulePolicy: selfBooking
+        ? { maxReschedules: provider.maxPatientReschedules, minNoticeHours: provider.minRescheduleNoticeHours }
+        : null,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),
       types: types.map((t) => ({
         id: t.id,

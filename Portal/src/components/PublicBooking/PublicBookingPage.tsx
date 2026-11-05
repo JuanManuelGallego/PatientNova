@@ -3,16 +3,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CalendarOff, CircleCheck, Clock, MapPin, Video } from "lucide-react";
+import { CalendarOff, CalendarPlus, CircleCheck, Clock, MapPin, MessageCircle, Phone, Video } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
-import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, timezoneName } from "@/src/utils/publicBooking";
+import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
+import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, mapUrl, timezoneName, whatsappUrl } from "@/src/utils/publicBooking";
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
-import { StateIcon, TrustStrip } from "./PublicChrome";
+import { BookingProgress, StateIcon, TrustStrip } from "./PublicChrome";
 import { BookingForm } from "./BookingForm";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalRequestCard } from "./PortalRequestCard";
@@ -32,6 +33,7 @@ export function PublicBookingPage({ slug }: { slug: string }) {
 }
 
 const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
+const EXTERNAL_LINK = { target: "_blank", rel: "noopener noreferrer" } as const;
 
 function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvider }) {
     return (
@@ -82,11 +84,15 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             <>
                 <ProviderHero slug={slug} provider={provider} />
                 {"request" in booked
-                    ? <RequestSent slug={slug} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
-                    : <BookingDone slug={slug} appointment={booked.appointment} timezone={timezone} onBookAnother={bookAnother} />}
+                    ? <RequestSent slug={slug} providerName={provider.displayName} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
+                    : <BookingDone slug={slug} providerName={provider.displayName} appointment={booked.appointment} timezone={timezone} onBookAnother={bookAnother} />}
             </>
         );
     }
+
+    const confirmTitle = provider.approvalRequired ? "Envía tu solicitud" : "Confirma tu cita";
+    const typeChosen = typeId !== null || provider.types.length === 1;
+    const currentStep = slot ? 4 : picker.dayChosen ? 3 : typeChosen ? 2 : 1;
 
     return (
         <>
@@ -94,11 +100,13 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 <TrustStrip />
             </ProviderHero>
 
+            <BookingProgress steps={[ "Tipo de cita", "Día", "Hora", confirmTitle ]} current={currentStep} />
+
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
                 {provider.approvalRequired && (
                     <p className={styles.approvalNotice} data-testid="approval-notice">
-                        Este consultorio confirma cada cita antes de reservarla. Eliges un horario, lo guardamos para ti
-                        y te avisamos por correo cuando la confirmen.
+                        {provider.displayName} confirma cada cita antes de reservarla. Eliges un horario, lo guardamos
+                        para ti y te avisamos por correo cuando la confirme.
                     </p>
                 )}
                 <Step number={1} title="Tipo de cita">
@@ -125,7 +133,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
                 <SlotSteps picker={picker} firstStep={2} noticeRef={slotNoticeRef} />
 
                 {slot && type && (
-                    <Step number={4} title={provider.approvalRequired ? "Envía tu solicitud" : "Confirma tu cita"} stepRef={confirmStep}>
+                    <Step number={4} title={confirmTitle} stepRef={confirmStep}>
                         <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
                             onBooked={setBooked} onSlotTaken={picker.slotTaken} />
                     </Step>
@@ -137,6 +145,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
 function ProviderHero({ slug, provider, children }: { slug: string; provider: PublicProvider; children?: React.ReactNode }) {
     const [ logoFailed, setLogoFailed ] = useState(false);
+    const roles = [ provider.jobTitle, provider.specialty ].filter(Boolean).join(" · ");
     return (
         <section className={styles.hero}>
             {provider.hasLogo && !logoFailed && (
@@ -146,9 +155,13 @@ function ProviderHero({ slug, provider, children }: { slug: string; provider: Pu
                 <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
                 <div>
                     <h1 className={styles.name}>{provider.displayName}</h1>
-                    {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}
+                    {roles && <p className={styles.jobTitle}>{roles}</p>}
+                    {provider.professionalLicense && (
+                        <p className={styles.license}>Tarjeta profesional {provider.professionalLicense}</p>
+                    )}
                 </div>
             </div>
+            {provider.bio && <p className={styles.bio}>{provider.bio}</p>}
             {provider.locations.length > 0 && (
                 <ul className={styles.locations} aria-label="Dónde atiende">
                     {provider.locations.map((l) => (
@@ -159,18 +172,44 @@ function ProviderHero({ slug, provider, children }: { slug: string; provider: Pu
                             <span>
                                 <span className={styles.locationName}>{l.name}</span>
                                 {locationDetail(l) && <span className={styles.address}>{locationDetail(l)}</span>}
+                                {!l.isVirtual && l.address && (
+                                    <a href={mapUrl(l.address)} {...EXTERNAL_LINK} className={styles.mapLink}>Ver en el mapa</a>
+                                )}
                             </span>
                         </li>
                     ))}
                 </ul>
             )}
+            <ProviderContact provider={provider} />
             {children}
         </section>
     );
 }
 
-function BookingDone({ slug, appointment, timezone, onBookAnother }: {
-    slug: string; appointment: PortalAppointment; timezone: string; onBookAnother: () => void;
+function ProviderContact({ provider: { phone, whatsapp } }: { provider: PublicProvider }) {
+    if (!phone && !whatsapp) return null;
+    return (
+        <ul className={styles.contact} aria-label="Contacto">
+            {phone && (
+                <li>
+                    <a href={`tel:${phone}`} className={styles.contactLink}>
+                        <Phone size={16} aria-hidden="true" />{phone}
+                    </a>
+                </li>
+            )}
+            {whatsapp && (
+                <li>
+                    <a href={whatsappUrl(whatsapp)} {...EXTERNAL_LINK} className={styles.contactLink}>
+                        <MessageCircle size={16} aria-hidden="true" />WhatsApp
+                    </a>
+                </li>
+            )}
+        </ul>
+    );
+}
+
+function BookingDone({ slug, providerName, appointment, timezone, onBookAnother }: {
+    slug: string; providerName: string; appointment: PortalAppointment; timezone: string; onBookAnother: () => void;
 }) {
     const heading = useRef<HTMLHeadingElement>(null);
     useEffect(() => { heading.current?.focus(); }, []);
@@ -182,13 +221,17 @@ function BookingDone({ slug, appointment, timezone, onBookAnother }: {
             <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
+            <button type="button" className={`btn-secondary ${styles.doneAction} ${styles.withIcon}`}
+                onClick={() => downloadAppointmentIcs(appointment, providerName, timezone)}>
+                <CalendarPlus size={18} aria-hidden="true" />Añadir al calendario
+            </button>
             <button type="button" className={`btn-secondary ${styles.doneAction}`} onClick={onBookAnother}>Reservar otra cita</button>
         </section>
     );
 }
 
-function RequestSent({ slug, request, timezone, onBookAnother }: {
-    slug: string; request: PortalPendingRequest; timezone: string; onBookAnother: () => void;
+function RequestSent({ slug, providerName, request, timezone, onBookAnother }: {
+    slug: string; providerName: string; request: PortalPendingRequest; timezone: string; onBookAnother: () => void;
 }) {
     const heading = useRef<HTMLHeadingElement>(null);
     useEffect(() => { heading.current?.focus(); }, []);
@@ -197,7 +240,7 @@ function RequestSent({ slug, request, timezone, onBookAnother }: {
             <StateIcon icon={Clock} />
             <h2 id="request-sent" ref={heading} tabIndex={-1} className={styles.doneTitle}>Solicitud enviada</h2>
             <p className={styles.muted}>
-                El consultorio la revisará. Mientras tanto guardamos el horario para ti. {APPROVAL_FOLLOW_UP}
+                {providerName} la revisará. Mientras tanto guardamos el horario para ti. {APPROVAL_FOLLOW_UP}
             </p>
             <PortalRequestCard request={request} timezone={timezone} inset />
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
