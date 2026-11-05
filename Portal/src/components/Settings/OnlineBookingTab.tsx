@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useId, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { ConfigProvider } from "antd";
@@ -35,9 +35,11 @@ import {
 import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
-import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
+import type { SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVE, LBL_SAVING } from "@/src/constants/ui";
+import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVED, LBL_SAVING } from "@/src/constants/ui";
+import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
+import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
 const WORKWEEK = [ 1, 2, 3, 4, 5 ];
@@ -50,6 +52,8 @@ const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label:
     { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: "/settings?tab=Tipos+de+Cita" },
     { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
 ];
+
+type SaveFn = (body: BookingSettingsUpdate) => Promise<BookingSettings>;
 
 function ErrorLine({ message }: { message: string }) {
     return (
@@ -71,6 +75,32 @@ function WarningHint({ testId, children }: { testId: string; children: ReactNode
     return (
         <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid={testId}>
             <STATUS_ICONS.warning size={14} />
+            {children}
+        </div>
+    );
+}
+
+/** Card-header autosave state: "Guardando…" while a save is in flight, "Guardado" briefly after. Errors render in the card body. */
+function SaveState({ saving, status, testId }: { saving: boolean; status: SaveStatus; testId: string }) {
+    const showSaved = !saving && status === "saved";
+    return (
+        <span
+            role="status"
+            aria-live="polite"
+            data-testid={testId}
+            data-status={saving ? "saving" : status}
+            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--c-gray-500)", minHeight: 20 }}
+        >
+            {showSaved && <STATUS_ICONS.success size={12} aria-hidden="true" style={{ color: "var(--c-success)" }} />}
+            {saving ? LBL_SAVING : showSaved ? LBL_SAVED : null}
+        </span>
+    );
+}
+
+function CardHeader({ title, children }: { title: string; children?: ReactNode }) {
+    return (
+        <div className="dash-card__header" style={{ gap: 12 }}>
+            <span className="dash-card__title">{title}</span>
             {children}
         </div>
     );
@@ -104,6 +134,9 @@ export function OnlineBookingTab() {
                 }}
                 error={statusError}
             />
+            <span className="form-input-hint" style={{ marginTop: -8 }} data-testid="online-booking-autosave-hint">
+                Los cambios de esta página se guardan automáticamente.
+            </span>
             <ApprovalSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <AvailabilitySection
@@ -145,9 +178,7 @@ function StatusSection({ settings, onToggle, error }: {
 
     return (
         <div className="dash-card">
-            <div className="dash-card__header">
-                <span className="dash-card__title">Reserva en línea</span>
-            </div>
+            <CardHeader title="Reserva en línea" />
             <div className="dash-card__body form-stack">
                 <div
                     style={{
@@ -214,36 +245,24 @@ const APPROVAL_OPTIONS: { value: BookingApprovalMode; label: string; hint: strin
     },
 ];
 
-function ApprovalSection({ settings, save, onSaved }: {
-    settings: BookingSettings;
-    save: (body: BookingSettingsUpdate) => Promise<BookingSettings>;
-    onSaved: (s: BookingSettings) => void;
-}) {
+function ApprovalSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const [ mode, setMode ] = useState<BookingApprovalMode>(settings.bookingApprovalMode);
-    const [ error, setError ] = useState<string | null>(null);
-    const [ saving, setSaving ] = useState(false);
-    const [ saved, setSaved ] = useState(false);
+    const autosave = useDebouncedSave<BookingApprovalMode>(
+        async (bookingApprovalMode) => onSaved(await save({ bookingApprovalMode })),
+        settings.bookingApprovalMode,
+    );
     const name = useId();
 
-    async function handleSave() {
-        setSaving(true);
-        setError(null);
-        setSaved(false);
-        try {
-            onSaved(await save({ bookingApprovalMode: mode }));
-            setSaved(true);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : ERR_SAVE);
-        } finally {
-            setSaving(false);
-        }
+    function handleChange(next: BookingApprovalMode) {
+        setMode(next);
+        autosave.schedule(next);
     }
 
     return (
         <div className="dash-card" data-testid="online-booking-approval">
-            <div className="dash-card__header">
-                <span className="dash-card__title">Confirmación de reservas</span>
-            </div>
+            <CardHeader title="Confirmación de reservas">
+                <SaveState saving={autosave.saving} status={autosave.status} testId="online-booking-approval-save-state" />
+            </CardHeader>
             <div className="dash-card__body form-stack">
                 <fieldset className="form-stack form-fieldset-plain">
                     <legend className="sr-only">Cómo se confirman las reservas en línea</legend>
@@ -254,7 +273,7 @@ function ApprovalSection({ settings, save, onSaved }: {
                                 name={name}
                                 value={opt.value}
                                 checked={mode === opt.value}
-                                onChange={() => { setSaved(false); setMode(opt.value); }}
+                                onChange={() => handleChange(opt.value)}
                                 style={{ marginTop: 3 }}
                                 data-testid={`online-booking-approval-${opt.value.toLowerCase().replace("_", "-")}`}
                             />
@@ -270,65 +289,39 @@ function ApprovalSection({ settings, save, onSaved }: {
                         Si vuelves a la confirmación automática, las solicitudes pendientes siguen esperando tu respuesta.
                     </span>
                 )}
-                {error && <ErrorLine message={error} />}
-                {saved && <SuccessBanner message="Confirmación de reservas actualizada." />}
-                <div>
-                    <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={handleSave}
-                        disabled={saving || mode === settings.bookingApprovalMode}
-                        data-testid="online-booking-approval-save"
-                    >
-                        {saving ? LBL_SAVING : LBL_SAVE}
-                    </button>
-                </div>
+                {autosave.error && <ErrorLine message={autosave.error} />}
             </div>
         </div>
     );
 }
 
-function LinkSection({ settings, save, onSaved }: {
-    settings: BookingSettings;
-    save: (body: BookingSettingsUpdate) => Promise<BookingSettings>;
-    onSaved: (s: BookingSettings) => void;
-}) {
+/**
+ * The slug is the one setting that is not autosaved: every intermediate value would break the shared link,
+ * claim or release a public address and write an audit row, and an empty field turns booking off. It is
+ * created or changed deliberately in a modal, like the rest of the app's explicit saves.
+ */
+function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const { suggestion } = useFetchSlugSuggestion(!settings.bookingSlug);
-    const [ typed, setSlug ] = useState<string | null>(null);
-    const touched = typed !== null;
-    const slug = typed ?? settings.bookingSlug ?? suggestion ?? "";
+    const [ editing, setEditing ] = useState(false);
+    const [ status, setStatus ] = useState<SaveStatus>("idle");
     const [ error, setError ] = useState<string | null>(null);
-    const [ saving, setSaving ] = useState(false);
-    const [ saved, setSaved ] = useState(false);
     const [ copied, setCopied ] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
+    const statusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    const normalized = slug.trim().toLowerCase();
-    const validation = normalized ? slugError(normalized) : null;
-    const changed = normalized !== (settings.bookingSlug ?? "");
-    const isRename = !!settings.bookingSlug && changed && !!normalized;
-    const isClear = !!settings.bookingSlug && !normalized;
-    // shortcut: the domain is only known once the server returns a bookingUrl; before that the prefix is the bare path.
-    const prefix = settings.bookingUrl && settings.bookingSlug
-        ? settings.bookingUrl.slice(0, -settings.bookingSlug.length)
-        : "/book/";
+    useEffect(() => () => clearTimeout(statusTimer.current), []);
 
-    async function handleSave() {
-        setError(null);
-        setSaved(false);
-        setSaving(true);
-        try {
-            onSaved(await save({ bookingSlug: normalized || null }));
-            setSaved(true);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : ERR_SAVE);
-        } finally {
-            setSaving(false);
-        }
+    function handleSaved(next: BookingSettings) {
+        onSaved(next);
+        setEditing(false);
+        setStatus("saved");
+        clearTimeout(statusTimer.current);
+        statusTimer.current = setTimeout(() => setStatus("idle"), 3000);
     }
 
     async function handleCopy() {
         if (!settings.bookingUrl) return;
+        setError(null);
         try {
             await navigator.clipboard.writeText(settings.bookingUrl);
             setCopied(true);
@@ -352,12 +345,12 @@ function LinkSection({ settings, save, onSaved }: {
 
     return (
         <div className="dash-card" id={LINK_SECTION_ID}>
-            <div className="dash-card__header">
-                <span className="dash-card__title">Enlace de reserva</span>
-            </div>
+            <CardHeader title="Enlace de reserva">
+                <SaveState saving={false} status={status} testId="online-booking-slug-save-state" />
+            </CardHeader>
             <div className="dash-card__body form-stack">
-                {settings.bookingUrl && (
-                    <div style={{ borderBottom: "1px solid var(--c-gray-100)", paddingBottom: 16, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+                {settings.bookingSlug && settings.bookingUrl ? (
+                    <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
                         <div ref={qrRef} data-testid="online-booking-qr">
                             <QRCodeSVG value={settings.bookingUrl} size={128} marginSize={2} title="Código QR del enlace de reserva" />
                         </div>
@@ -378,56 +371,156 @@ function LinkSection({ settings, save, onSaved }: {
                                 <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-secondary" onClick={handleDownloadQr} data-testid="online-booking-qr-download">
                                     <ACTION_ICONS.download size={14} /> Descargar QR
                                 </button>
+                                <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-secondary" onClick={() => setEditing(true)} data-testid="online-booking-slug-edit">
+                                    <ACTION_ICONS.edit size={14} /> Cambiar enlace
+                                </button>
                             </div>
                             {!settings.bookingEnabled && (
                                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>El enlace no recibirá reservas hasta que actives la reserva en línea.</span>
                             )}
                         </div>
                     </div>
-                )}
-
-                <label className="form-label">
-                    {settings.bookingSlug ? "Cambiar enlace" : "Elige tu enlace"}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ whiteSpace: "nowrap", fontSize: 13, color: "var(--c-gray-500)" }}>{prefix}</span>
-                        <input
-                            className="form-input"
-                            style={{ flex: 1, minWidth: 160 }}
-                            value={slug}
-                            onChange={(e) => { setSaved(false); setSlug(e.target.value); }}
-                            placeholder="dra-maria-perez"
-                            maxLength={40}
-                            aria-invalid={touched && !!validation}
-                            data-testid="online-booking-slug-input"
-                        />
+                ) : (
+                    <div className="form-stack" style={{ alignItems: "flex-start" }}>
+                        <span className="form-input-hint">
+                            Elige la dirección pública donde tus pacientes verán tu perfil y reservarán. Podrás compartirla como enlace o código QR.
+                        </span>
+                        <button type="button" style={{ display: "flex", gap: 6, alignItems: "center" }} className="btn-primary" onClick={() => setEditing(true)} data-testid="online-booking-slug-create">
+                            <ACTION_ICONS.plus size={14} /> Crear enlace
+                        </button>
                     </div>
-                    {touched && validation
-                        ? <FieldError message={validation} />
-                        : <span className="form-input-hint">Letras minúsculas, números y guiones. Entre 3 y 40 caracteres.</span>}
-                </label>
-                {isRename && (
-                    <WarningHint testId="online-booking-slug-warning">
-                        Si cambias el enlace, los enlaces y códigos QR que ya compartiste dejarán de funcionar.
-                    </WarningHint>
-                )}
-                {isClear && (
-                    <WarningHint testId="online-booking-slug-clear-warning">
-                        Si quitas el enlace, la reserva en línea se desactivará y los enlaces y códigos QR que ya compartiste dejarán de funcionar.
-                    </WarningHint>
                 )}
                 {error && <ErrorLine message={error} />}
-                {saved && <SuccessBanner message="Enlace actualizado." />}
-                <div>
-                    <button
-                        type="button"
-                        className={settings.bookingUrl ? "btn-secondary" : "btn-primary"}
-                        onClick={handleSave}
-                        disabled={saving || !changed || !!validation}
-                        data-testid="online-booking-slug-save"
-                    >
-                        {saving ? LBL_SAVING : "Guardar enlace"}
+            </div>
+            {editing && (
+                <SlugModal
+                    settings={settings}
+                    suggestion={suggestion}
+                    save={save}
+                    onSaved={handleSaved}
+                    onClose={() => setEditing(false)}
+                />
+            )}
+        </div>
+    );
+}
+
+function SlugModal({ settings, suggestion, save, onSaved, onClose }: {
+    settings: BookingSettings;
+    suggestion: string | null;
+    save: SaveFn;
+    onSaved: (s: BookingSettings) => void;
+    onClose: () => void;
+}) {
+    const [ typed, setSlug ] = useState<string | null>(null);
+    const touched = typed !== null;
+    const slug = typed ?? settings.bookingSlug ?? suggestion ?? "";
+    const [ error, setError ] = useState<string | null>(null);
+    const [ saving, setSaving ] = useState(false);
+    const close = () => { if (!saving) onClose(); };
+    const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(close);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const titleId = useId();
+    const hintId = useId();
+
+    // After the focus trap's own first-focus, so the field (not the close button) has focus with its text selected.
+    useEffect(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+    }, []);
+
+    const creating = !settings.bookingSlug;
+    const normalized = slug.trim().toLowerCase();
+    const validation = normalized ? slugError(normalized) : creating ? "Escribe un enlace." : null;
+    const changed = normalized !== (settings.bookingSlug ?? "");
+    const isRename = !creating && changed && !!normalized;
+    const isClear = !creating && !normalized;
+    // shortcut: the domain is only known once the server returns a bookingUrl; before that the prefix is the bare path.
+    const prefix = settings.bookingUrl && settings.bookingSlug
+        ? settings.bookingUrl.slice(0, -settings.bookingSlug.length)
+        : "/book/";
+
+    async function handleSubmit(e: FormEvent) {
+        e.preventDefault();
+        if (saving || !changed || validation) return;
+        setError(null);
+        setSaving(true);
+        try {
+            onSaved(await save({ bookingSlug: normalized || null }));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : ERR_SAVE);
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={close} onKeyDown={handleKeyDown}>
+            <div
+                ref={ref}
+                className="modal-panel modal-panel--sm"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                onClick={(e) => e.stopPropagation()}
+                data-testid="online-booking-slug-modal"
+            >
+                <div className="modal-header">
+                    <h2 id={titleId} className="modal-title modal-title--sm">
+                        {creating ? "Crear enlace de reserva" : "Cambiar enlace de reserva"}
+                    </h2>
+                    <button type="button" onClick={close} className="btn-close" aria-label="Cerrar" disabled={saving}>
+                        <ACTION_ICONS.close size={16} />
                     </button>
                 </div>
+                <form className="form-stack" onSubmit={handleSubmit} noValidate>
+                    <label className="form-label">
+                        Enlace
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 13, color: "var(--c-gray-500)", wordBreak: "break-all" }}>{prefix}</span>
+                            <input
+                                ref={inputRef}
+                                className="form-input"
+                                style={{ flex: 1, minWidth: 160 }}
+                                value={slug}
+                                onChange={(e) => { setError(null); setSlug(e.target.value); }}
+                                placeholder="dra-maria-perez"
+                                maxLength={40}
+                                autoComplete="off"
+                                spellCheck={false}
+                                aria-invalid={touched && !!validation}
+                                aria-describedby={hintId}
+                                data-testid="online-booking-slug-input"
+                            />
+                        </div>
+                        {touched && validation
+                            ? <FieldError id={hintId} message={validation} />
+                            : <span id={hintId} className="form-input-hint">Letras minúsculas, números y guiones. Entre 3 y 40 caracteres.</span>}
+                    </label>
+                    {isRename && (
+                        <WarningHint testId="online-booking-slug-warning">
+                            Si cambias el enlace, los enlaces y códigos QR que ya compartiste dejarán de funcionar.
+                        </WarningHint>
+                    )}
+                    {isClear && (
+                        <WarningHint testId="online-booking-slug-clear-warning">
+                            Si quitas el enlace, la reserva en línea se desactivará y los enlaces y códigos QR que ya compartiste dejarán de funcionar.
+                        </WarningHint>
+                    )}
+                    {error && <ErrorLine message={error} />}
+                    <div className="modal-footer modal-footer--stretch">
+                        <button type="button" className="btn-secondary btn-block" onClick={close} disabled={saving} data-testid="online-booking-slug-cancel">
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            className={`${isClear ? "btn-danger" : "btn-primary"} btn-block`}
+                            disabled={saving || !changed || !!validation}
+                            data-testid="online-booking-slug-save"
+                        >
+                            {saving ? LBL_SAVING : creating ? "Crear enlace" : isClear ? "Quitar enlace" : "Guardar enlace"}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
@@ -464,16 +557,17 @@ function TimeField({ value, onChange, label, invalid, testId }: {
     );
 }
 
-function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved: () => void }) {
+function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved: () => Promise<void> }) {
     const { availability, loading, error: loadError } = useFetchAvailability();
     const { saveAvailability } = useSaveAvailability();
+    // The working copy after the first edit; it stays in place after saving so open pickers and row order don't jump.
     const [ draft, setDraft ] = useState<AvailabilityRule[] | null>(null);
-    const [ savedRules, setSavedRules ] = useState<AvailabilityRule[] | null>(null);
     const dirty = draft !== null;
-    const rules = draft ?? savedRules ?? availability?.rules ?? null;
-    const [ error, setError ] = useState<string | null>(null);
-    const [ saving, setSaving ] = useState(false);
-    const [ saved, setSaved ] = useState(false);
+    const rules = draft ?? availability?.rules ?? null;
+    const autosave = useDebouncedSave<AvailabilityRule[]>(async (next) => {
+        await saveAvailability(next);
+        await onSaved();
+    });
 
     const validation = rules ? availabilityError(rules) : null;
     const dayErrors = new Map(WEEKDAYS_ES.map(({ weekday }) => [ weekday, rules ? availabilityError(rules.filter((r) => r.weekday === weekday)) : null ]));
@@ -481,8 +575,8 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
 
     function update(next: AvailabilityRule[]) {
         setDraft(next);
-        setSaved(false);
-        setError(null);
+        if (availabilityError(next)) autosave.cancel();
+        else autosave.schedule(sortRules(next));
     }
 
     function addWindow(weekday: number) {
@@ -513,28 +607,11 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
         update(rules.map((r) => (r === target ? { ...r, [ field ]: minutes } : r)));
     }
 
-    async function handleSave() {
-        if (!rules || validation) return;
-        setSaving(true);
-        setError(null);
-        try {
-            const result = await saveAvailability(sortRules(rules));
-            setSavedRules(result.rules);
-            setDraft(null);
-            setSaved(true);
-            onSaved();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : ERR_SAVE);
-        } finally {
-            setSaving(false);
-        }
-    }
-
     return (
         <div className="dash-card" id={AVAILABILITY_SECTION_ID}>
-            <div className="dash-card__header">
-                <span className="dash-card__title">Disponibilidad semanal</span>
-            </div>
+            <CardHeader title="Disponibilidad semanal">
+                <SaveState saving={autosave.saving} status={autosave.status} testId="availability-save-state" />
+            </CardHeader>
             <div className="dash-card__body form-stack" data-testid="online-booking-availability">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Horarios en los que los pacientes pueden reservar, en tu zona horaria ({fmtTimezoneLabel(timezone)}).
@@ -618,19 +695,10 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                     );
                 })}
                 {validation && dirty && !anyDayError && <ErrorLine message={validation} />}
-                {error && <ErrorLine message={error} />}
-                {saved && <SuccessBanner message="Disponibilidad actualizada." />}
-                <div>
-                    <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={handleSave}
-                        disabled={saving || !dirty || !!validation}
-                        data-testid="availability-save"
-                    >
-                        {saving ? LBL_SAVING : "Guardar disponibilidad"}
-                    </button>
-                </div>
+                {validation && dirty && (
+                    <WarningHint testId="availability-unsaved">Corrige los horarios marcados para guardar los cambios.</WarningHint>
+                )}
+                {autosave.error && <ErrorLine message={autosave.error} />}
             </div>
         </div>
     );
@@ -638,67 +706,69 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
 
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
-function RulesSection({ settings, save, onSaved }: {
-    settings: BookingSettings;
-    save: (body: BookingSettingsUpdate) => Promise<BookingSettings>;
-    onSaved: (s: BookingSettings) => void;
-}) {
-    const [ interval, setSlotInterval ] = useState(settings.slotIntervalMinutes);
-    const [ bufferText, setBuffer ] = useState(String(settings.bufferMinutes));
-    const [ leadText, setLeadHours ] = useState(String(settings.minLeadMinutes / 60));
-    const [ horizonText, setHorizon ] = useState(String(settings.maxHorizonDays));
-    const [ reschedulesText, setReschedules ] = useState(String(settings.maxPatientReschedules));
-    const [ noticeText, setNotice ] = useState(String(settings.minRescheduleNoticeHours));
-    const [ error, setError ] = useState<string | null>(null);
-    const [ saving, setSaving ] = useState(false);
-    const [ saved, setSaved ] = useState(false);
+type RulesForm = { interval: number; buffer: string; lead: string; horizon: string; reschedules: string; notice: string };
+
+function rulesFormOf(s: BookingSettings): RulesForm {
+    return {
+        interval: s.slotIntervalMinutes,
+        buffer: String(s.bufferMinutes),
+        lead: String(s.minLeadMinutes / 60),
+        horizon: String(s.maxHorizonDays),
+        reschedules: String(s.maxPatientReschedules),
+        notice: String(s.minRescheduleNoticeHours),
+    };
+}
+
+function parseRules(form: RulesForm) {
+    const buffer = toNumber(form.buffer);
+    const leadMinutes = Math.round(toNumber(form.lead) * 60);
+    const horizon = toNumber(form.horizon);
+    const reschedules = toNumber(form.reschedules);
+    const notice = toNumber(form.notice);
+    const leadError = Number.isFinite(leadMinutes) && leadMinutes >= 0 && leadMinutes <= 14 * 24 * 60 ? null : "Escribe un número entre 0 y 336 horas (14 días).";
+    const errors = {
+        buffer: Number.isInteger(buffer) && buffer >= 0 && buffer <= 240 ? null : "Escribe un número entero entre 0 y 240.",
+        lead: leadError,
+        horizon: !(Number.isInteger(horizon) && horizon >= 1 && horizon <= 365) ? "Escribe un número entero entre 1 y 365."
+            : !leadError && leadMinutes >= horizon * 24 * 60 ? "Debe ser mayor que la anticipación mínima, o no habrá horarios disponibles."
+            : null,
+        reschedules: Number.isInteger(reschedules) && reschedules >= 0 && reschedules <= MAX_PATIENT_RESCHEDULES
+            ? null : `Escribe un número entero entre 0 y ${MAX_PATIENT_RESCHEDULES}.`,
+        notice: Number.isInteger(notice) && notice >= 0 && notice <= MAX_RESCHEDULE_NOTICE_HOURS
+            ? null : `Escribe un número entero entre 0 y ${MAX_RESCHEDULE_NOTICE_HOURS} horas (7 días).`,
+    };
+    const body = {
+        slotIntervalMinutes: form.interval,
+        bufferMinutes: buffer,
+        minLeadMinutes: leadMinutes,
+        maxHorizonDays: horizon,
+        maxPatientReschedules: reschedules,
+        minRescheduleNoticeHours: notice,
+    } satisfies BookingSettingsUpdate;
+    return { body, errors, invalid: Object.values(errors).some(Boolean) };
+}
+
+function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
+    const [ form, setForm ] = useState<RulesForm>(() => rulesFormOf(settings));
+    const [ initial ] = useState(() => parseRules(rulesFormOf(settings)).body);
+    const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), initial);
+    const { errors, invalid } = parseRules(form);
     const ids = useId();
 
-    const buffer = toNumber(bufferText);
-    const leadMinutes = Math.round(toNumber(leadText) * 60);
-    const horizon = toNumber(horizonText);
-    const bufferError = Number.isInteger(buffer) && buffer >= 0 && buffer <= 240 ? null : "Escribe un número entero entre 0 y 240.";
-    const leadError = Number.isFinite(leadMinutes) && leadMinutes >= 0 && leadMinutes <= 14 * 24 * 60 ? null : "Escribe un número entre 0 y 336 horas (14 días).";
-    const horizonError = !(Number.isInteger(horizon) && horizon >= 1 && horizon <= 365) ? "Escribe un número entero entre 1 y 365."
-        : !leadError && leadMinutes >= horizon * 24 * 60 ? "Debe ser mayor que la anticipación mínima, o no habrá horarios disponibles."
-        : null;
-    const reschedules = toNumber(reschedulesText);
-    const notice = toNumber(noticeText);
-    const reschedulesError = Number.isInteger(reschedules) && reschedules >= 0 && reschedules <= MAX_PATIENT_RESCHEDULES
-        ? null : `Escribe un número entero entre 0 y ${MAX_PATIENT_RESCHEDULES}.`;
-    const noticeError = Number.isInteger(notice) && notice >= 0 && notice <= MAX_RESCHEDULE_NOTICE_HOURS
-        ? null : `Escribe un número entero entre 0 y ${MAX_RESCHEDULE_NOTICE_HOURS} horas (7 días).`;
-    const invalid = !!(bufferError || leadError || horizonError || reschedulesError || noticeError);
-    const changed = interval !== settings.slotIntervalMinutes || buffer !== settings.bufferMinutes
-        || leadMinutes !== settings.minLeadMinutes || horizon !== settings.maxHorizonDays
-        || reschedules !== settings.maxPatientReschedules || notice !== settings.minRescheduleNoticeHours;
-
-    async function handleSave() {
-        setSaving(true);
-        setError(null);
-        setSaved(false);
-        try {
-            onSaved(await save({
-                slotIntervalMinutes: interval,
-                bufferMinutes: buffer,
-                minLeadMinutes: leadMinutes,
-                maxHorizonDays: horizon,
-                maxPatientReschedules: reschedules,
-                minRescheduleNoticeHours: notice,
-            }));
-            setSaved(true);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : ERR_SAVE);
-        } finally {
-            setSaving(false);
-        }
+    function change(patch: Partial<RulesForm>) {
+        const next = { ...form, ...patch };
+        setForm(next);
+        const parsed = parseRules(next);
+        if (parsed.invalid) autosave.cancel();
+        else autosave.schedule(parsed.body);
     }
 
     function numberField(props: {
-        label: string; hint: string; value: string; onChange: (v: string) => void; err: string | null;
-        min: number; max: number; step?: number; testId: string; key: string;
+        field: keyof typeof errors; label: string; hint: string;
+        min: number; max: number; step?: number; testId: string;
     }) {
-        const errId = `${ids}-${props.key}-error`;
+        const err = errors[ props.field ];
+        const errId = `${ids}-${props.field}-error`;
         return (
             <label className="form-label">
                 {props.label}
@@ -709,76 +779,65 @@ function RulesSection({ settings, save, onSaved }: {
                     min={props.min}
                     max={props.max}
                     step={props.step}
-                    value={props.value}
-                    onChange={(e) => { setSaved(false); props.onChange(e.target.value); }}
-                    aria-invalid={!!props.err}
-                    aria-describedby={props.err ? errId : undefined}
+                    value={form[ props.field ]}
+                    onChange={(e) => change({ [ props.field ]: e.target.value } as Partial<RulesForm>)}
+                    aria-invalid={!!err}
+                    aria-describedby={err ? errId : undefined}
                     data-testid={props.testId}
                 />
-                {props.err ? <FieldError id={errId} message={props.err} /> : <span className="form-input-hint">{props.hint}</span>}
+                {err ? <FieldError id={errId} message={err} /> : <span className="form-input-hint">{props.hint}</span>}
             </label>
         );
     }
 
     return (
         <div className="dash-card">
-            <div className="dash-card__header">
-                <span className="dash-card__title">Reglas de reserva</span>
-            </div>
+            <CardHeader title="Reglas de reserva">
+                <SaveState saving={autosave.saving} status={autosave.status} testId="online-booking-rules-save-state" />
+            </CardHeader>
             <div className="dash-card__body form-stack">
                 <div className="form-grid-2">
                     <label className="form-label" data-testid="online-booking-interval">
                         Intervalo entre horarios (min)
                         <CustomSelect
-                            value={String(interval)}
-                            onChange={(v) => { setSaved(false); setSlotInterval(Number(v)); }}
+                            value={String(form.interval)}
+                            onChange={(v) => change({ interval: Number(v) })}
                             options={SLOT_INTERVAL_OPTIONS.map((n) => ({ value: String(n), label: `${n} min` }))}
                         />
                         <span className="form-input-hint">Cada cuánto se ofrece un horario de inicio. La duración la define el tipo de cita.</span>
                     </label>
                     {numberField({
-                        key: "buffer", label: "Tiempo entre citas (min)", hint: "Margen libre antes y después de cada cita reservada en línea.",
-                        value: bufferText, onChange: setBuffer, err: bufferError, min: 0, max: 240, testId: "online-booking-buffer",
+                        field: "buffer", label: "Tiempo entre citas (min)", hint: "Margen libre antes y después de cada cita reservada en línea.",
+                        min: 0, max: 240, testId: "online-booking-buffer",
                     })}
                     {numberField({
-                        key: "lead", label: "Anticipación mínima (horas)", hint: "Con cuánto tiempo de antelación se puede reservar.",
-                        value: leadText, onChange: setLeadHours, err: leadError, min: 0, max: 336, step: 0.5, testId: "online-booking-lead",
+                        field: "lead", label: "Anticipación mínima (horas)", hint: "Con cuánto tiempo de antelación se puede reservar.",
+                        min: 0, max: 336, step: 0.5, testId: "online-booking-lead",
                     })}
                     {numberField({
-                        key: "horizon", label: "Reservar hasta (días)", hint: "Cuántos días hacia adelante se puede reservar, contando hoy.",
-                        value: horizonText, onChange: setHorizon, err: horizonError, min: 1, max: 365, testId: "online-booking-horizon",
+                        field: "horizon", label: "Reservar hasta (días)", hint: "Cuántos días hacia adelante se puede reservar, contando hoy.",
+                        min: 1, max: 365, testId: "online-booking-horizon",
                     })}
                 </div>
                 <fieldset className="form-stack form-fieldset-plain">
                     <legend className="form-label form-fieldset-legend">Reprogramación por pacientes</legend>
                     <div className="form-grid-2">
                         {numberField({
-                            key: "reschedules", label: "Reprogramaciones por cita",
+                            field: "reschedules", label: "Reprogramaciones por cita",
                             hint: "Cuántas veces un paciente puede mover en línea una cita que reservó. Con 0 no puede reprogramar; siempre puede cancelar.",
-                            value: reschedulesText, onChange: setReschedules, err: reschedulesError, min: 0, max: MAX_PATIENT_RESCHEDULES,
-                            step: 1, testId: "online-booking-max-reschedules",
+                            min: 0, max: MAX_PATIENT_RESCHEDULES, step: 1, testId: "online-booking-max-reschedules",
                         })}
                         {numberField({
-                            key: "notice", label: "Aviso mínimo para reprogramar (horas)",
+                            field: "notice", label: "Aviso mínimo para reprogramar (horas)",
                             hint: "Después de este momento antes de la cita, el paciente ya no puede reprogramarla en línea.",
-                            value: noticeText, onChange: setNotice, err: noticeError, min: 0, max: MAX_RESCHEDULE_NOTICE_HOURS,
-                            step: 1, testId: "online-booking-reschedule-notice",
+                            min: 0, max: MAX_RESCHEDULE_NOTICE_HOURS, step: 1, testId: "online-booking-reschedule-notice",
                         })}
                     </div>
                 </fieldset>
-                {error && <ErrorLine message={error} />}
-                {saved && <SuccessBanner message="Reglas de reserva actualizadas." />}
-                <div>
-                    <button
-                        type="button"
-                        className="btn-primary"
-                        onClick={handleSave}
-                        disabled={saving || !changed || invalid}
-                        data-testid="online-booking-rules-save"
-                    >
-                        {saving ? LBL_SAVING : LBL_SAVE}
-                    </button>
-                </div>
+                {invalid && (
+                    <WarningHint testId="online-booking-rules-unsaved">Corrige los campos marcados para guardar los cambios.</WarningHint>
+                )}
+                {autosave.error && <ErrorLine message={autosave.error} />}
             </div>
         </div>
     );
