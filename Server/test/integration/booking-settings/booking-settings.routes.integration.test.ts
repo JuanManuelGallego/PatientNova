@@ -56,6 +56,11 @@ describe('booking settings routes (integration)', () => {
       maxHorizonDays: 60,
       maxPatientReschedules: 2,
       minRescheduleNoticeHours: 0,
+      bio: null,
+      specialty: null,
+      professionalLicense: null,
+      publicPhone: null,
+      publicWhatsapp: null,
       readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
       live: false,
     });
@@ -106,6 +111,33 @@ describe('booking settings routes (integration)', () => {
 
     const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'maxPatientReschedules' } } });
     expect(audit?.affectedFields).toEqual(expect.arrayContaining([ 'maxPatientReschedules', 'minRescheduleNoticeHours' ]));
+  });
+
+  it('PATCH /settings stores the public profile, trimmed and audited, and blank clears it', async () => {
+    const res = await patchSettings({
+      bio: '  Atiendo adultos.\nConsulta en español.  ', specialty: ' Psicología clínica ', professionalLicense: 'TP 12345',
+      publicPhone: '+573001112222', publicWhatsapp: '+573003334444',
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data).toMatchObject({
+      bio: 'Atiendo adultos.\nConsulta en español.', specialty: 'Psicología clínica', professionalLicense: 'TP 12345',
+      publicPhone: '+573001112222', publicWhatsapp: '+573003334444',
+    });
+    const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'publicPhone' } } });
+    expect(audit?.affectedFields).toEqual(expect.arrayContaining([ 'bio', 'specialty', 'professionalLicense', 'publicPhone', 'publicWhatsapp' ]));
+
+    const cleared = await patchSettings({ bio: '   ', specialty: null, publicPhone: '', publicWhatsapp: null });
+    expect((cleared.body as any).data).toMatchObject({
+      bio: null, specialty: null, professionalLicense: 'TP 12345', publicPhone: null, publicWhatsapp: null,
+    });
+  });
+
+  it('PATCH /settings rejects an invalid public profile', async () => {
+    expect((await patchSettings({ bio: 'a'.repeat(601) })).statusCode).toBe(400);
+    expect((await patchSettings({ specialty: 'a'.repeat(121) })).statusCode).toBe(400);
+    expect((await patchSettings({ professionalLicense: 'a'.repeat(61) })).statusCode).toBe(400);
+    expect((await patchSettings({ publicPhone: '3001112222' })).statusCode).toBe(400);
+    expect((await patchSettings({ publicWhatsapp: 'wa.me/573001112222' })).statusCode).toBe(400);
   });
 
   it('PATCH /settings refuses to enable until ready (422), then succeeds', async () => {

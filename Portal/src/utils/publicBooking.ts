@@ -1,5 +1,5 @@
 import { COMMON_TIMEZONES, fmtTime, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
-import type { PublicSlot } from "@/src/types/PublicBooking";
+import type { PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
 
 
 export const WEEK_DAYS = 7;
@@ -95,13 +95,33 @@ export function fmtLongDayTime(iso: string, zone: string): string {
     return `${fmtLongDay(localDayOf(iso, zone))}, ${fmtTime(iso, zone)}`;
 }
 
-export const APPROVAL_FOLLOW_UP = "Te avisaremos por correo cuando el consultorio confirme tu cita.";
+export const APPROVAL_FOLLOW_UP = "Te avisaremos por correo cuando tu cita quede confirmada.";
 
 export function normalizePhone(value: string): string {
     return value.replace(/[\s()-]/g, "");
 }
 
 export const isE164 = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
+
+export function fmtPhone(phone: string): string {
+    const parts = /^\+57(\d{3})(\d{3})(\d{4})$/.exec(phone);
+    return parts ? `+57 ${parts[ 1 ]} ${parts[ 2 ]} ${parts[ 3 ]}` : phone;
+}
+
+export const whatsappUrl = (phone: string) => `https://wa.me/${phone.replace(/\D/g, "")}`;
+
+export const mapUrl = (address: string) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+export function fmtBookingPolicy(policy: ReschedulePolicy | null): string {
+    const cancel = "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita";
+    if (!policy) return `${cancel}.`;
+    if (policy.maxReschedules === 0) return `${cancel}. No se puede reprogramar en línea.`;
+    const notice = policy.minNoticeHours > 0 ? `, con al menos ${plural(policy.minNoticeHours, "hora", "horas")} de anticipación` : "";
+    return `${cancel} y reprogramarla hasta ${plural(policy.maxReschedules, "vez", "veces")}${notice}.`;
+}
 
 export function fmtWeekRange(from: string, to: string): string {
     const month = (day: string) => part(day, { month: "short" });

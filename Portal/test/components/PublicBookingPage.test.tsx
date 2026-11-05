@@ -32,17 +32,23 @@ vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
 const provider = {
     displayName: "Dra. Ana Pública",
     jobTitle: "Psicóloga",
+    specialty: null as string | null,
+    professionalLicense: null as string | null,
+    bio: null as string | null,
+    phone: null as string | null,
+    whatsapp: null as string | null,
     hasAvatar: false,
     hasLogo: false,
     timezone: TZ,
     bookingOpen: true,
     approvalRequired: false,
+    reschedulePolicy: { maxReschedules: 2, minNoticeHours: 24 } as { maxReschedules: number; minNoticeHours: number } | null,
     lastBookableDate: "2099-12-31",
     types: [
         { id: "t1", name: "Primera consulta", description: null, durationMinutes: 60, price: 150000 },
         { id: "t2", name: "Control", description: null, durationMinutes: 30, price: null },
     ],
-    locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10", isVirtual: false } ],
+    locations: [ { id: "l1", name: "Consultorio Centro", address: "Calle 10" as string | null, isVirtual: false } ],
 };
 
 let slots = {
@@ -54,7 +60,7 @@ const defaultSlots = slots;
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 const fetchMock = vi.fn();
 
-function routeFetch(profileStatus = 200, slotsStatus = 200) {
+function routeFetch(profileStatus = 200, slotsStatus = 200, profile: typeof provider = provider) {
     fetchMock.mockImplementation(async (url: string) => {
         if (url.includes("/slots?")) {
             return slotsStatus === 200
@@ -64,7 +70,7 @@ function routeFetch(profileStatus = 200, slotsStatus = 200) {
         if (profileStatus !== 200) {
             return json(profileStatus, { success: false, error: profileStatus === 404 ? "Provider not found" : "Internal server error" });
         }
-        return json(200, { success: true, data: provider });
+        return json(200, { success: true, data: profile });
     });
 }
 
@@ -95,6 +101,107 @@ describe("PublicBookingPage", () => {
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
         expect(screen.getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
         expect(screen.getByRole("list", { name: "Garantías de la reserva" })).toBeInTheDocument();
+    });
+
+    it("shows the optional profile, contact links and a map link", async () => {
+        routeFetch(200, 200, {
+            ...provider, specialty: "Psicología clínica", professionalLicense: "TP 12345", bio: "Atiendo adultos.",
+            phone: "+573001112222", whatsapp: "+573003334444",
+        });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Psicología clínica")).toBeInTheDocument();
+        expect(screen.getByText("Psicóloga")).toBeInTheDocument();
+        expect(screen.getByText("Tarjeta profesional TP 12345")).toBeInTheDocument();
+        expect(screen.getByText("Atiendo adultos.")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "+57 300 111 2222" })).toHaveAttribute("href", "tel:+573001112222");
+        const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
+        expect(whatsapp).toHaveAttribute("href", "https://wa.me/573003334444");
+        expect(whatsapp).toHaveAttribute("rel", "noopener noreferrer");
+        expect(screen.getByRole("link", { name: "Ver en el mapa" })).toHaveAttribute("href", expect.stringContaining("query=Calle%2010"));
+    });
+
+    it("collapses a presentation that does not fit, and expands it on request", async () => {
+        class FiringResizeObserver {
+            constructor(private readonly callback: () => void) {}
+            observe() { this.callback(); }
+            disconnect() {}
+        }
+        vi.stubGlobal("ResizeObserver", FiringResizeObserver);
+        const height = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(200);
+        routeFetch(200, 200, { ...provider, bio: "Una presentación larga." });
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        await user.click(await screen.findByRole("button", { name: "Ver más" }));
+        expect(screen.getByRole("button", { name: "Ver menos" })).toHaveAttribute("aria-expanded", "true");
+        expect(screen.getByText("Una presentación larga.").className).not.toMatch(/bioClamped/);
+
+        await user.click(screen.getByRole("button", { name: "Ver menos" }));
+        expect(screen.getByRole("button", { name: "Ver más" })).toHaveAttribute("aria-expanded", "false");
+        expect(screen.getByText("Una presentación larga.").className).toMatch(/bioClamped/);
+        height.mockRestore();
+    });
+
+    it("offers no 'Ver más' when the presentation fits", async () => {
+        routeFetch(200, 200, { ...provider, bio: "Atiendo adultos." });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Atiendo adultos.")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Ver más" })).not.toBeInTheDocument();
+    });
+
+    it("shows no empty profile lines or contact list when nothing was filled in", async () => {
+        routeFetch();
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Psicóloga")).toBeInTheDocument();
+        expect(screen.queryByText(/Tarjeta profesional/)).not.toBeInTheDocument();
+        expect(screen.queryByRole("list", { name: "Contacto" })).not.toBeInTheDocument();
+    });
+
+    it("offers no map link for a location without an address", async () => {
+        routeFetch(200, 200, { ...provider, locations: [ { id: "l1", name: "Consultorio", address: null, isVirtual: false } ] });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Consultorio")).toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Ver en el mapa" })).not.toBeInTheDocument();
+    });
+
+    it("keeps the contact links on the paused page", async () => {
+        routeFetch(200, 200, { ...provider, bookingOpen: false, types: [], locations: [], phone: "+573001112222", reschedulePolicy: null });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByTestId("booking-paused")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "+57 300 111 2222" })).toBeInTheDocument();
+        expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    it("moves the progress through the steps as the patient chooses", async () => {
+        routeFetch();
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        const progress = await screen.findByRole("progressbar", { name: "Progreso de la reserva" });
+        expect(progress).toHaveAttribute("aria-valuetext", "Paso 1 de 4: Tipo de cita");
+
+        await user.click(screen.getByRole("button", { name: /Control/ }));
+        expect(progress).toHaveAttribute("aria-valuetext", "Paso 2 de 4: Día");
+
+        const morning = await screen.findByRole("list", { name: "Mañana" });
+        const week = screen.getByRole("group", { name: "Días de la semana" });
+        await user.click(within(week).getAllByRole("button")[ weekColumn(today) ]!);
+        expect(progress).toHaveAttribute("aria-valuetext", "Paso 3 de 4: Hora");
+
+        await user.click(within(morning).getByRole("button"));
+        expect(progress).toHaveAttribute("aria-valuetext", "Paso 4 de 4: Confirma tu cita");
+        expect(progress).toHaveAttribute("aria-valuenow", "4");
+    });
+
+    it("starts at the day step when the provider offers a single type", async () => {
+        routeFetch(200, 200, { ...provider, types: [ provider.types[ 0 ]! ] });
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 2 de 4: Día");
     });
 
     it("hides the appointments link and booking guarantees when the provider is unavailable", async () => {
@@ -301,7 +408,7 @@ describe("PublicBookingPage booking", () => {
         expect(screen.getByText(/Primera consulta · 60 minutos/)).toBeInTheDocument();
         expect(screen.getByText(/Consultorio Centro, Calle 10/)).toBeInTheDocument();
         expect(await screen.findByRole("heading", { level: 3, name: "Verifica tu correo" })).toBeInTheDocument();
-        expect(screen.getByText(/código para confirmar tu reserva/)).toBeInTheDocument();
+        expect(screen.getByText(/código de 6 dígitos para confirmar tu reserva/)).toBeInTheDocument();
 
         await user.type(screen.getByLabelText("Correo electrónico"), "ana@example.com");
         await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
@@ -341,6 +448,8 @@ describe("PublicBookingPage booking", () => {
         expect((init.headers as Record<string, string>)[ "X-CSRF-Token" ]).toBe("csrf-from-session");
         expect(screen.getByText("Timbre 2")).toBeInTheDocument();
         expect(screen.getByText("Confirmada")).toBeInTheDocument();
+        expect(screen.queryByRole("list", { name: "Dónde atiende" })).not.toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
 
         await user.click(screen.getByRole("button", { name: "Reservar otra cita" }));
@@ -359,7 +468,7 @@ describe("PublicBookingPage booking", () => {
             type: { name: "Primera consulta" },
             location: { name: "Consultorio Centro", address: "Calle 10", isVirtual: false },
         };
-        server.provider = { ...provider, approvalRequired: true };
+        server.provider = { ...provider, approvalRequired: true, reschedulePolicy: null };
         server.book = () => json(202, { success: true, data: { request } });
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
@@ -367,7 +476,8 @@ describe("PublicBookingPage booking", () => {
         expect(await pickMorningSlot(user)).toHaveTextContent("Envía tu solicitud");
         await fillDetails(user);
 
-        expect(await screen.findByTestId("booking-approval-note")).toHaveTextContent(/mientras el consultorio revisa tu solicitud/);
+        expect(await screen.findByTestId("booking-approval-note")).toHaveTextContent(/mientras Dra\. Ana Pública revisa tu solicitud/);
+        expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 4 de 4: Envía tu solicitud");
         expect(screen.getByText(/Enviarás la solicitud con el correo/)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reservar cita" })).not.toBeInTheDocument();
         await user.click(screen.getByRole("checkbox"));
@@ -376,7 +486,8 @@ describe("PublicBookingPage booking", () => {
         expect(await screen.findByRole("heading", { name: "Solicitud enviada" })).toHaveFocus();
         expect(screen.queryByRole("heading", { name: "Tu cita quedó reservada" })).not.toBeInTheDocument();
         expect(within(screen.getByTestId("portal-request-card")).getByText("Pendiente")).toBeInTheDocument();
-        expect(screen.getByTestId("request-sent")).toHaveTextContent(/El consultorio la revisará/);
+        expect(screen.getByTestId("request-sent")).toHaveTextContent(/Dra\. Ana Pública la revisará/);
+        expect(screen.queryByRole("button", { name: "Añadir al calendario" })).not.toBeInTheDocument();
         expect(screen.getByTestId("portal-request-card")).toHaveTextContent(/Guardamos este horario para ti hasta el/);
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
         expect(Object.keys(JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body))).sort()).toEqual([
@@ -510,6 +621,40 @@ describe("PublicBookingPage booking", () => {
         } finally {
             delete (Element.prototype as Partial<Element>).scrollIntoView;
         }
+    });
+
+    it("states the cancel and reschedule policy before the patient confirms", async () => {
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+        expect(screen.getByTestId("booking-policy")).toHaveTextContent(
+            "Puedes cancelarla desde Mis citas en cualquier momento antes de la cita y reprogramarla hasta 2 veces, con al menos 24 horas de anticipación.",
+        );
+    });
+
+    it("offers the booked appointment as a calendar file named after the provider", async () => {
+        const blobs: Blob[] = [];
+        URL.createObjectURL = vi.fn((blob: Blob) => { blobs.push(blob); return "blob:ics"; });
+        URL.revokeObjectURL = vi.fn();
+        const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+        await fillDetails(user);
+        await user.click(screen.getByRole("checkbox"));
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+
+        await user.click(await screen.findByRole("button", { name: "Añadir al calendario" }));
+
+        expect(click).toHaveBeenCalledOnce();
+        const ics = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.readAsText(blobs[ 0 ]!);
+        });
+        expect(ics).toContain("SUMMARY:Cita con Dra. Ana Pública");
+        expect(ics).not.toContain("Lucía");
+        click.mockRestore();
     });
 
     it("shows the confirmation with the device zone", async () => {

@@ -261,6 +261,12 @@ model User {
   maxPatientReschedules    Int @default(2)
   minRescheduleNoticeHours Int @default(0)
 
+  bio                 String? @db.VarChar(600)
+  specialty           String? @db.VarChar(120)
+  professionalLicense String? @db.VarChar(60)
+  publicPhone         String? @db.VarChar(20)
+  publicWhatsapp      String? @db.VarChar(20)
+
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?

@@ -60,6 +60,7 @@ export function useSlotPicker(
         weekDays,
         openDays,
         day,
+        dayChosen: dayChoice !== null,
         slot,
         slots,
         loading,

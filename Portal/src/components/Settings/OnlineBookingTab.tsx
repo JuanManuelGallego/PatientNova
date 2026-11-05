@@ -19,8 +19,11 @@ import {
     BookingApprovalMode,
     BookingSettings,
     BookingSettingsUpdate,
+    MAX_BIO_LENGTH,
+    MAX_LICENSE_LENGTH,
     MAX_PATIENT_RESCHEDULES,
     MAX_RESCHEDULE_NOTICE_HOURS,
+    MAX_SPECIALTY_LENGTH,
     SLOT_INTERVAL_OPTIONS,
 } from "@/src/types/Booking";
 import {
@@ -32,6 +35,7 @@ import {
     sortRules,
     timeToMinutes,
 } from "@/src/utils/bookingAvailability";
+import { isE164, normalizePhone } from "@/src/utils/publicBooking";
 import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
@@ -122,6 +126,7 @@ export function OnlineBookingTab() {
             </span>
             <ApprovalSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
+            <PublicProfileSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <AvailabilitySection
                 timezone={current.timezone}
                 onSaved={async () => {
@@ -674,6 +679,113 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
                 {validation && dirty && (
                     <WarningHint testId="availability-unsaved">Corrige los horarios marcados para guardar los cambios.</WarningHint>
                 )}
+                {autosave.error && <ErrorLine message={autosave.error} />}
+            </div>
+        </div>
+    );
+}
+
+type ProfileForm = { specialty: string; professionalLicense: string; bio: string; publicPhone: string; publicWhatsapp: string };
+
+function profileFormOf(s: BookingSettings): ProfileForm {
+    return {
+        specialty: s.specialty ?? "",
+        professionalLicense: s.professionalLicense ?? "",
+        bio: s.bio ?? "",
+        publicPhone: s.publicPhone ?? "",
+        publicWhatsapp: s.publicWhatsapp ?? "",
+    };
+}
+
+const PHONE_FORMAT_ERROR = "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567.";
+
+function parseProfile(form: ProfileForm) {
+    const publicPhone = normalizePhone(form.publicPhone);
+    const publicWhatsapp = normalizePhone(form.publicWhatsapp);
+    const errors = {
+        publicPhone: publicPhone && !isE164(publicPhone) ? PHONE_FORMAT_ERROR : null,
+        publicWhatsapp: publicWhatsapp && !isE164(publicWhatsapp) ? PHONE_FORMAT_ERROR : null,
+    };
+    const body = {
+        specialty: form.specialty.trim() || null,
+        professionalLicense: form.professionalLicense.trim() || null,
+        bio: form.bio.trim() || null,
+        publicPhone: publicPhone || null,
+        publicWhatsapp: publicWhatsapp || null,
+    } satisfies BookingSettingsUpdate;
+    return { body, errors, invalid: Object.values(errors).some(Boolean) };
+}
+
+function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
+    const [ form, setForm ] = useState<ProfileForm>(() => profileFormOf(settings));
+    const [ initial ] = useState(() => parseProfile(profileFormOf(settings)).body);
+    const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), { initial });
+    const { errors } = parseProfile(form);
+    const ids = useId();
+
+    function change(patch: Partial<ProfileForm>) {
+        const next = { ...form, ...patch };
+        setForm(next);
+        const parsed = parseProfile(next);
+        if (parsed.invalid) autosave.cancel();
+        else autosave.schedule(parsed.body);
+    }
+
+    function phoneField(field: keyof typeof errors, label: string, hint: string, testId: string) {
+        const err = errors[ field ];
+        const errId = `${ids}-${field}-error`;
+        return (
+            <label className="form-label">
+                {label}
+                <input
+                    className="form-input"
+                    type="tel"
+                    inputMode="tel"
+                    maxLength={24}
+                    placeholder="+57 300 123 4567"
+                    value={form[ field ]}
+                    onChange={(e) => change({ [ field ]: e.target.value })}
+                    aria-invalid={!!err}
+                    aria-describedby={err ? errId : undefined}
+                    data-testid={testId}
+                />
+                {err ? <FieldError id={errId} message={err} /> : <span className="form-input-hint">{hint}</span>}
+            </label>
+        );
+    }
+
+    return (
+        <div className="dash-card">
+            <CardHeader title="Perfil público">
+                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-profile-save-state" />
+            </CardHeader>
+            <div className="dash-card__body form-stack" data-testid="online-booking-profile">
+                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
+                    Opcional. Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
+                </span>
+                <div className="form-grid-2">
+                    <label className="form-label">
+                        Especialidad
+                        <input className="form-input" maxLength={MAX_SPECIALTY_LENGTH} placeholder="Psicología clínica"
+                            value={form.specialty} onChange={(e) => change({ specialty: e.target.value })} data-testid="online-booking-specialty" />
+                    </label>
+                    <label className="form-label">
+                        Número de tarjeta profesional
+                        <input className="form-input" maxLength={MAX_LICENSE_LENGTH}
+                            value={form.professionalLicense} onChange={(e) => change({ professionalLicense: e.target.value })} data-testid="online-booking-license" />
+                    </label>
+                </div>
+                <label className="form-label">
+                    Presentación
+                    <textarea className="form-input form-input--textarea" rows={4} maxLength={MAX_BIO_LENGTH}
+                        placeholder="Cuéntales a tus pacientes a quién atiendes y cómo trabajas."
+                        value={form.bio} onChange={(e) => change({ bio: e.target.value })} data-testid="online-booking-bio" />
+                    <span className="form-input-hint">{form.bio.length} de {MAX_BIO_LENGTH} caracteres</span>
+                </label>
+                <div className="form-grid-2">
+                    {phoneField("publicPhone", "Teléfono público", "Es independiente del teléfono de tu perfil.", "online-booking-public-phone")}
+                    {phoneField("publicWhatsapp", "WhatsApp público", "Abre un chat contigo desde tu página de reservas.", "online-booking-public-whatsapp")}
+                </div>
                 {autosave.error && <ErrorLine message={autosave.error} />}
             </div>
         </div>

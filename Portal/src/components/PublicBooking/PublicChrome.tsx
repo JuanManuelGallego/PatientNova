@@ -56,6 +56,21 @@ export function TrustStrip() {
     );
 }
 
+export function BookingProgress({ steps, current }: { steps: string[]; current: number }) {
+    const label = `Paso ${current} de ${steps.length}`;
+    return (
+        <div className={styles.progress} role="progressbar" aria-label="Progreso de la reserva"
+            aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={current} aria-valuetext={`${label}: ${steps[ current - 1 ]}`}>
+            <p className={styles.progressLabel}>{label}</p>
+            <div className={styles.progressTrack}>
+                {steps.map((step, i) => (
+                    <span key={step} className={styles.progressSegment} data-done={i < current || undefined} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export function StateIcon({ icon: Icon }: { icon: LucideIcon }) {
     return (
         <span className={styles.iconBubble} aria-hidden="true">

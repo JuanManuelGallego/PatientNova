@@ -141,11 +141,17 @@ describe('GET /v1/public/providers/:slug', () => {
     expect(res.body.data).toEqual({
       displayName: 'Test User',
       jobTitle: 'Psicóloga',
+      specialty: null,
+      professionalLicense: null,
+      bio: null,
+      phone: null,
+      whatsapp: null,
       hasAvatar: false,
       hasLogo: false,
       timezone: TZ,
       bookingOpen: true,
       approvalRequired: false,
+      reschedulePolicy: { maxReschedules: 2, minNoticeHours: 0 },
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],
       locations: [ { id: p.locationId, name: expect.any(String), address: 'Calle 1', isVirtual: false } ],
@@ -153,6 +159,41 @@ describe('GET /v1/public/providers/:slug', () => {
     const text = JSON.stringify(res.body);
     expect(text).not.toContain(p.id);
     expect(text).not.toContain('Piso 2');
+  });
+
+  it('shows the optional public profile, and only the contacts chosen for it', async () => {
+    const p = await createLiveProvider();
+    await prisma.user.update({
+      where: { id: p.id },
+      data: {
+        bio: 'Atiendo adultos.', specialty: 'Psicología clínica', professionalLicense: 'TP 12345',
+        publicPhone: '+573001112222', publicWhatsapp: '+573003334444',
+        phoneNumber: '+573009998888', whatsappNumber: '+573007776666',
+      },
+    });
+    const body = (await get(`/${p.slug}`)).body.data;
+    expect(body).toMatchObject({
+      bio: 'Atiendo adultos.', specialty: 'Psicología clínica', professionalLicense: 'TP 12345',
+      phone: '+573001112222', whatsapp: '+573003334444',
+    });
+    expect(JSON.stringify(body)).not.toContain('+573009998888');
+    expect(JSON.stringify(body)).not.toContain('+573007776666');
+  });
+
+  it('keeps the profile on a paused page, without a reschedule policy', async () => {
+    const p = await createLiveProvider();
+    await prisma.user.update({ where: { id: p.id }, data: { bookingEnabled: false, specialty: 'Psicología clínica', publicPhone: '+573001112222' } });
+    expect((await get(`/${p.slug}`)).body.data).toMatchObject({
+      bookingOpen: false, specialty: 'Psicología clínica', phone: '+573001112222', reschedulePolicy: null,
+    });
+  });
+
+  it('states the reschedule policy only where patients can reschedule', async () => {
+    const p = await createLiveProvider();
+    await prisma.user.update({ where: { id: p.id }, data: { maxPatientReschedules: 1, minRescheduleNoticeHours: 24 } });
+    expect((await get(`/${p.slug}`)).body.data.reschedulePolicy).toEqual({ maxReschedules: 1, minNoticeHours: 24 });
+    await prisma.user.update({ where: { id: p.id }, data: { bookingApprovalMode: 'REQUIRE_APPROVAL' } });
+    expect((await get(`/${p.slug}`)).body.data.reschedulePolicy).toBeNull();
   });
 
   it('falls back to first and last name without a display name', async () => {
