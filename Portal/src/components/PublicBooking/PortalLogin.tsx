@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
+import { CHANNEL_ICONS } from "@/src/config/icons";
 import { useRequestOtp, useVerifyOtp } from "@/src/api/portal/usePortalAuth";
 import type { LoginChannel } from "@/src/types/PublicBooking";
 import { fmtPhone, isE164, isPhoneChannel, normalizePhone, PHONE_FORMAT_HINT } from "@/src/utils/publicBooking";
@@ -16,6 +17,16 @@ const EMAIL_ONLY: LoginChannel[] = [ "EMAIL" ];
 const CHANNEL_LABELS: Record<LoginChannel, string> = { EMAIL: "Correo", WHATSAPP: "WhatsApp" };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+function ChannelButton({ channel, selected, onSelect }: { channel: LoginChannel; selected: boolean; onSelect: (channel: LoginChannel) => void }) {
+    const Icon = CHANNEL_ICONS[ channel ];
+    return (
+        <button type="button" className={styles.channel} aria-pressed={selected} onClick={() => onSelect(channel)}>
+            <Icon size={18} aria-hidden="true" />
+            {CHANNEL_LABELS[ channel ]}
+        </button>
+    );
+}
 
 function useCountdown() {
     const [ remaining, setRemaining ] = useState(0);
@@ -141,10 +152,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                             <p id={`${ids}-channels`} className={styles.channelLabel}>Recibir el código por</p>
                             <div className={styles.channels}>
                                 {channels.map((c) => (
-                                    <button key={c} type="button" className={styles.channel} aria-pressed={c === channel}
-                                        onClick={() => chooseChannel(c)}>
-                                        {CHANNEL_LABELS[ c ]}
-                                    </button>
+                                    <ChannelButton key={c} channel={c} selected={c === channel} onSelect={chooseChannel} />
                                 ))}
                             </div>
                         </div>
