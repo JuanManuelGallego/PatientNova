@@ -249,7 +249,7 @@ function ApprovalSection({ settings, save, onSaved }: { settings: BookingSetting
     const [ mode, setMode ] = useState<BookingApprovalMode>(settings.bookingApprovalMode);
     const autosave = useDebouncedSave<BookingApprovalMode>(
         async (bookingApprovalMode) => onSaved(await save({ bookingApprovalMode })),
-        settings.bookingApprovalMode,
+        { initial: settings.bookingApprovalMode },
     );
     const name = useId();
 
@@ -751,7 +751,7 @@ function parseRules(form: RulesForm) {
 function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const [ form, setForm ] = useState<RulesForm>(() => rulesFormOf(settings));
     const [ initial ] = useState(() => parseRules(rulesFormOf(settings)).body);
-    const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), initial);
+    const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), { initial });
     const { errors, invalid } = parseRules(form);
     const ids = useId();
 

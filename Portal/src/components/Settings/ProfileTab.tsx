@@ -1,4 +1,4 @@
-import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/users/useUpdateProfile";
+import { useAutoSaveProfile, useUpdateProfile } from "@/src/api/users/useUpdateProfile";
 import { useConsentDocument } from "@/src/api/consent/useConsentDocument";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
@@ -72,8 +72,7 @@ export function ProfileTab() {
   const [ logo, setLogo ] = useState<string | null>(user?.logo ?? null);
   const [ altLogo, setAltLogo ] = useState<string | null>(user?.altLogo ?? null);
 
-  const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
-  const saveStatus = useUpdateProfileWithDebounce(userPayload);
+  const { schedule: scheduleProfileSave, status: saveStatus } = useAutoSaveProfile();
   const { updateProfile } = useUpdateProfile();
   const [ error, setError ] = useState<string | null>(null);
 
@@ -101,7 +100,7 @@ export function ProfileTab() {
 
   function scheduleSave(overrides: Partial<User> = {}) {
     setError(null);
-    setUserPayload({
+    scheduleProfileSave({
       firstName: (overrides.firstName ?? fields.firstName).trim() || undefined,
       lastName: (overrides.lastName ?? fields.lastName).trim() || undefined,
       displayName: (overrides.displayName ?? fields.displayName).trim() || undefined,

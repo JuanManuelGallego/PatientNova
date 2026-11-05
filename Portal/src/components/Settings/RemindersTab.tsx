@@ -2,7 +2,7 @@ import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { useState } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { useUpdateProfile, useUpdateProfileWithDebounce } from "@/src/api/users/useUpdateProfile";
+import { useAutoSaveProfile, useUpdateProfile } from "@/src/api/users/useUpdateProfile";
 import { User } from "@/src/types/User";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
@@ -25,8 +25,7 @@ export function RemindersTab() {
     user?.reminderChannel ?? undefined,
   );
 
-  const [ userPayload, setUserPayload ] = useState<Partial<User> | null>(null);
-  const saveStatus = useUpdateProfileWithDebounce(userPayload);
+  const { schedule: scheduleProfileSave, status: saveStatus } = useAutoSaveProfile();
   const { updateProfile } = useUpdateProfile()
   const [ error, setError ] = useState<string | null>(null);
 
@@ -45,7 +44,7 @@ export function RemindersTab() {
       setError("Por favor, ingresa un número de SMS válido (formato E.164).");
       return;
     }
-    setUserPayload({
+    scheduleProfileSave({
       phoneNumber: resolvedPhone.trim() || undefined,
       whatsappNumber: resolvedWhatsapp.trim() || undefined,
       reminderActive: overrides.reminderActive ?? reminderActive,

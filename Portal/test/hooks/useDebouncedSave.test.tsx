@@ -24,7 +24,7 @@ describe("useDebouncedSave", () => {
 
     it("skips a value equal to the initial or last-sent one", async () => {
         const save = vi.fn().mockResolvedValue(undefined);
-        const { result } = renderHook(() => useDebouncedSave<{ a: number }>(save, { a: 1 }));
+        const { result } = renderHook(() => useDebouncedSave<{ a: number }>(save, { initial: { a: 1 } }));
         act(() => { result.current.schedule({ a: 2 }); result.current.schedule({ a: 1 }); });
         await advance(AUTO_SAVE_DEBOUNCE_MS);
         expect(save).not.toHaveBeenCalled();
@@ -33,6 +33,18 @@ describe("useDebouncedSave", () => {
         act(() => result.current.schedule({ a: 2 }));
         await advance(AUTO_SAVE_DEBOUNCE_MS);
         expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    it("saves repeated values when dedupe is off, honouring a custom delay", async () => {
+        const save = vi.fn().mockResolvedValue(undefined);
+        const { result } = renderHook(() => useDebouncedSave<number>(save, { initial: 1, delay: 1500, dedupe: false }));
+        act(() => result.current.schedule(1));
+        await advance(AUTO_SAVE_DEBOUNCE_MS);
+        expect(save).not.toHaveBeenCalled();
+        await advance(500);
+        act(() => result.current.schedule(1));
+        await advance(1500);
+        expect(save).toHaveBeenCalledTimes(2);
     });
 
     it("runs saves one at a time, in order", async () => {

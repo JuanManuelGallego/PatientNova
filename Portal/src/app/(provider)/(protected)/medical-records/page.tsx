@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
@@ -27,9 +27,11 @@ import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecord/Medical
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSection";
 import { useFetchMedicalRecords } from "@/src/api/medical-records/useFetchMedicalRecords";
-import { useAutoSaveMedicalRecords } from "@/src/hooks/useAutoSaveMedicalRecords";
+import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
 import { FamilySpecificSection } from "@/src/components/MedicalRecord/FamilySpecificSection";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+
+const MEDICAL_RECORD_AUTOSAVE_MS = 1500;
 
 function MedicalRecordsPageContent() {
   const timezone = useDisplayTimezone();
@@ -37,59 +39,70 @@ function MedicalRecordsPageContent() {
   const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState(QUERY_PARAMS.recordPatientId, parseAsString.withDefault(""));
   const [ form, setForm ] = useState<FormValues>(createEmptyForm());
+  // The latest form, so consecutive edits in one tick build on each other before React re-renders.
+  const formRef = useRef(form);
 
   const { createMedicalRecord } = useCreateMedicalRecord();
   const { updateMedicalRecord } = useUpdateMedicalRecord();
+  // The record id travels with the form, so a pending edit still lands on its own record after switching patients.
+  // No dedupe: the form can embed documents, too large to serialise on every keystroke.
+  const { schedule: scheduleSave, status: saveStatus } = useDebouncedSave<{ id: string; form: FormValues }>(
+    ({ id, form: values }) => updateMedicalRecord(id, values),
+    { delay: MEDICAL_RECORD_AUTOSAVE_MS, dedupe: false },
+  );
 
   const { patient: selectedPatient } = useFetchPatient(selectedPatientId || null);
 
   const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
   const medicalRecord = medicalRecords?.[ 0 ];
 
+  // Loading a record only fills the form; saves are scheduled by edits (updateField), never by this.
   useEffect(() => {
-    if (medicalRecord) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        name: medicalRecord.name || "",
-        nationalId: medicalRecord.nationalId || "",
-        sex: medicalRecord.sex || "",
-        birthDate: medicalRecord.birthDate || "",
-        birthPlace: medicalRecord.birthPlace || "",
-        consultationReason: medicalRecord.consultationReason || "",
-        earlyDevelopment: medicalRecord.earlyDevelopment || "",
-        schoolAndWork: medicalRecord.schoolAndWork || "",
-        lifestyleHabits: medicalRecord.lifestyleHabits || "",
-        traumaticEvents: medicalRecord.traumaticEvents || "",
-        emotionalConsiderations: medicalRecord.emotionalConsiderations || "",
-        physicalConsiderations: medicalRecord.physicalConsiderations || "",
-        mentalHistory: medicalRecord.mentalHistory || "",
-        objective: medicalRecord.objective || "",
-        familyObservations: medicalRecord.familyObservations || "",
-        isFamily: medicalRecord.isFamily ?? false,
-        familyType: medicalRecord.familyType || "",
-        lifecycle: medicalRecord.lifecycle || "",
-        genogram: medicalRecord.genogram || "",
-        resources: medicalRecord.resources || "",
-        difficulties: medicalRecord.difficulties || "",
-        communication: medicalRecord.communication || "",
-        rule: medicalRecord.rule || "",
-        limits: medicalRecord.limits || "",
-        familyContext: medicalRecord.familyContext || "",
-        expectations: medicalRecord.expectations || "",
-        flexibility: medicalRecord.flexibility || "",
-        familyMembers: medicalRecord.familyMembers?.length ? medicalRecord.familyMembers : [],
-        evolutionNotes: medicalRecord.evolutionNotes?.length ? medicalRecord.evolutionNotes : [],
-        documents: medicalRecord.documents || [],
-        subsystemRelations: medicalRecord.subsystemRelations?.length ? medicalRecord.subsystemRelations : [],
-      });
-    } else {
-      setForm(createEmptyForm());
-    }
+    const loaded: FormValues = medicalRecord ? {
+      name: medicalRecord.name || "",
+      nationalId: medicalRecord.nationalId || "",
+      sex: medicalRecord.sex || "",
+      birthDate: medicalRecord.birthDate || "",
+      birthPlace: medicalRecord.birthPlace || "",
+      consultationReason: medicalRecord.consultationReason || "",
+      earlyDevelopment: medicalRecord.earlyDevelopment || "",
+      schoolAndWork: medicalRecord.schoolAndWork || "",
+      lifestyleHabits: medicalRecord.lifestyleHabits || "",
+      traumaticEvents: medicalRecord.traumaticEvents || "",
+      emotionalConsiderations: medicalRecord.emotionalConsiderations || "",
+      physicalConsiderations: medicalRecord.physicalConsiderations || "",
+      mentalHistory: medicalRecord.mentalHistory || "",
+      objective: medicalRecord.objective || "",
+      familyObservations: medicalRecord.familyObservations || "",
+      isFamily: medicalRecord.isFamily ?? false,
+      familyType: medicalRecord.familyType || "",
+      lifecycle: medicalRecord.lifecycle || "",
+      genogram: medicalRecord.genogram || "",
+      resources: medicalRecord.resources || "",
+      difficulties: medicalRecord.difficulties || "",
+      communication: medicalRecord.communication || "",
+      rule: medicalRecord.rule || "",
+      limits: medicalRecord.limits || "",
+      familyContext: medicalRecord.familyContext || "",
+      expectations: medicalRecord.expectations || "",
+      flexibility: medicalRecord.flexibility || "",
+      familyMembers: medicalRecord.familyMembers?.length ? medicalRecord.familyMembers : [],
+      evolutionNotes: medicalRecord.evolutionNotes?.length ? medicalRecord.evolutionNotes : [],
+      documents: medicalRecord.documents || [],
+      subsystemRelations: medicalRecord.subsystemRelations?.length ? medicalRecord.subsystemRelations : [],
+    } : createEmptyForm();
+    formRef.current = loaded;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm(loaded);
   }, [ medicalRecord ]);
 
+  const recordId = medicalRecord?.id;
   const updateField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[ K ]) => {
-    setForm((current) => ({ ...current, [ key ]: value }));
-  }, []);
+    const next = { ...formRef.current, [ key ]: value };
+    formRef.current = next;
+    setForm(next);
+    if (recordId) scheduleSave({ id: recordId, form: next });
+  }, [ recordId, scheduleSave ]);
 
   const handleCreateRecord = useCallback(async (isFamily: boolean) => {
     await createMedicalRecord({
@@ -102,7 +115,6 @@ function MedicalRecordsPageContent() {
 
   const showRecord = selectedPatientId && medicalRecord && !loadingMedicalRecord;
   const showEmpty = selectedPatientId && !medicalRecord && !loadingMedicalRecord;
-  const saveStatus = useAutoSaveMedicalRecords(form, medicalRecord?.id, updateMedicalRecord);
 
   return (
     <PageLayout>
