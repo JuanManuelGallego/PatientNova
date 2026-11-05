@@ -58,11 +58,15 @@ export function CountryCodeInput({
     value,
     onChange,
     placeholder = "5551234567",
+    "aria-invalid": ariaInvalid,
+    "aria-describedby": ariaDescribedBy,
     "data-testid": testId,
 }: {
     value: string | undefined;
     onChange: (fullNumber: string) => void;
     placeholder?: string;
+    "aria-invalid"?: boolean;
+    "aria-describedby"?: string;
     "data-testid"?: string;
 }) {
     const parsed = useMemo(() => parsePhone(value), [ value ]);
@@ -80,7 +84,15 @@ export function CountryCodeInput({
     }
 
     function handleLocalChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/[^\d]/g, "");
+        const raw = e.target.value.trim();
+        const digits = raw.replace(/[^\d]/g, "");
+        // A pasted or autofilled number already carries its code; prefixing it again would still look valid.
+        if (raw.startsWith("+") && digits) {
+            const full = `+${digits}`;
+            if (!full.startsWith(countryCode)) setSelectedIso(parsePhone(full).iso);
+            onChange(full);
+            return;
+        }
         onChange(digits ? countryCode + digits : "");
     }
 
@@ -116,6 +128,8 @@ export function CountryCodeInput({
                 onChange={handleLocalChange}
                 placeholder={placeholder}
                 inputMode="tel"
+                aria-invalid={ariaInvalid}
+                aria-describedby={ariaDescribedBy}
             />
         </div>
     );

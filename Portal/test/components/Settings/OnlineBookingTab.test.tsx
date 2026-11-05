@@ -550,21 +550,34 @@ describe("OnlineBookingTab: public profile", () => {
         expect(screen.getByTestId("online-booking-profile-save-state")).toHaveTextContent("Guardado");
     });
 
-    it("normalizes a phone typed with spaces", async () => {
+    it("shows a stored phone split into its country code and number", () => {
+        settings = makeSettings({ publicPhone: "+525512345678" });
         renderTab();
-        await user.type(screen.getByTestId("online-booking-public-whatsapp"), "+57 300 111 2222");
-        await settle();
-        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ publicWhatsapp: "+573001112222" }));
+        const phone = within(screen.getByTestId("online-booking-public-phone"));
+        expect(phone.getByRole("combobox")).toHaveValue("mx");
+        expect(phone.getByRole("textbox")).toHaveValue("5512345678");
     });
 
-    it("never saves a phone without its country code", async () => {
+    it("saves the number with the selected country code", async () => {
         renderTab();
-        const phone = screen.getByTestId("online-booking-public-phone");
-        await user.type(phone, "3001112222");
+        const whatsapp = within(screen.getByTestId("online-booking-public-whatsapp"));
+        await user.type(whatsapp.getByRole("textbox"), "300 111 2222");
+        await settle();
+        expect(updateSettings).toHaveBeenLastCalledWith(expect.objectContaining({ publicWhatsapp: "+573001112222" }));
+
+        await user.selectOptions(whatsapp.getByRole("combobox"), "mx");
+        await settle();
+        expect(updateSettings).toHaveBeenLastCalledWith(expect.objectContaining({ publicWhatsapp: "+523001112222" }));
+    });
+
+    it("never saves an incomplete phone", async () => {
+        renderTab();
+        const phone = within(screen.getByTestId("online-booking-public-phone")).getByRole("textbox");
+        await user.type(phone, "300");
         await settle();
         expect(updateSettings).not.toHaveBeenCalled();
         expect(phone).toHaveAttribute("aria-invalid", "true");
-        expect(screen.getByRole("alert")).toHaveTextContent(/indicativo del país/);
+        expect(screen.getByRole("alert")).toHaveTextContent(/incompleto/);
     });
 
     it("warns that the profile is public", () => {
