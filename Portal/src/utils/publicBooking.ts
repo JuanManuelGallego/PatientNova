@@ -40,8 +40,9 @@ export interface WeekPage {
     hasNext: boolean;
 }
 
+/** The Sunday-to-Saturday week holding `start`, cut at the last bookable date. Its days before today stay listed, without slots. */
 export function weekPage(start: string, today: string, lastBookableDate: string): WeekPage {
-    const from = start < lastBookableDate ? start : lastBookableDate;
+    const from = sundayOf(start < lastBookableDate ? start : lastBookableDate);
     const end = addCalendarDays(from, WEEK_DAYS - 1);
     return {
         from,
@@ -69,6 +70,7 @@ export function calendarDaysBetween(from: string, to: string): string[] {
 }
 
 const asDate = (day: string) => new Date(`${day}T12:00:00Z`);
+const sundayOf = (day: string) => addCalendarDays(day, -asDate(day).getUTCDay());
 const part = (day: string, options: Intl.DateTimeFormatOptions) =>
     asDate(day).toLocaleDateString("es-CO", { timeZone: "UTC", ...options }).replace(/\.$/, "");
 

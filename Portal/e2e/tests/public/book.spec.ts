@@ -30,6 +30,8 @@ test.describe('public booking page', () => {
     await expect(page.getByRole('button', { name: /Control/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByText(/Consultorio Centro/)).toBeVisible();
     await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
+    // The current Sunday-to-Saturday week can be out of slots by Saturday evening.
+    await page.getByRole('button', { name: 'Semana siguiente' }).click();
     await expect(page.getByRole('list', { name: 'Tarde' }).getByRole('button').first()).toBeVisible();
     await expect(page.getByText(/Horas en tu zona horaria: Colombia/)).toBeVisible();
 
