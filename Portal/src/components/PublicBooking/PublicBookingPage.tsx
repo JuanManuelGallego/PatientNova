@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin, Video } from "lucide-react";
+import { CalendarOff, CircleCheck, Clock, MapPin, Video } from "lucide-react";
 import { useFetchPublicProvider } from "@/src/api/public-booking/useFetchPublicProvider";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalAppointment, PortalBookingOutcome, PortalPendingRequest } from "@/src/types/PortalBooking";
@@ -12,6 +12,7 @@ import { APPROVAL_FOLLOW_UP, fmtCop, locationDetail, timezoneName } from "@/src/
 import styles from "./PublicBooking.module.css";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { ProviderAvatar, providerImageUrl } from "./ProviderAvatar";
+import { StateIcon, TrustStrip } from "./PublicChrome";
 import { BookingForm } from "./BookingForm";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalRequestCard } from "./PortalRequestCard";
@@ -27,7 +28,7 @@ export function PublicBookingPage({ slug }: { slug: string }) {
     else if (!provider.bookingOpen) body = <BookingPaused slug={slug} provider={provider} />;
     else body = <BookingView slug={slug} provider={provider} />;
 
-    return <PublicPageShell>{body}</PublicPageShell>;
+    return <PublicPageShell appointmentsHref={error ? undefined : appointmentsPath(slug)}>{body}</PublicPageShell>;
 }
 
 const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
@@ -37,6 +38,7 @@ function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvi
         <>
             <ProviderHero slug={slug} provider={provider} />
             <section className={`dash-card ${styles.state}`} data-testid="booking-paused">
+                <StateIcon icon={CalendarOff} />
                 <h2 className={styles.stateTitle}>Las reservas en línea están en pausa</h2>
                 <p className={styles.muted}>
                     Por ahora no es posible reservar nuevas citas en línea. Si ya tienes una cita, puedes verla o cancelarla.
@@ -75,16 +77,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
         picker.retry();
     };
 
-    const nav = (
-        <nav className={styles.topNav} aria-label="Cuenta">
-            <Link href={appointmentsPath(slug)} className={styles.topLink}>Mis citas</Link>
-        </nav>
-    );
-
     if (booked) {
         return (
             <>
-                {nav}
                 <ProviderHero slug={slug} provider={provider} />
                 {"request" in booked
                     ? <RequestSent slug={slug} request={booked.request} timezone={timezone} onBookAnother={bookAnother} />
@@ -95,8 +90,9 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     return (
         <>
-            {nav}
-            <ProviderHero slug={slug} provider={provider} />
+            <ProviderHero slug={slug} provider={provider}>
+                <TrustStrip />
+            </ProviderHero>
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
                 {provider.approvalRequired && (
@@ -139,7 +135,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
     );
 }
 
-function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvider }) {
+function ProviderHero({ slug, provider, children }: { slug: string; provider: PublicProvider; children?: React.ReactNode }) {
     const [ logoFailed, setLogoFailed ] = useState(false);
     return (
         <section className={styles.hero}>
@@ -168,6 +164,7 @@ function ProviderHero({ slug, provider }: { slug: string; provider: PublicProvid
                     ))}
                 </ul>
             )}
+            {children}
         </section>
     );
 }
@@ -179,6 +176,7 @@ function BookingDone({ slug, appointment, timezone, onBookAnother }: {
     useEffect(() => { heading.current?.focus(); }, []);
     return (
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="booking-done">
+            <StateIcon icon={CircleCheck} />
             <h2 id="booking-done" ref={heading} tabIndex={-1} className={styles.doneTitle}>Tu cita quedó reservada</h2>
             <p className={styles.muted}>Te enviamos la confirmación a tu correo.</p>
             <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
@@ -196,6 +194,7 @@ function RequestSent({ slug, request, timezone, onBookAnother }: {
     useEffect(() => { heading.current?.focus(); }, []);
     return (
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="request-sent" data-testid="request-sent">
+            <StateIcon icon={Clock} />
             <h2 id="request-sent" ref={heading} tabIndex={-1} className={styles.doneTitle}>Solicitud enviada</h2>
             <p className={styles.muted}>
                 El consultorio la revisará. Mientras tanto guardamos el horario para ti. {APPROVAL_FOLLOW_UP}

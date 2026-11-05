@@ -38,25 +38,36 @@ describe("groupSlotsByDay", () => {
 });
 
 describe("weekPage", () => {
-    it("starts at today with no previous week, and pages while the next week starts inside the horizon", () => {
-        expect(weekPage("2026-11-09", "2026-11-09", "2027-01-07")).toEqual({
-            from: "2026-11-09", to: "2026-11-15", hasPrevious: false, hasNext: true,
+    it("starts on the Sunday of today's week, whatever the day, with no previous week", () => {
+        for (const today of [ "2026-11-08", "2026-11-11", "2026-11-14" ]) {
+            expect(weekPage(today, today, "2027-01-07")).toEqual({
+                from: "2026-11-08", to: "2026-11-14", hasPrevious: false, hasNext: true,
+            });
+        }
+    });
+
+    it("pages by Sunday-to-Saturday weeks while the next week starts inside the horizon", () => {
+        expect(weekPage("2026-11-15", "2026-11-11", "2027-01-07")).toEqual({
+            from: "2026-11-15", to: "2026-11-21", hasPrevious: true, hasNext: true,
         });
-        expect(weekPage("2026-11-16", "2026-11-09", "2027-01-07").hasPrevious).toBe(true);
+        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-15").hasNext).toBe(true);
+        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-14").hasNext).toBe(false);
+    });
+
+    it("crosses month and year boundaries when finding the Sunday", () => {
+        expect(weekPage("2027-01-01", "2027-01-01", "2027-03-01")).toMatchObject({ from: "2026-12-27", to: "2027-01-02" });
     });
 
     it("cuts the last week at the last bookable date", () => {
-        expect(weekPage("2027-01-04", "2026-11-09", "2027-01-07")).toEqual({
-            from: "2027-01-04", to: "2027-01-07", hasPrevious: true, hasNext: false,
+        expect(weekPage("2027-01-03", "2026-11-11", "2027-01-07")).toEqual({
+            from: "2027-01-03", to: "2027-01-07", hasPrevious: true, hasNext: false,
         });
-        expect(weekPage("2026-11-09", "2026-11-09", "2026-11-09")).toMatchObject({ to: "2026-11-09", hasNext: false });
-        expect(weekPage("2026-11-09", "2026-11-09", "2026-11-16").hasNext).toBe(true);
-        expect(weekPage("2026-11-09", "2026-11-09", "2026-11-15").hasNext).toBe(false);
+        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-11")).toMatchObject({ from: "2026-11-08", to: "2026-11-11", hasNext: false });
     });
 
     it("never inverts the range when today is past the last bookable date (stale profile, clock skew)", () => {
         expect(weekPage("2026-11-10", "2026-11-10", "2026-11-09")).toEqual({
-            from: "2026-11-09", to: "2026-11-09", hasPrevious: false, hasNext: false,
+            from: "2026-11-08", to: "2026-11-09", hasPrevious: false, hasNext: false,
         });
     });
 });

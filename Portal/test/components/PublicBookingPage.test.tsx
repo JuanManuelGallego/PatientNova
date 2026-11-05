@@ -20,6 +20,8 @@ vi.mock("@/src/components/TurnstileWidget", async () => {
 
 const TZ = "America/Bogota";
 const today = todayFormattedString(TZ);
+/** Column of `day` in the Sunday-first week grid. */
+const weekColumn = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay();
 
 const patientZone = vi.hoisted(() => ({ value: "America/Bogota" }));
 vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
@@ -92,15 +94,25 @@ describe("PublicBookingPage", () => {
         expect(screen.queryByRole("heading", { name: /Confirma tu cita/ })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
         expect(screen.getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+        expect(screen.getByRole("list", { name: "Garantías de la reserva" })).toBeInTheDocument();
+    });
+
+    it("hides the appointments link and booking guarantees when the provider is unavailable", async () => {
+        routeFetch(404);
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Esta página de reservas no está disponible")).toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Mis citas" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("list", { name: "Garantías de la reserva" })).not.toBeInTheDocument();
     });
 
     it("shows days and times in the patient's zone, not the provider's", async () => {
         patientZone.value = "Asia/Tokyo";
         const tokyoToday = todayFormattedString("Asia/Tokyo");
-        const tomorrow = addCalendarDays(tokyoToday, 1);
+        const column = weekColumn(tokyoToday);
         slots = {
             timezone: TZ,
-            slots: [ `${tomorrow}T01:00:00.000Z`, `${tomorrow}T06:00:00.000Z` ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
+            slots: [ `${tokyoToday}T01:00:00.000Z`, `${tokyoToday}T06:00:00.000Z` ].map((startUtc) => ({ startUtc, endUtc: startUtc })),
         };
         routeFetch();
         render(<PublicBookingPage slug="dra-ana" />);
@@ -109,32 +121,38 @@ describe("PublicBookingPage", () => {
         expect(morning).toHaveTextContent(/10:00/);
         expect(screen.getByRole("list", { name: "Tarde" })).toHaveTextContent(/03:00/);
         const week = screen.getByRole("group", { name: "Días de la semana" });
-        expect(within(week).getAllByRole("button")[ 1 ]).toHaveAttribute("aria-pressed", "true");
+        expect(within(week).getAllByRole("button")[ column ]).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByText(/Horas en tu zona horaria/)).toHaveTextContent(/Tokio|Tokyo/);
 
         const url = new URL(String(fetchMock.mock.calls.find(([ u ]) => String(u).includes("/slots?"))![ 0 ]));
-        expect(url.searchParams.get("from")).toBe(addCalendarDays(tokyoToday, -2));
-        expect(url.searchParams.get("to")).toBe(addCalendarDays(tokyoToday, 8));
+        expect(url.searchParams.get("from")).toBe(addCalendarDays(tokyoToday, -column - 2));
+        expect(url.searchParams.get("to")).toBe(addCalendarDays(tokyoToday, 6 - column + 2));
     });
 
-    it("shows the whole week, with days without slots greyed out and a tooltip", async () => {
+    it("shows the whole week from Sunday, with days without slots greyed out and a tooltip", async () => {
         routeFetch();
         render(<PublicBookingPage slug="dra-ana" />);
         const week = await screen.findByRole("group", { name: "Días de la semana" });
         const days = within(week).getAllByRole("button");
         expect(days).toHaveLength(7);
-        expect(days[ 0 ]).not.toHaveAttribute("aria-disabled");
-        expect(days[ 0 ]).not.toHaveAttribute("data-tooltip");
-        expect(days[ 0 ]).toHaveAttribute("aria-pressed", "true");
-        for (const closed of days.slice(1)) {
+        expect(days[ 0 ]).toHaveTextContent(/^dom/i);
+        expect(days[ 6 ]).toHaveTextContent(/^sáb/i);
+
+        const column = weekColumn(today);
+        const open = days[ column ];
+        expect(open).not.toHaveAttribute("aria-disabled");
+        expect(open).not.toHaveAttribute("data-tooltip");
+        expect(open).toHaveAttribute("aria-pressed", "true");
+        const closedDays = days.filter((d) => d !== open);
+        for (const closed of closedDays) {
             expect(closed).toHaveAttribute("aria-disabled", "true");
             expect(closed).toHaveAttribute("data-tooltip", "Sin horarios disponibles");
             expect(closed).toHaveAccessibleName(/sin horarios$/);
         }
 
-        await userEvent.click(days[ 1 ]);
-        expect(days[ 0 ]).toHaveAttribute("aria-pressed", "true");
-        expect(days[ 1 ]).not.toHaveAttribute("aria-pressed");
+        await userEvent.click(closedDays[ 0 ]);
+        expect(open).toHaveAttribute("aria-pressed", "true");
+        expect(closedDays[ 0 ]).not.toHaveAttribute("aria-pressed");
     });
 
     it("offers the next week when this one has no slots", async () => {
@@ -181,6 +199,7 @@ describe("PublicBookingPage", () => {
         expect(await screen.findByRole("heading", { name: "Las reservas en línea están en pausa" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+        expect(screen.queryByRole("list", { name: "Garantías de la reserva" })).not.toBeInTheDocument();
         expect(screen.queryByRole("group", { name: "Días de la semana" })).not.toBeInTheDocument();
         expect(fetchMock.mock.calls.some(([ u ]) => String(u).includes("/slots?"))).toBe(false);
     });
