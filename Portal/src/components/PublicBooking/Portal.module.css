@@ -18,19 +18,22 @@
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
-  background: var(--c-brand-accent);
+  background: var(--c-white);
+  box-shadow: inset 0 0 0 2px var(--c-brand);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 19px;
   font-weight: 700;
-  color: var(--c-white);
+  color: var(--c-brand);
 }
 
 .providerName {
   margin: 0;
-  font-size: 17px;
-  font-weight: 700;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   line-height: 1.25;
   color: var(--c-gray-900);
 }
@@ -71,8 +74,6 @@
 .title {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
   color: var(--c-gray-900);
 }
 
@@ -354,7 +355,6 @@
 .listHeading {
   margin: 4px 0 0;
   font-size: 15px;
-  font-weight: 600;
   color: var(--c-gray-700);
 }
 

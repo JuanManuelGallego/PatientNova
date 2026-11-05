@@ -92,6 +92,16 @@ describe("PublicBookingPage", () => {
         expect(screen.queryByRole("heading", { name: /Confirma tu cita/ })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Semana anterior" })).toBeDisabled();
         expect(screen.getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+        expect(screen.getByRole("list", { name: "Garantías de la reserva" })).toBeInTheDocument();
+    });
+
+    it("hides the appointments link and booking guarantees when the provider is unavailable", async () => {
+        routeFetch(404);
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        expect(await screen.findByText("Esta página de reservas no está disponible")).toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Mis citas" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("list", { name: "Garantías de la reserva" })).not.toBeInTheDocument();
     });
 
     it("shows days and times in the patient's zone, not the provider's", async () => {
@@ -181,6 +191,7 @@ describe("PublicBookingPage", () => {
         expect(await screen.findByRole("heading", { name: "Las reservas en línea están en pausa" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Dra. Ana Pública" })).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "Ver mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
+        expect(screen.queryByRole("list", { name: "Garantías de la reserva" })).not.toBeInTheDocument();
         expect(screen.queryByRole("group", { name: "Días de la semana" })).not.toBeInTheDocument();
         expect(fetchMock.mock.calls.some(([ u ]) => String(u).includes("/slots?"))).toBe(false);
     });

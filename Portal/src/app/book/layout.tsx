@@ -11,7 +11,7 @@ const displayFont = Newsreader({
 
 export default function BookLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className={`${styles.frame} ${displayFont.variable}`}>
+        <div data-theme="light" className={`${styles.frame} ${displayFont.variable}`}>
             {children}
             <PublicFooter />
         </div>

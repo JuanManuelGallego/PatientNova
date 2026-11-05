@@ -1,16 +1,26 @@
-/* Public booking palette, scoped to /book so the provider dashboard keeps its tokens. */
-.frame {
+/* Public booking palette, scoped to /book so the provider dashboard keeps its tokens.
+   Light only: patients have no theme toggle, so data-theme="light" on the frame resets any
+   dark theme a provider saved in this browser, and this selector must outrank that reset. */
+.frame[data-theme="light"] {
   --c-page-bg: #f6f5f1;
+  --c-input-bg: #fcfbf8;
   --c-brand: #0f6b66;
   --c-brand-hover: #0b5450;
   --c-brand-accent: #0f6b66;
   --c-brand-light: #e3efec;
+  --c-brand-glow: rgba(15, 107, 102, 0.25);
+  --c-link: #0f6b66;
+  --shadow-btn: 0 4px 14px rgba(15, 107, 102, 0.25);
+  --c-gray-50: #fbfaf7;
   --c-gray-100: #efede7;
   --c-gray-200: #e3e1da;
+  --c-gray-300: #d2d0c8;
+  --c-gray-400: #9a9c98;
   --c-gray-500: #5c6b70;
   --c-gray-700: #33424a;
   --c-gray-900: #17222a;
 
+  color-scheme: light;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
@@ -39,8 +49,9 @@
 
 .headerInner {
   max-width: 672px;
+  min-height: 60px;
   margin: 0 auto;
-  padding: 14px 16px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -51,6 +62,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  white-space: nowrap;
   font-family: var(--font-display), Georgia, serif;
   font-size: 19px;
   font-weight: 500;
@@ -66,13 +78,11 @@
   flex-shrink: 0;
 }
 
-.headerEnd {
+.navLink {
   display: inline-flex;
   align-items: center;
-  gap: 18px;
-}
-
-.navLink {
+  min-height: 44px;
+  white-space: nowrap;
   font-size: 14px;
   font-weight: 600;
   color: var(--c-brand);
@@ -88,18 +98,6 @@
   outline: 2px solid var(--c-brand);
   outline-offset: 2px;
   border-radius: 2px;
-}
-
-.secure {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--c-gray-500);
-}
-
-.secure svg {
-  color: var(--c-brand);
 }
 
 .footer {
@@ -181,7 +179,6 @@
 .iconBubble {
   width: 48px;
   height: 48px;
-  margin: 0 auto;
   border-radius: 50%;
   background: var(--c-brand-light);
   color: var(--c-brand);

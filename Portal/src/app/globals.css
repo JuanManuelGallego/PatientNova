@@ -61,7 +61,9 @@
 /* ================================================================
    CSS Custom Properties (backward-compat aliases + extras)
    ================================================================ */
-:root {
+/* [data-theme="light"] lets a subtree opt out of a dark theme set on <html>. */
+:root,
+[data-theme="light"] {
   /* Neutrals */
   --c-white: #ffffff;
   --c-gray-50: #f9fafb;

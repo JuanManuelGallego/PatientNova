@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Lock, MailCheck, ShieldCheck, type LucideIcon } from "lucide-react";
+import { KeyRound, MailCheck, ShieldCheck, type LucideIcon } from "lucide-react";
 import styles from "./PublicChrome.module.css";
 
 const LEGAL_LINK_TARGET = { target: "_blank", rel: "noopener noreferrer" } as const;
 
-export function PublicHeader({ slug, current }: { slug: string; current: "book" | "appointments" }) {
+export function PublicHeader({ appointmentsHref }: { appointmentsHref?: string }) {
     return (
         <header className={styles.header}>
             <div className={styles.headerInner}>
@@ -13,15 +13,11 @@ export function PublicHeader({ slug, current }: { slug: string; current: "book" 
                     <img className={styles.logo} src="/favicon.ico" alt="" width={32} height={32} />
                     Patient Nova
                 </span>
-                <div className={styles.headerEnd}>
-                    {current === "book" && (
-                        <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={styles.navLink}>Mis citas</Link>
-                    )}
-                    <span className={styles.secure}>
-                        <Lock size={14} aria-hidden="true" />
-                        Reserva segura
-                    </span>
-                </div>
+                {appointmentsHref && (
+                    <nav aria-label="Cuenta">
+                        <Link href={appointmentsHref} className={styles.navLink}>Mis citas</Link>
+                    </nav>
+                )}
             </div>
         </header>
     );
@@ -34,11 +30,11 @@ export function PublicFooter() {
                 <p className={styles.footerBrand}>
                     Agenda en línea por <strong>Patient Nova</strong>
                 </p>
-                <nav aria-label="Legal y contacto">
+                <nav aria-label="Legal y soporte">
                     <ul className={styles.footerLinks}>
                         <li><a href="/privacy-policy" {...LEGAL_LINK_TARGET}>Política de privacidad</a></li>
                         <li><a href="/terms-of-service" {...LEGAL_LINK_TARGET}>Términos de servicio</a></li>
-                        <li><a href="mailto:privacidad@patientnova.net">Contacto</a></li>
+                        <li><a href="mailto:support@patientnova.net">Soporte</a></li>
                     </ul>
                 </nav>
                 <p className={styles.footerNote}>
@@ -54,7 +50,7 @@ export function TrustStrip() {
     return (
         <ul className={styles.trust} aria-label="Garantías de la reserva">
             <li><ShieldCheck size={16} aria-hidden="true" />Datos protegidos</li>
-            <li><Lock size={16} aria-hidden="true" />Sin contraseña</li>
+            <li><KeyRound size={16} aria-hidden="true" />Sin contraseña</li>
             <li><MailCheck size={16} aria-hidden="true" />Confirmación por correo</li>
         </ul>
     );
@@ -63,7 +59,7 @@ export function TrustStrip() {
 export function StateIcon({ icon: Icon }: { icon: LucideIcon }) {
     return (
         <span className={styles.iconBubble} aria-hidden="true">
-            <Icon size={22} aria-hidden="true" />
+            <Icon size={22} />
         </span>
     );
 }
