@@ -1,0 +1,142 @@
+.frame {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-page-bg);
+}
+
+.header {
+  background: var(--c-white);
+  border-bottom: 1px solid var(--c-gray-200);
+}
+
+.headerInner {
+  max-width: 672px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-gray-900);
+}
+
+.brandMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--c-brand);
+  color: var(--c-white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-gray-500);
+}
+
+.secure svg {
+  color: var(--c-brand);
+}
+
+.footer {
+  background: var(--c-white);
+  border-top: 1px solid var(--c-gray-200);
+}
+
+.footerInner {
+  max-width: 672px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-gray-500);
+}
+
+.footerBrand {
+  margin: 0;
+}
+
+.footerBrand strong {
+  color: var(--c-gray-900);
+}
+
+.footerLinks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.footerLinks a {
+  color: var(--c-gray-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footerLinks a:hover {
+  color: var(--c-brand);
+}
+
+.footerLinks a:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.footerNote,
+.footerCopy {
+  margin: 0;
+}
+
+.trust {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-gray-700);
+}
+
+.trust svg {
+  color: var(--c-brand);
+}
+
+.iconBubble {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--c-brand-light);
+  color: var(--c-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
