@@ -4,9 +4,9 @@ import { MedicalRecord, FetchMedicalRecordFilters } from "@/src/types/MedicalRec
 import { useApiPaginatedQuery } from "@/src/api/base/useApiPaginatedQuery";
 import { buildMedicalRecordQueryString } from "@/src/utils/ApiUtils";
 
-export const useFetchMedicalRecords = (filters?: FetchMedicalRecordFilters) => {
+export const useFetchMedicalRecords = (filters?: FetchMedicalRecordFilters | null) => {
     const url = useMemo(
-        () => `${API_BASE}/medical-records${buildMedicalRecordQueryString(filters)}`,
+        () => filters === null ? null : `${API_BASE}/medical-records${buildMedicalRecordQueryString(filters)}`,
         [ filters ]
     );
 

@@ -55,8 +55,8 @@ function MedicalRecordsPageContent() {
 
   const { patient: selectedPatient } = useFetchPatient(selectedPatientId || null);
 
-  const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : {});
-  const medicalRecord = medicalRecords?.[ 0 ];
+  const { medicalRecords, loading: loadingMedicalRecord, fetchMedicalRecords } = useFetchMedicalRecords(selectedPatientId ? { patientId: selectedPatientId } : null);
+  const medicalRecord = selectedPatientId ? medicalRecords?.[ 0 ] : undefined;
 
   useEffect(() => {
     const loaded: FormValues = medicalRecord ? {
@@ -146,7 +146,7 @@ function MedicalRecordsPageContent() {
         title="Historias clínicas"
         subtitle={todayString(timezone)}
         actions={
-          medicalRecord && (
+          showRecord && (
             <button type="button" className="btn-primary" onClick={() => downloadMedicalRecordPDF(user, form)} data-testid="medical-records-download-pdf-button">
               Descargar PDF
             </button>
