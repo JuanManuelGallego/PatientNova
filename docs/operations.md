@@ -41,30 +41,83 @@ session on first deploy. Announce it and deploy outside clinic hours.
 
 ## Backups and restore (PostgreSQL)
 
-Status: **to be confirmed with the hosting provider.** Do not claim backups exist in any user-facing
+Status: **no database backups as of 2026-11-06.** Do not claim backups exist in any user-facing
 text until each box below is ticked.
 
-- [ ] Automated daily backups enabled at the provider, retention >= 14 days
-- [ ] Point-in-time recovery enabled (if offered)
-- [ ] Backups encrypted at rest
+- [ ] Nightly offsite backup running (`ops/db-backup`), retention >= 14 days
+- [ ] A missed or failed run alerts through Sentry, confirmed once by stopping the job
+- [ ] Railway volume backups and point-in-time recovery enabled, if the plan offers them
+- [ ] Offsite backups encrypted (`age`); Railway's own backups: confirm with Railway
 - [ ] A restore was rehearsed into a scratch database in the last 90 days (date: ____)
 
-Manual logical backup (also useful before risky migrations):
+Railway's backups stay inside Railway and wiping a volume deletes them, so the offsite copy is
+required either way. Railway's backups only add faster restores.
+
+### Nightly offsite backup
+
+`ops/db-backup` is a Railway cron service: `pg_dump`, encrypted with `age`, uploaded to Cloudflare R2.
+It reaches disk only as ciphertext and holds only the public key, so neither Railway's service nor R2
+can read a backup. `bash ops/db-backup/smoke-test.sh` runs it end to end, restore included, in
+throwaway containers.
+
+1. **R2.** Create a private bucket `patientnova-db-backups`. Add a lifecycle rule that deletes objects
+   after 30 days. Create an API token with Object Read & Write on that bucket only.
+2. **Encryption key.** Run `age-keygen -o patientnova-backup.key` on your own machine. Store the file
+   with the other key backups, then delete the local copy. It prints the public key (`age1...`).
+   Losing this key makes every backup useless, and it is the one key that must stay out of Railway.
+3. **Sentry.** In `patientnova-server`, create a cron monitor `db-backup` with schedule `0 7 * * *` in
+   UTC and an alert on it. Copy its check-in URL, up to the final `/`.
+4. **Railway.** Create a service from this repo with Root Directory `ops/db-backup`, Cron Schedule
+   `0 7 * * *` (2:00 in Bogotá) and restart policy Never. Set these variables:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | Reference to the Postgres service's URL |
+   | `BACKUP_AGE_RECIPIENT` | The `age1...` public key |
+   | `R2_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` |
+   | `R2_BUCKET` | `patientnova-db-backups` |
+   | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | The token from step 1 |
+   | `BACKUP_HEARTBEAT_URL` | The URL from step 3 |
+
+5. **Check.** Run it once with `railway cron run`. A `patientnova-*.dump.age` object appears in the
+   bucket and the monitor turns green. Then do the first restore rehearsal below.
+
+The job fails rather than upload when `pg_dump` fails or the file is under `BACKUP_MIN_BYTES` (1024).
+Its Postgres client must be at least the server's major version: update `ops/db-backup/Dockerfile`
+when the database moves to a newer major version.
+
+### Manual backup
+
+Before risky migrations, and until the nightly job runs:
 
 ```bash
-pg_dump --format=custom --no-owner --file patientnova-$(date +%F).dump "$DATABASE_URL"
+pg_dump --format=custom --no-owner --dbname "$DATABASE_URL" \
+  | age --recipient age1... --output patientnova-$(date +%F).dump.age
 ```
 
-Restore into a scratch database and verify:
+### Restore rehearsal
+
+Restore into a scratch Postgres service inside Railway, never onto a laptop. The check proves both
+halves: the backup restores, and the keys you hold can read it.
 
 ```bash
-createdb patientnova_restore
-pg_restore --no-owner --dbname patientnova_restore patientnova-YYYY-MM-DD.dump
-psql patientnova_restore -c 'SELECT count(*) FROM appointments;'
+age --decrypt --identity patientnova-backup.key patientnova-YYYY-MM-DDTHHMMSSZ.dump.age \
+  | pg_restore --no-owner --dbname "$SCRATCH_DATABASE_URL"
+psql "$SCRATCH_DATABASE_URL" -c 'SELECT count(*) FROM appointments;'
 ```
 
-Patient data is sensitive personal data under Ley 1581 de 2012: store dumps encrypted, restrict
-access, delete scratch copies after the rehearsal.
+Compare that count with production, then read rows using the **password manager copies** of the keys:
+
+```bash
+cd Server
+DATABASE_URL="$SCRATCH_DATABASE_URL" ENCRYPTION_KEY=... BLIND_INDEX_KEY=... pnpm run db:verify-restore
+```
+
+It exits 0 only when it read rows and decrypted all of them, and prints counts, never patient data.
+Delete the scratch service afterwards and record the date in the checklist above.
+
+Patient data is sensitive personal data under Ley 1581 de 2012: store dumps only encrypted and
+restrict access.
 
 ## Error tracking (Sentry, optional)
 

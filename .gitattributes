@@ -1,0 +1,2 @@
+# Run inside Linux containers; a CRLF shebang fails with "no such file or directory".
+ops/db-backup/*.sh text eol=lf

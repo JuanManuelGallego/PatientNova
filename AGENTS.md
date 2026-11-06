@@ -4,6 +4,7 @@
 
 - `Server/`: Node/TypeScript backend, Prisma, pg-boss; unit and real-Postgres integration tests.
 - `Portal/`: Next.js frontend; Playwright e2e tests.
+- `ops/db-backup/`: nightly encrypted database backup (Railway cron); `smoke-test.sh` runs it end to end, and setup is in `docs/operations.md`.
 - Backend `src/` paths below are relative to `Server/`; frontend paths to `Portal/`.
 
 ## Tests and configuration
