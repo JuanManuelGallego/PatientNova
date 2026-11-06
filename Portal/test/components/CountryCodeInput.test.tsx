@@ -56,6 +56,38 @@ describe("CountryCodeInput", () => {
         expect(onChange).toHaveBeenLastCalledWith("+4741234567");
     });
 
+    it("moves a code typed key by key to the selector without repeating it", async () => {
+        const { onChange, user, number, country } = setup();
+        await user.type(number, "+52 55 1234 5678");
+        expect(onChange).toHaveBeenLastCalledWith("+525512345678");
+        expect(country).toHaveValue("mx");
+        expect(number).toHaveValue("5512345678");
+    });
+
+    it("shows a number whose code is not listed in full and keeps it on edit", async () => {
+        const { onChange, user, number } = setup();
+        await user.click(number);
+        await user.paste("+47 412 34 567");
+        expect(number).toHaveValue("+4741234567");
+        await user.type(number, "8");
+        expect(onChange).toHaveBeenLastCalledWith("+47412345678");
+    });
+
+    it("uses the digits of an unlisted number when a country is picked", async () => {
+        const { onChange, user, number, country } = setup();
+        await user.click(number);
+        await user.paste("+47 412 34 567");
+        await user.selectOptions(country, "mx");
+        expect(onChange).toHaveBeenLastCalledWith("+524741234567");
+    });
+
+    it("leaves the value empty when only a country code was typed", async () => {
+        const { onChange, user, number } = setup();
+        await user.type(number, "+57");
+        expect(onChange).toHaveBeenLastCalledWith("");
+        expect(number).toHaveValue("");
+    });
+
     it("clears the value when only a plus sign is left", async () => {
         const { onChange, user, number } = setup();
         await user.click(number);

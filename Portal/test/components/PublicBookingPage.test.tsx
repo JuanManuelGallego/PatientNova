@@ -530,7 +530,7 @@ describe("PublicBookingPage booking", () => {
         expect(await screen.findByRole("list", { name: "Mañana" })).toBeInTheDocument();
     });
 
-    it("needs the country code on the phone and leaves it out when empty", async () => {
+    it("validates the phone and leaves it out when empty", async () => {
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
@@ -538,11 +538,11 @@ describe("PublicBookingPage booking", () => {
         await user.click(screen.getByRole("checkbox"));
 
         const phone = screen.getByLabelText("Teléfono (opcional)");
-        await user.type(phone, "3001112233");
+        await user.type(phone, "300");
         expect(phone).not.toHaveAttribute("aria-invalid");
         await user.tab();
         expect(phone).toHaveAttribute("aria-invalid", "true");
-        expect(screen.getByText(/Escríbelo con el indicativo del país/)).toBeInTheDocument();
+        expect(screen.getByText(/Revisa el número/)).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Reservar cita" }));
         expect(phone).toHaveFocus();
         expect(calls("/portal/bookings")).toHaveLength(0);

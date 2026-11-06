@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
 import { CHANNEL_ICONS } from "@/src/config/icons";
 import { useRequestOtp, useVerifyOtp } from "@/src/api/portal/usePortalAuth";
 import type { LoginChannel } from "@/src/types/PublicBooking";
-import { fmtPhone, isE164, isPhoneChannel, normalizePhone, PHONE_FORMAT_HINT } from "@/src/utils/publicBooking";
+import { fmtPhone, isE164, isPhoneChannel, PHONE_FORMAT_HINT } from "@/src/utils/publicBooking";
 import styles from "./Portal.module.css";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
@@ -79,7 +80,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
     const verify = useVerifyOtp(slug);
 
     const onPhone = isPhoneChannel(channel);
-    const contact = onPhone ? normalizePhone(phone) : normalizeEmail(email);
+    const contact = onPhone ? phone : normalizeEmail(email);
     const contactValid = onPhone ? isE164(contact) : contact !== "";
     const phoneError = onPhone && phoneTouched && !contactValid;
 
@@ -159,27 +160,21 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                     )}
                     {onPhone ? (
                         <div>
-                            <label className="form-label">
-                                Número de celular
-                                <input
-                                    className="form-input"
-                                    type="tel"
+                            <div className="form-label">
+                                <label htmlFor={`${ids}-phone`}>Número de celular</label>
+                                <CountryCodeInput
+                                    id={`${ids}-phone`}
                                     name="phone"
                                     autoComplete="tel"
-                                    inputMode="tel"
-                                    required
-                                    maxLength={24}
-                                    placeholder="+57 300 123 4567"
+                                    placeholder="300 123 4567"
                                     aria-invalid={phoneError || undefined}
-                                    aria-describedby={`${ids}-phone-hint`}
+                                    aria-describedby={phoneError ? `${ids}-phone-error` : undefined}
                                     value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
+                                    onChange={setPhone}
                                     onBlur={() => setPhoneTouched(true)}
                                 />
-                            </label>
-                            <span id={`${ids}-phone-hint`} className={phoneError ? styles.fieldError : styles.fieldHint}>
-                                {phoneError ? PHONE_FORMAT_HINT : "Con el indicativo del país."}
-                            </span>
+                            </div>
+                            {phoneError && <span id={`${ids}-phone-error`} className={styles.fieldError}>{PHONE_FORMAT_HINT}</span>}
                         </div>
                     ) : (
                         <label className="form-label">

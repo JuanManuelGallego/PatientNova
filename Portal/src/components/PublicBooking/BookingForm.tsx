@@ -3,12 +3,13 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ApiClientError } from "@/src/api/base/apiClients";
+import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
 import type { LoginChannel, PublicAppointmentType, PublicLocation, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
 import {
-    APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtContact, fmtCop, fmtLongDayTime, isE164, isPhoneChannel, locationDetail, normalizePhone,
+    APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtContact, fmtCop, fmtLongDayTime, isE164, isPhoneChannel, locationDetail,
     PHONE_FORMAT_HINT,
 } from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
@@ -103,7 +104,7 @@ function PatientDetails({ contact, contactChannel, providerName, approvalRequire
     const { createBooking, loading, error } = useCreateBooking();
 
     const onPhone = isPhoneChannel(contactChannel);
-    const phoneValue = onPhone ? "" : normalizePhone(phone);
+    const phoneValue = onPhone ? "" : phone;
     const contactKind = onPhone ? "el número" : "el correo";
     const invalid: Record<Field, boolean> = {
         name: !name.trim(),
@@ -178,15 +179,13 @@ function PatientDetails({ contact, contactChannel, providerName, approvalRequire
             </div>
             {!onPhone && (
                 <div>
-                    <label className="form-label">
-                        Teléfono (opcional)
-                        <input ref={phoneRef} className="form-input" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={24}
-                            placeholder="+57 300 123 4567" aria-invalid={shown.phone || undefined} aria-describedby={errorId("phone")}
-                            value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setPhoneTouched(true)} />
-                    </label>
-                    <span id={errorId("phone")} className={shown.phone ? portal.fieldError : portal.fieldHint}>
-                        {shown.phone ? PHONE_FORMAT_HINT : "Con el indicativo del país."}
-                    </span>
+                    <div className="form-label">
+                        <label htmlFor={`${ids}-phone`}>Teléfono (opcional)</label>
+                        <CountryCodeInput ref={phoneRef} id={`${ids}-phone`} name="phone" autoComplete="tel" placeholder="300 123 4567"
+                            aria-invalid={shown.phone || undefined} aria-describedby={shown.phone ? errorId("phone") : undefined}
+                            value={phone} onChange={setPhone} onBlur={() => setPhoneTouched(true)} />
+                    </div>
+                    {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
                 </div>
             )}
             <div>

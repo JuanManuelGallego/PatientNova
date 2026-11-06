@@ -105,8 +105,19 @@
   overflow-wrap: anywhere;
 }
 
-.form :global(.form-input) {
+.form :global(.form-input),
+.form :global(.phone-input-group) {
   min-height: 44px;
+  font-size: 16px;
+}
+
+.form :global(.phone-input-group) {
+  border-radius: var(--r-md);
+}
+
+.form :global(.phone-input-number),
+.form :global(.phone-input-code),
+.form :global(.phone-input-code-display) {
   font-size: 16px;
 }
 
@@ -264,7 +275,6 @@
   letter-spacing: 0;
 }
 
-.fieldHint,
 .fieldError {
   display: block;
   margin-top: 4px;
@@ -281,7 +291,8 @@
   margin-left: 30px;
 }
 
-.form :global(.form-input)[aria-invalid="true"] {
+.form :global(.form-input)[aria-invalid="true"],
+.form :global(.phone-input-group):has([aria-invalid="true"]) {
   border-color: var(--c-error);
 }
 

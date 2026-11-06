@@ -105,7 +105,7 @@ export function normalizePhone(value: string): string {
 
 export const isE164 = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
 
-export const PHONE_FORMAT_HINT = "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567.";
+export const PHONE_FORMAT_HINT = "Revisa el número, por ejemplo 300 123 4567.";
 
 export const isPhoneChannel = (channel: LoginChannel) => channel !== "EMAIL";
 

@@ -365,17 +365,31 @@ describe("PortalAppointmentsPage", () => {
             expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toEqual({ phone: PHONE, code: "123456", challenge: "challenge-1" });
         });
 
-        it("asks for the country code and blocks the request until the number is valid", async () => {
+        it("adds the selected country code to the number", async () => {
             withPhoneLogin();
             const user = userEvent.setup();
             render(<PortalAppointmentsPage slug={SLUG} />);
 
             await user.click(await choice("WhatsApp"));
-            await user.type(screen.getByLabelText("Número de celular"), "3001112233");
+            await user.type(screen.getByLabelText("Número de celular"), "300 111 2233");
+            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+            await user.click(screen.getByRole("button", { name: "Enviar código" }));
+
+            await screen.findByLabelText("Código de 6 dígitos");
+            expect(bodyOf(`/public/providers/${SLUG}/otp`)).toEqual({ phone: PHONE, channel: "WHATSAPP", captchaToken: "captcha-otp-request" });
+        });
+
+        it("blocks the request until the number is valid", async () => {
+            withPhoneLogin();
+            const user = userEvent.setup();
+            render(<PortalAppointmentsPage slug={SLUG} />);
+
+            await user.click(await choice("WhatsApp"));
+            await user.type(screen.getByLabelText("Número de celular"), "300");
             await user.tab();
             await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
 
-            expect(screen.getByText(/Escríbelo con el indicativo del país/)).toBeInTheDocument();
+            expect(screen.getByText(/Revisa el número/)).toBeInTheDocument();
             expect(screen.getByRole("button", { name: "Enviar código" })).toBeDisabled();
             expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(0);
         });
