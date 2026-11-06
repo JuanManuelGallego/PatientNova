@@ -21,7 +21,6 @@ export interface BookingSettings {
     minRescheduleNoticeHours: number;
     bio: string | null;
     specialty: string | null;
-    professionalLicense: string | null;
     publicPhone: string | null;
     publicWhatsapp: string | null;
     readiness: BookingReadiness;
@@ -31,13 +30,12 @@ export interface BookingSettings {
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
     "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
     | "maxPatientReschedules" | "minRescheduleNoticeHours"
-    | "bio" | "specialty" | "professionalLicense" | "publicPhone" | "publicWhatsapp">>;
+    | "bio" | "specialty" | "publicPhone" | "publicWhatsapp">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
-export const MAX_LICENSE_LENGTH = 60;
 
 export interface AvailabilityRule {
     weekday: number;

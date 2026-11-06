@@ -265,7 +265,6 @@ model User {
 
   bio                 String? @db.VarChar(600)
   specialty           String? @db.VarChar(120)
-  professionalLicense String? @db.VarChar(60)
   publicPhone         String? @db.VarChar(20)
   publicWhatsapp      String? @db.VarChar(20)
 

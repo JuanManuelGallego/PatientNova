@@ -142,7 +142,6 @@ describe('GET /v1/public/providers/:slug', () => {
       displayName: 'Test User',
       jobTitle: 'Psicóloga',
       specialty: null,
-      professionalLicense: null,
       bio: null,
       phone: null,
       whatsapp: null,
@@ -167,14 +166,14 @@ describe('GET /v1/public/providers/:slug', () => {
     await prisma.user.update({
       where: { id: p.id },
       data: {
-        bio: 'Atiendo adultos.', specialty: 'Psicología clínica', professionalLicense: 'TP 12345',
+        bio: 'Atiendo adultos.', specialty: 'Psicología clínica',
         publicPhone: '+573001112222', publicWhatsapp: '+573003334444',
         phoneNumber: '+573009998888', whatsappNumber: '+573007776666',
       },
     });
     const body = (await get(`/${p.slug}`)).body.data;
     expect(body).toMatchObject({
-      bio: 'Atiendo adultos.', specialty: 'Psicología clínica', professionalLicense: 'TP 12345',
+      bio: 'Atiendo adultos.', specialty: 'Psicología clínica',
       phone: '+573001112222', whatsapp: '+573003334444',
     });
     expect(JSON.stringify(body)).not.toContain('+573009998888');

@@ -20,7 +20,6 @@ import {
     BookingSettings,
     BookingSettingsUpdate,
     MAX_BIO_LENGTH,
-    MAX_LICENSE_LENGTH,
     MAX_PATIENT_RESCHEDULES,
     MAX_RESCHEDULE_NOTICE_HOURS,
     MAX_SPECIALTY_LENGTH,
@@ -686,12 +685,11 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     );
 }
 
-type ProfileForm = { specialty: string; professionalLicense: string; bio: string; publicPhone: string; publicWhatsapp: string };
+type ProfileForm = { specialty: string; bio: string; publicPhone: string; publicWhatsapp: string };
 
 function profileFormOf(s: BookingSettings): ProfileForm {
     return {
         specialty: s.specialty ?? "",
-        professionalLicense: s.professionalLicense ?? "",
         bio: s.bio ?? "",
         publicPhone: s.publicPhone ?? "",
         publicWhatsapp: s.publicWhatsapp ?? "",
@@ -709,7 +707,6 @@ function parseProfile(form: ProfileForm) {
     };
     const body = {
         specialty: form.specialty.trim() || null,
-        professionalLicense: form.professionalLicense.trim() || null,
         bio: form.bio.trim() || null,
         publicPhone: publicPhone || null,
         publicWhatsapp: publicWhatsapp || null,
@@ -759,18 +756,11 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Opcional. Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
                 </span>
-                <div className="form-grid-2">
-                    <label className="form-label">
-                        Especialidad
-                        <input className="form-input" maxLength={MAX_SPECIALTY_LENGTH} placeholder="Psicología clínica"
-                            value={form.specialty} onChange={(e) => change({ specialty: e.target.value })} data-testid="online-booking-specialty" />
-                    </label>
-                    <label className="form-label">
-                        Número de tarjeta profesional
-                        <input className="form-input" maxLength={MAX_LICENSE_LENGTH}
-                            value={form.professionalLicense} onChange={(e) => change({ professionalLicense: e.target.value })} data-testid="online-booking-license" />
-                    </label>
-                </div>
+                <label className="form-label">
+                    Especialidad
+                    <input className="form-input" maxLength={MAX_SPECIALTY_LENGTH} placeholder="Psicología clínica"
+                        value={form.specialty} onChange={(e) => change({ specialty: e.target.value })} data-testid="online-booking-specialty" />
+                </label>
                 <label className="form-label">
                     Presentación
                     <textarea className="form-input form-input--textarea" rows={4} maxLength={MAX_BIO_LENGTH}

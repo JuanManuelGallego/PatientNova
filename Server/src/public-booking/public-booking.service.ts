@@ -51,7 +51,6 @@ export const publicBookingService = {
       displayName: providerDisplayName(provider),
       jobTitle: provider.jobTitle,
       specialty: provider.specialty,
-      professionalLicense: provider.professionalLicense,
       bio: provider.bio,
       phone: provider.publicPhone,
       whatsapp: provider.publicWhatsapp,

@@ -33,7 +33,6 @@ const provider = {
     displayName: "Dra. Ana Pública",
     jobTitle: "Psicóloga",
     specialty: null as string | null,
-    professionalLicense: null as string | null,
     bio: null as string | null,
     phone: null as string | null,
     whatsapp: null as string | null,
@@ -105,14 +104,13 @@ describe("PublicBookingPage", () => {
 
     it("shows the optional profile, contact links and a map link", async () => {
         routeFetch(200, 200, {
-            ...provider, specialty: "Psicología clínica", professionalLicense: "TP 12345", bio: "Atiendo adultos.",
+            ...provider, specialty: "Psicología clínica", bio: "Atiendo adultos.",
             phone: "+573001112222", whatsapp: "+573003334444",
         });
         render(<PublicBookingPage slug="dra-ana" />);
 
         expect(await screen.findByText("Psicología clínica")).toBeInTheDocument();
         expect(screen.getByText("Psicóloga")).toBeInTheDocument();
-        expect(screen.getByText("Tarjeta profesional TP 12345")).toBeInTheDocument();
         expect(screen.getByText("Atiendo adultos.")).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "+57 300 111 2222" })).toHaveAttribute("href", "tel:+573001112222");
         const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
@@ -156,7 +154,6 @@ describe("PublicBookingPage", () => {
         render(<PublicBookingPage slug="dra-ana" />);
 
         expect(await screen.findByText("Psicóloga")).toBeInTheDocument();
-        expect(screen.queryByText(/Tarjeta profesional/)).not.toBeInTheDocument();
         expect(screen.queryByRole("list", { name: "Contacto" })).not.toBeInTheDocument();
     });
 

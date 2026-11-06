@@ -80,7 +80,7 @@ pnpm run test:integration
 - Readiness is checked when enabling (slug, availability, bookable type/location). Later loss of readiness keeps `bookingEnabled` but reports `live: false`. Use `bookingSettingsService.isBookingLive(userId, tx)` after the provider lock for booking; pages/images/login/sessions need only `isPortalReachable`. Never re-derive these checks. Profile/session expose `bookingOpen`.
 - Reachable means portal on, provider active/not deleted, with a slug. Live additionally requires booking enabled and ready; paused/not-ready booking must still allow login, listing and cancellation.
 - Resolve slugs only with `publicBookingService.resolveProvider(slug, 'reachable' | 'live')`: reachable for profile/images/OTP, live for slots. Invalid, unknown or unavailable providers share `ProviderNotFoundError`; closed profiles list no types/locations.
-- Availability uses `generateSlots`/`isSlotAvailable` and `ACTIVE_STATUSES` appointments plus non-deleted blocked time. Public DTOs are allow-lists: no `userId`, private contacts (`phoneNumber`/`whatsappNumber`), settings or location `instructions`. The only exceptions are the provider's opt-in public profile (`bio`, `specialty`, `professionalLicense`, `publicPhone`, `publicWhatsapp`, edited through booking settings and also shown while booking is paused) and `reschedulePolicy`, non-null only while patients can reschedule (booking open, `AUTO_CONFIRM`). Expose `lastBookableDate` for paging.
+- Availability uses `generateSlots`/`isSlotAvailable` and `ACTIVE_STATUSES` appointments plus non-deleted blocked time. Public DTOs are allow-lists: no `userId`, private contacts (`phoneNumber`/`whatsappNumber`), settings or location `instructions`. The only exceptions are the provider's opt-in public profile (`bio`, `specialty`, `publicPhone`, `publicWhatsapp`, edited through booking settings and also shown while booking is paused) and `reschedulePolicy`, non-null only while patients can reschedule (booking open, `AUTO_CONFIRM`). Expose `lastBookableDate` for paging.
 - Public images serve only allowed data-URL image bytes with `Cross-Origin-Resource-Policy: cross-origin`; Portal CSP `img-src` allows the API origin.
 - Book only through `portalBookingService.book`: lock -> live (`resolveBookingMode`; else unknown-provider 404) -> in `REQUIRE_APPROVAL` branch to the request path below, otherwise continue -> bookable type/location -> `isSlotAvailable(loadBusy(..., tx))` -> resolve/create patient -> cap -> consent -> `createWithin`. New patients use `source: PORTAL`; never modify existing patients. Strict bodies; server derives price/duration/end/status. Map conflicts, including 23P01, to neutral `SlotUnavailableError` without others' times. Lists use `PortalAppointmentDto`.
 - Approval mode (`REQUIRE_APPROVAL`): `book` runs `holdSlotWithin` (`portal-request.service.ts`) in the same transaction: bookable type/location -> `isSlotFree` (holds counted) -> caps (3 live PENDING per contact, 50 per provider) -> `bookingRequestService.createHoldWithin` with consent evidence -> required `BOOKING_REQUEST` audit. It never looks up or creates a patient, consent or appointment (that happens on approval), so the 202 `{ request: PortalRequestDto }` has one shape for every email. The receipt email goes after commit. Reschedule keeps requiring `AUTO_CONFIRM` (`requireSelfBooking`). `GET /appointments` always returns the session contact's live `requests`, independent of patient/consent. Own requests go only through `ownRequestWhere` (`emailHash` or `verifiedPhoneHash`). `POST /requests/:id/cancel` (`portal-change-ip` + `portalSessionGuard`): lock -> own live PENDING -> CANCELLED + audit; every miss is `PortalRequestNotFoundError` (404); works while booking is paused.
@@ -124,3 +124,17 @@ pnpm run test:integration
 - Reuse `verifyConnection` for the daily check and `POST /google/connection/verify`; checks call Google and may write, so never use GET for verification.
 - Expire only through `markConnectionExpired` (idempotent audit), classifying with `isAuthorizationFailure`. Encrypted refresh tokens cannot appear in `where`; `rotateRefreshToken` compares decrypted values and guards writes with `updatedAt`.
 - Frontend branches on `status: connected | expired | not_connected`, not legacy `connected`; reconnect with `startOAuth(path, true)`. Google alerts are in-app only through `ProviderAlerts`/`PageLayout` for ADMIN/SUPER_ADMIN; never fetch the status endpoint for VIEWER (403).
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for `JuanManuelGallego/PatientNova`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.

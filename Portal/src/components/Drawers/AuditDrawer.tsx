@@ -112,6 +112,7 @@ const FIELD_LABELS: Record<string, string> = {
   meetingStatus: "Videollamada",
   bio: "Presentación",
   specialty: "Especialidad",
+  // Field removed; stored audit rows still name it.
   professionalLicense: "Tarjeta profesional",
   publicPhone: "Teléfono público",
   publicWhatsapp: "WhatsApp público",

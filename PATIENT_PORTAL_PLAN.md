@@ -1130,7 +1130,6 @@ As planned:
   - **Prepared 2026-11-02** together with 5.4 (see "5.4 + 8.2 (a)–(c) implementation plan" under Phase 5). Changes from
     the text above: alerts are in-app only (no outbound notice on `reminderChannel`); (d) is covered by the
     `NEEDS_LINK` banner; (e) is included.
-- **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Phase 9: All channels for patient login and messages
 *Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot. SMS was dropped from login the same day: the login offers email and WhatsApp, and SMS stays for reminders and notices. Text below about SMS codes describes what was first built.*
