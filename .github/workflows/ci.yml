@@ -245,6 +245,10 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          # The production policy, enforced, so anything it blocks fails the suite. next build keeps
+          # the job-level NODE_ENV=test, which would add 'unsafe-eval' and hide those failures.
+          NODE_ENV: production
+          CSP_ENFORCE: "true"
         run: |
           pnpm run build
           nohup pnpm exec next start -p 3000 > ../portal.log 2>&1 &
@@ -255,6 +259,14 @@ jobs:
           echo "Portal did not start" >&2
           cat ../portal.log
           exit 1
+
+      - name: Check the CSP is enforced
+        run: |
+          csp=$(curl -sI http://localhost:3000/login | grep -i '^content-security-policy:' || true)
+          if [ -z "$csp" ] || echo "$csp" | grep -q "'unsafe-eval'"; then
+            echo "Expected the enforced production CSP, got: ${csp:-none}" >&2
+            exit 1
+          fi
 
       - name: Install Playwright browsers
         working-directory: Portal

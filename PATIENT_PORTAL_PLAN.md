@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, 9.1–9.4 built 2026-11-05 with phone login off (see "Phase 9"; 9.0 checks remain before turning it on); public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color). **Updated:** 2026-11-05
+> **Status:** Phase 0 complete; key rotation moved to 10.10; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, 9.1–9.4 built 2026-11-05 with phone login off (see "Phase 9"; 9.0 checks remain before turning it on); public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color); booking portal redesign merged 2026-11-06. The portal is not enabled in production. All remaining work is in Phase 10. **Updated:** 2026-11-06
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -25,9 +25,9 @@ Built as the branches below, then merged to `staging` through PRs #59–#68 with
 
 Also landed outside the numbered items: 5000-patient cap per provider, `cancelledBy=PROVIDER` on provider cancels, past-appointment lock narrowed to moves/reactivations/confirms, every `tx` audit made `required`, Renovate + pnpm 12.
 
-Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` and `ENCRYPTION_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement (`CSP_ENFORCE=true`) after a staging soak.
+Still open before any real-patient pilot: moved to Phase 10 (10.1 to 10.8).
 
-Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (8.1, not started).
+Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (10.10, not started).
 
 # Patient Portal: architecture proposal
 
@@ -42,6 +42,9 @@ Patients should be able to self-book with a specific provider. Today `User` is t
 - **Matching is email only**, no name or phone check. *(Phase 9 adds phone matching, only for a number proven by OTP and never for a number typed in the booking form.)*
 - No cancellation cutoff. Guardians/dependents out of scope.
 - **Compliance (encryption/blind index of patient contact fields):** decided and implemented (0.23). Matching uses the `emailHash` blind index.
+- **Phone login is always allowed (decided 2026-11-06).** It cannot be turned off per provider, and there is no email-only launch.
+- **Providers cannot revoke an individual patient's portal access (decided 2026-11-06).** Nothing in the product sets `portalAccessEnabled` to false. The column and its checks stay.
+- **Consent is granted once and has no revocation flow (decided 2026-11-06).** Nothing writes `PatientConsent.revokedAt`. Patients are asked again whenever `PRIVACY_POLICY_VERSION` changes.
 
 ## Review round 3 (five smaller findings, all verified against the code and accepted)
 1. Range type: columns are `TIMESTAMP(3)`, so the exclusion constraint uses `tsrange(...,'[)')` (0.2).
@@ -92,9 +95,9 @@ All eight findings were checked against the code and accepted.
 - **The portal never updates an existing Patient from typed input.** Typed name/phone apply only when creating a new Patient.
 - Required for a new Patient: `name` and `lastName` (schema requires both) collected in the booking form, email from the session, phone optional, `reminderChannel=EMAIL`, `source=PORTAL`.
 - **Consent without leaking existence:** `GET /v1/portal/appointments` returns `{appointments: [], consentRequired: true}` both when no patient exists and when the patient hasn't accepted. There is **one idempotent operation, `ensureCurrentConsent(tx, patientId, policyVersion, evidence)`**: it reuses the active (`revokedAt IS NULL`) `PatientConsent` for that patient, kind and policy version, or inserts it (`INSERT ... ON CONFLICT DO NOTHING` against a partial unique index on `(patientId, kind, policyVersion) WHERE revokedAt IS NULL`, then select), so concurrent calls can't create duplicates. `POST /v1/portal/consent` calls it when a patient exists and returns the same 204 whether it did anything or not (no patient yet). Booking always requires `consentAccepted: true` in its body (the UI always shows the checkbox, since the portal can't know who is an existing patient) and calls the same operation inside the booking transaction, so a prior consent is reused and never duplicated. In approval mode it is called on approval with the evidence stored on the `BookingRequest`, preserving the original acceptance time.
-- Revocation: `portalAccessEnabled=false` takes effect on the next request (checked per request, no token version needed). If the provider changes a patient's email, the old email's session simply stops resolving to that patient.
-- Email only, no name/phone check (user's choice). Risk: a shared or stale email attaches someone to the wrong record. Mitigation: provider can disable portal access per patient, every portal action is audited.
-- Known limitation: existing patients without an email can't be matched and would be duplicated; resolve later with a merge action in the inbox. (Phase 9 phone login addresses this for patients with a phone on record.)
+- The per-request `portalAccessEnabled` check remains in the code, but nothing in the product sets it to false (decided 2026-11-06). If the provider changes a patient's email, the old email's session simply stops resolving to that patient.
+- Email only, no name/phone check (user's choice). Risk: a shared or stale email attaches someone to the wrong record. Mitigation: every portal action is audited, and the provider can correct the contact on the record, after which the old contact stops resolving to that patient.
+- Known limitation: existing patients without an email can't be matched and would be duplicated; a merge action is listed in 10.16. (Phase 9 phone login addresses this for patients with a phone on record.)
 
 ## Slot contract
 `GET /v1/public/providers/:slug/slots?typeId=&from=YYYY-MM-DD&to=YYYY-MM-DD` (dates in the provider's timezone, range at most 31 days).
@@ -202,7 +205,7 @@ Work:
 
 **0F. Compliance decision gate**
 - **0.23 Compliance decision record.** *(Done: decision in `docs/compliance-patient-data.md`; implemented for `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`, with blind indexes per AGENTS.md. The pilot gate is satisfied on the code side; key custody remains in the open list above.)* Decide, in writing, whether `Patient` name, lastName, email, phone fields and `Reminder.to` get encryption plus a blind index (HMAC of the normalized email) before the portal stores patient data. This must come **before** 3.1/3.3 because a blind index changes the unique index (0.4), `findByEmail` and the matching function. Output: a short decision doc, and if "encrypt", the design for the index swap. **Pilot gate:** a pilot with real patient data requires this decision implemented, or an explicit written acceptance by the controller; until then any pilot uses only synthetic or staff data.
-- **0.24 Encryption key rotation:** moved to 8.1.
+- **0.24 Encryption key rotation:** moved to 10.10.
 
 **Phase 0 exit criteria** (all met as of 2026-10-26, pending counsel sign-off on the legal text and consent design): concurrent double-booking impossible (lock plus constraint) and `createWithin` in place; patient and provider tokens mutually rejected; the two CORS classes enforced with Origin and CSRF checks; no PII or secrets in default logs or URLs; normalized-email index in place; unauthenticated Portal pages make no provider API calls; e2e runs against a self-contained stack; legal text updated; consent design agreed with legal (0.20 to 0.22); compliance decision recorded (0.23).
 
@@ -252,7 +255,7 @@ Starting point (checked in code): `AvailabilityRule` (ISO weekday, `startMinute`
 
 **Phase 2 exit criteria:** a provider with booking live gets a public page that shows only allow-listed data and correct slots (buffer, blocked time, lead/horizon, DST-tested); unknown and disabled providers are indistinguishable in responses; the public endpoints set no cookies and accept no credentials; `isSlotAvailable` is ready for 4.1; the Bruno collection covers every Phase 1 and Phase 2 endpoint. Still gated by `ENABLE_PORTAL` and per-provider `bookingEnabled`; no public launch until 0.17 (counsel review) is closed.
 
-**Decided for Phase 2 (2026-10-31):** price comes from the appointment type only (location price unused); the page always shows the avatar (initials fallback) and shows the logo when one is set. **Open:** whether a "next available date" hint is worth a server endpoint later (not in Phase 2: week paging covers it).
+**Decided for Phase 2 (2026-10-31):** price comes from the appointment type only (location price unused); the page always shows the avatar (initials fallback) and shows the logo when one is set. The "next available date" hint is listed in 10.16.
 
 ### Phase 3: Patient authentication
 Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
@@ -662,7 +665,7 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
 - ~~Whether patients should keep view and cancel access while the provider has paused booking.~~ Decided 2026-11-02:
   yes, see PR 5.5-A below.
 - ~~Whether to cap reschedules per appointment.~~ Decided 2026-11-02: a provider setting, see PR 5.5-A below.
-- A "past appointments" history on "Mis citas" (not in Phase 5).
+- A "past appointments" history on "Mis citas": moved to 10.11.
 
 #### 5.5: cancel while booking is off + reschedule policy (decided 2026-11-02)
 **Decided:**
@@ -1113,12 +1116,12 @@ As planned:
 - The no-secrets-in-URLs rule has a test.
 - Bruno and AGENTS.md match the code.
 
-**Open:**
-- Should VIEWER keep read access to portal rows (masked emails, IP addresses)? Today VIEWER reads the whole log.
-- Is a provider-facing consent history per patient worth adding later? 7.2 was removed, so it is not in this phase.
+**Decided:**
+- VIEWER keeps read access to portal rows, masked emails and IP addresses included (decided 2026-11-06).
+- Providers do not need a consent history per patient (decided 2026-11-06).
 
 ### Phase 8: Operational follow-ups (not portal features; can start any time)
-- **8.1 Encryption key rotation (was 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **8.1 Encryption key rotation:** moved to 10.10.
 - **8.2 Google Meet connection UX.** *(Done 2026-11-02: (a)–(e) built and the manual (a) check completed.)* Originally: today the connection expires silently. The refresh token's death (`invalid_grant`, `src/google/google-meet.service.ts:28`) is only discovered when the provider clicks "Generar Google Meet": then the connection is marked disconnected and the modal switches to "Reconectar". Until that moment `GET /v1/google/connection` reports `connected: true` from the stored row, so Settings and the appointment modal show a healthy connection that isn't. Build:
   - (a) **Find the cause first.** If the OAuth consent screen is in "Testing" publishing status, Google expires refresh tokens after 7 days; moving it to "In production" (with verification for the Meet scope if required) fixes the root cause. Also check password changes, the 50-token-per-client limit and user revocation. Record the finding in `docs/operations.md`.
   - (b) **Check validity proactively.** A daily pg-boss job (and an optional `?verify=true` on the status endpoint, rate-limited) refreshes the access token for each active connection. On `invalid_grant` it reuses the existing mark-disconnected + audit path. Requires `ENABLE_SCHEDULER`; without it the status endpoint check is the only signal.
@@ -1134,7 +1137,7 @@ As planned:
 ### Phase 9: All channels for patient login and messages
 *Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot. SMS was dropped from login the same day: the login offers email and WhatsApp, and SMS stays for reminders and notices. Text below about SMS codes describes what was first built.*
 
-**Still to do before phone login reaches production (9.0):** real test sends to the Colombian carriers, the Twilio Console settings, counsel's review of the policy (with a `PRIVACY_POLICY_VERSION` bump if the text changes), and a manual check on a real phone. See `docs/operations.md`. After the Portal that reads `contact` is deployed, drop the transitional `email` from the session and verify responses.
+**Still to do:** moved to Phase 10 (10.1, 10.8 and 10.9).
 
 **Decided while building:**
 - `patient-meeting-link` reuses the existing template, as `{1: provider, 2: url}`, so there is no eighth template.
@@ -1290,21 +1293,44 @@ As planned:
 - Paid OTP sends are capped per number, per provider and overall, and hitting a cap is visible in Sentry.
 - Bruno, AGENTS.md and both docs match the code.
 
-**Open:**
-- **Who pays** for WhatsApp and SMS, and should a provider be able to turn phone login off? The default is one global flag, paid by the platform. A per-provider setting would add a `loginChannels` field in booking settings.
-- **Families sharing a number** go through review every time and see an empty list by phone; email still works for them. Is a safe way to choose a record worth designing later?
-- **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). Fixing it needs a small delivery table the status callback can read, then a retry on the next route. Worth it if pilots show real failures.
-- **Patient-chosen channel.** Should a patient be able to change their own channel, with a fresh OTP proving the new contact? This would relax "the portal never updates an existing Patient".
+**Decided:**
+- **Families share one contact (decided 2026-11-06).** There is no record picker. A shared number goes through review every time and shows an empty list by phone. A shared email resolves to the one record that holds it.
+- **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). There is no failover to another channel (decided 2026-11-06).
 
-### Phase 10: Backend follow-ups to the booking portal redesign
-*Status: not started. Left out of the frontend-only redesign (`docs/superpowers/specs/2026-11-05-patient-booking-portal-redesign-design.md`) on 2026-11-05. Each item is independent.*
+### Phase 10: Remaining work
+*Status: this is the single list of remaining work, checked against the code on 2026-11-06. Everything outside this phase is built or decided. All built work is on `main`, and the portal is not enabled in production. Phone login cannot be separated from the portal, so 10.1 to 10.8 gate enabling it, including for any pilot.*
 
-- **10.1 Past appointments in Mis citas.** Add an "Anteriores" list under the upcoming appointments. Today `GET /appointments` returns only upcoming ones (`listUpcoming`), so this needs a new read scoped through `resolvePortalPatient`, with the same consent gate, and a DTO allow-list. Update the Bruno collection in the same PR. Smallest of the three.
-- **10.2 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. In auto-confirm, a session that resolves to a consented patient could omit it. Open point: confirm this respects "must not reveal patient existence" before building. Approval mode must keep asking, because that path never looks up a patient. Phone sessions must never display a saved name.
-- **10.3 Hold the slot during verification.** In auto-confirm nothing holds the chosen time while the patient requests and enters the code, so it can be lost after all that work. Consider a short anonymous hold. Open points: abuse (holds without a proven contact), interaction with `booking_requests_no_hold_overlap` and `loadLiveHolds`, and expiry. Largest of the three, so weigh it against how often patients actually lose a slot.
+**Legal and compliance (before enabling; owner: controller, with counsel).**
+- **10.1 Counsel review of the policy.** The update was drafted on 2026-11-06 (WhatsApp login, Meta, rescheduling, consent evidence, 90-day request retention; `PRIVACY_POLICY_VERSION` `2026-11-06`). Questions for counsel: Meta's role; the revocation wording in section 10; whether sensitive data needs its own checkbox; WhatsApp reminders greeting the patient by name, with the address and instructions; and minors whose booking lands on a parent's record through a shared contact. If the text changes, update `PRIVACY_POLICY_VERSION` and `lastUpdated` to the new date.
+- **10.2 Terms of service.** `terms-of-service/page.tsx` says portal access is by email only and omits rescheduling. Update it, its `lastUpdated`, and have counsel review it.
+- **10.3 Consent checkbox.** Section 4 of `docs/compliance-patient-data.md` says the label mentions health data, but the labels in `PatientSteps.tsx` and `PortalConsent.tsx` say only "mis datos personales". Change the labels or the document once counsel decides.
+- **10.4 Consent revocation procedure.** The product has no revocation flow and nothing writes `PatientConsent.revokedAt` (decided 2026-11-06), but revocation is a right under article 8 of Ley 1581 and the policy offers it. Write the manual procedure for requests through `privacidad@`, then correct section 4 of `docs/compliance-patient-data.md`, which still describes revocation as a feature.
+- **10.5 Compliance checklist** (`docs/compliance-patient-data.md`, section 5). Controller identity, NIT and any Colombian representative; RNBD decision; processor contracts, including accepting the Sentry DPA; international transfer basis; `privacidad@` monitoring and the 10/15 business-day runbook; incident procedure; retention table and erasure path.
+
+**Operations (before enabling; owner: account admin).**
+- **10.6 Backups and keys.** The four backup checks in `docs/operations.md`, including a restore rehearsal. `ENCRYPTION_KEY` and `BLIND_INDEX_KEY` provisioned and backed up apart from the database.
+- **10.7 Production database and headers.** Confirm the `btree_gist` permission. Set `CSP_ENFORCE=true` for the staging Portal build and redeploy, because headers are set at build time. The full e2e suite passed under the enforced policy on 2026-11-06 and CI now runs that way, so the check on staging covers what e2e cannot: the real Turnstile site key, the Google OAuth popup and a Sentry test error. Then set it for production.
+- **10.8 WhatsApp and Twilio (was 9.0).** Templates approved and all 12 portal SIDs set: they are required at boot even with `ENABLE_PORTAL=false`, so a deploy without them does not start the API. Send real codes to the main Colombian carriers. Set the Twilio usage alert and Geo Permissions. Run a full login, booking and message check on a real phone.
+
+**Code.**
+- **10.9 Remove the transitional `email`.** After the Portal that reads `contact` is deployed, drop `email` from `sessionContactView` (`src/portal/portal-contact.ts`), which feeds the session and verify responses. Update the tests and Bruno in the same PR.
+- **10.10 Encryption key rotation (was 8.1 and 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **10.11 Past appointments in Mis citas.** Add an "Anteriores" list under the upcoming appointments. Today `GET /appointments` returns only upcoming ones (`listUpcoming`), so this needs a new read scoped through `resolvePortalPatient`, with the same consent gate, and a DTO allow-list. Update the Bruno collection in the same PR. Smallest of the three.
+- **10.12 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. In auto-confirm, a session that resolves to a consented patient could omit it. Open point: confirm this respects "must not reveal patient existence" before building. Approval mode must keep asking, because that path never looks up a patient. Phone sessions must never display a saved name.
+- **10.13 Hold the slot during verification.** In auto-confirm nothing holds the chosen time while the patient requests and enters the code, so it can be lost after all that work. Consider a short anonymous hold. Open points: abuse (holds without a proven contact), interaction with `booking_requests_no_hold_overlap` and `loadLiveHolds`, and expiry. Largest of the three, so weigh it against how often patients actually lose a slot.
+
+**Decisions.**
+- **10.14 Who pays** for WhatsApp and SMS? The default is the platform.
+- **10.15 Patient-chosen channel.** The patient chooses email or WhatsApp at login, and for a patient the portal creates, that choice becomes `reminderChannel`. An existing patient's messages keep following the provider's setting. Should a patient be able to change that, with a fresh OTP proving the new contact? This would relax "the portal never updates an existing Patient".
+
+**Later, only if real use shows the need.**
+- **10.16** A merge action in the inbox for duplicate patients, and a "next available date" hint on the booking page.
+
+**Documentation.**
+- **10.17** Record the Google connection finding in `docs/operations.md`, which still says "to do" although 8.2 (a) is marked complete. Correct the config path in AGENTS.md (`src/utils/config.ts` is now `src/utils/config/config.ts`). Decide whether `docs/` stays in `.gitignore`: since `ca3d4385`, new files there, including the `docs/adr/` that AGENTS.md mentions, are silently ignored.
 
 ### Dependency summary
-`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7 and is not a gate for an email-only pilot: 9.0 gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
+`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7. Phone login cannot be separated from the portal, so 9.0 gates enabling the portal in production, including any pilot. 9.0 also gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes. In Phase 10, 10.1 to 10.8 gate enabling the portal in production, 10.9 follows the Portal deploy, and the rest are independent.
 
 ## Verification
 - Integration tests per `AGENTS.md` (real Postgres, mocked Twilio/Brevo/dispatch), including the concurrent-booking race, admin vs portal vs blocked-time races, cross-tenant slug isolation, portal vs provider token rejection, uniform responses regardless of patient existence, and email-normalization collisions.

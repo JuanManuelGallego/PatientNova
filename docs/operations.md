@@ -183,7 +183,12 @@ learns about it: at login the patient recovers with email, and later the appoint
 ## CSP rollout (Portal)
 
 The Content-Security-Policy ships as `Content-Security-Policy-Report-Only`. After a staging soak with
-no console violations, set `CSP_ENFORCE=true` for the Portal build to enforce it.
+no console violations, set `CSP_ENFORCE=true` for the Portal build to enforce it. Headers are set at
+build time, so redeploy after changing the variable.
+
+The policy has no `report-uri`: in report-only mode a violation shows only in the console of whoever
+triggers it. The CI e2e job builds with `NODE_ENV=production` and `CSP_ENFORCE=true`, so the suite runs
+under the enforced policy. `'wasm-unsafe-eval'` is there for the medical record PDF.
 
 ## End-to-end tests
 

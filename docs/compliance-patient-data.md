@@ -105,8 +105,8 @@ read everything; the keys must never be stored with the backups.
 - Immutable rows; revocation sets `revokedAt` and writes an audit entry (`EntityType.PATIENT_CONSENT`).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
-- `policyVersion` = the policy's last-updated date (`2026-10-19` for the current text). Changing the
-  privacy policy requires bumping it and re-asking consent at the patient's next booking (7.2).
+- `policyVersion` = the policy's last-updated date (`2026-11-06` for the current text). Changing the
+  privacy policy requires bumping it and re-asking consent at the patient's next booking.
 - Approval-mode requests carry the same evidence on `BookingRequest` and copy it to `PatientConsent`
   on approval, preserving the original acceptance time.
 - **Existing patients** (0.21) have no record: they accept at first portal use, before any data
@@ -138,7 +138,7 @@ by name and includes the address and instructions. Removing the name needs a new
       pending; for Sentry, review and accept its DPA in the organization's legal settings).
 - [ ] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
       or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
-      but not Meta and not phone login: counsel to confirm before phone login reaches production.
+      and, since the draft of 2026-11-06, Meta and phone login: counsel to confirm before the portal reaches production.
 - [ ] International transfer basis per processor (adequacy list, authorization, or contract).
 - [ ] The `privacidad@` mailbox is monitored; internal runbook for the 10/15 business-day deadlines.
 - [ ] Incident procedure, including notification to the SIC and affected data subjects.

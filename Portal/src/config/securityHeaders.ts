@@ -2,7 +2,9 @@
  * Security response headers for every Portal route (patient-facing pages included).
  *
  * CSP notes: the Next.js app router emits inline bootstrap scripts, so `script-src` needs
- * 'unsafe-inline' unless nonces are introduced (which forces dynamic rendering). Everything else is
+ * 'unsafe-inline' unless nonces are introduced (which forces dynamic rendering). `script-src` also
+ * needs 'wasm-unsafe-eval', because the medical record PDF renderer lays out with WebAssembly; it
+ * allows compiling WebAssembly only, not JavaScript eval. Everything else is
  * locked down: no objects, no framing, same-origin forms, and network access limited to this origin
  * and the API. No third-party analytics/scripts are allowed (the privacy policy promises none).
  * The only exception is Cloudflare Turnstile (bot protection, not analytics), scoped to its single origin.
@@ -39,7 +41,7 @@ export function buildCsp(options: CspOptions): string {
 
     const directives: Record<string, string[]> = {
         "default-src": [ "'self'" ],
-        "script-src": [ "'self'", "'unsafe-inline'", ...(options.isDev ? [ "'unsafe-eval'" ] : []), TURNSTILE_ORIGIN ],
+        "script-src": [ "'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...(options.isDev ? [ "'unsafe-eval'" ] : []), TURNSTILE_ORIGIN ],
         "style-src": [ "'self'", "'unsafe-inline'" ],
         "img-src": img,
         "font-src": [ "'self'", "data:" ],
