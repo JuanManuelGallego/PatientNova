@@ -102,7 +102,9 @@ read everything; the keys must never be stored with the backups.
 
 `PatientConsent(patientId, kind = DATA_PROCESSING, policyVersion, acceptedAt, ip, userAgent, revokedAt?)`
 
-- Immutable rows; revocation sets `revokedAt` and writes an audit entry (`EntityType.PATIENT_CONSENT`).
+- Rows are never deleted. The product has no revocation feature: an operator sets `revokedAt` and
+  writes the audit entry (`EntityType.PATIENT_CONSENT`) with `pnpm run consent:revoke` (see
+  "Revocation procedure" below).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
 - `policyVersion` = the policy's last-updated date (`2026-11-06` for the current text). Changing the
@@ -111,10 +113,35 @@ read everything; the keys must never be stored with the backups.
   on approval, preserving the original acceptance time.
 - **Existing patients** (0.21) have no record: they accept at first portal use, before any data
   about them is shown.
-- **UI gate (0.22):** one checkbox, never pre-ticked, linking to the policy, whose label states that
-  the person authorizes treatment of personal data **including health data** for scheduling and
-  reminders. Open question for counsel: whether sensitive data needs its own separate checkbox;
-  if yes, add a second one (the data model supports it via `kind`).
+- **UI gate (0.22):** one checkbox, never pre-ticked, linking to the policy. The label today reads
+  "Acepto el tratamiento de mis datos personales según la Política de privacidad" and does **not**
+  mention health data. Changing it waits on counsel, who also decides whether sensitive data needs
+  its own separate checkbox (the data model supports a second one via `kind`). Consent rows store
+  the policy version, not the label, so any label change must bump `PRIVACY_POLICY_VERSION`.
+
+**Revocation procedure (draft, pending counsel).** Revocation is a right under Ley 1581, art. 8, and
+the policy offers it through `privacidad@patientnova.net`.
+
+1. Log the request and the date received. A query has 10 business days and a claim 15, extendable by
+   5 and 8.
+2. Verify identity: the requester replies from the contact on file, or the clinic confirms it.
+3. Forward the request to the clinic, which is the controller, and tell the patient it was forwarded.
+4. The clinic cancels upcoming appointments, which also cancels their reminders, and rejects any
+   pending booking request. It decides what clinical data must be kept.
+5. The operator runs `pnpm run consent:revoke <patientId>` with the production environment. Add
+   `--block-portal` only if the patient also wants off the portal.
+6. Reply to the patient and close the log entry.
+
+What the command does and does not do:
+- It revokes every active consent of the patient and writes one audit row each, in one transaction.
+  Running it again changes nothing.
+- Consent gates only the portal. The command stops no reminders or notices and cancels nothing, which
+  is why step 4 comes first. Deleting a patient does not cancel appointments either.
+- Approving a request made before the revocation copies its consent back, so step 4 must reject it.
+- Without `--block-portal`, the next login asks for consent again, and accepting is a new authorization.
+  Anyone holding a shared contact could accept: an open question for counsel.
+- With `--block-portal`, the patient reaches the portal's "unavailable" path. No screen undoes this:
+  it takes a direct database change, which the audit log will not record.
 
 **Phone login and messages.** A number is personal data the patient proves with a code before it
 acts as an identity. `BookingRequest.verifiedPhone` keeps the proven number of a request (encrypted,

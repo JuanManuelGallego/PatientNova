@@ -22,6 +22,7 @@
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/utils/prisma/seed-admin.ts",
     "pii:backfill": "tsx src/utils/prisma/backfill-pii-cli.ts",
+    "consent:revoke": "tsx src/patient-consents/revoke-consent-cli.ts",
     "db:seed-e2e": "tsx src/utils/prisma/seed-e2e.ts",
     "db:format": "pnpm exec prisma db push",
     "db:wipe": "pnpm exec prisma migrate reset --force --skip-seed"

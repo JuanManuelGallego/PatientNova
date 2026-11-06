@@ -70,6 +70,7 @@ pnpm run test:integration
 - A phone identifies a patient only when exactly one trusted active record holds it (`classifyPhoneMatch`): an SMS number, or a WhatsApp number not flagged. Unverified records do not count, so a typed number cannot lock out its real holder. Any active revoked match fails closed for the whole number; several or only-unverified matches are `unavailable, review: true`. Never add a "who are you?" picker: it would show a family member's name to whoever holds the phone.
 - Typed numbers are never identities. `Patient.whatsappUnverified` is set whenever a number from the booking form is written, and cleared only when the provider changes the number, sets `reminderChannel = WHATSAPP`, or links the record to a request that proved that same number. A phone session never collects an email or a phone: the number comes from the session (`patient.phone` is 400).
 - Consent uses `ensureCurrentConsent` (`src/patient-consents/`), idempotent on `patient_consents_active_key`, auditing inside `tx` only on insertion. Only the server selects `PRIVACY_POLICY_VERSION`.
+- Consent gates only the portal. Revocation is the operator command `consent:revoke` (`revokePatientConsents`), with the procedure in `docs/compliance-patient-data.md` section 4; reminders and appointments stay with the clinic, and approving an older request restores consent.
 
 ## Booking and patient actions
 
