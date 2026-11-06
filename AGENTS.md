@@ -17,7 +17,7 @@ pnpm run test:integration
 ```
 
 - The Vitest `integration` project (`test/integration/**/*.test.ts`) loads `.env.test` via setup, runs serially, and truncates all `public` tables between tests. Never use dev/prod: `DATABASE_URL` must contain `test`.
-- Adding `requireEnv(...)` in `src/utils/config.ts` requires updating `.env.test`, `.github/workflows/ci.yml` (CI supplies env directly), `.env.example`, and local `Server/.env` (used by unit tests).
+- Adding `requireEnv(...)` in `src/utils/config/config.ts` requires updating `.env.test`, `.github/workflows/ci.yml` (CI supplies env directly), `.env.example`, and local `Server/.env` (used by unit tests).
 - After changing `schema.prisma`, run `pnpm exec prisma generate`; the committed `generated/prisma` client is typechecked.
 - Unit tests (`test/unit/**/*.test.ts`) mock Prisma/DB. Integration tests cover repositories, services and HTTP routes; consult the tests for coverage.
 - Reuse `test/integration/helpers.ts`: entity factories, `appointmentTimeRange`, `futureDate`, `unique`, `makeRes`, and `invokeRoute`. The latter runs validation/middleware and waits for `asyncHandler` to settle.

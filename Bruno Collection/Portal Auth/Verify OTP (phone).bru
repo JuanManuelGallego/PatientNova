@@ -30,5 +30,5 @@ script:post-response {
 
 docs {
   Same as Verify OTP, with `phone` instead of `email`. There is no `channel`: the session takes it from
-  the code that was sent. Returns `{ email: null, contact, contactChannel, expiresAt, csrfToken }`.
+  the code that was sent. Returns `{ contact, contactChannel, expiresAt, csrfToken }`.
 }

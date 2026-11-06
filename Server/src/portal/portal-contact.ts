@@ -54,7 +54,6 @@ export const typedPhoneIsUnverified = (contact: PortalContact, typedPhone: strin
 
 export function sessionContactView(contact: PortalContact) {
   return {
-    email: isPhoneContact(contact) ? null : contact.value,
     contact: contact.value,
     contactChannel: contact.channel,
   };

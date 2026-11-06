@@ -13,7 +13,6 @@ import { sessionContactView } from './portal-contact.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export interface PortalSessionView {
-  email: string | null;
   contact: string;
   contactChannel: Channel;
   expiresAt: string;

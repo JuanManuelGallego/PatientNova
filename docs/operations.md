@@ -149,7 +149,7 @@ restrict access.
 Each provider connects their own Google account (`google_connections`, refresh token encrypted at
 rest). A refresh token can stop working without any action in PatientNova.
 
-- **Find out why connections expire (to do, record the result here).** In Google Cloud Console →
+- **Why connections expire (checked 2026-11-02; the result was not recorded).** In Google Cloud Console →
   OAuth consent screen, check the publishing status. In "Testing", Google expires refresh tokens after
   7 days: move the app to "In production" (verification may be required for the Meet scope). Other
   causes: the provider changed their Google password, revoked access in their Google account, or more
