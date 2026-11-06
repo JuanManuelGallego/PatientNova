@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-    addCalendarDays, calendarDaysBetween, lastBookableDateIn, slotQueryRange, fmtBookingPolicy, fmtCop, fmtDayParts, fmtLongDay, fmtPhone, fmtWeekRange, groupSlotsByDay,
-    isE164, localDayOf, mapUrl, normalizePhone, weekPage, whatsappUrl,
+    addCalendarDays, addMonths, calendarDaysBetween, fmtMonth, fmtShortDayTime, lastBookableDateIn, lastDayOfMonth, mergeSlots, monthGrid, monthOf, slotQueryRange, slotWindow, fmtBookingPolicy, fmtCop, fmtDayParts, fmtLongDay, fmtPhone, groupSlotsByDay,
+    isE164, localDayOf, mapUrl, normalizePhone, whatsappUrl,
 } from "@/src/utils/publicBooking";
 
 const slot = (startUtc: string) => ({ startUtc, endUtc: startUtc });
@@ -70,41 +70,6 @@ describe("groupSlotsByDay", () => {
     });
 });
 
-describe("weekPage", () => {
-    it("starts on the Sunday of today's week, whatever the day, with no previous week", () => {
-        for (const today of [ "2026-11-08", "2026-11-11", "2026-11-14" ]) {
-            expect(weekPage(today, today, "2027-01-07")).toEqual({
-                from: "2026-11-08", to: "2026-11-14", hasPrevious: false, hasNext: true,
-            });
-        }
-    });
-
-    it("pages by Sunday-to-Saturday weeks while the next week starts inside the horizon", () => {
-        expect(weekPage("2026-11-15", "2026-11-11", "2027-01-07")).toEqual({
-            from: "2026-11-15", to: "2026-11-21", hasPrevious: true, hasNext: true,
-        });
-        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-15").hasNext).toBe(true);
-        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-14").hasNext).toBe(false);
-    });
-
-    it("crosses month and year boundaries when finding the Sunday", () => {
-        expect(weekPage("2027-01-01", "2027-01-01", "2027-03-01")).toMatchObject({ from: "2026-12-27", to: "2027-01-02" });
-    });
-
-    it("cuts the last week at the last bookable date", () => {
-        expect(weekPage("2027-01-03", "2026-11-11", "2027-01-07")).toEqual({
-            from: "2027-01-03", to: "2027-01-07", hasPrevious: true, hasNext: false,
-        });
-        expect(weekPage("2026-11-11", "2026-11-11", "2026-11-11")).toMatchObject({ from: "2026-11-08", to: "2026-11-11", hasNext: false });
-    });
-
-    it("never inverts the range when today is past the last bookable date (stale profile, clock skew)", () => {
-        expect(weekPage("2026-11-10", "2026-11-10", "2026-11-09")).toEqual({
-            from: "2026-11-08", to: "2026-11-09", hasPrevious: false, hasNext: false,
-        });
-    });
-});
-
 describe("addCalendarDays", () => {
     it("crosses months, years and leap days", () => {
         expect(addCalendarDays("2026-12-29", 7)).toBe("2027-01-05");
@@ -129,14 +94,6 @@ describe("calendarDaysBetween", () => {
 describe("fmtDayParts", () => {
     it("reads the calendar day, without trailing abbreviation dots", () => {
         expect(fmtDayParts("2026-11-09")).toEqual({ weekday: "lun", dayNumber: "9", full: "lunes, 9 de noviembre" });
-    });
-});
-
-describe("fmtWeekRange", () => {
-    it("names the month once inside a month, both months across one, and one day alone", () => {
-        expect(fmtWeekRange("2026-11-09", "2026-11-15")).toBe("9 – 15 nov");
-        expect(fmtWeekRange("2026-12-28", "2027-01-03")).toBe("28 dic – 3 ene");
-        expect(fmtWeekRange("2026-11-09", "2026-11-09")).toBe("9 nov");
     });
 });
 
@@ -170,5 +127,63 @@ describe("phone helpers", () => {
         expect(isE164("+573001112233")).toBe(true);
         expect(isE164("3001112233")).toBe(false);
         expect(isE164("+571234")).toBe(false);
+    });
+});
+
+describe("slotWindow", () => {
+    it("keeps every padded query inside the 31-day API limit", () => {
+        const window = slotWindow(0, "2026-11-05", "2027-12-31");
+        const query = slotQueryRange(window.from, window.to);
+        expect(calendarDaysBetween(query.from, query.to).length - 1).toBeLessThan(31);
+    });
+
+    it("follows on from the previous window with no gap", () => {
+        const first = slotWindow(0, "2026-11-05", "2027-12-31");
+        expect(slotWindow(1, "2026-11-05", "2027-12-31").from).toBe(addCalendarDays(first.to, 1));
+    });
+
+    it("cuts at the last bookable date and has no next window", () => {
+        expect(slotWindow(0, "2026-11-05", "2026-11-10")).toEqual({ from: "2026-11-05", to: "2026-11-10", hasNext: false });
+    });
+
+    it("has no next window when it ends exactly on the last bookable date", () => {
+        const first = slotWindow(0, "2026-11-05", "2027-12-31");
+        expect(slotWindow(0, "2026-11-05", first.to).hasNext).toBe(false);
+    });
+});
+
+describe("mergeSlots", () => {
+    it("drops duplicates from overlapping padding and sorts by start", () => {
+        const later = slot("2026-11-06T14:00:00.000Z");
+        const earlier = slot("2026-11-05T14:00:00.000Z");
+        expect(starts(mergeSlots([ later ], [ later, earlier ]))).toEqual([ earlier.startUtc, later.startUtc ]);
+    });
+});
+
+describe("month helpers", () => {
+    it("names the month of a day", () => {
+        expect(monthOf("2026-11-05")).toBe("2026-11");
+    });
+
+    it("starts the grid on Sunday with blanks and ends on the last day", () => {
+        const grid = monthGrid("2026-12"); // 1 December 2026 is a Tuesday
+        expect(grid.slice(0, 3)).toEqual([ null, null, "2026-12-01" ]);
+        expect(grid.at(-1)).toBe("2026-12-31");
+    });
+
+    it("crosses the year and knows February", () => {
+        expect(addMonths("2026-12", 1)).toBe("2027-01");
+        expect(addMonths("2027-01", -1)).toBe("2026-12");
+        expect(lastDayOfMonth("2028-02")).toBe("2028-02-29");
+    });
+
+    it("formats the month in Spanish", () => {
+        expect(fmtMonth("2026-11")).toBe("noviembre de 2026");
+    });
+});
+
+describe("fmtShortDayTime", () => {
+    it("names the day in the given zone", () => {
+        expect(fmtShortDayTime("2026-11-07T02:00:00.000Z", "America/Bogota")).toMatch(/^vie 6 nov, 0?9:00/);
     });
 });

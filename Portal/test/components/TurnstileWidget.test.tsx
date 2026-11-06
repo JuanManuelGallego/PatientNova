@@ -69,6 +69,7 @@ describe("TurnstileWidget", () => {
         const onError = vi.fn();
         render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} onError={onError} />);
         expect(screen.getByRole("alert")).toHaveTextContent("No pudimos verificar");
+        expect(screen.getByRole("alert")).toHaveClass("error-inline");
         expect(onError).toHaveBeenCalled();
         expect(turnstile.render).not.toHaveBeenCalled();
         expect(onToken).toHaveBeenCalledWith(null);

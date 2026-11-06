@@ -212,7 +212,7 @@
 }
 
 .linkButton:disabled {
-  color: var(--c-gray-400);
+  color: var(--c-gray-500);
   cursor: default;
   font-variant-numeric: tabular-nums;
 }
@@ -284,7 +284,7 @@
 }
 
 .fieldError {
-  color: var(--c-error);
+  color: var(--c-error-text);
 }
 
 .checkboxError {
@@ -382,7 +382,7 @@
   padding: 2px 10px;
   border-radius: var(--r-full);
   background: var(--c-success-light);
-  color: var(--c-success);
+  color: var(--c-success-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -458,15 +458,59 @@
   color: var(--c-error-text);
 }
 
+.appt[data-featured] {
+  border-color: var(--c-brand-sub);
+  background: var(--c-brand-light);
+}
+
+.nextLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-brand-hover);
+}
+
+.mainAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+.change {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.change > div {
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--c-page-bg);
+}
+
+.change > div[data-new] {
+  background: var(--c-brand-light);
+}
+
+.change dt {
+  font-size: 12px;
+  color: var(--c-gray-600);
+}
+
+.change dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-900);
+}
+
 .reschedule {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.sectionLabel {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--c-gray-500);
-}

@@ -5,11 +5,10 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { useRescheduleAppointment } from "@/src/api/portal/usePortalBooking";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import { fmtLongDayTime } from "@/src/utils/publicBooking";
-import { PortalAppointmentCard } from "./PortalAppointmentCard";
-import { reveal, SlotSteps, Step, useSlotPicker } from "./SlotPicker";
+import { fmtShortDayTime } from "@/src/utils/publicBooking";
+import { SlotChooser } from "./SlotChooser";
+import { useSlotChooser } from "./useSlotChooser";
 import portal from "./Portal.module.css";
-import styles from "./PublicBooking.module.css";
 
 interface RescheduleFlowProps {
     slug: string;
@@ -28,21 +27,16 @@ interface RescheduleFlowProps {
  * the page's state, never in the URL. Same slot rules and device zone as booking.
  */
 export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, onBack, onGone, onSessionLost }: RescheduleFlowProps) {
-    const picker = useSlotPicker(slug, provider, { rescheduleId: appointment.id }, timezone);
+    const picker = useSlotChooser(slug, provider, { rescheduleId: appointment.id }, timezone);
     const { rescheduleAppointment, loading } = useRescheduleAppointment();
     // Tied to the time it was about: choosing another time hides it.
     const [ failure, setFailure ] = useState<{ startUtc: string; message: string } | null>(null);
     const heading = useRef<HTMLHeadingElement>(null);
-    const confirmStep = useRef<HTMLDivElement>(null);
-    const noticeRef = useRef<HTMLParagraphElement>(null);
-    const { slot, notice } = picker;
-    const pickedStart = slot?.startUtc;
+    const { slot } = picker;
     const slotsStatus = picker.error?.status;
     const slotsMessage = picker.error?.message;
 
     useEffect(() => { heading.current?.focus(); }, []);
-    useEffect(() => { if (pickedStart) reveal(confirmStep.current); }, [ pickedStart ]);
-    useEffect(() => { if (notice) noticeRef.current?.focus(); }, [ notice ]);
     // Loading the times already tells whether the appointment can still be moved. The callbacks are
     // read through a ref so a parent re-render does not fire them again.
     const exits = useRef({ onSessionLost, onGone });
@@ -71,32 +65,23 @@ export function RescheduleFlow({ slug, provider, appointment, timezone, onDone, 
     return (
         <div className={portal.reschedule}>
             <h2 ref={heading} tabIndex={-1} className={portal.title}>Reprogramar cita</h2>
-            <p className={portal.sectionLabel}>Cita actual</p>
-            <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
+            <dl className={portal.change} data-testid="reschedule-change">
+                <div>
+                    <dt>Antes</dt>
+                    <dd>{fmtShortDayTime(appointment.startUtc, timezone)}</dd>
+                </div>
+                <div data-new>
+                    <dt>Ahora</dt>
+                    <dd>{slot ? fmtShortDayTime(slot.startUtc, timezone) : "Elige un horario"}</dd>
+                </div>
+            </dl>
 
-            <SlotSteps picker={picker} firstStep={1} noticeRef={noticeRef} headingLevel={3} />
+            <SlotChooser picker={picker} />
 
-            {slot && (
-                <Step number={3} level={3} title="Confirma el cambio" stepRef={confirmStep}>
-                    <div className={styles.confirm}>
-                        <dl className={styles.summary}>
-                            <div>
-                                <dt>Antes</dt>
-                                <dd>{fmtLongDayTime(appointment.startUtc, timezone)}</dd>
-                            </div>
-                            <div>
-                                <dt>Ahora</dt>
-                                <dd>{fmtLongDayTime(slot.startUtc, timezone)}</dd>
-                            </div>
-                        </dl>
-                        {failure?.startUtc === slot.startUtc && <p className={`error-inline ${portal.error}`} role="alert">{failure.message}</p>}
-                        <button type="button" className={`btn-primary ${portal.submit}`} disabled={loading} onClick={() => void submit()}>
-                            {loading ? "Reprogramando…" : "Confirmar nuevo horario"}
-                        </button>
-                    </div>
-                </Step>
-            )}
-
+            {slot && failure?.startUtc === slot.startUtc && <p className={`error-inline ${portal.error}`} role="alert">{failure.message}</p>}
+            <button type="button" className={`btn-primary ${portal.submit}`} disabled={!slot || loading} onClick={() => void submit()}>
+                {loading ? "Reprogramando…" : "Confirmar nuevo horario"}
+            </button>
             <button type="button" className={portal.linkButton} disabled={loading} onClick={onBack}>Volver a mis citas</button>
         </div>
     );

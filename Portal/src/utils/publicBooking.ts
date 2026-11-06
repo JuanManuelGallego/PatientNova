@@ -2,7 +2,7 @@ import { COMMON_TIMEZONES, fmtTime, fmtTimezoneLabel, localDateTimeToUtc, todayF
 import type { LoginChannel, PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
 
 
-export const WEEK_DAYS = 7;
+export const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
 
 export function locationDetail(l: { isVirtual: boolean; address: string | null }): string | null {
     return l.isVirtual ? "Videollamada" : l.address || null;
@@ -33,29 +33,35 @@ export function groupSlotsByDay(slots: PublicSlot[], timezone: string): SlotDay[
     return [ ...days.values() ];
 }
 
-export interface WeekPage {
-    from: string;
-    to: string;
-    hasPrevious: boolean;
-    hasNext: boolean;
-}
-
-/** The Sunday-to-Saturday week holding `start`, cut at the last bookable date. Its days before today stay listed, without slots. */
-export function weekPage(start: string, today: string, lastBookableDate: string): WeekPage {
-    const from = sundayOf(start < lastBookableDate ? start : lastBookableDate);
-    const end = addCalendarDays(from, WEEK_DAYS - 1);
-    return {
-        from,
-        to: end < lastBookableDate ? end : lastBookableDate,
-        hasPrevious: from > today,
-        hasNext: addCalendarDays(from, WEEK_DAYS) <= lastBookableDate,
-    };
-}
-
 const ZONE_PADDING_DAYS = 2;
 
 export function slotQueryRange(from: string, to: string): { from: string; to: string } {
     return { from: addCalendarDays(from, -ZONE_PADDING_DAYS), to: addCalendarDays(to, ZONE_PADDING_DAYS) };
+}
+
+/** Visible days per slots request: the API allows 31 days and `slotQueryRange` adds its padding to both ends. */
+export const SLOT_WINDOW_DAYS = 27;
+/** Empty windows searched without asking, so a provider with no times cannot start a run of requests. */
+export const MAX_EMPTY_WINDOWS = 4;
+
+export interface SlotWindow {
+    from: string;
+    to: string;
+    hasNext: boolean;
+}
+
+/** The `index`-th run of days after `today`, cut at the last bookable date. Windows never overlap. */
+export function slotWindow(index: number, today: string, lastBookableDate: string): SlotWindow {
+    const from = addCalendarDays(today, index * SLOT_WINDOW_DAYS);
+    const end = addCalendarDays(from, SLOT_WINDOW_DAYS - 1);
+    const to = end < lastBookableDate ? end : lastBookableDate;
+    return { from, to, hasNext: to < lastBookableDate };
+}
+
+/** Padded windows overlap, so the same slot can arrive twice. */
+export function mergeSlots(current: PublicSlot[], incoming: PublicSlot[]): PublicSlot[] {
+    const byStart = new Map([ ...current, ...incoming ].map((slot) => [ slot.startUtc, slot ]));
+    return [ ...byStart.values() ].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
 }
 
 export function lastBookableDateIn(zone: string, lastBookableDate: string, providerZone: string): string {
@@ -70,9 +76,25 @@ export function calendarDaysBetween(from: string, to: string): string[] {
 }
 
 const asDate = (day: string) => new Date(`${day}T12:00:00Z`);
-const sundayOf = (day: string) => addCalendarDays(day, -asDate(day).getUTCDay());
 const part = (day: string, options: Intl.DateTimeFormatOptions) =>
     asDate(day).toLocaleDateString("es-CO", { timeZone: "UTC", ...options }).replace(/\.$/, "");
+
+export const monthOf = (day: string) => day.slice(0, 7);
+
+export function addMonths(month: string, count: number): string {
+    const [ y, m ] = month.split("-").map(Number);
+    return new Date(Date.UTC(y!, m! - 1 + count, 1)).toISOString().slice(0, 7);
+}
+
+export const lastDayOfMonth = (month: string) => addCalendarDays(`${addMonths(month, 1)}-01`, -1);
+
+/** The days of `month` for a Sunday-first grid; `null` fills the cells before the 1st. */
+export function monthGrid(month: string): (string | null)[] {
+    const first = `${month}-01`;
+    return [ ...Array<null>(asDate(first).getUTCDay()).fill(null), ...calendarDaysBetween(first, lastDayOfMonth(month)) ];
+}
+
+export const fmtMonth = (month: string) => part(`${month}-01`, { month: "long", year: "numeric" });
 
 export function fmtDayParts(day: string): { weekday: string; dayNumber: string; full: string } {
     return {
@@ -93,6 +115,12 @@ export function fmtLongDay(day: string): string {
 /** "lunes, 3 de noviembre de 2026, 9:00 a. m." in `zone`: how patient pages name an appointment time. */
 export function fmtLongDayTime(iso: string, zone: string): string {
     return `${fmtLongDay(localDayOf(iso, zone))}, ${fmtTime(iso, zone)}`;
+}
+
+/** "vie 6 nov, 9:00 a. m." in `zone`: the short form used where the long one does not fit. */
+export function fmtShortDayTime(iso: string, zone: string): string {
+    const day = localDayOf(iso, zone);
+    return `${part(day, { weekday: "short" })} ${part(day, { day: "numeric" })} ${part(day, { month: "short" })}, ${fmtTime(iso, zone)}`;
 }
 
 export const APPROVAL_FOLLOW_UP = "Te avisaremos cuando tu cita quede confirmada.";
@@ -129,15 +157,6 @@ export function fmtBookingPolicy(policy: ReschedulePolicy | null): string {
     if (policy.maxReschedules === 0) return `${cancel}. No se puede reprogramar en línea.`;
     const notice = policy.minNoticeHours > 0 ? `, con al menos ${plural(policy.minNoticeHours, "hora", "horas")} de anticipación` : "";
     return `${cancel} y reprogramarla hasta ${plural(policy.maxReschedules, "vez", "veces")}${notice}.`;
-}
-
-export function fmtWeekRange(from: string, to: string): string {
-    const month = (day: string) => part(day, { month: "short" });
-    const day = (d: string) => part(d, { day: "numeric" });
-    if (from === to) return `${day(from)} ${month(from)}`;
-    return month(from) === month(to)
-        ? `${day(from)} – ${day(to)} ${month(to)}`
-        : `${day(from)} ${month(from)} – ${day(to)} ${month(to)}`;
 }
 
 const COP = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });

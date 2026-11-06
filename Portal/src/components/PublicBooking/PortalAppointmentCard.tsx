@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtLongDay, localDayOf, locationDetail, PENDING_MEETING_LINK_NOTE } from "@/src/utils/publicBooking";
+import { fmtLongDay, localDayOf, locationDetail, mapUrl, PENDING_MEETING_LINK_NOTE } from "@/src/utils/publicBooking";
 import styles from "./Portal.module.css";
 
 const STATUS_LABEL: Record<PortalAppointment[ "status" ], string> = {
@@ -16,14 +16,19 @@ interface PortalAppointmentCardProps {
     appointment: PortalAppointment;
     timezone: string;
     inset?: boolean;
+    /** The next appointment: highlighted, and leading with what the patient needs to get there. */
+    featured?: boolean;
     /** Buttons for the patient's actions, shown at the foot of the card. */
     actions?: React.ReactNode;
 }
 
-export function PortalAppointmentCard({ appointment: a, timezone, inset = false, actions }: PortalAppointmentCardProps) {
+export function PortalAppointmentCard({ appointment: a, timezone, inset = false, featured = false, actions }: PortalAppointmentCardProps) {
     const dayId = useId();
+    const meetingReady = a.meeting?.status === "ready" ? a.meeting : null;
+    const address = a.location && !a.location.isVirtual ? a.location.address : null;
     return (
-        <article className={inset ? `${styles.appt} ${styles.inset}` : styles.appt} aria-labelledby={dayId}>
+        <article className={inset ? `${styles.appt} ${styles.inset}` : styles.appt} aria-labelledby={dayId} data-featured={featured || undefined}>
+            {featured && <p className={styles.nextLabel}>Tu próxima cita</p>}
             <div className={styles.apptHead}>
                 <div>
                     <p id={dayId} className={styles.apptDay}>{fmtLongDay(localDayOf(a.startUtc, timezone))}</p>
@@ -38,11 +43,17 @@ export function PortalAppointmentCard({ appointment: a, timezone, inset = false,
                     {locationDetail(a.location) && <>, {locationDetail(a.location)}</>}
                 </p>
             )}
-            {a.meeting?.status === "ready" && (
+            {meetingReady && (
                 <p className={styles.apptMeta}>
-                    <a href={a.meeting.url} target="_blank" rel="noopener noreferrer" className={styles.apptLink} data-testid="portal-appointment-meeting-link">
+                    <a href={meetingReady.url} target="_blank" rel="noopener noreferrer" className={featured ? `btn-primary ${styles.mainAction}` : styles.apptLink}
+                        data-testid="portal-appointment-meeting-link">
                         Unirse a la videollamada
                     </a>
+                </p>
+            )}
+            {featured && !meetingReady && address && (
+                <p className={styles.apptMeta}>
+                    <a href={mapUrl(address)} target="_blank" rel="noopener noreferrer" className={`btn-primary ${styles.mainAction}`}>Cómo llegar</a>
                 </p>
             )}
             {a.meeting?.status === "pending" && (

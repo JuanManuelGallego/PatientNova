@@ -8,7 +8,7 @@ vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
 }));
 
 import { PortalAppointmentsPage } from "@/src/components/PublicBooking/PortalAppointmentsPage";
-import { RESEND_COOLDOWN_SECONDS } from "@/src/components/PublicBooking/PortalLogin";
+import { PortalLogin, RESEND_COOLDOWN_SECONDS, useLoginDraft } from "@/src/components/PublicBooking/PortalLogin";
 import { csrfStore } from "@/src/api/base/csrfStore";
 import { todayFormattedString } from "@/src/utils/TimeUtils";
 
@@ -161,7 +161,6 @@ describe("PortalAppointmentsPage", () => {
 
         await user.type(codeInput, "12a34567");
         expect(codeInput).toHaveValue("123456");
-        await user.click(screen.getByRole("button", { name: "Ingresar" }));
 
         expect(await screen.findByRole("heading", { name: "Antes de continuar" })).toBeInTheDocument();
         expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toEqual({ email: "ana@example.com", code: "123456", challenge: "challenge-1" });
@@ -219,7 +218,6 @@ describe("PortalAppointmentsPage", () => {
         expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(2);
 
         await user.type(codeInput, "654321");
-        await user.click(screen.getByRole("button", { name: "Ingresar" }));
         await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
         expect(bodyOf(`/portal/${SLUG}/otp/verify`).challenge).toBe("challenge-2");
     });
@@ -231,7 +229,6 @@ describe("PortalAppointmentsPage", () => {
         const codeInput = await requestCode(user);
 
         await user.type(codeInput, "000000");
-        await user.click(screen.getByRole("button", { name: "Ingresar" }));
         expect(await screen.findByRole("alert")).toHaveTextContent("El código no es válido o ya expiró");
         expect(codeInput).toHaveValue("");
 
@@ -360,7 +357,6 @@ describe("PortalAppointmentsPage", () => {
             expect(screen.getByRole("button", { name: "Cambiar número" })).toBeInTheDocument();
 
             await user.type(codeInput, "123456");
-            await user.click(screen.getByRole("button", { name: "Ingresar" }));
             await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
             expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toEqual({ phone: PHONE, code: "123456", challenge: "challenge-1" });
         });
@@ -415,6 +411,58 @@ describe("PortalAppointmentsPage", () => {
         });
     });
 
+    it("submits by itself on the sixth digit, once", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        const codeInput = await requestCode(user);
+
+        await user.type(codeInput, "12345");
+        expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(0);
+        await user.type(codeInput, "6");
+        await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
+    });
+
+    it("submits a pasted code once", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        const codeInput = await requestCode(user);
+
+        await user.click(codeInput);
+        await user.paste("123456");
+        await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
+    });
+
+    it("keeps the field focused for another try after a wrong code", async () => {
+        server.verify = () => fail(400, "Invalid or expired code");
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        const codeInput = await requestCode(user);
+
+        await user.type(codeInput, "000000");
+        await screen.findByRole("alert");
+        expect(codeInput).toHaveFocus();
+    });
+
+    it("returning with the same draft shows the code step, sends nothing and keeps the countdown", async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        function Harness({ shown }: { shown: boolean }) {
+            const draft = useLoginDraft();
+            return shown ? <PortalLogin slug={SLUG} draft={draft} onLoggedIn={() => undefined} /> : null;
+        }
+        const { rerender } = render(<Harness shown />);
+        await requestCode(user);
+
+        rerender(<Harness shown={false} />);
+        await act(async () => { vi.advanceTimersByTime(5000); });
+        rerender(<Harness shown />);
+
+        expect(screen.getByLabelText("Código de 6 dígitos")).toBeInTheDocument();
+        expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(1);
+        const resend = screen.getByRole("button", { name: /Reenviar código \(\d+ s\)/ });
+        expect(Number(/\d+/.exec(resend.textContent!)![ 0 ])).toBeLessThanOrEqual(RESEND_COOLDOWN_SECONDS - 5);
+    });
+
     it("returning to the same email goes back to the code step without a new request", async () => {
         const user = userEvent.setup();
         render(<PortalAppointmentsPage slug={SLUG} />);
@@ -431,7 +479,6 @@ describe("PortalAppointmentsPage", () => {
         expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(1);
 
         await user.type(codeInput, "123456");
-        await user.click(screen.getByRole("button", { name: "Ingresar" }));
         await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
         expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toMatchObject({ email: "ana@example.com", challenge: "challenge-1" });
     });
@@ -667,7 +714,7 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         listed = [ appt("a3", { canCancel: false, canReschedule: false }) ];
         cleanup();
         render(<PortalAppointmentsPage slug={SLUG} />);
-        expect(within(await cardOf(0)).queryByRole("button")).toBeNull();
+        expect(within(await cardOf(0)).getAllByRole("button").map((b) => b.textContent)).toEqual([ "Calendario" ]);
     });
 
     it("shows the video-call link when it is ready, and says it will arrive by email otherwise", async () => {
@@ -749,6 +796,104 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         await waitFor(() => expect(dialog).toHaveTextContent(/error en el servidor/));
     });
 
+    it("shows the old time beside the new one, which stays empty until a time is picked", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+
+        const change = await screen.findByTestId("reschedule-change");
+        expect(within(change).getByText("Antes")).toBeInTheDocument();
+        expect(within(change).getByText("Ahora")).toBeInTheDocument();
+        expect(within(change).getByText("Elige un horario")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Confirmar nuevo horario" })).toBeDisabled();
+
+        await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+
+        expect(within(change).queryByText("Elige un horario")).toBeNull();
+        expect(screen.getByRole("button", { name: "Confirmar nuevo horario" })).toBeEnabled();
+    });
+
+    it("says nothing about how many changes remain", async () => {
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
+        await screen.findByRole("list", { name: "Mañana" });
+
+        expect(screen.queryByText(/Te queda/)).toBeNull();
+    });
+
+    it("keeps the next appointment above pending requests", async () => {
+        server.appointments = () => ok(200, {
+            consentRequired: false,
+            appointments: listed,
+            requests: [ {
+                id: "r1", status: "PENDING", startUtc: "2099-03-01T15:00:00.000Z", endUtc: "2099-03-01T16:00:00.000Z", durationMinutes: 60,
+                holdExpiresAt: "2099-02-01T00:00:00.000Z", type: { name: "Control" }, location: { name: "Consultorio Centro", address: "Calle 10", isVirtual: false },
+            } ],
+        });
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const next = await screen.findByText("Tu próxima cita");
+        const requests = screen.getByRole("list", { name: "Solicitudes pendientes" });
+        expect(next.compareDocumentPosition(requests) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("highlights only the next appointment", async () => {
+        listed = [ appt("a1"), appt("a2") ];
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const list = await screen.findByRole("list", { name: "Próximas citas" });
+        const [ next, later ] = within(list).getAllByRole("article");
+        expect(within(next!).getByText("Tu próxima cita")).toBeInTheDocument();
+        expect(within(later!).queryByText("Tu próxima cita")).toBeNull();
+    });
+
+    it("the next appointment leads with the video call when its link is ready", async () => {
+        listed = [ appt("a1", { meeting: { status: "ready", url: "https://meet.example/abc" } }) ];
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const link = within(await cardOf(0)).getByRole("link", { name: "Unirse a la videollamada" });
+        expect(link).toHaveAttribute("href", "https://meet.example/abc");
+        expect(link).toHaveClass("btn-primary");
+    });
+
+    it("the next appointment leads with directions for an in-person place", async () => {
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const link = within(await cardOf(0)).getByRole("link", { name: "Cómo llegar" });
+        expect(link).toHaveAttribute("href", expect.stringContaining("query=Calle%2010"));
+        expect(link).toHaveClass("btn-primary");
+    });
+
+    it("only the next appointment offers directions", async () => {
+        listed = [ appt("a1"), appt("a2") ];
+        render(<PortalAppointmentsPage slug={SLUG} />);
+        await cardOf(0);
+
+        expect(within(await cardOf(1)).queryByRole("link", { name: "Cómo llegar" })).toBeNull();
+    });
+
+    it("offers no main action without a link or an address", async () => {
+        listed = [ appt("a1", { location: { name: "Consultorio", address: null, instructions: null, isVirtual: false } }) ];
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        const card = await cardOf(0);
+        expect(within(card).queryByRole("link")).toBeNull();
+    });
+
+    it("downloads the next appointment for the calendar", async () => {
+        URL.createObjectURL = vi.fn(() => "blob:ics");
+        URL.revokeObjectURL = vi.fn();
+        const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+        const user = userEvent.setup();
+        render(<PortalAppointmentsPage slug={SLUG} />);
+
+        await user.click(within(await cardOf(0)).getByRole("button", { name: "Calendario" }));
+
+        expect(click).toHaveBeenCalledOnce();
+        click.mockRestore();
+    });
+
     it("reschedules to a new time in the device zone and returns to the list", async () => {
         let sent: unknown;
         server.reschedule = (_id, body) => {
@@ -761,15 +906,11 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         await user.click(within(await cardOf(0)).getByRole("button", { name: "Reprogramar" }));
 
         expect(await screen.findByRole("heading", { level: 2, name: "Reprogramar cita" })).toHaveFocus();
-        expect(screen.getByRole("heading", { level: 3, name: /Día/ })).toBeInTheDocument();
-        expect(screen.getByRole("heading", { level: 3, name: /Hora/ })).toBeInTheDocument();
-        expect(screen.getByText("Cita actual")).toBeInTheDocument();
         const slotsUrl = String(slotCalls()[ 0 ][ 0 ]);
         expect(slotsUrl).toContain("/portal/appointments/a1/slots?from=");
         expect(slotsUrl).not.toContain("typeId");
         expect(slotCalls()[ 0 ][ 1 ].credentials).toBe("include");
         await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
-        expect(await screen.findByRole("heading", { name: /Confirma el cambio/ })).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Confirmar nuevo horario" }));
 
         expect(await screen.findByRole("status")).toHaveTextContent("Tu cita quedó reprogramada");
@@ -786,8 +927,8 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         await user.click(await screen.findByRole("button", { name: "Confirmar nuevo horario" }));
 
         expect(await screen.findByRole("alert")).toHaveTextContent("Ese horario ya no está disponible");
-        expect(screen.queryByRole("heading", { name: /Confirma el cambio/ })).toBeNull();
-        await waitFor(() => expect(slotCalls()).toHaveLength(2));
+        expect(screen.getByRole("button", { name: "Confirmar nuevo horario" })).toBeDisabled();
+        await waitFor(() => expect(slotCalls().length).toBeGreaterThanOrEqual(2));
         expect(screen.getByRole("heading", { name: "Reprogramar cita" })).toBeInTheDocument();
     });
 
