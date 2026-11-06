@@ -41,14 +41,15 @@ session on first deploy. Announce it and deploy outside clinic hours.
 
 ## Backups and restore (PostgreSQL)
 
-Status: **no database backups as of 2026-11-06.** Do not claim backups exist in any user-facing
-text until each box below is ticked.
+Status: **nightly offsite backups since 2026-11-06, with a restore rehearsed the same day.** Railway's
+own backups are unconfirmed, so user-facing text may claim only the encrypted offsite copies.
 
-- [ ] Nightly offsite backup running (`ops/db-backup`), retention >= 14 days
+- [x] Nightly offsite backup running (`ops/db-backup`), retention 30 days
 - [ ] A missed or failed run alerts through Sentry, confirmed once by stopping the job
 - [ ] Railway volume backups and point-in-time recovery enabled, if the plan offers them
-- [ ] Offsite backups encrypted (`age`); Railway's own backups: confirm with Railway
-- [ ] A restore was rehearsed into a scratch database in the last 90 days (date: ____)
+- [x] Offsite backups encrypted (`age`)
+- [ ] Railway's own backups, if enabled: confirm they are encrypted
+- [x] A restore was rehearsed in the last 90 days (date: 2026-11-06)
 
 Railway's backups stay inside Railway and wiping a volume deletes them, so the offsite copy is
 required either way. Railway's backups only add faster restores.
@@ -97,24 +98,41 @@ pg_dump --format=custom --no-owner --dbname "$DATABASE_URL" \
 
 ### Restore rehearsal
 
-Restore into a scratch Postgres service inside Railway, never onto a laptop. The check proves both
-halves: the backup restores, and the keys you hold can read it.
+Every 90 days, in Git Bash, so the data stays in memory and the private key stays out of Railway. A
+restored database is readable patient data: use this memory-only container, never a Docker volume.
+If the image is missing, build it with `docker build --tag patientnova-db-backup:smoke ops/db-backup`.
+Download the newest `.dump.age` from R2 into an empty folder outside OneDrive and run these from there.
+
+Start the database, then paste the private key when `read` waits:
 
 ```bash
-age --decrypt --identity patientnova-backup.key patientnova-YYYY-MM-DDTHHMMSSZ.dump.age \
-  | pg_restore --no-owner --dbname "$SCRATCH_DATABASE_URL"
-psql "$SCRATCH_DATABASE_URL" -c 'SELECT count(*) FROM appointments;'
+MSYS_NO_PATHCONV=1 docker run -d --rm --name pn-restore --tmpfs /var/lib/postgresql -p 127.0.0.1:5544:5432 -e POSTGRES_PASSWORD=restore -e POSTGRES_DB=restore postgres:18-alpine
+read -rs AGE_KEY; export AGE_KEY
 ```
 
-Compare that count with production, then read rows using the **password manager copies** of the keys:
+Restore. `exit 0` means it worked:
 
 ```bash
-cd Server
-DATABASE_URL="$SCRATCH_DATABASE_URL" ENCRYPTION_KEY=... BLIND_INDEX_KEY=... pnpm run db:verify-restore
+MSYS_NO_PATHCONV=1 docker run --rm -i -e AGE_KEY --network container:pn-restore --entrypoint bash patientnova-db-backup:smoke -c 'set -o pipefail; printf "%s
+" "$AGE_KEY" > /tmp/key.txt && age --decrypt --identity /tmp/key.txt | pg_restore --no-owner --no-privileges --dbname postgresql://postgres:restore@127.0.0.1:5432/restore' < patientnova-YYYY-MM-DDTHHMMSSZ.dump.age; echo "exit $?"
 ```
 
-It exits 0 only when it read rows and decrypted all of them, and prints counts, never patient data.
-Delete the scratch service afterwards and record the date in the checklist above.
+Compare with the same query on production. Small differences are normal:
+
+```bash
+docker exec pn-restore psql -U postgres -d restore -tAc 'SELECT (SELECT count(*) FROM patients), (SELECT count(*) FROM appointments), (SELECT count(*) FROM "AuditLog")'
+```
+
+Read rows with the **password manager copies** of the keys, which proves the key backups work. It
+exits 0 only when it read rows and decrypted all of them, and prints counts, never patient data:
+
+```bash
+read -rs ENCRYPTION_KEY; read -rs BLIND_INDEX_KEY; cd Server
+DATABASE_URL="postgresql://postgres:restore@127.0.0.1:5544/restore" ENCRYPTION_KEY="$ENCRYPTION_KEY" BLIND_INDEX_KEY="$BLIND_INDEX_KEY" pnpm run db:verify-restore; echo "exit $?"
+```
+
+Clean up: `docker rm -f pn-restore`, delete the downloaded file, close the terminal, and record the
+date in the checklist above.
 
 Patient data is sensitive personal data under Ley 1581 de 2012: store dumps only encrypted and
 restrict access.

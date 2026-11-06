@@ -221,7 +221,7 @@ clinic does not respond.
 | Consent records | Indefinitely | No purge exists; they are evidence |
 | Audit log | Indefinitely | Immutable through the Prisma guard |
 | Reminders | Indefinitely | No purge exists |
-| Database backups | None as of 2026-11-06; 30 days once the nightly job runs (10.6) | R2 lifecycle rule; encrypted with `age` |
+| Database backups | 30 days, nightly since 2026-11-06 | R2 lifecycle rule; encrypted with `age` |
 | Vendor copies (Twilio, Meta, Brevo, Sentry, Railway and Vercel logs) | Each vendor's terms and settings | To review with the contracts |
 
 Clinical retention depends on the clinic and on health regulation. The policy cites Resolución 839
