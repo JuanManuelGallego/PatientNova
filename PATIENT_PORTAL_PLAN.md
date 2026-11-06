@@ -1314,7 +1314,7 @@ As planned:
 
 **Code.**
 - **10.9 Remove the transitional `email`.** Done 2026-11-06: `sessionContactView` no longer returns it, so the session and verify responses carry only `contact` and `contactChannel`. The token's `email` claim stays.
-- **10.10 Encryption key rotation (was 8.1 and 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** gates enabling the portal (decided 2026-11-06), because the incident procedure cannot otherwise replace a leaked key. Build it on its own branch with a written plan, after the Phase 10 walkthrough. **Deploy in two steps:** `isEncrypted` matches only `enc:v1:` and treats anything else as plaintext, so old code reading `enc:v2:` would show ciphertext and encrypt it again on save. First deploy code that reads v2 and still writes v1, then the code that writes v2. **Backups:** restoring one made before a rotation needs the old key, so keep a retired key at least 30 days after the re-encryption finishes, and cover that in the runbook and the restore rehearsal. Rotating does not protect data already copied along with the key. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **10.10 Encryption key rotation (was 8.1 and 0.24; not started; plan prepared, see "10.10 implementation plan" below).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** gates enabling the portal (decided 2026-11-06), because the incident procedure cannot otherwise replace a leaked key. Build it on its own branch with a written plan, after the Phase 10 walkthrough. **Deploy in two steps:** `isEncrypted` matches only `enc:v1:` and treats anything else as plaintext, so old code reading `enc:v2:` would show ciphertext and encrypt it again on save. First deploy code that reads v2 and still writes v1, then the code that writes v2. **Backups:** restoring one made before a rotation needs the old key, so keep a retired key at least 30 days after the re-encryption finishes, and cover that in the runbook and the restore rehearsal. Rotating does not protect data already copied along with the key. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
 - **10.12 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. Decided 2026-11-06: build it as a small separate PR after 10.10. Hide name and surname only when `consentRequired` is false and booking is in auto-confirm; `patient` becomes optional and the server answers 400 when a name is needed and missing, which brings the fields back. This reveals nothing new: `consentRequired` already tells the contact holder they are a consented patient. Approval mode, new contacts, review routing and a pending re-consent keep asking. The consent checkbox stays. Phone sessions must never display a saved name.
 - **Dropped 2026-11-06: holding the slot during verification.** Double-booking is already prevented, so a hold would only change when the loser finds out. A lost slot recovers cleanly (form and session kept), and a hold before any proven contact would let anyone block a calendar.
 
@@ -1327,6 +1327,379 @@ As planned:
 
 **Documentation.**
 - **10.17** Closed 2026-11-06. The AGENTS.md config path is corrected, and `docs/` came out of `.gitignore`, so new files there are tracked again. The Google publishing status was not recorded: `docs/operations.md` says so and keeps the steps to check it.
+
+#### 10.10 implementation plan (prepared 2026-11-06)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Make `ENCRYPTION_KEY` replaceable on a live database: a two-key keyring, a key id in every new ciphertext, a command that moves stored values to the current key, and a runbook.
+
+**Architecture:** `field-encryption.ts` stays pure and takes a `Keyring`; a new `keyring.ts` builds the process's ring from config, and the Prisma extension and the backfill use it. A new `reencrypt-pii.ts` walks all ten tables with raw SQL and rewrites only ciphertext that is not under the current key. It ships as two PRs deployed in order, because code from before PR A would misread `enc:v2:`.
+
+**Tech Stack:** Node `crypto` (AES-256-GCM), Prisma raw SQL on Postgres, Vitest.
+
+**Spec:** item 10.10 above, plus sections 3 and 7 of `docs/compliance-patient-data.md`.
+
+**Starting point (checked in code):**
+- Only `encryption-extension.ts` and `backfill-pii.ts` call `encrypt`/`decrypt`, and `config.encryption.key` is read only in those two files.
+- `FamilyMember`, `EvolutionNote` and `AuditLog` have no `updatedAt`, so the backfill's `updatedAt` guard cannot be reused.
+- Ids differ: `users`, `google_connections` and `"AuditLog"` use text ids; the other seven use `uuid`.
+- `AuditLog` has no `@@map`, so its table is `"AuditLog"`. `fieldsBefore`/`fieldsAfter` are `JSONB`: ciphertext is stored there as a JSON string, while old rows may hold plain JSON objects.
+- `AuditLog` immutability lives only in `auditLogGuardExtension`. The migrations have no trigger, rule or `REVOKE`, so raw SQL through the same client works.
+- `@updatedAt` is applied by the Prisma client and no trigger touches it, so a raw `UPDATE` keeps it.
+- All 52 encrypted fields are `String`/`@db.Text` or `Json` in the schema. The v2 header adds 9 characters, which Task 4 checks against the real columns.
+- `enc:v1:` is asserted in `test/unit/utils/encryption.test.ts:42` and `test/integration/patients/patient.pii-encryption.integration.test.ts:28`. `booking-requests.integration.test.ts:93` only checks `enc:`.
+- `prisma-client.ts` caches the client in `global.__prisma` outside production, and `test/integration/setup.ts` imports it before any test file, so tests that need other keys must reload modules.
+- `pnpm start` runs `pii:backfill` on every boot, so the backfill must read through the keyring.
+
+**Decisions this plan makes (the spec leaves them open):**
+- **Key id:** the first 8 hex characters of `SHA-256("patientnova-key-id:" + key bytes)`. It is derived, so there is no third variable to set wrongly, and it is safe to print because the key has 256 bits of entropy.
+- **`v1` reads** try each key in the ring, current first. `v1` does not name its key, and the GCM tag shows which one fits.
+- **Two PRs, no flag.** PR A reads `v2` and writes `v1`; PR B writes `v2`. A flag would be one more production setting to get wrong, and PR B removes the `v1` writer. Tests build `v1` values with their own fixture.
+- **Concurrency guard:** the `UPDATE` compares the old ciphertext of every field it changes. GCM's random IV makes any app write to those fields change that value, and this works on all ten tables.
+- **`pii:reencrypt` is manual**, not part of `pnpm start`. `AuditLog` can be large, and in an incident the operator should watch it finish.
+- **Plaintext stays as it is.** The command moves ciphertext only, as the spec requires for `AuditLog`.
+
+**Not included:**
+- A third key in the ring. One rotation finishes before the next starts.
+- Encrypting leftover plaintext outside the three models the backfill covers.
+- Fixing the `enc:` look-alike bug (see "Found while planning" at the end of this section).
+
+**Depends on:** branch from `main` after `phase10/legal-text` merges, because the runbook extends backup sections that are only on that branch. Task 6 needs a restorable backup (10.6).
+
+##### Global Constraints
+- `ENCRYPTION_KEY_PREVIOUS` is optional and never goes through `requireEnv`, so `.env.test`, `.github/workflows/ci.yml` and `Server/.env` do not change. A blank value counts as unset.
+- Never log, print or put in an error message a plaintext, a ciphertext or a key. Allowed: model, field, record id, counts, key ids.
+- Raw SQL on encrypted columns stays in `backfill-pii.ts` and `reencrypt-pii.ts`.
+- `BLIND_INDEX_KEY` and every blind index stay untouched: plaintext does not change, so neither do the hashes.
+- Run commands from `Server/`, with `docker compose -f docker-compose.test.yml up -d` for integration tests. If a full integration run dies with `0xC0000409` on Windows, rerun that file alone.
+- PR B merges only after PR A runs on every instance of every environment.
+
+##### Review Focus
+1. Soft-deleted or inactive rows must move too. Otherwise restoring a patient after the old key is retired fails on read.
+2. A value no key opens must not stop the run: the rest finishes, that row stays unchanged, and the command exits non-zero naming its model, field and id.
+3. An app write between the batch read and the `UPDATE` must win. The row is skipped and the next run picks it up.
+4. Audit JSON comes in three shapes (ciphertext string, plain object, JSON null). Only the first is rewritten, and its decrypted text stays byte-identical.
+5. Keys as operators really enter them: uppercase hex gives the same key id, a blank `ENCRYPTION_KEY_PREVIOUS` counts as unset, and the previous key equal to the current key or to `BLIND_INDEX_KEY` fails at boot.
+
+---
+
+##### PR A: `phase10/key-rotation-read` (reads `v2`, still writes `v1`)
+
+##### Task 1: Keyring and `v2` reader
+
+**Files:**
+- Modify: `Server/src/utils/encryption/field-encryption.ts`, `Server/src/utils/config/config.ts:41-50`, `Server/.env.example`, `README.md` (variables table)
+- Create: `Server/src/utils/encryption/keyring.ts`, `Server/test/ciphertext-fixtures.ts`
+- Test: `Server/test/unit/utils/encryption.test.ts`, `Server/test/unit/utils/config.test.ts`
+
+**Interfaces:**
+- Produces, in `field-encryption.ts`:
+  ```ts
+  export interface Keyring { currentId: string; keys: ReadonlyMap<string, Buffer> }
+  export function keyId(key: string): string;
+  export function createKeyring(current: string, previous?: string): Keyring;
+  export function encrypt(plaintext: string, keyring: Keyring): string;
+  export function decrypt(ciphertext: string, keyring: Keyring): string;
+  export function isEncrypted(value: string): boolean;
+  ```
+- Produces, in `keyring.ts`: `export function activeKeyring(): Keyring | null` (built once from config; null when no key is configured).
+- Produces, in config: `config.encryption.previousKey: string | undefined`.
+- Produces, in `test/ciphertext-fixtures.ts`: `sealV1(plaintext, hexKey)` and `sealV2(plaintext, hexKey)`. They use `node:crypto` directly, so they pin the stored format independently of the code under test. `sealV2` builds `enc:v2:<kid>:<base64(iv + tag + ciphertext)>`.
+
+- [ ] **Step 1: Write the failing tests.** Move the existing `encryption.test.ts` calls to `createKeyring(TEST_KEY)`, then add:
+
+```ts
+const OLD = 'a'.repeat(64); const NEW = 'b'.repeat(64); const OTHER = 'c'.repeat(64);
+const ring = createKeyring(NEW, OLD);
+
+it('reads v1 under the current key', () => expect(decrypt(sealV1('x', NEW), ring)).toBe('x'));
+it('reads v1 under the previous key', () => expect(decrypt(sealV1('x', OLD), ring)).toBe('x'));
+it('reads v2 by key id', () => expect(decrypt(sealV2('x', OLD), ring)).toBe('x'));
+it('rejects v2 under an unknown key id', () =>
+  expect(() => decrypt(sealV2('x', OTHER), ring)).toThrow(/Unknown encryption key id [0-9a-f]{8}/));
+it('rejects v1 that no key opens', () => expect(() => decrypt(sealV1('x', OTHER), ring)).toThrow(EncryptionError));
+it('rejects a v2 value tampered with', () => { /* flip a payload byte */ });
+it('recognises both formats and no look-alike', () => {
+  expect(isEncrypted(sealV1('x', NEW))).toBe(true);
+  expect(isEncrypted(sealV2('x', NEW))).toBe(true);
+  expect(isEncrypted('enc:v2:abc123')).toBe(false);
+  expect(isEncrypted('enc:v3:abcd1234:AAAA')).toBe(false);
+});
+it('derives a stable key id that ignores hex case', () => {
+  expect(keyId(NEW)).toMatch(/^[0-9a-f]{8}$/);
+  expect(keyId('B'.repeat(64))).toBe(keyId(NEW));
+});
+it('still writes v1 under the current key', () => {
+  const value = encrypt('x', ring);
+  expect(value.startsWith('enc:v1:')).toBe(true);
+  expect(decrypt(value, createKeyring(NEW))).toBe('x');
+});
+```
+
+Add to `config.test.ts`, in the existing `loadConfig` style, the exact errors:
+- malformed: `ENCRYPTION_KEY_PREVIOUS must be a 64-character hex string`
+- equal to the current key, any case: `ENCRYPTION_KEY_PREVIOUS must differ from ENCRYPTION_KEY`
+- equal to the blind index key: `ENCRYPTION_KEY_PREVIOUS must differ from BLIND_INDEX_KEY`
+- set with no current key: `ENCRYPTION_KEY_PREVIOUS requires ENCRYPTION_KEY`
+- blank: `previousKey` is `undefined`
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project unit test/unit/utils/encryption.test.ts test/unit/utils/config.test.ts`. Expected: FAIL (`createKeyring` is not a function).
+
+- [ ] **Step 3: Implement.** Parse `v2` with `/^enc:v2:([0-9a-f]{8}):/`. Wrap GCM failures in `EncryptionError` with a message that carries no content. `encrypt` keeps the `v1` format, using the current key. In `config.ts`, validate as the tests pin. Document the variable in `.env.example` and the README table: "Set only during a rotation; see `docs/operations.md`".
+
+- [ ] **Step 4: Run to verify they pass.** Same command. Expected: PASS. `pnpm run typecheck` fails in the extension and backfill until Task 2, so the branch compiles again at the end of that task.
+
+- [ ] **Step 5: Commit.** `git commit -m "feat(encryption): keyring and v2 reader"`
+
+##### Task 2: Extension and backfill read through the keyring
+
+**Files:**
+- Modify: `Server/src/utils/prisma/encryption-extension.ts`, `Server/src/utils/prisma/backfill-pii.ts`
+- Create: `Server/test/integration/prisma/use-keys.ts`
+- Test: `Server/test/integration/prisma/key-rotation.integration.test.ts`
+
+**Interfaces:**
+- Consumes: `activeKeyring()`, `encrypt`, `decrypt`, `keyId`, `createKeyring`, `sealV2`.
+- Produces: test helper `useKeys({ current, previous? }): Promise<{ prisma, close(): Promise<void> }>`. It saves `global.__prisma`, clears it, calls `vi.resetModules()`, stubs both env vars, dynamically imports `prisma-client.js`, then restores the global. Dynamic imports in the test after that call get the same rotated modules. `close()` disconnects that client and calls `vi.unstubAllEnvs()`.
+
+- [ ] **Step 1: Write the failing tests.** The key the suite boots with is the "old" key.
+
+```ts
+const OLD_KEY = process.env.ENCRYPTION_KEY!;
+const NEW_KEY = 'c'.repeat(64);
+
+it('reads a row written under the previous key', async () => {
+  const patient = await createTestPatient(user.id, { name: 'Ana' });
+  const rotated = await useKeys({ current: NEW_KEY, previous: OLD_KEY });
+  expect((await rotated.prisma.patient.findUniqueOrThrow({ where: { id: patient.id } })).name).toBe('Ana');
+});
+
+it('writes under the current key', async () => {
+  // Update notes through the rotated client, read the column raw.
+  expect(decrypt(rawNotes, createKeyring(NEW_KEY))).toBe('nueva nota');
+});
+
+it('backfill reads ciphertext under the previous key', async () => {
+  // Set piiVersion = 1 raw on a row encrypted under OLD_KEY, import backfill-pii.js after useKeys.
+  await backfillPii();
+  // Row reaches PII_VERSION and its nameTokens are still correct.
+});
+
+it('fails loudly on a key id outside the ring', async () => {
+  await prisma.$executeRaw`UPDATE patients SET "name" = ${sealV2('x', 'd'.repeat(64))} WHERE id = ${id}::uuid`;
+  await expect(prisma.patient.findUniqueOrThrow({ where: { id } }))
+    .rejects.toThrow(/Failed to decrypt Patient\.name: Unknown encryption key id/);
+});
+```
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project integration test/integration/prisma/key-rotation.integration.test.ts`. Expected: FAIL (the previous-key read throws).
+
+- [ ] **Step 3: Implement.** Replace `getKey()` with a keyring getter that keeps the production throw and the keyless development behaviour. In `decryptField`, append `EncryptionError.message` to `Failed to decrypt ${model}.${field}`. In `backfillPii`, use `activeKeyring()` wherever `key` was used, keeping its keyless branches.
+
+- [ ] **Step 4: Run to verify they pass.** Run the new file, then `pnpm run typecheck && pnpm test && pnpm run test:integration`. Expected: all pass, including `patient.pii-encryption`, which still sees `enc:v1:`.
+
+- [ ] **Step 5: Commit and open PR A.** `git commit -m "feat(encryption): read through the keyring"`
+
+**Deploy gate:** PR A runs on every instance in staging and production before Task 3 merges. Confirm the deployed commit in Railway.
+
+---
+
+##### PR B: `phase10/key-rotation-write` (writes `v2`, adds the command and runbook)
+
+##### Task 3: Write `v2`
+
+**Files:**
+- Modify: `Server/src/utils/encryption/field-encryption.ts`
+- Test: `Server/test/unit/utils/encryption.test.ts`, `Server/test/integration/patients/patient.pii-encryption.integration.test.ts:28`
+
+**Interfaces:**
+- Produces: `export function isCurrent(value: string, keyring: Keyring): boolean` (true only for `v2` under `keyring.currentId`).
+
+- [ ] **Step 1: Write the failing test.** Replace `still writes v1 under the current key` and `ciphertext starts with enc:v1: prefix` with:
+
+```ts
+it('writes v2 under the current key id', () => {
+  const value = encrypt('x', ring);
+  expect(value.startsWith(`enc:v2:${keyId(NEW)}:`)).toBe(true);
+  expect(decrypt(value, createKeyring(NEW))).toBe('x');
+});
+it('knows which values are current', () => {
+  expect(isCurrent(encrypt('x', ring), ring)).toBe(true);
+  expect(isCurrent(sealV2('x', OLD), ring)).toBe(false);
+  expect(isCurrent(sealV1('x', NEW), ring)).toBe(false);
+});
+```
+
+Change `ENC` in `patient.pii-encryption.integration.test.ts` to `/^enc:v2:[0-9a-f]{8}:/`.
+
+- [ ] **Step 2: Run to verify it fails.** `pnpm exec vitest run --project unit test/unit/utils/encryption.test.ts`. Expected: FAIL (the value starts with `enc:v1:`).
+
+- [ ] **Step 3: Implement.** `encrypt` writes `enc:v2:<currentId>:<payload>`, and the `v1` writer is removed. Add `isCurrent`.
+
+- [ ] **Step 4: Run to verify it passes.** `pnpm test && pnpm exec vitest run --project integration test/integration/patients test/integration/prisma`. Expected: PASS.
+
+- [ ] **Step 5: Commit.** `git commit -m "feat(encryption): write v2 with the key id"`
+
+##### Task 4: Re-encrypt command
+
+**Files:**
+- Create: `Server/src/utils/prisma/reencrypt-pii.ts`, `Server/src/utils/prisma/reencrypt-pii-cli.ts`
+- Modify: `Server/package.json` (`"pii:reencrypt": "tsx src/utils/prisma/reencrypt-pii-cli.ts"`), `Server/src/utils/prisma/backfill-pii.ts` (export `quote`)
+- Test: `Server/test/integration/prisma/reencrypt-pii.integration.test.ts`
+
+**Interfaces:**
+- Consumes: `activeKeyring`, `decrypt`, `encrypt`, `isEncrypted`, `isCurrent`, `keyId`, `ENCRYPTED_FIELDS`, `ENCRYPTED_JSON_FIELDS`, `quote`, `useKeys`, `sealV1`, `sealV2`.
+- Produces:
+  ```ts
+  export const REENCRYPT_TABLES: Record<string, { table: string; id: 'uuid' | 'text' }>;
+  export interface ReencryptResult { model: string; scanned: number; updated: number; skipped: number; failed: number }
+  export async function reencryptPii(opts?: { batchSize?: number }): Promise<ReencryptResult[]>;
+  export async function reencryptRow(model: string, row: Record<string, unknown>, keyring: Keyring): Promise<'updated' | 'skipped' | 'failed'>;
+  ```
+- `REENCRYPT_TABLES`: `User` `users` text; `MedicalRecord` `medical_records` uuid; `FamilyMember` `family_members` uuid; `EvolutionNote` `evolution_notes` uuid; `Patient` `patients` uuid; `Appointment` `appointments` uuid; `Reminder` `reminders` uuid; `AuditLog` `AuditLog` text; `GoogleConnection` `google_connections` text; `BookingRequest` `booking_requests` uuid.
+
+- [ ] **Step 1: Write the failing tests.** Each runs after `useKeys({ current: NEW_KEY, previous: OLD_KEY })` plus a dynamic import of `reencrypt-pii.js`.
+
+```ts
+it('covers every encrypted model', () =>
+  expect(Object.keys(REENCRYPT_TABLES).sort()).toEqual(Object.keys(ENCRYPTED_FIELDS).sort()));
+
+it('every encrypted column has no length limit', async () => {
+  // information_schema.columns for each model and field: data_type is 'text' or 'jsonb'.
+});
+
+it('moves every field of every model to the current key', async () => {
+  // Seed one row per model with every encrypted field set, written under OLD_KEY, plus a
+  // soft-deleted patient, an inactive patient and one value rewritten raw as sealV1(..., OLD_KEY).
+  const results = await reencryptPii({ batchSize: 1 });
+  expect(results.every((r) => r.failed === 0 && r.skipped === 0)).toBe(true);
+  // Raw: every non-null encrypted field starts with `enc:v2:${keyId(NEW_KEY)}:`
+  // and decrypts to the value seeded.
+  const again = await reencryptPii();
+  expect(again.every((r) => r.scanned === 0 && r.updated === 0)).toBe(true);
+});
+
+it('leaves nothing that needs the old key', async () => {
+  await reencryptPii();
+  const after = await useKeys({ current: NEW_KEY }); // no previous key in the ring
+  // Reads the soft-deleted patient and an audit row through after.prisma.
+});
+
+it('changes only ciphertext: updatedAt and every other column are kept', async () => {
+  // Compare SELECT * before and after for patients and "AuditLog", minus the encrypted fields.
+});
+
+it('rewrites audit JSON ciphertext and leaves plain JSON alone', async () => {
+  // Three rows: fieldsBefore object through the client, raw plain object, JSON null.
+  // First: jsonb_typeof = 'string', and decrypt then JSON.parse equals the original.
+  // Second and third: unchanged.
+  await expect(rotated.prisma.auditLog.update({ where: { id }, data: {} })).rejects.toThrow('AuditLog is immutable');
+});
+
+it('skips a row the app changed after it was read', async () => {
+  // Read the row, update notes through rotated.prisma, call reencryptRow with the old snapshot.
+  expect(outcome).toBe('skipped');
+  // Raw notes decrypt to the app's value.
+});
+
+it('counts a value no key opens and carries on', async () => {
+  // Two patients; one name rewritten raw as sealV2('x', 'd'.repeat(64)).
+  const patient = (await reencryptPii()).find((r) => r.model === 'Patient')!;
+  expect(patient.failed).toBe(1);
+  // That value is unchanged and the other patient moved.
+});
+
+it('leaves plaintext alone', async () => {
+  // Raw plaintext notes stay byte-identical.
+});
+```
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project integration test/integration/prisma/reencrypt-pii.integration.test.ts`. Expected: FAIL (module not found).
+
+- [ ] **Step 3: Implement `reencryptPii` and `reencryptRow`.** Throw `EncryptionError` when `activeKeyring()` is null. For each model, page by `id`: uuid tables start from the zero UUID and cast `$n AS uuid`, text tables start from `''`.
+
+```text
+text(f)  = "f"                      for text columns
+         = ("f" #>> '{}')           for ENCRYPTED_JSON_FIELDS
+stale(f) = text(f) ~ '^enc:v(1:|2:[0-9a-f]{8}:)' AND text(f) NOT LIKE $1     -- $1 = 'enc:v2:<kid>:%'
+
+SELECT "id"::text AS "id", text(f1) AS "f1", ...
+FROM <table> WHERE (stale(f1) OR stale(f2) ...) AND "id" > $2 ORDER BY "id" LIMIT <batchSize>
+
+UPDATE <table> SET "f" = $new                                -- to_jsonb($new::text) for JSON fields
+WHERE "id" = $id AND text(f) = $old [AND ... for each changed field]
+```
+
+The `~` pattern matches exactly what `isEncrypted` accepts, so a plain note that merely starts with `enc:v` is never selected and "scanned 0" stays reachable. In `reencryptRow`, a field changes when `isEncrypted(value) && !isCurrent(value, keyring)`. Decrypted text goes straight back to `encrypt` and is never parsed. If any field in a row fails to decrypt, log `logger.error({ model, field, recordId }, ...)`, change nothing in that row and return `'failed'`. A row with nothing to change returns `'skipped'`. Zero rows updated also returns `'skipped'`. Database errors propagate: the run is resumable.
+
+- [ ] **Step 4: Implement the CLI.** Follow `revoke-consent-cli.ts`. Print `Current key id: <kid>`, then `PII re-encrypt <model>: scanned N, updated N, skipped N, failed N` for each model. Exit 1 when any `failed > 0`, and say "run it again" when any `skipped > 0`. Done means every model scanned 0.
+
+- [ ] **Step 5: Run to verify they pass.** Run the new file, then `pnpm run typecheck && pnpm run lint && pnpm test && pnpm run test:integration`. Expected: PASS.
+
+- [ ] **Step 6: Commit.** `git commit -m "feat(encryption): pii:reencrypt command"`
+
+##### Task 5: Runbook and docs
+
+**Files:**
+- Modify: `docs/operations.md`, `docs/compliance-patient-data.md`, `AGENTS.md`, `PATIENT_PORTAL_PLAN.md`
+
+Load `mattpocock-skills:writing-for-agents` before editing `AGENTS.md`.
+
+- [ ] **Step 1: Add `## Rotating keys` to `docs/operations.md`.** It carries these steps, in this order:
+
+**`ENCRYPTION_KEY`**
+1. Run only one rotation at a time, and never start one before the last reached scanned 0.
+2. Generate the key with `openssl rand -hex 32` and save it next to the old one, outside Railway, before anything else. Note the date.
+3. Take a manual backup, and confirm it restores if the nightly job is not yet proven.
+4. In Railway, staging both changes together on every service with the key: `ENCRYPTION_KEY_PREVIOUS` = old, `ENCRYPTION_KEY` = new. Deploy once, at a quiet time. An old instance still running during the overlap fails on values written with the new key until it stops. It corrupts nothing.
+5. Run `pnpm run pii:reencrypt` with the production environment, as with `consent:revoke`; it must see both keys. Repeat until every model scans 0.
+6. A `failed` row stops the procedure until it has been looked at: the output gives its model, field and id, never its content.
+7. Remove `ENCRYPTION_KEY_PREVIOUS` and deploy, right away after a leak. If a read then fails with `Unknown encryption key id`, put it back and run the command again.
+8. Keep the retired key outside Railway for at least 30 days after step 5, because backups from before that step need it. Record the date it can be deleted.
+9. Take a fresh backup and read it with `db:verify-restore` using only the new key.
+
+**Limits to state**
+- Rotating does not protect data already copied along with the key. A leak still follows section 7 of the compliance document.
+- Roll back only as far as PR A, since older code cannot read `v2`.
+
+**`BLIND_INDEX_KEY`**
+- Copy the procedure from the spec: back up the new key outside Railway, set it, bump `PII_VERSION`, deploy, and let the backfill on start rehash every row.
+- Until it finishes, rows not yet rehashed are missed by email, phone and name search, `toHash` reply matching and the email unique index, so rotate at a quiet time.
+
+- [ ] **Step 2: Extend "Restore rehearsal".**
+- A backup taken before a rotation needs the old key as `ENCRYPTION_KEY`.
+- A backup taken during re-encryption needs both, the old one as `ENCRYPTION_KEY_PREVIOUS`.
+- To bring an old backup into production: set new + previous, restore, run `pii:reencrypt` until every model scans 0, then remove the previous key.
+
+- [ ] **Step 3: Update the compliance document.**
+- Section 3 item 2: describe the keyring and key ids.
+- Section 3 item 9: point to the runbook.
+- Section 3 item 10: `enc:v2:` also exists, and rollback is limited to PR A.
+- Section 7 step 2: `ENCRYPTION_KEY` can rotate. Remove the "cannot until 10.10" line.
+
+- [ ] **Step 4: Update `AGENTS.md`.**
+- "Raw SQL bypasses encryption": allow `reencrypt-pii.ts` as well.
+- State that its `AuditLog` raw update is the documented exception to immutability, ciphertext only.
+- "New PII fields require": add `REENCRYPT_TABLES` for a new model.
+
+- [ ] **Step 5: Update this file.** Mark 10.10 built, pending Task 6, and update the line at the top that says "not started".
+
+- [ ] **Step 6: Verify.** `grep -n "cannot until 10.10" docs/compliance-patient-data.md` finds nothing, and every command in the runbook exists in `Server/package.json`.
+
+- [ ] **Step 7: Commit and open PR B.** `git commit -m "docs: key rotation runbook"`
+
+##### Task 6: Rehearsal (owner, closes the gate)
+
+No code. It needs PR B deployed and a restorable backup from 10.6.
+
+- [ ] **Step 1:** Restore a production backup into a scratch Railway Postgres, and run the runbook there end to end with a throwaway key.
+- [ ] **Step 2:** Confirm every model scans 0, `db:verify-restore` passes with only the throwaway key, and the same run with only the old key fails. Delete the scratch service and the throwaway key.
+- [ ] **Step 3:** Run `pii:reencrypt` once in production without changing the key. It moves stored `v1` values to `v2`, and proves the command on the real tables with no key at risk.
+- [ ] **Step 4:** Record the date in 10.10. A real production rotation is not required: the gate is that one is possible.
+
+##### Found while planning (not part of 10.10)
+`encryptField` returns a value unchanged when `isEncrypted` is true, and `isEncrypted` only checks the prefix. `portal-booking.schemas.ts` limits `name` to trimmed length, so a verified patient could submit a name starting with `enc:v1:`. It would be stored as is and throw on every read, and the extension decrypts whole lists, so the provider inbox would answer 500 while that request is listed. This comes from reading the code and has not been reproduced. Fix it in a small separate PR: treat such a value as ciphertext only if a key opens it. Until then, a row like this shows up as `failed` in `pii:reencrypt`.
 
 ### Dependency summary
 `0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7. Phone login cannot be separated from the portal, so 9.0 gates enabling the portal in production, including any pilot. 9.0 also gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes. In Phase 10, 10.1 to 10.8 and 10.10 gate enabling the portal in production, and the rest are independent.
