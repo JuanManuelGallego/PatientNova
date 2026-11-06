@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { inbox, latestCode, stripVercelBypass } from '../../support/portal';
+import { dayPicker, goToTimes, inbox, latestCode, pickSecondDay, stripVercelBypass } from '../../support/portal';
 
 const SLUG = 'e2e-publica';
 const PROVIDER_EMAIL = 'e2e-public-provider@example.com';
@@ -13,23 +13,29 @@ test.describe('self-booking on the public page', () => {
         const email = `reserva-${testInfo.project.name}-${Date.now()}@example.com`;
         const providerNoticesBefore = (await inbox(PROVIDER_EMAIL)).length;
 
-        await page.goto(`/book/${SLUG}`);
-        await page.getByRole('button', { name: 'Semana siguiente' }).click();
-        const days = page.getByRole('group', { name: 'Días de la semana' });
-        const day = days.locator('button[aria-pressed="true"]');
-        await expect(day).toBeVisible();
-        const dayName = await day.getAttribute('aria-label');
-        const time = page.getByRole('list', { name: 'Mañana' }).getByRole('button').first();
+        await goToTimes(page, SLUG);
+        const dayName = await pickSecondDay(page);
+        const time = page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button').first();
         const timeText = (await time.textContent())!.trim();
         await time.click();
-        await expect(page.getByRole('heading', { name: /Confirma tu cita/ })).toBeVisible();
+        await page.getByRole('button', { name: 'Continuar' }).click();
+        await expect(page.getByRole('heading', { name: '¿Dónde te enviamos el código?' })).toBeVisible();
 
         await page.getByLabel('Correo electrónico').fill(email);
         const send = page.getByRole('button', { name: 'Enviar código' });
         await expect(send).toBeEnabled({ timeout: 20_000 });
         await send.click();
+        await expect(page.getByLabel('Código de 6 dígitos')).toBeVisible();
+
+        // Back to Horario and forward again keeps the code step and sends nothing new.
+        const codesBefore = (await inbox(email)).length;
+        await page.goBack();
+        await expect(page.getByRole('heading', { name: '¿Cuándo te queda bien?' })).toBeVisible();
+        await page.getByRole('button', { name: 'Continuar' }).click();
+        await expect(page.getByLabel('Código de 6 dígitos')).toBeVisible();
+        expect((await inbox(email)).length).toBe(codesBefore);
+
         await page.getByLabel('Código de 6 dígitos').fill(await latestCode(email));
-        await page.getByRole('button', { name: 'Ingresar' }).click();
 
         await page.getByLabel('Nombre').fill('Paciente');
         await page.getByLabel('Apellidos').fill('E2E');
@@ -50,17 +56,17 @@ test.describe('self-booking on the public page', () => {
         await expect(page).toHaveURL(new RegExp(`/book/${SLUG}/appointments$`));
         await expect(page.getByRole('list', { name: 'Próximas citas' })).toContainText(timeText);
 
-        await page.goto(`/book/${SLUG}`);
-        await page.getByRole('button', { name: 'Semana siguiente' }).click();
-        await days.getByRole('button', { name: dayName! }).click();
-        await expect(page.getByRole('list', { name: 'Mañana' }).getByRole('button', { name: timeText, exact: true })).toHaveCount(0);
+        await goToTimes(page, SLUG);
+        await dayPicker(page).getByRole('button', { name: dayName, exact: true }).click();
+        await expect(page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button', { name: timeText, exact: true })).toHaveCount(0);
 
         // Self-service on the same session (no extra OTP: `otp-request-ip` allows 10 per IP per 15 minutes).
         await page.goto(`/book/${SLUG}/appointments`);
         const card = page.getByRole('list', { name: 'Próximas citas' }).getByRole('article').first();
         await card.getByRole('button', { name: 'Reprogramar' }).click();
         await expect(page.getByRole('heading', { name: 'Reprogramar cita' })).toBeVisible();
-        await page.getByRole('button', { name: 'Semana siguiente' }).click();
+        await expect(dayPicker(page)).toBeVisible();
+        await pickSecondDay(page);
         const newTime = page.getByRole('list', { name: /Mañana|Tarde/ }).first().getByRole('button').first();
         const newTimeText = (await newTime.textContent())!.trim();
         await newTime.click();

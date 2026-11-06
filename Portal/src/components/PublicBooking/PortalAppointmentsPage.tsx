@@ -12,6 +12,7 @@ import type { PortalAppointment, PortalPendingRequest } from "@/src/types/Portal
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
 import { browserTimezone } from "@/src/utils/TimeUtils";
+import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
 import { fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
@@ -189,25 +190,25 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
         const both = !!requests?.length && !!appointments?.length;
         body = (
             <>
-                {!!requests?.length && (
-                    <>
-                        {both && <h2 className={styles.listHeading}>Solicitudes pendientes</h2>}
-                        <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
-                    </>
-                )}
                 {both && <h2 className={styles.listHeading}>Próximas citas</h2>}
                 {!!appointments?.length && (
                 <ul className={styles.appts} aria-label="Próximas citas">
-                    {appointments.map((a) => (
+                    {appointments.map((a, index) => (
                         <li key={a.id}>
                             <PortalAppointmentCard
                                 appointment={a}
                                 timezone={timezone}
-                                actions={(a.canReschedule || a.canCancel) && (
+                                featured={index === 0}
+                                actions={(index === 0 || a.canReschedule || a.canCancel) && (
                                     <>
                                         {a.canReschedule && (
                                             <button type="button" className="btn-secondary" onClick={() => { setStatus(null); setRescheduling(a); }}>
                                                 Reprogramar
+                                            </button>
+                                        )}
+                                        {index === 0 && (
+                                            <button type="button" className="btn-secondary" onClick={() => downloadAppointmentIcs(a, provider.displayName, timezone)}>
+                                                Calendario
                                             </button>
                                         )}
                                         {a.canCancel && (
@@ -222,6 +223,12 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
                         </li>
                     ))}
                 </ul>
+                )}
+                {!!requests?.length && (
+                    <>
+                        {both && <h2 className={styles.listHeading}>Solicitudes pendientes</h2>}
+                        <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
+                    </>
                 )}
                 <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
                 {cancellingRequest && (

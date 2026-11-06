@@ -29,11 +29,9 @@ test.describe('portal login on "Mis citas"', () => {
         const codeInput = page.getByLabel('Código de 6 dígitos');
         const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, '0');
         await codeInput.fill(wrong);
-        await page.getByRole('button', { name: 'Ingresar' }).click();
         await expect(page.getByText(/El código no es válido o ya expiró/)).toBeVisible();
 
         await codeInput.fill(code);
-        await page.getByRole('button', { name: 'Ingresar' }).click();
 
         await expect(page.getByRole('heading', { name: 'Antes de continuar' })).toBeVisible();
         await page.getByRole('checkbox').check();

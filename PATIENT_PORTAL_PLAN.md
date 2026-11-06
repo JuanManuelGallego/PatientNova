@@ -1296,6 +1296,13 @@ As planned:
 - **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). Fixing it needs a small delivery table the status callback can read, then a retry on the next route. Worth it if pilots show real failures.
 - **Patient-chosen channel.** Should a patient be able to change their own channel, with a fresh OTP proving the new contact? This would relax "the portal never updates an existing Patient".
 
+### Phase 10: Backend follow-ups to the booking portal redesign
+*Status: not started. Left out of the frontend-only redesign (`docs/superpowers/specs/2026-11-05-patient-booking-portal-redesign-design.md`) on 2026-11-05. Each item is independent.*
+
+- **10.1 Past appointments in Mis citas.** Add an "Anteriores" list under the upcoming appointments. Today `GET /appointments` returns only upcoming ones (`listUpcoming`), so this needs a new read scoped through `resolvePortalPatient`, with the same consent gate, and a DTO allow-list. Update the Bruno collection in the same PR. Smallest of the three.
+- **10.2 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. In auto-confirm, a session that resolves to a consented patient could omit it. Open point: confirm this respects "must not reveal patient existence" before building. Approval mode must keep asking, because that path never looks up a patient. Phone sessions must never display a saved name.
+- **10.3 Hold the slot during verification.** In auto-confirm nothing holds the chosen time while the patient requests and enters the code, so it can be lost after all that work. Consider a short anonymous hold. Open points: abuse (holds without a proven contact), interaction with `booking_requests_no_hold_overlap` and `loadLiveHolds`, and expiry. Largest of the three, so weigh it against how often patients actually lose a slot.
+
 ### Dependency summary
 `0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7 and is not a gate for an email-only pilot: 9.0 gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
 

@@ -1,23 +1,15 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PublicFooter, PublicHeader, TrustStrip } from "@/src/components/PublicBooking/PublicChrome";
+import { PublicFooter } from "@/src/components/PublicBooking/PublicChrome";
 
 describe("public booking chrome", () => {
-  it("shows the Patient Nova brand and logo in the header", () => {
-    const { container } = render(<PublicHeader />);
-    expect(screen.getByText("Patient Nova")).toBeInTheDocument();
-    expect(container.querySelector("img")).toHaveAttribute("src", "/favicon.ico");
-  });
+  it("shows the Patient Nova logo beside the name", () => {
+    render(<PublicFooter />);
 
-  it("links to the patient's appointments when given a target", () => {
-    render(<PublicHeader appointmentsHref="/book/dra-ana/appointments" />);
-    const account = screen.getByRole("navigation", { name: "Cuenta" });
-    expect(within(account).getByRole("link", { name: "Mis citas" })).toHaveAttribute("href", "/book/dra-ana/appointments");
-  });
-
-  it("omits the appointments link without a target", () => {
-    render(<PublicHeader />);
-    expect(screen.queryByRole("navigation", { name: "Cuenta" })).not.toBeInTheDocument();
+    const brand = screen.getByText(/Agenda en línea por/);
+    expect(brand).toHaveTextContent("Agenda en línea por Patient Nova");
+    // The name is right beside it, so the logo stays decorative.
+    expect(brand.parentElement!.querySelector("img[alt='']")).toHaveAttribute("src", expect.stringContaining("favicon.ico"));
   });
 
   it("links the legal pages and support from the footer", () => {
@@ -33,12 +25,5 @@ describe("public booking chrome", () => {
     const privacy = screen.getByRole("link", { name: "Política de privacidad" });
     expect(privacy).toHaveAttribute("target", "_blank");
     expect(privacy).toHaveAttribute("rel", "noopener noreferrer");
-  });
-
-  it("lists the three booking guarantees", () => {
-    render(<TrustStrip />);
-    const list = screen.getByRole("list", { name: "Garantías de la reserva" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(list).getByText("Sin contraseña")).toBeInTheDocument();
   });
 });

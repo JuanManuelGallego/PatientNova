@@ -1,0 +1,330 @@
+.chooser {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--c-brand-light);
+  color: var(--c-gray-900);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.notice:focus {
+  outline: none;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.muted {
+  margin: 0;
+  font-size: 15px;
+  color: var(--c-gray-600);
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-gray-500);
+}
+
+.label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-gray-600);
+}
+
+.first {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--c-brand);
+  color: var(--c-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.first:hover {
+  background: var(--c-brand-hover);
+}
+
+.first:focus-visible,
+.day:focus-visible,
+.cell:focus-visible,
+.time:focus-visible,
+.iconButton:focus-visible,
+.calendarLink:focus-visible,
+.moreDays:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+.firstLabel {
+  display: block;
+  font-size: 13px;
+}
+
+.firstTime {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pickDay {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.stripHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stripHead .label {
+  margin: 0;
+}
+
+.calendarLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-brand);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.strip {
+  display: flex;
+  gap: 8px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.day {
+  flex: 0 0 60px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--c-gray-200);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  color: var(--c-gray-900);
+  font: inherit;
+  cursor: pointer;
+}
+
+.day[aria-pressed="true"] {
+  border-color: var(--c-brand);
+  background: var(--c-brand);
+  color: var(--c-white);
+}
+
+.dayWeekday {
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.dayNumber {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.moreDays {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-brand);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreDays:disabled {
+  color: var(--c-gray-500);
+  cursor: default;
+}
+
+.times {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dayTimes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.time {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--c-gray-50);
+  color: var(--c-gray-900);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.time[aria-pressed="true"] {
+  border-color: var(--c-brand);
+  background: var(--c-brand);
+  color: var(--c-white);
+}
+
+.timeSkeleton {
+  height: 44px;
+  border-radius: var(--r-md);
+}
+
+.calendar {
+  min-width: 0;
+}
+
+.calendarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.monthName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-gray-900);
+}
+
+.monthName::first-letter {
+  text-transform: uppercase;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--c-brand);
+  cursor: pointer;
+}
+
+.iconButton:disabled {
+  color: var(--c-gray-500);
+  cursor: default;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.weekday {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--c-gray-500);
+}
+
+.cell {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--c-brand-light);
+  color: var(--c-brand-hover);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.cell[aria-pressed="true"] {
+  background: var(--c-brand);
+  color: var(--c-white);
+}
+
+.cell[aria-disabled="true"] {
+  background: none;
+  color: var(--c-gray-500);
+  font-weight: 400;
+  cursor: default;
+}
+
+.desktopCalendar {
+  display: none;
+}
+
+/* Below the sheet's close button, which would otherwise cover "Mes siguiente". */
+.sheetCalendar {
+  padding: 44px 16px 24px;
+}
+
+@media (min-width: 960px) {
+  .phoneDays {
+    display: none;
+  }
+
+  .desktopCalendar {
+    display: block;
+  }
+
+  .pickDay {
+    display: grid;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+}

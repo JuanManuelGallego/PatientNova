@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
 import { CHANNEL_ICONS } from "@/src/config/icons";
@@ -29,14 +29,43 @@ function ChannelButton({ channel, selected, onSelect }: { channel: LoginChannel;
     );
 }
 
-function useCountdown() {
-    const [ remaining, setRemaining ] = useState(0);
+/** Seconds until `until`. It runs on the clock, so it survives the form leaving the screen. */
+function useCountdown(until: number) {
+    const [ now, setNow ] = useState(() => Date.now());
     useEffect(() => {
-        if (remaining <= 0) return;
-        const timer = setTimeout(() => setRemaining((s) => s - 1), 1000);
+        if (until <= now) return;
+        const timer = setTimeout(() => setNow(Date.now()), 1000);
         return () => clearTimeout(timer);
-    }, [ remaining ]);
-    return [ remaining, setRemaining ] as const;
+    }, [ until, now ]);
+    return [ Math.max(0, Math.ceil((until - now) / 1000)), setNow ] as const;
+}
+
+interface SentCode {
+    channel: LoginChannel;
+    contact: string;
+    challenge: string;
+}
+
+export interface LoginDraft {
+    step: "contact" | "code";
+    channel: LoginChannel;
+    email: string;
+    phone: string;
+    sent: SentCode | null;
+    cooldownUntil: number;
+}
+
+const EMPTY_DRAFT: LoginDraft = { step: "contact", channel: "EMAIL", email: "", phone: "", sent: null, cooldownUntil: 0 };
+
+/**
+ * Login progress, held by whoever outlives the form. A flow that moves away and back must keep it:
+ * returning to the same contact goes to the code step with no request, because a throttled request
+ * breaks the code already sent.
+ */
+export function useLoginDraft() {
+    const [ draft, setDraft ] = useState(EMPTY_DRAFT);
+    const update = useCallback((patch: Partial<LoginDraft>) => setDraft((d) => ({ ...d, ...patch })), []);
+    return { draft, update };
 }
 
 interface PortalLoginProps {
@@ -47,31 +76,28 @@ interface PortalLoginProps {
     lead?: string;
     embedded?: boolean;
     channels?: LoginChannel[] | undefined;
-}
-
-interface SentCode {
-    channel: LoginChannel;
-    contact: string;
-    challenge: string;
+    draft?: ReturnType<typeof useLoginDraft>;
+    /** For a parent that already shows a heading. */
+    hideTitle?: boolean;
 }
 
 const DEFAULT_LEAD = "Te enviaremos un código para entrar. No necesitas contraseña.";
 
-export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false, channels = EMAIL_ONLY }: PortalLoginProps) {
+export function PortalLogin({
+    slug, onLoggedIn, notice, title = "Mis citas", lead = DEFAULT_LEAD, embedded = false, channels = EMAIL_ONLY, draft: sharedDraft, hideTitle = false,
+}: PortalLoginProps) {
     const Heading = embedded ? "h3" : "h1";
     const ids = useId();
     const widget = useRef<TurnstileHandle>(null);
     const codeInput = useRef<HTMLInputElement>(null);
-    const [ step, setStep ] = useState<"contact" | "code">("contact");
-    const [ channel, setChannel ] = useState<LoginChannel>("EMAIL");
-    const [ email, setEmail ] = useState("");
-    const [ phone, setPhone ] = useState("");
+    const ownDraft = useLoginDraft();
+    const { draft, update } = sharedDraft ?? ownDraft;
+    const { step, channel, email, phone, sent, cooldownUntil } = draft;
     const [ phoneTouched, setPhoneTouched ] = useState(false);
     const [ code, setCode ] = useState("");
     const [ captchaToken, setCaptchaToken ] = useState<string | null>(null);
     const [ captchaFailed, setCaptchaFailed ] = useState(false);
-    const [ sent, setSent ] = useState<SentCode | null>(null);
-    const [ cooldown, setCooldown ] = useCountdown();
+    const [ cooldown, syncClock ] = useCountdown(cooldownUntil);
     const request = useRequestOtp(slug);
     const onCaptchaToken = (token: string | null) => {
         setCaptchaToken(token);
@@ -90,11 +116,15 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         try {
             const body = isPhoneChannel(target) ? { phone: to, channel: target } : { email: to };
             const result = await request.requestOtp(body, captchaToken);
-            setSent({ channel: target, contact: to, challenge: result.challenge });
-            setChannel(target);
+            const now = Date.now();
+            update({
+                sent: { channel: target, contact: to, challenge: result.challenge },
+                channel: target,
+                step: "code",
+                cooldownUntil: now + RESEND_COOLDOWN_SECONDS * 1000,
+            });
+            syncClock(now);
             setCode("");
-            setStep("code");
-            setCooldown(RESEND_COOLDOWN_SECONDS);
         } catch {
         } finally {
             widget.current?.reset();
@@ -107,17 +137,16 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         e.preventDefault();
         if (codeAlreadySent) {
             request.reset();
-            setStep("code");
+            update({ step: "code" });
             return;
         }
         void sendCode(channel, contact);
     };
 
-    const onSubmitCode = async (e: FormEvent) => {
-        e.preventDefault();
-        if (!sent || code.length !== CODE_LENGTH || verify.loading) return;
+    const submitCode = async (value: string) => {
+        if (!sent || value.length !== CODE_LENGTH || verify.loading) return;
         try {
-            await verify.verifyOtp(isPhoneChannel(sent.channel) ? { phone: sent.contact } : { email: sent.contact }, code, sent.challenge);
+            await verify.verifyOtp(isPhoneChannel(sent.channel) ? { phone: sent.contact } : { email: sent.contact }, value, sent.challenge);
             onLoggedIn();
         } catch {
             setCode("");
@@ -125,15 +154,23 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
         }
     };
 
+    const onCodeChange = (value: string) => {
+        const next = value.replace(/\D/g, "").slice(0, CODE_LENGTH);
+        // An extra digit typed after a complete code leaves `next` unchanged, and must not submit again.
+        if (next === code) return;
+        setCode(next);
+        void submitCode(next);
+    };
+
     const changeContact = () => {
-        setStep("contact");
+        update({ step: "contact" });
         setCode("");
         request.reset();
         verify.reset();
     };
 
     const chooseChannel = (next: LoginChannel) => {
-        setChannel(next);
+        update({ channel: next });
         request.reset();
     };
 
@@ -141,8 +178,8 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
     const error = request.error ?? verify.error;
 
     return (
-        <section className={embedded ? `${styles.card} ${styles.embedded}` : `dash-card ${styles.card}`} aria-labelledby={`${ids}-title`}>
-            <Heading id={`${ids}-title`} className={styles.title}>{title}</Heading>
+        <section className={embedded ? `${styles.card} ${styles.embedded}` : `dash-card ${styles.card}`} aria-labelledby={hideTitle ? undefined : `${ids}-title`}>
+            {!hideTitle && <Heading id={`${ids}-title`} className={styles.title}>{title}</Heading>}
             {notice && <p className={styles.notice} role="status">{notice}</p>}
 
             {step === "contact" ? (
@@ -170,7 +207,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                                     aria-invalid={phoneError || undefined}
                                     aria-describedby={phoneError ? `${ids}-phone-error` : undefined}
                                     value={phone}
-                                    onChange={setPhone}
+                                    onChange={(value) => update({ phone: value })}
                                     onBlur={() => setPhoneTouched(true)}
                                 />
                             </div>
@@ -188,7 +225,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                                 required
                                 maxLength={254}
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                onChange={(e) => update({ email: e.target.value })}
                             />
                         </label>
                     )}
@@ -202,7 +239,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                     )}
                 </form>
             ) : (
-                <form className={styles.form} onSubmit={onSubmitCode}>
+                <form className={styles.form} onSubmit={(e) => { e.preventDefault(); void submitCode(code); }}>
                     {sent && sentByPhone ? (
                         <p className={styles.lead} aria-live="polite">
                             Si el número es válido, te enviamos un código por {CHANNEL_LABELS[ sent.channel ]} a{" "}
@@ -228,7 +265,7 @@ export function PortalLogin({ slug, onLoggedIn, notice, title = "Mis citas", lea
                             required
                             autoFocus
                             value={code}
-                            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))}
+                            onChange={(e) => onCodeChange(e.target.value)}
                         />
                     </label>
                     {error && <p className={`error-inline ${styles.error}`} role="alert">{error}</p>}

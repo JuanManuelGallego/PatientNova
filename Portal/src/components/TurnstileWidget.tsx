@@ -111,7 +111,7 @@ export function TurnstileWidget({ action, onToken, onError, siteKey = DEFAULT_SI
         <div>
             <div ref={containerRef} data-testid="turnstile-container" />
             {(failed || !siteKey) && (
-                <p role="alert" className="form-input-hint">
+                <p role="alert" className="error-inline">
                     No pudimos verificar que eres una persona. Recarga la página e inténtalo de nuevo.
                 </p>
             )}

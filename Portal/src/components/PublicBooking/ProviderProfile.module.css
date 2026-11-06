@@ -1,0 +1,382 @@
+/* The photo stays at or below 128px: uploads are 256px, so a larger circle would look soft. */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerPhoto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  background: var(--c-brand-light);
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--c-brand);
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerName {
+  margin: 0;
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  color: var(--c-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.nameButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.headerRole {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--c-gray-600);
+}
+
+.profileLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-brand);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.headerAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-brand);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nameButton:focus-visible,
+.profileLink:focus-visible,
+.headerAction:focus-visible,
+.contactLink:focus-visible,
+.mapLink:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.pinned {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 0;
+  pointer-events: none;
+}
+
+.pinnedName {
+  display: block;
+  padding: 12px 64px 12px 20px;
+  border-bottom: 1px solid var(--c-gray-100);
+  background: var(--c-surface);
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--c-gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.pinned[data-visible] .pinnedName {
+  opacity: 1;
+}
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 20px 20px;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: center;
+}
+
+.logo {
+  display: block;
+  max-width: 140px;
+  max-height: 36px;
+  object-fit: contain;
+}
+
+.photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  background: var(--c-brand-light);
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 40px;
+  font-weight: 500;
+  color: var(--c-brand);
+}
+
+.name {
+  max-width: 100%;
+  margin: 0;
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.012em;
+  color: var(--c-gray-900);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.role {
+  margin: 0;
+  font-size: 15px;
+  color: var(--c-gray-600);
+}
+
+.contact {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contactLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--c-brand-sub);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-brand-hover);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.callNumber {
+  display: none;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-gray-600);
+}
+
+.bio {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--c-gray-700);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.bio[data-clamped] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.panelLink {
+  justify-content: center;
+  border-top: 1px solid var(--c-gray-100);
+}
+
+.places {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  background: var(--c-page-bg);
+  font-size: 14px;
+}
+
+.placeIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--c-brand);
+}
+
+.placeName {
+  display: block;
+  font-weight: 600;
+  color: var(--c-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.placeDetail {
+  display: block;
+  color: var(--c-gray-600);
+  overflow-wrap: anywhere;
+}
+
+.mapLink {
+  display: inline-block;
+  margin-top: 2px;
+  color: var(--c-brand);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.sheetDock {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--c-gray-100);
+  background: var(--c-surface);
+}
+
+.sheetAction {
+  width: 100%;
+}
+
+@media (max-width: 959.98px) {
+  .header[data-compact] .headerPhoto {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .header[data-compact] .headerName {
+    font-size: 19px;
+  }
+
+  .header[data-compact] .headerRole,
+  .header[data-compact] .profileLink,
+  .header[data-compact] .appointmentsLink {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .profile {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 28px;
+    padding: 28px 28px 20px;
+  }
+
+  .profile:has(> :only-child) {
+    display: flex;
+  }
+
+  .photo {
+    width: 128px;
+    height: 128px;
+    font-size: 46px;
+  }
+
+  .contact {
+    grid-auto-flow: row;
+  }
+
+  .callWord {
+    display: none;
+  }
+
+  .callNumber {
+    display: inline;
+  }
+
+  .details {
+    padding-top: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pinnedName {
+    transition: none;
+  }
+}

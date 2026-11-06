@@ -72,6 +72,7 @@
   --c-gray-300: #d1d5db;
   --c-gray-400: #9ca3af;
   --c-gray-500: #6b7280;
+  --c-gray-600: #4b5563;
   --c-gray-700: #374151;
   --c-gray-900: #111827;
 
@@ -89,6 +90,8 @@
   --c-success: #10b981;
   --c-success-bg: #ecfdf5;
   --c-success-light: #d1fae5;
+  /* Green for text: --c-success is 2.5:1 on white. */
+  --c-success-text: #065f46;
   --c-error: #ef4444;
   /* Red for text on light surfaces: --c-error is 3.8:1 on white, under AA for body-size text. */
   --c-error-text: #b91c1c;
@@ -162,6 +165,7 @@
   --c-success: #34d399;
   --c-success-bg: #064e3b;
   --c-success-light: #065f46;
+  --c-success-text: #a7f3d0;
   --c-error: #f87171;
   --c-error-text: #fca5a5;
   --c-error-bg: #450a0a;
@@ -193,6 +197,7 @@
   --c-gray-300: #3f3d54;
   --c-gray-400: #6b6a82;
   --c-gray-500: #9896b0;
+  --c-gray-600: #b0aec8;
   --c-gray-700: #c8c6e0;
   --c-gray-900: #f0eeff;
 
@@ -2061,7 +2066,7 @@ body {
   padding: 10px 14px;
   margin-bottom: 16px;
   font-size: 13px;
-  color: var(--c-error);
+  color: var(--c-error-text);
 }
 
 .info-banner {

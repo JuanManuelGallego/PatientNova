@@ -1,7 +1,7 @@
 import { CircleAlert, SearchX } from "lucide-react";
 import type { ApiClientError } from "@/src/api/base/apiClients";
 import styles from "./PublicBooking.module.css";
-import { PublicHeader, StateIcon } from "./PublicChrome";
+import { StateIcon } from "./PublicChrome";
 
 export function Unavailable() {
     return (
@@ -23,15 +23,11 @@ export function ErrorState({ error, onRetry, inline = false }: { error: ApiClien
     );
 }
 
-export function PublicPageShell({ children, appointmentsHref }: {
-    children: React.ReactNode; appointmentsHref?: string;
-}) {
+/** `wide` gives the booking flow the whole phone screen and two panes on desktop. */
+export function PublicPageShell({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
     return (
-        <>
-            <PublicHeader appointmentsHref={appointmentsHref} />
-            <main className={styles.page}>
-                <div className={styles.container}>{children}</div>
-            </main>
-        </>
+        <main className={wide ? `${styles.page} ${styles.pageWide}` : styles.page}>
+            <div className={wide ? styles.containerWide : styles.container}>{children}</div>
+        </main>
     );
 }

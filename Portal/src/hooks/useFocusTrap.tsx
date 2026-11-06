@@ -1,51 +1,46 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useCallback, ReactNode } from "react";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface FocusTrapContextValue {
   register: () => number;
-  unregister: (id: number) => void;
+  unregister: () => void;
 }
 
 const FocusTrapContext = createContext<FocusTrapContextValue | null>(null);
 
 export function FocusTrapProvider({ children }: { children: ReactNode }) {
-  const [, setOpenCount] = useState(0);
+  // A ref, not state: the provider can unmount together with its dialog, and an update queued then never runs.
+  const openCount = useRef(0);
   const savedScrollYRef = useRef(0);
   const idCounter = useRef(0);
 
   const register = useCallback(() => {
-    const id = idCounter.current++;
-    setOpenCount((c) => {
-      if (c === 0) {
-        savedScrollYRef.current = window.scrollY;
-        document.body.style.position = "fixed";
-        document.body.style.top = `-${savedScrollYRef.current}px`;
-        document.body.style.left = "0";
-        document.body.style.right = "0";
-        document.body.style.overflow = "hidden";
-      }
-      return c + 1;
-    });
-    return id;
+    if (openCount.current === 0) {
+      savedScrollYRef.current = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${savedScrollYRef.current}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
+    }
+    openCount.current += 1;
+    return idCounter.current++;
   }, []);
 
   const unregister = useCallback(() => {
-    setOpenCount((c) => {
-      const next = c - 1;
-      if (next === 0) {
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.left = "";
-        document.body.style.right = "";
-        document.body.style.overflow = "";
-        window.scrollTo(0, savedScrollYRef.current);
-      }
-      return next;
-    });
+    openCount.current -= 1;
+    if (openCount.current === 0) {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      window.scrollTo(0, savedScrollYRef.current);
+    }
   }, []);
 
   return (
@@ -81,7 +76,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     return () => {
       if (registrationId.current !== null) {
-        unregister(registrationId.current);
+        unregister();
       }
 
       if (previousFocus.current instanceof HTMLElement) {
