@@ -1,3 +1,5 @@
+export type LoginChannel = "EMAIL" | "WHATSAPP";
+
 export interface PublicProvider {
     displayName: string;
     jobTitle: string | null;
@@ -11,6 +13,7 @@ export interface PublicProvider {
     timezone: string;
     bookingOpen: boolean;
     approvalRequired: boolean;
+    loginChannels?: LoginChannel[];
     reschedulePolicy: ReschedulePolicy | null;
     lastBookableDate: string;
     types: PublicAppointmentType[];

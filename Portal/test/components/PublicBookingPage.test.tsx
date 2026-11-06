@@ -340,7 +340,8 @@ describe("PublicBookingPage", () => {
 
 describe("PublicBookingPage booking", () => {
     const SESSION = {
-        email: "ana@example.com",
+        contact: "ana@example.com",
+        contactChannel: "EMAIL",
         expiresAt: "2099-01-01T02:00:00.000Z",
         csrfToken: "csrf-from-session",
         providerSlug: "dra-ana",
@@ -360,7 +361,7 @@ describe("PublicBookingPage booking", () => {
     };
 
     interface BookServer {
-        provider: typeof provider;
+        provider: typeof provider & { loginChannels?: string[] };
         session: typeof SESSION | null;
         book: (body: unknown) => Response;
     }
@@ -378,7 +379,7 @@ describe("PublicBookingPage booking", () => {
             if (path === "/public/providers/dra-ana/otp") return json(202, { success: true, data: { challenge: "challenge-1" } });
             if (path === "/portal/dra-ana/otp/verify") {
                 server.session = SESSION;
-                return json(200, { success: true, data: { email: SESSION.email, expiresAt: SESSION.expiresAt, csrfToken: "csrf-from-verify" } });
+                return json(200, { success: true, data: { contact: SESSION.contact, contactChannel: SESSION.contactChannel, expiresAt: SESSION.expiresAt, csrfToken: "csrf-from-verify" } });
             }
             if (path === "/portal/session") {
                 return server.session ? json(200, { success: true, data: server.session }) : json(401, { success: false, error: "Invalid session" });
@@ -398,6 +399,37 @@ describe("PublicBookingPage booking", () => {
         await user.type(await screen.findByLabelText("Nombre"), "  Lucía ");
         await user.type(screen.getByLabelText("Apellidos"), "Rojas");
     }
+
+    it("a phone session shows its number, no phone field and no email field, and sends no phone", async () => {
+        server.session = { ...SESSION, contact: "+573001112233", contactChannel: "WHATSAPP" };
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+        await fillDetails(user);
+
+        expect(screen.getByText(/Reservarás con el número/)).toBeInTheDocument();
+        expect(screen.getByText("+57 300 111 2233")).toBeInTheDocument();
+        expect(screen.queryByLabelText("Teléfono (opcional)")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/correo/i)).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole("checkbox"));
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+
+        await waitFor(() => expect(calls("/portal/bookings")).toHaveLength(1));
+        const body = JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body));
+        expect(body.patient).toEqual({ name: "Lucía", lastName: "Rojas" });
+    });
+
+    it("offers the provider's login channels in the booking step", async () => {
+        server.session = null;
+        server.provider = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP" ] };
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await pickMorningSlot(user);
+
+        expect(await screen.findByRole("heading", { level: 3, name: "Confirma que eres tú" })).toBeInTheDocument();
+        expect(screen.getByRole("group", { name: "Recibir el código por" })).toBeInTheDocument();
+    });
 
     it("asks for the email first and keeps the chosen time through the login", async () => {
         server.session = null;
@@ -498,7 +530,7 @@ describe("PublicBookingPage booking", () => {
         expect(await screen.findByRole("list", { name: "Mañana" })).toBeInTheDocument();
     });
 
-    it("needs the country code on the phone and leaves it out when empty", async () => {
+    it("validates the phone and leaves it out when empty", async () => {
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
@@ -506,11 +538,11 @@ describe("PublicBookingPage booking", () => {
         await user.click(screen.getByRole("checkbox"));
 
         const phone = screen.getByLabelText("Teléfono (opcional)");
-        await user.type(phone, "3001112233");
+        await user.type(phone, "300");
         expect(phone).not.toHaveAttribute("aria-invalid");
         await user.tab();
         expect(phone).toHaveAttribute("aria-invalid", "true");
-        expect(screen.getByText(/Escríbelo con el indicativo del país/)).toBeInTheDocument();
+        expect(screen.getByText(/Revisa el número/)).toBeInTheDocument();
         await user.click(screen.getByRole("button", { name: "Reservar cita" }));
         expect(phone).toHaveFocus();
         expect(calls("/portal/bookings")).toHaveLength(0);
@@ -568,14 +600,24 @@ describe("PublicBookingPage booking", () => {
         expect(screen.getByRole("status")).toHaveTextContent("Tu sesión expiró");
     });
 
-    it("lets the patient choose among several locations", async () => {
+    it("asks for the place as its own step before confirming when there are several locations", async () => {
         server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100", isVirtual: false } ] };
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
-        await pickMorningSlot(user);
-        const places = screen.getByRole("group", { name: "Elige el lugar" });
-        expect(within(places).getByRole("button", { name: /Consultorio Centro/ })).toHaveAttribute("aria-pressed", "true");
+        const morning = await screen.findByRole("list", { name: "Mañana" });
+        expect(screen.queryByRole("group", { name: "Elige el lugar" })).not.toBeInTheDocument();
+        await user.click(within(morning).getByRole("button"));
+
+        const places = await screen.findByRole("group", { name: "Elige el lugar" });
+        expect(within(places).getByRole("heading", { name: "Elige el lugar" })).toHaveTextContent("4");
+        expect(within(places).getByRole("button", { name: /Consultorio Centro/ })).toHaveAttribute("aria-pressed", "false");
+        expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 4 de 5: Elige el lugar");
+        expect(screen.queryByRole("heading", { name: "Confirma tu cita" })).not.toBeInTheDocument();
+
         await user.click(within(places).getByRole("button", { name: /Sede Norte/ }));
+        const confirm = await screen.findByRole("heading", { name: "Confirma tu cita" });
+        expect(confirm).toHaveTextContent("5");
+        expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Paso 5 de 5: Confirma tu cita");
         expect(screen.getByText("Sede Norte, Calle 100")).toBeInTheDocument();
         await fillDetails(user);
         await user.click(screen.getByRole("checkbox"));
@@ -618,6 +660,30 @@ describe("PublicBookingPage booking", () => {
             const heading = await pickMorningSlot(user);
             expect(scroll).toHaveBeenCalledTimes(1);
             expect(scroll.mock.contexts[ 0 ]).toBe(heading.closest("[role=group]"));
+        } finally {
+            delete (Element.prototype as Partial<Element>).scrollIntoView;
+        }
+    });
+
+    it("scrolls to the place first, then to the confirmation, when there are several locations", async () => {
+        server.provider = { ...provider, locations: [ ...provider.locations, { id: "l2", name: "Sede Norte", address: "Calle 100", isVirtual: false } ] };
+        const scroll = vi.fn();
+        Element.prototype.scrollIntoView = scroll;
+        try {
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+            await user.click(within(await screen.findByRole("list", { name: "Mañana" })).getByRole("button"));
+            const places = await screen.findByRole("group", { name: "Elige el lugar" });
+            expect(scroll).toHaveBeenCalledTimes(1);
+            expect(scroll.mock.contexts[ 0 ]).toBe(places);
+
+            await user.click(within(places).getByRole("button", { name: /Sede Norte/ }));
+            const confirm = await screen.findByRole("group", { name: "Confirma tu cita" });
+            expect(scroll).toHaveBeenCalledTimes(2);
+            expect(scroll.mock.contexts[ 1 ]).toBe(confirm);
+
+            await user.click(within(places).getByRole("button", { name: /Consultorio Centro/ }));
+            expect(scroll).toHaveBeenCalledTimes(2);
         } finally {
             delete (Element.prototype as Partial<Element>).scrollIntoView;
         }

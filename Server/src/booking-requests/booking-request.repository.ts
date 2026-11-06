@@ -1,4 +1,4 @@
-import { BookingRequestStatus, type BookingRequestKind, type Prisma } from '../../generated/prisma/client.ts';
+import { BookingRequestStatus, type BookingRequestKind, type Channel, type Prisma } from '../../generated/prisma/client.ts';
 import type { BookingRequestTab } from './booking-request.schemas.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { Interval } from '../public-booking/slot-engine.js';
@@ -12,7 +12,9 @@ export interface LiveHoldOptions {
 export interface CreateBookingRequestData {
   userId: string;
   kind?: BookingRequestKind;
-  email: string;
+  contactChannel?: Channel;
+  email: string | null;
+  verifiedPhone?: string | null;
   name: string;
   lastName: string;
   phone?: string | null;
@@ -50,7 +52,9 @@ export const providerRequestSelect = {
   resolvedAt: true,
   name: true,
   lastName: true,
+  contactChannel: true,
   email: true,
+  verifiedPhone: true,
   phone: true,
   patientTimezone: true,
   appointmentId: true,
@@ -62,6 +66,7 @@ export const providerRequestSelect = {
 export const providerRequestDetailSelect = {
   ...providerRequestSelect,
   emailHash: true,
+  verifiedPhoneHash: true,
   policyVersion: true,
   consentAcceptedAt: true,
   consentIp: true,
@@ -147,15 +152,13 @@ export const bookingRequestRepository = {
     });
   },
 
-  async countLive(userId: string, now: Date, tx: TransactionClient, emailHash?: string): Promise<number> {
-    return tx.bookingRequest.count({
-      where: { ...liveHoldWhere(userId, now, {}), ...(emailHash !== undefined && { emailHash }) },
-    });
+  async countLive(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput = {}): Promise<number> {
+    return tx.bookingRequest.count({ where: { ...liveHoldWhere(userId, now, {}), ...own } });
   },
 
-  async listLiveForEmail(userId: string, emailHash: string, now: Date, tx?: TransactionClient) {
+  async listLiveOwn(userId: string, own: Prisma.BookingRequestWhereInput, now: Date, tx?: TransactionClient) {
     return (tx ?? prisma).bookingRequest.findMany({
-      where: { ...liveHoldWhere(userId, now, {}), emailHash },
+      where: { ...liveHoldWhere(userId, now, {}), ...own },
       select: requestForDtoSelect,
       orderBy: { startAt: 'asc' },
     });
@@ -165,9 +168,9 @@ export const bookingRequestRepository = {
     return tx.bookingRequest.findUniqueOrThrow({ where: { id }, select: requestForDtoSelect });
   },
 
-  async findLiveOwn(userId: string, emailHash: string, id: string, now: Date, tx: TransactionClient) {
+  async findLiveOwn(userId: string, own: Prisma.BookingRequestWhereInput, id: string, now: Date, tx: TransactionClient) {
     return tx.bookingRequest.findFirst({
-      where: { ...liveHoldWhere(userId, now, {}), emailHash, id },
+      where: { ...liveHoldWhere(userId, now, {}), ...own, id },
       select: { id: true, startAt: true, endAt: true },
     });
   },
@@ -184,7 +187,9 @@ export const bookingRequestRepository = {
       data: {
         userId: data.userId,
         kind: data.kind ?? 'NEW',
+        contactChannel: data.contactChannel ?? 'EMAIL',
         email: data.email,
+        verifiedPhone: data.verifiedPhone ?? null,
         name: data.name,
         lastName: data.lastName,
         phone: data.phone ?? null,

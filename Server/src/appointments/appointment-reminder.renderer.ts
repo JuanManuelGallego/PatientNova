@@ -1,4 +1,4 @@
-import { Channel } from '../../generated/prisma/client.ts';
+import { Channel, RecordSource } from '../../generated/prisma/client.ts';
 import { BULK_TEMPLATE_CONFIG } from '../twilio/bulk-template-config.ts';
 import { DEFAULT_LOCALE } from '../utils/config/constants.ts';
 import { splitSubjectLine } from '../twilio/email-subject.ts';
@@ -41,7 +41,7 @@ Le recordamos cordialmente que el pago de la consulta debe estar gestionado y co
 
 Quedamos a su disposición para cualquier duda. ¡Feliz día!`;
 
-export const MEETING_LINK_PENDING_TEXT = 'Te enviaremos el enlace por correo';
+export const MEETING_LINK_PENDING_TEXT = 'Te enviaremos el enlace pronto';
 
 export function formatDate(at: Date, timeZone: string, weekday = false): string {
   return new Intl.DateTimeFormat(DEFAULT_LOCALE, {
@@ -52,6 +52,8 @@ export function formatDate(at: Date, timeZone: string, weekday = false): string 
 export function formatTime(at: Date, timeZone: string): string {
   return new Intl.DateTimeFormat(DEFAULT_LOCALE, { hour: '2-digit', minute: '2-digit', hour12: true, timeZone }).format(at);
 }
+
+export const formatWhen = (at: Date, timezone: string) => `${formatDate(at, timezone, true)}, ${formatTime(at, timezone)}`;
 
 export function renderAppointmentReminder(
   appointment: AppointmentWithRelations,
@@ -95,10 +97,8 @@ export function renderAppointmentReminder(
     return { contentSid: null, contentVariables: variables, body, subject };
   }
 
-  return {
-    contentSid: null,
-    contentVariables: variables,
-    body: rendered,
-    subject: null,
-  };
+  const smsBody = appointment.source === RecordSource.PORTAL
+    ? `Recordatorio: tu cita con ${doctorName} es el ${date}, ${time} - Lugar: ${variables[ '5' ]}`
+    : rendered;
+  return { contentSid: null, contentVariables: variables, body: smsBody, subject: null };
 }

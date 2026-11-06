@@ -37,6 +37,7 @@ import {
 } from "@/src/utils/bookingAvailability";
 import { isE164, normalizePhone } from "@/src/utils/publicBooking";
 import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
+import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
 import { SaveStatusIndicator, type SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
@@ -697,7 +698,7 @@ function profileFormOf(s: BookingSettings): ProfileForm {
     };
 }
 
-const PHONE_FORMAT_ERROR = "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567.";
+const PHONE_FORMAT_ERROR = "Revisa el número: parece incompleto o demasiado largo.";
 
 function parseProfile(form: ProfileForm) {
     const publicPhone = normalizePhone(form.publicPhone);
@@ -737,14 +738,9 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
         return (
             <label className="form-label">
                 {label}
-                <input
-                    className="form-input"
-                    type="tel"
-                    inputMode="tel"
-                    maxLength={24}
-                    placeholder="+57 300 123 4567"
-                    value={form[ field ]}
-                    onChange={(e) => change({ [ field ]: e.target.value })}
+                <CountryCodeInput
+                    value={form[ field ] || undefined}
+                    onChange={(v) => change({ [ field ]: v })}
                     aria-invalid={!!err}
                     aria-describedby={err ? errId : undefined}
                     data-testid={testId}

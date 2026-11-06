@@ -87,7 +87,7 @@ function RequestsPageContent() {
               <td className="td">
                 <div className="td-name__primary">{r.name} {r.lastName}</div>
                 <div className="td-name__secondary">
-                  {r.email}
+                  {r.email ?? r.verifiedPhone}
                   {r.kind === "REVIEW" && <> (paciente inactivo o eliminado)</>}
                 </div>
               </td>

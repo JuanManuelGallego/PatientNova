@@ -96,7 +96,7 @@ describe('portal booking at a virtual location', () => {
     expect(toPatient!.body).toContain(MEETING_LINK_PENDING_LINE);
     expect(toPatient!.body).not.toContain('Dirección');
     expect(toPatient!.body).not.toMatch(/\{\{\d+\}\}/);
-    expect(appt.reminder?.body).toContain('Te enviaremos el enlace por correo');
+    expect(appt.reminder?.body).toContain('Te enviaremos el enlace pronto');
     expect(appt.reminder?.body).not.toMatch(/\{\{\d+\}\}/);
 
     expect(await findNeedsMeetingLink(provider.id)).toEqual({ count: 1, appointments: [ { id, startAt: appt.startAt } ] });

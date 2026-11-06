@@ -40,7 +40,7 @@ export type MeetingStatus = "NOT_REQUIRED" | "PENDING" | "NEEDS_LINK" | "READY";
 
 export const isWaitingForLink = (status: MeetingStatus | undefined): boolean => status === "PENDING" || status === "NEEDS_LINK";
 
-export const MEETING_LINK_PENDING_TEXT = "Te enviaremos el enlace por correo";
+export const MEETING_LINK_PENDING_TEXT = "Te enviaremos el enlace pronto";
 
 export interface AppointmentForm {
   startAt: string;

@@ -1,25 +1,21 @@
 import { ActionType, BookingRequestKind, BookingRequestStatus, EntityType } from '../../generated/prisma/enums.js';
-import { deliverBookingRequestNotificationsNow } from '../booking-requests/booking-request-notifications.js';
+import { deliverBookingRequestNotificationsNow, sendRequestReceipt } from '../booking-requests/booking-request-notifications.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { ONE_MINUTE_MS } from '../utils/config/constants.js';
-import { logger, maskEmail } from '../utils/api/logger.js';
-import { emailHash } from '../utils/encryption/blind-index.js';
+import { logger } from '../utils/api/logger.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
-import { sendTransactionalEmail } from '../brevo/transactional.js';
-import { renderBookingRequestReceivedEmail } from '../brevo/email-templates.js';
 import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
 import { bookingRequestService } from '../booking-requests/booking-request.service.js';
 import {
-  MAX_PENDING_REQUESTS_PER_EMAIL,
+  MAX_PENDING_REQUESTS_PER_CONTACT,
   MAX_PENDING_REQUESTS_PER_PROVIDER,
 } from '../booking-requests/booking-request.constants.js';
-import { bookingUrl } from '../booking-settings/booking-settings.service.js';
-import { providerDisplayName } from '../public-booking/public-booking.service.js';
 import type { ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
+import { isPhoneContact, ownRequestWhere } from './portal-contact.js';
 import {
   PortalRequestCapacityError,
   PortalRequestLimitError,
@@ -48,18 +44,21 @@ export async function holdSlotWithin(
   const { userId } = session;
   const end = new Date(slot.start.getTime() + slot.durationMinutes * ONE_MINUTE_MS);
 
-  const hash = emailHash(session.email);
-  if (!hash) throw new PortalRequestLimitError();
-  const [ forEmail, forProvider ] = await Promise.all([
-    bookingRequestRepository.countLive(userId, now, tx, hash),
+  const { contact } = session;
+  const own = ownRequestWhere(contact);
+  if (!own) throw new PortalRequestLimitError();
+  const [ forContact, forProvider ] = await Promise.all([
+    bookingRequestRepository.countLive(userId, now, tx, own),
     bookingRequestRepository.countLive(userId, now, tx),
   ]);
-  if (forEmail >= MAX_PENDING_REQUESTS_PER_EMAIL) throw new PortalRequestLimitError();
+  if (forContact >= MAX_PENDING_REQUESTS_PER_CONTACT) throw new PortalRequestLimitError();
   if (forProvider >= MAX_PENDING_REQUESTS_PER_PROVIDER) throw new PortalRequestCapacityError();
 
   const { request, expiredIds } = await bookingRequestService.createHoldWithin(tx, userId, {
     kind,
-    email: session.email,
+    contactChannel: contact.channel,
+    email: isPhoneContact(contact) ? null : contact.value,
+    verifiedPhone: isPhoneContact(contact) ? contact.value : null,
     name: body.patient.name,
     lastName: body.patient.lastName,
     phone: body.patient.phone || null,
@@ -76,53 +75,34 @@ export async function holdSlotWithin(
   return { request: toPortalRequestDto(await bookingRequestRepository.findForDto(request.id, tx)), expiredIds };
 }
 
-async function sendRequestReceivedEmail(userId: string, to: string): Promise<void> {
-  try {
-    const provider = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { displayName: true, firstName: true, lastName: true, bookingSlug: true },
-    });
-    if (!provider) return;
-    const page = bookingUrl(provider.bookingSlug);
-    const email = renderBookingRequestReceivedEmail({
-      providerName: providerDisplayName(provider),
-      appointmentsUrl: page ? `${page}/appointments` : '',
-    });
-    await sendTransactionalEmail(to, email);
-  } catch (err) {
-    logger.error({ userId, maskedTo: maskEmail(to), errorName: err instanceof Error ? err.name : undefined },
-      'Booking request received email failed');
-  }
-}
-
 /**
  * After commit: the patient's receipt and, without the scheduler, the provider notice and the `expired` notices for
  * holds expired on the way. All best effort.
  */
-export async function afterRequestCreated(userId: string, to: string, held: HeldSlot): Promise<void> {
-  await sendRequestReceivedEmail(userId, to);
+export async function afterRequestCreated(held: HeldSlot): Promise<void> {
+  await sendRequestReceipt(held.request.id);
   await deliverBookingRequestNotificationsNow('received', [ held.request.id ]);
   await deliverBookingRequestNotificationsNow('expired', held.expiredIds);
 }
 
 export const portalRequestService = {
   async list(session: PortalSessionContext): Promise<PortalRequestDto[]> {
-    const hash = emailHash(session.email);
-    if (!hash) return [];
-    const rows = await bookingRequestRepository.listLiveForEmail(session.userId, hash, new Date());
+    const own = ownRequestWhere(session.contact);
+    if (!own) return [];
+    const rows = await bookingRequestRepository.listLiveOwn(session.userId, own, new Date());
     return rows.map(toPortalRequestDto);
   },
 
   async cancel(session: PortalSessionContext, requestId: string, meta: ConsentRequestMeta): Promise<void> {
     const { userId } = session;
-    const hash = emailHash(session.email);
-    if (!hash) throw new PortalRequestNotFoundError();
-    const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
+    const own = ownRequestWhere(session.contact);
+    if (!own) throw new PortalRequestNotFoundError();
+    const auditContext = portalPatientAuditContext({ userId, contact: session.contact, ipAddress: meta.ipAddress });
 
     await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       const now = new Date();
-      const request = await bookingRequestRepository.findLiveOwn(userId, hash, requestId, now, tx);
+      const request = await bookingRequestRepository.findLiveOwn(userId, own, requestId, now, tx);
       if (!request) throw new PortalRequestNotFoundError();
       await bookingRequestRepository.cancel(request.id, now, tx);
       await logAudit({

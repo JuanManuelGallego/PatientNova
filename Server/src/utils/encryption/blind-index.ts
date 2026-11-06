@@ -37,8 +37,9 @@ export function emailHash(email: string | null | undefined): string | null {
   return normalized ? hmac('email', normalized) : null;
 }
 
-export function portalActorHash(userId: string, email: string): string {
-  return hmac('portal-actor', `${userId}:${normalizeEmail(email)}`);
+export function portalActorHash(userId: string, contact: string): string {
+  const normalized = contact.includes('@') ? normalizeEmail(contact) : normalizePhone(contact);
+  return hmac('portal-actor', `${userId}:${normalized}`);
 }
 
 export function phoneHash(phone: string | null | undefined): string | null {

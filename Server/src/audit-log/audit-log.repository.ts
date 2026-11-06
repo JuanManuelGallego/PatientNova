@@ -8,13 +8,13 @@ import { ActionSource } from '../../generated/prisma/enums.js';
 
 export interface PortalPatientFilter {
   patientId: string;
-  actorId: string | null;
+  actorIds: string[];
 }
 
-function portalPatientMatch({ patientId, actorId }: PortalPatientFilter): Prisma.AuditLogWhereInput[] {
+function portalPatientMatch({ patientId, actorIds }: PortalPatientFilter): Prisma.AuditLogWhereInput[] {
   return [
     { portalPatientId: patientId },
-    ...(actorId ? [ { portalPatientId: null, actorId } ] : []),
+    ...(actorIds.length > 0 ? [ { portalPatientId: null, actorId: { in: actorIds } } ] : []),
   ];
 }
 

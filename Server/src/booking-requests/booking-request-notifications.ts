@@ -3,13 +3,15 @@ import { BookingRequestStatus, Channel } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
+import type { PatientRoute } from '../portal/patient-route.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { dispatchMessage, type DispatchOpts } from '../scheduler/dispatch.js';
-import { renderBookingRequestExpiredEmail, renderBookingRequestRejectedEmail } from '../brevo/email-templates.js';
-import { formatDate, formatTime } from '../appointments/appointment-reminder.renderer.js';
+import { formatDate, formatTime, formatWhen } from '../appointments/appointment-reminder.renderer.js';
 import { providerDisplayName } from '../public-booking/public-booking.service.js';
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
-import { formatWhen, providerDestination } from '../portal/portal-booking-notifications.js';
+import { providerDestination } from '../portal/portal-booking-notifications.js';
+import { renderPatientNotice } from '../portal/patient-notices.js';
+import { requestContact } from '../portal/portal-contact.js';
 
 export const BOOKING_REQUEST_NOTIFY_QUEUE = 'booking-request-notify';
 
@@ -32,7 +34,9 @@ async function loadRequest(requestId: string) {
     where: { id: requestId },
     select: {
       status: true,
+      contactChannel: true,
       email: true,
+      verifiedPhone: true,
       startAt: true,
       holdExpiresAt: true,
       patientTimezone: true,
@@ -65,16 +69,21 @@ function isDeliverable(request: LoadedRequest | null, event: BookingRequestEvent
 
 const portalBase = (): string => config.portal.url.replace(/\/+$/, '');
 
-function patientMessage(request: LoadedRequest, event: BookingRequestEvent): Message {
-  const timezone = request.patientTimezone;
-  const params = {
-    providerName: providerDisplayName(request.user),
-    whenLocal: formatWhen(request.startAt, timezone),
-    timezone,
-    bookingUrl: bookingUrl(request.user.bookingSlug) ?? portalBase(),
-  };
-  const email = event === 'rejected' ? renderBookingRequestRejectedEmail(params) : renderBookingRequestExpiredEmail(params);
-  return { channel: Channel.EMAIL, opts: { to: request.email, subject: email.subject, body: email.body } };
+function requestRoute(request: LoadedRequest): PatientRoute | null {
+  const contact = requestContact(request);
+  return contact && { channel: contact.channel, to: contact.value };
+}
+
+function noticeTimes(request: LoadedRequest) {
+  return { providerName: providerDisplayName(request.user), at: request.startAt, timezone: request.patientTimezone };
+}
+
+function patientMessage(request: LoadedRequest, event: BookingRequestEvent): Message | null {
+  const route = requestRoute(request);
+  if (!route) return null;
+  const params = { ...noticeTimes(request), bookingUrl: bookingUrl(request.user.bookingSlug) ?? portalBase() };
+  const kind = event === 'rejected' ? 'request-rejected' : 'request-expired';
+  return { channel: route.channel, opts: renderPatientNotice(kind, params, route) };
 }
 
 /** Provider notices carry no patient details. Formatted times end in "a. m."/"p. m.", so no full stop follows them. */
@@ -129,6 +138,23 @@ export async function deliverBookingRequestNotification(job: BookingRequestNotif
   const result = await dispatchMessage(message.channel, message.opts);
   if (!result.success) throw new Error(`Booking request notification ${event} failed: ${result.error ?? 'dispatch failed'}`);
   logger.info({ requestId, event, channel: message.channel, messageId: result.messageSid }, 'Booking request notification sent');
+}
+
+export async function sendRequestReceipt(requestId: string): Promise<void> {
+  try {
+    const request = await loadRequest(requestId);
+    const route = request && requestRoute(request);
+    if (!request || !route) return;
+    const page = bookingUrl(request.user.bookingSlug);
+    const opts = renderPatientNotice('request-received', {
+      ...noticeTimes(request),
+      appointmentsUrl: page ? `${page}/appointments` : portalBase(),
+    }, route);
+    const result = await dispatchMessage(route.channel, opts);
+    if (!result.success) logger.error({ requestId, channel: route.channel }, 'Booking request receipt was not accepted');
+  } catch (err) {
+    logger.error({ requestId, errorName: err instanceof Error ? err.name : undefined }, 'Booking request receipt failed');
+  }
 }
 
 /** Enqueued on the caller's `tx`, so a rollback drops them. No-op without the scheduler. */

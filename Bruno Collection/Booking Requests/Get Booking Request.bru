@@ -12,6 +12,9 @@ get {
 
 docs {
   One request plus `consent` (policy version and acceptance time) and `candidates`: the patients
-  sharing its email, computed now. The active record comes first (at most one), then deleted ones.
+  sharing its verified contact, computed now. Active records come first (at most one for an email, several
+  for a shared number), then deleted ones. `contactChannel` says how the patient proved who they are:
+  `email`, null for a phone session, or `verifiedPhone`. `phone` is typed and never proven.
+  `unverifiedMatch` marks a candidate matched only by a number typed in the booking form.
   404 for another provider's request.
 }

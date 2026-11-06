@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FocusEventHandler, type Ref } from "react";
 import Image from 'next/image';
 
 const COUNTRY_CODES = [
@@ -47,10 +47,6 @@ function parsePhone(value: string | undefined): { iso: string; local: string } {
             return { iso: c.iso, local: value.slice(c.code.length) };
         }
     }
-    if (value.startsWith("+")) {
-        const match = value.match(/^\+(\d{1,3})/);
-        if (match) return { iso: "co", local: value.slice(match[ 0 ].length) };
-    }
     return { iso: "co", local: value };
 }
 
@@ -58,15 +54,30 @@ export function CountryCodeInput({
     value,
     onChange,
     placeholder = "5551234567",
+    id,
+    name,
+    autoComplete,
+    onBlur,
+    ref,
+    "aria-invalid": ariaInvalid,
+    "aria-describedby": ariaDescribedBy,
     "data-testid": testId,
 }: {
     value: string | undefined;
     onChange: (fullNumber: string) => void;
     placeholder?: string;
+    id?: string;
+    name?: string;
+    autoComplete?: string;
+    onBlur?: FocusEventHandler<HTMLInputElement>;
+    ref?: Ref<HTMLInputElement>;
+    "aria-invalid"?: boolean;
+    "aria-describedby"?: string;
     "data-testid"?: string;
 }) {
     const parsed = useMemo(() => parsePhone(value), [ value ]);
     const [ selectedIso, setSelectedIso ] = useState(parsed.iso);
+    const [ plusTyped, setPlusTyped ] = useState(false);
     const local = parsed.local;
 
     const entry = COUNTRY_CODES.find(c => c.iso === selectedIso);
@@ -76,11 +87,21 @@ export function CountryCodeInput({
         const newIso = e.target.value;
         setSelectedIso(newIso);
         const newCode = COUNTRY_CODES.find(c => c.iso === newIso)?.code ?? "+57";
-        onChange(local ? newCode + local : "");
+        const digits = local.replace(/\D/g, "");
+        onChange(digits ? newCode + digits : "");
     }
 
     function handleLocalChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/[^\d]/g, "");
+        const raw = e.target.value.trim();
+        const digits = raw.replace(/[^\d]/g, "");
+        setPlusTyped(raw === "+");
+        if (raw.startsWith("+") && digits) {
+            const full = `+${digits}`;
+            const typed = parsePhone(full);
+            if (!full.startsWith(countryCode)) setSelectedIso(typed.iso);
+            onChange(typed.local ? full : "");
+            return;
+        }
         onChange(digits ? countryCode + digits : "");
     }
 
@@ -99,6 +120,7 @@ export function CountryCodeInput({
                 </span>
                 <select
                     className="phone-input-code"
+                    aria-label="Indicativo del país"
                     value={selectedIso}
                     onChange={handleCodeChange}
                     style={{ color: "transparent" }}
@@ -111,11 +133,19 @@ export function CountryCodeInput({
                 </select>
             </div>
             <input
+                ref={ref}
+                id={id}
+                name={name}
                 className="phone-input-number"
-                value={local}
+                type="tel"
+                autoComplete={autoComplete}
+                value={plusTyped && !value ? "+" : local}
                 onChange={handleLocalChange}
+                onBlur={onBlur}
                 placeholder={placeholder}
                 inputMode="tel"
+                aria-invalid={ariaInvalid}
+                aria-describedby={ariaDescribedBy}
             />
         </div>
     );

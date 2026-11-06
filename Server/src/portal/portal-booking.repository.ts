@@ -39,7 +39,7 @@ export const portalBookingRepository = {
   async findOwn(userId: string, patientId: string, appointmentId: string, tx: TransactionClient) {
     return tx.appointment.findFirst({
       where: { id: appointmentId, userId, patientId },
-      select: { ...portalAppointmentSelect, typeId: true, locationId: true },
+      select: { ...portalAppointmentSelect, typeId: true, locationId: true, patientId: true },
     });
   },
 

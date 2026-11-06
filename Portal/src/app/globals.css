@@ -1151,7 +1151,6 @@ body {
   outline: none;
   flex: 1;
   min-width: 0;
-  max-width: 120px;
 }
 
 .phone-input-code-wrapper {

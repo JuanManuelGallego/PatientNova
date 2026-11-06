@@ -1,5 +1,5 @@
 import type { PortalAppointment } from "@/src/types/PortalBooking";
-import { localDayOf } from "@/src/utils/publicBooking";
+import { localDayOf, PENDING_MEETING_LINK_NOTE } from "@/src/utils/publicBooking";
 
 const CRLF = "\r\n";
 const MAX_LINE_OCTETS = 75;
@@ -38,7 +38,7 @@ function placeOf(appointment: PortalAppointment): string | null {
 function descriptionOf(appointment: PortalAppointment): string | null {
     const notes = [
         appointment.type?.name,
-        appointment.meeting?.status === "pending" ? "El enlace de la videollamada llegará a tu correo." : null,
+        appointment.meeting?.status === "pending" ? PENDING_MEETING_LINK_NOTE : null,
         appointment.location?.instructions,
     ];
     return notes.filter(Boolean).join("\n") || null;

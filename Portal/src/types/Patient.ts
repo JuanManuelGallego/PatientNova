@@ -22,6 +22,7 @@ export interface Patient {
   lastName: string;
 
   whatsappNumber?: string | null;
+  whatsappUnverified?: boolean;
   smsNumber?: string | null;
   email?: string | null;
 

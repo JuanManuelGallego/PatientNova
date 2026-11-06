@@ -5,18 +5,14 @@ import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { dispatchMessage, type DispatchOpts } from '../scheduler/dispatch.js';
-import {
-  renderBookingConfirmationEmail,
-  renderPortalCancellationEmail,
-  renderPortalMeetingLinkEmail,
-  renderPortalRescheduleEmail,
-} from '../brevo/email-templates.js';
 import { ACTIVE_STATUSES } from '../appointments/appointment-status.js';
-import { formatDate, formatTime } from '../appointments/appointment-reminder.renderer.js';
+import { formatDate, formatTime, formatWhen } from '../appointments/appointment-reminder.renderer.js';
 import { providerDisplayName } from '../public-booking/public-booking.service.js';
 import { bookingUrl } from '../booking-settings/booking-settings.service.js';
+import { patientRouteSelect, resolvePatientRoute } from './patient-route.js';
+import { renderPatientNotice } from './patient-notices.js';
 
-/** What the patient did in the portal; each event sends one patient email and one provider notice. */
+/** What the patient did in the portal; each event sends one patient notice and one provider notice. */
 export type PortalEvent =
   | 'booked'
   | 'booked-link-pending'
@@ -60,8 +56,6 @@ export interface PortalMove {
 
 const CANCELLATION_KINDS = new Set<BookingNotificationKind>(EVENT_KINDS.cancelled);
 
-export const formatWhen = (at: Date, timezone: string) => `${formatDate(at, timezone, true)}, ${formatTime(at, timezone)}`;
-
 async function loadAppointment(appointmentId: string) {
   return prisma.appointment.findUnique({
     where: { id: appointmentId },
@@ -72,7 +66,7 @@ async function loadAppointment(appointmentId: string) {
       patientTimezone: true,
       meetingUrl: true,
       meetingStatus: true,
-      patient: { select: { email: true } },
+      patient: { select: patientRouteSelect },
       appointmentLocation: { select: { name: true, address: true, isVirtual: true } },
       user: {
         select: {
@@ -107,31 +101,32 @@ function placeOf(appt: BookedAppointment) {
 }
 
 function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): Message | null {
-  if (!appt.patient.email) return null;
-  const timezone = appt.patientTimezone ?? appt.user.timezone;
+  const route = resolvePatientRoute(appt.patient);
+  if (!route) return null;
   const bookPage = bookingUrl(appt.user.bookingSlug);
   const portalRoot = config.portal.url.replace(/\/+$/, '');
-  const providerName = providerDisplayName(appt.user);
-  const whenLocal = formatWhen(appt.startAt, timezone);
-  const location = placeOf(appt);
   const appointmentsUrl = bookPage ? `${bookPage}/appointments` : portalRoot;
+  const base = {
+    providerName: providerDisplayName(appt.user),
+    at: appt.startAt,
+    timezone: appt.patientTimezone ?? appt.user.timezone,
+  };
 
-  let email;
+  let opts: DispatchOpts;
   if (job.kind === 'patient-meeting-link') {
     if (!appt.meetingUrl) return null;
-    email = renderPortalMeetingLinkEmail({ providerName, whenLocal, timezone, meetingUrl: appt.meetingUrl, appointmentsUrl });
+    opts = renderPatientNotice('meeting-link', { ...base, meetingUrl: appt.meetingUrl, appointmentsUrl }, route);
   } else if (job.kind === 'patient-cancellation') {
-    email = renderPortalCancellationEmail({ providerName, whenLocal, timezone, bookingUrl: bookPage ?? portalRoot });
+    opts = renderPatientNotice('cancellation', { ...base, bookingUrl: bookPage ?? portalRoot }, route);
   } else if (job.kind === 'patient-reschedule') {
     if (!job.previousStartAt) return null;
-    email = renderPortalRescheduleEmail({
-      providerName, whenLocal, timezone, ...location, appointmentsUrl,
-      previousLocal: formatWhen(new Date(job.previousStartAt), timezone),
-    });
+    opts = renderPatientNotice('reschedule', {
+      ...base, ...placeOf(appt), appointmentsUrl, previousAt: new Date(job.previousStartAt),
+    }, route);
   } else {
-    email = renderBookingConfirmationEmail({ providerName, whenLocal, timezone, ...location, appointmentsUrl });
+    opts = renderPatientNotice('confirmation', { ...base, ...placeOf(appt), appointmentsUrl }, route);
   }
-  return { channel: Channel.EMAIL, opts: { to: appt.patient.email, subject: email.subject, body: email.body } };
+  return { channel: route.channel, opts };
 }
 
 interface ProviderText {

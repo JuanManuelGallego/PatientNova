@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, not started; public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color). **Updated:** 2026-11-04
+> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, 9.1–9.4 built 2026-11-05 with phone login off (see "Phase 9"; 9.0 checks remain before turning it on); public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color). **Updated:** 2026-11-05
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -37,9 +37,9 @@ Patients should be able to self-book with a specific provider. Today `User` is t
 ## Scope decisions (confirmed with user)
 - **1-to-1: a patient belongs to one provider.** No cross-provider identity, no `PatientIdentity`/`PatientLink`.
 - **Approval**: provider chooses per account between auto-confirm and request-then-approve.
-- **Patient auth**: passwordless (email OTP). The session proves control of an email for one provider; it does not carry a `patientId` (see "Session and matching"). *(Phase 9 proposes adding WhatsApp and SMS codes: the session then proves control of an email or a phone. Not built.)*
+- **Patient auth**: passwordless (email OTP). The session proves control of an email for one provider; it does not carry a `patientId` (see "Session and matching"). *(Phase 9 adds WhatsApp and SMS codes: the session proves control of an email or a phone.)*
 - **Provider's own consent form is out of scope** for the portal (provider handles it offline). The portal collects only acceptance of its own privacy/data-processing text.
-- **Matching is email only**, no name or phone check. *(Phase 9 proposes phone matching too, only for a number proven by OTP and never for a number typed in the booking form. Not built.)*
+- **Matching is email only**, no name or phone check. *(Phase 9 adds phone matching, only for a number proven by OTP and never for a number typed in the booking form.)*
 - No cancellation cutoff. Guardians/dependents out of scope.
 - **Compliance (encryption/blind index of patient contact fields):** decided and implemented (0.23). Matching uses the `emailHash` blind index.
 
@@ -1133,7 +1133,20 @@ As planned:
 - **8.3 Unsaved-changes handling, app-wide.** Today no provider form shows or guards unsaved edits, so leaving a form loses them silently (e.g. Settings → Reserva en línea has four sections with separate save buttons). Build it once and apply it to every form, not per screen: (a) a shared `useUnsavedChanges(dirty)` hook that registers dirty forms and adds a `beforeunload` warning; (b) a "Cambios sin guardar" marker next to the save button in a shared save-row component; (c) a guard on in-app navigation (settings `TabNav`, sidebar links, drawer/modal close) using an in-app confirm dialog, not `window.confirm`. Tests: dirty form warns on tab switch and close, clean or just-saved form does not, cancel keeps the edits.
 
 ### Phase 9: All channels for patient login and messages
-*Status: prepared 2026-11-04, not started. Nothing in this phase is built.*
+*Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot. SMS was dropped from login the same day: the login offers email and WhatsApp, and SMS stays for reminders and notices. Text below about SMS codes describes what was first built.*
+
+**Still to do before phone login reaches production (9.0):** real test sends to the Colombian carriers, the Twilio Console settings, counsel's review of the policy (with a `PRIVACY_POLICY_VERSION` bump if the text changes), and a manual check on a real phone. See `docs/operations.md`. After the Portal that reads `contact` is deployed, drop the transitional `email` from the session and verify responses.
+
+**Decided while building:**
+- `patient-meeting-link` reuses the existing template, as `{1: provider, 2: url}`, so there is no eighth template.
+- "Several active" counts trusted records only: one trusted record plus an unverified one is that patient. Otherwise anyone typing a number into a form could lock out its real holder, which is what decision 3 asks for.
+- The flag clears on an inbox pick only when the request proved that same number. A pick on an email request, or on a record matched by another number, says nothing about a typed phone.
+- With no pick, a phone request reuses only a single trusted record, otherwise it creates a new patient. Restoring a deleted record is allowed alongside active ones sharing the number, since only email is unique.
+- The backfill skips patients already on `reminderChannel = WHATSAPP`: the provider already endorsed that number, by the same rule that clears the flag.
+- The login always offers email and WhatsApp: there is no setting to leave one out.
+- `?portalPatientId=` leaves out an unverified number's actor, so a stranger's activity never shows under a record they typed a number into. On a shared, trusted number the unlinked rows show under every record holding it: the provider sees them either way, and they carry no PII.
+- An active revoked record fails closed for the whole number even when its number is unverified, as the table says. Trusting it less would let a revoked patient get a new record by logging in with that number.
+- Portal SMS reminders are one short line. WhatsApp reminders keep the approved template, which greets by name; removing that needs a new template.
 
 **Goal:** a patient can receive the login code by email, WhatsApp or SMS, and every later portal message (confirmation, cancellation, reschedule, meeting link, request receipt, rejection, expiry and reminder) reaches them on their own channel. All of these are email-only today.
 
@@ -1166,7 +1179,7 @@ As planned:
 5. **Phone sessions never collect an email.** A typed email would become a login identity, and it could hit `patients_userId_emailHash_active_key`, revealing that the patient exists. This mirrors today's rule that the email comes from the session.
 6. **Keep our own `PortalOtp`; do not move to Twilio Verify.** One code path keeps the challenge, the daily failure cap and all limits under `lockRow`, for every channel. Verify would take over code generation and checking for phones only. Revisit if pumping protection on Messaging falls short.
 7. **One route for every patient message.** It follows `Patient.reminderChannel`, since the provider already set that per patient. A patient has no preference screen in this phase, because "the portal never updates an existing Patient".
-8. **No automatic fallback in this phase.** At login the patient recovers ("Enviar por SMS") after the cooldown. For later messages the appointment still shows in "Mis citas", and a failed reminder still alerts the provider. See Open.
+8. **No automatic fallback in this phase.** At login the patient recovers with email. For later messages the appointment still shows in "Mis citas", and a failed reminder still alerts the provider. See Open.
 9. **Message text is minimal.** SMS is not end-to-end encrypted and both channels show on lock screens. Messages carry the provider's name, the time and the place or link, never the appointment type, notes or the patient's name.
 
 **9.0 — Prerequisites (no code; start first, they have lead time).**
@@ -1183,8 +1196,8 @@ As planned:
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID` | Request expired (neutral) | provider, date, time |
 
 - `patient-meeting-link` reuses `TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID` if its variables fit; otherwise it becomes an eighth template.
-- Send real test SMS and WhatsApp codes to the main Colombian carriers. Confirm delivery, delay and how the sender appears. If SMS is poor, leave it out of `loginChannels` (9.3); no other change is needed.
-- In the Twilio Console: Geo Permissions limited to the allowed countries, SMS Pumping Protection on, and a usage alert.
+- Send real test WhatsApp codes to the main Colombian carriers. Confirm delivery, delay and how the sender appears.
+- In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS reminders.
 - Counsel confirms the policy covers login codes over WhatsApp and SMS. It names Twilio and SMS/WhatsApp "por instrucción de la clínica", but not Meta and not phone login. Any text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
 
 **PR 9.1 — Server: patient message routing (no login change).** Useful on its own: existing patients get portal messages on their WhatsApp or SMS.
@@ -1221,14 +1234,14 @@ As planned:
   - `audit-log.service.ts` builds actor ids from the patient's email and both numbers, so `?portalPatientId=` needs `actorId IN (...)`.
 - Tests: the existing OTP, session, booking, request and audit suites pass unchanged in meaning. Add: a legacy email-only token still works, and the actor id for an email equals the pre-refactor value.
 
-**PR 9.3 — Server: phone OTP and phone patients (behind `ENABLE_PORTAL_PHONE_LOGIN`, default off).**
+**PR 9.3 — Server: phone OTP and phone patients.**
 - `POST /v1/public/providers/:slug/otp`: body `{ email, captchaToken }` stays valid, plus strict `{ phone, channel: 'WHATSAPP' | 'SMS', captchaToken }`. E.164 only, same CAPTCHA action and limiter.
 - Limits on the row under `lockRow`, starting values:
   - per number: 3 sends per hour, sharing the row's cooldown and `failedCount`;
   - per provider, paid channels: `perProviderPaidPerHour` 30;
   - across all providers: `PORTAL_OTP_PAID_DAILY_CAP` 300, counting rows, which is what number-rotating pumping inflates. It can overshoot slightly under concurrency, like the existing provider cap.
   - A hit cap answers the usual 202 and logs at error level without PII, so Sentry shows an attack or a limit that is too low.
-- `PORTAL_OTP_PHONE_COUNTRY_CODES` (default `57`): any other prefix gets a 400 with a Spanish message. This depends on policy, not on any patient, so it reveals nothing and spares the patient waiting for a code that never comes.
+- Every country is allowed: any E.164 number can request a code, and the caps above bound the cost.
 - `sendPortalOtp(contact, code, provider)` runs after commit and never throws, like `sendTransactionalEmail`. It logs `maskedTo`, never the code or `contentVariables`. The SMS text says what the code is for and for which provider, because the sender is overwritten.
 - `POST /v1/portal/:slug/otp/verify`: `{ email | phone, code, challenge }`. The session's channel comes from the row, never the client. A resend on the other channel replaces the code and the channel.
 - `resolvePortalPatient` and `findPortalMatch` for a phone contact, over `whatsappHash` or `smsHash`:
@@ -1249,7 +1262,7 @@ As planned:
   - Byte-identical 202s for a new number, a patient's number and a revoked number.
   - Each paid limit answers 202 without sending, and WhatsApp plus SMS share the row's limits.
   - A code is never stored, logged or passed to the logger in plain form.
-  - A disallowed country gets 400 before any row is written; flag off means the phone body is rejected.
+  - A number from any country gets the usual 202.
   - Each row of the table above, plus list and consent responses identical across outcomes.
   - An email session's typed number never matches a phone session (patient and request).
   - The review flow with shared numbers, and two concurrent phone bookings creating one patient.
@@ -1267,7 +1280,7 @@ As planned:
 - Bruno, in the PR where each change becomes final: Request OTP and Verify OTP phone bodies, `loginChannels`, the session fields, the request's nullable email and `existingPatientId`.
 - AGENTS.md, in the same PRs: `PortalContact` as the session identity; patient messages only through `resolvePatientRoute`; typed numbers are never identities; own requests only through `ownRequestWhere`; a paid-channel limits line; the new `requireEnv` SIDs. Update the rules that today say "email", including the OTP section and "replaced by a new email reminder".
 - `docs/operations.md`: template list, Twilio Console settings, the caps and how to change them. `docs/compliance-patient-data.md`: `verifiedPhone`, and Meta as a recipient of WhatsApp traffic.
-- Order: 9.0 runs in parallel from the start. 9.1 (needs six templates), then 9.2, then 9.3 (needs the OTP template), then 9.4. Turn on `ENABLE_PORTAL_PHONE_LOGIN` only after the manual check.
+- Order: 9.0 runs in parallel from the start. 9.1 (needs six templates), then 9.2, then 9.3 (needs the OTP template), then 9.4. Reach production only after the manual check.
 
 **Phase 9 exit criteria:**
 - A patient with no email can log in, book, and receive every message on WhatsApp or SMS.
@@ -1280,7 +1293,6 @@ As planned:
 
 **Open:**
 - **Who pays** for WhatsApp and SMS, and should a provider be able to turn phone login off? The default is one global flag, paid by the platform. A per-provider setting would add a `loginChannels` field in booking settings.
-- **Patients abroad.** The `57` default excludes them from phone login, so they keep email. Which country codes should be added?
 - **Families sharing a number** go through review every time and see an empty list by phone; email still works for them. Is a safe way to choose a record worth designing later?
 - **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). Fixing it needs a small delivery table the status callback can read, then a retry on the next route. Worth it if pilots show real failures.
 - **Patient-chosen channel.** Should a patient be able to change their own channel, with a fresh OTP proving the new contact? This would relax "the portal never updates an existing Patient".

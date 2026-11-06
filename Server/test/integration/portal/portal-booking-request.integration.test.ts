@@ -10,9 +10,9 @@ vi.mock('../../../src/brevo/transactional.js', () => ({ sendTransactionalEmail: 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
-import { BookingApprovalMode, BookingRequestStatus, EntityType, ActionSource } from '../../../generated/prisma/enums.js';
+import { Channel, BookingApprovalMode, BookingRequestStatus, EntityType, ActionSource } from '../../../generated/prisma/enums.js';
 import {
-  MAX_PENDING_REQUESTS_PER_EMAIL,
+  MAX_PENDING_REQUESTS_PER_CONTACT,
   MAX_PENDING_REQUESTS_PER_PROVIDER,
 } from '../../../src/booking-requests/booking-request.constants.js';
 import { createTestPatient, unique } from '../helpers.js';
@@ -101,9 +101,10 @@ describe('POST /v1/portal/bookings in approval mode', () => {
 
     await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!));
 
-    expect(mocks.email).toHaveBeenCalledTimes(1);
-    const [ to, rendered ] = mocks.email.mock.calls[0]!;
-    expect(to).toBe(email);
+    const receipts = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === email);
+    expect(receipts).toHaveLength(1);
+    const [ channel, rendered ] = receipts[0]!;
+    expect(channel).toBe(Channel.EMAIL);
     expect(rendered.subject).toContain('Recibimos tu solicitud');
     expect(rendered.body).toContain(`/book/${provider.slug}/appointments`);
   });
@@ -144,10 +145,10 @@ describe('POST /v1/portal/bookings in approval mode', () => {
     const starts = await slotStarts(provider);
     const session = sessionFor(provider.id, unique('muchas@test.local'));
 
-    for (let i = 0; i < MAX_PENDING_REQUESTS_PER_EMAIL; i++) {
+    for (let i = 0; i < MAX_PENDING_REQUESTS_PER_CONTACT; i++) {
       expect((await postBooking(session, portalBookingBody(provider, starts[i]!))).status).toBe(202);
     }
-    const over = await postBooking(session, portalBookingBody(provider, starts[MAX_PENDING_REQUESTS_PER_EMAIL]!));
+    const over = await postBooking(session, portalBookingBody(provider, starts[MAX_PENDING_REQUESTS_PER_CONTACT]!));
     expect(over.status).toBe(409);
     expect(over.body.error).toBe('Request limit reached');
     expect((await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, starts[5]!))).status).toBe(202);
@@ -174,7 +175,7 @@ describe('POST /v1/portal/bookings in approval mode', () => {
   it('still answers 202 when the receipt email fails after commit', async () => {
     const provider = await approvalProvider();
     const [ start ] = await slotStarts(provider);
-    mocks.email.mockRejectedValueOnce(new Error('pool timeout'));
+    mocks.dispatch.mockRejectedValueOnce(new Error('pool timeout'));
 
     const res = await postBooking(sessionFor(provider.id, unique('correo@test.local')), portalBookingBody(provider, start!));
 

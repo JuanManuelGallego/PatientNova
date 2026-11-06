@@ -43,7 +43,8 @@ const provider = {
     locations: [],
 };
 const session = (overrides: Record<string, unknown> = {}) => ({
-    email: "ana@example.com",
+    contact: "ana@example.com",
+    contactChannel: "EMAIL",
     expiresAt: "2099-01-01T02:00:00.000Z",
     csrfToken: "csrf-from-session",
     providerSlug: SLUG,
@@ -58,7 +59,7 @@ const fail = (status: number, error: string) => new Response(JSON.stringify({ su
 
 interface Server {
     profileStatus: number;
-    profile: typeof provider;
+    profile: typeof provider & { loginChannels?: string[] };
     session: ReturnType<typeof session> | null;
     verify: () => Response;
     otp: () => Response;
@@ -85,7 +86,7 @@ beforeEach(() => {
         session: null,
         verify: () => {
             server.session = session({ consentRequired: true });
-            return ok(200, { email: "ana@example.com", expiresAt: "2099-01-01T02:00:00.000Z", csrfToken: "csrf-from-verify" });
+            return ok(200, { contact: "ana@example.com", contactChannel: "EMAIL", expiresAt: "2099-01-01T02:00:00.000Z", csrfToken: "csrf-from-verify" });
         },
         otp: () => {
             server.challenges += 1;
@@ -303,6 +304,115 @@ describe("PortalAppointmentsPage", () => {
         server.session = session();
         render(<PortalAppointmentsPage slug="Dra-Ana" />);
         expect(await screen.findByText("No tienes citas próximas.")).toBeInTheDocument();
+    });
+
+    describe("login channels", () => {
+        const PHONE = "+573001112233";
+        const withPhoneLogin = () => { server.profile = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP" ] }; };
+        const choice = (name: string) => screen.findByRole("button", { name });
+
+        async function requestPhoneCode(user: ReturnType<typeof userEvent.setup>, channel = "WhatsApp") {
+            await user.click(await choice(channel));
+            await user.type(screen.getByLabelText("Número de celular"), "+57 300 111 2233");
+            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+            await user.click(screen.getByRole("button", { name: "Enviar código" }));
+            return screen.findByLabelText("Código de 6 dígitos");
+        }
+
+        it("hides the choice when only email is offered", async () => {
+            server.profile = { ...provider, loginChannels: [ "EMAIL" ] };
+            render(<PortalAppointmentsPage slug={SLUG} />);
+            await screen.findByLabelText("Correo electrónico");
+            expect(screen.queryByRole("group", { name: "Recibir el código por" })).not.toBeInTheDocument();
+        });
+
+        it("hides the choice with an older API that sends no channels", async () => {
+            render(<PortalAppointmentsPage slug={SLUG} />);
+            await screen.findByLabelText("Correo electrónico");
+            expect(screen.queryByRole("group", { name: "Recibir el código por" })).not.toBeInTheDocument();
+        });
+
+        it("offers only the channels the provider has, starting on email", async () => {
+            server.profile = { ...provider, loginChannels: [ "EMAIL", "WHATSAPP" ] };
+            render(<PortalAppointmentsPage slug={SLUG} />);
+            const group = await screen.findByRole("group", { name: "Recibir el código por" });
+            expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual([ "Correo", "WhatsApp" ]);
+            expect(within(group).getByRole("button", { name: "Correo" })).toHaveAttribute("aria-pressed", "true");
+        });
+
+        it("sends a phone code with neutral copy and verifies with no channel", async () => {
+            withPhoneLogin();
+            const user = userEvent.setup();
+            render(<PortalAppointmentsPage slug={SLUG} />);
+
+            await user.click(await choice("WhatsApp"));
+            const input = screen.getByLabelText("Número de celular");
+            expect(input).toHaveAttribute("type", "tel");
+            expect(input).toHaveAttribute("autocomplete", "tel");
+            await user.type(input, "+57 300 111 2233");
+            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+            await user.click(screen.getByRole("button", { name: "Enviar código" }));
+
+            const codeInput = await screen.findByLabelText("Código de 6 dígitos");
+            expect(bodyOf(`/public/providers/${SLUG}/otp`)).toEqual({ phone: PHONE, channel: "WHATSAPP", captchaToken: "captcha-otp-request" });
+            expect(screen.getByText(/Si el número es válido, te enviamos un código por WhatsApp/)).toBeInTheDocument();
+            expect(screen.getByText("+57 300 111 2233")).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Cambiar número" })).toBeInTheDocument();
+
+            await user.type(codeInput, "123456");
+            await user.click(screen.getByRole("button", { name: "Ingresar" }));
+            await waitFor(() => expect(call(`/portal/${SLUG}/otp/verify`)).toHaveLength(1));
+            expect(bodyOf(`/portal/${SLUG}/otp/verify`)).toEqual({ phone: PHONE, code: "123456", challenge: "challenge-1" });
+        });
+
+        it("adds the selected country code to the number", async () => {
+            withPhoneLogin();
+            const user = userEvent.setup();
+            render(<PortalAppointmentsPage slug={SLUG} />);
+
+            await user.click(await choice("WhatsApp"));
+            await user.type(screen.getByLabelText("Número de celular"), "300 111 2233");
+            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+            await user.click(screen.getByRole("button", { name: "Enviar código" }));
+
+            await screen.findByLabelText("Código de 6 dígitos");
+            expect(bodyOf(`/public/providers/${SLUG}/otp`)).toEqual({ phone: PHONE, channel: "WHATSAPP", captchaToken: "captcha-otp-request" });
+        });
+
+        it("blocks the request until the number is valid", async () => {
+            withPhoneLogin();
+            const user = userEvent.setup();
+            render(<PortalAppointmentsPage slug={SLUG} />);
+
+            await user.click(await choice("WhatsApp"));
+            await user.type(screen.getByLabelText("Número de celular"), "300");
+            await user.tab();
+            await user.click(screen.getByRole("button", { name: "Resolver captcha" }));
+
+            expect(screen.getByText(/Revisa el número/)).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Enviar código" })).toBeDisabled();
+            expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(0);
+        });
+
+        it("going back to the same number returns to the code, with no request", async () => {
+            withPhoneLogin();
+            const user = userEvent.setup();
+            render(<PortalAppointmentsPage slug={SLUG} />);
+            await requestPhoneCode(user);
+
+            await user.click(screen.getByRole("button", { name: "Cambiar número" }));
+            await user.click(screen.getByRole("button", { name: "Ingresar el código enviado" }));
+
+            await screen.findByLabelText("Código de 6 dígitos");
+            expect(call(`/public/providers/${SLUG}/otp`)).toHaveLength(1);
+            expect(screen.getByText(/te enviamos un código por WhatsApp/)).toBeInTheDocument();
+        });
+
+        it("shows a phone session's number on the signed-in screen", async () => {
+            server.session = session({ contact: PHONE, contactChannel: "WHATSAPP" });
+            render(<PortalAppointmentsPage slug={SLUG} />);
+            expect(await screen.findByText("+57 300 111 2233")).toBeInTheDocument();
+        });
     });
 
     it("returning to the same email goes back to the code step without a new request", async () => {
@@ -571,7 +681,7 @@ describe("PortalAppointmentsPage cancel and reschedule", () => {
         expect(ready).toHaveTextContent("Sala virtual, Videollamada");
         expect(within(ready).getByRole("link", { name: "Unirse a la videollamada" })).toHaveAttribute("href", "https://meet.example/abc");
         expect(within(pending).queryByRole("link", { name: "Unirse a la videollamada" })).toBeNull();
-        expect(pending).toHaveTextContent("El enlace de la videollamada llegará a tu correo.");
+        expect(pending).toHaveTextContent("Te enviaremos el enlace de la videollamada.");
     });
 
     it("still lists and cancels while booking is paused, without offering a new booking", async () => {

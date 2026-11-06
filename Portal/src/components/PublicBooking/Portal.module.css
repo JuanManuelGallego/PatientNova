@@ -105,8 +105,19 @@
   overflow-wrap: anywhere;
 }
 
-.form :global(.form-input) {
+.form :global(.form-input),
+.form :global(.phone-input-group) {
   min-height: 44px;
+  font-size: 16px;
+}
+
+.form :global(.phone-input-group) {
+  border-radius: var(--r-md);
+}
+
+.form :global(.phone-input-number),
+.form :global(.phone-input-code),
+.form :global(.phone-input-code-display) {
   font-size: 16px;
 }
 
@@ -131,6 +142,47 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
+}
+
+.channelLabel {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-700);
+}
+
+.channels {
+  display: flex;
+  gap: 8px;
+}
+
+.channel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-gray-200);
+  background: var(--c-surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-gray-900);
+  cursor: pointer;
+}
+
+.channel:hover {
+  border-color: var(--c-gray-300);
+}
+
+.channel[aria-pressed="true"] {
+  border-color: var(--c-brand);
+  background: var(--c-brand-light);
+  box-shadow: 0 0 0 1px var(--c-brand);
 }
 
 .hint {
@@ -166,6 +218,7 @@
 }
 
 .linkButton:focus-visible,
+.channel:focus-visible,
 .back:focus-visible {
   outline: 2px solid var(--c-brand);
   outline-offset: 2px;
@@ -222,7 +275,6 @@
   letter-spacing: 0;
 }
 
-.fieldHint,
 .fieldError {
   display: block;
   margin-top: 4px;
@@ -239,7 +291,8 @@
   margin-left: 30px;
 }
 
-.form :global(.form-input)[aria-invalid="true"] {
+.form :global(.form-input)[aria-invalid="true"],
+.form :global(.phone-input-group):has([aria-invalid="true"]) {
   border-color: var(--c-error);
 }
 

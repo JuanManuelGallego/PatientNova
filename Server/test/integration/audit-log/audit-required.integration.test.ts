@@ -5,6 +5,7 @@ import { auditLogRepository } from '../../../src/audit-log/audit-log.repository.
 import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
+import { emailContact } from '../../../src/portal/portal-contact.js';
 import { ActionSource, ActionType, EntityType } from '../../../generated/prisma/enums.ts';
 import { createTestUser, unique } from '../helpers.js';
 
@@ -66,7 +67,7 @@ describe('required audit writes', () => {
 
 describe('portal audit actor and enum values', () => {
   it('records PUBLIC_PORTAL source, a hashed actor id and a masked display name', async () => {
-    const ctx = portalPatientAuditContext({ userId, email: 'maria.perez@example.com', ipAddress: '10.0.0.1' });
+    const ctx = portalPatientAuditContext({ userId, contact: emailContact('maria.perez@example.com'), ipAddress: '10.0.0.1' });
     expect(ctx.actorId).toMatch(/^portal:[0-9a-f]{24}$/);
     expect(ctx.actorDisplayName).not.toContain('maria.perez');
 
@@ -98,18 +99,18 @@ describe('portal audit actor and enum values', () => {
   });
 
   it('keeps the same actor id for the same provider+email and differs across providers', () => {
-    const a = portalPatientAuditContext({ userId: 'u1', email: 'x@y.co' });
-    const b = portalPatientAuditContext({ userId: 'u1', email: 'x@y.co' });
-    const c = portalPatientAuditContext({ userId: 'u2', email: 'x@y.co' });
+    const a = portalPatientAuditContext({ userId: 'u1', contact: emailContact('x@y.co') });
+    const b = portalPatientAuditContext({ userId: 'u1', contact: emailContact('x@y.co') });
+    const c = portalPatientAuditContext({ userId: 'u2', contact: emailContact('x@y.co') });
     expect(a.actorId).toBe(b.actorId);
     expect(a.actorId).not.toBe(c.actorId);
   });
 
   it('keys the actor id (an unkeyed sha256 of provider:email would be guessable) and normalizes the email', async () => {
     const { createHash } = await import('node:crypto');
-    const ctx = portalPatientAuditContext({ userId: 'u1', email: 'x@y.co' });
+    const ctx = portalPatientAuditContext({ userId: 'u1', contact: emailContact('x@y.co') });
     const unkeyed = createHash('sha256').update('u1:x@y.co').digest('hex').slice(0, 24);
     expect(ctx.actorId).not.toBe(`portal:${unkeyed}`);
-    expect(portalPatientAuditContext({ userId: 'u1', email: ' X@Y.co ' }).actorId).toBe(ctx.actorId);
+    expect(portalPatientAuditContext({ userId: 'u1', contact: emailContact(' X@Y.co ') }).actorId).toBe(ctx.actorId);
   });
 });

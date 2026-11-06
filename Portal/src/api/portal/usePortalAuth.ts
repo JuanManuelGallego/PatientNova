@@ -1,14 +1,14 @@
 import { useCallback } from "react";
 import { usePortalMutation, usePublicMutation } from "@/src/api/base/useClientMutation";
 import { csrfStore } from "@/src/api/base/csrfStore";
-import type { OtpChallenge, PortalLogin } from "@/src/types/PortalSession";
+import type { OtpChallenge, OtpRequestContact, OtpVerifyContact, PortalLogin } from "@/src/types/PortalSession";
 
 const providerPath = (slug: string) => `/providers/${encodeURIComponent(slug)}`;
 
 export function useRequestOtp(slug: string) {
     const { mutate, ...rest } = usePublicMutation<OtpChallenge>();
     const requestOtp = useCallback(
-        (email: string, captchaToken: string) => mutate(`${providerPath(slug)}/otp`, { email, captchaToken }),
+        (contact: OtpRequestContact, captchaToken: string) => mutate(`${providerPath(slug)}/otp`, { ...contact, captchaToken }),
         [ mutate, slug ],
     );
     return { requestOtp, ...rest };
@@ -17,8 +17,8 @@ export function useRequestOtp(slug: string) {
 export function useVerifyOtp(slug: string) {
     const { mutate, ...rest } = usePortalMutation<PortalLogin>();
     const verifyOtp = useCallback(
-        (email: string, code: string, challenge: string) =>
-            mutate(`/${encodeURIComponent(slug)}/otp/verify`, { email, code, challenge }),
+        (contact: OtpVerifyContact, code: string, challenge: string) =>
+            mutate(`/${encodeURIComponent(slug)}/otp/verify`, { ...contact, code, challenge }),
         [ mutate, slug ],
     );
     return { verifyOtp, ...rest };

@@ -19,6 +19,8 @@ model Patient {
   smsNumber      String? @db.Text
   email          String? @db.Text
 
+  whatsappUnverified Boolean @default(false)
+
   emailHash      String?  @db.VarChar(64)
   whatsappHash   String?  @db.VarChar(64)
   smsHash        String?  @db.VarChar(64)
@@ -322,7 +324,8 @@ model PortalOtp {
   id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
 
-  emailHash       String    @db.VarChar(64)
+  contactHash     String    @db.VarChar(64)
+  channel         Channel   @default(EMAIL)
   codeHash        String    @db.VarChar(64)
   challengeHash   String    @default("") @db.VarChar(64)
   expiresAt       DateTime
@@ -337,9 +340,10 @@ model PortalOtp {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, emailHash])
+  @@unique([userId, contactHash])
   @@index([userId, lastSentAt])
   @@index([lastSentAt])
+  @@index([channel, lastSentAt])
   @@map("portal_otps")
 }
 
@@ -389,11 +393,14 @@ model BookingRequest {
   kind   BookingRequestKind   @default(NEW)
   status BookingRequestStatus @default(PENDING)
 
-  email     String  @db.Text
-  name      String  @db.Text
-  lastName  String  @db.Text
-  phone     String? @db.Text
-  emailHash String? @db.VarChar(64)
+  contactChannel    Channel @default(EMAIL)
+  email             String? @db.Text
+  verifiedPhone     String? @db.Text
+  name              String  @db.Text
+  lastName          String  @db.Text
+  phone             String? @db.Text
+  emailHash         String? @db.VarChar(64)
+  verifiedPhoneHash String? @db.VarChar(64)
 
   startAt         DateTime
   endAt           DateTime
@@ -422,6 +429,7 @@ model BookingRequest {
 
   @@index([userId, status, holdExpiresAt])
   @@index([userId, emailHash, status])
+  @@index([userId, verifiedPhoneHash, status])
   @@index([userId, startAt])
   @@map("booking_requests")
 }

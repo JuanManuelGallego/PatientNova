@@ -11,7 +11,7 @@ import { portalSecret, signPortalToken } from '../../../src/auth/tokens.js';
 import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
 import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 import { DateTime } from 'luxon';
-import { ConsentKind } from '../../../generated/prisma/enums.js';
+import { Channel, ConsentKind } from '../../../generated/prisma/enums.js';
 import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
 import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createTestAppointmentType, createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
@@ -70,8 +70,14 @@ export interface TestSession { cookie: string; csrf: string; email: string; sid:
 
 export function sessionFor(userId: string, email: string): TestSession {
   const sid = `sid-${++seq}`;
-  const token = signPortalToken({ userId, email, sid });
+  const token = signPortalToken({ userId, email, sid, channel: Channel.EMAIL });
   return { cookie: `${PORTAL_COOKIE_NAME}=${token}`, csrf: createCsrfToken(sid, portalSecret()), email, sid };
+}
+
+export function phoneSessionFor(userId: string, phone: string, channel: Channel = Channel.WHATSAPP): TestSession {
+  const sid = `sid-${++seq}`;
+  const token = signPortalToken({ userId, phone, sid, channel });
+  return { cookie: `${PORTAL_COOKIE_NAME}=${token}`, csrf: createCsrfToken(sid, portalSecret()), email: '', sid };
 }
 
 /** POST on a session route with the exact Origin, the session cookie and its CSRF token (`csrf: null` omits it). */

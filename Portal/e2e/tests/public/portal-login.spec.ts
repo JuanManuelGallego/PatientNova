@@ -21,6 +21,7 @@ test.describe('portal login on "Mis citas"', () => {
         await page.goto(`/book/${SLUG}`);
         await page.getByRole('link', { name: 'Mis citas' }).click();
         await expect(page).toHaveURL(new RegExp(`/book/${SLUG}/appointments$`));
+        await expect(page.getByRole('group', { name: 'Recibir el código por' })).toBeVisible();
 
         await requestCode(page, email);
         const code = await latestCode(email);

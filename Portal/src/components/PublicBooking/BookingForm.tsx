@@ -3,33 +3,34 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ApiClientError } from "@/src/api/base/apiClients";
+import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
 import { useCreateBooking } from "@/src/api/portal/usePortalBooking";
-import type { PublicAppointmentType, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
+import type { LoginChannel, PublicAppointmentType, PublicLocation, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
 import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
-import { APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtCop, fmtLongDayTime, isE164, locationDetail, normalizePhone } from "@/src/utils/publicBooking";
+import {
+    APPROVAL_FOLLOW_UP, fmtBookingPolicy, fmtContact, fmtCop, fmtLongDayTime, isE164, isPhoneChannel, locationDetail,
+    PHONE_FORMAT_HINT,
+} from "@/src/utils/publicBooking";
 import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import portal from "./Portal.module.css";
 import styles from "./PublicBooking.module.css";
 
-const LOGIN_LEAD = "Ingresa tu correo y te enviaremos un código de 6 dígitos para confirmar tu reserva. A ese correo llegarán también la confirmación y los avisos de tu cita. No necesitas contraseña.";
+const LOGIN_LEAD = "Te enviaremos un código de 6 dígitos para confirmar tu reserva. No necesitas contraseña.";
 
 interface BookingFormProps {
     slug: string;
     provider: PublicProvider;
     type: PublicAppointmentType;
+    location: PublicLocation;
     slot: PublicSlot;
     timezone: string;
     onBooked: (outcome: PortalBookingOutcome) => void;
     onSlotTaken: (message: string) => void;
 }
 
-export function BookingForm({ slug, provider, type, slot, timezone, onBooked, onSlotTaken }: BookingFormProps) {
-    const [ locationId, setLocationId ] = useState(provider.locations[ 0 ]?.id ?? "");
-    const location = provider.locations.find((l) => l.id === locationId);
-    const placesLabelId = useId();
-
+export function BookingForm({ slug, provider, type, location, slot, timezone, onBooked, onSlotTaken }: BookingFormProps) {
     return (
         <div className={styles.confirm}>
             <dl className={styles.summary}>
@@ -41,32 +42,15 @@ export function BookingForm({ slug, provider, type, slot, timezone, onBooked, on
                     <dt>Fecha</dt>
                     <dd>{fmtLongDayTime(slot.startUtc, timezone)}</dd>
                 </div>
-                {location && (
-                    <div>
-                        <dt>Lugar</dt>
-                        <dd>{location.name}{locationDetail(location) && `, ${locationDetail(location)}`}</dd>
-                    </div>
-                )}
+                <div>
+                    <dt>Lugar</dt>
+                    <dd>{location.name}{locationDetail(location) && `, ${locationDetail(location)}`}</dd>
+                </div>
             </dl>
             <p className={styles.policy} data-testid="booking-policy">{fmtBookingPolicy(provider.reschedulePolicy)}</p>
 
-            {provider.locations.length > 1 && (
-                <div role="group" aria-labelledby={placesLabelId}>
-                    <p id={placesLabelId} className={styles.period}>Elige el lugar</p>
-                    <div className={styles.options}>
-                        {provider.locations.map((l) => (
-                            <button key={l.id} type="button" className={styles.option} aria-pressed={l.id === locationId}
-                                onClick={() => setLocationId(l.id)}>
-                                <span className={styles.optionName}>{l.name}</span>
-                                {locationDetail(l) && <span className={styles.optionMeta}>{locationDetail(l)}</span>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} typeId={type.id} locationId={locationId} slot={slot} timezone={timezone}
-                onBooked={onBooked} onSlotTaken={onSlotTaken} />
+            <PatientStep slug={slug} providerName={provider.displayName} approvalRequired={provider.approvalRequired} loginChannels={provider.loginChannels}
+                typeId={type.id} locationId={location.id} slot={slot} timezone={timezone} onBooked={onBooked} onSlotTaken={onSlotTaken} />
         </div>
     );
 }
@@ -75,6 +59,7 @@ interface PatientStepProps {
     slug: string;
     providerName: string;
     approvalRequired: boolean;
+    loginChannels?: LoginChannel[] | undefined;
     typeId: string;
     locationId: string;
     slot: PublicSlot;
@@ -83,7 +68,7 @@ interface PatientStepProps {
     onSlotTaken: (message: string) => void;
 }
 
-function PatientStep({ slug, ...rest }: PatientStepProps) {
+function PatientStep({ slug, loginChannels, ...rest }: PatientStepProps) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     const [ notice, setNotice ] = useState<string | undefined>();
 
@@ -91,17 +76,20 @@ function PatientStep({ slug, ...rest }: PatientStepProps) {
     if (error) return <ErrorState error={error} onRetry={refetch} inline />;
     if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
         return (
-            <PortalLogin slug={slug} embedded title="Verifica tu correo" lead={LOGIN_LEAD} notice={notice}
-                onLoggedIn={() => { setNotice(undefined); refetch(); }} />
+            <PortalLogin slug={slug} embedded title={(loginChannels?.length ?? 1) > 1 ? "Confirma que eres tú" : "Verifica tu correo"} lead={LOGIN_LEAD}
+                notice={notice} channels={loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />
         );
     }
-    return <PatientDetails email={session.email} {...rest} onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }} />;
+    return (
+        <PatientDetails contact={session.contact} contactChannel={session.contactChannel} {...rest}
+            onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }} />
+    );
 }
 
 type Field = "name" | "lastName" | "phone" | "consent";
 
-function PatientDetails({ email, providerName, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
-    Omit<PatientStepProps, "slug"> & { email: string; onSessionLost: () => void }) {
+function PatientDetails({ contact, contactChannel, providerName, approvalRequired, typeId, locationId, slot, timezone, onBooked, onSlotTaken, onSessionLost }:
+    Omit<PatientStepProps, "slug" | "loginChannels"> & { contact: string; contactChannel: LoginChannel; onSessionLost: () => void }) {
     const [ name, setName ] = useState("");
     const [ lastName, setLastName ] = useState("");
     const [ phone, setPhone ] = useState("");
@@ -115,7 +103,9 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
     const consentRef = useRef<HTMLInputElement>(null);
     const { createBooking, loading, error } = useCreateBooking();
 
-    const phoneValue = normalizePhone(phone);
+    const onPhone = isPhoneChannel(contactChannel);
+    const phoneValue = onPhone ? "" : phone;
+    const contactKind = onPhone ? "el número" : "el correo";
     const invalid: Record<Field, boolean> = {
         name: !name.trim(),
         lastName: !lastName.trim(),
@@ -134,10 +124,10 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
         e.preventDefault();
         if (loading) return;
         const firstInvalid = (Object.keys(invalid) as Field[]).find((f) => invalid[ f ]);
-        if (firstInvalid || !locationId) {
+        if (firstInvalid) {
             setAttempted(true);
             const refs = { name: nameRef, lastName: lastNameRef, phone: phoneRef, consent: consentRef };
-            if (firstInvalid) refs[ firstInvalid ].current?.focus();
+            refs[ firstInvalid ].current?.focus();
             return;
         }
         try {
@@ -160,8 +150,8 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
     return (
         <form className={portal.form} onSubmit={onSubmit} noValidate>
             <p className={portal.lead}>
-                {approvalRequired ? "Enviarás la solicitud con el correo" : "Reservarás con el correo"}{" "}
-                <strong className={portal.email}>{email}</strong>.{" "}
+                {approvalRequired ? `Enviarás la solicitud con ${contactKind}` : `Reservarás con ${contactKind}`}{" "}
+                <strong className={portal.email}>{fmtContact(contact, contactChannel)}</strong>.{" "}
                 Si ya eres paciente de {providerName}, usaremos los datos que tiene registrados.
             </p>
             {approvalRequired && (
@@ -187,17 +177,17 @@ function PatientDetails({ email, providerName, approvalRequired, typeId, locatio
                 </label>
                 {shown.lastName && <span id={errorId("lastName")} className={portal.fieldError}>Escribe tus apellidos.</span>}
             </div>
-            <div>
-                <label className="form-label">
-                    Teléfono (opcional)
-                    <input ref={phoneRef} className="form-input" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={24}
-                        placeholder="+57 300 123 4567" aria-invalid={shown.phone || undefined} aria-describedby={errorId("phone")}
-                        value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setPhoneTouched(true)} />
-                </label>
-                <span id={errorId("phone")} className={shown.phone ? portal.fieldError : portal.fieldHint}>
-                    {shown.phone ? "Escríbelo con el indicativo del país, por ejemplo +57 300 123 4567." : "Con el indicativo del país."}
-                </span>
-            </div>
+            {!onPhone && (
+                <div>
+                    <div className="form-label">
+                        <label htmlFor={`${ids}-phone`}>Teléfono (opcional)</label>
+                        <CountryCodeInput ref={phoneRef} id={`${ids}-phone`} name="phone" autoComplete="tel" placeholder="300 123 4567"
+                            aria-invalid={shown.phone || undefined} aria-describedby={shown.phone ? errorId("phone") : undefined}
+                            value={phone} onChange={setPhone} onBlur={() => setPhoneTouched(true)} />
+                    </div>
+                    {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
+                </div>
+            )}
             <div>
                 <label className={portal.checkbox}>
                     <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)}

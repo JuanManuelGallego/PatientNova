@@ -12,6 +12,12 @@ export class PortalBookingUnavailableError extends ApiError {
   }
 }
 
+export class PortalPhoneFieldError extends ApiError {
+  constructor() {
+    super('The phone number comes from the session', 400);
+  }
+}
+
 export class PortalBookingLimitError extends ApiError {
   constructor() {
     super('Booking limit reached', 409);

@@ -1,3 +1,4 @@
+import type { Channel } from '../../generated/prisma/enums.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { portalSecret } from '../auth/tokens.js';
 import { createCsrfToken } from '../utils/security/csrf.js';
@@ -8,10 +9,13 @@ import { bookingSettingsService } from '../booking-settings/booking-settings.ser
 import { ensureCurrentConsent, hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient, type PortalPatientResolution } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
+import { sessionContactView } from './portal-contact.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
 
 export interface PortalSessionView {
-  email: string;
+  email: string | null;
+  contact: string;
+  contactChannel: Channel;
   expiresAt: string;
   csrfToken: string;
   providerSlug: string;
@@ -33,7 +37,7 @@ export const portalSessionService = {
     ]);
     const consentRequired = await isConsentRequired(resolution);
     return {
-      email: session.email,
+      ...sessionContactView(session.contact),
       expiresAt: session.expiresAt.toISOString(),
       csrfToken: createCsrfToken(session.sid, portalSecret()),
       providerSlug: state?.bookingSlug ?? '',
@@ -45,7 +49,7 @@ export const portalSessionService = {
   async acceptConsent(session: PortalSessionContext, meta: ConsentRequestMeta): Promise<void> {
     const auditContext = portalPatientAuditContext({
       userId: session.userId,
-      email: session.email,
+      contact: session.contact,
       ipAddress: meta.ipAddress,
     });
     await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {

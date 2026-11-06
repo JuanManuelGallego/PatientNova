@@ -1,8 +1,10 @@
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { Channel } from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 
 export interface PortalOtpRow {
   id: string;
+  channel: Channel;
   codeHash: string;
   challengeHash: string;
   expiresAt: Date;
@@ -16,11 +18,12 @@ export interface PortalOtpRow {
 }
 
 export const portalOtpRepository = {
-  async ensureRow(tx: TransactionClient, userId: string, emailHash: string, now: Date): Promise<void> {
+  async ensureRow(tx: TransactionClient, userId: string, contactHash: string, channel: Channel, now: Date): Promise<void> {
     await tx.portalOtp.createMany({
       data: [ {
         userId,
-        emailHash,
+        contactHash,
+        channel,
         codeHash: '',
         expiresAt: now,
         lastSentAt: new Date(0),
@@ -31,18 +34,24 @@ export const portalOtpRepository = {
     });
   },
 
-  async lockRow(tx: TransactionClient, userId: string, emailHash: string): Promise<PortalOtpRow | null> {
+  async lockRow(tx: TransactionClient, userId: string, contactHash: string): Promise<PortalOtpRow | null> {
     const rows = await tx.$queryRaw<PortalOtpRow[]>`
-      SELECT "id", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount",
+      SELECT "id", "channel", "codeHash", "challengeHash", "expiresAt", "attempts", "consumedAt", "lastSentAt", "sendWindowStart", "sendCount",
         "failedCount", "failedWindowStart"
       FROM "portal_otps"
-      WHERE "userId" = ${userId} AND "emailHash" = ${emailHash}
+      WHERE "userId" = ${userId} AND "contactHash" = ${contactHash}
       FOR UPDATE`;
     return rows[0] ?? null;
   },
 
   countSentSince(tx: TransactionClient, userId: string, since: Date): Promise<number> {
     return tx.portalOtp.count({ where: { userId, lastSentAt: { gte: since } } });
+  },
+
+  countPaidSentSince(tx: TransactionClient, since: Date, userId?: string): Promise<number> {
+    return tx.portalOtp.count({
+      where: { channel: { in: [ Channel.WHATSAPP, Channel.SMS ] }, lastSentAt: { gte: since }, ...(userId && { userId }) },
+    });
   },
 
   async update(tx: TransactionClient, id: string, data: Prisma.PortalOtpUpdateInput): Promise<void> {

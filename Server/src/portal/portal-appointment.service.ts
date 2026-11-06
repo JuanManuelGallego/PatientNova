@@ -30,6 +30,7 @@ import {
   SlotUnavailableError,
 } from './portal-booking.errors.js';
 import { portalReminder, requireSelfBooking, toPortalError } from './portal-booking.service.js';
+import { loadPatientRoute } from './patient-route.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import type { ReschedulePortalAppointmentBody } from './portal-booking.schemas.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications } from './portal-booking-notifications.js';
@@ -59,21 +60,22 @@ async function dropQueuedReminderJob(reminderId: string | null): Promise<void> {
 /**
  * The linked reminder after a move: a PENDING one follows the new time with its channel and address unchanged
  * (the provider may have switched it), or is cancelled when the new time is under 24h away; otherwise a new
- * email reminder is linked when there is still time for it. A SENT reminder is never rewritten.
+ * reminder is linked on the patient's route when there is still time for it. A SENT reminder is never rewritten.
  */
 async function reminderPatch(
   tx: TransactionClient,
-  appointmentId: string,
+  userId: string,
+  appt: { id: string; patientId: string },
   start: Date,
   now: Date,
-  email: string,
 ): Promise<Pick<UpdateAppointmentDto, 'reminder'>> {
   const linked = await tx.reminder.findFirst({
-    where: { appointmentId, isDeleted: false },
+    where: { appointmentId: appt.id, isDeleted: false },
     select: { status: true, channel: true, to: true },
   });
   const pending = linked?.status === ReminderStatus.PENDING;
-  const reminder = pending ? portalReminder(start, now, linked.to, linked.channel) : portalReminder(start, now, email);
+  const route = pending ? { channel: linked.channel, to: linked.to } : await loadPatientRoute(userId, appt.patientId, tx);
+  const reminder = portalReminder(start, now, route);
   if (reminder) return { reminder };
   return pending ? { reminder: null } : {};
 }
@@ -99,7 +101,7 @@ export const portalAppointmentService = {
   /** Cancels any upcoming active appointment of the session's patient. No cutoff. */
   async cancel(session: PortalSessionContext, appointmentId: string, meta: ConsentRequestMeta): Promise<void> {
     const { userId } = session;
-    const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
+    const auditContext = portalPatientAuditContext({ userId, contact: session.contact, ipAddress: meta.ipAddress });
 
     const cancelledReminderId = await runInAuditContext(auditContext, () => prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
@@ -159,7 +161,7 @@ export const portalAppointmentService = {
     meta: ConsentRequestMeta,
   ): Promise<PortalAppointmentDto> {
     const { userId } = session;
-    const auditContext = portalPatientAuditContext({ userId, email: session.email, ipAddress: meta.ipAddress });
+    const auditContext = portalPatientAuditContext({ userId, contact: session.contact, ipAddress: meta.ipAddress });
     const start = new Date(body.startUtc);
 
     try {
@@ -176,7 +178,7 @@ export const portalAppointmentService = {
         await updateWithin(tx, appt.id, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),
-          ...(await reminderPatch(tx, appt.id, start, now, session.email)),
+          ...(await reminderPatch(tx, userId, appt, start, now)),
         }, userId, { patientTimezone: body.patientTimezone, replaceSettledReminder: true });
         await tx.appointment.update({ where: { id: appt.id, userId }, data: { patientRescheduleCount: { increment: 1 } } });
         const move = { previousStartAt: appt.startAt, startAt: start };

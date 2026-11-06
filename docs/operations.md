@@ -119,8 +119,66 @@ rest). A refresh token can stop working without any action in PatientNova.
 - `sweep-pending-meetings` runs every 15 minutes and hands any link still `PENDING` after 30 minutes to the
   provider, so a stuck job never leaves a patient without a confirmation.
 - Recovery: the provider adds any video-call link (Meet, Zoom, ...) by editing the appointment. The
-  patient gets it by email and the linked reminder is re-rendered. To find affected appointments:
+  patient gets it on their channel and the linked reminder is re-rendered. To find affected appointments:
   `GET /v1/appointments/needs-meeting-link` (admins).
+
+## Patient messages and login by WhatsApp
+
+Portal notices and reminders follow each patient's `reminderChannel`, falling back to email, WhatsApp
+and SMS. A patient on WhatsApp who logs in with email gets WhatsApp. Phone login is separate and
+always on while the portal is.
+
+### Templates
+
+All are required at start: the API does not boot without them. In Spanish, `utility` except the code.
+
+| Env var | Used for | Variables |
+|---|---|---|
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID` | Login code (`whatsapp/authentication`, 10 min) | code |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID` | Booked, approved, meeting ready | provider, date, time, place |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID` | Cancelled | provider, date, time |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID` | Rescheduled | provider, previous date and time, new date, new time, place |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID` | Request receipt | provider, date, time |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID` | Request rejected | provider, date, time |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID` | Request expired | provider, date, time |
+| `TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID` | Meeting link (existing template) | provider, link |
+
+A formatted time ends in "a. m."/"p. m.", so a template must not put a full stop right after a time
+variable. The place is the location and address, the meeting link, or "Te enviaremos el enlace pronto".
+
+### Before phone login reaches production
+
+1. Send real WhatsApp codes to the main Colombian carriers. Check delivery, delay and how the
+   sender appears.
+2. In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS
+   reminders. SMS no longer carries login codes.
+3. Counsel confirms the privacy policy covers login codes over WhatsApp, and names Meta. Any
+   text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
+4. Check a full login, booking and message on a real phone.
+
+Phone login has no off switch: the login always offers email and WhatsApp. Dropping a channel is a
+code change in `portalLoginChannels`.
+
+### Limits
+
+| Limit | Value | Change it with |
+|---|---|---|
+| Numbers per day, all providers | 300 | `PORTAL_OTP_PAID_DAILY_CAP` |
+| Numbers per provider per hour | 30 | `PORTAL_OTP_LIMITS.perProviderPaidPerHour` (code) |
+| Sends per number per hour | 3 | `PORTAL_OTP_LIMITS.perPhonePerHour` (code) |
+
+Every code on a phone channel costs money and can be requested anonymously. A hit limit still answers
+the usual 202, so the patient sees no difference, and Sentry records `Portal OTP paid cap reached:
+<phone-cap | provider-paid-cap | paid-daily-cap>`. One `phone-cap` is usually a patient retrying. Many
+`paid-daily-cap` or `provider-paid-cap` events mean number-rotating pumping or a limit set too low:
+check Twilio usage before raising anything. Both shared caps count numbers, not messages, because that
+is what rotating numbers inflates: each number can still receive 3 codes an hour, so the most that can
+be sent is about three times the cap. They can also overshoot slightly under concurrency.
+A non-numeric `PORTAL_OTP_PAID_DAILY_CAP` stops the API at boot, so the cap can never silently vanish.
+
+A number without WhatsApp fails after Twilio accepts the message (63024). Neither the code nor a notice
+learns about it: at login the patient recovers with email, and later the appointment still shows in
+"Mis citas".
 
 ## CSP rollout (Portal)
 

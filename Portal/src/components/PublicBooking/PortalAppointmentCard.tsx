@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtLongDay, localDayOf, locationDetail } from "@/src/utils/publicBooking";
+import { fmtLongDay, localDayOf, locationDetail, PENDING_MEETING_LINK_NOTE } from "@/src/utils/publicBooking";
 import styles from "./Portal.module.css";
 
 const STATUS_LABEL: Record<PortalAppointment[ "status" ], string> = {
@@ -47,7 +47,7 @@ export function PortalAppointmentCard({ appointment: a, timezone, inset = false,
             )}
             {a.meeting?.status === "pending" && (
                 <p className={styles.apptInstructions} data-testid="portal-appointment-meeting-pending">
-                    El enlace de la videollamada llegará a tu correo.
+                    {PENDING_MEETING_LINK_NOTE}
                 </p>
             )}
             {a.location?.instructions && <p className={styles.apptInstructions}>{a.location.instructions}</p>}

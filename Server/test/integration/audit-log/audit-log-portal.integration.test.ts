@@ -4,6 +4,7 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { auditLogRouter } from '../../../src/audit-log/audit-log.routes.js';
 import { auditLogService } from '../../../src/audit-log/audit-log.service.js';
 import { portalActorId, portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
+import { emailContact } from '../../../src/portal/portal-contact.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { logAudit } from '../../../src/audit-log/audit-log.utils.js';
 import { resolvePortalPatient } from '../../../src/portal/patient-resolution.js';
@@ -28,8 +29,8 @@ async function list(query: Record<string, unknown>, ownerId = userId) {
 }
 
 async function portalAudit(ownerId: string, email: string, entityId = randomUUID(), opts: { resolve?: boolean } = {}) {
-  await runInAuditContext(portalPatientAuditContext({ userId: ownerId, email, ipAddress: '203.0.113.7' }), async () => {
-    if (opts.resolve) await resolvePortalPatient({ userId: ownerId, email });
+  await runInAuditContext(portalPatientAuditContext({ userId: ownerId, contact: emailContact(email), ipAddress: '203.0.113.7' }), async () => {
+    if (opts.resolve) await resolvePortalPatient({ userId: ownerId, contact: emailContact(email) });
     await logAudit({
       entityType: EntityType.APPOINTMENT,
       entityId,
@@ -156,7 +157,7 @@ describe('audit-log portalPatientId filter', () => {
     const patient = await createTestPatient(userId);
     await portalAudit(userId, patient.email!, randomUUID(), { resolve: true });
     await runInAuditContext({ actorId: 'provider', actorDisplayName: 'Proveedor', userId, source: ActionSource.API }, async () => {
-      await resolvePortalPatient({ userId, email: patient.email! });
+      await resolvePortalPatient({ userId, contact: emailContact(patient.email!) });
       await logAudit({ entityType: EntityType.PATIENT, entityId: patient.id, userId, actionType: ActionType.UPDATE, description: 'x', required: true });
     });
     const providerRow = await prisma.auditLog.findFirstOrThrow({ where: { userId, source: ActionSource.API } });

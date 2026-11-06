@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { Channel } from '../../generated/prisma/enums.js';
 import { FIFTEEN_MINUTES_MS } from '../utils/config/constants.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
@@ -9,6 +10,7 @@ import { createCaptchaVerifier } from '../captcha/captcha-verifier.js';
 import { PORTAL_COOKIE_NAME, portalCookieOptions } from '../auth/portal-cookie.js';
 import { PORTAL_SESSION_TTL_SECONDS } from '../auth/tokens.js';
 import { portalOtpService } from './portal-otp.service.js';
+import { emailContact, sessionContactView } from './portal-contact.js';
 import { requestOtpSchema, verifyOtpSchema, type RequestOtpBody, type VerifyOtpBody } from './portal-otp.schemas.js';
 
 export const OTP_CAPTCHA_ACTION = 'otp-request';
@@ -21,8 +23,9 @@ export function createOtpRequestRouter(): Router {
     validateBody(requestOtpSchema),
     requireCaptcha(createCaptchaVerifier(), OTP_CAPTCHA_ACTION),
     asyncHandler(async (req: Request, res: Response) => {
-      const { email } = req.body as RequestOtpBody;
-      const result = await portalOtpService.request(String(req.params.slug), email);
+      const body = req.body as RequestOtpBody;
+      const contact = 'phone' in body ? { channel: body.channel, value: body.phone } : emailContact(body.email);
+      const result = await portalOtpService.request(String(req.params.slug), contact);
       res.set('Cache-Control', 'no-store');
       ok(res, result, 202);
     }),
@@ -37,11 +40,16 @@ export function createOtpVerifyRouter(): Router {
     createPublicLimiter({ name: 'otp-verify-ip', windowMs: FIFTEEN_MINUTES_MS, max: 20 }),
     validateBody(verifyOtpSchema),
     asyncHandler(async (req: Request, res: Response) => {
-      const { email, code, challenge } = req.body as VerifyOtpBody;
-      const login = await portalOtpService.verify(String(req.params.slug), email, code, challenge);
+      const body = req.body as VerifyOtpBody;
+      const claimed = 'phone' in body ? { channel: Channel.WHATSAPP, value: body.phone } : emailContact(body.email);
+      const login = await portalOtpService.verify(String(req.params.slug), claimed, body.code, body.challenge);
       res.cookie(PORTAL_COOKIE_NAME, login.token, portalCookieOptions(PORTAL_SESSION_TTL_SECONDS * 1000));
       res.set('Cache-Control', 'no-store');
-      ok(res, { email: login.email, expiresAt: login.expiresAt.toISOString(), csrfToken: login.csrfToken });
+      ok(res, {
+        ...sessionContactView(login.contact),
+        expiresAt: login.expiresAt.toISOString(),
+        csrfToken: login.csrfToken,
+      });
     }),
   );
   return router;

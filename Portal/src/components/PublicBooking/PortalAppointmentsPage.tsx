@@ -12,7 +12,7 @@ import type { PortalAppointment, PortalPendingRequest } from "@/src/types/Portal
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
 import { browserTimezone } from "@/src/utils/TimeUtils";
-import { fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
+import { fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
@@ -63,10 +63,10 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
     if (loading) return <CardSkeleton />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
     if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
-        return <PortalLogin slug={slug} notice={notice} onLoggedIn={() => { setNotice(undefined); refetch(); }} />;
+        return <PortalLogin slug={slug} notice={notice} channels={provider.loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />;
     }
 
-    const sessionKey = `${session.email}|${session.expiresAt}`;
+    const sessionKey = `${session.contact}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
         const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
         return (
@@ -120,7 +120,7 @@ function SignedIn({ slug, provider, session, onLoggedOut, onSessionLost }: Signe
             )}
             {error && <p className={`error-inline ${styles.error}`} role="alert">No pudimos cerrar la sesión. {error}</p>}
             <div className={styles.account}>
-                <span className={styles.muted}>Sesión iniciada como <strong className={styles.email}>{session.email}</strong></span>
+                <span className={styles.muted}>Sesión iniciada como <strong className={styles.email}>{fmtContact(session.contact, session.contactChannel)}</strong></span>
                 <button type="button" className={styles.linkButton} disabled={loading} onClick={() => void onLogout()}>
                     {loading ? "Cerrando…" : "Cerrar sesión"}
                 </button>
@@ -164,7 +164,7 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
                 provider={provider}
                 appointment={rescheduling}
                 timezone={timezone}
-                onDone={() => settle("Tu cita quedó reprogramada. Te enviamos la confirmación a tu correo.")}
+                onDone={() => settle("Tu cita quedó reprogramada. Te enviamos la confirmación.")}
                 onBack={() => setRescheduling(null)}
                 onGone={settle}
                 onSessionLost={onSessionLost}
@@ -239,7 +239,7 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
                         appointment={cancelling}
                         timezone={timezone}
                         onClose={() => setCancelling(null)}
-                        onCancelled={() => settle("Tu cita quedó cancelada. Te enviamos la confirmación a tu correo.")}
+                        onCancelled={() => settle("Tu cita quedó cancelada. Te enviamos la confirmación.")}
                         onGone={settle}
                         onSessionLost={onSessionLost}
                     />

@@ -34,6 +34,7 @@ export function PublicBookingPage({ slug }: { slug: string }) {
 
 const appointmentsPath = (slug: string) => `/book/${encodeURIComponent(slug)}/appointments`;
 const EXTERNAL_LINK = { target: "_blank", rel: "noopener noreferrer" } as const;
+const LOCATION_STEP = "Elige el lugar";
 
 function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvider }) {
     return (
@@ -54,18 +55,23 @@ function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvi
 function BookingView({ slug, provider }: { slug: string; provider: PublicProvider }) {
     const timezone = browserTimezone();
     const [ typeId, setTypeId ] = useState<string | null>(null);
+    const [ locationId, setLocationId ] = useState<string | null>(null);
     const [ booked, setBooked ] = useState<PortalBookingOutcome | null>(null);
 
     const type = provider.types.find((t) => t.id === typeId) ?? provider.types[ 0 ];
     const picker = useSlotPicker(slug, provider, { typeId: type?.id ?? null }, timezone);
     const { slot, notice, error } = picker;
     const pickedStart = slot?.startUtc;
+    const choosesLocation = provider.locations.length > 1;
+    const location = choosesLocation ? provider.locations.find((l) => l.id === locationId) : provider.locations[ 0 ];
+    const locationReady = location !== undefined;
+    const locationStep = useRef<HTMLDivElement>(null);
     const confirmStep = useRef<HTMLDivElement>(null);
     const slotNoticeRef = useRef<HTMLParagraphElement>(null);
 
     useEffect(() => {
-        if (pickedStart) reveal(confirmStep.current);
-    }, [ pickedStart ]);
+        if (pickedStart) reveal(locationReady ? confirmStep.current : locationStep.current);
+    }, [ pickedStart, locationReady ]);
 
     useEffect(() => {
         if (notice) slotNoticeRef.current?.focus();
@@ -75,6 +81,7 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     const bookAnother = () => {
         setBooked(null);
+        setLocationId(null);
         picker.pick(null);
         picker.retry();
     };
@@ -92,7 +99,8 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
     const confirmTitle = provider.approvalRequired ? "Envía tu solicitud" : "Confirma tu cita";
     const typeChosen = typeId !== null || provider.types.length === 1;
-    const currentStep = slot ? 4 : picker.dayChosen ? 3 : typeChosen ? 2 : 1;
+    const steps = [ "Tipo de cita", "Día", "Hora", ...(choosesLocation ? [ LOCATION_STEP ] : []), confirmTitle ];
+    const currentStep = slot ? (location ? steps.length : 4) : picker.dayChosen ? 3 : typeChosen ? 2 : 1;
 
     return (
         <>
@@ -101,11 +109,11 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
             </ProviderHero>
 
             <section className={`dash-card ${styles.flow}`} aria-label="Horarios disponibles">
-                <BookingProgress steps={[ "Tipo de cita", "Día", "Hora", confirmTitle ]} current={currentStep} />
+                <BookingProgress steps={steps} current={currentStep} />
                 {provider.approvalRequired && (
                     <p className={styles.approvalNotice} data-testid="approval-notice">
                         {provider.displayName} confirma cada cita antes de reservarla. Eliges un horario, lo guardamos
-                        para ti y te avisamos por correo cuando la confirme.
+                        para ti y te avisamos cuando la confirme.
                     </p>
                 )}
                 <Step number={1} title="Tipo de cita">
@@ -131,10 +139,24 @@ function BookingView({ slug, provider }: { slug: string; provider: PublicProvide
 
                 <SlotSteps picker={picker} firstStep={2} noticeRef={slotNoticeRef} />
 
-                {slot && type && (
-                    <Step number={4} title={confirmTitle} stepRef={confirmStep}>
-                        <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} slot={slot} timezone={timezone}
-                            onBooked={setBooked} onSlotTaken={picker.slotTaken} />
+                {slot && choosesLocation && (
+                    <Step number={4} title={LOCATION_STEP} stepRef={locationStep}>
+                        <div className={styles.options}>
+                            {provider.locations.map((l) => (
+                                <button key={l.id} type="button" className={styles.option} aria-pressed={l.id === location?.id}
+                                    onClick={() => setLocationId(l.id)}>
+                                    <span className={styles.optionName}>{l.name}</span>
+                                    {locationDetail(l) && <span className={styles.optionMeta}>{locationDetail(l)}</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </Step>
+                )}
+
+                {slot && type && location && (
+                    <Step number={steps.length} title={confirmTitle} stepRef={confirmStep}>
+                        <BookingForm key={slot.startUtc} slug={slug} provider={provider} type={type} location={location} slot={slot}
+                            timezone={timezone} onBooked={setBooked} onSlotTaken={picker.slotTaken} />
                     </Step>
                 )}
             </section>
@@ -243,7 +265,7 @@ function BookingDone({ slug, providerName, appointment, timezone, onBookAnother 
         <section className={`dash-card ${styles.flow} ${styles.done}`} aria-labelledby="booking-done">
             <StateIcon icon={CircleCheck} />
             <h2 id="booking-done" ref={heading} tabIndex={-1} className={styles.doneTitle}>Tu cita quedó reservada</h2>
-            <p className={styles.muted}>Te enviamos la confirmación a tu correo.</p>
+            <p className={styles.muted}>Te enviamos la confirmación.</p>
             <PortalAppointmentCard appointment={appointment} timezone={timezone} inset />
             <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             <Link href={`/book/${encodeURIComponent(slug)}/appointments`} className={`btn-primary ${styles.doneAction}`}>Ver mis citas</Link>
