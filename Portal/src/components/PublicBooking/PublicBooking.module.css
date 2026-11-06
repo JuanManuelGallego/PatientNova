@@ -15,17 +15,117 @@
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 4px;
+  gap: 12px;
+}
+
+/* 128px shows the 256px avatar upload at 2x, so the photo stays sharp on dense screens.
+   A larger circle needs a larger upload. */
+.card {
+  --portrait-size: 128px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--c-gray-100);
+  border-radius: var(--r-4xl);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card-lg);
+}
+
+.portrait,
+.portraitSkeleton {
+  align-self: center;
+  width: var(--portrait-size);
+  height: var(--portrait-size);
+  margin: 28px 0 20px 28px;
+  border-radius: 50%;
+}
+
+.portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  object-position: center 20%;
+  background: var(--c-brand-light);
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: calc(var(--portrait-size) * 0.36);
+  font-weight: 500;
+  color: var(--c-brand);
+}
+
+.intro {
+  align-self: center;
+  min-width: 0;
+  padding: 28px 28px 20px 24px;
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-provider), Georgia, serif;
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--c-gray-900);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .logo {
-  align-self: flex-start;
-  max-height: 44px;
-  max-width: 180px;
+  display: block;
+  max-width: 140px;
+  max-height: 36px;
+  margin-bottom: 12px;
   object-fit: contain;
 }
 
+.role {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--c-gray-700);
+}
+
+.specialty {
+  margin: 2px 0 0;
+  font-size: 15px;
+  color: var(--c-gray-500);
+}
+
+.about {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 0 28px 22px;
+}
+
+.band {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 28px 10px;
+  border-top: 1px solid var(--c-brand-sub);
+  background: var(--c-brand-light);
+}
+
+.card[data-compact] {
+  --portrait-size: 88px;
+}
+
+.card[data-compact] .portrait,
+.card[data-compact] .portraitSkeleton {
+  margin-top: 20px;
+}
+
+.card[data-compact] .intro {
+  padding-top: 20px;
+}
+
+.card[data-compact] .name {
+  font-size: 30px;
+}
+
+/* Kept for the appointments page header, which stays a plain avatar row. */
 .identity {
   display: flex;
   align-items: center;
@@ -47,30 +147,15 @@
   color: var(--c-white);
 }
 
-.name {
-  font-size: 28px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--c-gray-900);
-  margin: 0;
-}
-
 .jobTitle {
   font-size: 16px;
   color: var(--c-gray-500);
   margin: 4px 0 0;
 }
 
-.license {
-  font-size: 14px;
-  color: var(--c-gray-500);
-  margin: 2px 0 0;
-}
-
 .bio {
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--c-gray-700);
   margin: 0;
   white-space: pre-line;
@@ -105,15 +190,16 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px 24px;
 }
 
 .location {
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  min-width: 0;
   font-size: 15px;
   line-height: 1.4;
   color: var(--c-gray-700);
@@ -133,7 +219,7 @@
 
 .address {
   display: block;
-  color: var(--c-gray-500);
+  overflow-wrap: anywhere;
 }
 
 .mapLink {
@@ -149,7 +235,7 @@
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 0 24px;
 }
 
 .contactLink {
@@ -166,6 +252,46 @@
 
 .contactLink:hover {
   text-decoration: underline;
+}
+
+.textButton:focus-visible,
+.mapLink:focus-visible,
+.contactLink:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (max-width: 520px) {
+  .card {
+    --portrait-size: 96px;
+  }
+
+  .card[data-compact] {
+    --portrait-size: 72px;
+  }
+
+  .portrait,
+  .portraitSkeleton {
+    margin: 20px 0 16px 16px;
+  }
+
+  .intro {
+    padding: 20px 16px 16px;
+  }
+
+  .name,
+  .card[data-compact] .name {
+    font-size: 28px;
+  }
+
+  .about {
+    padding: 0 16px 18px;
+  }
+
+  .band {
+    padding: 14px 16px 8px;
+  }
 }
 
 .flow {
@@ -549,13 +675,6 @@
   gap: 8px;
 }
 
-.avatarSkeleton {
-  width: 88px;
-  height: 88px;
-  flex-shrink: 0;
-  border-radius: 50%;
-}
-
 .daySkeleton {
   height: 60px;
   border-radius: var(--r-lg);
@@ -622,10 +741,6 @@
 }
 
 @media (max-width: 420px) {
-  .name {
-    font-size: 24px;
-  }
-
   .avatar {
     width: 72px;
     height: 72px;

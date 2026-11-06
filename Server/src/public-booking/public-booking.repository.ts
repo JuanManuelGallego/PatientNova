@@ -28,7 +28,6 @@ export const publicBookingRepository = {
         minRescheduleNoticeHours: true,
         bio: true,
         specialty: true,
-        professionalLicense: true,
         publicPhone: true,
         publicWhatsapp: true,
       },

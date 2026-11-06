@@ -168,42 +168,47 @@ function ProviderHero({ slug, provider, compact = false, children }: {
     slug: string; provider: PublicProvider; compact?: boolean; children?: React.ReactNode;
 }) {
     const [ logoFailed, setLogoFailed ] = useState(false);
+    const showLocations = provider.locations.length > 0 && !compact;
+    const showContact = Boolean(provider.phone || provider.whatsapp);
     return (
         <section className={styles.hero}>
-            {provider.hasLogo && !logoFailed && (
-                <img className={styles.logo} src={providerImageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
-            )}
-            <div className={styles.identity}>
-                <ProviderAvatar slug={slug} provider={provider} className={styles.avatar} />
-                <div>
-                    <h1 className={styles.name}>{provider.displayName}</h1>
-                    {provider.jobTitle && <p className={styles.jobTitle}>{provider.jobTitle}</p>}
-                    {provider.specialty && <p className={styles.jobTitle}>{provider.specialty}</p>}
-                    {provider.professionalLicense && (
-                        <p className={styles.license}>Tarjeta profesional {provider.professionalLicense}</p>
+            <div className={styles.card} data-compact={compact || undefined}>
+                <ProviderAvatar slug={slug} provider={provider} className={styles.portrait} />
+                <div className={styles.intro}>
+                    {provider.hasLogo && !logoFailed && (
+                        <img className={styles.logo} src={providerImageUrl(slug, "logo")} alt="" onError={() => setLogoFailed(true)} />
                     )}
+                    <h1 className={styles.name}>{provider.displayName}</h1>
+                    {provider.jobTitle && <p className={styles.role}>{provider.jobTitle}</p>}
+                    {provider.specialty && <p className={styles.specialty}>{provider.specialty}</p>}
                 </div>
+                {provider.bio && !compact && (
+                    <div className={styles.about}><ProviderBio bio={provider.bio} /></div>
+                )}
+                {(showLocations || showContact) && (
+                    <div className={styles.band}>
+                        {showLocations && (
+                            <ul className={styles.locations} aria-label="Dónde atiende">
+                                {provider.locations.map((l) => (
+                                    <li key={l.id} className={styles.location}>
+                                        {l.isVirtual
+                                            ? <Video size={18} aria-hidden="true" className={styles.locationIcon} />
+                                            : <MapPin size={18} aria-hidden="true" className={styles.locationIcon} />}
+                                        <span>
+                                            <span className={styles.locationName}>{l.name}</span>
+                                            {locationDetail(l) && <span className={styles.address}>{locationDetail(l)}</span>}
+                                            {!l.isVirtual && l.address && (
+                                                <a href={mapUrl(l.address)} {...EXTERNAL_LINK} className={styles.mapLink}>Ver en el mapa</a>
+                                            )}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <ProviderContact provider={provider} />
+                    </div>
+                )}
             </div>
-            {provider.bio && !compact && <ProviderBio bio={provider.bio} />}
-            {provider.locations.length > 0 && !compact && (
-                <ul className={styles.locations} aria-label="Dónde atiende">
-                    {provider.locations.map((l) => (
-                        <li key={l.id} className={styles.location}>
-                            {l.isVirtual
-                                ? <Video size={18} aria-hidden="true" className={styles.locationIcon} />
-                                : <MapPin size={18} aria-hidden="true" className={styles.locationIcon} />}
-                            <span>
-                                <span className={styles.locationName}>{l.name}</span>
-                                {locationDetail(l) && <span className={styles.address}>{locationDetail(l)}</span>}
-                                {!l.isVirtual && l.address && (
-                                    <a href={mapUrl(l.address)} {...EXTERNAL_LINK} className={styles.mapLink}>Ver en el mapa</a>
-                                )}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <ProviderContact provider={provider} />
             {children}
         </section>
     );
@@ -301,10 +306,10 @@ function RequestSent({ slug, providerName, request, timezone, onBookAnother }: {
 function ProfileSkeleton() {
     return (
         <section className={styles.hero} aria-busy="true" aria-label="Cargando">
-            <div className={styles.identity}>
-                <div className={`skeleton-bar ${styles.avatarSkeleton}`} />
-                <div className={styles.skeletonLines}>
-                    <div className="skeleton-bar" style={{ width: "70%", height: 24 }} />
+            <div className={styles.card}>
+                <div className={`skeleton-bar ${styles.portraitSkeleton}`} />
+                <div className={`${styles.intro} ${styles.skeletonLines}`}>
+                    <div className="skeleton-bar" style={{ width: "70%", height: 32 }} />
                     <div className="skeleton-bar" style={{ width: "40%" }} />
                 </div>
             </div>

@@ -4,7 +4,6 @@ export interface PublicProvider {
     displayName: string;
     jobTitle: string | null;
     specialty: string | null;
-    professionalLicense: string | null;
     bio: string | null;
     phone: string | null;
     whatsapp: string | null;

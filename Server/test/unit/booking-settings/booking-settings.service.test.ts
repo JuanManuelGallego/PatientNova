@@ -53,7 +53,6 @@ const settings = {
   minRescheduleNoticeHours: 0,
   bio: null,
   specialty: null,
-  professionalLicense: null,
   publicPhone: null,
   publicWhatsapp: null,
 };

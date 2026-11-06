@@ -17,7 +17,6 @@ export const bookingSettingsSelect = {
   minRescheduleNoticeHours: true,
   bio: true,
   specialty: true,
-  professionalLicense: true,
   publicPhone: true,
   publicWhatsapp: true,
 } as const;
@@ -42,7 +41,7 @@ export const bookingSettingsRepository = {
       [
         'bookingSlug', 'bookingEnabled', 'bookingApprovalMode', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
         'maxPatientReschedules', 'minRescheduleNoticeHours',
-        'bio', 'specialty', 'professionalLicense', 'publicPhone', 'publicWhatsapp',
+        'bio', 'specialty', 'publicPhone', 'publicWhatsapp',
       ],
     );
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });

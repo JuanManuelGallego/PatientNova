@@ -11,7 +11,6 @@ const MINUTES_PER_DAY = 1440;
 const MINUTE_STEP = 5;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
-export const MAX_LICENSE_LENGTH = 60;
 
 const publicText = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable().optional();
 const publicPhone = z.string().trim().regex(e164Regex).or(z.literal('')).transform((v) => v || null).nullable().optional();
@@ -41,7 +40,6 @@ export const updateBookingSettingsSchema = z
     minRescheduleNoticeHours: z.number().int().min(0).max(MAX_RESCHEDULE_NOTICE_HOURS).optional(),
     bio: publicText(MAX_BIO_LENGTH),
     specialty: publicText(MAX_SPECIALTY_LENGTH),
-    professionalLicense: publicText(MAX_LICENSE_LENGTH),
     publicPhone,
     publicWhatsapp: publicPhone,
   })

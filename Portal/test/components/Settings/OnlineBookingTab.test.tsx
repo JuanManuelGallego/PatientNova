@@ -68,7 +68,6 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         minRescheduleNoticeHours: 0,
         bio: null,
         specialty: null,
-        professionalLicense: null,
         publicPhone: null,
         publicWhatsapp: null,
         readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
@@ -545,7 +544,7 @@ describe("OnlineBookingTab: public profile", () => {
         await settle();
 
         expect(updateSettings).toHaveBeenCalledWith({
-            specialty: "Psicología", professionalLicense: null, bio: "Atiendo adultos", publicPhone: "+573001112222", publicWhatsapp: null,
+            specialty: "Psicología", bio: "Atiendo adultos", publicPhone: "+573001112222", publicWhatsapp: null,
         });
         expect(screen.getByTestId("online-booking-profile-save-state")).toHaveTextContent("Guardado");
     });

@@ -27,7 +27,6 @@ body:json {
     "minRescheduleNoticeHours": 0,
     "bio": "Atiendo adultos y parejas.",
     "specialty": "Psicología clínica",
-    "professionalLicense": "TP 12345",
     "publicPhone": "+573001112222",
     "publicWhatsapp": "+573001112222"
   }
@@ -40,7 +39,7 @@ docs {
   `maxPatientReschedules` (0-10, 0 = patients cannot reschedule online) caps portal reschedules per
   appointment; `minRescheduleNoticeHours` (0-168) refuses a reschedule once the current start is that
   close. Cancelling has no cutoff.
-  `bio` (600), `specialty` (120), `professionalLicense` (60), `publicPhone` and `publicWhatsapp` (E.164)
+  `bio` (600), `specialty` (120), `publicPhone` and `publicWhatsapp` (E.164)
   appear on the public booking page. Empty string or null clears them. They are separate from the
   profile's `phoneNumber`/`whatsappNumber`, which stay private.
 }
