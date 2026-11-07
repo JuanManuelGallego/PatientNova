@@ -21,6 +21,11 @@ export const patientConsentRepository = {
     });
   },
 
+  /** A revocation made after `since`: a consent given before it must not come back. */
+  async findRevokedSince(patientId: string, since: Date, tx: TransactionClient) {
+    return tx.patientConsent.findFirst({ where: { patientId, revokedAt: { gte: since } }, select: { id: true } });
+  },
+
   async findAllActive(patientId: string, tx: TransactionClient) {
     return tx.patientConsent.findMany({ where: { patientId, revokedAt: null } });
   },

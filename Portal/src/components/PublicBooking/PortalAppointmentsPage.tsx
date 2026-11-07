@@ -11,6 +11,7 @@ import { useCancelAppointment, useCancelRequest, usePortalAppointments } from "@
 import type { PortalAppointment, PortalPendingRequest } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
+import { accessNotice } from "@/src/config/consentText";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
 import { fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
@@ -64,7 +65,12 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
     if (loading) return <CardSkeleton />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
     if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
-        return <PortalLogin slug={slug} notice={notice} channels={provider.loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />;
+        return (
+            <>
+                <PortalLogin slug={slug} notice={notice} channels={provider.loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />
+                <p className={styles.muted} data-testid="access-notice">{accessNotice(provider)}</p>
+            </>
+        );
     }
 
     const sessionKey = `${session.contact}|${session.expiresAt}`;
@@ -73,7 +79,7 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
         return (
             <>
                 <PendingRequestsOnly onSessionLost={onSessionLost} />
-                <PortalConsent onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
+                <PortalConsent provider={provider} onAccepted={() => setConsentedFor(sessionKey)} onSessionLost={onSessionLost} />
             </>
         );
     }

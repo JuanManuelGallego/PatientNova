@@ -55,8 +55,11 @@ const settings = {
   specialty: null,
   publicPhone: null,
   publicWhatsapp: null,
+  legalName: null,
+  privacyContact: null,
+  contactHours: null,
 };
-const ready = { hasSlug: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
+const ready = { hasSlug: true, hasLegalIdentity: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -120,7 +123,7 @@ describe('bookingSettingsService.updateSettings', () => {
   });
 
   it('allows disabling even when not ready', async () => {
-    repo.getReadiness.mockResolvedValue({ hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false });
+    repo.getReadiness.mockResolvedValue({ hasSlug: false, hasLegalIdentity: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false });
     await expect(bookingSettingsService.updateSettings('user-1', { bookingEnabled: false })).resolves.toBeDefined();
   });
 

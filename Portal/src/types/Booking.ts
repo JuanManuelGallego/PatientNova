@@ -2,6 +2,7 @@ export type BookingApprovalMode = "AUTO_CONFIRM" | "REQUIRE_APPROVAL";
 
 export interface BookingReadiness {
     hasSlug: boolean;
+    hasLegalIdentity: boolean;
     hasAvailability: boolean;
     hasBookableType: boolean;
     hasBookableLocation: boolean;
@@ -23,6 +24,9 @@ export interface BookingSettings {
     specialty: string | null;
     publicPhone: string | null;
     publicWhatsapp: string | null;
+    legalName: string | null;
+    privacyContact: string | null;
+    contactHours: string | null;
     readiness: BookingReadiness;
     live: boolean;
 }
@@ -30,12 +34,14 @@ export interface BookingSettings {
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
     "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
     | "maxPatientReschedules" | "minRescheduleNoticeHours"
-    | "bio" | "specialty" | "publicPhone" | "publicWhatsapp">>;
+    | "bio" | "specialty" | "publicPhone" | "publicWhatsapp" | "legalName" | "privacyContact" | "contactHours">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
+export const MAX_LEGAL_TEXT_LENGTH = 200;
+export const MAX_CONTACT_HOURS_LENGTH = 120;
 
 export interface AvailabilityRule {
     weekday: number;

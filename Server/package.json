@@ -24,6 +24,8 @@
     "pii:backfill": "tsx src/utils/prisma/backfill-pii-cli.ts",
     "consent:revoke": "tsx src/patient-consents/revoke-consent-cli.ts",
     "db:verify-restore": "tsx src/utils/prisma/verify-restore-cli.ts",
+    "patient:erase": "tsx src/patients/patient-erase-cli.ts",
+    "clinic:export": "tsx src/patients/clinic-export-cli.ts",
     "db:seed-e2e": "tsx src/utils/prisma/seed-e2e.ts",
     "db:format": "pnpm exec prisma db push",
     "db:wipe": "pnpm exec prisma migrate reset --force --skip-seed"

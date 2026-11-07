@@ -170,6 +170,24 @@ describe('GET /v1/booking-requests/:id', () => {
 });
 
 describe('POST /v1/booking-requests/:id/approve', () => {
+  it('refuses to restore a consent revoked after the request was made', async () => {
+    const p = await provider();
+    const email = unique('revocada@test.local').toLowerCase();
+    const patient = await createTestPatient(p.id, { email });
+    const consent = await prisma.patientConsent.create({
+      data: { patientId: patient.id, userId: p.id, kind: ConsentKind.DATA_PROCESSING, policyVersion: PRIVACY_POLICY_VERSION, acceptedAt: new Date(Date.now() - HOUR) },
+    });
+    const { id } = await seedRequest(p, { email });
+    await prisma.patientConsent.update({ where: { id: consent.id }, data: { revokedAt: new Date() } });
+
+    const res = await approve(p, id);
+
+    expect(res.status).toBe(409);
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id } })).status).toBe(BookingRequestStatus.PENDING);
+    expect(await prisma.patientConsent.count({ where: { patientId: patient.id, revokedAt: null } })).toBe(0);
+    expect(await prisma.appointment.count({ where: { patientId: patient.id } })).toBe(0);
+  });
+
   it('creates patient, consent (original time) and appointment atomically, then confirms the patient', async () => {
     const p = await provider();
     const req = await seedRequest(p);

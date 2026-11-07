@@ -30,6 +30,9 @@ export const publicBookingRepository = {
         specialty: true,
         publicPhone: true,
         publicWhatsapp: true,
+        legalName: true,
+        privacyContact: true,
+        contactHours: true,
       },
     });
   },

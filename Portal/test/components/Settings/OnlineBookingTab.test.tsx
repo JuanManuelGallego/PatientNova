@@ -70,13 +70,16 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         specialty: null,
         publicPhone: null,
         publicWhatsapp: null,
-        readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
+        legalName: null,
+        privacyContact: null,
+        contactHours: null,
+        readiness: { hasSlug: false, hasLegalIdentity: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
         live: false,
         ...overrides,
     };
 }
 
-const READY = { hasSlug: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
+const READY = { hasSlug: true, hasLegalIdentity: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
 const WITH_LINK = { bookingSlug: "dra", bookingUrl: "https://app.test/book/dra" };
 
 const renderTab = () => render(<FocusTrapProvider><OnlineBookingTab /></FocusTrapProvider>);
@@ -173,7 +176,7 @@ describe("OnlineBookingTab: status", () => {
         await user.click(screen.getByTestId("availability-add-1"));
         await settle();
         const readiness = screen.getByTestId("online-booking-readiness");
-        expect(within(readiness).getAllByText("(listo)")).toHaveLength(3);
+        expect(within(readiness).getAllByText("(listo)")).toHaveLength(4);
     });
 
     it("says so when readiness can't be refreshed after saving availability", async () => {
@@ -545,6 +548,7 @@ describe("OnlineBookingTab: public profile", () => {
 
         expect(updateSettings).toHaveBeenCalledWith({
             specialty: "Psicología", bio: "Atiendo adultos", publicPhone: "+573001112222", publicWhatsapp: null,
+            legalName: null, privacyContact: null, contactHours: null,
         });
         expect(screen.getByTestId("online-booking-profile-save-state")).toHaveTextContent("Guardado");
     });

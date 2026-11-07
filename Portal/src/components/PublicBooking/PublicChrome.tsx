@@ -15,7 +15,8 @@ export function PublicFooter() {
                 <nav aria-label="Legal y soporte">
                     <ul className={styles.footerLinks}>
                         <li><a href="/privacy-policy" {...LEGAL_LINK_TARGET}>Política de privacidad</a></li>
-                        <li><a href="/terms-of-service" {...LEGAL_LINK_TARGET}>Términos de servicio</a></li>
+                        <li><a href="/patient-terms" {...LEGAL_LINK_TARGET}>Condiciones del portal</a></li>
+                        <li><a href="/terms-of-service" {...LEGAL_LINK_TARGET}>Términos para profesionales</a></li>
                         <li><a href="mailto:support@patientnova.net">Soporte</a></li>
                     </ul>
                 </nav>

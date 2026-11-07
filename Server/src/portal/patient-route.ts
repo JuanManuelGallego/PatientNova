@@ -12,6 +12,7 @@ export const patientRouteSelect = {
   whatsappNumber: true,
   whatsappUnverified: true,
   smsNumber: true,
+  messagesStoppedAt: true,
 } as const;
 
 export interface PatientRouteFields {
@@ -20,6 +21,7 @@ export interface PatientRouteFields {
   whatsappNumber: string | null;
   whatsappUnverified: boolean;
   smsNumber: string | null;
+  messagesStoppedAt?: Date | null;
 }
 
 const FALLBACK_ORDER = [ Channel.EMAIL, Channel.WHATSAPP, Channel.SMS ];
@@ -36,6 +38,7 @@ function addressFor(patient: PatientRouteFields, channel: Channel): string | nul
 }
 
 export function resolvePatientRoute(patient: PatientRouteFields): PatientRoute | null {
+  if (patient.messagesStoppedAt) return null;
   for (const channel of [ patient.reminderChannel, ...FALLBACK_ORDER ]) {
     const to = addressFor(patient, channel);
     if (to) return { channel, to };

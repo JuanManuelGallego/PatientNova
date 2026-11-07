@@ -7,6 +7,7 @@ export interface PublicProvider {
     bio: string | null;
     phone: string | null;
     whatsapp: string | null;
+    legal: { name: string; privacyContact: string | null; contactHours: string | null } | null;
     hasAvatar: boolean;
     hasLogo: boolean;
     timezone: string;

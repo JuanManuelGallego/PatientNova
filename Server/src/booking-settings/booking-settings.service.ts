@@ -22,6 +22,7 @@ const MINUTES_PER_DAY = 1440;
 
 const READINESS_KEYS: Record<keyof BookingReadiness, BookingReadinessKey> = {
   hasSlug: 'slug',
+  hasLegalIdentity: 'legalIdentity',
   hasAvailability: 'availability',
   hasBookableType: 'bookableType',
   hasBookableLocation: 'bookableLocation',

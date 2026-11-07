@@ -137,6 +137,33 @@ date in the checklist above.
 Patient data is sensitive personal data under Ley 1581 de 2012: store dumps only encrypted and
 restrict access.
 
+## Erasure and export
+
+Clinical records must generally be kept, so most deletion requests end in restricted access. Run these only after the clinic approves, with the production environment.
+
+### Erasure
+
+```bash
+pnpm run patient:erase <patientId>            # reports what would go, changes nothing
+pnpm run patient:erase <patientId> --confirm  # one transaction, cannot be undone
+```
+
+It removes the patient, medical record, appointments, reminders, consents and booking requests from their contacts, redacts their audit rows and writes one `DELETE` audit row with no personal data. Then:
+
+1. Ask vendors to remove what they hold and you can reach: Brevo contacts and Twilio message logs.
+2. Add the patient id to the erasure register in the request log, outside the product. Backups keep the data for up to 30 days.
+3. **After any restore, rerun `patient:erase --confirm` for every id in that register** before the data serves anyone. Do the same with `consent:revoke` for revocations made after the backup.
+
+### Clinic export
+
+A clinic leaving the service gets its patients, appointments, reminders, consents and medical records as JSON, soft-deleted rows included. It is readable patient data, so the command refuses to print to a terminal. Encrypt it with a key the clinic gave you:
+
+```bash
+pnpm --silent run clinic:export <clinicUserId> | age --recipient age1... --output clinic-export.json.age
+```
+
+Open it once with the clinic to confirm it is readable and complete before anything is deleted.
+
 ## Error tracking (Sentry, optional)
 
 - Sentry org `juanmanuelgallego`, projects `patientnova-server` and `patientnova-portal`.
