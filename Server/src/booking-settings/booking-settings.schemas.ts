@@ -11,6 +11,8 @@ const MINUTES_PER_DAY = 1440;
 const MINUTE_STEP = 5;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
+export const MAX_LEGAL_TEXT_LENGTH = 200;
+export const MAX_CONTACT_HOURS_LENGTH = 120;
 
 const publicText = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable().optional();
 const publicPhone = z.string().trim().regex(e164Regex).or(z.literal('')).transform((v) => v || null).nullable().optional();
@@ -42,6 +44,9 @@ export const updateBookingSettingsSchema = z
     specialty: publicText(MAX_SPECIALTY_LENGTH),
     publicPhone,
     publicWhatsapp: publicPhone,
+    legalName: publicText(MAX_LEGAL_TEXT_LENGTH),
+    privacyContact: publicText(MAX_LEGAL_TEXT_LENGTH),
+    contactHours: publicText(MAX_CONTACT_HOURS_LENGTH),
   })
   .refine(
     (d) => Object.keys(d).length > 0,

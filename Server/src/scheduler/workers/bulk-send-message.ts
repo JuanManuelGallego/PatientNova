@@ -9,6 +9,7 @@ import { logAudit } from '../../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
+import { cancelQueuedReminder } from '../cancel-queued-reminder.js';
 
 const JOB_CTX = { actorId: 'bulk-send-worker', actorDisplayName: 'Bulk Send Worker' };
 
@@ -19,7 +20,10 @@ export async function bulkSendWorker([job]: Array<{
   if (!job) return;
   const { reminderId } = job.data;
 
-  const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
+  const reminder = await prisma.reminder.findUnique({
+    where: { id: reminderId },
+    include: { patient: { select: { messagesStoppedAt: true } } },
+  });
   if (!reminder) {
     logger.warn({ reminderId }, 'Bulk send reminder not found — skipping');
     return;
@@ -27,6 +31,11 @@ export async function bulkSendWorker([job]: Array<{
 
   if (reminder.status !== ReminderStatus.PENDING || reminder.isDeleted) {
     logger.debug({ reminderId, status: reminder.status }, 'Bulk send reminder no longer pending — skipping');
+    return;
+  }
+
+  if (reminder.patient.messagesStoppedAt) {
+    await cancelQueuedReminder(reminder, 'Recordatorio cancelado porque el paciente detuvo los mensajes', JOB_CTX);
     return;
   }
 

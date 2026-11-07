@@ -16,7 +16,8 @@ describe("public booking chrome", () => {
     render(<PublicFooter />);
     const legal = screen.getByRole("navigation", { name: "Legal y soporte" });
     expect(within(legal).getByRole("link", { name: "Política de privacidad" })).toHaveAttribute("href", "/privacy-policy");
-    expect(within(legal).getByRole("link", { name: "Términos de servicio" })).toHaveAttribute("href", "/terms-of-service");
+    expect(within(legal).getByRole("link", { name: "Términos para profesionales" })).toHaveAttribute("href", "/terms-of-service");
+    expect(within(legal).getByRole("link", { name: "Condiciones del portal" })).toHaveAttribute("href", "/patient-terms");
     expect(within(legal).getByRole("link", { name: "Soporte" })).toHaveAttribute("href", "mailto:support@patientnova.net");
   });
 

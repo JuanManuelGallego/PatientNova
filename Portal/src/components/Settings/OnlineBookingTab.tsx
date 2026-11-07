@@ -22,6 +22,8 @@ import {
     MAX_BIO_LENGTH,
     MAX_PATIENT_RESCHEDULES,
     MAX_RESCHEDULE_NOTICE_HOURS,
+    MAX_CONTACT_HOURS_LENGTH,
+    MAX_LEGAL_TEXT_LENGTH,
     MAX_SPECIALTY_LENGTH,
     SLOT_INTERVAL_OPTIONS,
 } from "@/src/types/Booking";
@@ -48,10 +50,12 @@ import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
 const WORKWEEK = [ 1, 2, 3, 4, 5 ];
 const LINK_SECTION_ID = "online-booking-link";
+const PROFILE_SECTION_ID = "online-booking-profile";
 const AVAILABILITY_SECTION_ID = "online-booking-availability";
 
 const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string; fixLabel: string; href: string }> = [
     { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
+    { key: "hasLegalIdentity", label: "Responsable de los datos y contacto directo", fixLabel: "Completar perfil", href: `#${PROFILE_SECTION_ID}` },
     { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
     { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: "/settings?tab=Tipos+de+Cita" },
     { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
@@ -685,7 +689,15 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
     );
 }
 
-type ProfileForm = { specialty: string; bio: string; publicPhone: string; publicWhatsapp: string };
+type ProfileForm = {
+    specialty: string;
+    bio: string;
+    publicPhone: string;
+    publicWhatsapp: string;
+    legalName: string;
+    privacyContact: string;
+    contactHours: string;
+};
 
 function profileFormOf(s: BookingSettings): ProfileForm {
     return {
@@ -693,6 +705,9 @@ function profileFormOf(s: BookingSettings): ProfileForm {
         bio: s.bio ?? "",
         publicPhone: s.publicPhone ?? "",
         publicWhatsapp: s.publicWhatsapp ?? "",
+        legalName: s.legalName ?? "",
+        privacyContact: s.privacyContact ?? "",
+        contactHours: s.contactHours ?? "",
     };
 }
 
@@ -710,6 +725,9 @@ function parseProfile(form: ProfileForm) {
         bio: form.bio.trim() || null,
         publicPhone: publicPhone || null,
         publicWhatsapp: publicWhatsapp || null,
+        legalName: form.legalName.trim() || null,
+        privacyContact: form.privacyContact.trim() || null,
+        contactHours: form.contactHours.trim() || null,
     } satisfies BookingSettingsUpdate;
     return { body, errors, invalid: Object.values(errors).some(Boolean) };
 }
@@ -748,13 +766,13 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
     }
 
     return (
-        <div className="dash-card">
+        <div className="dash-card" id={PROFILE_SECTION_ID}>
             <CardHeader title="Perfil público">
                 <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-profile-save-state" />
             </CardHeader>
             <div className="dash-card__body form-stack" data-testid="online-booking-profile">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
-                    Opcional. Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
+                    Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
                 </span>
                 <label className="form-label">
                     Especialidad
@@ -772,6 +790,24 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
                     {phoneField("publicPhone", "Teléfono público", "Es independiente del teléfono de tu perfil.", "online-booking-public-phone")}
                     {phoneField("publicWhatsapp", "WhatsApp público", "Abre un chat contigo desde tu página de reservas.", "online-booking-public-whatsapp")}
                 </div>
+                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
+                    Obligatorio para abrir las reservas: el paciente ve quién responde por sus datos y cómo contactarte sin usar el portal. Agrega también un teléfono o WhatsApp público.
+                </span>
+                <label className="form-label">
+                    Nombre legal del responsable
+                    <input className="form-input" maxLength={MAX_LEGAL_TEXT_LENGTH} placeholder="Tu nombre completo o el de tu consultorio"
+                        value={form.legalName} onChange={(e) => change({ legalName: e.target.value })} data-testid="online-booking-legal-name" />
+                </label>
+                <label className="form-label">
+                    Contacto de privacidad
+                    <input className="form-input" maxLength={MAX_LEGAL_TEXT_LENGTH} placeholder="Correo o teléfono para solicitudes sobre datos"
+                        value={form.privacyContact} onChange={(e) => change({ privacyContact: e.target.value })} data-testid="online-booking-privacy-contact" />
+                </label>
+                <label className="form-label">
+                    Horario de atención directa
+                    <input className="form-input" maxLength={MAX_CONTACT_HOURS_LENGTH} placeholder="Lunes a viernes, 8:00 a 17:00"
+                        value={form.contactHours} onChange={(e) => change({ contactHours: e.target.value })} data-testid="online-booking-contact-hours" />
+                </label>
                 {autosave.error && <ErrorLine message={autosave.error} />}
             </div>
         </div>

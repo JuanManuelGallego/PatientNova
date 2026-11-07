@@ -10,6 +10,7 @@ import { runInAuditContext } from '../../audit-log/audit-log-context.js';
 import { EntityType, ActionType, ActionSource } from '../../../generated/prisma/enums.ts';
 import { sendReminderFailureAlert } from '../../reminders/reminder-failure-alert.js';
 import { ACTIVE_STATUSES } from '../../appointments/appointment-status.js';
+import { cancelQueuedReminder } from '../cancel-queued-reminder.js';
 
 const JOB_CTX = { actorId: 'scheduler', actorDisplayName: 'Scheduler Worker' };
 
@@ -23,7 +24,10 @@ export async function sendReminderWorker([ job ]: Array<{
 
   const reminder = await prisma.reminder.findUnique({
     where: { id: reminderId },
-    include: { appointment: { select: { status: true, isDeleted: true } } },
+    include: {
+      appointment: { select: { status: true, isDeleted: true } },
+      patient: { select: { messagesStoppedAt: true } },
+    },
   });
   if (!reminder) {
     logger.warn({ reminderId }, 'Reminder not found — skipping');
@@ -35,30 +39,17 @@ export async function sendReminderWorker([ job ]: Array<{
     return;
   }
 
+  if (reminder.patient.messagesStoppedAt) {
+    await cancelQueuedReminder(reminder, 'Recordatorio cancelado porque el paciente detuvo los mensajes', JOB_CTX);
+    logger.info({ reminderId }, 'Patient stopped messages — reminder cancelled');
+    return;
+  }
+
   // Defense in depth: cancel paths mark the reminder CANCELLED, but a queued job must never
   // remind a patient of an appointment that was cancelled, completed or deleted. Settle it as
   // CANCELLED so it does not stay PENDING forever.
   if (reminder.appointment && (reminder.appointment.isDeleted || !ACTIVE_STATUSES.has(reminder.appointment.status))) {
-    await prisma.$transaction(async (tx) => {
-      const { count } = await tx.reminder.updateMany({
-        where: { id: reminderId, status: ReminderStatus.PENDING },
-        data: { status: ReminderStatus.CANCELLED },
-      });
-      if (count === 0) return;
-      await runInAuditContext(JOB_CTX, () => logAudit({
-        entityType: EntityType.REMINDER,
-        entityId: reminderId,
-        actionType: ActionType.UPDATE,
-        source: ActionSource.JOB,
-        description: 'Recordatorio cancelado porque la cita ya no está activa',
-        affectedFields: [ 'status' ],
-        fieldsBefore: { status: ReminderStatus.PENDING },
-        fieldsAfter: { status: ReminderStatus.CANCELLED },
-        userId: reminder.userId,
-        tx,
-        required: true,
-      }));
-    });
+    await cancelQueuedReminder(reminder, 'Recordatorio cancelado porque la cita ya no está activa', JOB_CTX);
     logger.info({ reminderId, appointmentStatus: reminder.appointment.status }, 'Linked appointment no longer active — reminder cancelled');
     return;
   }

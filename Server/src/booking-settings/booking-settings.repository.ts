@@ -19,10 +19,14 @@ export const bookingSettingsSelect = {
   specialty: true,
   publicPhone: true,
   publicWhatsapp: true,
+  legalName: true,
+  privacyContact: true,
+  contactHours: true,
 } as const;
 
 export interface BookingReadiness {
   hasSlug: boolean;
+  hasLegalIdentity: boolean;
   hasAvailability: boolean;
   hasBookableType: boolean;
   hasBookableLocation: boolean;
@@ -41,7 +45,7 @@ export const bookingSettingsRepository = {
       [
         'bookingSlug', 'bookingEnabled', 'bookingApprovalMode', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
         'maxPatientReschedules', 'minRescheduleNoticeHours',
-        'bio', 'specialty', 'publicPhone', 'publicWhatsapp',
+        'bio', 'specialty', 'publicPhone', 'publicWhatsapp', 'legalName', 'privacyContact', 'contactHours',
       ],
     );
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });
@@ -70,13 +74,19 @@ export const bookingSettingsRepository = {
 
   async getReadiness(userId: string, slug: string | null, tx?: TransactionClient): Promise<BookingReadiness> {
     const client = tx ?? prisma;
-    const [ rules, types, locations ] = await Promise.all([
+    const [ identity, rules, types, locations ] = await Promise.all([
+      client.user.findUnique({
+        where: { id: userId },
+        select: { legalName: true, privacyContact: true, contactHours: true, publicPhone: true, publicWhatsapp: true },
+      }),
       client.availabilityRule.count({ where: { userId } }),
       client.appointmentType.count({ where: { userId, bookableOnline: true, isActive: true, isDeleted: false } }),
       client.appointmentLocation.count({ where: { userId, bookableOnline: true, isActive: true, isDeleted: false } }),
     ]);
     return {
       hasSlug: slug !== null,
+      // The alternative to the portal is what makes it voluntary, so a way to reach the clinic is part of this.
+      hasLegalIdentity: !!(identity?.legalName && identity.privacyContact && identity.contactHours && (identity.publicPhone || identity.publicWhatsapp)),
       hasAvailability: rules > 0,
       hasBookableType: types > 0,
       hasBookableLocation: locations > 0,

@@ -33,6 +33,7 @@ body:json {
 }
 
 docs {
+  `legalName`, `privacyContact` and `contactHours` are public. With a public phone or WhatsApp they are required before booking can go live (`legalIdentity` in the 422).
   `bookingApprovalMode`: `AUTO_CONFIRM` confirms portal bookings at once; `REQUIRE_APPROVAL` turns each
   one into a pending request that holds its slot (202) until the provider answers it in Booking Requests.
   Pending requests survive a switch back to `AUTO_CONFIRM`.

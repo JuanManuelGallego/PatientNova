@@ -1,6 +1,6 @@
 import { ApiError } from '../utils/errors/errors.js';
 
-export type BookingReadinessKey = 'slug' | 'availability' | 'bookableType' | 'bookableLocation';
+export type BookingReadinessKey = 'slug' | 'legalIdentity' | 'availability' | 'bookableType' | 'bookableLocation';
 
 export class BookingSlugTakenError extends ApiError {
   constructor() {

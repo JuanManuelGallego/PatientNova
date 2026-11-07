@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import Link from "next/link";
 import { ApiClientError } from "@/src/api/base/apiClients";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { usePortalSession } from "@/src/api/portal/usePortalSession";
@@ -13,6 +12,8 @@ import { ErrorState } from "./PublicStates";
 import { PortalLogin, SESSION_LOST_NOTICE, useLoginDraft } from "./PortalLogin";
 import { StepScreen } from "./StepScreen";
 import type { BookingStep } from "./useBookingFlow";
+import { accessNotice } from "@/src/config/consentText";
+import { ConsentLabel, ConsentNotice } from "./ConsentNotice";
 import portal from "./Portal.module.css";
 import styles from "./BookingFlow.module.css";
 
@@ -72,7 +73,7 @@ export function PatientSteps({ slug, provider, type, location, slot, timezone, s
                         <>
                             <PortalLogin slug={slug} embedded hideTitle draft={login} lead={LOGIN_LEAD} notice={notice} channels={provider.loginChannels}
                                 onLoggedIn={() => { setNotice(undefined); refetch(); }} />
-                            <p className={styles.quiet}>Tus datos están protegidos según la Ley 1581 de 2012.</p>
+                            <p className={styles.quiet} data-testid="access-notice">{accessNotice(provider)}</p>
                         </>
                     )}
             </StepScreen>
@@ -228,18 +229,16 @@ function PatientDetails({ screen, contact, contactChannel, provider, typeId, loc
                         {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
                     </div>
                 )}
+                <ConsentNotice provider={provider} />
                 <div>
                     <label className={portal.checkbox}>
                         <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => onForm({ consent: e.target.checked })}
                             aria-invalid={shown.consent || undefined} aria-describedby={shown.consent ? errorId("consent") : undefined} />
-                        <span>
-                            Acepto el tratamiento de mis datos personales según la{" "}
-                            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer">Política de privacidad</Link>.
-                        </span>
+                        <ConsentLabel provider={provider} />
                     </label>
                     {shown.consent && (
                         <span id={errorId("consent")} className={`${portal.fieldError} ${portal.checkboxError}`}>
-                            Acepta la política de privacidad para reservar.
+                            Marca la autorización para continuar, o contacta directamente a la clínica.
                         </span>
                     )}
                 </div>

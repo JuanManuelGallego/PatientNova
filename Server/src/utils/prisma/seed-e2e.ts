@@ -132,6 +132,8 @@ const BOOKABLE = { isDeleted: false, isActive: true, bookableOnline: true } as c
 async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
   const booking = {
     bookingSlug: seed.slug, bookingEnabled: true, bookingApprovalMode: seed.approvalMode,
+    legalName: 'Consultorio E2E S.A.S.', privacyContact: 'privacidad@example.com', contactHours: 'Lunes a viernes, 8:00 a 17:00',
+    publicPhone: '+573001234567',
     slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60,
     reminderChannel: Channel.EMAIL, reminderActive: true,
   };

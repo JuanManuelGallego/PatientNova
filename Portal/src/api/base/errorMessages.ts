@@ -44,6 +44,7 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^request not found$/i, "Esta solicitud ya no está pendiente: fue respondida o venció. Actualizamos la lista." ],
     [ /reschedule unavailable/i, "Esta cita ya no se puede reprogramar en línea. Comunícate con el consultorio." ],
     [ /new time must differ/i, "Elige un horario distinto al de tu cita actual." ],
+    [ /^consent was revoked after this request$/i, "El paciente revocó su autorización después de esta solicitud. Contáctalo antes de agendar." ],
     [ /^booking request is no longer pending$/i, "Esta solicitud ya no está pendiente: fue respondida, cancelada o venció. Actualizamos la lista." ],
     [ /^booking request not found$/i, "No encontramos esta solicitud. Actualizamos la lista." ],
     [ /^patient to restore not found for this request$/i, "Ese paciente ya no se puede restaurar para esta solicitud." ],

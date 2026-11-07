@@ -123,6 +123,7 @@ const FIELD_LABELS: Record<string, string> = {
   resolvedAt: "Resuelta el",
   requestId: "Solicitud",
   portalAccessEnabled: "Acceso al portal",
+  messagesStoppedAt: "Mensajes detenidos el",
 };
 
 function fieldLabel(key: string): string {

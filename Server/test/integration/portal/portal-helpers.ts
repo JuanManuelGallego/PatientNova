@@ -47,6 +47,7 @@ export async function createLiveProvider(opts: { bufferMinutes?: number; price?:
     data: {
       bookingSlug: slug,
       bookingEnabled: true,
+      legalName: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00', publicPhone: '+573001234567',
       slotIntervalMinutes: 60,
       bufferMinutes: opts.bufferMinutes ?? 0,
       minLeadMinutes: 0,

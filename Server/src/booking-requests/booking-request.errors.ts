@@ -7,6 +7,12 @@ export class BookingRequestNotFoundError extends ApiError {
 }
 
 /** Already approved, rejected, cancelled or expired (including a hold past its expiry the sweep has not flipped yet). */
+export class BookingRequestConsentRevokedError extends ApiError {
+  constructor() {
+    super('Consent was revoked after this request', 409);
+  }
+}
+
 export class BookingRequestNotPendingError extends ApiError {
   constructor() {
     super('Booking request is no longer pending', 409);

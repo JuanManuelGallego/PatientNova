@@ -34,6 +34,7 @@ const provider = {
     bio: null as string | null,
     phone: null as string | null,
     whatsapp: null as string | null,
+    legal: { name: "Consultorio Prueba S.A.S.", privacyContact: "privacidad@example.com", contactHours: "Lunes a viernes, 8:00 a 17:00" },
     hasAvatar: false,
     hasLogo: false,
     timezone: TZ,
@@ -501,13 +502,13 @@ describe("PublicBookingPage booking", () => {
         expect(await screen.findByRole("heading", { name: "¿Dónde te enviamos el código?" })).toBeInTheDocument();
     });
 
-    it("the verify step carries the data protection line and the code lead", async () => {
+    it("the verify step names who receives the contact, and carries the code lead", async () => {
         server.session = null;
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
 
-        expect(await screen.findByText("Tus datos están protegidos según la Ley 1581 de 2012.")).toBeInTheDocument();
+        expect(await screen.findByTestId("access-notice")).toHaveTextContent("Al pedir el código solicitas a Consultorio Prueba S.A.S.");
         expect(screen.getByText(/código de 6 dígitos para confirmar tu reserva/)).toBeInTheDocument();
     });
 
@@ -969,7 +970,7 @@ describe("PublicBookingPage booking", () => {
         expect(screen.getByLabelText("Nombre")).toHaveFocus();
         expect(screen.getByLabelText("Nombre")).toHaveAccessibleDescription("Escribe tu nombre.");
         expect(screen.getByText("Escribe tus apellidos.")).toBeInTheDocument();
-        expect(screen.getByText("Acepta la política de privacidad para reservar.")).toBeInTheDocument();
+        expect(screen.getByText("Marca la autorización para continuar, o contacta directamente a la clínica.")).toBeInTheDocument();
 
         await fillDetails(user);
         await user.click(submit);

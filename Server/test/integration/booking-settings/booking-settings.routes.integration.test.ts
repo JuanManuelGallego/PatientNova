@@ -33,7 +33,7 @@ const putAvailability = (rules: unknown[], id = userId) =>
 const MONDAY_MORNING = { weekday: 1, startMinute: 540, endMinute: 720 };
 
 async function makeReady(id = userId) {
-  await prisma.user.update({ where: { id }, data: { bookingSlug: unique('dra').toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40).replace(/-+$/, '') } });
+  await prisma.user.update({ where: { id }, data: { legalName: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00', publicPhone: '+573001234567', bookingSlug: unique('dra').toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40).replace(/-+$/, '') } });
   await prisma.availabilityRule.create({ data: { userId: id, ...MONDAY_MORNING } });
   const type = await createTestAppointmentType(id);
   await prisma.appointmentType.update({ where: { id: type.id }, data: { bookableOnline: true } });
@@ -60,7 +60,7 @@ describe('booking settings routes (integration)', () => {
       specialty: null,
       publicPhone: null,
       publicWhatsapp: null,
-      readiness: { hasSlug: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
+      readiness: { hasSlug: false, hasLegalIdentity: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
       live: false,
     });
   });
@@ -149,6 +149,18 @@ describe('booking settings routes (integration)', () => {
     expect((res.body as any).data).toMatchObject({ bookingEnabled: true, live: true });
   });
 
+  it('needs the clinic\'s legal identity and a way to reach it before going live', async () => {
+    await makeReady();
+    await prisma.user.update({ where: { id: userId }, data: { legalName: null } });
+    expect((await patchSettings({ bookingEnabled: true })).statusCode).toBe(422);
+
+    await prisma.user.update({ where: { id: userId }, data: { legalName: 'Consultorio S.A.S.', publicPhone: null, publicWhatsapp: null } });
+    expect((await patchSettings({ bookingEnabled: true })).statusCode).toBe(422);
+
+    await prisma.user.update({ where: { id: userId }, data: { publicWhatsapp: '+573001234567' } });
+    expect((await patchSettings({ bookingEnabled: true })).statusCode).toBe(200);
+  });
+
   it('readiness is advisory after enabling: deleting the last bookable location keeps booking enabled but not live', async () => {
     // .env.test runs with ENABLE_PORTAL=false, which alone would make isBookingLive false.
     const portal = config.portal as { patientEnabled: boolean };
@@ -172,7 +184,7 @@ describe('booking settings routes (integration)', () => {
   });
 
   it('inactive or deleted locations and types do not count as bookable', async () => {
-    await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'listo' } });
+    await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'listo', legalName: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00', publicPhone: '+573001234567' } });
     await prisma.availabilityRule.create({ data: { userId, ...MONDAY_MORNING } });
     const inactive = await createTestLocation(userId);
     await prisma.appointmentLocation.update({ where: { id: inactive.id }, data: { bookableOnline: true, isActive: false } });
@@ -180,11 +192,11 @@ describe('booking settings routes (integration)', () => {
     await prisma.appointmentType.update({ where: { id: type.id }, data: { bookableOnline: true, isDeleted: true } });
 
     const res = await invokeRoute(bookingSettingsRouter, 'get', '/settings', reqFor(userId));
-    expect((res.body as any).data.readiness).toEqual({ hasSlug: true, hasAvailability: true, hasBookableType: false, hasBookableLocation: false });
+    expect((res.body as any).data.readiness).toEqual({ hasSlug: true, hasLegalIdentity: true, hasAvailability: true, hasBookableType: false, hasBookableLocation: false });
   });
 
   it('a bookable virtual location is enough to go live', async () => {
-    await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'solo-virtual' } });
+    await prisma.user.update({ where: { id: userId }, data: { bookingSlug: 'solo-virtual', legalName: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00', publicPhone: '+573001234567' } });
     await prisma.availabilityRule.create({ data: { userId, ...MONDAY_MORNING } });
     const virtual = await createTestLocation(userId, { isVirtual: true });
     await prisma.appointmentLocation.update({ where: { id: virtual.id }, data: { bookableOnline: true } });

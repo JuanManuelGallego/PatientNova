@@ -11,6 +11,10 @@ function patient(overrides: Partial<PatientRouteFields> = {}): PatientRouteField
 }
 
 describe('resolvePatientRoute', () => {
+  it('finds no route once messages were stopped for the patient', () => {
+    expect(resolvePatientRoute(patient({ messagesStoppedAt: new Date() }))).toBeNull();
+  });
+
   it.each([
     [ Channel.EMAIL, EMAIL ],
     [ Channel.WHATSAPP, WHATSAPP ],

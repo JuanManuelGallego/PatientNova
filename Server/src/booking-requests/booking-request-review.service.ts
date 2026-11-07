@@ -15,6 +15,7 @@ import { getAuditContext } from '../audit-log/audit-log-context.js';
 import { createPatientWithin, restorePatientWithin, updatePatientWithin } from '../patients/patient.service.js';
 import { PatientEmailConflictError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent } from '../patient-consents/patient-consent.service.js';
+import { patientConsentRepository } from '../patient-consents/patient-consent.repository.js';
 import { createPortalAppointmentWithin } from '../portal/portal-booking.service.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from '../portal/portal-booking-notifications.js';
 import { bookingRequestRepository } from './booking-request.repository.js';
@@ -27,6 +28,7 @@ import { newPatientContact, requestContact, typedPhoneIsUnverified } from '../po
 import {
   BookingRequestCandidateError,
   BookingRequestNotFoundError,
+  BookingRequestConsentRevokedError,
   BookingRequestNotPendingError,
   BookingRequestRestoreCandidateError,
 } from './booking-request.errors.js';
@@ -221,6 +223,9 @@ export const bookingRequestReviewService = {
       const request = await requirePending(userId, id, now, tx);
       const patientId = await resolveApprovalPatient(tx, userId, request, body, now);
 
+      if (await patientConsentRepository.findRevokedSince(patientId, request.consentAcceptedAt, tx)) {
+        throw new BookingRequestConsentRevokedError();
+      }
       await ensureCurrentConsent(
         tx,
         { patientId, userId },

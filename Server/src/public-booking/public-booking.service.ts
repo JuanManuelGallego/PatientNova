@@ -54,6 +54,9 @@ export const publicBookingService = {
       bio: provider.bio,
       phone: provider.publicPhone,
       whatsapp: provider.publicWhatsapp,
+      legal: provider.legalName
+        ? { name: provider.legalName, privacyContact: provider.privacyContact, contactHours: provider.contactHours }
+        : null,
       hasAvatar: IMAGE_DATA_URL.test(images?.avatar ?? ''),
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,

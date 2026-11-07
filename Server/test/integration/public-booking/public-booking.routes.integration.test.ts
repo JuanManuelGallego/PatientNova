@@ -54,7 +54,7 @@ async function createLiveProvider(): Promise<Provider> {
   const slug = unique('dra').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   await prisma.user.update({
     where: { id: user.id },
-    data: { bookingSlug: slug, bookingEnabled: true, jobTitle: 'Psicóloga', minLeadMinutes: 0, slotIntervalMinutes: 30, timezone: TZ },
+    data: { legalName: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00', publicPhone: '+573001234567', bookingSlug: slug, bookingEnabled: true, jobTitle: 'Psicóloga', minLeadMinutes: 0, slotIntervalMinutes: 30, timezone: TZ },
   });
   await prisma.availabilityRule.create({ data: { userId: user.id, weekday: 1, startMinute: 9 * 60, endMinute: 12 * 60 } });
   const type = await createTestAppointmentType(user.id);
@@ -143,8 +143,9 @@ describe('GET /v1/public/providers/:slug', () => {
       jobTitle: 'Psicóloga',
       specialty: null,
       bio: null,
-      phone: null,
+      phone: '+573001234567',
       whatsapp: null,
+      legal: { name: 'Consultorio Prueba S.A.S.', privacyContact: 'privacidad@test.local', contactHours: 'Lunes a viernes, 8:00 a 17:00' },
       hasAvatar: false,
       hasLogo: false,
       timezone: TZ,
