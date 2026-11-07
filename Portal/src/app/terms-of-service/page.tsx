@@ -130,7 +130,7 @@ const sections = [
     id: "contact",
     title: "14. Contacto",
     content: [
-      "Juan Manuel Gallego, persona natural. 402-1595 rue Lalemant, Sherbrooke (Québec), Canadá.",
+      "Juan Manuel Gallego, persona natural. Tv. 5 #75D-42, apto. 619, Medellín (Antioquia), Colombia.",
       "Teléfono: +57 304 487 3415",
       "Contacto legal: legal@patientnova.net",
       "Contacto de privacidad: privacidad@patientnova.net",

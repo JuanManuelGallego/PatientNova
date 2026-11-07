@@ -144,7 +144,7 @@ jobs:
   e2e:
     name: E2E Tests (Playwright, self-contained stack)
     runs-on: ubuntu-latest
-    needs: [portal, server]
+    needs: [portal]
 
     # Throwaway stack: Postgres + API + Portal all inside this job. No staging data or secrets.
     services:

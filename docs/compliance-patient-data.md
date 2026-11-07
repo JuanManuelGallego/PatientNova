@@ -157,12 +157,10 @@ by name and includes the address and instructions. Removing the name needs a new
 
 ## 5. Checklist (owner: controller, with counsel)
 
-- [ ] Controller identity published: legal name, NIT, address, and Colombian representative if needed
-      (the controller is currently an individual in Canada; counsel to advise).
+- [ ] Controller identity published: legal name, NIT and address in Colombia.
 - [ ] Decide whether the **RNBD** registration (Registro Nacional de Bases de Datos) applies and file it.
-- [ ] Data processing / transmission contracts with each processor: Twilio, Brevo, Google, Cloudflare,
-      Sentry, Railway and Vercel, all named in the policy (contracts pending; for Sentry, review and
-      accept its DPA in the organization's legal settings).
+- [x] Data processing / transmission contracts with each processor: Twilio, Brevo, Google, Cloudflare,
+      Sentry, Railway and Vercel, all named in the policy (treated as approved, owner's decision of 2026-11-06).
 - [ ] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
       or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
       and, since the draft of 2026-11-06, Meta and phone login: counsel to confirm before the portal reaches production.

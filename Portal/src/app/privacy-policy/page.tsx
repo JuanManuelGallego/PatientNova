@@ -13,7 +13,7 @@ const sections = [
     id: "scope-and-roles",
     title: "1. Responsable, encargado y alcance",
     content: [
-      "Patient Nova es el nombre comercial del servicio prestado por Juan Manuel Gallego, persona natural, con domicilio en 402-1595 rue Lalemant, Sherbrooke (Québec), Canadá, teléfono +57 304 487 3415 y correo electrónico privacidad@patientnova.net (el «Proveedor»). Esta Política de Tratamiento de Datos Personales describe cómo se trata la información en el portal de gestión para profesionales y equipos de salud y, cuando una clínica lo habilite, en el portal de pacientes.",
+      "Patient Nova es el nombre comercial del servicio prestado por Juan Manuel Gallego, persona natural, con domicilio en Tv. 5 #75D-42, apto. 619, Medellín (Antioquia), Colombia, teléfono +57 304 487 3415 y correo electrónico privacidad@patientnova.net (el «Proveedor»). Esta Política de Tratamiento de Datos Personales describe cómo se trata la información en el portal de gestión para profesionales y equipos de salud y, cuando una clínica lo habilite, en el portal de pacientes.",
       "Esta Política se rige por la Ley Estatutaria 1581 de 2012, el Decreto 1377 de 2013 (compilado en el Decreto Único 1074 de 2015) y las demás normas colombianas sobre protección de datos personales, sin perjuicio de las normas imperativas de otras jurisdicciones que resulten aplicables.",
       "El Proveedor actúa como responsable del tratamiento de los datos de las cuentas de usuarios profesionales y de los datos técnicos y de seguridad del Servicio. Respecto de los datos de pacientes, la clínica, profesional o entidad que utiliza el Servicio es la responsable del tratamiento, y el Proveedor actúa como encargado, tratándolos por cuenta de ella y siguiendo sus instrucciones.",
       "Si eres paciente, la clínica o profesional que te atiende es quien decide para qué se usan tus datos; dirige a ella tus solicitudes en primer lugar. Esta Política no sustituye la información ni la autorización que la clínica deba obtener de sus pacientes.",
@@ -62,7 +62,7 @@ const sections = [
     content: [
       "Compartimos los datos necesarios con proveedores que actúan como encargados o subencargados para operar el Servicio: Twilio, para SMS, WhatsApp y estados de entrega; Brevo, para el envío de correos electrónicos (recordatorios, códigos de acceso y avisos) y sus eventos de entrega; Google, para funciones de Google Meet; Cloudflare, para la verificación anti-bots (Turnstile) en formularios públicos y el almacenamiento de copias de seguridad cifradas; Sentry, para el registro de errores técnicos del servidor y del navegador (tipo de error, traza de código, versión y entorno), configurado para no enviar contenido de solicitudes, cookies, encabezados ni datos de usuario y para enmascarar correos electrónicos y teléfonos; Railway, para el alojamiento del servidor y de la base de datos; Vercel, para el alojamiento del portal web; y otros proveedores de registro, seguridad y soporte que el operador configure. Sus ubicaciones, subencargados y condiciones pueden cambiar.",
       "Los mensajes de WhatsApp se entregan a través de Meta, titular de WhatsApp, que recibe el número del destinatario y el contenido del mensaje: el nombre de la clínica o profesional, la fecha, la hora, el lugar o el enlace de la cita y los códigos de acceso al portal. Los recordatorios por WhatsApp pueden incluir además el nombre del paciente, la dirección y las instrucciones de la cita.",
-      "Varios de estos proveedores, y el propio Proveedor, que se encuentra en Canadá, pueden tratar los datos fuera de Colombia, por ejemplo en Estados Unidos, Canadá o la Unión Europea. Estas transmisiones y transferencias internacionales se realizan conforme al artículo 26 de la Ley 1581 de 2012 y a las normas que lo reglamentan, mediante contratos u otros mecanismos que garanticen un nivel adecuado de protección.",
+      "Varios de estos proveedores pueden tratar los datos fuera de Colombia, por ejemplo en Estados Unidos o la Unión Europea. Estas transmisiones y transferencias internacionales se realizan conforme al artículo 26 de la Ley 1581 de 2012 y a las normas que lo reglamentan, mediante contratos u otros mecanismos que garanticen un nivel adecuado de protección.",
       "Podemos divulgar información cuando sea necesario para cumplir una obligación legal, responder a una orden válida de autoridad competente, proteger derechos y seguridad o investigar fraude. También podemos transferir información como parte de una reorganización, adquisición o venta, sujeto a las garantías y avisos que exija la ley.",
       "No vendemos datos personales. Los datos enviados a Twilio, Meta, Brevo, Google, Cloudflare, Sentry, Railway, Vercel u otros proveedores quedan sujetos también a las políticas y condiciones de esos proveedores.",
     ],
@@ -129,7 +129,7 @@ const sections = [
     id: "contact",
     title: "12. Contacto",
     content: [
-      "Responsable: Juan Manuel Gallego, persona natural. 402-1595 rue Lalemant, Sherbrooke (Québec), Canadá.",
+      "Responsable: Juan Manuel Gallego, persona natural. Tv. 5 #75D-42, apto. 619, Medellín (Antioquia), Colombia.",
       "Teléfono: +57 304 487 3415",
       "Privacidad, consultas y reclamos: privacidad@patientnova.net",
       "Asuntos legales: legal@patientnova.net",
