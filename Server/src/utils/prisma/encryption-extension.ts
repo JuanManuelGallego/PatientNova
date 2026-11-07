@@ -4,6 +4,7 @@ import {
   decrypt,
   isEncrypted,
   EncryptionError,
+  type Keyring,
 } from "../encryption/field-encryption.js";
 import {
   BLIND_INDEXES,
@@ -13,6 +14,7 @@ import {
 } from "../encryption/encrypted-fields.js";
 import { PII_VERSION } from "../encryption/blind-index.js";
 import { config } from "../config/config.js";
+import { activeKeyring } from "../encryption/keyring.js";
 import { logger } from "../api/logger.js";
 
 const WRITE_OPERATIONS = new Set([
@@ -40,15 +42,12 @@ const READ_OPERATIONS = new Set([
   "updateManyAndReturn",
 ]);
 
-function getKey(): string {
-  const key = config.encryption.key;
-  if (!key) {
-    if (config.env === "production") {
-      throw new EncryptionError("ENCRYPTION_KEY is required in production");
-    }
-    return "";
+function getKeyring(): Keyring | null {
+  const keyring = activeKeyring();
+  if (!keyring && config.env === "production") {
+    throw new EncryptionError("ENCRYPTION_KEY is required in production");
   }
-  return key;
+  return keyring;
 }
 
 function encryptField(value: unknown, model: string, field: string): unknown {
@@ -65,14 +64,14 @@ function encryptField(value: unknown, model: string, field: string): unknown {
     return value;
   }
 
-  const key = getKey();
-  if (!key) {
+  const keyring = getKeyring();
+  if (!keyring) {
     logger.error({ model, field }, "Encryption key not set — storing plaintext");
     return plaintext;
   }
 
   if (isEncrypted(plaintext)) return plaintext; // idempotent
-  return encrypt(plaintext, key);
+  return encrypt(plaintext, keyring);
 }
 
 function decryptField(
@@ -85,8 +84,8 @@ function decryptField(
   if (typeof value !== "string") return value;
   if (!isEncrypted(value)) return value; // plaintext passthrough (pre-migration data)
 
-  const key = getKey();
-  if (!key) {
+  const keyring = getKeyring();
+  if (!keyring) {
     logger.error(
       { model, field },
       "Encryption key not set — returning raw ciphertext",
@@ -95,7 +94,7 @@ function decryptField(
   }
 
   try {
-    const decrypted = decrypt(value, key);
+    const decrypted = decrypt(value, keyring);
     const isJsonField = ENCRYPTED_JSON_FIELDS[model]?.has(field) ?? false;
     if (isJsonField) {
       try {
@@ -105,8 +104,9 @@ function decryptField(
       }
     }
     return decrypted;
-  } catch {
-    throw new EncryptionError(`Failed to decrypt ${model}.${field}`, {
+  } catch (err) {
+    const reason = err instanceof EncryptionError ? `: ${err.message}` : "";
+    throw new EncryptionError(`Failed to decrypt ${model}.${field}${reason}`, {
       model,
       field,
       recordId,
@@ -137,7 +137,7 @@ function encryptData(
       else if (typeof value === "string" && !isEncrypted(value)) result[column] = derive(value);
     }
   }
-  if (isCreate && PII_VERSIONED_MODELS.has(model) && !("piiVersion" in result) && getKey()) {
+  if (isCreate && PII_VERSIONED_MODELS.has(model) && !("piiVersion" in result) && getKeyring()) {
     result.piiVersion = PII_VERSION;
   }
 

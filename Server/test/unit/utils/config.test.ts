@@ -55,4 +55,48 @@ describe('config.encryption', () => {
     vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
     expect((await loadConfig()).encryption).toEqual({ key: HEX_A, blindIndexKey: HEX_B });
   });
+
+  describe('ENCRYPTION_KEY_PREVIOUS', () => {
+    it('rejects a malformed value', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', 'short');
+      await expect(loadConfig()).rejects.toThrow('ENCRYPTION_KEY_PREVIOUS must be a 64-character hex string');
+    });
+
+    it('rejects a value equal to the current key, any case', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', HEX_A.toUpperCase());
+      await expect(loadConfig()).rejects.toThrow('ENCRYPTION_KEY_PREVIOUS must differ from ENCRYPTION_KEY');
+    });
+
+    it('rejects a value equal to the blind index key', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', HEX_B);
+      await expect(loadConfig()).rejects.toThrow('ENCRYPTION_KEY_PREVIOUS must differ from BLIND_INDEX_KEY');
+    });
+
+    it('rejects a previous key with no current key', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', '');
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', 'c'.repeat(64));
+      await expect(loadConfig()).rejects.toThrow('ENCRYPTION_KEY_PREVIOUS requires ENCRYPTION_KEY');
+    });
+
+    it('treats a blank value as unset', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', '  ');
+      expect((await loadConfig()).encryption.previousKey).toBeUndefined();
+    });
+
+    it('exposes a valid previous key', async () => {
+      vi.stubEnv('ENCRYPTION_KEY', HEX_A);
+      vi.stubEnv('BLIND_INDEX_KEY', HEX_B);
+      vi.stubEnv('ENCRYPTION_KEY_PREVIOUS', 'c'.repeat(64));
+      expect((await loadConfig()).encryption.previousKey).toBe('c'.repeat(64));
+    });
+  });
 });

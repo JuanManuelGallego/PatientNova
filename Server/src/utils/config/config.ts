@@ -46,7 +46,14 @@ function encryptionConfig() {
   if (key && !HEX_256.test(key)) throw new Error('ENCRYPTION_KEY must be a 64-character hex string (256 bits)');
   if (!HEX_256.test(blindIndexKey)) throw new Error('BLIND_INDEX_KEY must be a 64-character hex string (256 bits)');
   if (key && key.toLowerCase() === blindIndexKey.toLowerCase()) throw new Error('BLIND_INDEX_KEY must differ from ENCRYPTION_KEY');
-  return { key, blindIndexKey };
+  const previousKey = process.env.ENCRYPTION_KEY_PREVIOUS?.trim() || undefined;
+  if (previousKey) {
+    if (!HEX_256.test(previousKey)) throw new Error('ENCRYPTION_KEY_PREVIOUS must be a 64-character hex string (256 bits)');
+    if (!key) throw new Error('ENCRYPTION_KEY_PREVIOUS requires ENCRYPTION_KEY');
+    if (previousKey.toLowerCase() === key.toLowerCase()) throw new Error('ENCRYPTION_KEY_PREVIOUS must differ from ENCRYPTION_KEY');
+    if (previousKey.toLowerCase() === blindIndexKey.toLowerCase()) throw new Error('ENCRYPTION_KEY_PREVIOUS must differ from BLIND_INDEX_KEY');
+  }
+  return { key, blindIndexKey, previousKey };
 }
 
 export const config = {
