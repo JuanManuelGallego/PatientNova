@@ -1,5 +1,5 @@
 import { prisma } from './prisma-client.js';
-import { config } from '../config/config.js';
+import { activeKeyring } from '../encryption/keyring.js';
 import { logger } from '../api/logger.js';
 import { decrypt, encrypt, isEncrypted } from '../encryption/field-encryption.js';
 import { BLIND_INDEXES, ENCRYPTED_FIELDS } from '../encryption/encrypted-fields.js';
@@ -22,7 +22,7 @@ const quote = (identifier: string) => `"${identifier.replace(/"/g, '""')}"`;
 
 export async function backfillPii(opts: { batchSize?: number } = {}): Promise<BackfillResult[]> {
   const batchSize = opts.batchSize ?? 500;
-  const key = config.encryption.key;
+  const keyring = activeKeyring();
   const results: BackfillResult[] = [];
 
   for (const { model, table } of TABLES) {
@@ -61,8 +61,8 @@ export async function backfillPii(opts: { batchSize?: number } = {}): Promise<Ba
             continue;
           }
           const encrypted = isEncrypted(value);
-          plaintext[ field ] = encrypted ? (key ? decrypt(value, key) : null) : value;
-          if (!encrypted && key) set(field, encrypt(value, key));
+          plaintext[ field ] = encrypted ? (keyring ? decrypt(value, keyring) : null) : value;
+          if (!encrypted && keyring) set(field, encrypt(value, keyring));
         }
         for (const [ field, { column, derive } ] of indexes) {
           // Encrypted value we cannot decrypt (no key): leave its index alone.
@@ -70,7 +70,7 @@ export async function backfillPii(opts: { batchSize?: number } = {}): Promise<Ba
           const derived = derive(plaintext[ field ] ?? null);
           set(column, derived, Array.isArray(derived) ? '::text[]' : '');
         }
-        if (key) set('piiVersion', PII_VERSION, '::smallint');
+        if (keyring) set('piiVersion', PII_VERSION, '::smallint');
 
         if (assignments.length === 0) {
           result.skipped++;

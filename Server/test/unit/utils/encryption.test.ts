@@ -4,10 +4,14 @@ import {
   decrypt,
   isEncrypted,
   EncryptionError,
+  createKeyring,
+  keyId,
 } from "../../../src/utils/encryption/field-encryption.js";
 import { randomBytes } from "node:crypto";
+import { sealV1, sealV2 } from "../../ciphertext-fixtures.js";
 
-const TEST_KEY = randomBytes(32).toString("hex"); // valid 64-char hex key
+const TEST_HEX = randomBytes(32).toString("hex"); // valid 64-char hex key
+const TEST_KEY = createKeyring(TEST_HEX);
 
 describe("encryption", () => {
   describe("encrypt / decrypt round-trip", () => {
@@ -79,14 +83,14 @@ describe("encryption", () => {
 
     it("rejects ciphertext with wrong key", () => {
       const ciphertext = encrypt("secret", TEST_KEY);
-      const wrongKey = randomBytes(32).toString("hex");
+      const wrongKey = createKeyring(randomBytes(32).toString("hex"));
       expect(() => decrypt(ciphertext, wrongKey)).toThrow();
     });
   });
 
   describe("error handling", () => {
     it("throws EncryptionError for invalid key length", () => {
-      expect(() => encrypt("test", "short")).toThrow(EncryptionError);
+      expect(() => encrypt("test", createKeyring("short"))).toThrow(EncryptionError);
     });
 
     it("throws EncryptionError for missing prefix on decrypt", () => {
@@ -138,5 +142,51 @@ describe("encryption", () => {
       const decrypted = decrypt(ciphertext, TEST_KEY);
       expect(JSON.parse(decrypted)).toEqual(obj);
     });
+  });
+
+  describe("keyring", () => {
+    const OLD = "a".repeat(64);
+    const NEW = "b".repeat(64);
+    const OTHER = "c".repeat(64);
+    const ring = createKeyring(NEW, OLD);
+
+    it("reads v1 under the current key", () =>
+      expect(decrypt(sealV1("x", NEW), ring)).toBe("x"));
+    it("reads v1 under the previous key", () =>
+      expect(decrypt(sealV1("x", OLD), ring)).toBe("x"));
+    it("reads v2 by key id", () =>
+      expect(decrypt(sealV2("x", OLD), ring)).toBe("x"));
+    it("rejects v2 under an unknown key id", () =>
+      expect(() => decrypt(sealV2("x", OTHER), ring)).toThrow(
+        /Unknown encryption key id [0-9a-f]{8}/,
+      ));
+    it("rejects v1 that no key opens", () =>
+      expect(() => decrypt(sealV1("x", OTHER), ring)).toThrow(EncryptionError));
+    it("rejects a v2 value tampered with", () => {
+      const value = sealV2("x", NEW);
+      const head = value.slice(0, "enc:v2:".length + 9);
+      const payload = Buffer.from(value.slice(head.length), "base64");
+      payload[payload.length - 1] = payload[payload.length - 1]! ^ 0xff;
+      expect(() => decrypt(`${head}${payload.toString("base64")}`, ring)).toThrow(
+        EncryptionError,
+      );
+    });
+    it("recognises both formats and no look-alike", () => {
+      expect(isEncrypted(sealV1("x", NEW))).toBe(true);
+      expect(isEncrypted(sealV2("x", NEW))).toBe(true);
+      expect(isEncrypted("enc:v2:abc123")).toBe(false);
+      expect(isEncrypted("enc:v3:abcd1234:AAAA")).toBe(false);
+    });
+    it("derives a stable key id that ignores hex case", () => {
+      expect(keyId(NEW)).toMatch(/^[0-9a-f]{8}$/);
+      expect(keyId("B".repeat(64))).toBe(keyId(NEW));
+    });
+    it("still writes v1 under the current key", () => {
+      const value = encrypt("x", ring);
+      expect(value.startsWith("enc:v1:")).toBe(true);
+      expect(decrypt(value, createKeyring(NEW))).toBe("x");
+    });
+    it("rejects a malformed key", () =>
+      expect(() => createKeyring("short")).toThrow(EncryptionError));
   });
 });
