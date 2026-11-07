@@ -27,7 +27,7 @@ Also landed outside the numbered items: 5000-patient cap per provider, `cancelle
 
 Still open before any real-patient pilot: the gates in Phase 10.
 
-`ENCRYPTION_KEY` rotation is one of those gates (10.10, not started).
+`ENCRYPTION_KEY` rotation is one of those gates (10.10, built, pending the rehearsal).
 
 # Patient Portal: architecture proposal
 
@@ -1314,7 +1314,7 @@ As planned:
 - **10.20 Audit redaction on erasure.** Built 2026-11-06 inside `patient:erase`. No `subjectPatientId` column was needed: rows are found through the patient's records, their portal activity, and a scan of that provider's log for their full name or contacts, which also reaches rows a column would miss and needs no backfill. The text and diffs become `[Contenido suprimido]`; who, what and when stay. Raw SQL with constants, the one exception to `auditLogGuardExtension`, noted in AGENTS.md.
 - **10.21 Erasure and export that work.** Built 2026-11-06: `patient:erase` (reports without `--confirm`), `clinic:export` (refuses a terminal, piped into `age`) and the steps in `docs/operations.md`, including rerunning erasures after a restore. Still open: on staging, rehearse one approved deletion, one export the clinic can read, and one restore that reapplies erasures.
 - **10.22 Public document download.** Checked 2026-11-06: `Document.userId` is unique, so this is one document per clinic, not per patient, and the policy says it must hold no patient data. It remains reachable by anyone with the clinic's id, so the owner confirms each clinic uploads only a blank or general form.
-- **10.10 Encryption key rotation (was 8.1 and 0.24; not started; plan prepared, see "10.10 implementation plan" below).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** gates enabling the portal (decided 2026-11-06), because the incident procedure cannot otherwise replace a leaked key; the owner scheduled it for later. Build it on its own branch from the plan below. **Deploy in two steps:** `isEncrypted` matches only `enc:v1:` and treats anything else as plaintext, so old code reading `enc:v2:` would show ciphertext and encrypt it again on save. First deploy code that reads v2 and still writes v1, then the code that writes v2. **Backups:** restoring one made before a rotation needs the old key, so keep a retired key at least 30 days after the re-encryption finishes, and cover that in the runbook and the restore rehearsal. Rotating does not protect data already copied along with the key. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **10.10 Encryption key rotation (was 8.1 and 0.24; built, pending the rehearsal (Task 6); see "10.10 implementation plan" below).** Before 10.10, `ENCRYPTION_KEY` could not be rotated: `decrypt` took a single key and the `enc:v1:` prefix named the format, not the key, so changing the env var made every encrypted field unreadable. It added: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** gates enabling the portal (decided 2026-11-06), because the incident procedure cannot otherwise replace a leaked key; the owner scheduled it for later. It was built on its own branch from the plan below. **Deploy in two steps:** `isEncrypted` matched only `enc:v1:` and treated anything else as plaintext, so old code reading `enc:v2:` would show ciphertext and encrypt it again on save. PR A deployed code that reads v2 and still writes v1, then PR B the code that writes v2. **PR B review fixes (2026-11-07):** a value no key opens no longer holds back the rest of its row, and every such field is listed; `pii:reencrypt` only reports unless given `--key-id` matching the current key, and `pii:key-id` prints a key's id from stdin. **Backups:** restoring one made before a rotation needs the old key, so keep a retired key at least 30 days after the re-encryption finishes, and cover that in the runbook and the restore rehearsal. Rotating does not protect data already copied along with the key. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
 
 **Gates: legal text (owner approves).** Drafted 2026-11-06 and uncommitted with 10.19. Publishing means merging to `main`.
 - **10.1 Privacy policy and legal sign-off.** Rewritten 2026-11-06 from annex A of the review, adapted to the scope decisions, in `Portal/src/app/privacy-policy/page.tsx`. Approved by the owner and reviewed by legal counsel on 2026-11-06.
@@ -1395,10 +1395,11 @@ As planned:
 
 ##### Review Focus
 1. Soft-deleted or inactive rows must move too. Otherwise restoring a patient after the old key is retired fails on read.
-2. A value no key opens must not stop the run: the rest finishes, that row stays unchanged, and the command exits non-zero naming its model, field and id.
+2. A value no key opens must not stop the run: the rest finishes, that value stays unchanged while the row's other stale values still move, the row counts as `failed`, and the command exits non-zero listing the model, field and id of every such value. (Changed after the PR B review on 2026-11-07: leaving the whole row unchanged stranded its other values under the key step 7 retires.)
 3. An app write between the batch read and the `UPDATE` must win. The row is skipped and the next run picks it up.
 4. Audit rows come in several shapes: JSON ciphertext strings, plain JSON objects, JSON null, and rows redacted by `patient:erase` (plaintext `[Contenido suprimido]`, null diffs). Only ciphertext is rewritten, and its decrypted text stays byte-identical. A redacted row is never touched.
 5. Keys as operators really enter them: uppercase hex gives the same key id, a blank `ENCRYPTION_KEY_PREVIOUS` counts as unset, and the previous key equal to the current key or to `BLIND_INDEX_KEY` fails at boot.
+6. A wrong or swapped key must not take over: the command writes only when the operator passes `--key-id` equal to the current key id, recorded from the new key with `pii:key-id` (runbook step 2). Without it, it only reports. (Added after the PR B review on 2026-11-07.)
 
 ---
 
@@ -1571,10 +1572,12 @@ Change `ENC` in `patient.pii-encryption.integration.test.ts` to `/^enc:v2:[0-9a-
 - Produces:
   ```ts
   export const REENCRYPT_TABLES: Record<string, { table: string; id: 'uuid' | 'text' }>;
-  export interface ReencryptResult { model: string; scanned: number; updated: number; skipped: number; failed: number }
-  export async function reencryptPii(opts?: { batchSize?: number }): Promise<ReencryptResult[]>;
-  export async function reencryptRow(model: string, row: Record<string, unknown>, keyring: Keyring): Promise<'updated' | 'skipped' | 'failed'>;
+  export interface ReencryptResult { model: string; scanned: number; updated: number; skipped: number; failed: number; failures: { field: string; recordId: string }[] }
+  export async function reencryptPii(opts?: { batchSize?: number; dryRun?: boolean; keyId?: string }): Promise<ReencryptResult[]>;
+  export async function reencryptRow(model: string, row: Record<string, unknown>, keyring: Keyring): Promise<{ outcome: 'updated' | 'skipped' | 'failed'; failedFields: string[] }>;
+  export function confirmKeyId(expected: string | undefined, keyring: Keyring): void; // throws KeyIdMismatchError
   ```
+  (`failures`, `dryRun`, `keyId`, `confirmKeyId` and the object returned by `reencryptRow` were added after the PR B review.)
 - `REENCRYPT_TABLES`: `User` `users` text; `MedicalRecord` `medical_records` uuid; `FamilyMember` `family_members` uuid; `EvolutionNote` `evolution_notes` uuid; `Patient` `patients` uuid; `Appointment` `appointments` uuid; `Reminder` `reminders` uuid; `AuditLog` `AuditLog` text; `GoogleConnection` `google_connections` text; `BookingRequest` `booking_requests` uuid.
 - `reencryptRow` takes a row as the batch query selects it: `id`, plus each encrypted field as text or null.
 
@@ -1627,7 +1630,8 @@ it('counts a value no key opens and carries on', async () => {
   // Two patients; one name rewritten raw as sealV2('x', 'd'.repeat(64)).
   const patient = (await reencryptPii()).find((r) => r.model === 'Patient')!;
   expect(patient.failed).toBe(1);
-  // That value is unchanged and the other patient moved.
+  // That value is unchanged byte for byte, the same row's other stale values moved, and the other patient moved.
+  // After the PR B review: a second test puts two unopenable values in one row; both are listed in `failures`.
 });
 
 it('leaves plaintext and redacted audit rows alone', async () => {
@@ -1651,9 +1655,9 @@ UPDATE <table> SET "f" = $new                                -- to_jsonb($new::t
 WHERE "id" = $id AND text(f) = $old [AND ... for each changed field]
 ```
 
-The `~` pattern matches exactly what `isEncrypted` accepts, so a plain note that merely starts with `enc:v` is never selected and "scanned 0" stays reachable. In `reencryptRow`, a field changes when `isEncrypted(value) && !isCurrent(value, keyring)`. Decrypted text goes straight back to `encrypt` and is never parsed. If any field in a row fails to decrypt, log `logger.error({ model, field, recordId }, ...)`, change nothing in that row and return `'failed'`. A row with nothing to change returns `'skipped'`. Zero rows updated also returns `'skipped'`. Database errors propagate: the run is resumable.
+The `~` pattern matches exactly what `isEncrypted` accepts, so a plain note that merely starts with `enc:v` is never selected and "scanned 0" stays reachable. In `reencryptRow`, a field changes when `isEncrypted(value) && !isCurrent(value, keyring)`. Decrypted text goes straight back to `encrypt` and is never parsed. If a field fails to decrypt, log `logger.error({ model, field, recordId }, ...)` for that field and leave it unchanged; every other stale field of the row still moves in the same guarded `UPDATE` (each changed field keeps its old-value guard), and the row returns `'failed'` when any field failed, listing every failed field, not just the first (changed after the PR B review: the first version left the whole row unchanged). A row with nothing to change returns `'skipped'`. Zero rows updated also returns `'skipped'`. Database errors propagate: the run is resumable.
 
-- [ ] **Step 4: Implement the CLI.** Follow `revoke-consent-cli.ts`. Print `Current key id: <kid>`, then `PII re-encrypt <model>: scanned N, updated N, skipped N, failed N` for each model. Exit 1 when any `failed > 0`, and say "run it again" when any `skipped > 0`. Done means every model scans 0, or scans only failed rows that were examined (runbook step 6).
+- [ ] **Step 4: Implement the CLI.** Follow `revoke-consent-cli.ts`. Print `Current key id: <kid>`, then `PII re-encrypt <model>: scanned N, updated N, skipped N, failed N` for each model. Exit 1 when any `failed > 0`, and say "run it again" when any `skipped > 0`. Done means every model scans 0, or scans only failed rows that were examined (runbook step 6). After the PR B review: with no arguments it only reports (`dryRun`: per model `stale N, no key opens N`, writes nothing); it writes only with `--key-id <kid>` equal to the current key id (`confirmKeyId`), rejects unknown arguments without echoing them, and prints every failed `model / field / record id` itself. `pnpm run pii:key-id` (`src/utils/encryption/key-id-cli.ts`) reads a key from stdin and prints only its id.
 
 - [ ] **Step 5: Run to verify they pass.** Run the new file, then `pnpm run typecheck && pnpm run lint && pnpm test && pnpm run test:integration`. Expected: PASS.
 
@@ -1715,8 +1719,8 @@ Load `mattpocock-skills:writing-for-agents` before editing `AGENTS.md`.
 No code. It needs PR B deployed.
 
 - [ ] **Step 1:** Restore the newest backup with the "Restore rehearsal" procedure (memory-only container). Run the runbook there end to end with a throwaway key, with `DATABASE_URL` pointing at that container.
-- [ ] **Step 2:** Confirm every model scans 0, `db:verify-restore` passes with only the throwaway key, and the same run with only the old key fails. Stop the container and delete the throwaway key.
-- [ ] **Step 3:** After a manual backup, run `pii:reencrypt` once in production without changing the key. It moves stored `v1` values to `v2`, and proves the command on the real tables with no key at risk.
+- [ ] **Step 2:** Confirm every model scans 0, `db:verify-restore` passes with only the throwaway key, the `pii:reencrypt` report with only the throwaway key shows `stale 0` on every model (runbook step 9), and the same run with only the old key fails. Stop the container and delete the throwaway key.
+- [ ] **Step 3:** After a manual backup, run `pii:reencrypt` once in production without changing the key, set up as in runbook step 5: first the report, then with `--key-id` set to the current key's id (from `pii:key-id`, which must match the printed `Current key id`). It moves stored `v1` values to `v2`, and proves the command on the real tables with no key at risk.
 - [ ] **Step 4:** Record the date in 10.10. A real production rotation is not required: the gate is that one is possible.
 
 ##### Found while planning (not part of 10.10)

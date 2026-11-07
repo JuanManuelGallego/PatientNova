@@ -52,7 +52,7 @@ pnpm run test:integration
 - Errors reach Sentry: never interpolate names, notes, emails or phones. `scrubText` only masks well-formed emails and phone-like numbers. Sentry stays opt-in via DSN, with restricted `dataCollection` and `scrubEvent`/`scrubBrowserEvent`; see `docs/operations.md`.
 - Encrypted fields: `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`. Never SQL-filter, sort or `contains` on ciphertext.
 - Search through `patientSearchWhere`/`medicalRecordNameWhere` (`src/utils/encryption/pii-search.ts`); exact lookups use blind indexes (`emailHash`, `toHash`, etc.). The Prisma extension maintains `BLIND_INDEXES`; never set them manually.
-- Raw SQL bypasses encryption: never `$executeRaw` encrypted fields outside `backfill-pii.ts`. New PII fields require `ENCRYPTED_FIELDS`, `BLIND_INDEXES` if searched, a `TEXT` column, and tests.
+- Raw SQL bypasses encryption: never `$executeRaw` encrypted fields outside `backfill-pii.ts`, `reencrypt-pii.ts` and the constants of `patient-erasure.service.ts`. New PII fields require `ENCRYPTED_FIELDS`, `BLIND_INDEXES` if searched, a `TEXT` column, `REENCRYPT_TABLES` (`reencrypt-pii.ts`) for a new model, and tests.
 - Global JSON/urlencoded limit: `100kb`. Mount larger parsers BEFORE it: `/v1/users` 2mb, `/v1/consent-document` and `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb. First parser wins. Limiters run before parsing; global per-IP limiting skips signature-authenticated `/webhooks/*`. `trust proxy` is exactly 1 hop.
 
 ## Public API, OTP and sessions
@@ -73,7 +73,7 @@ pnpm run test:integration
 - Consent uses `ensureCurrentConsent` (`src/patient-consents/`), idempotent on `patient_consents_active_key`, auditing inside `tx` only on insertion. Only the server selects `PRIVACY_POLICY_VERSION`.
 - Consent gates only the portal. Revocation is the operator command `consent:revoke` (`src/patient-consents/consent-revocation.service.ts`, procedure in `docs/compliance-patient-data.md` section 4). It never cancels care. `Patient.messagesStoppedAt` makes `resolvePatientRoute` return null, and the send workers cancel anything queued. Approval refuses a request older than a revocation (`findRevokedSince`).
 - The authorization text has one source, `Portal/src/config/consentText.ts`. Changing it, the policy or the patient conditions bumps `PRIVACY_POLICY_VERSION` and adds a folder under `docs/legal/versions/`, because consent rows store only the version. Booking needs the clinic's legal identity plus a public phone or WhatsApp (`hasLegalIdentity` readiness), which is the real alternative that keeps the portal voluntary.
-- `patient:erase` (`src/patients/patient-erasure.service.ts`) is the only code allowed to rewrite audit rows, through raw SQL with constants. Audit rows keep names until then.
+- Two commands rewrite audit rows through raw SQL: `patient:erase` (`src/patients/patient-erasure.service.ts`) with constants, `pii:reencrypt` (`reencrypt-pii.ts`) with ciphertext only. Audit rows keep names until erasure.
 
 ## Booking and patient actions
 

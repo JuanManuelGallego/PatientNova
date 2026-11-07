@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { createKeyring, decrypt } from '../../../src/utils/encryption/field-encryption.js';
+import { createKeyring, decrypt, keyId } from '../../../src/utils/encryption/field-encryption.js';
 import { PII_VERSION } from '../../../src/utils/encryption/blind-index.js';
 import { sealV2 } from '../../ciphertext-fixtures.js';
 import { createTestPatient, createTestUser } from '../helpers.js';
@@ -34,7 +34,7 @@ describe('key rotation through the keyring', () => {
     const patient = await createTestPatient(userId, { name: 'Ana' });
     const [ raw ] = await prisma.$queryRaw<{ name: string }[]>`
       SELECT "name" FROM patients WHERE id = ${patient.id}::uuid`;
-    expect(raw!.name.startsWith('enc:v1:')).toBe(true);
+    expect(raw!.name.startsWith(`enc:v2:${keyId(OLD_KEY)}:`)).toBe(true);
     expect(() => decrypt(raw!.name, createKeyring(NEW_KEY))).toThrow();
 
     const rotated = await rotate();

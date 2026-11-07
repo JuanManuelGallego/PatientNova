@@ -75,9 +75,14 @@ export function encrypt(plaintext: string, keyring: Keyring): string {
   ]);
   const authTag = cipher.getAuthTag();
 
-  // Format: enc:v1:<base64(iv + authTag + ciphertext)>
+  // Format: enc:v2:<keyId>:<base64(iv + authTag + ciphertext)>
   const payload = Buffer.concat([iv, authTag, encrypted]);
-  return `${PREFIX}${payload.toString("base64")}`;
+  return `enc:v2:${keyring.currentId}:${payload.toString("base64")}`;
+}
+
+/** True only for a v2 value written under the keyring's current key. */
+export function isCurrent(value: string, keyring: Keyring): boolean {
+  return V2_PATTERN.exec(value)?.[1] === keyring.currentId;
 }
 
 function open(payloadB64: string, keyBuffer: Buffer): string {

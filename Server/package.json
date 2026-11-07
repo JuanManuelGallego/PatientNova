@@ -22,6 +22,8 @@
     "db:studio": "prisma studio",
     "db:seed-admin": "tsx src/utils/prisma/seed-admin.ts",
     "pii:backfill": "tsx src/utils/prisma/backfill-pii-cli.ts",
+    "pii:reencrypt": "tsx src/utils/prisma/reencrypt-pii-cli.ts",
+    "pii:key-id": "tsx src/utils/encryption/key-id-cli.ts",
     "consent:revoke": "tsx src/patient-consents/revoke-consent-cli.ts",
     "db:verify-restore": "tsx src/utils/prisma/verify-restore-cli.ts",
     "patient:erase": "tsx src/patients/patient-erase-cli.ts",
