@@ -41,30 +41,101 @@ session on first deploy. Announce it and deploy outside clinic hours.
 
 ## Backups and restore (PostgreSQL)
 
-Status: **to be confirmed with the hosting provider.** Do not claim backups exist in any user-facing
-text until each box below is ticked.
+Status: **nightly offsite backups since 2026-11-06, with a restore rehearsed the same day.** Railway's
+own backups are unconfirmed, so user-facing text may claim only the encrypted offsite copies.
 
-- [ ] Automated daily backups enabled at the provider, retention >= 14 days
-- [ ] Point-in-time recovery enabled (if offered)
-- [ ] Backups encrypted at rest
-- [ ] A restore was rehearsed into a scratch database in the last 90 days (date: ____)
+- [x] Nightly offsite backup running (`ops/db-backup`), retention 30 days
+- [ ] A missed or failed run alerts through Sentry, confirmed once by stopping the job
+- [ ] Railway volume backups and point-in-time recovery enabled, if the plan offers them
+- [x] Offsite backups encrypted (`age`)
+- [ ] Railway's own backups, if enabled: confirm they are encrypted
+- [x] A restore was rehearsed in the last 90 days (date: 2026-11-06)
 
-Manual logical backup (also useful before risky migrations):
+Railway's backups stay inside Railway and wiping a volume deletes them, so the offsite copy is
+required either way. Railway's backups only add faster restores.
+
+### Nightly offsite backup
+
+`ops/db-backup` is a Railway cron service: `pg_dump`, encrypted with `age`, uploaded to Cloudflare R2.
+It reaches disk only as ciphertext and holds only the public key, so neither Railway's service nor R2
+can read a backup. `bash ops/db-backup/smoke-test.sh` runs it end to end, restore included, in
+throwaway containers.
+
+1. **R2.** Create a private bucket `patientnova-db-backups`. Add a lifecycle rule that deletes objects
+   after 30 days. Create an API token with Object Read & Write on that bucket only.
+2. **Encryption key.** Run `age-keygen -o patientnova-backup.key` on your own machine. Store the file
+   with the other key backups, then delete the local copy. It prints the public key (`age1...`).
+   Losing this key makes every backup useless, and it is the one key that must stay out of Railway.
+3. **Sentry.** In `patientnova-server`, create a cron monitor `db-backup` with schedule `0 7 * * *` in
+   UTC and an alert on it. Copy its check-in URL, up to the final `/`.
+4. **Railway.** Create a service from this repo with Root Directory `ops/db-backup`, Cron Schedule
+   `0 7 * * *` (2:00 in Bogotá) and restart policy Never. Set these variables:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | Reference to the Postgres service's URL |
+   | `BACKUP_AGE_RECIPIENT` | The `age1...` public key |
+   | `R2_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` |
+   | `R2_BUCKET` | `patientnova-db-backups` |
+   | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | The token from step 1 |
+   | `BACKUP_HEARTBEAT_URL` | The URL from step 3 |
+
+5. **Check.** Run it once with `railway cron run`. A `patientnova-*.dump.age` object appears in the
+   bucket and the monitor turns green. Then do the first restore rehearsal below.
+
+The job fails rather than upload when `pg_dump` fails or the file is under `BACKUP_MIN_BYTES` (1024).
+Its Postgres client must be at least the server's major version: update `ops/db-backup/Dockerfile`
+when the database moves to a newer major version.
+
+### Manual backup
+
+Before risky migrations, and until the nightly job runs:
 
 ```bash
-pg_dump --format=custom --no-owner --file patientnova-$(date +%F).dump "$DATABASE_URL"
+pg_dump --format=custom --no-owner --dbname "$DATABASE_URL" \
+  | age --recipient age1... --output patientnova-$(date +%F).dump.age
 ```
 
-Restore into a scratch database and verify:
+### Restore rehearsal
+
+Every 90 days, in Git Bash, so the data stays in memory and the private key stays out of Railway. A
+restored database is readable patient data: use this memory-only container, never a Docker volume.
+If the image is missing, build it with `docker build --tag patientnova-db-backup:smoke ops/db-backup`.
+Download the newest `.dump.age` from R2 into an empty folder outside OneDrive and run these from there.
+
+Start the database, then paste the private key when `read` waits:
 
 ```bash
-createdb patientnova_restore
-pg_restore --no-owner --dbname patientnova_restore patientnova-YYYY-MM-DD.dump
-psql patientnova_restore -c 'SELECT count(*) FROM appointments;'
+MSYS_NO_PATHCONV=1 docker run -d --rm --name pn-restore --tmpfs /var/lib/postgresql -p 127.0.0.1:5544:5432 -e POSTGRES_PASSWORD=restore -e POSTGRES_DB=restore postgres:18-alpine
+read -rs AGE_KEY; export AGE_KEY
 ```
 
-Patient data is sensitive personal data under Ley 1581 de 2012: store dumps encrypted, restrict
-access, delete scratch copies after the rehearsal.
+Restore. `exit 0` means it worked:
+
+```bash
+MSYS_NO_PATHCONV=1 docker run --rm -i -e AGE_KEY --network container:pn-restore --entrypoint bash patientnova-db-backup:smoke -c 'set -o pipefail; printf "%s
+" "$AGE_KEY" > /tmp/key.txt && age --decrypt --identity /tmp/key.txt | pg_restore --no-owner --no-privileges --dbname postgresql://postgres:restore@127.0.0.1:5432/restore' < patientnova-YYYY-MM-DDTHHMMSSZ.dump.age; echo "exit $?"
+```
+
+Compare with the same query on production. Small differences are normal:
+
+```bash
+docker exec pn-restore psql -U postgres -d restore -tAc 'SELECT (SELECT count(*) FROM patients), (SELECT count(*) FROM appointments), (SELECT count(*) FROM "AuditLog")'
+```
+
+Read rows with the **password manager copies** of the keys, which proves the key backups work. It
+exits 0 only when it read rows and decrypted all of them, and prints counts, never patient data:
+
+```bash
+read -rs ENCRYPTION_KEY; read -rs BLIND_INDEX_KEY; cd Server
+DATABASE_URL="postgresql://postgres:restore@127.0.0.1:5544/restore" ENCRYPTION_KEY="$ENCRYPTION_KEY" BLIND_INDEX_KEY="$BLIND_INDEX_KEY" pnpm run db:verify-restore; echo "exit $?"
+```
+
+Clean up: `docker rm -f pn-restore`, delete the downloaded file, close the terminal, and record the
+date in the checklist above.
+
+Patient data is sensitive personal data under Ley 1581 de 2012: store dumps only encrypted and
+restrict access.
 
 ## Error tracking (Sentry, optional)
 
@@ -96,7 +167,7 @@ access, delete scratch copies after the rehearsal.
 Each provider connects their own Google account (`google_connections`, refresh token encrypted at
 rest). A refresh token can stop working without any action in PatientNova.
 
-- **Find out why connections expire (to do, record the result here).** In Google Cloud Console →
+- **Why connections expire (checked 2026-11-02; the result was not recorded).** In Google Cloud Console →
   OAuth consent screen, check the publishing status. In "Testing", Google expires refresh tokens after
   7 days: move the app to "In production" (verification may be required for the Meet scope). Other
   causes: the provider changed their Google password, revoked access in their Google account, or more
@@ -183,7 +254,12 @@ learns about it: at login the patient recovers with email, and later the appoint
 ## CSP rollout (Portal)
 
 The Content-Security-Policy ships as `Content-Security-Policy-Report-Only`. After a staging soak with
-no console violations, set `CSP_ENFORCE=true` for the Portal build to enforce it.
+no console violations, set `CSP_ENFORCE=true` for the Portal build to enforce it. Headers are set at
+build time, so redeploy after changing the variable.
+
+The policy has no `report-uri`: in report-only mode a violation shows only in the console of whoever
+triggers it. The CI e2e job builds with `NODE_ENV=production` and `CSP_ENFORCE=true`, so the suite runs
+under the enforced policy. `'wasm-unsafe-eval'` is there for the medical record PDF.
 
 ## End-to-end tests
 

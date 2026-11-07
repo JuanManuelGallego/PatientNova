@@ -1,4 +1,4 @@
-> **Status:** Phase 0 complete; key rotation moved to 8.1; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, 9.1–9.4 built 2026-11-05 with phone login off (see "Phase 9"; 9.0 checks remain before turning it on); public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color). **Updated:** 2026-11-05
+> **Status:** Phase 0 complete; key rotation moved to 10.10; Phase 1 complete (#69 server, #70 settings tab); Phase 2 complete (#72 slot engine, #73 public read API, `05226ec` `/book/[slug]` page); Phase 3 complete (3.1+3.2 OTP `54a6c2d`…`65677b7`, 3.3 session `8116ebc`, 3.4 "Mis citas" OTP login); Phase 4 built (4.1 booking transaction #78, 4.2 notifications #79, 4.3 Portal booking form and "Mis citas" list); pilot gate pending. Phase 5 (5.1–5.3) built 2026-11-02 (patient cancel, reschedule, "Mis citas" actions); 8.2 (b)–(c) built 2026-11-02; 5.5-A/B (cancel while booking is off, reschedule policy) and 5.4 (virtual portal bookings, server 5.4-A + Portal 5.4-B) built 2026-11-02; Phase 5 complete, including the manual 8.2 (a) check (see "5.5" and "5.4 + 8.2 (a)–(c) implementation plan"); Phase 6 prepared 2026-11-02 (see "Phase 6 implementation plan"); 6.1–6.2 built (#84); 6.3–6.6 built 2026-11-02 on `phase6/inbox-notifications-expiry` (e2e for approval mode moved to 7.4); Phase 7 prepared and built 2026-11-03 on `phase7/audit-quality-gates` (see "Phase 7 implementation plan"); Phase 9 (all channels for login and patient messages) prepared 2026-11-04, 9.1–9.4 built 2026-11-05 with phone login off (see "Phase 9"; 9.0 checks remain before turning it on); public booking profile (bio, specialty, license, public contact), map links, cancel/reschedule policy line, step progress and `.ics` download built 2026-11-04 (no per-provider accent color); booking portal redesign merged 2026-11-06. The portal is not enabled in production. All remaining work is in Phase 10. **Updated:** 2026-11-06
 
 ## Phase 0 status (2026-10-26)
 Built as the branches below, then merged to `staging` through PRs #59–#68 with review fixes. Server: 46 integration files / 558 tests against real Postgres, `tsc --noEmit` clean; Portal: ~200 unit tests; the self-contained Playwright `e2e` job runs in CI. CI triggers on pull requests and pushes to `main` (no longer on pushes to `staging`).
@@ -25,9 +25,9 @@ Built as the branches below, then merged to `staging` through PRs #59–#68 with
 
 Also landed outside the numbered items: 5000-patient cap per provider, `cancelledBy=PROVIDER` on provider cancels, past-appointment lock narrowed to moves/reactivations/confirms, every `tx` audit made `required`, Renovate + pnpm 12.
 
-Still open before any real-patient pilot: counsel review of the legal text, controller identity/NIT, `BLIND_INDEX_KEY` and `ENCRYPTION_KEY` provisioned and backed up apart from the database (`docs/operations.md`), confirmed backups (`docs/operations.md`), `btree_gist` permission on the production database, CSP enforcement (`CSP_ENFORCE=true`) after a staging soak.
+Still open before any real-patient pilot: moved to Phase 10 (10.1 to 10.8).
 
-Not a pilot gate but due soon: `ENCRYPTION_KEY` rotation (8.1, not started).
+Also a gate, by decision of 2026-11-06: `ENCRYPTION_KEY` rotation (10.10, not started).
 
 # Patient Portal: architecture proposal
 
@@ -42,6 +42,9 @@ Patients should be able to self-book with a specific provider. Today `User` is t
 - **Matching is email only**, no name or phone check. *(Phase 9 adds phone matching, only for a number proven by OTP and never for a number typed in the booking form.)*
 - No cancellation cutoff. Guardians/dependents out of scope.
 - **Compliance (encryption/blind index of patient contact fields):** decided and implemented (0.23). Matching uses the `emailHash` blind index.
+- **Phone login is always allowed (decided 2026-11-06).** It cannot be turned off per provider, and there is no email-only launch.
+- **Providers cannot revoke an individual patient's portal access (decided 2026-11-06).** Nothing in the product sets `portalAccessEnabled` to false. The column and its checks stay.
+- **Consent is granted once and has no revocation flow (decided 2026-11-06).** Nothing writes `PatientConsent.revokedAt`. Patients are asked again whenever `PRIVACY_POLICY_VERSION` changes.
 
 ## Review round 3 (five smaller findings, all verified against the code and accepted)
 1. Range type: columns are `TIMESTAMP(3)`, so the exclusion constraint uses `tsrange(...,'[)')` (0.2).
@@ -92,9 +95,9 @@ All eight findings were checked against the code and accepted.
 - **The portal never updates an existing Patient from typed input.** Typed name/phone apply only when creating a new Patient.
 - Required for a new Patient: `name` and `lastName` (schema requires both) collected in the booking form, email from the session, phone optional, `reminderChannel=EMAIL`, `source=PORTAL`.
 - **Consent without leaking existence:** `GET /v1/portal/appointments` returns `{appointments: [], consentRequired: true}` both when no patient exists and when the patient hasn't accepted. There is **one idempotent operation, `ensureCurrentConsent(tx, patientId, policyVersion, evidence)`**: it reuses the active (`revokedAt IS NULL`) `PatientConsent` for that patient, kind and policy version, or inserts it (`INSERT ... ON CONFLICT DO NOTHING` against a partial unique index on `(patientId, kind, policyVersion) WHERE revokedAt IS NULL`, then select), so concurrent calls can't create duplicates. `POST /v1/portal/consent` calls it when a patient exists and returns the same 204 whether it did anything or not (no patient yet). Booking always requires `consentAccepted: true` in its body (the UI always shows the checkbox, since the portal can't know who is an existing patient) and calls the same operation inside the booking transaction, so a prior consent is reused and never duplicated. In approval mode it is called on approval with the evidence stored on the `BookingRequest`, preserving the original acceptance time.
-- Revocation: `portalAccessEnabled=false` takes effect on the next request (checked per request, no token version needed). If the provider changes a patient's email, the old email's session simply stops resolving to that patient.
-- Email only, no name/phone check (user's choice). Risk: a shared or stale email attaches someone to the wrong record. Mitigation: provider can disable portal access per patient, every portal action is audited.
-- Known limitation: existing patients without an email can't be matched and would be duplicated; resolve later with a merge action in the inbox. (Phase 9 phone login addresses this for patients with a phone on record.)
+- The per-request `portalAccessEnabled` check remains in the code, but nothing in the product sets it to false (decided 2026-11-06). If the provider changes a patient's email, the old email's session simply stops resolving to that patient.
+- Email only, no name/phone check (user's choice). Risk: a shared or stale email attaches someone to the wrong record. Mitigation: every portal action is audited, and the provider can correct the contact on the record, after which the old contact stops resolving to that patient.
+- Known limitation: existing patients without an email can't be matched and would be duplicated; a merge action is listed in 10.16. (Phase 9 phone login addresses this for patients with a phone on record.)
 
 ## Slot contract
 `GET /v1/public/providers/:slug/slots?typeId=&from=YYYY-MM-DD&to=YYYY-MM-DD` (dates in the provider's timezone, range at most 31 days).
@@ -202,7 +205,7 @@ Work:
 
 **0F. Compliance decision gate**
 - **0.23 Compliance decision record.** *(Done: decision in `docs/compliance-patient-data.md`; implemented for `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`, with blind indexes per AGENTS.md. The pilot gate is satisfied on the code side; key custody remains in the open list above.)* Decide, in writing, whether `Patient` name, lastName, email, phone fields and `Reminder.to` get encryption plus a blind index (HMAC of the normalized email) before the portal stores patient data. This must come **before** 3.1/3.3 because a blind index changes the unique index (0.4), `findByEmail` and the matching function. Output: a short decision doc, and if "encrypt", the design for the index swap. **Pilot gate:** a pilot with real patient data requires this decision implemented, or an explicit written acceptance by the controller; until then any pilot uses only synthetic or staff data.
-- **0.24 Encryption key rotation:** moved to 8.1.
+- **0.24 Encryption key rotation:** moved to 10.10.
 
 **Phase 0 exit criteria** (all met as of 2026-10-26, pending counsel sign-off on the legal text and consent design): concurrent double-booking impossible (lock plus constraint) and `createWithin` in place; patient and provider tokens mutually rejected; the two CORS classes enforced with Origin and CSRF checks; no PII or secrets in default logs or URLs; normalized-email index in place; unauthenticated Portal pages make no provider API calls; e2e runs against a self-contained stack; legal text updated; consent design agreed with legal (0.20 to 0.22); compliance decision recorded (0.23).
 
@@ -252,7 +255,7 @@ Starting point (checked in code): `AvailabilityRule` (ISO weekday, `startMinute`
 
 **Phase 2 exit criteria:** a provider with booking live gets a public page that shows only allow-listed data and correct slots (buffer, blocked time, lead/horizon, DST-tested); unknown and disabled providers are indistinguishable in responses; the public endpoints set no cookies and accept no credentials; `isSlotAvailable` is ready for 4.1; the Bruno collection covers every Phase 1 and Phase 2 endpoint. Still gated by `ENABLE_PORTAL` and per-provider `bookingEnabled`; no public launch until 0.17 (counsel review) is closed.
 
-**Decided for Phase 2 (2026-10-31):** price comes from the appointment type only (location price unused); the page always shows the avatar (initials fallback) and shows the logo when one is set. **Open:** whether a "next available date" hint is worth a server endpoint later (not in Phase 2: week paging covers it).
+**Decided for Phase 2 (2026-10-31):** price comes from the appointment type only (location price unused); the page always shows the avatar (initials fallback) and shows the logo when one is set. The "next available date" hint is listed in 10.16.
 
 ### Phase 3: Patient authentication
 Prerequisites: 0.5, 0.6, 0.7, 0.10, 0.20, 0.23.
@@ -662,7 +665,7 @@ Three PRs, in order (PR numbers are not the item numbers above: PR 5.1 covers it
 - ~~Whether patients should keep view and cancel access while the provider has paused booking.~~ Decided 2026-11-02:
   yes, see PR 5.5-A below.
 - ~~Whether to cap reschedules per appointment.~~ Decided 2026-11-02: a provider setting, see PR 5.5-A below.
-- A "past appointments" history on "Mis citas" (not in Phase 5).
+- A "past appointments" history on "Mis citas": dropped on 2026-11-06. A dated session list reaches anyone who shares the contact, which outweighs the benefit.
 
 #### 5.5: cancel while booking is off + reschedule policy (decided 2026-11-02)
 **Decided:**
@@ -1113,12 +1116,12 @@ As planned:
 - The no-secrets-in-URLs rule has a test.
 - Bruno and AGENTS.md match the code.
 
-**Open:**
-- Should VIEWER keep read access to portal rows (masked emails, IP addresses)? Today VIEWER reads the whole log.
-- Is a provider-facing consent history per patient worth adding later? 7.2 was removed, so it is not in this phase.
+**Decided:**
+- VIEWER keeps read access to portal rows, masked emails and IP addresses included (decided 2026-11-06).
+- Providers do not need a consent history per patient (decided 2026-11-06).
 
 ### Phase 8: Operational follow-ups (not portal features; can start any time)
-- **8.1 Encryption key rotation (was 0.24; not started).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** not a pilot gate, but build it before real patient data grows, so a leaked key can be rotated right away. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **8.1 Encryption key rotation:** moved to 10.10.
 - **8.2 Google Meet connection UX.** *(Done 2026-11-02: (a)–(e) built and the manual (a) check completed.)* Originally: today the connection expires silently. The refresh token's death (`invalid_grant`, `src/google/google-meet.service.ts:28`) is only discovered when the provider clicks "Generar Google Meet": then the connection is marked disconnected and the modal switches to "Reconectar". Until that moment `GET /v1/google/connection` reports `connected: true` from the stored row, so Settings and the appointment modal show a healthy connection that isn't. Build:
   - (a) **Find the cause first.** If the OAuth consent screen is in "Testing" publishing status, Google expires refresh tokens after 7 days; moving it to "In production" (with verification for the Meet scope if required) fixes the root cause. Also check password changes, the 50-token-per-client limit and user revocation. Record the finding in `docs/operations.md`.
   - (b) **Check validity proactively.** A daily pg-boss job (and an optional `?verify=true` on the status endpoint, rate-limited) refreshes the access token for each active connection. On `invalid_grant` it reuses the existing mark-disconnected + audit path. Requires `ENABLE_SCHEDULER`; without it the status endpoint check is the only signal.
@@ -1134,7 +1137,7 @@ As planned:
 ### Phase 9: All channels for patient login and messages
 *Status: 9.1–9.4 built 2026-11-05. The `ENABLE_PORTAL_PHONE_LOGIN` flag was removed the same day: phone login is always on with the portal. All templates were assumed to exist; the SIDs are required at boot. SMS was dropped from login the same day: the login offers email and WhatsApp, and SMS stays for reminders and notices. Text below about SMS codes describes what was first built.*
 
-**Still to do before phone login reaches production (9.0):** real test sends to the Colombian carriers, the Twilio Console settings, counsel's review of the policy (with a `PRIVACY_POLICY_VERSION` bump if the text changes), and a manual check on a real phone. See `docs/operations.md`. After the Portal that reads `contact` is deployed, drop the transitional `email` from the session and verify responses.
+**Still to do:** moved to Phase 10 (10.1, 10.8 and 10.9).
 
 **Decided while building:**
 - `patient-meeting-link` reuses the existing template, as `{1: provider, 2: url}`, so there is no eighth template.
@@ -1290,21 +1293,416 @@ As planned:
 - Paid OTP sends are capped per number, per provider and overall, and hitting a cap is visible in Sentry.
 - Bruno, AGENTS.md and both docs match the code.
 
-**Open:**
-- **Who pays** for WhatsApp and SMS, and should a provider be able to turn phone login off? The default is one global flag, paid by the platform. A per-provider setting would add a `loginChannels` field in booking settings.
-- **Families sharing a number** go through review every time and see an empty list by phone; email still works for them. Is a safe way to choose a record worth designing later?
-- **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). Fixing it needs a small delivery table the status callback can read, then a retry on the next route. Worth it if pilots show real failures.
-- **Patient-chosen channel.** Should a patient be able to change their own channel, with a fresh OTP proving the new contact? This would relax "the portal never updates an existing Patient".
+**Decided:**
+- **Families share one contact (decided 2026-11-06).** There is no record picker. A shared number goes through review every time and shows an empty list by phone. A shared email resolves to the one record that holds it.
+- **Asynchronous delivery failure.** A portal notice to a number without WhatsApp fails silently (63024). There is no failover to another channel (decided 2026-11-06).
 
-### Phase 10: Backend follow-ups to the booking portal redesign
-*Status: not started. Left out of the frontend-only redesign (`docs/superpowers/specs/2026-11-05-patient-booking-portal-redesign-design.md`) on 2026-11-05. Each item is independent.*
+### Phase 10: Remaining work
+*Status: this is the single list of remaining work, checked against the code on 2026-11-06. Everything outside this phase is built or decided. All built work is on `main`, and the portal is not enabled in production. Phone login cannot be separated from the portal, so 10.1 to 10.8 and 10.10 gate enabling it, including for any pilot.*
 
-- **10.1 Past appointments in Mis citas.** Add an "Anteriores" list under the upcoming appointments. Today `GET /appointments` returns only upcoming ones (`listUpcoming`), so this needs a new read scoped through `resolvePortalPatient`, with the same consent gate, and a DTO allow-list. Update the Bruno collection in the same PR. Smallest of the three.
-- **10.2 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. In auto-confirm, a session that resolves to a consented patient could omit it. Open point: confirm this respects "must not reveal patient existence" before building. Approval mode must keep asking, because that path never looks up a patient. Phone sessions must never display a saved name.
-- **10.3 Hold the slot during verification.** In auto-confirm nothing holds the chosen time while the patient requests and enters the code, so it can be lost after all that work. Consider a short anonymous hold. Open points: abuse (holds without a proven contact), interaction with `booking_requests_no_hold_overlap` and `loadLiveHolds`, and expiry. Largest of the three, so weigh it against how often patients actually lose a slot.
+**Legal and compliance (before enabling; owner: controller, with counsel).**
+- **10.1 Counsel review of the policy.** The update was drafted on 2026-11-06 (WhatsApp login, Meta, rescheduling, consent evidence, 90-day request retention; `PRIVACY_POLICY_VERSION` `2026-11-06`). Questions for counsel: Meta's role; the revocation wording in section 10; whether sensitive data needs its own checkbox; WhatsApp reminders greeting the patient by name, with the address and instructions; and minors whose booking lands on a parent's record through a shared contact. If the text changes, update `PRIVACY_POLICY_VERSION` and `lastUpdated` to the new date. **Status:** counsel brief drafted 2026-11-06 ([doc](https://claude.ai/artifact/VaAfkwB7DYAxJPgPEud3NW)); it also carries the questions for 10.2 to 10.5 and goes out with the policy and terms attached.
+- **10.2 Terms of service.** Text updated 2026-11-06: WhatsApp access, rescheduling and requests, Meta, Sentry, mandatory Turnstile. Account closure goes to `legal@` and data deletion to `privacidad@` in both documents. Counsel review pending, including whether patients must accept the terms and how section 3's legal capacity applies to minors.
+- **10.3 Consent checkbox.** The labels in `PatientSteps.tsx` and `PortalConsent.tsx` say only "mis datos personales"; section 4 of `docs/compliance-patient-data.md` now records that (corrected 2026-11-06). Change the labels once counsel decides, through one shared constant. A label change must bump `PRIVACY_POLICY_VERSION`, because consent rows store the version, not the label. A second checkbox also needs a new consent `kind` and a change to the shared e2e step in `Portal/e2e/support/portal.ts`.
+- **10.4 Consent revocation procedure.** The product has no revocation flow (decided 2026-11-06), but revocation is a right under article 8 of Ley 1581 and the policy offers it. Built 2026-11-06: the operator command `pnpm run consent:revoke <patientId> [--block-portal]` (`revokePatientConsents`), audited and idempotent, and the draft procedure in section 4 of `docs/compliance-patient-data.md`. Counsel to confirm the procedure, whether revocation must also stop the clinic's reminders, and whether someone holding a shared contact can validly accept again.
+- **10.5 Compliance checklist** (`docs/compliance-patient-data.md`, section 5). Drafted 2026-11-06, pending counsel: request runbook (section 6), incident procedure (7), retention table (8). In the counsel brief: controller identity, NIT and any Colombian representative; RNBD; international transfer basis; the erasure path, which waits on counsel because the product only soft-deletes. Owner's tasks: accept the processor contracts (Twilio, Brevo, Google, Cloudflare, Sentry, Railway, Vercel) and confirm `privacidad@` and `legal@` receive mail with a test from an outside account.
+
+**Operations (before enabling; owner: account admin).**
+- **10.6 Backups and keys.** Done 2026-11-06. `ENCRYPTION_KEY` and `BLIND_INDEX_KEY` backed up. Nightly encrypted backup running (`ops/db-backup`: `pg_dump`, `age`, Cloudflare R2, Sentry check-in, 30 days), and a restore rehearsed with the saved keys. Still open, none of them a gate: switch the `db-backup` service from `staging` to `main` after merging, stop the job once to confirm the Sentry alert, and enable Railway's own backups if the plan offers them. Rehearse a restore every 90 days.
+- **10.7 Production database and headers.** Owner reported all checks passed on 2026-11-06. Confirm the `btree_gist` permission. Set `CSP_ENFORCE=true` for the staging Portal build and redeploy, because headers are set at build time. The full e2e suite passed under the enforced policy on 2026-11-06 and CI now runs that way, so the check on staging covers what e2e cannot: the real Turnstile site key, the Google OAuth popup and a Sentry test error. Then set it for production.
+- **10.8 WhatsApp and Twilio (was 9.0).** Marked complete by the owner on 2026-11-06. Templates approved and all 12 portal SIDs set: they are required at boot even with `ENABLE_PORTAL=false`, so a deploy without them does not start the API. Send real codes to the main Colombian carriers. Set the Twilio usage alert and Geo Permissions. Run a full login, booking and message check on a real phone.
+
+**Code.**
+- **10.9 Remove the transitional `email`.** Done 2026-11-06: `sessionContactView` no longer returns it, so the session and verify responses carry only `contact` and `contactChannel`. The token's `email` claim stays.
+- **10.10 Encryption key rotation (was 8.1 and 0.24; not started; plan prepared, see "10.10 implementation plan" below).** Today `ENCRYPTION_KEY` cannot be rotated: `decrypt` takes a single key and the `enc:v1:` prefix names the format, not the key, so changing the env var makes every encrypted field unreadable. Build: (1) a keyring (`ENCRYPTION_KEY` + `ENCRYPTION_KEY_PREVIOUS`) and an `enc:v2:<kid>:` format that records the key id, still reading `v1`; new writes always use the current key. (2) A re-encrypt command over every `ENCRYPTED_FIELDS` model (10 models, including the `AuditLog` JSON fields), batched and idempotent like `backfill-pii.ts`. `AuditLog` is immutable through the Prisma guard, so it is rewritten with raw SQL as a documented exception (ciphertext only, never content). (3) A runbook in `docs/operations.md`. `BLIND_INDEX_KEY` can already be rotated: set the new key, bump `PII_VERSION`, deploy, and the backfill on start rehashes every row. Until it finishes, rows not yet rehashed are missed by email/phone/name search, `toHash` reply matching and the email unique index, so rotate at a quiet time. Either key is backed up outside Railway before the deploy. **Timing:** gates enabling the portal (decided 2026-11-06), because the incident procedure cannot otherwise replace a leaked key. Build it on its own branch with a written plan, after the Phase 10 walkthrough. **Deploy in two steps:** `isEncrypted` matches only `enc:v1:` and treats anything else as plaintext, so old code reading `enc:v2:` would show ciphertext and encrypt it again on save. First deploy code that reads v2 and still writes v1, then the code that writes v2. **Backups:** restoring one made before a rotation needs the old key, so keep a retired key at least 30 days after the re-encryption finishes, and cover that in the runbook and the restore rehearsal. Rotating does not protect data already copied along with the key. Tests: read `v1` and `v2` under a keyring, re-encrypt is idempotent and keeps `updatedAt`, a value under an unknown `kid` fails loudly.
+- **10.12 Skip the name for recognized patients.** The form says it will use the saved data but still requires name and surname, because `createPortalBookingSchema` requires `patient`. Decided 2026-11-06: build it as a small separate PR after 10.10. Hide name and surname only when `consentRequired` is false and booking is in auto-confirm; `patient` becomes optional and the server answers 400 when a name is needed and missing, which brings the fields back. This reveals nothing new: `consentRequired` already tells the contact holder they are a consented patient. Approval mode, new contacts, review routing and a pending re-consent keep asking. The consent checkbox stays. Phone sessions must never display a saved name.
+- **Dropped 2026-11-06: holding the slot during verification.** Double-booking is already prevented, so a hold would only change when the loser finds out. A lost slot recovers cleanly (form and session kept), and a hold before any proven contact would let anyone block a calendar.
+
+**Decisions.**
+- **10.14 Who pays** for WhatsApp and SMS? Decided 2026-11-06: the platform. There is no metering; `Reminder` rows can be counted by provider and channel if volume becomes a question. SMS costs about ten times what WhatsApp does, so look there first.
+- **10.15 Patient-chosen channel.** Decided 2026-11-06: no. The patient chooses email or WhatsApp at login, and for a patient the portal creates, that choice becomes `reminderChannel`. An existing patient's messages keep following the provider's setting, and a patient who wants a change asks the provider. The portal never updates an existing Patient: adding a contact to a record would let someone sharing a family email attach their own number and reach that record by phone.
+
+**Later, only if real use shows the need.**
+- **10.16** A merge action in the inbox for duplicate patients. It is heavy: `Patient` has five related tables, the audit log is immutable, and merging the wrong two people exposes one patient's data to the other, so build it only if real use justifies it. The inbox `candidates` already avoid most duplicates. A "next available date" hint was dropped on 2026-11-06: `useSlotChooser` already moves past empty windows.
+
+**Documentation.**
+- **10.17** Closed 2026-11-06. The AGENTS.md config path is corrected, and `docs/` came out of `.gitignore`, so new files there are tracked again. The Google publishing status was not recorded: `docs/operations.md` says so and keeps the steps to check it.
+
+#### 10.10 implementation plan (prepared 2026-11-06)
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Make `ENCRYPTION_KEY` replaceable on a live database: a two-key keyring, a key id in every new ciphertext, a command that moves stored values to the current key, and a runbook.
+
+**Architecture:** `field-encryption.ts` stays pure and takes a `Keyring`; a new `keyring.ts` builds the process's ring from config, and the Prisma extension and the backfill use it. A new `reencrypt-pii.ts` walks all ten tables with raw SQL and rewrites only ciphertext that is not under the current key. It ships as two PRs deployed in order, because code from before PR A would misread `enc:v2:`.
+
+**Tech Stack:** Node `crypto` (AES-256-GCM), Prisma raw SQL on Postgres, Vitest.
+
+**Spec:** item 10.10 above, plus sections 3 and 7 of `docs/compliance-patient-data.md`.
+
+**Starting point (checked in code):**
+- Only `encryption-extension.ts` and `backfill-pii.ts` call `encrypt`/`decrypt`, and `config.encryption.key` is read only in those two files.
+- `FamilyMember`, `EvolutionNote` and `AuditLog` have no `updatedAt`, so the backfill's `updatedAt` guard cannot be reused.
+- Ids differ: `users`, `google_connections` and `"AuditLog"` use text ids; the other seven use `uuid`.
+- `AuditLog` has no `@@map`, so its table is `"AuditLog"`. `fieldsBefore`/`fieldsAfter` are `JSONB`: ciphertext is stored there as a JSON string, while old rows may hold plain JSON objects.
+- `AuditLog` immutability lives only in `auditLogGuardExtension`. The migrations have no trigger, rule or `REVOKE`, so raw SQL through the same client works.
+- `@updatedAt` is applied by the Prisma client and no trigger touches it, so a raw `UPDATE` keeps it.
+- All 52 encrypted fields are `String`/`@db.Text` or `Json` in the schema. The v2 header adds 9 characters, which Task 4 checks against the real columns.
+- `enc:v1:` is asserted in `test/unit/utils/encryption.test.ts:42` and `test/integration/patients/patient.pii-encryption.integration.test.ts:28`. `booking-requests.integration.test.ts:93` only checks `enc:`.
+- `prisma-client.ts` caches the client in `global.__prisma` outside production, and `test/integration/setup.ts` imports it before any test file, so tests that need other keys must reload modules.
+- `pnpm start` runs `pii:backfill` on every boot, so the backfill must read through the keyring.
+
+**Decisions this plan makes (the spec leaves them open):**
+- **Key id:** the first 8 hex characters of `SHA-256("patientnova-key-id:" + key bytes)`. It is derived, so there is no third variable to set wrongly, and it is safe to print because the key has 256 bits of entropy.
+- **`v1` reads** try each key in the ring, current first. `v1` does not name its key, and the GCM tag shows which one fits.
+- **Two PRs, no flag.** PR A reads `v2` and writes `v1`; PR B writes `v2`. A flag would be one more production setting to get wrong, and PR B removes the `v1` writer. Tests build `v1` values with their own fixture.
+- **Concurrency guard:** the `UPDATE` compares the old ciphertext of every field it changes. GCM's random IV makes any app write to those fields change that value, and this works on all ten tables.
+- **`pii:reencrypt` is manual**, not part of `pnpm start`. `AuditLog` can be large, and in an incident the operator should watch it finish.
+- **Plaintext stays as it is.** The command moves ciphertext only, as the spec requires for `AuditLog`.
+
+**Not included:**
+- A third key in the ring. One rotation finishes before the next starts.
+- Encrypting leftover plaintext outside the three models the backfill covers.
+- Fixing the `enc:` look-alike bug (see "Found while planning" at the end of this section).
+
+**Depends on:** branch from `main` after `phase10/legal-text` merges, because the runbook extends backup sections that are only on that branch. Task 6 needs a restorable backup (10.6).
+
+##### Global Constraints
+- `ENCRYPTION_KEY_PREVIOUS` is optional and never goes through `requireEnv`, so `.env.test`, `.github/workflows/ci.yml` and `Server/.env` do not change. A blank value counts as unset.
+- Never log, print or put in an error message a plaintext, a ciphertext or a key. Allowed: model, field, record id, counts, key ids.
+- Raw SQL on encrypted columns stays in `backfill-pii.ts` and `reencrypt-pii.ts`.
+- `BLIND_INDEX_KEY` and every blind index stay untouched: plaintext does not change, so neither do the hashes.
+- Run commands from `Server/`, with `docker compose -f docker-compose.test.yml up -d` for integration tests. If a full integration run dies with `0xC0000409` on Windows, rerun that file alone.
+- PR B merges only after PR A runs on every instance of every environment.
+
+##### Review Focus
+1. Soft-deleted or inactive rows must move too. Otherwise restoring a patient after the old key is retired fails on read.
+2. A value no key opens must not stop the run: the rest finishes, that row stays unchanged, and the command exits non-zero naming its model, field and id.
+3. An app write between the batch read and the `UPDATE` must win. The row is skipped and the next run picks it up.
+4. Audit JSON comes in three shapes (ciphertext string, plain object, JSON null). Only the first is rewritten, and its decrypted text stays byte-identical.
+5. Keys as operators really enter them: uppercase hex gives the same key id, a blank `ENCRYPTION_KEY_PREVIOUS` counts as unset, and the previous key equal to the current key or to `BLIND_INDEX_KEY` fails at boot.
+
+---
+
+##### PR A: `phase10/key-rotation-read` (reads `v2`, still writes `v1`)
+
+##### Task 1: Keyring and `v2` reader
+
+**Files:**
+- Modify: `Server/src/utils/encryption/field-encryption.ts`, `Server/src/utils/config/config.ts:41-50`, `Server/.env.example`, `README.md` (variables table)
+- Create: `Server/src/utils/encryption/keyring.ts`, `Server/test/ciphertext-fixtures.ts`
+- Test: `Server/test/unit/utils/encryption.test.ts`, `Server/test/unit/utils/config.test.ts`
+
+**Interfaces:**
+- Produces, in `field-encryption.ts`:
+  ```ts
+  export interface Keyring { currentId: string; keys: ReadonlyMap<string, Buffer> }
+  export function keyId(key: string): string;
+  export function createKeyring(current: string, previous?: string): Keyring;
+  export function encrypt(plaintext: string, keyring: Keyring): string;
+  export function decrypt(ciphertext: string, keyring: Keyring): string;
+  export function isEncrypted(value: string): boolean;
+  ```
+- Produces, in `keyring.ts`: `export function activeKeyring(): Keyring | null` (built once from config; null when no key is configured).
+- Produces, in config: `config.encryption.previousKey: string | undefined`.
+- Produces, in `test/ciphertext-fixtures.ts`: `sealV1(plaintext, hexKey)` and `sealV2(plaintext, hexKey)`. They use `node:crypto` directly, so they pin the stored format independently of the code under test. `sealV2` builds `enc:v2:<kid>:<base64(iv + tag + ciphertext)>`.
+
+- [ ] **Step 1: Write the failing tests.** Move the existing `encryption.test.ts` calls to `createKeyring(TEST_KEY)`, then add:
+
+```ts
+const OLD = 'a'.repeat(64); const NEW = 'b'.repeat(64); const OTHER = 'c'.repeat(64);
+const ring = createKeyring(NEW, OLD);
+
+it('reads v1 under the current key', () => expect(decrypt(sealV1('x', NEW), ring)).toBe('x'));
+it('reads v1 under the previous key', () => expect(decrypt(sealV1('x', OLD), ring)).toBe('x'));
+it('reads v2 by key id', () => expect(decrypt(sealV2('x', OLD), ring)).toBe('x'));
+it('rejects v2 under an unknown key id', () =>
+  expect(() => decrypt(sealV2('x', OTHER), ring)).toThrow(/Unknown encryption key id [0-9a-f]{8}/));
+it('rejects v1 that no key opens', () => expect(() => decrypt(sealV1('x', OTHER), ring)).toThrow(EncryptionError));
+it('rejects a v2 value tampered with', () => { /* flip a payload byte */ });
+it('recognises both formats and no look-alike', () => {
+  expect(isEncrypted(sealV1('x', NEW))).toBe(true);
+  expect(isEncrypted(sealV2('x', NEW))).toBe(true);
+  expect(isEncrypted('enc:v2:abc123')).toBe(false);
+  expect(isEncrypted('enc:v3:abcd1234:AAAA')).toBe(false);
+});
+it('derives a stable key id that ignores hex case', () => {
+  expect(keyId(NEW)).toMatch(/^[0-9a-f]{8}$/);
+  expect(keyId('B'.repeat(64))).toBe(keyId(NEW));
+});
+it('still writes v1 under the current key', () => {
+  const value = encrypt('x', ring);
+  expect(value.startsWith('enc:v1:')).toBe(true);
+  expect(decrypt(value, createKeyring(NEW))).toBe('x');
+});
+```
+
+Add to `config.test.ts`, in the existing `loadConfig` style, the exact errors:
+- malformed: `ENCRYPTION_KEY_PREVIOUS must be a 64-character hex string`
+- equal to the current key, any case: `ENCRYPTION_KEY_PREVIOUS must differ from ENCRYPTION_KEY`
+- equal to the blind index key: `ENCRYPTION_KEY_PREVIOUS must differ from BLIND_INDEX_KEY`
+- set with no current key: `ENCRYPTION_KEY_PREVIOUS requires ENCRYPTION_KEY`
+- blank: `previousKey` is `undefined`
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project unit test/unit/utils/encryption.test.ts test/unit/utils/config.test.ts`. Expected: FAIL (`createKeyring` is not a function).
+
+- [ ] **Step 3: Implement.** Parse `v2` with `/^enc:v2:([0-9a-f]{8}):/`. Wrap GCM failures in `EncryptionError` with a message that carries no content. `encrypt` keeps the `v1` format, using the current key. In `config.ts`, validate as the tests pin. Document the variable in `.env.example` and the README table: "Set only during a rotation; see `docs/operations.md`".
+
+- [ ] **Step 4: Run to verify they pass.** Same command. Expected: PASS. `pnpm run typecheck` fails in the extension and backfill until Task 2, so the branch compiles again at the end of that task.
+
+- [ ] **Step 5: Commit.** `git commit -m "feat(encryption): keyring and v2 reader"`
+
+##### Task 2: Extension and backfill read through the keyring
+
+**Files:**
+- Modify: `Server/src/utils/prisma/encryption-extension.ts`, `Server/src/utils/prisma/backfill-pii.ts`
+- Create: `Server/test/integration/prisma/use-keys.ts`
+- Test: `Server/test/integration/prisma/key-rotation.integration.test.ts`
+
+**Interfaces:**
+- Consumes: `activeKeyring()`, `encrypt`, `decrypt`, `keyId`, `createKeyring`, `sealV2`.
+- Produces: test helper `useKeys({ current, previous? }): Promise<{ prisma, close(): Promise<void> }>`. It saves `global.__prisma`, clears it, calls `vi.resetModules()`, stubs both env vars, dynamically imports `prisma-client.js`, then restores the global. Dynamic imports in the test after that call get the same rotated modules. `close()` disconnects that client and calls `vi.unstubAllEnvs()`.
+
+- [ ] **Step 1: Write the failing tests.** The key the suite boots with is the "old" key.
+
+```ts
+const OLD_KEY = process.env.ENCRYPTION_KEY!;
+const NEW_KEY = 'c'.repeat(64);
+
+it('reads a row written under the previous key', async () => {
+  const patient = await createTestPatient(user.id, { name: 'Ana' });
+  const rotated = await useKeys({ current: NEW_KEY, previous: OLD_KEY });
+  expect((await rotated.prisma.patient.findUniqueOrThrow({ where: { id: patient.id } })).name).toBe('Ana');
+});
+
+it('writes under the current key', async () => {
+  // Update notes through the rotated client, read the column raw.
+  expect(decrypt(rawNotes, createKeyring(NEW_KEY))).toBe('nueva nota');
+});
+
+it('backfill reads ciphertext under the previous key', async () => {
+  // Set piiVersion = 1 raw on a row encrypted under OLD_KEY, import backfill-pii.js after useKeys.
+  await backfillPii();
+  // Row reaches PII_VERSION and its nameTokens are still correct.
+});
+
+it('fails loudly on a key id outside the ring', async () => {
+  await prisma.$executeRaw`UPDATE patients SET "name" = ${sealV2('x', 'd'.repeat(64))} WHERE id = ${id}::uuid`;
+  await expect(prisma.patient.findUniqueOrThrow({ where: { id } }))
+    .rejects.toThrow(/Failed to decrypt Patient\.name: Unknown encryption key id/);
+});
+```
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project integration test/integration/prisma/key-rotation.integration.test.ts`. Expected: FAIL (the previous-key read throws).
+
+- [ ] **Step 3: Implement.** Replace `getKey()` with a keyring getter that keeps the production throw and the keyless development behaviour. In `decryptField`, append `EncryptionError.message` to `Failed to decrypt ${model}.${field}`. In `backfillPii`, use `activeKeyring()` wherever `key` was used, keeping its keyless branches.
+
+- [ ] **Step 4: Run to verify they pass.** Run the new file, then `pnpm run typecheck && pnpm test && pnpm run test:integration`. Expected: all pass, including `patient.pii-encryption`, which still sees `enc:v1:`.
+
+- [ ] **Step 5: Commit and open PR A.** `git commit -m "feat(encryption): read through the keyring"`
+
+**Deploy gate:** PR A runs on every instance in staging and production before Task 3 merges. Confirm the deployed commit in Railway.
+
+---
+
+##### PR B: `phase10/key-rotation-write` (writes `v2`, adds the command and runbook)
+
+##### Task 3: Write `v2`
+
+**Files:**
+- Modify: `Server/src/utils/encryption/field-encryption.ts`
+- Test: `Server/test/unit/utils/encryption.test.ts`, `Server/test/integration/patients/patient.pii-encryption.integration.test.ts:28`
+
+**Interfaces:**
+- Produces: `export function isCurrent(value: string, keyring: Keyring): boolean` (true only for `v2` under `keyring.currentId`).
+
+- [ ] **Step 1: Write the failing test.** Replace `still writes v1 under the current key` and `ciphertext starts with enc:v1: prefix` with:
+
+```ts
+it('writes v2 under the current key id', () => {
+  const value = encrypt('x', ring);
+  expect(value.startsWith(`enc:v2:${keyId(NEW)}:`)).toBe(true);
+  expect(decrypt(value, createKeyring(NEW))).toBe('x');
+});
+it('knows which values are current', () => {
+  expect(isCurrent(encrypt('x', ring), ring)).toBe(true);
+  expect(isCurrent(sealV2('x', OLD), ring)).toBe(false);
+  expect(isCurrent(sealV1('x', NEW), ring)).toBe(false);
+});
+```
+
+Change `ENC` in `patient.pii-encryption.integration.test.ts` to `/^enc:v2:[0-9a-f]{8}:/`.
+
+- [ ] **Step 2: Run to verify it fails.** `pnpm exec vitest run --project unit test/unit/utils/encryption.test.ts`. Expected: FAIL (the value starts with `enc:v1:`).
+
+- [ ] **Step 3: Implement.** `encrypt` writes `enc:v2:<currentId>:<payload>`, and the `v1` writer is removed. Add `isCurrent`.
+
+- [ ] **Step 4: Run to verify it passes.** `pnpm test && pnpm exec vitest run --project integration test/integration/patients test/integration/prisma`. Expected: PASS.
+
+- [ ] **Step 5: Commit.** `git commit -m "feat(encryption): write v2 with the key id"`
+
+##### Task 4: Re-encrypt command
+
+**Files:**
+- Create: `Server/src/utils/prisma/reencrypt-pii.ts`, `Server/src/utils/prisma/reencrypt-pii-cli.ts`
+- Modify: `Server/package.json` (`"pii:reencrypt": "tsx src/utils/prisma/reencrypt-pii-cli.ts"`), `Server/src/utils/prisma/backfill-pii.ts` (export `quote`)
+- Test: `Server/test/integration/prisma/reencrypt-pii.integration.test.ts`
+
+**Interfaces:**
+- Consumes: `activeKeyring`, `decrypt`, `encrypt`, `isEncrypted`, `isCurrent`, `keyId`, `ENCRYPTED_FIELDS`, `ENCRYPTED_JSON_FIELDS`, `quote`, `useKeys`, `sealV1`, `sealV2`.
+- Produces:
+  ```ts
+  export const REENCRYPT_TABLES: Record<string, { table: string; id: 'uuid' | 'text' }>;
+  export interface ReencryptResult { model: string; scanned: number; updated: number; skipped: number; failed: number }
+  export async function reencryptPii(opts?: { batchSize?: number }): Promise<ReencryptResult[]>;
+  export async function reencryptRow(model: string, row: Record<string, unknown>, keyring: Keyring): Promise<'updated' | 'skipped' | 'failed'>;
+  ```
+- `REENCRYPT_TABLES`: `User` `users` text; `MedicalRecord` `medical_records` uuid; `FamilyMember` `family_members` uuid; `EvolutionNote` `evolution_notes` uuid; `Patient` `patients` uuid; `Appointment` `appointments` uuid; `Reminder` `reminders` uuid; `AuditLog` `AuditLog` text; `GoogleConnection` `google_connections` text; `BookingRequest` `booking_requests` uuid.
+
+- [ ] **Step 1: Write the failing tests.** Each runs after `useKeys({ current: NEW_KEY, previous: OLD_KEY })` plus a dynamic import of `reencrypt-pii.js`.
+
+```ts
+it('covers every encrypted model', () =>
+  expect(Object.keys(REENCRYPT_TABLES).sort()).toEqual(Object.keys(ENCRYPTED_FIELDS).sort()));
+
+it('every encrypted column has no length limit', async () => {
+  // information_schema.columns for each model and field: data_type is 'text' or 'jsonb'.
+});
+
+it('moves every field of every model to the current key', async () => {
+  // Seed one row per model with every encrypted field set, written under OLD_KEY, plus a
+  // soft-deleted patient, an inactive patient and one value rewritten raw as sealV1(..., OLD_KEY).
+  const results = await reencryptPii({ batchSize: 1 });
+  expect(results.every((r) => r.failed === 0 && r.skipped === 0)).toBe(true);
+  // Raw: every non-null encrypted field starts with `enc:v2:${keyId(NEW_KEY)}:`
+  // and decrypts to the value seeded.
+  const again = await reencryptPii();
+  expect(again.every((r) => r.scanned === 0 && r.updated === 0)).toBe(true);
+});
+
+it('leaves nothing that needs the old key', async () => {
+  await reencryptPii();
+  const after = await useKeys({ current: NEW_KEY }); // no previous key in the ring
+  // Reads the soft-deleted patient and an audit row through after.prisma.
+});
+
+it('changes only ciphertext: updatedAt and every other column are kept', async () => {
+  // Compare SELECT * before and after for patients and "AuditLog", minus the encrypted fields.
+});
+
+it('rewrites audit JSON ciphertext and leaves plain JSON alone', async () => {
+  // Three rows: fieldsBefore object through the client, raw plain object, JSON null.
+  // First: jsonb_typeof = 'string', and decrypt then JSON.parse equals the original.
+  // Second and third: unchanged.
+  await expect(rotated.prisma.auditLog.update({ where: { id }, data: {} })).rejects.toThrow('AuditLog is immutable');
+});
+
+it('skips a row the app changed after it was read', async () => {
+  // Read the row, update notes through rotated.prisma, call reencryptRow with the old snapshot.
+  expect(outcome).toBe('skipped');
+  // Raw notes decrypt to the app's value.
+});
+
+it('counts a value no key opens and carries on', async () => {
+  // Two patients; one name rewritten raw as sealV2('x', 'd'.repeat(64)).
+  const patient = (await reencryptPii()).find((r) => r.model === 'Patient')!;
+  expect(patient.failed).toBe(1);
+  // That value is unchanged and the other patient moved.
+});
+
+it('leaves plaintext alone', async () => {
+  // Raw plaintext notes stay byte-identical.
+});
+```
+
+- [ ] **Step 2: Run to verify they fail.** `pnpm exec vitest run --project integration test/integration/prisma/reencrypt-pii.integration.test.ts`. Expected: FAIL (module not found).
+
+- [ ] **Step 3: Implement `reencryptPii` and `reencryptRow`.** Throw `EncryptionError` when `activeKeyring()` is null. For each model, page by `id`: uuid tables start from the zero UUID and cast `$n AS uuid`, text tables start from `''`.
+
+```text
+text(f)  = "f"                      for text columns
+         = ("f" #>> '{}')           for ENCRYPTED_JSON_FIELDS
+stale(f) = text(f) ~ '^enc:v(1:|2:[0-9a-f]{8}:)' AND text(f) NOT LIKE $1     -- $1 = 'enc:v2:<kid>:%'
+
+SELECT "id"::text AS "id", text(f1) AS "f1", ...
+FROM <table> WHERE (stale(f1) OR stale(f2) ...) AND "id" > $2 ORDER BY "id" LIMIT <batchSize>
+
+UPDATE <table> SET "f" = $new                                -- to_jsonb($new::text) for JSON fields
+WHERE "id" = $id AND text(f) = $old [AND ... for each changed field]
+```
+
+The `~` pattern matches exactly what `isEncrypted` accepts, so a plain note that merely starts with `enc:v` is never selected and "scanned 0" stays reachable. In `reencryptRow`, a field changes when `isEncrypted(value) && !isCurrent(value, keyring)`. Decrypted text goes straight back to `encrypt` and is never parsed. If any field in a row fails to decrypt, log `logger.error({ model, field, recordId }, ...)`, change nothing in that row and return `'failed'`. A row with nothing to change returns `'skipped'`. Zero rows updated also returns `'skipped'`. Database errors propagate: the run is resumable.
+
+- [ ] **Step 4: Implement the CLI.** Follow `revoke-consent-cli.ts`. Print `Current key id: <kid>`, then `PII re-encrypt <model>: scanned N, updated N, skipped N, failed N` for each model. Exit 1 when any `failed > 0`, and say "run it again" when any `skipped > 0`. Done means every model scanned 0.
+
+- [ ] **Step 5: Run to verify they pass.** Run the new file, then `pnpm run typecheck && pnpm run lint && pnpm test && pnpm run test:integration`. Expected: PASS.
+
+- [ ] **Step 6: Commit.** `git commit -m "feat(encryption): pii:reencrypt command"`
+
+##### Task 5: Runbook and docs
+
+**Files:**
+- Modify: `docs/operations.md`, `docs/compliance-patient-data.md`, `AGENTS.md`, `PATIENT_PORTAL_PLAN.md`
+
+Load `mattpocock-skills:writing-for-agents` before editing `AGENTS.md`.
+
+- [ ] **Step 1: Add `## Rotating keys` to `docs/operations.md`.** It carries these steps, in this order:
+
+**`ENCRYPTION_KEY`**
+1. Run only one rotation at a time, and never start one before the last reached scanned 0.
+2. Generate the key with `openssl rand -hex 32` and save it next to the old one, outside Railway, before anything else. Note the date.
+3. Take a manual backup, and confirm it restores if the nightly job is not yet proven.
+4. In Railway, staging both changes together on every service with the key: `ENCRYPTION_KEY_PREVIOUS` = old, `ENCRYPTION_KEY` = new. Deploy once, at a quiet time. An old instance still running during the overlap fails on values written with the new key until it stops. It corrupts nothing.
+5. Run `pnpm run pii:reencrypt` with the production environment, as with `consent:revoke`; it must see both keys. Repeat until every model scans 0.
+6. A `failed` row stops the procedure until it has been looked at: the output gives its model, field and id, never its content.
+7. Remove `ENCRYPTION_KEY_PREVIOUS` and deploy, right away after a leak. If a read then fails with `Unknown encryption key id`, put it back and run the command again.
+8. Keep the retired key outside Railway for at least 30 days after step 5, because backups from before that step need it. Record the date it can be deleted.
+9. Take a fresh backup and read it with `db:verify-restore` using only the new key.
+
+**Limits to state**
+- Rotating does not protect data already copied along with the key. A leak still follows section 7 of the compliance document.
+- Roll back only as far as PR A, since older code cannot read `v2`.
+
+**`BLIND_INDEX_KEY`**
+- Copy the procedure from the spec: back up the new key outside Railway, set it, bump `PII_VERSION`, deploy, and let the backfill on start rehash every row.
+- Until it finishes, rows not yet rehashed are missed by email, phone and name search, `toHash` reply matching and the email unique index, so rotate at a quiet time.
+
+- [ ] **Step 2: Extend "Restore rehearsal".**
+- A backup taken before a rotation needs the old key as `ENCRYPTION_KEY`.
+- A backup taken during re-encryption needs both, the old one as `ENCRYPTION_KEY_PREVIOUS`.
+- To bring an old backup into production: set new + previous, restore, run `pii:reencrypt` until every model scans 0, then remove the previous key.
+
+- [ ] **Step 3: Update the compliance document.**
+- Section 3 item 2: describe the keyring and key ids.
+- Section 3 item 9: point to the runbook.
+- Section 3 item 10: `enc:v2:` also exists, and rollback is limited to PR A.
+- Section 7 step 2: `ENCRYPTION_KEY` can rotate. Remove the "cannot until 10.10" line.
+
+- [ ] **Step 4: Update `AGENTS.md`.**
+- "Raw SQL bypasses encryption": allow `reencrypt-pii.ts` as well.
+- State that its `AuditLog` raw update is the documented exception to immutability, ciphertext only.
+- "New PII fields require": add `REENCRYPT_TABLES` for a new model.
+
+- [ ] **Step 5: Update this file.** Mark 10.10 built, pending Task 6, and update the line at the top that says "not started".
+
+- [ ] **Step 6: Verify.** `grep -n "cannot until 10.10" docs/compliance-patient-data.md` finds nothing, and every command in the runbook exists in `Server/package.json`.
+
+- [ ] **Step 7: Commit and open PR B.** `git commit -m "docs: key rotation runbook"`
+
+##### Task 6: Rehearsal (owner, closes the gate)
+
+No code. It needs PR B deployed and a restorable backup from 10.6.
+
+- [ ] **Step 1:** Restore a production backup into a scratch Railway Postgres, and run the runbook there end to end with a throwaway key.
+- [ ] **Step 2:** Confirm every model scans 0, `db:verify-restore` passes with only the throwaway key, and the same run with only the old key fails. Delete the scratch service and the throwaway key.
+- [ ] **Step 3:** Run `pii:reencrypt` once in production without changing the key. It moves stored `v1` values to `v2`, and proves the command on the real tables with no key at risk.
+- [ ] **Step 4:** Record the date in 10.10. A real production rotation is not required: the gate is that one is possible.
+
+##### Found while planning (not part of 10.10)
+`encryptField` returns a value unchanged when `isEncrypted` is true, and `isEncrypted` only checks the prefix. `portal-booking.schemas.ts` limits `name` to trimmed length, so a verified patient could submit a name starting with `enc:v1:`. It would be stored as is and throw on every read, and the extension decrypts whole lists, so the provider inbox would answer 500 while that request is listed. This comes from reading the code and has not been reproduced. Fix it in a small separate PR: treat such a value as ciphertext only if a key opens it. Until then, a row like this shows up as `failed` in `pii:reencrypt`.
 
 ### Dependency summary
-`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7 and is not a gate for an email-only pilot: 9.0 gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes.
+`0 → 1 → 2 → 3 → 4 → 5`; Phase 6 depends on 4; Phase 7 depends on 6 (7.3-A gates 7.3-B; 7.4-A/B are independent). Phases 5 and 6 can run in parallel after the MVP. Phase 8 is independent of the portal; 8.2 (b)–(c) must land before 5.4 (5.1–5.3 don't depend on it). Phase 9 depends on 6 and 7. Phone login cannot be separated from the portal, so 9.0 gates enabling the portal in production, including any pilot. 9.0 also gates 9.1 and 9.3 (templates), then `9.1 → 9.2 → 9.3 → 9.4`. Within Phase 0: 0.2 gates 4.1; 0.4 and 0.23 gate 3.3 (matching); 0.5/0.6/0.7 gate Phase 3; 0.11 gates 2.1; 0.14/0.15 gate 2.3; 0.17 gates any public launch; 0.20 gates 3.1; 0.22 gates 4.1; 0.23 also gates any pilot with real patients; 0.19 is independent. Phase 1 only needs 0.12 and 0.13, so it can start while the rest of Phase 0 finishes. In Phase 10, 10.1 to 10.8 and 10.10 gate enabling the portal in production, and the rest are independent.
 
 ## Verification
 - Integration tests per `AGENTS.md` (real Postgres, mocked Twilio/Brevo/dispatch), including the concurrent-booking race, admin vs portal vs blocked-time races, cross-tenant slug isolation, portal vs provider token rejection, uniform responses regardless of patient existence, and email-normalization collisions.

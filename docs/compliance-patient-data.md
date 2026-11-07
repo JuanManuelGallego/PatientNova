@@ -102,19 +102,46 @@ read everything; the keys must never be stored with the backups.
 
 `PatientConsent(patientId, kind = DATA_PROCESSING, policyVersion, acceptedAt, ip, userAgent, revokedAt?)`
 
-- Immutable rows; revocation sets `revokedAt` and writes an audit entry (`EntityType.PATIENT_CONSENT`).
+- Rows are never deleted. The product has no revocation feature: an operator sets `revokedAt` and
+  writes the audit entry (`EntityType.PATIENT_CONSENT`) with `pnpm run consent:revoke` (see
+  "Revocation procedure" below).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
-- `policyVersion` = the policy's last-updated date (`2026-10-19` for the current text). Changing the
-  privacy policy requires bumping it and re-asking consent at the patient's next booking (7.2).
+- `policyVersion` = the policy's last-updated date (`2026-11-06` for the current text). Changing the
+  privacy policy requires bumping it and re-asking consent at the patient's next booking.
 - Approval-mode requests carry the same evidence on `BookingRequest` and copy it to `PatientConsent`
   on approval, preserving the original acceptance time.
 - **Existing patients** (0.21) have no record: they accept at first portal use, before any data
   about them is shown.
-- **UI gate (0.22):** one checkbox, never pre-ticked, linking to the policy, whose label states that
-  the person authorizes treatment of personal data **including health data** for scheduling and
-  reminders. Open question for counsel: whether sensitive data needs its own separate checkbox;
-  if yes, add a second one (the data model supports it via `kind`).
+- **UI gate (0.22):** one checkbox, never pre-ticked, linking to the policy. The label today reads
+  "Acepto el tratamiento de mis datos personales según la Política de privacidad" and does **not**
+  mention health data. Changing it waits on counsel, who also decides whether sensitive data needs
+  its own separate checkbox (the data model supports a second one via `kind`). Consent rows store
+  the policy version, not the label, so any label change must bump `PRIVACY_POLICY_VERSION`.
+
+**Revocation procedure (draft, pending counsel).** Revocation is a right under Ley 1581, art. 8, and
+the policy offers it through `privacidad@patientnova.net`.
+
+1. Log the request and the date received. A query has 10 business days and a claim 15, extendable by
+   5 and 8.
+2. Verify identity: the requester replies from the contact on file, or the clinic confirms it.
+3. Forward the request to the clinic, which is the controller, and tell the patient it was forwarded.
+4. The clinic cancels upcoming appointments, which also cancels their reminders, and rejects any
+   pending booking request. It decides what clinical data must be kept.
+5. The operator runs `pnpm run consent:revoke <patientId>` with the production environment. Add
+   `--block-portal` only if the patient also wants off the portal.
+6. Reply to the patient and close the log entry.
+
+What the command does and does not do:
+- It revokes every active consent of the patient and writes one audit row each, in one transaction.
+  Running it again changes nothing.
+- Consent gates only the portal. The command stops no reminders or notices and cancels nothing, which
+  is why step 4 comes first. Deleting a patient does not cancel appointments either.
+- Approving a request made before the revocation copies its consent back, so step 4 must reject it.
+- Without `--block-portal`, the next login asks for consent again, and accepting is a new authorization.
+  Anyone holding a shared contact could accept: an open question for counsel.
+- With `--block-portal`, the patient reaches the portal's "unavailable" path. No screen undoes this:
+  it takes a direct database change, which the audit log will not record.
 
 **Phone login and messages.** A number is personal data the patient proves with a code before it
 acts as an identity. `BookingRequest.verifiedPhone` keeps the proven number of a request (encrypted,
@@ -133,17 +160,74 @@ by name and includes the address and instructions. Removing the name needs a new
 - [ ] Controller identity published: legal name, NIT, address, and Colombian representative if needed
       (the controller is currently an individual in Canada; counsel to advise).
 - [ ] Decide whether the **RNBD** registration (Registro Nacional de Bases de Datos) applies and file it.
-- [ ] Data processing / transmission contracts with each processor (Twilio, Brevo, Google, hosting,
-      Sentry, named in the policy on 2026-10-18) and a list of them in the policy (done in text; contracts
-      pending; for Sentry, review and accept its DPA in the organization's legal settings).
+- [ ] Data processing / transmission contracts with each processor: Twilio, Brevo, Google, Cloudflare,
+      Sentry, Railway and Vercel, all named in the policy (contracts pending; for Sentry, review and
+      accept its DPA in the organization's legal settings).
 - [ ] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
       or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
-      but not Meta and not phone login: counsel to confirm before phone login reaches production.
+      and, since the draft of 2026-11-06, Meta and phone login: counsel to confirm before the portal reaches production.
 - [ ] International transfer basis per processor (adequacy list, authorization, or contract).
-- [ ] The `privacidad@` mailbox is monitored; internal runbook for the 10/15 business-day deadlines.
-- [ ] Incident procedure, including notification to the SIC and affected data subjects.
-- [ ] Retention table (clinical records vs. appointments vs. logs) and the erasure path; define how
-      the immutable audit log is minimized when a patient is erased.
+- [ ] The `privacidad@` and `legal@` mailboxes are monitored, confirmed by a test from an outside account.
+- [ ] Runbook for the 10/15 business-day deadlines: drafted in section 6, counsel to confirm.
+- [ ] Incident procedure, including notification to the SIC and affected data subjects: drafted in
+      section 7, counsel to confirm.
+- [ ] Retention table: drafted in section 8, counsel to confirm.
+- [ ] Erasure path, including how the immutable audit log is minimized when a patient is erased:
+      not built, waits on counsel (section 8).
 - [x] Encryption of patient identity/contact fields (section 3) implemented; backfill runs on start.
-- [ ] `BLIND_INDEX_KEY` generated, stored in the secret manager and backed up apart from the database.
+- [x] `ENCRYPTION_KEY` and `BLIND_INDEX_KEY` backed up apart from the database (owner confirmed 2026-11-06).
 - [ ] Counsel review of `privacy-policy/page.tsx` and `terms-of-service/page.tsx`.
+
+## 6. Data subject requests (draft, pending counsel)
+
+Requests arrive at `privacidad@patientnova.net`. Account closure goes to `legal@patientnova.net`.
+Patient Nova is the processor for patient data, so the clinic decides those requests.
+
+1. Log the date received, the type (query or claim), and the deadline. Keep the log outside the
+   product, and keep it to what the deadline needs.
+2. Verify identity: the requester replies from the contact on file, or the clinic confirms it.
+3. If it concerns a patient, forward it to the clinic within 2 business days and tell the requester.
+   If it concerns a provider account, Patient Nova answers it directly.
+4. A query is answered within 10 business days, extendable by 5. A claim is answered within 15,
+   extendable by 8. Any extension is explained to the requester before the deadline.
+5. Follow up with the clinic so the deadline is met. Consent revocation follows section 4.
+6. Reply in writing and close the log entry.
+
+Counsel to confirm the 2-day transfer, how incomplete claims are handled, and who answers when a
+clinic does not respond.
+
+## 7. Security incidents (draft, pending counsel)
+
+1. Contain: stop the exposure and record the time it was detected.
+2. Rotate what was exposed. `AUTH_SECRET`, `PORTAL_AUTH_SECRET` and `BLIND_INDEX_KEY` can rotate today.
+   **`ENCRYPTION_KEY` cannot until 10.10 is built**: a leaked key cannot be replaced.
+3. Assess which clinics, which data subjects, which fields, and for how long. Ciphertext without keys
+   and blind indexes without keys count as a smaller exposure than plaintext.
+4. Notify each affected clinic, which is the controller for its patients.
+5. Notify the SIC and the affected data subjects. Counsel to confirm the deadline, the channel, and
+   who files for patient data: Patient Nova or the clinic.
+6. Record the cause, the fix and every notice sent. Keep names and contact details out of tickets,
+   logs and error tracking.
+
+## 8. Retention (draft, pending counsel)
+
+| Data | Kept for | How it ends |
+|---|---|---|
+| Portal OTP rows | 24 hours after the last send | `purge-portal-otps` |
+| Portal session | 2 hours | Stateless JWT expires; nothing stored |
+| Booking requests | 90 days after they stop being pending | `purge-booking-requests` |
+| Scheduler jobs | Dead-letter queues 30 days, other queues pg-boss defaults | pg-boss; payloads carry ids only |
+| Patients, appointments, medical records | Indefinitely, including soft-deleted rows | No purge exists |
+| Consent records | Indefinitely | No purge exists; they are evidence |
+| Audit log | Indefinitely | Immutable through the Prisma guard |
+| Reminders | Indefinitely | No purge exists |
+| Database backups | 30 days, nightly since 2026-11-06 | R2 lifecycle rule; encrypted with `age` |
+| Vendor copies (Twilio, Meta, Brevo, Sentry, Railway and Vercel logs) | Each vendor's terms and settings | To review with the contracts |
+
+Clinical retention depends on the clinic and on health regulation. The policy cites Resolución 839
+de 2017 and this document cites Resolución 1995 de 1999: counsel to confirm which applies and the term.
+
+**Erasure gap.** The product can only soft-delete a patient, and section 7 of the policy promises no fixed
+deletion term. A real erasure is blocked by `PatientConsent` (`onDelete: Restrict`), and deleting a
+patient writes the full name into an immutable audit description (encrypted at rest,
+`patient.service.ts`). Build nothing until counsel says what must be erased and what must be kept.

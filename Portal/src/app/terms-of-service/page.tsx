@@ -6,7 +6,7 @@ export const metadata = {
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.
-const lastUpdated = "13 de octubre de 2026";
+const lastUpdated = "6 de noviembre de 2026";
 
 const sections = [
   {
@@ -14,7 +14,7 @@ const sections = [
     title: "1. Aceptación y alcance",
     content: [
       "Estos Términos de Servicio (los «Términos») regulan el acceso y uso de Patient Nova (la «Plataforma» o el «Servicio»), prestado por Juan Manuel Gallego, persona natural (el «Proveedor»). Al acceder o utilizar el Servicio, aceptas estos Términos y la Política de Privacidad. Si actúas en nombre de una clínica, consulta o entidad, declaras que tienes autorización para vincularla.",
-      "El Servicio está diseñado para profesionales y equipos de salud. Cuando una clínica habilite el portal de pacientes, sus pacientes podrán acceder con un código enviado por correo electrónico para consultar, reservar o cancelar citas con esa clínica; ese uso se rige también por la Política de Privacidad y por las condiciones que fije la clínica. El Servicio no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
+      "El Servicio está diseñado para profesionales y equipos de salud. Cuando una clínica habilite el portal de pacientes, sus pacientes podrán acceder con un código enviado por correo electrónico o por WhatsApp para consultar, reservar, reprogramar o cancelar citas y solicitudes de cita con esa clínica; ese uso se rige también por la Política de Privacidad y por las condiciones que fije la clínica. El Servicio no sustituye el criterio profesional, no ofrece consejo médico y no debe utilizarse para emergencias ni para decisiones clínicas sin la supervisión del profesional responsable.",
       "Si no aceptas estos Términos, no debes utilizar el Servicio.",
     ],
   },
@@ -50,7 +50,7 @@ const sections = [
     id: "third-parties",
     title: "5. Servicios de terceros y comunicaciones",
     content: [
-      "El Servicio puede utilizar proveedores externos, entre ellos Twilio para SMS, WhatsApp y estados de entrega, Brevo para correos electrónicos y sus estados de entrega, Google para determinadas funciones de Google Meet, Cloudflare para la verificación anti-bots (Turnstile) en formularios públicos cuando esté habilitada, y proveedores de alojamiento y base de datos. El uso de esas funciones puede implicar que los datos necesarios se transmitan a dichos proveedores conforme a sus propias condiciones y políticas.",
+      "El Servicio puede utilizar proveedores externos, entre ellos Twilio para SMS, WhatsApp y estados de entrega, Meta, titular de WhatsApp, para la entrega de los mensajes de WhatsApp, Brevo para correos electrónicos y sus estados de entrega, Google para determinadas funciones de Google Meet, Cloudflare para la verificación anti-bots (Turnstile) en formularios públicos y el almacenamiento de copias de seguridad cifradas, Sentry para el registro de errores técnicos, y Railway y Vercel para el alojamiento del servidor, la base de datos y el portal web. El uso de esas funciones puede implicar que los datos necesarios se transmitan a dichos proveedores conforme a sus propias condiciones y políticas.",
       "Antes de enviar un mensaje, debes asegurarte de que el destinatario ha proporcionado el número o la dirección de correo correctos y de que tienes autorización, consentimiento o cualquier otra base legal necesaria. No utilices Patient Nova para spam, mensajes engañosos o comunicaciones no solicitadas.",
       "Debes atender las solicitudes de no recibir comunicaciones y mantener tus propios procedimientos de consentimiento, oposición y exclusión. La Plataforma no garantiza que un canal externo ofrezca una función de baja para cada tipo de mensaje.",
     ],

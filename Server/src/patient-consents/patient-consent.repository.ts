@@ -20,4 +20,12 @@ export const patientConsentRepository = {
       where: { patientId, kind, policyVersion, revokedAt: null },
     });
   },
+
+  async findAllActive(patientId: string, tx: TransactionClient) {
+    return tx.patientConsent.findMany({ where: { patientId, revokedAt: null } });
+  },
+
+  async markRevoked(id: string, revokedAt: Date, tx: TransactionClient) {
+    return tx.patientConsent.update({ where: { id }, data: { revokedAt } });
+  },
 };

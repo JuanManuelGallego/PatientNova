@@ -291,7 +291,6 @@ describe('POST /v1/portal/:slug/otp/verify', () => {
     expect(claims).toMatchObject({ userId: provider.id, email, typ: 'portal' });
     expect(claims.sid).toMatch(/^[0-9a-f-]{36}$/);
     expect(res.body.data).toEqual({
-      email,
       contact: email,
       contactChannel: 'EMAIL',
       expiresAt: expect.any(String),

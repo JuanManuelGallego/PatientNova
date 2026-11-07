@@ -106,6 +106,7 @@ const FIELD_LABELS: Record<string, string> = {
   kind: "Tipo",
   policyVersion: "Versión de la política",
   acceptedAt: "Aceptado el",
+  revokedAt: "Revocado el",
   holdExpiresAt: "Reserva vence",
   cancelledBy: "Cancelada por",
   patientRescheduleCount: "Reprogramaciones del paciente",

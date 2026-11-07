@@ -103,7 +103,7 @@ describe('requirePortalSession', () => {
     const res = await request(app).get('/v1/portal/session').set('Origin', ALLOWED_ORIGIN).set('Cookie', `${PORTAL_COOKIE_NAME}=${legacy}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.data.email).toBe(email);
+    expect(res.body.data.contact).toBe(email);
     expect(res.body.data.csrfToken).toBe(createCsrfToken(sid, portalSecret()));
   });
 
@@ -177,7 +177,7 @@ describe('GET /v1/portal/session', () => {
       .map((email) => getSession(sessionFor(provider.id, email))));
 
     const expectedShape = {
-      email: 'string', contact: 'string', contactChannel: 'string', expiresAt: 'string', csrfToken: 'string',
+      contact: 'string', contactChannel: 'string', expiresAt: 'string', csrfToken: 'string',
       providerSlug: 'string', consentRequired: 'boolean', bookingOpen: 'boolean',
     };
     for (const res of responses) {
@@ -191,11 +191,11 @@ describe('GET /v1/portal/session', () => {
     }
   });
 
-  it('echoes the session email, expiry and a CSRF token bound to the sid', async () => {
+  it('echoes the session contact, expiry and a CSRF token bound to the sid', async () => {
     const provider = await createLiveProvider();
     const session = sessionFor(provider.id, unique('p@test.local'));
     const res = await getSession(session);
-    expect(res.body.data.email).toBe(session.email);
+    expect(res.body.data.contact).toBe(session.email);
     expect(res.body.data.csrfToken).toBe(session.csrf);
     const expiresIn = new Date(res.body.data.expiresAt).getTime() - Date.now();
     expect(expiresIn).toBeGreaterThan(115 * 60_000);

@@ -301,14 +301,15 @@ describe('POST /v1/portal/:slug/otp/verify with a phone', () => {
     const res = await verifyOtp(provider.slug, { phone, code: whatsappCode(), challenge: body.data.challenge });
 
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.WHATSAPP });
+    expect(res.body.data).toMatchObject({ contact: phone, contactChannel: Channel.WHATSAPP });
+    expect(res.body.data).not.toHaveProperty('email');
     const cookie = (res.headers[ 'set-cookie' ] as unknown as string[]).find((c) => c.startsWith(`${PORTAL_COOKIE_NAME}=`))!;
     const claims = verifyPortalToken(cookie.split(';')[ 0 ]!.split('=')[ 1 ]!) as Record<string, unknown>;
     expect(claims).toMatchObject({ channel: Channel.WHATSAPP, phone, userId: provider.id });
     expect(claims.email).toBeUndefined();
 
     const session = await request(app).get('/v1/portal/session').set('Origin', ALLOWED_ORIGIN).set('Cookie', cookie.split(';')[ 0 ]!);
-    expect(session.body.data).toMatchObject({ email: null, contact: phone, contactChannel: Channel.WHATSAPP });
+    expect(session.body.data).toMatchObject({ contact: phone, contactChannel: Channel.WHATSAPP });
   });
 
   it('a client cannot choose the channel of the session', async () => {

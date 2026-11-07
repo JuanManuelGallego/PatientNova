@@ -17,13 +17,18 @@ describe("security headers", () => {
   it("allows no third-party script source except Turnstile, and no eval in production", () => {
     const directives = buildCsp(prod).split("; ");
     const get = (name: string) => directives.find((d) => d.startsWith(`${name} `))!;
-    expect(get("script-src")).not.toContain("unsafe-eval");
+    expect(get("script-src").split(" ")).not.toContain("'unsafe-eval'");
     expect(buildCsp({ ...prod, isDev: true })).toContain("'unsafe-eval'");
     expect(get("script-src")).toContain("https://challenges.cloudflare.com");
     expect(get("frame-src")).toBe("frame-src 'self' https://challenges.cloudflare.com");
     expect(get("connect-src")).toContain("https://challenges.cloudflare.com");
     expect(get("script-src").match(/https?:\/\/\S+/g)).toEqual([ "https://challenges.cloudflare.com" ]);
     expect(get("frame-ancestors")).toBe("frame-ancestors 'none'");
+  });
+
+  it("allows WebAssembly in production, which the medical record PDF needs", () => {
+    const scriptSrc = buildCsp(prod).split("; ").find((d) => d.startsWith("script-src "))!;
+    expect(scriptSrc.split(" ")).toContain("'wasm-unsafe-eval'");
   });
 
   it("ships as Report-Only until enforcement is switched on", () => {

@@ -1,1 +1,1 @@
-export const PRIVACY_POLICY_VERSION = '2026-10-19';
+export const PRIVACY_POLICY_VERSION = '2026-11-06';
