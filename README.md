@@ -211,7 +211,7 @@ PatientNova/
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | JWT signing secret (generate with `openssl rand -hex 64`) |
 | `ENCRYPTION_KEY` | AES-256-GCM key for field encryption (generate with `openssl rand -hex 32`) |
-| `ENCRYPTION_KEY_PREVIOUS` | Optional previous field-encryption key. Set only during a rotation. Do not start one until the `pii:reencrypt` command and its runbook in `docs/operations.md` exist |
+| `ENCRYPTION_KEY_PREVIOUS` | Optional previous field-encryption key. Set only during a rotation. Procedure: "Rotating keys" in `docs/operations.md` |
 | `TWILIO_ACCOUNT_SID` | Twilio account SID |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |
 | `TWILIO_WHATSAPP_FROM` | WhatsApp sender (e.g. `whatsapp:+14155238886`) |

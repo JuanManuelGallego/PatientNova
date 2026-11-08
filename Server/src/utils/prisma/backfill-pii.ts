@@ -18,7 +18,7 @@ export interface BackfillResult {
   skipped: number;
 }
 
-const quote = (identifier: string) => `"${identifier.replace(/"/g, '""')}"`;
+export const quote = (identifier: string) => `"${identifier.replace(/"/g, '""')}"`;
 
 export async function backfillPii(opts: { batchSize?: number } = {}): Promise<BackfillResult[]> {
   const batchSize = opts.batchSize ?? 500;

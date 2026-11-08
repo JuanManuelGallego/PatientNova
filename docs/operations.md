@@ -128,14 +128,127 @@ exits 0 only when it read rows and decrypted all of them, and prints counts, nev
 
 ```bash
 read -rs ENCRYPTION_KEY; read -rs BLIND_INDEX_KEY; cd Server
-DATABASE_URL="postgresql://postgres:restore@127.0.0.1:5544/restore" ENCRYPTION_KEY="$ENCRYPTION_KEY" BLIND_INDEX_KEY="$BLIND_INDEX_KEY" pnpm run db:verify-restore; echo "exit $?"
+DATABASE_URL="postgresql://postgres:restore@127.0.0.1:5544/restore" ENCRYPTION_KEY="$ENCRYPTION_KEY" ENCRYPTION_KEY_PREVIOUS="$ENCRYPTION_KEY_PREVIOUS" BLIND_INDEX_KEY="$BLIND_INDEX_KEY" pnpm run db:verify-restore; echo "exit $?"
 ```
+
+`ENCRYPTION_KEY_PREVIOUS` stays empty unless the backup needs it (below); then also run
+`read -rs ENCRYPTION_KEY_PREVIOUS` first. Passing it empty keeps a value in `Server/.env` from being used.
 
 Clean up: `docker rm -f pn-restore`, delete the downloaded file, close the terminal, and record the
 date in the checklist above.
 
+Which keys a backup needs:
+
+- A backup taken before a rotation needs the old key as `ENCRYPTION_KEY`.
+- A backup taken during re-encryption (between the deploy and a scan of 0) needs both: the new key as
+  `ENCRYPTION_KEY` and the old one as `ENCRYPTION_KEY_PREVIOUS`. `db:verify-restore` uses
+  `ENCRYPTION_KEY_PREVIOUS` when it is set.
+- To bring an old backup into production: set the new key plus the previous one, restore, and rerun
+  the erasures and revocations as "Erasure" requires (they decrypt the audit log, so they need both
+  keys). Then run `pnpm run pii:reencrypt`, as in step 5 of "Rotating keys" (report first, then with
+  `--key-id`), until every model scans 0, and remove the previous key.
+
 Patient data is sensitive personal data under Ley 1581 de 2012: store dumps only encrypted and
 restrict access.
+
+## Rotating keys
+
+Rotate `ENCRYPTION_KEY` after a leak, or when the clinic's policy asks for it. Every stored ciphertext
+carries the id of its key (`enc:v2:<kid>:...`, the first 8 hex characters of a hash of the key), so
+the app can read values under the current key and under `ENCRYPTION_KEY_PREVIOUS` while
+`pnpm run pii:reencrypt` moves everything to the new one.
+
+### `ENCRYPTION_KEY`
+
+1. Run one rotation at a time, and start none before the last one reached scanned 0 on every model, or
+   only the examined look-alike rows from step 6 remain.
+2. Generate the new key with `openssl rand -hex 32` and save it in the password manager next to the old
+   one, outside Railway, before anything else. Note the date. Record the new key's id next to it; step 5
+   checks it. From `Server/`, paste the new key when `read` waits:
+
+   ```bash
+   read -rs NEW_KEY; printf '%s\n' "$NEW_KEY" | pnpm run pii:key-id; unset NEW_KEY
+   ```
+
+   It reads the key from standard input, so the key stays out of the shell history and the process list,
+   and prints only the 8-character id, never the key.
+3. Take a manual backup (see "Manual backup"). If the nightly job is not yet proven, also confirm that
+   the backup restores.
+4. In Railway, change both variables in one deploy on every service that has the key:
+   `ENCRYPTION_KEY_PREVIOUS` = the old key, `ENCRYPTION_KEY` = the new one. Deploy once, at a quiet time.
+   An old instance still running during the overlap fails on values written with the new key until it
+   stops. It corrupts nothing.
+5. Once the old deployment has stopped, run the command from `Server/` in Git Bash against production.
+   Set every variable it uses in the shell: `config.ts` falls back to `Server/.env` for anything unset,
+   so a missed key would be your local one. Paste, in this order, the production `DATABASE_URL`, the new
+   key, the old key and the production `BLIND_INDEX_KEY`, each when `read` waits (nothing is shown):
+
+   ```bash
+   read -rs DATABASE_URL; read -rs ENCRYPTION_KEY; read -rs ENCRYPTION_KEY_PREVIOUS; read -rs BLIND_INDEX_KEY
+   export DATABASE_URL ENCRYPTION_KEY ENCRYPTION_KEY_PREVIOUS BLIND_INDEX_KEY NODE_ENV=production
+   pnpm run pii:reencrypt; echo "exit $?"
+   ```
+
+   Without arguments it only reports and writes nothing. It prints `Current key id: <kid>` and, per model,
+   `stale N, no key opens N`. Stop unless `Current key id` is the id you recorded in step 2. Many values
+   no key opens usually mean `ENCRYPTION_KEY_PREVIOUS` is wrong or empty: fix it before going on. Then
+   re-encrypt, with the id from step 2:
+
+   ```bash
+   pnpm run pii:reencrypt --key-id <kid>; echo "exit $?"
+   ```
+
+   It writes only when `<kid>` is the current key id; otherwise it names both ids, writes nothing and
+   exits with 1. It prints, per model, `scanned N, updated N, skipped N, failed N`. If it reports rows that
+   changed while being re-encrypted, run it again. Repeat until every model scans 0 (step 6 covers rows
+   that stay `failed`). It then prints `Every stored ciphertext is under key <kid>.` It covers the audit
+   log too, changing ciphertext only: plaintext and rows redacted by `patient:erase` stay as they are.
+   Close the terminal when done: it holds the keys.
+6. A `failed` row stops the procedure until it has been examined (the command exits 1). The command lists
+   every value no key opens as `model / field / record id`, and nothing more. That value stays as it is;
+   the other values of the same row did move. A row can list several fields: examine every listed field
+   on its own, because one look-alike does not explain the others. Look at each value in `psql`; never
+   copy it into a ticket or chat. Real ciphertext is the prefix (`enc:v1:` or `enc:v2:<8 hex>:`) followed
+   by a long base64 string (at least about 40 characters, no spaces). The command already moved every
+   value that the current or previous key opens, so a `failed` value that looks like real ciphertext
+   means a key is missing, whatever its key id: find that key, and do not go on to step 7. An `enc:v2:`
+   id that differs from the printed `Current key id` only tells you which missing key wrote it, which
+   helps to find it. A value whose rest is readable text (a name, for example), or short, or not base64,
+   was typed by someone: the app stores a typed value that starts with `enc:v1:` or `enc:v2:<8 hex>:` as
+   is and cannot read it back. It is plaintext and can stay. Record its model, field and id, and go on to
+   step 7 once every other model scans 0 and only these examined values remain as `failed`.
+7. Only when every model scans 0, or only the examined look-alike rows from step 6 remain, remove
+   `ENCRYPTION_KEY_PREVIOUS` and deploy; do it right away after a leak. With look-alike rows left, the
+   final "Every stored ciphertext is under key ..." line does not print, and that is expected. If a read
+   then fails with
+   `Unknown encryption key id`, put the previous key back and run the command again.
+8. After step 5, keep the retired key outside Railway as long as the longest backup retention (30 days in
+   R2, longer if Railway's own backups are on), because backups from before that step need it. Record the
+   date it can be deleted, then delete it.
+9. Take a fresh backup, restore it and read it with `pnpm run db:verify-restore` using only the new key
+   (see "Restore rehearsal"): it must print `exit 0`. That reads only a sample of patients, so in the
+   same terminal also run the report against the restored copy with only the new key. With no previous
+   key, any value still under the old key counts as `no key opens`, and nothing is written:
+
+   ```bash
+   DATABASE_URL="postgresql://postgres:restore@127.0.0.1:5544/restore" ENCRYPTION_KEY="$ENCRYPTION_KEY" ENCRYPTION_KEY_PREVIOUS="" BLIND_INDEX_KEY="$BLIND_INDEX_KEY" NODE_ENV=production pnpm run pii:reencrypt; echo "exit $?"
+   ```
+
+   Every model must show `stale 0` and it must print `exit 0`, apart from the examined look-alike values
+   from step 6 (the report exits 1 while any value no key opens remains).
+
+Limits:
+
+- Rotating does not protect data already copied together with the key. A leak still follows section 7 of
+  `docs/compliance-patient-data.md`.
+- Roll back the code only as far as the release that first reads `enc:v2:` values; older code cannot
+  read them.
+
+### `BLIND_INDEX_KEY`
+
+Back up the new key outside Railway, set it, bump `PII_VERSION`, deploy, and let the backfill that runs
+on start rehash every row. Until it finishes, rows not yet rehashed are missed by email, phone and name
+search, by `toHash` reply matching and by the email unique index, so rotate at a quiet time.
 
 ## Erasure and export
 

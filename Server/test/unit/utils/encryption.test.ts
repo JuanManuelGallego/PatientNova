@@ -6,6 +6,7 @@ import {
   EncryptionError,
   createKeyring,
   keyId,
+  isCurrent,
 } from "../../../src/utils/encryption/field-encryption.js";
 import { randomBytes } from "node:crypto";
 import { sealV1, sealV2 } from "../../ciphertext-fixtures.js";
@@ -41,9 +42,9 @@ describe("encryption", () => {
   });
 
   describe("ciphertext format", () => {
-    it("ciphertext starts with enc:v1: prefix", () => {
+    it("ciphertext starts with the enc:v2:<keyId>: prefix", () => {
       const ciphertext = encrypt("test", TEST_KEY);
-      expect(ciphertext.startsWith("enc:v1:")).toBe(true);
+      expect(ciphertext.startsWith(`enc:v2:${keyId(TEST_HEX)}:`)).toBe(true);
     });
 
     it("produces different ciphertexts for the same plaintext (random IV)", () => {
@@ -72,7 +73,7 @@ describe("encryption", () => {
     it("rejects ciphertext with flipped bytes", () => {
       const ciphertext = encrypt("secret", TEST_KEY);
       // Flip a byte in the base64 payload
-      const prefix = "enc:v1:";
+      const prefix = `enc:v2:${keyId(TEST_HEX)}:`;
       const payload = Buffer.from(ciphertext.slice(prefix.length), "base64");
       payload[payload.length - 1] =
         (payload[payload.length - 1]! ^ 0xff) & 0xff;
@@ -181,10 +182,15 @@ describe("encryption", () => {
       expect(keyId(NEW)).toMatch(/^[0-9a-f]{8}$/);
       expect(keyId("B".repeat(64))).toBe(keyId(NEW));
     });
-    it("still writes v1 under the current key", () => {
+    it("writes v2 under the current key id", () => {
       const value = encrypt("x", ring);
-      expect(value.startsWith("enc:v1:")).toBe(true);
+      expect(value.startsWith(`enc:v2:${keyId(NEW)}:`)).toBe(true);
       expect(decrypt(value, createKeyring(NEW))).toBe("x");
+    });
+    it("knows which values are current", () => {
+      expect(isCurrent(encrypt("x", ring), ring)).toBe(true);
+      expect(isCurrent(sealV2("x", OLD), ring)).toBe(false);
+      expect(isCurrent(sealV1("x", NEW), ring)).toBe(false);
     });
     it("rejects a malformed key", () =>
       expect(() => createKeyring("short")).toThrow(EncryptionError));

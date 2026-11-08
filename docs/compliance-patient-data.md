@@ -50,7 +50,11 @@ checklist items in section 5.
    `BookingRequest.email`, `verifiedPhone`, `name`, `lastName`, `phone`.
    The columns became `TEXT`; length limits live in the zod schemas.
 2. **Keys.** `BLIND_INDEX_KEY` (32 bytes hex, distinct from `ENCRYPTION_KEY`, required in production)
-   is kept in the secret manager and backed up separately from database backups. Every blind index
+   is kept in the secret manager and backed up separately from database backups.
+   `ENCRYPTION_KEY` works as a keyring: new values are written as `enc:v2:<kid>:...`, where `kid` is
+   the first 8 hex characters of SHA-256 of `"patientnova-key-id:"` plus the key bytes. Reads accept
+   `enc:v2:` by key id and `enc:v1:` (no id) by trying the current key, then `ENCRYPTION_KEY_PREVIOUS`.
+   A key id no configured key matches fails with `Unknown encryption key id`. Every blind index
    is `HMAC-SHA256(key, "<purpose>:" + normalizedValue)`, hex, purpose `email`, `phone` or `name`.
    Phone and email hashes are shared across models on purpose: `Reminder.toHash` equals the
    patient's `whatsappHash` for the same number, which is how the WhatsApp webhook finds a reminder.
@@ -74,8 +78,9 @@ checklist items in section 5.
 6. **Sorting.** The patient list still sorts by name, last name or email: matching rows (at most
    5,000, `IN_MEMORY_SORT_CAP`) are decrypted and sorted with a Spanish collator, then paginated;
    above the cap it falls back to newest first and logs a warning. Patients without email sort last.
-7. **Other readers** read through Prisma and get plaintext from the extension; there is no raw SQL
-   over these columns besides the backfill.
+7. **Other readers** read through Prisma and get plaintext from the extension. Raw SQL over these
+   columns exists only in the backfill (item 8), `pii:reencrypt` (`reencrypt-pii.ts`, ciphertext only;
+   item 9) and the constants `patient:erase` writes (`patient-erasure.service.ts`).
 8. **Backfill** (`pnpm run pii:backfill`, runs in `pnpm start` right after `migrate deploy`). Walks
    rows with `piiVersion` null or older than `PII_VERSION`, encrypts plaintext values, writes the
    indexes and stamps `piiVersion`. Raw SQL: `updatedAt` is kept and no audit rows are written.
@@ -84,9 +89,12 @@ checklist items in section 5.
    that runs it (`docs/operations.md`).
 9. **Rotation.** Changing `BLIND_INDEX_KEY` or a normalization rule: bump `PII_VERSION`, deploy;
    the backfill rehashes every row. Searches miss rows that are not rehashed yet, so do it in a
-   quiet window.
-10. **Rollback.** Older code cannot read the ciphertext (it would show `enc:v1:...` strings), so
-    rolling back the code after the backfill means restoring the pre-deploy dump. Roll forward instead.
+   quiet window. `ENCRYPTION_KEY` rotates with `pnpm run pii:reencrypt`: see "Rotating keys" in
+   `docs/operations.md`.
+10. **Rollback.** Older code cannot read the ciphertext (it would show `enc:v1:...` strings,
+    and `enc:v2:...` once the release that writes `enc:v2:` (10.10 PR B) has run), so rolling back
+    the code after the backfill means restoring the pre-deploy dump. Roll forward instead. After the
+    keyring release, roll back no further than that release: older code cannot read `enc:v2:`.
 11. **Tests:** `test/integration/patients/patient.pii-encryption.integration.test.ts` (ciphertext at
     rest for every field, indexes on create/update/clear, accent/case/prefix search across the
     four lists, exact email/phone, tenant isolation, sorting + pagination, backfill encryption,
@@ -191,8 +199,9 @@ approves a real deletion, follow "Erasure" in `docs/operations.md`.
 Juan Manuel Gallego is the operational lead. The backup is Mauricio Gallego, +57 310 555 5961. Keep a security contact for each clinic.
 
 1. Contain: stop the exposure, preserve evidence and record when it was detected.
-2. Rotate what was exposed. `AUTH_SECRET`, `PORTAL_AUTH_SECRET` and `BLIND_INDEX_KEY` can rotate today.
-   **`ENCRYPTION_KEY` cannot until 10.10 is built**: a leaked key cannot be replaced.
+2. Rotate what was exposed. `AUTH_SECRET`, `PORTAL_AUTH_SECRET`, `BLIND_INDEX_KEY` and `ENCRYPTION_KEY` can
+   rotate. For `ENCRYPTION_KEY` follow "Rotating keys" in `docs/operations.md`, and remove the previous
+   key right after re-encryption finishes.
 3. Assess which clinics, which data subjects, which fields, and for how long.
 4. Notify, using one incident record for every notice:
 
@@ -219,6 +228,7 @@ Juan Manuel Gallego is the operational lead. The backup is Mauricio Gallego, +57
 | Audit log | Same period as the record it evidences; reviewed then. Immutability does not mean forever | Redacted by `patient:erase` |
 | Reminders | Same as the appointment | `patient:erase`, when approved |
 | Database backups | 30 days, nightly since 2026-11-06 | R2 lifecycle rule; encrypted with `age` |
+| Retired `ENCRYPTION_KEY` | After re-encryption, as long as the longest backup retention (30 days in R2, longer if Railway's backups are on), because older backups need it | Deleted from the password manager on the recorded date |
 | Vendor copies (Twilio, Meta, Brevo, Sentry, Railway and Vercel logs) | Each vendor's terms and settings | To review with the contracts |
 
 Resolución 1995 de 1999 and its changes, including Resolución 839 de 2017, apply together. These periods are proposals for the

@@ -25,7 +25,7 @@ beforeEach(async () => {
   userId = (await createTestUser()).id;
 });
 
-const ENC = /^enc:v1:/;
+const ENC = /^enc:v2:[0-9a-f]{8}:/;
 
 async function newPatient(overrides: Partial<{ name: string; lastName: string; email: string | null; whatsappNumber: string | null; smsNumber: string | null }> = {}) {
   return patientRepository.create(
