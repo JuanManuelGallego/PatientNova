@@ -4,7 +4,7 @@ export interface PortalBookingRequest {
     startUtc: string;
     patientTimezone: string;
     consentAccepted: true;
-    patient: { name: string; lastName: string; phone?: string };
+    patient?: { name: string; lastName: string; phone?: string };
 }
 
 export interface PortalAppointment {

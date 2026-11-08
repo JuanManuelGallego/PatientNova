@@ -47,7 +47,9 @@ docs {
 
   The body is strict: price, duration, end time and status come from the server (type price,
   type duration, CONFIRMED). `patient` is used only when the contact has no patient yet; an existing
-  patient is never changed. A phone session must not send `patient.phone` (400): the number comes from
+  patient is never changed. It may be omitted for a consented patient in auto-confirm mode; the
+  server answers 400 `Patient name is required` when a name is needed (new contact, approval request,
+  review). A phone session must not send `patient.phone` (400): the number comes from
   the session. A number typed by an email session is flagged unverified until the provider endorses it. `patientTimezone` is the device's IANA zone, used for the patient's
   messages.
 

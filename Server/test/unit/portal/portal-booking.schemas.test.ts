@@ -16,6 +16,12 @@ describe('createPortalBookingSchema', () => {
     expect(parsed.patient).toEqual({ name: 'Lucia', lastName: 'Rojas' });
   });
 
+  it('accepts a booking without patient details (a recognized patient is not asked again)', () => {
+    const { patient: _omitted, ...rest } = valid;
+    expect(createPortalBookingSchema.safeParse(rest).success).toBe(true);
+    expect(createPortalBookingSchema.safeParse({ ...rest, patient: { name: 'Lucia' } }).success).toBe(false);
+  });
+
   it('accepts an optional E.164 or empty phone', () => {
     expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '+573001112233' } }).success).toBe(true);
     expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '' } }).success).toBe(true);
