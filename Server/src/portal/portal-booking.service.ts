@@ -37,7 +37,7 @@ import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appo
 import { portalActionContext } from './portal-appointment-actions.js';
 import { afterRequestCreated, holdSlotWithin, portalRequestService } from './portal-request.service.js';
 import type { PortalRequestDto } from './portal-request.dto.js';
-import { PortalBookingLimitError, PortalBookingUnavailableError, PortalPhoneFieldError, SlotUnavailableError } from './portal-booking.errors.js';
+import { PortalBookingLimitError, PortalBookingUnavailableError, PortalPatientDetailsRequiredError, PortalPhoneFieldError, SlotUnavailableError } from './portal-booking.errors.js';
 import { isPhoneContact, newPatientContact, typedPhoneIsUnverified } from './portal-contact.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from './portal-booking-notifications.js';
 import { enqueueProvisionMeet, meetingPendingMode } from './portal-meeting.service.js';
@@ -125,6 +125,7 @@ export async function createPortalAppointmentWithin(tx: TransactionClient, input
 }
 
 async function createPortalPatient(tx: TransactionClient, session: PortalSessionContext, typed: CreatePortalBookingBody['patient']) {
+  if (!typed) throw new PortalPatientDetailsRequiredError();
   const patient = await createPatientWithin(tx, {
     name: typed.name,
     lastName: typed.lastName,
@@ -138,7 +139,7 @@ async function createPortalPatient(tx: TransactionClient, session: PortalSession
 export const portalBookingService = {
   async book(session: PortalSessionContext, body: CreatePortalBookingBody, meta: ConsentRequestMeta): Promise<PortalBookingResult> {
     const { userId } = session;
-    if (isPhoneContact(session.contact) && body.patient.phone) throw new PortalPhoneFieldError();
+    if (isPhoneContact(session.contact) && body.patient?.phone) throw new PortalPhoneFieldError();
     const auditContext = portalPatientAuditContext({ userId, contact: session.contact, ipAddress: meta.ipAddress });
     const start = new Date(body.startUtc);
 

@@ -893,6 +893,38 @@ describe("PublicBookingPage booking", () => {
         expect(JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body)).patient).toEqual({ name: "Lucía", lastName: "Rojas" });
     });
 
+    it("skips name and phone for a recognized patient and sends no patient", async () => {
+        server.session = { ...SESSION, consentRequired: false };
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await toDetails(user);
+
+        expect(screen.queryByLabelText("Nombre")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("Apellidos")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("Teléfono (opcional)")).not.toBeInTheDocument();
+        await user.click(screen.getByRole("checkbox"));
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+        await screen.findByRole("heading", { name: "Tu cita quedó reservada" });
+        expect(JSON.parse(String(calls("/portal/bookings")[ 0 ][ 1 ].body))).not.toHaveProperty("patient");
+    });
+
+    it("brings the name fields back when the server still needs a name", async () => {
+        server.session = { ...SESSION, consentRequired: false };
+        server.book = (body) => (body as { patient?: unknown }).patient
+            ? json(201, { success: true, data: { appointment: booked } })
+            : json(400, { success: false, error: "Patient name is required", details: "Patient name is required" });
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await toDetails(user);
+        await user.click(screen.getByRole("checkbox"));
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+
+        await fillDetails(user);
+        await user.click(screen.getByRole("button", { name: "Reservar cita" }));
+        await screen.findByRole("heading", { name: "Tu cita quedó reservada" });
+        expect(JSON.parse(String(calls("/portal/bookings")[ 1 ][ 1 ].body)).patient).toEqual({ name: "Lucía", lastName: "Rojas" });
+    });
+
     it("a taken slot at submit returns to Horario with the message and no time selected", async () => {
         server.book = () => json(409, { success: false, error: "Slot no longer available" });
         const user = userEvent.setup();

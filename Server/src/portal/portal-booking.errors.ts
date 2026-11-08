@@ -18,6 +18,12 @@ export class PortalPhoneFieldError extends ApiError {
   }
 }
 
+export class PortalPatientDetailsRequiredError extends ApiError {
+  constructor() {
+    super('Patient name is required', 400);
+  }
+}
+
 export class PortalBookingLimitError extends ApiError {
   constructor() {
     super('Booking limit reached', 409);

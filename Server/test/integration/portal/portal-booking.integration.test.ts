@@ -149,6 +149,28 @@ describe('POST /v1/portal/bookings', () => {
     expect(appt!.patientId).toBe(existing.id);
   });
 
+  it('books a consented patient without a name, and asks for it (400) when one is needed', async () => {
+    const provider = await createLiveProvider();
+    const existing = await createTestPatient(provider.id, { name: 'Ana', lastName: 'Perez' });
+    const session = sessionFor(provider.id, existing.email!);
+    await request(app).post('/v1/portal/consent')
+      .set('Origin', ALLOWED_ORIGIN).set('Cookie', session.cookie).set('X-CSRF-Token', session.csrf).send({ accepted: true });
+    const [ start, second ] = await slotStarts(provider);
+    const { patient: _omitted, ...nameless } = portalBookingBody(provider, start!);
+
+    const ok = await postBooking(session, nameless);
+    expect(ok.status).toBe(201);
+    expect((await appointmentsOf(provider.id))[0]!.patientId).toBe(existing.id);
+
+    const stranger = sessionFor(provider.id, unique('nuevo@test.local'));
+    const { patient: _also, ...namelessSecond } = portalBookingBody(provider, second!);
+    const res = await postBooking(stranger, namelessSecond);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Patient name is required');
+    expect(await patientByEmail(provider.id, stranger.email)).toHaveLength(0);
+    expect(await appointmentsOf(provider.id)).toHaveLength(1);
+  });
+
   it('answers a neutral 409 for revoked portal access and writes nothing', async () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);

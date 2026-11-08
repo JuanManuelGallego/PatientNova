@@ -12,7 +12,7 @@ export const createPortalBookingSchema = z.strictObject({
     name: z.string().trim().min(1, 'name is required').max(100),
     lastName: z.string().trim().min(1, 'lastName is required').max(100),
     phone: e164OrEmpty.optional(),
-  }),
+  }).optional(),
 });
 
 export type CreatePortalBookingBody = z.infer<typeof createPortalBookingSchema>;

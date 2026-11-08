@@ -87,6 +87,7 @@ export function PatientSteps({ slug, provider, type, location, slot, timezone, s
             screen={screen}
             contact={contact.contact}
             contactChannel={contact.contactChannel}
+            recognized={!contact.consentRequired}
             provider={provider}
             typeId={type.id}
             locationId={location.id}
@@ -112,6 +113,7 @@ interface PatientDetailsProps {
     screen: { steps: BookingStep[]; step: BookingStep; moved: boolean; dock: ReactNode };
     contact: string;
     contactChannel: LoginChannel;
+    recognized: boolean;
     provider: PublicProvider;
     typeId: string;
     locationId: string;
@@ -124,11 +126,12 @@ interface PatientDetailsProps {
     onSessionLost: () => void;
 }
 
-function PatientDetails({ screen, contact, contactChannel, provider, typeId, locationId, slot, timezone, form, onForm, onBooked, onSlotTaken, onSessionLost }: PatientDetailsProps) {
+function PatientDetails({ screen, contact, contactChannel, recognized, provider, typeId, locationId, slot, timezone, form, onForm, onBooked, onSlotTaken, onSessionLost }: PatientDetailsProps) {
     const { name, lastName, phone, consent } = form;
     const { approvalRequired, displayName: providerName } = provider;
     const [ attempted, setAttempted ] = useState(false);
     const [ phoneTouched, setPhoneTouched ] = useState(false);
+    const [ nameRequired, setNameRequired ] = useState(false);
     const ids = useId();
     const formId = `${ids}-form`;
     const nameRef = useRef<HTMLInputElement>(null);
@@ -137,12 +140,13 @@ function PatientDetails({ screen, contact, contactChannel, provider, typeId, loc
     const consentRef = useRef<HTMLInputElement>(null);
     const { createBooking, loading, error } = useCreateBooking();
 
+    const askName = !recognized || approvalRequired || nameRequired;
     const onPhone = isPhoneChannel(contactChannel);
-    const phoneValue = onPhone ? "" : phone;
+    const phoneValue = onPhone || !askName ? "" : phone;
     const contactKind = onPhone ? "el número" : "el correo";
     const invalid: Record<Field, boolean> = {
-        name: !name.trim(),
-        lastName: !lastName.trim(),
+        name: askName && !name.trim(),
+        lastName: askName && !lastName.trim(),
         phone: phoneValue !== "" && !isE164(phoneValue),
         consent: !consent,
     };
@@ -171,12 +175,13 @@ function PatientDetails({ screen, contact, contactChannel, provider, typeId, loc
                 startUtc: slot.startUtc,
                 patientTimezone: timezone,
                 consentAccepted: true,
-                patient: { name: name.trim(), lastName: lastName.trim(), ...(phoneValue && { phone: phoneValue }) },
+                ...(askName && { patient: { name: name.trim(), lastName: lastName.trim(), ...(phoneValue && { phone: phoneValue }) } }),
             });
             onBooked(outcome);
         } catch (err) {
             if (!(err instanceof ApiClientError)) return;
             if (err.status === 401) onSessionLost();
+            else if (err.status === 400 && /name is required/i.test(err.details ?? "")) setNameRequired(true);
             else if (/slot no longer available/i.test(err.details ?? "")) onSlotTaken(err.message);
         }
     };
@@ -200,6 +205,7 @@ function PatientDetails({ screen, contact, contactChannel, provider, typeId, loc
                         Guardaremos este horario mientras {providerName} revisa tu solicitud. {APPROVAL_FOLLOW_UP}
                     </p>
                 )}
+                {askName && (<>
                 <div>
                     <label className="form-label">
                         Nombre
@@ -229,6 +235,7 @@ function PatientDetails({ screen, contact, contactChannel, provider, typeId, loc
                         {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
                     </div>
                 )}
+                </>)}
                 <ConsentNotice provider={provider} />
                 <div>
                     <label className={portal.checkbox}>

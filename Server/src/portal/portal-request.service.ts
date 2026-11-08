@@ -17,6 +17,7 @@ import type { ConsentRequestMeta } from '../patient-consents/patient-consent.ser
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isPhoneContact, ownRequestWhere } from './portal-contact.js';
 import {
+  PortalPatientDetailsRequiredError,
   PortalRequestCapacityError,
   PortalRequestLimitError,
   PortalRequestNotFoundError,
@@ -42,6 +43,7 @@ export async function holdSlotWithin(
   kind: BookingRequestKind = BookingRequestKind.NEW,
 ): Promise<HeldSlot> {
   const { userId } = session;
+  if (!body.patient) throw new PortalPatientDetailsRequiredError();
   const end = new Date(slot.start.getTime() + slot.durationMinutes * ONE_MINUTE_MS);
 
   const { contact } = session;
