@@ -66,10 +66,6 @@ export async function resolveBookingMode(userId: string, tx: TransactionClient) 
   return { settings, approval: settings.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL };
 }
 
-/**
- * The reminder of a portal appointment at the provider's chosen preset, in the patient's zone; none when the
- * provider chose `NONE`, no route exists, or the send time is already past or not before the start.
- */
 export function portalReminder(start: Date, now: Date, route: PatientRoute | null, timing: PortalReminderTiming, timezone: string) {
   if (!route) return undefined;
   const sendAt = portalReminderSendAt(start, timing, timezone);

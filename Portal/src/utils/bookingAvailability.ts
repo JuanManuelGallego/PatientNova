@@ -72,12 +72,6 @@ function listEs(values: readonly number[]): string {
     return values.length === 1 ? String(values[ 0 ]) : `${values.slice(0, -1).join(", ")} y ${values[ values.length - 1 ]}`;
 }
 
-/**
- * Warns when the slot grid lets online bookings leave gaps between appointments.
- * Back-to-back online appointments start `duration + buffer` apart, so that pitch must land on the grid;
- * the recommended interval is the largest option that divides every pitch without exceeding the shortest one.
- * No warning when the interval is already that option or no option fits.
- */
 export function intervalGapWarning(interval: number, buffer: number, durations: readonly number[]): string | null {
     if (!durations.length || !Number.isInteger(buffer) || buffer < 0) return null;
     const lengths = [ ...new Set(durations) ].sort((a, b) => a - b);

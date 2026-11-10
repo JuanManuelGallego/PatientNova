@@ -306,8 +306,6 @@ enum BookingApprovalMode {
   REQUIRE_APPROVAL
 }
 
-/// When a portal appointment's reminder goes out: the appointment modal's presets. Clock presets are wall-clock
-/// times in the patient's zone.
 enum PortalReminderTiming {
   NONE
   ONE_HOUR_BEFORE

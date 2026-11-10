@@ -58,12 +58,6 @@ async function dropQueuedReminderJob(reminderId: string | null): Promise<void> {
   }
 }
 
-/**
- * The linked reminder after a move: a PENDING one follows the new time with its channel and address unchanged
- * (the provider may have switched it), or is cancelled when the provider's preset no longer leaves time for it or
- * is `NONE`; otherwise a new reminder is linked on the patient's route when there is still time for it. A SENT
- * reminder is never rewritten.
- */
 async function reminderPatch(
   tx: TransactionClient,
   userId: string,

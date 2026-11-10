@@ -170,7 +170,6 @@ describe("PublicBookingPage", () => {
         const places = await screen.findByRole("group", { name: "Lugar" });
         expect(within(places).getByRole("button", { name: /Consultorio Centro.*Calle 10/ })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "false");
-        // The place is not a choice, so it is not asked.
         expect(screen.getByRole("heading", { name: "¿Qué necesitas?" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Lugar de atención" })).toBeInTheDocument();
         expect(screen.queryByRole("heading", { name: "¿Dónde prefieres atenderte?" })).not.toBeInTheDocument();
@@ -183,7 +182,6 @@ describe("PublicBookingPage", () => {
         const types = await screen.findByRole("group", { name: "Tipo de cita" });
         expect(within(types).getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByRole("button", { name: "Ver horarios" })).toBeDisabled();
-        // Only the place is asked.
         expect(screen.getByRole("heading", { level: 2, name: "Tu cita" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Tipo de cita" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "¿Dónde prefieres atenderte?" })).toBeInTheDocument();

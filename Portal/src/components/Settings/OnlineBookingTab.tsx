@@ -821,7 +821,6 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
 
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
-/** What the chosen preset means for a patient, in the same terms as the appointment modal. */
 function reminderTimingHint(timing: PortalReminderTiming): string {
     if (timing === "NONE") return "Las citas reservadas en línea no reciben recordatorio automático.";
     const { type } = PORTAL_REMINDER_TIMINGS.find((t) => t.value === timing)!;

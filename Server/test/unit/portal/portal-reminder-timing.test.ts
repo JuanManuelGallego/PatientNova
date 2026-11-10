@@ -9,7 +9,6 @@ const sendAt = (start: string, timing: PortalReminderTiming, zone = BOGOTA) =>
   portalReminderSendAt(at(start), timing, zone)?.toISOString() ?? null;
 
 describe('portalReminderSendAt', () => {
-  // 10:00 in Bogotá (UTC-5) on Thursday 10 December 2026.
   const START = '2026-12-10T15:00:00.000Z';
 
   it('sends nothing for NONE', () => {
@@ -28,12 +27,10 @@ describe('portalReminderSendAt', () => {
   });
 
   it('takes the appointment date in the zone, not in UTC', () => {
-    // 22:00 on 9 December in Bogotá is already 10 December in UTC.
     expect(sendAt('2026-12-10T03:00:00.000Z', PortalReminderTiming.SAME_DAY_MORNING)).toBe('2026-12-09T13:00:00.000Z');
   });
 
   it('keeps the wall-clock time across a DST change', () => {
-    // Madrid moves to CEST on Sunday 29 March 2026; the appointment is Monday 30 March at 10:00 CEST.
     const start = '2026-03-30T08:00:00.000Z';
     expect(sendAt(start, PortalReminderTiming.PREVIOUS_DAY_EVENING, MADRID)).toBe('2026-03-29T16:00:00.000Z');
     expect(sendAt(start, PortalReminderTiming.PREVIOUS_DAY_MORNING, MADRID)).toBe('2026-03-29T07:00:00.000Z');

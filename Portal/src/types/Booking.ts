@@ -2,11 +2,9 @@ import { ReminderType } from "./Reminder";
 
 export type BookingApprovalMode = "AUTO_CONFIRM" | "REQUIRE_APPROVAL";
 
-/** When a portal appointment's reminder goes out: the appointment modal's presets (server `PortalReminderTiming`). */
 export type PortalReminderTiming =
     | "NONE" | "ONE_HOUR_BEFORE" | "ONE_DAY_BEFORE" | "SAME_DAY_MORNING" | "PREVIOUS_DAY_MORNING" | "PREVIOUS_DAY_EVENING";
 
-/** Each preset's modal counterpart, in the modal's order, so labels and clock times come from `REMINDER_TYPE_CONFIG`. */
 export const PORTAL_REMINDER_TIMINGS: { value: PortalReminderTiming; type: ReminderType }[] = [
     { value: "NONE", type: ReminderType.NONE },
     { value: "ONE_HOUR_BEFORE", type: ReminderType.ONE_HOUR_BEFORE },

@@ -252,7 +252,6 @@ describe('POST /v1/public/providers/:slug/otp with a phone', () => {
       const provider = await createLiveProvider();
       const other = await createLiveProvider();
       const lines = capturedLogs();
-      // Above the provider's rows, so only the per-provider cap can trigger: the default may be as low as that cap.
       portal.otpPaidDailyCap = PORTAL_OTP_LIMITS.perProviderPaidPerHour + 10;
       await paidRows(provider.id, PORTAL_OTP_LIMITS.perProviderPaidPerHour);
 
