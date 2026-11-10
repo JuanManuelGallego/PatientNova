@@ -1,4 +1,20 @@
+import { ReminderType } from "./Reminder";
+
 export type BookingApprovalMode = "AUTO_CONFIRM" | "REQUIRE_APPROVAL";
+
+/** When a portal appointment's reminder goes out: the appointment modal's presets (server `PortalReminderTiming`). */
+export type PortalReminderTiming =
+    | "NONE" | "ONE_HOUR_BEFORE" | "ONE_DAY_BEFORE" | "SAME_DAY_MORNING" | "PREVIOUS_DAY_MORNING" | "PREVIOUS_DAY_EVENING";
+
+/** Each preset's modal counterpart, in the modal's order, so labels and clock times come from `REMINDER_TYPE_CONFIG`. */
+export const PORTAL_REMINDER_TIMINGS: { value: PortalReminderTiming; type: ReminderType }[] = [
+    { value: "NONE", type: ReminderType.NONE },
+    { value: "ONE_HOUR_BEFORE", type: ReminderType.ONE_HOUR_BEFORE },
+    { value: "ONE_DAY_BEFORE", type: ReminderType.ONE_DAY_BEFORE },
+    { value: "SAME_DAY_MORNING", type: ReminderType.SAME_DAY_MORNING },
+    { value: "PREVIOUS_DAY_MORNING", type: ReminderType.PREVIOUS_DAY_MORNING },
+    { value: "PREVIOUS_DAY_EVENING", type: ReminderType.PREVIOUS_DAY_EVENING },
+];
 
 export interface BookingReadiness {
     hasSlug: boolean;
@@ -20,8 +36,7 @@ export interface BookingSettings {
     maxHorizonDays: number;
     maxPatientReschedules: number;
     minRescheduleNoticeHours: number;
-    portalReminderEnabled: boolean;
-    portalReminderLeadHours: number;
+    portalReminderTiming: PortalReminderTiming;
     bio: string | null;
     specialty: string | null;
     publicPhone: string | null;
@@ -35,12 +50,11 @@ export interface BookingSettings {
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
     "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
-    | "maxPatientReschedules" | "minRescheduleNoticeHours" | "portalReminderEnabled" | "portalReminderLeadHours"
+    | "maxPatientReschedules" | "minRescheduleNoticeHours" | "portalReminderTiming"
     | "bio" | "specialty" | "publicPhone" | "publicWhatsapp" | "legalName" | "privacyContact" | "contactHours">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
-export const MAX_PORTAL_REMINDER_LEAD_HOURS = 168;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
 export const MAX_LEGAL_TEXT_LENGTH = 200;

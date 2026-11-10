@@ -17,6 +17,7 @@ import {
   BookingApprovalMode,
   Channel,
   EntityType,
+  PortalReminderTiming,
   ReminderStatus,
 } from '../../../generated/prisma/enums.js';
 import { createTestAppointmentType, unique } from '../helpers.js';
@@ -199,27 +200,27 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect((await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } })).status).toBe(ReminderStatus.PENDING);
   });
 
-  it('moves the pending reminder by the provider lead time, read when the move happens', async () => {
+  it('moves the pending reminder by the provider preset, read when the move happens', async () => {
     const provider = await createLiveProvider();
     const [ from ] = await slotStarts(provider, 3);
     const [ to ] = await slotStarts(provider, 5);
     const { session, appointmentId } = await bookAt(provider, from!);
     const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
-    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderLeadHours: 2 } });
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.ONE_HOUR_BEFORE } });
 
     expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
 
     const moved = await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } });
-    expect(moved.sendAt.getTime()).toBe(new Date(to!).getTime() - 2 * HOUR);
+    expect(moved.sendAt.getTime()).toBe(new Date(to!).getTime() - HOUR);
   });
 
-  it('cancels the pending reminder on a move once the provider turned portal reminders off', async () => {
+  it('cancels the pending reminder on a move once the provider chose none', async () => {
     const provider = await createLiveProvider();
     const [ from ] = await slotStarts(provider, 3);
     const [ to ] = await slotStarts(provider, 5);
     const { session, appointmentId } = await bookAt(provider, from!);
     const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
-    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderEnabled: false } });
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.NONE } });
 
     expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
 

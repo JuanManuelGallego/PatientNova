@@ -23,12 +23,14 @@ import {
     MAX_BIO_LENGTH,
     MAX_PATIENT_RESCHEDULES,
     MAX_RESCHEDULE_NOTICE_HOURS,
-    MAX_PORTAL_REMINDER_LEAD_HOURS,
     MAX_CONTACT_HOURS_LENGTH,
     MAX_LEGAL_TEXT_LENGTH,
     MAX_SPECIALTY_LENGTH,
+    PORTAL_REMINDER_TIMINGS,
+    PortalReminderTiming,
     SLOT_INTERVAL_OPTIONS,
 } from "@/src/types/Booking";
+import { REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import {
     MINUTES_PER_DAY,
     WEEKDAYS_ES,
@@ -819,9 +821,20 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
 
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
+/** What the chosen preset means for a patient, in the same terms as the appointment modal. */
+function reminderTimingHint(timing: PortalReminderTiming): string {
+    if (timing === "NONE") return "Las citas reservadas en línea no reciben recordatorio automático.";
+    const { type } = PORTAL_REMINDER_TIMINGS.find((t) => t.value === timing)!;
+    const { label, clock } = REMINDER_TYPE_CONFIG[ type ];
+    const when = clock
+        ? `la ${label.toLowerCase()} (${clock.hour}:${String(clock.minute).padStart(2, "0")}, hora del paciente)`
+        : `${label} de la cita`;
+    return `Se envía ${when}, por el canal de cada paciente. Si la cita se reserva o se mueve después de ese momento, no se envía.`;
+}
+
 type RulesForm = {
     interval: number; buffer: string; lead: string; horizon: string; reschedules: string; notice: string;
-    reminderOn: boolean; reminderHours: string;
+    reminderTiming: PortalReminderTiming;
 };
 
 function rulesFormOf(s: BookingSettings): RulesForm {
@@ -832,8 +845,7 @@ function rulesFormOf(s: BookingSettings): RulesForm {
         horizon: String(s.maxHorizonDays),
         reschedules: String(s.maxPatientReschedules),
         notice: String(s.minRescheduleNoticeHours),
-        reminderOn: s.portalReminderEnabled,
-        reminderHours: String(s.portalReminderLeadHours),
+        reminderTiming: s.portalReminderTiming,
     };
 }
 
@@ -843,8 +855,6 @@ function parseRules(form: RulesForm) {
     const horizon = toNumber(form.horizon);
     const reschedules = toNumber(form.reschedules);
     const notice = toNumber(form.notice);
-    const reminderHours = toNumber(form.reminderHours);
-    const reminderHoursValid = Number.isInteger(reminderHours) && reminderHours >= 1 && reminderHours <= MAX_PORTAL_REMINDER_LEAD_HOURS;
     const leadError = Number.isFinite(leadMinutes) && leadMinutes >= 0 && leadMinutes <= 14 * 24 * 60 ? null : "Escribe un número entre 0 y 336 horas (14 días).";
     const errors = {
         buffer: Number.isInteger(buffer) && buffer >= 0 && buffer <= 240 ? null : "Escribe un número entero entre 0 y 240.",
@@ -856,9 +866,6 @@ function parseRules(form: RulesForm) {
             ? null : `Escribe un número entero entre 0 y ${MAX_PATIENT_RESCHEDULES}.`,
         notice: Number.isInteger(notice) && notice >= 0 && notice <= MAX_RESCHEDULE_NOTICE_HOURS
             ? null : `Escribe un número entero entre 0 y ${MAX_RESCHEDULE_NOTICE_HOURS} horas (7 días).`,
-        // While the reminder is off the hours field is hidden, so it never blocks saving.
-        reminderHours: !form.reminderOn || reminderHoursValid
-            ? null : `Escribe un número entero entre 1 y ${MAX_PORTAL_REMINDER_LEAD_HOURS} horas (7 días).`,
     };
     const body = {
         slotIntervalMinutes: form.interval,
@@ -867,8 +874,7 @@ function parseRules(form: RulesForm) {
         maxHorizonDays: horizon,
         maxPatientReschedules: reschedules,
         minRescheduleNoticeHours: notice,
-        portalReminderEnabled: form.reminderOn,
-        ...(reminderHoursValid && { portalReminderLeadHours: reminderHours }),
+        portalReminderTiming: form.reminderTiming,
     } satisfies BookingSettingsUpdate;
     return { body, errors, invalid: Object.values(errors).some(Boolean) };
 }
@@ -968,27 +974,17 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                 </fieldset>
                 <fieldset className="form-stack form-fieldset-plain">
                     <legend className="form-label form-fieldset-legend">Recordatorio al paciente</legend>
-                    <span className="form-input-hint">
-                        Las citas reservadas en línea reciben un recordatorio automático por el canal de cada paciente.
-                        Si la cita se reserva o se mueve con menos anticipación, no se envía.
-                    </span>
-                    <Switch
-                        checked={form.reminderOn}
-                        onChange={(checked) => change({ reminderOn: checked })}
-                        label="Recordatorio de citas reservadas en línea"
-                        onText="Activado"
-                        offText="Desactivado"
-                        testId="online-booking-reminder-toggle"
-                    />
-                    {form.reminderOn && (
-                        <div className="form-grid-2">
-                            {numberField({
-                                field: "reminderHours", label: "Enviar recordatorio (horas antes)",
-                                hint: "Cuánto antes del inicio de la cita se envía.",
-                                min: 1, max: MAX_PORTAL_REMINDER_LEAD_HOURS, step: 1, testId: "online-booking-reminder-hours",
-                            })}
-                        </div>
-                    )}
+                    <div className="form-grid-2">
+                        <label className="form-label" data-testid="online-booking-reminder-timing">
+                            Enviar recordatorio
+                            <CustomSelect
+                                value={form.reminderTiming}
+                                onChange={(v) => change({ reminderTiming: v as PortalReminderTiming })}
+                                options={PORTAL_REMINDER_TIMINGS.map(({ value, type }) => ({ value, label: REMINDER_TYPE_CONFIG[ type ].label }))}
+                            />
+                            <span className="form-input-hint">{reminderTimingHint(form.reminderTiming)}</span>
+                        </label>
+                    </div>
                 </fieldset>
                 {invalid && (
                     <WarningHint testId="online-booking-rules-unsaved">Corrige los campos marcados para guardar los cambios.</WarningHint>

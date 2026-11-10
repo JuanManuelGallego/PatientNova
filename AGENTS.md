@@ -106,8 +106,8 @@ pnpm run test:integration
 - Patient-facing notifications/reminders use `Appointment.patientTimezone ?? User.timezone`; provider text uses `User.timezone`. Do not add a full stop after formatted "a. m."/"p. m.".
 - Enqueue `send-reminder` on `tx` when created or `sendAt`/`sendMode` changes (`startAfter: sendAt` for SCHEDULED). Never duplicate an unchanged job: simultaneous PENDING reads can send twice. Old jobs remain after moves; workers skip jobs more than a minute before the new `sendAt`.
 - All cancellation paths call `cancelLinkedReminder(tx, ...)` for PENDING reminders; reactivation does not restore them. Workers cancel instead of sending reminders for deleted/inactive appointments.
-- Portal appointments get their reminder from `portalReminder` (`src/portal/portal-booking.service.ts`), governed by the provider's `portalReminderEnabled`/`portalReminderLeadHours` booking settings (default on, 24h), read on `tx` at booking, approval and reschedule; none inside the lead time.
-- Rescheduling keeps PENDING reminder channel/address and moves `sendAt` (or cancels within the lead time, or when portal reminders are off). Settled SENT/FAILED/CANCELLED reminders are unlinked with audit and replaced by a new reminder on the patient's route, never rewritten.
+- Portal appointments get their reminder from `portalReminder` (`src/portal/portal-booking.service.ts`) at the provider's `portalReminderTiming` booking setting, read on `tx` at booking, approval and reschedule. Its presets mirror the appointment modal's (`REMINDER_TYPE_CONFIG` in `Portal/src/types/Reminder.ts`); `portalReminderSendAt` (`src/portal/portal-reminder-timing.ts`) computes them, clock presets in the patient's zone. Keep both in step. None once the send time has passed or is not before the start.
+- Rescheduling keeps PENDING reminder channel/address and moves `sendAt` (or cancels when the preset leaves no time, or is `NONE`). Settled SENT/FAILED/CANCELLED reminders are unlinked with audit and replaced by a new reminder on the patient's route, never rewritten.
 
 ## Time and frontend conventions
 

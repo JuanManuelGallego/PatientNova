@@ -4,6 +4,7 @@ import {
   BookingRequestKind,
   MeetingStatus,
   PatientStatus,
+  type PortalReminderTiming,
   RecordSource,
   ReminderMode,
   ReminderStatus,
@@ -11,10 +12,10 @@ import {
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
-import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
+import { ONE_MINUTE_MS } from '../utils/config/constants.js';
 import { bindAuditPortalPatient, runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
-import { bookingSettingsRepository, type PortalReminderPolicy } from '../booking-settings/booking-settings.repository.js';
+import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { publicBookingRepository } from '../public-booking/public-booking.repository.js';
 import { isSlotFree } from '../public-booking/public-booking.service.js';
@@ -33,6 +34,7 @@ import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
 import { isConsentRequired } from './portal-session.service.js';
 import { portalBookingRepository } from './portal-booking.repository.js';
 import { loadPatientRoute, type PatientRoute } from './patient-route.js';
+import { portalReminderSendAt } from './portal-reminder-timing.js';
 import { toPortalAppointmentDto, type PortalAppointmentDto } from './portal-appointment.dto.js';
 import { portalActionContext } from './portal-appointment-actions.js';
 import { afterRequestCreated, holdSlotWithin, portalRequestService } from './portal-request.service.js';
@@ -65,13 +67,13 @@ export async function resolveBookingMode(userId: string, tx: TransactionClient) 
 }
 
 /**
- * The reminder of a portal appointment: the provider's lead time before it, or none when the provider turned it
- * off, that time has passed or no route exists.
+ * The reminder of a portal appointment at the provider's chosen preset, in the patient's zone; none when the
+ * provider chose `NONE`, no route exists, or the send time is already past or not before the start.
  */
-export function portalReminder(start: Date, now: Date, route: PatientRoute | null, policy: PortalReminderPolicy) {
-  if (!policy.portalReminderEnabled || !route) return undefined;
-  const sendAt = new Date(start.getTime() - policy.portalReminderLeadHours * ONE_HOUR_MS);
-  if (sendAt <= now) return undefined;
+export function portalReminder(start: Date, now: Date, route: PatientRoute | null, timing: PortalReminderTiming, timezone: string) {
+  if (!route) return undefined;
+  const sendAt = portalReminderSendAt(start, timing, timezone);
+  if (!sendAt || sendAt <= now || sendAt >= start) return undefined;
   return { ...route, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
 }
 
@@ -109,7 +111,8 @@ export async function createPortalAppointmentWithin(tx: TransactionClient, input
     input.start,
     now,
     await loadPatientRoute(input.userId, input.patientId, tx),
-    await bookingSettingsRepository.getPortalReminderPolicy(input.userId, tx),
+    await bookingSettingsRepository.getPortalReminderTiming(input.userId, tx),
+    input.patientTimezone,
   );
   const meetingPending = input.isVirtual ? await meetingPendingMode(input.userId, tx) : undefined;
   const appointment = await createWithin(tx, {

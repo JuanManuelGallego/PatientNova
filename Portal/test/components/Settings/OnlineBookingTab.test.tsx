@@ -71,8 +71,7 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         maxHorizonDays: 60,
         maxPatientReschedules: 2,
         minRescheduleNoticeHours: 0,
-        portalReminderEnabled: true,
-        portalReminderLeadHours: 24,
+        portalReminderTiming: "ONE_DAY_BEFORE",
         bio: null,
         specialty: null,
         publicPhone: null,
@@ -446,7 +445,7 @@ describe("OnlineBookingTab: rules", () => {
         expect(updateSettings).toHaveBeenCalledWith({
             slotIntervalMinutes: 30, bufferMinutes: 15, minLeadMinutes: 1440, maxHorizonDays: 60,
             maxPatientReschedules: 2, minRescheduleNoticeHours: 0,
-            portalReminderEnabled: true, portalReminderLeadHours: 24,
+            portalReminderTiming: "ONE_DAY_BEFORE",
         });
         expect(screen.getByTestId("online-booking-rules-save-state")).toHaveTextContent("Guardado");
     });
@@ -463,31 +462,28 @@ describe("OnlineBookingTab: rules", () => {
         expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ maxPatientReschedules: 0, minRescheduleNoticeHours: 24 }));
     });
 
-    it("saves the portal reminder lead time", async () => {
+    it("offers the appointment modal's reminder presets and saves the chosen one", async () => {
         renderTab();
-        const hours = screen.getByTestId("online-booking-reminder-hours");
-        await user.clear(hours);
-        await user.type(hours, "2");
+        const field = screen.getByTestId("online-booking-reminder-timing");
+        expect(field).toHaveTextContent("Se envía 1 día antes de la cita");
+        await user.click(within(field).getByRole("combobox"));
+        expect(within(screen.getByRole("listbox")).getAllByRole("option").map((o) => o.textContent)).toEqual([
+            "Ninguno", "1 hora antes", "1 día antes", "Mañana del día de la cita", "Mañana del día anterior", "Tarde del día anterior",
+        ]);
+        await user.click(screen.getByRole("option", { name: "Tarde del día anterior" }));
+        expect(field).toHaveTextContent("la tarde del día anterior (18:00, hora del paciente)");
         await settle();
-        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderEnabled: true, portalReminderLeadHours: 2 }));
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderTiming: "PREVIOUS_DAY_EVENING" }));
     });
 
-    it("turns the portal reminder off and hides its lead time", async () => {
+    it("turns the portal reminder off with Ninguno", async () => {
         renderTab();
-        await user.click(screen.getByTestId("online-booking-reminder-toggle"));
-        expect(screen.queryByTestId("online-booking-reminder-hours")).not.toBeInTheDocument();
+        const field = screen.getByTestId("online-booking-reminder-timing");
+        await user.click(within(field).getByRole("combobox"));
+        await user.click(screen.getByRole("option", { name: "Ninguno" }));
+        expect(field).toHaveTextContent("no reciben recordatorio automático");
         await settle();
-        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderEnabled: false, portalReminderLeadHours: 24 }));
-    });
-
-    it("does not save an out-of-range reminder lead time", async () => {
-        renderTab();
-        const hours = screen.getByTestId("online-booking-reminder-hours");
-        await user.clear(hours);
-        await user.type(hours, "0");
-        await settle();
-        expect(updateSettings).not.toHaveBeenCalled();
-        expect(screen.getByRole("alert")).toHaveTextContent(/entre 1 y 168/);
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderTiming: "NONE" }));
     });
 
     it("does not save an out-of-range reschedule policy", async () => {
