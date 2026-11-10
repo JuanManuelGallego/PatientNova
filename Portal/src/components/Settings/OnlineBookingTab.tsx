@@ -823,8 +823,9 @@ const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
 function reminderTimingHint(timing: PortalReminderTiming): string {
     if (timing === "NONE") return "Las citas reservadas en línea no reciben recordatorio automático.";
-    const { type } = PORTAL_REMINDER_TIMINGS.find((t) => t.value === timing)!;
-    const { label, clock } = REMINDER_TYPE_CONFIG[ type ];
+    const preset = PORTAL_REMINDER_TIMINGS.find((t) => t.value === timing);
+    if (!preset) return "Se envía por el canal de cada paciente.";
+    const { label, clock } = REMINDER_TYPE_CONFIG[ preset.type ];
     const when = clock
         ? `la ${label.toLowerCase()} (${clock.hour}:${String(clock.minute).padStart(2, "0")}, hora del paciente)`
         : `${label} de la cita`;
@@ -888,7 +889,7 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
     const gapWarning = intervalGapWarning(
         form.interval,
         toNumber(form.buffer),
-        appointmentTypes.filter((t) => t.bookableOnline).map((t) => t.defaultDuration),
+        appointmentTypes.filter((t) => t.bookableOnline && t.isActive !== false).map((t) => t.defaultDuration),
     );
 
     function change(patch: Partial<RulesForm>) {

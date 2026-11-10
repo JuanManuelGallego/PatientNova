@@ -99,9 +99,10 @@ export function RemindersTab() {
               />
               <span className="form-input-hint">
                 Por aquí recibes tu agenda diaria, los avisos de reservas en
-                línea y las alertas de recordatorios fallidos. Los
-                recordatorios a tus pacientes salen por el canal de cada
-                paciente, que eliges en su ficha.
+                línea, las confirmaciones y cancelaciones que tus pacientes
+                responden a sus recordatorios y las alertas de recordatorios
+                fallidos. Los recordatorios a tus pacientes salen por el canal
+                de cada paciente, que eliges en su ficha.
               </span>
             </label>
           </div>
@@ -118,7 +119,8 @@ export function RemindersTab() {
                 className="form-input-hint"
                 style={{ marginBottom: 12, display: "block" }}
               >
-                Activa o desactiva tus avisos automáticos. No detiene los
+                Activa o desactiva tus avisos automáticos, incluidos los de
+                confirmaciones y cancelaciones de tus pacientes. No detiene los
                 recordatorios a tus pacientes: el de las citas reservadas en
                 línea se configura en Reserva en línea.
               </span>

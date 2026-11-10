@@ -425,6 +425,13 @@ describe("OnlineBookingTab: rules", () => {
         expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
     });
 
+    it("ignores inactive types in the interval warning", () => {
+        appointmentTypes = [ type(60), { ...type(45), isActive: false } ];
+        renderTab();
+        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
+        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
+    });
+
     it("shows no interval warning without bookable types", () => {
         appointmentTypes = [ type(60, false) ];
         renderTab();
@@ -474,6 +481,12 @@ describe("OnlineBookingTab: rules", () => {
         expect(field).toHaveTextContent("la tarde del día anterior (18:00, hora del paciente)");
         await settle();
         expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderTiming: "PREVIOUS_DAY_EVENING" }));
+    });
+
+    it("still renders the rules when the server sends a preset this page does not know", () => {
+        settings = makeSettings({ portalReminderTiming: "TWO_DAYS_BEFORE" as BookingSettings[ "portalReminderTiming" ] });
+        renderTab();
+        expect(screen.getByTestId("online-booking-reminder-timing")).toHaveTextContent("Se envía por el canal de cada paciente.");
     });
 
     it("turns the portal reminder off with Ninguno", async () => {

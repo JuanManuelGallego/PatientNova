@@ -24,6 +24,7 @@ import {
   ConsentKind,
   EntityType,
   PatientStatus,
+  PortalReminderTiming,
   RecordSource,
 } from '../../../generated/prisma/enums.js';
 import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
@@ -186,6 +187,17 @@ describe('POST /v1/booking-requests/:id/approve', () => {
     expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id } })).status).toBe(BookingRequestStatus.PENDING);
     expect(await prisma.patientConsent.count({ where: { patientId: patient.id, revokedAt: null } })).toBe(0);
     expect(await prisma.appointment.count({ where: { patientId: patient.id } })).toBe(0);
+  });
+
+  it('follows the provider reminder preset when it approves', async () => {
+    const p = await provider();
+    await prisma.user.update({ where: { id: p.id }, data: { portalReminderTiming: PortalReminderTiming.NONE } });
+    const req = await seedRequest(p);
+
+    expect((await approve(p, req.id)).status).toBe(200);
+
+    const stored = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: req.id } });
+    expect(await prisma.reminder.count({ where: { appointmentId: stored.appointmentId! } })).toBe(0);
   });
 
   it('creates patient, consent (original time) and appointment atomically, then confirms the patient', async () => {

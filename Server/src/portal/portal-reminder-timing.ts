@@ -4,7 +4,7 @@ import { getLocalDateString, localToUtc } from '../utils/time/time-utils.js';
 
 type Preset = { offsetMs: number } | { clock: { daysBefore: number; hour: number; minute: number } };
 
-const PRESETS: Record<Exclude<PortalReminderTiming, 'NONE'>, Preset> = {
+export const PRESETS: Record<Exclude<PortalReminderTiming, 'NONE'>, Preset> = {
   [PortalReminderTiming.ONE_HOUR_BEFORE]: { offsetMs: ONE_HOUR_MS },
   [PortalReminderTiming.ONE_DAY_BEFORE]: { offsetMs: ONE_DAY_MS },
   [PortalReminderTiming.SAME_DAY_MORNING]: { clock: { daysBefore: 0, hour: 8, minute: 0 } },

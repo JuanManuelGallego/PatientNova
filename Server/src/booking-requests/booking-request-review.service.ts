@@ -17,6 +17,7 @@ import { PatientEmailConflictError } from '../patients/patient.errors.js';
 import { ensureCurrentConsent } from '../patient-consents/patient-consent.service.js';
 import { patientConsentRepository } from '../patient-consents/patient-consent.repository.js';
 import { createPortalAppointmentWithin } from '../portal/portal-booking.service.js';
+import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { deliverPortalNotificationsNow, enqueuePortalNotifications, type PortalEvent } from '../portal/portal-booking-notifications.js';
 import { bookingRequestRepository } from './booking-request.repository.js';
 import {
@@ -245,6 +246,7 @@ export const bookingRequestReviewService = {
         start: request.startAt,
         end: request.endAt,
         patientTimezone: request.patientTimezone,
+        reminderTiming: await bookingSettingsRepository.getPortalReminderTiming(userId, tx),
         excludeRequestId: request.id,
       }, now);
 

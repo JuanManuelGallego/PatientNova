@@ -94,6 +94,7 @@ export interface PortalAppointmentInput {
   start: Date;
   end: Date;
   patientTimezone: string;
+  reminderTiming: PortalReminderTiming;
   /** Approval: the request whose own hold must not block its appointment. */
   excludeRequestId?: string;
 }
@@ -107,7 +108,7 @@ export async function createPortalAppointmentWithin(tx: TransactionClient, input
     input.start,
     now,
     await loadPatientRoute(input.userId, input.patientId, tx),
-    await bookingSettingsRepository.getPortalReminderTiming(input.userId, tx),
+    input.reminderTiming,
     input.patientTimezone,
   );
   const meetingPending = input.isVirtual ? await meetingPendingMode(input.userId, tx) : undefined;
@@ -194,6 +195,7 @@ export const portalBookingService = {
           start,
           end,
           patientTimezone: body.patientTimezone,
+          reminderTiming: settings.portalReminderTiming,
         }, now);
         const event: PortalEvent = linkPending ? 'booked-link-pending' : 'booked';
         await enqueuePortalNotifications(event, appointment.id, tx);

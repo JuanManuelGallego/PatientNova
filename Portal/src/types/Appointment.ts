@@ -188,4 +188,5 @@ export interface AppointmentType {
   defaultPrice?: number | null;
   color?: string | null;
   bookableOnline?: boolean;
+  isActive?: boolean;
 }
