@@ -56,6 +56,8 @@ describe('booking settings routes (integration)', () => {
       maxHorizonDays: 60,
       maxPatientReschedules: 2,
       minRescheduleNoticeHours: 0,
+      portalReminderEnabled: true,
+      portalReminderLeadHours: 24,
       bio: null,
       specialty: null,
       publicPhone: null,
@@ -110,6 +112,18 @@ describe('booking settings routes (integration)', () => {
 
     const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'maxPatientReschedules' } } });
     expect(audit?.affectedFields).toEqual(expect.arrayContaining([ 'maxPatientReschedules', 'minRescheduleNoticeHours' ]));
+  });
+
+  it('PATCH /settings stores the portal reminder policy, range-checked and audited', async () => {
+    const res = await patchSettings({ portalReminderEnabled: false, portalReminderLeadHours: 2 });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data).toMatchObject({ portalReminderEnabled: false, portalReminderLeadHours: 2 });
+    expect((await patchSettings({ portalReminderLeadHours: 0 })).statusCode).toBe(400);
+    expect((await patchSettings({ portalReminderLeadHours: 169 })).statusCode).toBe(400);
+    expect((await patchSettings({ portalReminderLeadHours: 1.5 })).statusCode).toBe(400);
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'portalReminderEnabled' } } });
+    expect(audit?.affectedFields).toEqual(expect.arrayContaining([ 'portalReminderEnabled', 'portalReminderLeadHours' ]));
   });
 
   it('PATCH /settings stores the public profile, trimmed and audited, and blank clears it', async () => {

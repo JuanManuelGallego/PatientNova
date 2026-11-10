@@ -18,6 +18,7 @@ import type { UpdateAppointmentDto } from '../appointments/appointment.schemas.j
 import { computeSlots, isSlotFree } from '../public-booking/public-booking.service.js';
 import type { SlotRangeQuery } from '../public-booking/public-booking.schemas.js';
 import { reminderJobManager } from '../scheduler/reminder-job-manager.js';
+import type { PortalReminderPolicy } from '../booking-settings/booking-settings.repository.js';
 import { hasCurrentConsent, type ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
 import { resolvePortalPatient } from './patient-resolution.js';
 import { PRIVACY_POLICY_VERSION } from './privacy-policy.js';
@@ -59,8 +60,9 @@ async function dropQueuedReminderJob(reminderId: string | null): Promise<void> {
 
 /**
  * The linked reminder after a move: a PENDING one follows the new time with its channel and address unchanged
- * (the provider may have switched it), or is cancelled when the new time is under 24h away; otherwise a new
- * reminder is linked on the patient's route when there is still time for it. A SENT reminder is never rewritten.
+ * (the provider may have switched it), or is cancelled when the new time is within the provider's lead time or the
+ * provider turned portal reminders off; otherwise a new reminder is linked on the patient's route when there is
+ * still time for it. A SENT reminder is never rewritten.
  */
 async function reminderPatch(
   tx: TransactionClient,
@@ -68,6 +70,7 @@ async function reminderPatch(
   appt: { id: string; patientId: string },
   start: Date,
   now: Date,
+  policy: PortalReminderPolicy,
 ): Promise<Pick<UpdateAppointmentDto, 'reminder'>> {
   const linked = await tx.reminder.findFirst({
     where: { appointmentId: appt.id, isDeleted: false },
@@ -75,7 +78,7 @@ async function reminderPatch(
   });
   const pending = linked?.status === ReminderStatus.PENDING;
   const route = pending ? { channel: linked.channel, to: linked.to } : await loadPatientRoute(userId, appt.patientId, tx);
-  const reminder = portalReminder(start, now, route);
+  const reminder = portalReminder(start, now, route, policy);
   if (reminder) return { reminder };
   return pending ? { reminder: null } : {};
 }
@@ -178,7 +181,7 @@ export const portalAppointmentService = {
         await updateWithin(tx, appt.id, {
           startAt: start.toISOString(),
           endAt: end.toISOString(),
-          ...(await reminderPatch(tx, userId, appt, start, now)),
+          ...(await reminderPatch(tx, userId, appt, start, now, settings)),
         }, userId, { patientTimezone: body.patientTimezone, replaceSettledReminder: true });
         await tx.appointment.update({ where: { id: appt.id, userId }, data: { patientRescheduleCount: { increment: 1 } } });
         const move = { previousStartAt: appt.startAt, startAt: start };

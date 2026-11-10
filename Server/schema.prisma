@@ -263,6 +263,8 @@ model User {
   maxHorizonDays      Int                 @default(60)
   maxPatientReschedules    Int @default(2)
   minRescheduleNoticeHours Int @default(0)
+  portalReminderEnabled    Boolean @default(true)
+  portalReminderLeadHours  Int     @default(24)
 
   bio                 String? @db.VarChar(600)
   specialty           String? @db.VarChar(120)

@@ -72,7 +72,7 @@ export function RemindersTab() {
       <div className="dash-card">
         <div className="dash-card__header">
           <span className="dash-card__title">
-            Canal y preferencias de recordatorios
+            Tus avisos
           </span>
           <SaveStatusIndicator
             saving={autosave.saving}
@@ -84,7 +84,7 @@ export function RemindersTab() {
         <div className="dash-card__body">
           <div style={{ paddingTop: 5 }}>
             <label className="form-label" data-testid="reminders-channel-selector">
-              Canal de recordatorios para pacientes
+              Canal de tus avisos
               <CustomSelect
                 value={reminderChannel ?? Channel.WHATSAPP}
                 onChange={(value) => {
@@ -98,10 +98,10 @@ export function RemindersTab() {
                 }))}
               />
               <span className="form-input-hint">
-                Todos los recordatorios enviados a tus pacientes (citas,
-                notificaciones manuales y envíos masivos) usarán este
-                canal. Asegúrate de que tus pacientes tengan el dato de
-                contacto correspondiente registrado.
+                Por aquí recibes tu agenda diaria, los avisos de reservas en
+                línea y las alertas de recordatorios fallidos. Los
+                recordatorios a tus pacientes salen por el canal de cada
+                paciente, que eliges en su ficha.
               </span>
             </label>
           </div>
@@ -118,9 +118,9 @@ export function RemindersTab() {
                 className="form-input-hint"
                 style={{ marginBottom: 12, display: "block" }}
               >
-                Activa o desactiva los recordatorios automáticos de citas. El
-                canal que configures aquí se usará para <strong>todos</strong>{" "}
-                los recordatorios enviados a tus pacientes.
+                Activa o desactiva tus avisos automáticos. No detiene los
+                recordatorios a tus pacientes: el de las citas reservadas en
+                línea se configura en Reserva en línea.
               </span>
               <Switch
                 checked={reminderActive}
@@ -128,7 +128,7 @@ export function RemindersTab() {
                   setReminderActive(checked);
                   saveNow({ reminderActive: checked });
                 }}
-                label="Recordatorios automáticos"
+                label="Avisos automáticos"
                 onText="Activados"
                 offText="Desactivados"
                 testId="reminders-active-toggle"
@@ -147,7 +147,7 @@ export function RemindersTab() {
                     style={{ marginBottom: 12, display: "block" }}
                   >
                     Datos de contacto del profesional. Se usan para los
-                    recordatorios diarios del sistema usando tu cannal selecionado arriba.
+                    avisos del sistema por el canal que elegiste arriba.
                   </span>
                   <div className="form-grid-2">
                     <label className="form-label">

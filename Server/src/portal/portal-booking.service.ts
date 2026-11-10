@@ -11,10 +11,10 @@ import {
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { isAppointmentOverlapViolation } from '../utils/errors/prisma-errors.js';
-import { ONE_DAY_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
+import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
 import { bindAuditPortalPatient, runInAuditContext } from '../audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../audit-log/audit-actors.js';
-import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
+import { bookingSettingsRepository, type PortalReminderPolicy } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
 import { publicBookingRepository } from '../public-booking/public-booking.repository.js';
 import { isSlotFree } from '../public-booking/public-booking.service.js';
@@ -64,10 +64,14 @@ export async function resolveBookingMode(userId: string, tx: TransactionClient) 
   return { settings, approval: settings.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL };
 }
 
-/** The reminder of a portal appointment: 24h before it, or none when that time has passed or no route exists. */
-export function portalReminder(start: Date, now: Date, route: PatientRoute | null) {
-  const sendAt = new Date(start.getTime() - ONE_DAY_MS);
-  if (!route || sendAt <= now) return undefined;
+/**
+ * The reminder of a portal appointment: the provider's lead time before it, or none when the provider turned it
+ * off, that time has passed or no route exists.
+ */
+export function portalReminder(start: Date, now: Date, route: PatientRoute | null, policy: PortalReminderPolicy) {
+  if (!policy.portalReminderEnabled || !route) return undefined;
+  const sendAt = new Date(start.getTime() - policy.portalReminderLeadHours * ONE_HOUR_MS);
+  if (sendAt <= now) return undefined;
   return { ...route, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
 }
 
@@ -101,7 +105,12 @@ export interface PortalAppointmentInput {
  * route, meeting provisioning for a virtual location, and the job that will confirm it. Shared by `book` and approval.
  */
 export async function createPortalAppointmentWithin(tx: TransactionClient, input: PortalAppointmentInput, now: Date) {
-  const reminder = portalReminder(input.start, now, await loadPatientRoute(input.userId, input.patientId, tx));
+  const reminder = portalReminder(
+    input.start,
+    now,
+    await loadPatientRoute(input.userId, input.patientId, tx),
+    await bookingSettingsRepository.getPortalReminderPolicy(input.userId, tx),
+  );
   const meetingPending = input.isVirtual ? await meetingPendingMode(input.userId, tx) : undefined;
   const appointment = await createWithin(tx, {
     startAt: input.start.toISOString(),

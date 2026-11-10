@@ -5,6 +5,7 @@ import { OnlineBookingTab } from "@/src/components/Settings/OnlineBookingTab";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { AUTO_SAVE_DEBOUNCE_MS } from "@/src/hooks/useDebouncedSave";
 import type { AvailabilityRule, BookingSettings } from "@/src/types/Booking";
+import type { AppointmentType } from "@/src/types/Appointment";
 
 const updateSettings = vi.fn();
 const saveAvailability = vi.fn();
@@ -12,6 +13,7 @@ const fetchSettings = vi.fn();
 let settings: BookingSettings;
 let rules: AvailabilityRule[];
 let suggestion: string | null;
+let appointmentTypes: AppointmentType[];
 let user: UserEvent;
 
 vi.mock("@/src/providers/ThemeContext", () => ({
@@ -49,6 +51,9 @@ vi.mock("@/src/api/booking/useFetchSlugSuggestion", () => ({
 vi.mock("@/src/api/booking/useFetchAvailability", () => ({
     useFetchAvailability: () => ({ availability: { timezone: "America/Bogota", rules }, loading: false, error: null, fetchAvailability: vi.fn() }),
 }));
+vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({
+    useFetchAppointmentTypes: () => ({ appointmentTypes, loading: false, error: null, fetchAppointmentTypes: vi.fn() }),
+}));
 vi.mock("@/src/api/booking/useSaveAvailability", () => ({
     useSaveAvailability: () => ({ saveAvailability, loading: false, error: null }),
 }));
@@ -66,6 +71,8 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         maxHorizonDays: 60,
         maxPatientReschedules: 2,
         minRescheduleNoticeHours: 0,
+        portalReminderEnabled: true,
+        portalReminderLeadHours: 24,
         bio: null,
         specialty: null,
         publicPhone: null,
@@ -99,6 +106,7 @@ beforeEach(() => {
     settings = makeSettings();
     rules = [];
     suggestion = "test-user";
+    appointmentTypes = [];
     updateSettings.mockImplementation(async (body) => ({ ...settings, ...body }));
     saveAvailability.mockImplementation(async (r: AvailabilityRule[]) => ({ timezone: "America/Bogota", rules: r }));
     fetchSettings.mockImplementation(async () => settings);
@@ -405,6 +413,25 @@ describe("OnlineBookingTab: availability", () => {
 });
 
 describe("OnlineBookingTab: rules", () => {
+    const type = (defaultDuration: number, bookableOnline = true): AppointmentType =>
+        ({ id: `t${defaultDuration}`, name: `Cita ${defaultDuration}`, defaultDuration, bookableOnline });
+
+    it("warns when the interval lets online bookings leave gaps, ignoring types not bookable online", async () => {
+        appointmentTypes = [ type(60), type(45, false) ];
+        renderTab();
+        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
+        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
+        await user.click(within(screen.getByTestId("online-booking-interval")).getByRole("combobox"));
+        await user.click(screen.getByRole("option", { name: "60 min" }));
+        expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
+    });
+
+    it("shows no interval warning without bookable types", () => {
+        appointmentTypes = [ type(60, false) ];
+        renderTab();
+        expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
+    });
+
     it("autosaves buffer, lead time (hours → minutes) and horizon in one request", async () => {
         renderTab();
         const buffer = screen.getByTestId("online-booking-buffer");
@@ -419,6 +446,7 @@ describe("OnlineBookingTab: rules", () => {
         expect(updateSettings).toHaveBeenCalledWith({
             slotIntervalMinutes: 30, bufferMinutes: 15, minLeadMinutes: 1440, maxHorizonDays: 60,
             maxPatientReschedules: 2, minRescheduleNoticeHours: 0,
+            portalReminderEnabled: true, portalReminderLeadHours: 24,
         });
         expect(screen.getByTestId("online-booking-rules-save-state")).toHaveTextContent("Guardado");
     });
@@ -433,6 +461,33 @@ describe("OnlineBookingTab: rules", () => {
         await user.type(notice, "24");
         await settle();
         expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ maxPatientReschedules: 0, minRescheduleNoticeHours: 24 }));
+    });
+
+    it("saves the portal reminder lead time", async () => {
+        renderTab();
+        const hours = screen.getByTestId("online-booking-reminder-hours");
+        await user.clear(hours);
+        await user.type(hours, "2");
+        await settle();
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderEnabled: true, portalReminderLeadHours: 2 }));
+    });
+
+    it("turns the portal reminder off and hides its lead time", async () => {
+        renderTab();
+        await user.click(screen.getByTestId("online-booking-reminder-toggle"));
+        expect(screen.queryByTestId("online-booking-reminder-hours")).not.toBeInTheDocument();
+        await settle();
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderEnabled: false, portalReminderLeadHours: 24 }));
+    });
+
+    it("does not save an out-of-range reminder lead time", async () => {
+        renderTab();
+        const hours = screen.getByTestId("online-booking-reminder-hours");
+        await user.clear(hours);
+        await user.type(hours, "0");
+        await settle();
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(screen.getByRole("alert")).toHaveTextContent(/entre 1 y 168/);
     });
 
     it("does not save an out-of-range reschedule policy", async () => {

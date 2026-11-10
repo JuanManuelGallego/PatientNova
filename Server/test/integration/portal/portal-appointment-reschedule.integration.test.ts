@@ -199,6 +199,35 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect((await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } })).status).toBe(ReminderStatus.PENDING);
   });
 
+  it('moves the pending reminder by the provider lead time, read when the move happens', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 5);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderLeadHours: 2 } });
+
+    expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
+
+    const moved = await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } });
+    expect(moved.sendAt.getTime()).toBe(new Date(to!).getTime() - 2 * HOUR);
+  });
+
+  it('cancels the pending reminder on a move once the provider turned portal reminders off', async () => {
+    const provider = await createLiveProvider();
+    const [ from ] = await slotStarts(provider, 3);
+    const [ to ] = await slotStarts(provider, 5);
+    const { session, appointmentId } = await bookAt(provider, from!);
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderEnabled: false } });
+
+    expect((await postReschedule(session, appointmentId, moveTo(to!))).status).toBe(200);
+
+    expect(await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).toMatchObject({
+      status: ReminderStatus.CANCELLED, appointmentId: null,
+    });
+  });
+
   it('may move right next to its own old time: the appointment never blocks itself through the buffer', async () => {
     const provider = await createLiveProvider({ bufferMinutes: 30 });
     const starts = await slotStarts(provider, 3);

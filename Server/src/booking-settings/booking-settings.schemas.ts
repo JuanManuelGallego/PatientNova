@@ -7,6 +7,7 @@ export const SLOT_INTERVAL_OPTIONS = [ 5, 10, 15, 20, 30, 45, 60, 90, 120 ] as c
 export const MAX_AVAILABILITY_RULES = 50;
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 7 * 24;
+export const MAX_PORTAL_REMINDER_LEAD_HOURS = 7 * 24;
 const MINUTES_PER_DAY = 1440;
 const MINUTE_STEP = 5;
 export const MAX_BIO_LENGTH = 600;
@@ -40,6 +41,8 @@ export const updateBookingSettingsSchema = z
     maxHorizonDays: z.number().int().min(1).max(365).optional(),
     maxPatientReschedules: z.number().int().min(0).max(MAX_PATIENT_RESCHEDULES).optional(),
     minRescheduleNoticeHours: z.number().int().min(0).max(MAX_RESCHEDULE_NOTICE_HOURS).optional(),
+    portalReminderEnabled: z.boolean().optional(),
+    portalReminderLeadHours: z.number().int().min(1).max(MAX_PORTAL_REMINDER_LEAD_HOURS).optional(),
     bio: publicText(MAX_BIO_LENGTH),
     specialty: publicText(MAX_SPECIALTY_LENGTH),
     publicPhone,

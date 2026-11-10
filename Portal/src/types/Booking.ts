@@ -20,6 +20,8 @@ export interface BookingSettings {
     maxHorizonDays: number;
     maxPatientReschedules: number;
     minRescheduleNoticeHours: number;
+    portalReminderEnabled: boolean;
+    portalReminderLeadHours: number;
     bio: string | null;
     specialty: string | null;
     publicPhone: string | null;
@@ -33,11 +35,12 @@ export interface BookingSettings {
 
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
     "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
-    | "maxPatientReschedules" | "minRescheduleNoticeHours"
+    | "maxPatientReschedules" | "minRescheduleNoticeHours" | "portalReminderEnabled" | "portalReminderLeadHours"
     | "bio" | "specialty" | "publicPhone" | "publicWhatsapp" | "legalName" | "privacyContact" | "contactHours">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 168;
+export const MAX_PORTAL_REMINDER_LEAD_HOURS = 168;
 export const MAX_BIO_LENGTH = 600;
 export const MAX_SPECIALTY_LENGTH = 120;
 export const MAX_LEGAL_TEXT_LENGTH = 200;
