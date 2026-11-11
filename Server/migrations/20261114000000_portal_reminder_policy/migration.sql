@@ -1,3 +1,3 @@
--- Provider policy for the reminder of portal appointments: on/off and how many hours before the start it goes out.
-ALTER TABLE "users" ADD COLUMN "portalReminderEnabled" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN "portalReminderLeadHours" INTEGER NOT NULL DEFAULT 24;
+CREATE TYPE "PortalReminderTiming" AS ENUM ('NONE', 'ONE_HOUR_BEFORE', 'ONE_DAY_BEFORE', 'SAME_DAY_MORNING', 'PREVIOUS_DAY_MORNING', 'PREVIOUS_DAY_EVENING');
+
+ALTER TABLE "users" ADD COLUMN "portalReminderTiming" "PortalReminderTiming" NOT NULL DEFAULT 'ONE_DAY_BEFORE';
