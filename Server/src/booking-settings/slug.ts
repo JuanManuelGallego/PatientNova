@@ -5,7 +5,7 @@ export const SLUG_MAX_LENGTH = 40;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
-  'admin', 'api', 'app', 'appointments', 'auth', 'book', 'booking', 'calendar', 'dashboard',
+  'admin', 'api', 'app', 'appointments', 'auth', 'book', 'booking', 'calendar', 'confirmar', 'dashboard',
   'help', 'login', 'logout', 'me', 'new', 'patients', 'portal', 'privacy', 'public', 'register',
   'requests', 'reset-password', 'settings', 'signup', 'static', 'support', 'terms', 'v1', 'www',
 ]);

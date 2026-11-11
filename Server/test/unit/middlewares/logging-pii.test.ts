@@ -54,6 +54,12 @@ describe('logger redaction', () => {
     expect(JSON.stringify(lines[0])).not.toMatch(/hunter2|t0ken|Bearer abc|token=abc/);
   });
 
+  it('redacts booking-confirmation tokens in request bodies', () => {
+    const { lines, log } = capture();
+    log.info({ req: { body: { token: 'c0nfirm', releaseToken: 'rel3ase' } } }, 'x');
+    expect(JSON.stringify(lines[0])).not.toMatch(/c0nfirm|rel3ase/);
+  });
+
   it('keeps masked values logged under maskedEmail/maskedTo', () => {
     const { lines, log } = capture();
     log.info({ maskedEmail: maskEmail('ana@example.com'), maskedTo: maskPhone('+573001112233') }, 'x');

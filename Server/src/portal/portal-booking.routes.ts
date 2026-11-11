@@ -7,7 +7,7 @@ import { validateBody, validateParams, validateQuery } from '../middlewares/vali
 import { slotRangeQuerySchema, type SlotRangeQuery } from '../public-booking/public-booking.schemas.js';
 import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { uuidParamSchema } from '../utils/validation/schemas.js';
-import type { ConsentRequestMeta } from '../patient-consents/patient-consent.service.js';
+import { requestMeta } from '../utils/api/request-meta.js';
 import { portalSessionGuard } from './portal-session.middleware.js';
 import { portalBookingService } from './portal-booking.service.js';
 import { portalAppointmentService } from './portal-appointment.service.js';
@@ -21,11 +21,6 @@ import {
 
 /** Cancel takes no input: no reason field, so no free text reaches the server. */
 const cancelBodySchema = z.strictObject({}).optional();
-
-const requestMeta = (req: Request): ConsentRequestMeta => ({
-  ipAddress: req.ip?.replace('::ffff:', ''),
-  userAgent: req.get('user-agent'),
-});
 
 export function createPortalBookingRoutes(): Router {
   const router = Router();

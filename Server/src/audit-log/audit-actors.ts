@@ -29,3 +29,15 @@ export function portalPatientAuditContext(params: {
     source: ActionSource.PUBLIC_PORTAL,
   };
 }
+
+export const PORTAL_ANONYMOUS_ACTOR_ID = 'portal:anonymous';
+
+export function portalAnonymousAuditContext(params: { userId: string; ipAddress?: string | undefined }): AuditContext {
+  return {
+    actorId: PORTAL_ANONYMOUS_ACTOR_ID,
+    actorDisplayName: 'Paciente (portal, sin verificar)',
+    ipAddress: params.ipAddress,
+    userId: params.userId,
+    source: ActionSource.PUBLIC_PORTAL,
+  };
+}

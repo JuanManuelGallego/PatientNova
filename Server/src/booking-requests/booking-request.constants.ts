@@ -1,4 +1,4 @@
-import { ONE_HOUR_MS } from '../utils/config/constants.js';
+import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
 
 export const HOLD_HOURS = 48;
 /** The provider gets one reminder about a pending request once half its hold has passed (24h for a full 48h hold). */
@@ -16,4 +16,13 @@ export function holdExpiry(now: Date, startAt: Date): Date {
 export function isNudgeDue(createdAt: Date, holdExpiresAt: Date, now: Date): boolean {
   const half = createdAt.getTime() + (holdExpiresAt.getTime() - createdAt.getTime()) / 2;
   return now.getTime() >= half;
+}
+
+export const UNCONFIRMED_HOLD_MINUTES = 15;
+export const MAX_UNCONFIRMED_PER_PROVIDER = 5;
+export const EMAIL_SENDS_PER_HOUR = 5;
+export const UNCONFIRMED_RETENTION_HOURS = 48;
+
+export function unconfirmedHoldExpiry(now: Date, startAt: Date): Date {
+  return new Date(Math.min(now.getTime() + UNCONFIRMED_HOLD_MINUTES * ONE_MINUTE_MS, startAt.getTime()));
 }

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
+import { requestMeta } from '../utils/api/request-meta.js';
 import { validateBody } from '../middlewares/validate.js';
 import { PORTAL_COOKIE_NAME, portalClearCookieOptions } from '../auth/portal-cookie.js';
 import { portalSessionGuard } from './portal-session.middleware.js';
@@ -17,10 +18,7 @@ export function createPortalSessionRoutes(): Router {
   }));
 
   router.post('/consent', ...portalSessionGuard, validateBody(acceptConsentSchema), asyncHandler(async (req: Request, res: Response) => {
-    await portalSessionService.acceptConsent(req.portal!, {
-      ipAddress: req.ip?.replace('::ffff:', ''),
-      userAgent: req.get('user-agent'),
-    });
+    await portalSessionService.acceptConsent(req.portal!, requestMeta(req));
     res.status(204).end();
   }));
 
