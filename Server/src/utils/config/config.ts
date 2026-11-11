@@ -166,7 +166,7 @@ export const config = {
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
-    otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 300),
+    otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 60),
   },
 
   captcha: captchaConfig(),

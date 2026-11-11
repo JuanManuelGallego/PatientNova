@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { availabilityError, minutesToTime, slugError, sortRules, timeToMinutes } from "@/src/utils/bookingAvailability";
+import { availabilityError, intervalGapWarning, minutesToTime, slugError, sortRules, timeToMinutes } from "@/src/utils/bookingAvailability";
 
 const rule = (weekday: number, startMinute: number, endMinute: number) => ({ weekday, startMinute, endMinute });
 
@@ -58,5 +58,42 @@ describe("sortRules", () => {
         expect(sortRules([ rule(2, 600, 660), rule(1, 900, 960), rule(1, 540, 600) ])).toEqual([
             rule(1, 540, 600), rule(1, 900, 960), rule(2, 600, 660),
         ]);
+    });
+});
+
+describe("intervalGapWarning", () => {
+    it("recommends the appointment length when a shorter interval lets bookings leave gaps", () => {
+        const warning = intervalGapWarning(30, 0, [ 60 ]);
+        expect(warning).toContain("duran 60 min");
+        expect(warning).toContain("usa 60 min");
+    });
+
+    it("stays quiet when the interval already chains appointments back to back", () => {
+        expect(intervalGapWarning(60, 0, [ 60 ])).toBeNull();
+        expect(intervalGapWarning(60, 0, [ 60, 120 ])).toBeNull();
+    });
+
+    it("counts the buffer in the distance between appointments", () => {
+        expect(intervalGapWarning(60, 10, [ 50 ])).toBeNull();
+        const warning = intervalGapWarning(60, 15, [ 60 ]);
+        expect(warning).toContain("más 15 min entre citas");
+        expect(warning).toContain("usa 15 min");
+    });
+
+    it("warns about intervals that are longer or misaligned too", () => {
+        expect(intervalGapWarning(120, 0, [ 60 ])).toContain("usa 60 min");
+        expect(intervalGapWarning(30, 0, [ 45 ])).toContain("usa 45 min");
+    });
+
+    it("recommends a common divisor for mixed lengths and accepts it", () => {
+        expect(intervalGapWarning(30, 0, [ 45, 60 ])).toContain("duran 45 y 60 min");
+        expect(intervalGapWarning(30, 0, [ 45, 60 ])).toContain("usa 15 min");
+        expect(intervalGapWarning(15, 0, [ 60, 45, 60 ])).toBeNull();
+    });
+
+    it("stays quiet without bookable types, with an invalid buffer, or when no option fits", () => {
+        expect(intervalGapWarning(30, 0, [])).toBeNull();
+        expect(intervalGapWarning(30, Number.NaN, [ 60 ])).toBeNull();
+        expect(intervalGapWarning(30, 0, [ 52 ])).toBeNull();
     });
 });

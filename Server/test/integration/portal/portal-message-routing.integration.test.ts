@@ -7,7 +7,7 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
-import { Channel, PatientStatus, RecordSource, ReminderStatus } from '../../../generated/prisma/enums.js';
+import { Channel, PatientStatus, PortalReminderTiming, RecordSource, ReminderStatus } from '../../../generated/prisma/enums.js';
 import { deliverBookingNotification, type BookingNotificationKind } from '../../../src/portal/portal-booking-notifications.js';
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
 import { createPortalAppointmentWithin } from '../../../src/portal/portal-booking.service.js';
@@ -196,6 +196,7 @@ describe('reminders of portal bookings', () => {
       start: startAt,
       end: new Date(startAt.getTime() + 3_600_000),
       patientTimezone: 'America/Bogota',
+      reminderTiming: PortalReminderTiming.ONE_DAY_BEFORE,
     }, new Date()));
 
     const created = await prisma.appointment.findUniqueOrThrow({ where: { id: appointment.id }, include: { reminder: true } });

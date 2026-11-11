@@ -1,7 +1,8 @@
 # Patient data: compliance decision record (Colombia)
 
-Status: **updated 2026-11-06 from `docs/informe-juridico-portal-2026-11-06.md`, which is informative, not a signed opinion.**
-This is engineering analysis, not legal advice. Open legal items are in Phase 10 of `PATIENT_PORTAL_PLAN.md`.
+Status: **updated 2026-11-06 from the legal report `docs/informe-juridico-portal-2026-11-06.md`, which is informative, not a signed opinion.**
+This is engineering analysis, not legal advice. Open legal items were tracked in Phase 10 of `PATIENT_PORTAL_PLAN.md`.
+Both files were removed in #98; `git log --all -- <path>` finds their last version.
 
 Applicable framework: Ley 1581 de 2012, Decreto 1377 de 2013 (compiled in Decreto 1074 de 2015),
 SIC guidance, and for clinical records Resolución 1995 de 1999. Health data is **sensitive data**

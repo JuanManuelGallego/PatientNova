@@ -31,6 +31,7 @@ import {
   Channel,
   EntityType,
   PatientStatus,
+  PortalReminderTiming,
   RecordSource,
 } from '../../../generated/prisma/enums.js';
 import { createTestAppointmentType, createTestLocation, createTestPatient, unique } from '../helpers.js';
@@ -596,6 +597,42 @@ describe('booking confirmation, reminder and provider notice', () => {
     const start = await soonestSlotWithin24h(provider);
 
     const res = await postBooking(sessionFor(provider.id, unique('pronto@test.local')), portalBookingBody(provider, start));
+
+    expect(res.status).toBe(201);
+    expect(await prisma.reminder.count({ where: { appointmentId: res.body.data.appointment.id } })).toBe(0);
+  });
+
+  it('uses the provider preset, so a short-notice booking still gets its reminder', async () => {
+    const provider = await createLiveProvider();
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.ONE_HOUR_BEFORE } });
+    const start = await soonestSlotWithin24h(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('corto@test.local')), portalBookingBody(provider, start));
+
+    expect(res.status).toBe(201);
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    expect(reminder.sendAt.getTime()).toBe(new Date(start).getTime() - 3600_000);
+  });
+
+  it('places a clock preset at that wall-clock time in the patient zone', async () => {
+    const provider = await createLiveProvider();
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.PREVIOUS_DAY_EVENING } });
+    const [ start ] = await slotStarts(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('tarde@test.local')), portalBookingBody(provider, start!, { patientTimezone: MADRID }));
+
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    const local = DateTime.fromJSDate(reminder.sendAt, { zone: MADRID });
+    expect(local.toISODate()).toBe(DateTime.fromISO(start!, { zone: MADRID }).minus({ days: 1 }).toISODate());
+    expect([ local.hour, local.minute ]).toEqual([ 18, 0 ]);
+  });
+
+  it('creates no reminder when the provider chose none', async () => {
+    const provider = await createLiveProvider();
+    await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.NONE } });
+    const [ start ] = await slotStarts(provider);
+
+    const res = await postBooking(sessionFor(provider.id, unique('apagado@test.local')), portalBookingBody(provider, start!));
 
     expect(res.status).toBe(201);
     expect(await prisma.reminder.count({ where: { appointmentId: res.body.data.appointment.id } })).toBe(0);

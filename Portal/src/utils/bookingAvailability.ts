@@ -1,4 +1,4 @@
-import { AvailabilityRule, MAX_AVAILABILITY_RULES } from "@/src/types/Booking";
+import { AvailabilityRule, MAX_AVAILABILITY_RULES, SLOT_INTERVAL_OPTIONS } from "@/src/types/Booking";
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const SLUG_MIN_LENGTH = 3;
@@ -66,4 +66,20 @@ export function availabilityError(rules: AvailabilityRule[]): string | null {
         }
     }
     return null;
+}
+
+function listEs(values: readonly number[]): string {
+    return values.length === 1 ? String(values[ 0 ]) : `${values.slice(0, -1).join(", ")} y ${values[ values.length - 1 ]}`;
+}
+
+export function intervalGapWarning(interval: number, buffer: number, durations: readonly number[]): string | null {
+    if (!durations.length || !Number.isInteger(buffer) || buffer < 0) return null;
+    const lengths = [ ...new Set(durations) ].sort((a, b) => a - b);
+    const pitches = lengths.map((d) => d + buffer);
+    const recommended = [ ...SLOT_INTERVAL_OPTIONS ].reverse()
+        .find((o) => o <= pitches[ 0 ] && pitches.every((p) => p % o === 0));
+    if (recommended === undefined || recommended === interval) return null;
+    const occupy = buffer > 0 ? `duran ${listEs(lengths)} min, más ${buffer} min entre citas` : `duran ${listEs(lengths)} min`;
+    return `Tus tipos de cita en línea ${occupy}. Con un intervalo de ${interval} min pueden quedar espacios libres entre citas; `
+        + `usa ${recommended} min para que queden seguidas.`;
 }

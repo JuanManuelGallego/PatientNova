@@ -14,6 +14,7 @@ import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSett
 import { useFetchSlugSuggestion } from "@/src/api/booking/useFetchSlugSuggestion";
 import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
+import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import {
     AvailabilityRule,
     BookingApprovalMode,
@@ -25,12 +26,16 @@ import {
     MAX_CONTACT_HOURS_LENGTH,
     MAX_LEGAL_TEXT_LENGTH,
     MAX_SPECIALTY_LENGTH,
+    PORTAL_REMINDER_TIMINGS,
+    PortalReminderTiming,
     SLOT_INTERVAL_OPTIONS,
 } from "@/src/types/Booking";
+import { REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
 import {
     MINUTES_PER_DAY,
     WEEKDAYS_ES,
     availabilityError,
+    intervalGapWarning,
     minutesToTime,
     slugError,
     sortRules,
@@ -816,7 +821,21 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
 
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
-type RulesForm = { interval: number; buffer: string; lead: string; horizon: string; reschedules: string; notice: string };
+function reminderTimingHint(timing: PortalReminderTiming): string {
+    if (timing === "NONE") return "Las citas reservadas en línea no reciben recordatorio automático.";
+    const preset = PORTAL_REMINDER_TIMINGS.find((t) => t.value === timing);
+    if (!preset) return "Se envía por el canal de cada paciente.";
+    const { label, clock } = REMINDER_TYPE_CONFIG[ preset.type ];
+    const when = clock
+        ? `la ${label.toLowerCase()} (${clock.hour}:${String(clock.minute).padStart(2, "0")}, hora del paciente)`
+        : `${label} de la cita`;
+    return `Se envía ${when}, por el canal de cada paciente. Si la cita se reserva o se mueve después de ese momento, no se envía.`;
+}
+
+type RulesForm = {
+    interval: number; buffer: string; lead: string; horizon: string; reschedules: string; notice: string;
+    reminderTiming: PortalReminderTiming;
+};
 
 function rulesFormOf(s: BookingSettings): RulesForm {
     return {
@@ -826,6 +845,7 @@ function rulesFormOf(s: BookingSettings): RulesForm {
         horizon: String(s.maxHorizonDays),
         reschedules: String(s.maxPatientReschedules),
         notice: String(s.minRescheduleNoticeHours),
+        reminderTiming: s.portalReminderTiming,
     };
 }
 
@@ -854,6 +874,7 @@ function parseRules(form: RulesForm) {
         maxHorizonDays: horizon,
         maxPatientReschedules: reschedules,
         minRescheduleNoticeHours: notice,
+        portalReminderTiming: form.reminderTiming,
     } satisfies BookingSettingsUpdate;
     return { body, errors, invalid: Object.values(errors).some(Boolean) };
 }
@@ -864,6 +885,12 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
     const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), { initial });
     const { errors, invalid } = parseRules(form);
     const ids = useId();
+    const { appointmentTypes } = useFetchAppointmentTypes();
+    const gapWarning = intervalGapWarning(
+        form.interval,
+        toNumber(form.buffer),
+        appointmentTypes.filter((t) => t.bookableOnline && t.isActive !== false).map((t) => t.defaultDuration),
+    );
 
     function change(patch: Partial<RulesForm>) {
         const next = { ...form, ...patch };
@@ -915,6 +942,7 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                             options={SLOT_INTERVAL_OPTIONS.map((n) => ({ value: String(n), label: `${n} min` }))}
                         />
                         <span className="form-input-hint">Cada cuánto se ofrece un horario de inicio. La duración la define el tipo de cita.</span>
+                        {gapWarning && <WarningHint testId="online-booking-interval-warning">{gapWarning}</WarningHint>}
                     </label>
                     {numberField({
                         field: "buffer", label: "Tiempo entre citas (min)", hint: "Margen libre antes y después de cada cita reservada en línea.",
@@ -942,6 +970,20 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                             hint: "Después de este momento antes de la cita, el paciente ya no puede reprogramarla en línea.",
                             min: 0, max: MAX_RESCHEDULE_NOTICE_HOURS, step: 1, testId: "online-booking-reschedule-notice",
                         })}
+                    </div>
+                </fieldset>
+                <fieldset className="form-stack form-fieldset-plain">
+                    <legend className="form-label form-fieldset-legend">Recordatorio al paciente</legend>
+                    <div className="form-grid-2">
+                        <label className="form-label" data-testid="online-booking-reminder-timing">
+                            Enviar recordatorio
+                            <CustomSelect
+                                value={form.reminderTiming}
+                                onChange={(v) => change({ reminderTiming: v as PortalReminderTiming })}
+                                options={PORTAL_REMINDER_TIMINGS.map(({ value, type }) => ({ value, label: REMINDER_TYPE_CONFIG[ type ].label }))}
+                            />
+                            <span className="form-input-hint">{reminderTimingHint(form.reminderTiming)}</span>
+                        </label>
                     </div>
                 </fieldset>
                 {invalid && (

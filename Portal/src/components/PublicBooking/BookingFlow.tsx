@@ -8,7 +8,7 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { appointmentsPath } from "@/src/utils/publicBooking";
 import { BookingResult } from "./BookingResult";
-import { NeedStep } from "./NeedStep";
+import { NeedStep, needTitle } from "./NeedStep";
 import { PatientSteps } from "./PatientSteps";
 import { ProviderHeader } from "./ProviderHeader";
 import { ProviderPanel, ProviderProfileSheet } from "./ProviderProfile";
@@ -98,7 +98,7 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
         <div className={styles.layout}>
             {header}
             {flow.step === "need" && (
-                <StepScreen key="need" {...screen} title="¿Qué necesitas?" dock={(
+                <StepScreen key="need" {...screen} title={needTitle(provider)} dock={(
                     <>
                         {summary}
                         <button type="button" className={`btn-primary ${styles.dockAction}`} disabled={!needDone} onClick={() => flow.go("time")}>Ver horarios</button>

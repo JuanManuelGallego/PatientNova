@@ -1,4 +1,4 @@
-import type { AvailabilityRule } from '../../generated/prisma/client.ts';
+import type { AvailabilityRule, PortalReminderTiming } from '../../generated/prisma/client.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
@@ -15,6 +15,7 @@ export const bookingSettingsSelect = {
   maxHorizonDays: true,
   maxPatientReschedules: true,
   minRescheduleNoticeHours: true,
+  portalReminderTiming: true,
   bio: true,
   specialty: true,
   publicPhone: true,
@@ -44,11 +45,17 @@ export const bookingSettingsRepository = {
       dto,
       [
         'bookingSlug', 'bookingEnabled', 'bookingApprovalMode', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
-        'maxPatientReschedules', 'minRescheduleNoticeHours',
+        'maxPatientReschedules', 'minRescheduleNoticeHours', 'portalReminderTiming',
         'bio', 'specialty', 'publicPhone', 'publicWhatsapp', 'legalName', 'privacyContact', 'contactHours',
       ],
     );
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });
+  },
+
+  async getPortalReminderTiming(userId: string, tx: TransactionClient): Promise<PortalReminderTiming> {
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { portalReminderTiming: true } });
+    if (!user) throw new UserNotFoundError(userId);
+    return user.portalReminderTiming;
   },
 
   async getBookingState(userId: string, tx?: TransactionClient) {

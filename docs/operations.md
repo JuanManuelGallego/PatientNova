@@ -374,7 +374,7 @@ code change in `portalLoginChannels`.
 
 | Limit | Value | Change it with |
 |---|---|---|
-| Numbers per day, all providers | 300 | `PORTAL_OTP_PAID_DAILY_CAP` |
+| Numbers per day, all providers | 60 | `PORTAL_OTP_PAID_DAILY_CAP` |
 | Numbers per provider per hour | 30 | `PORTAL_OTP_LIMITS.perProviderPaidPerHour` (code) |
 | Sends per number per hour | 3 | `PORTAL_OTP_LIMITS.perPhonePerHour` (code) |
 

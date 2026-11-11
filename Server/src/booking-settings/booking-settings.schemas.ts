@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BookingApprovalMode } from '../../generated/prisma/client.ts';
+import { BookingApprovalMode, PortalReminderTiming } from '../../generated/prisma/client.ts';
 import { isReservedSlug, isValidSlugFormat, SLUG_MAX_LENGTH, SLUG_MIN_LENGTH } from './slug.js';
 import { e164Regex } from '../utils/validation/middleware.js';
 
@@ -40,6 +40,7 @@ export const updateBookingSettingsSchema = z
     maxHorizonDays: z.number().int().min(1).max(365).optional(),
     maxPatientReschedules: z.number().int().min(0).max(MAX_PATIENT_RESCHEDULES).optional(),
     minRescheduleNoticeHours: z.number().int().min(0).max(MAX_RESCHEDULE_NOTICE_HOURS).optional(),
+    portalReminderTiming: z.enum(PortalReminderTiming).optional(),
     bio: publicText(MAX_BIO_LENGTH),
     specialty: publicText(MAX_SPECIALTY_LENGTH),
     publicPhone,

@@ -25,6 +25,7 @@ body:json {
     "maxHorizonDays": 60,
     "maxPatientReschedules": 2,
     "minRescheduleNoticeHours": 0,
+    "portalReminderTiming": "ONE_DAY_BEFORE",
     "bio": "Atiendo adultos y parejas.",
     "specialty": "Psicología clínica",
     "publicPhone": "+573001112222",
@@ -40,6 +41,11 @@ docs {
   `maxPatientReschedules` (0-10, 0 = patients cannot reschedule online) caps portal reschedules per
   appointment; `minRescheduleNoticeHours` (0-168) refuses a reschedule once the current start is that
   close. Cancelling has no cutoff.
+  `portalReminderTiming` is when the patient reminder of portal appointments (bookings, approvals and
+  reschedules) goes out, on the patient's own channel, with the appointment modal's presets: `NONE`,
+  `ONE_HOUR_BEFORE`, `ONE_DAY_BEFORE` (default), `SAME_DAY_MORNING` (08:00), `PREVIOUS_DAY_MORNING` (09:00) or
+  `PREVIOUS_DAY_EVENING` (18:00); clock presets are in the patient's zone. An appointment booked or moved after
+  that moment gets none. Reminders already scheduled keep their time until the appointment moves.
   `bio` (600), `specialty` (120), `publicPhone` and `publicWhatsapp` (E.164)
   appear on the public booking page. Empty string or null clears them. They are separate from the
   profile's `phoneNumber`/`whatsappNumber`, which stay private.

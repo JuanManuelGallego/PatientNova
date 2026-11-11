@@ -263,6 +263,7 @@ model User {
   maxHorizonDays      Int                 @default(60)
   maxPatientReschedules    Int @default(2)
   minRescheduleNoticeHours Int @default(0)
+  portalReminderTiming     PortalReminderTiming @default(ONE_DAY_BEFORE)
 
   bio                 String? @db.VarChar(600)
   specialty           String? @db.VarChar(120)
@@ -303,6 +304,15 @@ model User {
 enum BookingApprovalMode {
   AUTO_CONFIRM
   REQUIRE_APPROVAL
+}
+
+enum PortalReminderTiming {
+  NONE
+  ONE_HOUR_BEFORE
+  ONE_DAY_BEFORE
+  SAME_DAY_MORNING
+  PREVIOUS_DAY_MORNING
+  PREVIOUS_DAY_EVENING
 }
 
 // ─── Availability Rule ──────────────────────────────────────────────────────────

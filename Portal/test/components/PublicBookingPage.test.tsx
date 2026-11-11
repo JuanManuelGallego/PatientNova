@@ -163,6 +163,31 @@ describe("PublicBookingPage", () => {
         expect(within(places).getByRole("button", { name: /Sede Sur.*Calle 1/ })).toBeInTheDocument();
     });
 
+    it("shows a single place already chosen next to several types", async () => {
+        routeFetch();
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        const places = await screen.findByRole("group", { name: "Lugar" });
+        expect(within(places).getByRole("button", { name: /Consultorio Centro.*Calle 10/ })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "false");
+        expect(screen.getByRole("heading", { name: "¿Qué necesitas?" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Lugar de atención" })).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "¿Dónde prefieres atenderte?" })).not.toBeInTheDocument();
+    });
+
+    it("shows a single type already chosen next to several places", async () => {
+        routeFetch(200, 200, threeTypes({ types: [ provider.types[ 0 ]! ], locations: twoPlaces }));
+        render(<PublicBookingPage slug="dra-ana" />);
+
+        const types = await screen.findByRole("group", { name: "Tipo de cita" });
+        expect(within(types).getByRole("button", { name: /Primera consulta/ })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByRole("button", { name: "Ver horarios" })).toBeDisabled();
+        expect(screen.getByRole("heading", { level: 2, name: "Tu cita" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Tipo de cita" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "¿Dónde prefieres atenderte?" })).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "¿Qué necesitas?" })).not.toBeInTheDocument();
+    });
+
     it("skips Tu cita with one type and one place", async () => {
         routeFetch(200, 200, threeTypes({ types: [ provider.types[ 0 ]! ] }));
         render(<PublicBookingPage slug="dra-ana" />);

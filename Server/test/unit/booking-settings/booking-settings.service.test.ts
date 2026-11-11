@@ -51,6 +51,7 @@ const settings = {
   maxHorizonDays: 60,
   maxPatientReschedules: 2,
   minRescheduleNoticeHours: 0,
+  portalReminderTiming: 'ONE_DAY_BEFORE' as const,
   bio: null,
   specialty: null,
   publicPhone: null,

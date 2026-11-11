@@ -18,8 +18,8 @@ describe('PORTAL_OTP_PAID_DAILY_CAP', () => {
   });
 
   it('uses the default when it is blank', async () => {
-    await expect(loadCap('')).resolves.toBe(300);
-    await expect(loadCap('   ')).resolves.toBe(300);
+    await expect(loadCap('')).resolves.toBe(60);
+    await expect(loadCap('   ')).resolves.toBe(60);
   });
 
   it.each([ 'abc', '300,', '-1', '0', '1.5' ])('refuses to boot with %s, which would remove the ceiling', async (value) => {
