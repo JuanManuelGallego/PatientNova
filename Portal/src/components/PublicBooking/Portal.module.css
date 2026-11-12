@@ -121,12 +121,6 @@
   font-size: 16px;
 }
 
-.codeInput {
-  letter-spacing: 0.4em;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
 .error {
   margin: 0;
 }
@@ -192,13 +186,6 @@
   color: var(--c-gray-500);
 }
 
-.secondaryActions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 .linkButton {
   min-height: 44px;
   padding: 0 4px;
@@ -262,17 +249,6 @@
   margin: 0;
   font-size: 14px;
   color: var(--c-gray-500);
-}
-
-.card.embedded,
-.card.embedded:has(> .captcha) {
-  padding: 0;
-}
-
-.card.embedded > .title {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0;
 }
 
 .fieldError {

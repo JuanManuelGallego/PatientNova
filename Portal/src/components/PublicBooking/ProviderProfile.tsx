@@ -62,7 +62,7 @@ export function ProviderProfile({ slug, provider, headingLevel = 2 }: ProviderPr
 interface ProviderPanelProps {
     slug: string;
     provider: PublicProvider;
-    appointmentsHref: string;
+    appointmentsHref?: string | undefined;
 }
 
 /** The desktop left pane: always open. It leaves out the places, which are a choice in the first step right beside it. */
@@ -76,7 +76,7 @@ export function ProviderPanel({ slug, provider, appointmentsHref }: ProviderPane
                     <ClampedBio bio={provider.bio} />
                 </section>
             )}
-            <Link href={appointmentsHref} className={`${styles.headerAction} ${styles.panelLink}`}>Mis citas</Link>
+            {appointmentsHref && <Link href={appointmentsHref} className={`${styles.headerAction} ${styles.panelLink}`}>Mis citas</Link>}
         </div>
     );
 }

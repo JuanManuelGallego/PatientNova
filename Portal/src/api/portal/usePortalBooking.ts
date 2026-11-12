@@ -1,19 +1,8 @@
 import { useCallback } from "react";
 import { usePortalMutation } from "@/src/api/base/useClientMutation";
 import { usePortalQuery } from "@/src/api/base/useClientQuery";
-import type {
-    PortalAppointment, PortalAppointments, PortalBookingOutcome, PortalBookingRequest, PortalRescheduleRequest,
-} from "@/src/types/PortalBooking";
+import type { PortalAppointment, PortalAppointments, PortalRescheduleRequest } from "@/src/types/PortalBooking";
 import type { PublicSlots } from "@/src/types/PublicBooking";
-
-export function useCreateBooking() {
-    const { mutate, ...rest } = usePortalMutation<PortalBookingOutcome>();
-    const createBooking = useCallback(
-        (body: PortalBookingRequest) => mutate("/bookings", body),
-        [ mutate ],
-    );
-    return { createBooking, ...rest };
-}
 
 export function usePortalAppointments() {
     const { data, ...rest } = usePortalQuery<PortalAppointments>("/appointments");

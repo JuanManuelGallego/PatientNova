@@ -15,7 +15,11 @@ let rules: AvailabilityRule[];
 let suggestion: string | null;
 let appointmentTypes: AppointmentType[];
 let user: UserEvent;
+let selfServeEnabled: boolean | undefined;
 
+vi.mock("@/src/providers/AuthContext", () => ({
+    useAuthContext: () => ({ user: { portalEnabled: true, selfServeEnabled } }),
+}));
 vi.mock("@/src/providers/ThemeContext", () => ({
     useTheme: () => ({ isDark: false }),
 }));
@@ -101,6 +105,7 @@ afterAll(() => { delete testGlobal.jest; });
 beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    selfServeEnabled = true;
     user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     settings = makeSettings();
     rules = [];
@@ -455,6 +460,27 @@ describe("OnlineBookingTab: rules", () => {
             portalReminderTiming: "ONE_DAY_BEFORE",
         });
         expect(screen.getByTestId("online-booking-rules-save-state")).toHaveTextContent("Guardado");
+    });
+
+    it.each([ false, undefined ])("hides the patient reschedule policy when selfServeEnabled is %s, and still submits the saved values", async (flag) => {
+        selfServeEnabled = flag;
+        renderTab();
+        expect(screen.queryByTestId("online-booking-max-reschedules")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("online-booking-reschedule-notice")).not.toBeInTheDocument();
+        expect(screen.queryByText("Reprogramación por pacientes")).not.toBeInTheDocument();
+        const field = screen.getByTestId("online-booking-reminder-timing");
+        await user.click(within(field).getByRole("combobox"));
+        await user.click(screen.getByRole("option", { name: "Tarde del día anterior" }));
+        await settle();
+        expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+            maxPatientReschedules: settings.maxPatientReschedules, minRescheduleNoticeHours: settings.minRescheduleNoticeHours,
+        }));
+    });
+
+    it("shows the patient reschedule policy when selfServeEnabled is true", () => {
+        renderTab();
+        expect(screen.getByTestId("online-booking-max-reschedules")).toBeInTheDocument();
+        expect(screen.getByTestId("online-booking-reschedule-notice")).toBeInTheDocument();
     });
 
     it("saves the patient reschedule policy, 0 meaning no online reschedules", async () => {

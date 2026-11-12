@@ -35,8 +35,11 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /too many requests/i, "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo." ],
     [ /slot no longer available/i, "Ese horario ya no está disponible. Elige otro." ],
     [ /booking limit reached/i, "Ya tienes 3 citas próximas reservadas en línea. Para reservar otra, comunícate con el consultorio." ],
-    [ /^request limit reached$/i, "Ya tienes 3 solicitudes pendientes con este consultorio. Espera su respuesta o cancela una para enviar otra." ],
+    [ /^request limit reached$/i, "Ya tienes varias reservas en curso con este profesional. Comunícate directamente con el consultorio para cambiarlas." ],
     [ /^request capacity reached$/i, "El consultorio no está recibiendo más solicitudes en línea por ahora. Inténtalo más tarde o comunícate con el consultorio." ],
+    [ /no podemos enviar mensajes por WhatsApp/i, "Por ahora no podemos enviar mensajes por WhatsApp. Usa tu correo para reservar." ],
+    [ /no hay cupo para nuevas reservas/i, "No hay cupo para nuevas reservas en este momento. Intenta de nuevo en un rato." ],
+    [ /no pudimos enviar el enlace de confirmación/i, "No pudimos enviar el enlace de confirmación. Revisa el dato de contacto o inténtalo de nuevo en unos minutos." ],
     [ /online booking unavailable/i,"No pudimos completar tu reserva en línea. Comunícate con el consultorio." ],
     [ /^(appointment type|location) not found$/i, "Esa opción ya no está disponible. Recarga la página e inténtalo de nuevo." ],
     // Patient portal: one answer for any appointment the patient can no longer change (provider side says "with id ...").
