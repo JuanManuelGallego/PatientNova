@@ -20,6 +20,22 @@ export interface BookingPending {
     releaseToken: string;
 }
 
+export type ConfirmationState = "unconfirmed" | "confirmed" | "requested" | "expired" | "unavailable";
+
+export interface BookingConfirmationView {
+    state: ConfirmationState;
+    providerSlug: string;
+    providerName: string;
+    startUtc: string;
+    durationMinutes: number;
+    patientTimezone: string;
+    typeName: string;
+    location: { name: string; address: string | null; isVirtual: boolean };
+    holdExpiresAt: string;
+    approvalRequired: boolean;
+    providerContact: { phone: string | null; whatsapp: string | null };
+}
+
 export interface PortalAppointment {
     id: string;
     startUtc: string;
