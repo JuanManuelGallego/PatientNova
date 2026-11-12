@@ -151,19 +151,6 @@ export function renderPortalRescheduleEmail(params: PlaceParams & {
   };
 }
 
-export function renderBookingRequestReceivedEmail(params: { providerName: string; appointmentsUrl: string }): RenderedEmail {
-  return {
-    subject: `Recibimos tu solicitud de cita con ${params.providerName}`,
-    body: [
-      'Hola,',
-      '',
-      `Recibimos tu solicitud de cita con ${params.providerName}. Te avisaremos por correo cuando sea confirmada.`,
-      '',
-      `Puedes consultar su estado aquí: ${params.appointmentsUrl}`,
-    ].join('\n'),
-  };
-}
-
 const ANOTHER_TIME_LINE = 'Si quieres, puedes solicitar otro horario aquí:';
 
 /** Neutral by design: the patient never learns why the provider did not confirm. */

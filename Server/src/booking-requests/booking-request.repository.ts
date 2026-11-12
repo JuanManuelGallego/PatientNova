@@ -73,6 +73,36 @@ export const providerRequestDetailSelect = {
   consentUserAgent: true,
 } as const;
 
+export const confirmationViewSelect = {
+  userId: true,
+  status: true,
+  endAt: true,
+  confirmedAt: true,
+  resolvedBy: true,
+  startAt: true,
+  holdExpiresAt: true,
+  patientTimezone: true,
+  type: { select: { name: true } },
+  location: { select: { name: true, address: true, isVirtual: true } },
+  appointment: {
+    select: {
+      status: true,
+      isDeleted: true,
+      startAt: true,
+      endAt: true,
+      patientTimezone: true,
+      appointmentType: { select: { name: true } },
+      appointmentLocation: { select: { name: true, address: true, isVirtual: true } },
+    },
+  },
+  user: {
+    select: {
+      bookingSlug: true, displayName: true, firstName: true, lastName: true, publicPhone: true, publicWhatsapp: true,
+      bookingApprovalMode: true,
+    },
+  },
+} as const;
+
 export const HOLDING_STATUSES = [ BookingRequestStatus.PENDING, BookingRequestStatus.UNCONFIRMED ];
 
 const RESOLVED_STATUSES = [ BookingRequestStatus.APPROVED, BookingRequestStatus.REJECTED, BookingRequestStatus.CANCELLED ];
@@ -166,10 +196,6 @@ export const bookingRequestRepository = {
   },
 
 
-  async countLive(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput = {}): Promise<number> {
-    return tx.bookingRequest.count({ where: { ...liveHoldWhere(userId, now, {}), ...own } });
-  },
-
   async countLivePending(userId: string, now: Date, tx: TransactionClient): Promise<number> {
     return tx.bookingRequest.count({ where: { userId, status: BookingRequestStatus.PENDING, holdExpiresAt: { gt: now } } });
   },
@@ -222,32 +248,6 @@ export const bookingRequestRepository = {
     await tx.bookingRequest.update({ where: { id }, data: { ...data, status: BookingRequestStatus.PENDING } });
   },
 
-  async create(data: CreateBookingRequestData, tx: TransactionClient) {
-    return tx.bookingRequest.create({
-      data: {
-        userId: data.userId,
-        kind: data.kind ?? 'NEW',
-        contactChannel: data.contactChannel ?? 'EMAIL',
-        email: data.email,
-        verifiedPhone: data.verifiedPhone ?? null,
-        name: data.name,
-        lastName: data.lastName,
-        phone: data.phone ?? null,
-        typeId: data.typeId,
-        locationId: data.locationId,
-        startAt: data.startAt,
-        endAt: data.endAt,
-        patientTimezone: data.patientTimezone,
-        holdExpiresAt: data.holdExpiresAt,
-        policyVersion: data.policyVersion,
-        consentAcceptedAt: data.consentAcceptedAt,
-        consentIp: data.consentIp?.slice(0, 64) ?? null,
-        consentUserAgent: data.consentUserAgent?.slice(0, 512) ?? null,
-        confirmedAt: data.consentAcceptedAt,
-      },
-    });
-  },
-
   async createUnconfirmed(data: CreateBookingRequestData & { confirmTokenHash: string; releaseTokenHash: string }, tx: TransactionClient) {
     return tx.bookingRequest.create({
       data: {
@@ -278,6 +278,10 @@ export const bookingRequestRepository = {
 
   async findByConfirmTokenHash(hash: string, tx?: TransactionClient) {
     return (tx ?? prisma).bookingRequest.findUnique({ where: { confirmTokenHash: hash } });
+  },
+
+  async findConfirmationView(confirmTokenHash: string) {
+    return prisma.bookingRequest.findUnique({ where: { confirmTokenHash }, select: confirmationViewSelect });
   },
 
   async findByReleaseTokenHash(hash: string, tx: TransactionClient) {
@@ -334,6 +338,7 @@ export const bookingRequestRepository = {
       resolvedBy: string;
       appointmentId?: string;
       patientId?: string;
+      confirmedAt?: Date;
     },
     tx: TransactionClient,
   ): Promise<void> {

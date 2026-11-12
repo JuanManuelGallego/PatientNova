@@ -15,7 +15,7 @@ import { createPortalSessionRouter, createPublicApiRouter } from '../../../src/p
 import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider } from './portal-helpers.js';
 
 
-const FIFTEEN_MIN_LIMITS = { otpRequest: 10, otpVerify: 20, booking: 10, change: 10 } as const;
+const FIFTEEN_MIN_LIMITS = { otpRequest: 10, otpVerify: 20, booking: 10, confirm: 20, change: 10 } as const;
 
 let app: express.Express;
 let siteverifyCalls = 0;
@@ -90,12 +90,31 @@ describe('otp-verify-ip', () => {
 });
 
 describe('portal-booking-ip', () => {
-  it(`allows ${FIFTEEN_MIN_LIMITS.booking} booking attempts per IP, counted before the session check`, async () => {
+  it(`allows ${FIFTEEN_MIN_LIMITS.booking} booking attempts per IP, counted before body validation and CAPTCHA`, async () => {
     const ip = '198.51.100.30';
+    const path = '/v1/public/providers/no-such-provider/bookings';
     for (let i = 0; i < FIFTEEN_MIN_LIMITS.booking; i++) {
-      expect((await postFrom(ip, '/v1/portal/bookings').send({})).status).toBe(401);
+      expect((await postFrom(ip, path).send({})).status).toBe(400);
     }
-    expectJson429(await postFrom(ip, '/v1/portal/bookings').send({}));
+    expectJson429(await postFrom(ip, path).send({}));
+    expect((await postFrom('198.51.100.31', path).send({})).status).toBe(400);
+  });
+});
+
+describe('booking-confirm-ip', () => {
+  it('is one budget shared by view, confirm and release, separate from the booking budget', async () => {
+    const ip = '198.51.100.35';
+    const paths = [
+      '/v1/public/booking-confirmations/view',
+      '/v1/public/booking-confirmations/confirm',
+      '/v1/public/booking-confirmations/release',
+    ];
+    for (let i = 0; i < FIFTEEN_MIN_LIMITS.confirm; i++) {
+      expect((await postFrom(ip, paths[ i % paths.length ]!).send({})).status).toBe(400);
+    }
+    for (const path of paths) expectJson429(await postFrom(ip, path).send({}));
+    expect((await postFrom(ip, '/v1/public/providers/no-such-provider/bookings').send({})).status).toBe(400);
+    expect((await postFrom('198.51.100.36', paths[ 0 ]!).send({})).status).toBe(400);
   });
 });
 
@@ -115,7 +134,6 @@ describe('portal-change-ip', () => {
 
     const slots = await request(app).get(`/v1/portal/appointments/${id}/slots`).set('X-Forwarded-For', ip);
     expect(slots.status).toBe(401);
-    expect((await postFrom(ip, '/v1/portal/bookings').send({})).status).toBe(401);
   });
 });
 

@@ -1,0 +1,34 @@
+meta {
+  name: View Confirmation
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/public/booking-confirmations/view
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "token": "{{confirmationToken}}"
+  }
+}
+
+docs {
+  Reads the booking behind a confirmation link. Set `confirmationToken` to the last path segment of
+  the link the patient was sent (`/book/confirmar/<token>`). The token goes in the JSON body, never in
+  the URL, and changes nothing: email scanners open links, so only Confirm Booking confirms.
+
+  200 `{ state, providerSlug, providerName, startUtc, durationMinutes, patientTimezone, typeName,
+  location, holdExpiresAt, approvalRequired, providerContact }`. `state` is `unconfirmed`, `confirmed`,
+  `requested` (sent to the provider for review), `expired` or `unavailable` (refused click, rejected or
+  expired request, or an appointment cancelled since). Never the patient's name or
+  contact. 404 "Este enlace no es válido." for an unknown token. Shares a 20-per-15-minutes limit per IP
+  with Confirm Booking and Release Booking.
+}

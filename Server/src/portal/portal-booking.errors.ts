@@ -12,12 +12,6 @@ export class PortalBookingUnavailableError extends ApiError {
   }
 }
 
-export class PortalPhoneFieldError extends ApiError {
-  constructor() {
-    super('The phone number comes from the session', 400);
-  }
-}
-
 export class PortalPatientDetailsRequiredError extends ApiError {
   constructor() {
     super('Patient name is required', 400);

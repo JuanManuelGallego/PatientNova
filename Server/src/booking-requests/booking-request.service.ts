@@ -7,7 +7,7 @@ import { logger } from '../utils/api/logger.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { bookingRequestRepository, type CreateBookingRequestData } from './booking-request.repository.js';
 import { ONE_DAY_MS, ONE_HOUR_MS } from '../utils/config/constants.js';
-import { NUDGE_HOURS, RESOLVED_RETENTION_DAYS, UNCONFIRMED_RETENTION_HOURS, holdExpiry, isNudgeDue, unconfirmedHoldExpiry } from './booking-request.constants.js';
+import { NUDGE_HOURS, RESOLVED_RETENTION_DAYS, UNCONFIRMED_RETENTION_HOURS, isNudgeDue, unconfirmedHoldExpiry } from './booking-request.constants.js';
 import { enqueueBookingRequestNotifications, type ExpiredHolds } from './booking-request-notifications.js';
 
 export type NewBookingRequest = Omit<CreateBookingRequestData, 'userId' | 'holdExpiresAt'>;
@@ -42,37 +42,9 @@ export const bookingRequestService = {
   },
 
   /**
-   * A request from a "Mis citas" session (`POST /v1/portal/bookings`), confirmed by its login: PENDING for the 48h
-   * hold, and the provider is notified. `expiredIds` as in `createUnconfirmedWithin`.
+   * `expiredIds`: stale holds this call expired first. Without the scheduler the caller must deliver their expiry
+   * notices after commit (`deliverExpiredHoldsNow`).
    */
-  async createHoldWithin(tx: TransactionClient, userId: string, input: NewBookingRequest, now: Date) {
-    const expiredIds = await bookingRequestService.expireStaleWithin(tx, userId, now);
-    const request = await bookingRequestRepository.create(
-      { ...input, userId, holdExpiresAt: holdExpiry(now, input.startAt) },
-      tx,
-    );
-    await logAudit({
-      entityType: EntityType.BOOKING_REQUEST,
-      entityId: request.id,
-      userId,
-      actionType: ActionType.CREATE,
-      description: 'Solicitud de reserva creada desde el portal',
-      affectedFields: [ 'status', 'startAt', 'endAt', 'typeId', 'locationId', 'holdExpiresAt' ],
-      fieldsAfter: {
-        status: request.status,
-        startAt: request.startAt,
-        endAt: request.endAt,
-        typeId: request.typeId,
-        locationId: request.locationId,
-        holdExpiresAt: request.holdExpiresAt,
-      },
-      tx,
-      required: true,
-    });
-    await enqueueBookingRequestNotifications('received', [ request.id ], tx);
-    return { request, expiredIds };
-  },
-
   async createUnconfirmedWithin(
     tx: TransactionClient,
     userId: string,

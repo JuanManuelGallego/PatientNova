@@ -1,4 +1,3 @@
-import type express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn(), createMeetingSpace: vi.fn() }));
@@ -18,9 +17,8 @@ import { deliverBookingNotification } from '../../../src/portal/portal-booking-n
 import { MEETING_LINK_PENDING_LINE } from '../../../src/brevo/email-templates.js';
 import { ActionSource, AppointmentStatus, Channel, MeetingStatus } from '../../../generated/prisma/enums.js';
 import { createTestLocation, unique } from '../helpers.js';
-import { buildPortalApp, createLiveProvider, portalBookingBody, portalPost, sessionFor, slotStarts } from '../portal/portal-helpers.js';
+import { bookViaConfirmation, createLiveProvider, sessionFor, slotStarts } from '../portal/portal-helpers.js';
 
-let app: express.Express;
 const portal = config.portal as { patientEnabled: boolean };
 const portalWas = portal.patientEnabled;
 beforeAll(() => { portal.patientEnabled = true; });
@@ -29,7 +27,6 @@ const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });
 beforeEach(() => {
-  app = buildPortalApp();
   scheduler.enabled = true;
   mocks.dispatch.mockReset().mockResolvedValue({ success: true, messageSid: 'msg-1' });
   mocks.send.mockReset().mockResolvedValue('job-1');
@@ -48,10 +45,9 @@ async function pendingBooking() {
 
   const [ start ] = await slotStarts(provider, 3);
   const session = sessionFor(provider.id, unique('meet@test.local'));
-  const res = await portalPost(app, '/v1/portal/bookings', session, portalBookingBody({ ...provider, locationId: virtual.id }, start!));
-  expect(res.status).toBe(201);
+  const { appointmentId } = await bookViaConfirmation(provider, start!, { email: session.email, locationId: virtual.id });
   mocks.send.mockClear();
-  return { provider, session, id: res.body.data.appointment.id as string };
+  return { provider, session, id: appointmentId! };
 }
 
 const run = (appointmentId: string, retryCount = 0) => provisionMeetWorker([ { data: { appointmentId }, retryCount } ]);

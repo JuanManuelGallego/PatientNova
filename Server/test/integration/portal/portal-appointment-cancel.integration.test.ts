@@ -31,7 +31,7 @@ import {
   buildPortalApp,
   createConsentedPatient,
   createLiveProvider,
-  portalBookingBody,
+  bookViaConfirmation,
   sessionFor,
   portalPost,
   slotStarts,
@@ -56,8 +56,6 @@ beforeEach(() => {
   mocks.cancel.mockReset().mockResolvedValue(undefined);
 });
 
-const postBooking = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
-
 const postCancel = (s: TestSession, id: string, opts: { csrf?: string | null; origin?: string; body?: object } = {}) =>
   portalPost(app, `/v1/portal/appointments/${id}/cancel`, s, opts.body, opts);
 
@@ -67,9 +65,9 @@ const listAppointments = (s: TestSession) => request(app).get('/v1/portal/appoin
 async function book(provider: LiveProvider, email = unique('cancela@test.local'), slotIndex = 0) {
   const session = sessionFor(provider.id, email);
   const starts = await slotStarts(provider);
-  const res = await postBooking(session, portalBookingBody(provider, starts[slotIndex]!));
-  expect(res.status).toBe(201);
-  return { session, appointmentId: res.body.data.appointment.id as string, start: starts[slotIndex]! };
+  const { appointmentId } = await bookViaConfirmation(provider, starts[slotIndex]!, { email });
+  expect(appointmentId).not.toBeNull();
+  return { session, appointmentId: appointmentId!, start: starts[slotIndex]! };
 }
 
 async function providerAppointment(provider: LiveProvider, patientId: string, start: Date, data: Record<string, unknown> = {}) {

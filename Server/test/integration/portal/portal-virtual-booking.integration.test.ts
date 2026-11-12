@@ -1,4 +1,5 @@
 import type express from 'express';
+import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn() }));
@@ -18,7 +19,7 @@ import {
   buildPortalApp,
   createConsentedPatient,
   createLiveProvider,
-  portalBookingBody,
+  bookViaConfirmation,
   portalPost,
   sessionFor,
   slotStarts,
@@ -58,16 +59,17 @@ async function virtualProvider(opts: { google?: boolean } = {}) {
 async function book(provider: LiveProvider, daysAhead = 3) {
   const [ start ] = await slotStarts(provider, daysAhead);
   const session = sessionFor(provider.id, unique('virtual@test.local'));
-  const res = await portalPost(app, '/v1/portal/bookings', session, portalBookingBody(provider, start!));
-  expect(res.status).toBe(201);
-  return { session, start: start!, dto: res.body.data.appointment, id: res.body.data.appointment.id as string };
+  const { appointmentId } = await bookViaConfirmation(provider, start!, { email: session.email });
+  const list = await request(app).get('/v1/portal/appointments').set('Cookie', session.cookie);
+  const dto = list.body.data.appointments.find((a: { id: string }) => a.id === appointmentId);
+  return { session, start: start!, dto, id: appointmentId! };
 }
 
 const appointment = (id: string) => prisma.appointment.findUniqueOrThrow({ where: { id }, include: { reminder: true } });
 const sentEmails = () => mocks.dispatch.mock.calls.map(([ , opts ]) => opts as { to: string; subject: string; body: string });
 const queued = (queue: string) => mocks.send.mock.calls.filter(([ q ]) => q === queue);
 
-describe('portal booking at a virtual location', () => {
+describe('a booking at a virtual location, confirmed through its link', () => {
   it('with Google connected: PENDING, a provision-meet job on the transaction, and only the provider notice', async () => {
     scheduler.enabled = true;
     const provider = await virtualProvider({ google: true });
@@ -119,8 +121,7 @@ describe('portal booking at a virtual location', () => {
       return 'job-1';
     });
     const [ start ] = await slotStarts(provider);
-    const res = await portalPost(app, '/v1/portal/bookings', sessionFor(provider.id, unique('rb@test.local')), portalBookingBody(provider, start!));
-    expect(res.status).toBe(500);
+    await expect(bookViaConfirmation(provider, start!, { email: unique('rb@test.local') })).rejects.toThrow('queue down');
     expect(await prisma.appointment.count({ where: { userId: provider.id } })).toBe(0);
   });
 

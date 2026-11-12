@@ -8,9 +8,12 @@ import { requireCaptcha } from '../middlewares/captcha.js';
 import { createCaptchaVerifier } from '../captcha/captcha-verifier.js';
 import { requestMeta } from '../utils/api/request-meta.js';
 import { bookingStartService } from './booking-start.service.js';
+import { bookingConfirmationService } from './booking-confirmation.service.js';
 import {
+  bookingTokenSchema,
   releaseBookingSchema,
   startBookingSchema,
+  type BookingTokenBody,
   type ReleaseBookingBody,
   type StartBookingBody,
 } from './portal-booking.schemas.js';
@@ -33,6 +36,28 @@ export function createBookingConfirmationRoutes(): Router {
   );
 
   const confirmLimiter = createPublicLimiter({ name: 'booking-confirm-ip', windowMs: FIFTEEN_MINUTES_MS, max: 20 });
+
+  router.post(
+    '/booking-confirmations/view',
+    confirmLimiter,
+    validateBody(bookingTokenSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      const view = await bookingConfirmationService.view((req.body as BookingTokenBody).token);
+      res.set('Cache-Control', 'no-store');
+      ok(res, view);
+    }),
+  );
+
+  router.post(
+    '/booking-confirmations/confirm',
+    confirmLimiter,
+    validateBody(bookingTokenSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      const view = await bookingConfirmationService.confirm((req.body as BookingTokenBody).token, requestMeta(req));
+      res.set('Cache-Control', 'no-store');
+      ok(res, view);
+    }),
+  );
 
   router.post(
     '/booking-confirmations/release',

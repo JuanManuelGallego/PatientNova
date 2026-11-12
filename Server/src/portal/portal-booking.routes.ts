@@ -13,9 +13,7 @@ import { portalBookingService } from './portal-booking.service.js';
 import { portalAppointmentService } from './portal-appointment.service.js';
 import { portalRequestService } from './portal-request.service.js';
 import {
-  createPortalBookingSchema,
   reschedulePortalAppointmentSchema,
-  type CreatePortalBookingBody,
   type ReschedulePortalAppointmentBody,
 } from './portal-booking.schemas.js';
 
@@ -26,18 +24,6 @@ export function createPortalBookingRoutes(): Router {
   const router = Router();
   // One budget for every change a patient makes to an existing appointment.
   const changeLimiter = createPublicLimiter({ name: 'portal-change-ip', windowMs: FIFTEEN_MINUTES_MS, max: 10 });
-
-  router.post(
-    '/bookings',
-    createPublicLimiter({ name: 'portal-booking-ip', windowMs: FIFTEEN_MINUTES_MS, max: 10 }),
-    ...portalSessionGuard,
-    validateBody(createPortalBookingSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-      const result = await portalBookingService.book(req.portal!, req.body as CreatePortalBookingBody, requestMeta(req));
-      res.set('Cache-Control', 'no-store');
-      ok(res, result, 'request' in result ? 202 : 201);
-    }),
-  );
 
   router.post(
     '/requests/:id/cancel',

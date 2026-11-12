@@ -4,7 +4,6 @@ import { formatDate, formatTime, formatWhen, MEETING_LINK_PENDING_TEXT } from '.
 import {
   renderBookingConfirmationEmail,
   renderBookingRequestExpiredEmail,
-  renderBookingRequestReceivedEmail,
   renderBookingRequestRejectedEmail,
   renderConfirmLinkEmail,
   renderUnconfirmedExpiredEmail,
@@ -42,7 +41,6 @@ export interface PatientNoticeParams {
   cancellation: Timed & { bookingUrl: string };
   reschedule: Timed & PlaceParams & { previousAt: Date; appointmentsUrl: string };
   'meeting-link': Timed & { meetingUrl: string; appointmentsUrl: string };
-  'request-received': Timed & { appointmentsUrl: string };
   'request-rejected': Timed & { bookingUrl: string };
   'request-expired': Timed & { bookingUrl: string };
   'confirm-link': Timed & PlaceParams & { token: string; confirmUrl: string; approvalRequired: boolean; providerContact: ProviderContact };
@@ -117,11 +115,6 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
       contentVariables: { '1': oneLine(p.providerName), '2': p.meetingUrl },
     }),
     sms: (p) => `Enlace de tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)}: ${p.meetingUrl}`,
-  },
-  'request-received': {
-    email: (p) => renderBookingRequestReceivedEmail(p),
-    whatsapp: (p) => ({ contentSid: config.twilio.patientPortal.requestReceivedSid, contentVariables: slotVariables(p) }),
-    sms: (p) => `Recibimos tu solicitud de cita con ${p.providerName} para el ${formatWhen(p.at, p.timezone)} y te avisaremos cuando sea confirmada.`,
   },
   'request-rejected': {
     email: (p) => renderBookingRequestRejectedEmail({ ...p, ...emailTimes(p) }),

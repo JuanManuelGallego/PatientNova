@@ -10,7 +10,6 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
 import { sendTransactionalEmail } from '../../../src/brevo/transactional.js';
 import {
   renderBookingConfirmationEmail,
-  renderBookingRequestReceivedEmail,
   renderOtpEmail,
 } from '../../../src/brevo/email-templates.js';
 import { logger } from '../../../src/utils/api/logger.js';
@@ -61,6 +60,5 @@ describe('Spanish templates', () => {
     const bare = renderBookingConfirmationEmail({ providerName: 'X', whenLocal: 'y', timezone: 'UTC', appointmentsUrl: url }).body;
     expect(bare).not.toContain('Lugar:');
     expect(bare).not.toContain('Dirección:');
-    expect(renderBookingRequestReceivedEmail({ providerName: 'X', appointmentsUrl: url }).body).toContain(url);
   });
 });

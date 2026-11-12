@@ -1,0 +1,34 @@
+meta {
+  name: Confirm Booking
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/public/booking-confirmations/confirm
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "token": "{{confirmationToken}}"
+  }
+}
+
+docs {
+  The patient's click on "Confirmar mi cita". Same body and token as View Confirmation. Idempotent:
+  confirming twice answers the current view.
+
+  In auto-confirm mode the booking is created (matching or creating the patient, recording consent) and
+  the view is `confirmed`. With `REQUIRE_APPROVAL`, or when the contact matches an inactive or deleted
+  patient, the request goes to the provider's inbox and the view is `requested`. An expired hold answers
+  `expired`; a click that cannot be honoured answers 409 (slot taken, including by the provider, who is
+  never blocked by an unconfirmed hold; booking cap; in approval mode "Request limit reached" when the
+  contact already has 3 live requests) or 404 (booking paused, type or location no longer offered) and
+  releases the hold; the view is then `unavailable`. 404 for an unknown token.
+}

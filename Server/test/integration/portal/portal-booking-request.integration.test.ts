@@ -10,14 +10,12 @@ vi.mock('../../../src/brevo/transactional.js', () => ({ sendTransactionalEmail: 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
-import { Channel, BookingApprovalMode, BookingRequestStatus, EntityType, ActionSource } from '../../../generated/prisma/enums.js';
+import { BookingApprovalMode, BookingRequestStatus, EntityType, ActionSource } from '../../../generated/prisma/enums.js';
+import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
+import { withProviderLock } from '../../../src/utils/prisma/provider-lock.js';
+import { unique } from '../helpers.js';
 import {
-  MAX_PENDING_REQUESTS_PER_CONTACT,
-  MAX_PENDING_REQUESTS_PER_PROVIDER,
-} from '../../../src/booking-requests/booking-request.constants.js';
-import { createTestPatient, unique } from '../helpers.js';
-import {
-  ALLOWED_ORIGIN, buildPortalApp, createConsentedPatient, createLiveProvider, portalBookingBody, portalPost, sessionFor, slotStarts,
+  ALLOWED_ORIGIN, bookViaConfirmation, buildPortalApp, createLiveProvider, portalPost, sessionFor, slotStarts,
   type LiveProvider, type TestSession,
 } from './portal-helpers.js';
 
@@ -44,36 +42,23 @@ const approvalProvider = async (): Promise<LiveProvider> => {
   return provider;
 };
 
-const postBooking = (s: TestSession, body: unknown) => portalPost(app, '/v1/portal/bookings', s, body as object);
 const getAppointments = (s: TestSession) => request(app).get('/v1/portal/appointments').set('Cookie', s.cookie);
 const cancelRequest = (s: TestSession, id: string, opts: { csrf?: string | null } = {}) =>
   portalPost(app, `/v1/portal/requests/${id}/cancel`, s, undefined, opts);
 
-describe('POST /v1/portal/bookings in approval mode', () => {
-  it('answers 202 with a request, holds the slot and creates no patient, consent or appointment', async () => {
+describe('an approval-mode booking confirmed through its link', () => {
+  it('lands as a PENDING request and creates no patient, consent or appointment', async () => {
     const provider = await approvalProvider();
     const email = unique('solicita@test.local');
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!));
+    const { row, appointmentId } = await bookViaConfirmation(provider, start!, { email });
 
-    expect(res.status).toBe(202);
-    expect(res.headers['cache-control']).toBe('no-store');
-    expect(Object.keys(res.body.data)).toEqual([ 'request' ]);
-    const dto = res.body.data.request;
-    expect(Object.keys(dto).sort()).toEqual([
-      'durationMinutes', 'endUtc', 'holdExpiresAt', 'id', 'location', 'startUtc', 'status', 'type',
-    ]);
-    expect(dto).toMatchObject({ startUtc: start, durationMinutes: 60, status: 'PENDING' });
-    expect(Object.keys(dto.type)).toEqual([ 'name' ]);
-    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'isVirtual', 'name' ]);
-
+    expect(appointmentId).toBeNull();
     expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(0);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
     expect(await prisma.appointment.count({ where: { userId: provider.id } })).toBe(0);
-
-    const stored = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: dto.id } });
-    expect(stored).toMatchObject({
+    expect(row).toMatchObject({
       status: BookingRequestStatus.PENDING,
       email,
       name: 'Lucia',
@@ -84,160 +69,12 @@ describe('POST /v1/portal/bookings in approval mode', () => {
       typeId: provider.typeId,
       locationId: provider.locationId,
     });
-    expect(stored.consentAcceptedAt).toBeInstanceOf(Date);
-    expect(stored.policyVersion).toBeTruthy();
-
-    const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: dto.id } });
-    expect(audits).toHaveLength(1);
-    expect(audits[0]!.source).toBe(ActionSource.PUBLIC_PORTAL);
-    expect(audits[0]!.portalPatientId).toBeNull();
-    expect(JSON.stringify(audits[0])).not.toContain(email);
-  });
-
-  it('emails the patient that the request was received, without a date or contact data from other patients', async () => {
-    const provider = await approvalProvider();
-    const email = unique('correo@test.local');
-    const [ start ] = await slotStarts(provider);
-
-    await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!));
-
-    const receipts = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === email);
-    expect(receipts).toHaveLength(1);
-    const [ channel, rendered ] = receipts[0]!;
-    expect(channel).toBe(Channel.EMAIL);
-    expect(rendered.subject).toContain('Recibimos tu solicitud');
-    expect(rendered.body).toContain(`/book/${provider.slug}/appointments`);
-  });
-
-  it('gives the same answer shape for a new email, a matching patient and a revoked patient', async () => {
-    const provider = await approvalProvider();
-    const consented = await createConsentedPatient(provider.id);
-    const revoked = await createTestPatient(provider.id);
-    await prisma.patient.update({ where: { id: revoked.id }, data: { portalAccessEnabled: false } });
-    const starts = await slotStarts(provider);
-
-    const emails = [ unique('nueva@test.local'), consented.email!, revoked.email! ];
-    const shapes = [];
-    for (const [ i, email ] of emails.entries()) {
-      const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, starts[i]!));
-      shapes.push({ status: res.status, keys: Object.keys(res.body.data), dto: Object.keys(res.body.data.request).sort() });
-    }
-    expect(new Set(shapes.map((s) => JSON.stringify(s))).size).toBe(1);
-    expect(shapes[0]!.status).toBe(202);
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(2);
-    expect(await prisma.appointment.count({ where: { userId: provider.id } })).toBe(0);
-  });
-
-  it('blocks the slot for the next patient with the neutral 409', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-
-    expect((await postBooking(sessionFor(provider.id, unique('a@test.local')), portalBookingBody(provider, start!))).status).toBe(202);
-    const second = await postBooking(sessionFor(provider.id, unique('b@test.local')), portalBookingBody(provider, start!));
-
-    expect(second.status).toBe(409);
-    expect(second.body.error).toBe('Slot no longer available');
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(1);
-  });
-
-  it('caps pending requests per email', async () => {
-    const provider = await approvalProvider();
-    const starts = await slotStarts(provider);
-    const session = sessionFor(provider.id, unique('muchas@test.local'));
-
-    for (let i = 0; i < MAX_PENDING_REQUESTS_PER_CONTACT; i++) {
-      expect((await postBooking(session, portalBookingBody(provider, starts[i]!))).status).toBe(202);
-    }
-    const over = await postBooking(session, portalBookingBody(provider, starts[MAX_PENDING_REQUESTS_PER_CONTACT]!));
-    expect(over.status).toBe(409);
-    expect(over.body.error).toBe('Request limit reached');
-    expect((await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, starts[5]!))).status).toBe(202);
-  });
-
-  it('without the scheduler, emails the patient whose stale hold this booking expired', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-    const stale = unique('vencida@test.local');
-    const first = await postBooking(sessionFor(provider.id, stale), portalBookingBody(provider, start!));
-    await prisma.bookingRequest.update({ where: { id: first.body.data.request.id }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
-    mocks.dispatch.mockClear();
-
-    const res = await postBooking(sessionFor(provider.id, unique('nueva@test.local')), portalBookingBody(provider, start!));
-
-    expect(res.status).toBe(202);
-    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: first.body.data.request.id } })).status)
-      .toBe(BookingRequestStatus.EXPIRED);
-    const toStale = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === stale);
-    expect(toStale).toHaveLength(1);
-    expect(mocks.send).not.toHaveBeenCalled();
-  });
-
-  it('still answers 202 when the receipt email fails after commit', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-    mocks.dispatch.mockRejectedValueOnce(new Error('pool timeout'));
-
-    const res = await postBooking(sessionFor(provider.id, unique('correo@test.local')), portalBookingBody(provider, start!));
-
-    expect(res.status).toBe(202);
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id, status: BookingRequestStatus.PENDING } })).toBe(1);
-  });
-
-  it('caps live requests per provider with an error that says nothing about this patient', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-    const base = Date.now() - 400 * 24 * 3_600_000;
-    for (let i = 0; i < MAX_PENDING_REQUESTS_PER_PROVIDER; i++) {
-      await prisma.bookingRequest.create({
-        data: {
-          userId: provider.id,
-          email: `lleno${i}@test.local`,
-          name: 'Otra',
-          lastName: 'Persona',
-          typeId: provider.typeId,
-          locationId: provider.locationId,
-          startAt: new Date(base + i * 3_600_000),
-          endAt: new Date(base + (i + 1) * 3_600_000),
-          patientTimezone: 'America/Bogota',
-          holdExpiresAt: new Date(Date.now() + 3_600_000),
-          policyVersion: 'test',
-          consentAcceptedAt: new Date(),
-        },
-      });
-    }
-
-    const res = await postBooking(sessionFor(provider.id, unique('nueva@test.local')), portalBookingBody(provider, start!));
-    expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Request capacity reached');
-  });
-
-  it('rejects a start off the grid and an unknown type like the auto flow', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-    const session = sessionFor(provider.id, unique('malo@test.local'));
-    const offGrid = new Date(new Date(start!).getTime() + 7 * 60_000).toISOString();
-
-    expect((await postBooking(session, portalBookingBody(provider, offGrid))).status).toBe(409);
-    expect((await postBooking(session, portalBookingBody(provider, start!, { typeId: '11111111-1111-4111-8111-111111111111' }))).status).toBe(404);
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
-  });
-
-  it('stays a 404 when booking is not live', async () => {
-    const provider = await approvalProvider();
-    const [ start ] = await slotStarts(provider);
-    await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
-
-    const res = await postBooking(sessionFor(provider.id, unique('cerrada@test.local')), portalBookingBody(provider, start!));
-    expect(res.status).toBe(404);
-  });
-
-  it('still books straight away for a provider in auto-confirm mode', async () => {
-    const provider = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const res = await postBooking(sessionFor(provider.id, unique('auto@test.local')), portalBookingBody(provider, start!));
-    expect(res.status).toBe(201);
-    expect(Object.keys(res.body.data)).toEqual([ 'appointment' ]);
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
+    expect(row.confirmedAt).not.toBeNull();
+    expect(row.consentAcceptedAt).toBeInstanceOf(Date);
+    expect(row.policyVersion).toBeTruthy();
+    const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: row.id } });
+    expect(audits.some((a) => a.source === ActionSource.PUBLIC_PORTAL && a.portalPatientId === null)).toBe(true);
+    expect(JSON.stringify(audits)).not.toContain(email);
   });
 });
 
@@ -250,28 +87,58 @@ describe('GET /v1/portal/appointments pending requests', () => {
     const [ otherStart ] = await slotStarts(other);
     const session = sessionFor(provider.id, email);
 
-    const second = await postBooking(session, portalBookingBody(provider, starts[3]!));
-    const first = await postBooking(session, portalBookingBody(provider, starts[1]!));
-    await postBooking(sessionFor(provider.id, unique('ajena@test.local')), portalBookingBody(provider, starts[5]!));
-    await postBooking(sessionFor(other.id, email), portalBookingBody(other, otherStart!));
+    const second = await bookViaConfirmation(provider, starts[3]!, { email });
+    const first = await bookViaConfirmation(provider, starts[1]!, { email });
+    await bookViaConfirmation(provider, starts[5]!, { email: unique('ajena@test.local') });
+    await bookViaConfirmation(other, otherStart!, { email });
 
     const res = await getAppointments(session);
     expect(res.status).toBe(200);
     expect(res.body.data.consentRequired).toBe(true);
     expect(res.body.data.appointments).toEqual([]);
-    expect(res.body.data.requests.map((r: { id: string }) => r.id)).toEqual([ first.body.data.request.id, second.body.data.request.id ]);
+    expect(res.body.data.requests.map((r: { id: string }) => r.id)).toEqual([ first.requestId, second.requestId ]);
+    const dto = res.body.data.requests[0];
+    expect(Object.keys(dto).sort()).toEqual([ 'durationMinutes', 'endUtc', 'holdExpiresAt', 'id', 'location', 'startUtc', 'status', 'type' ]);
+    expect(Object.keys(dto.type)).toEqual([ 'name' ]);
+    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'isVirtual', 'name' ]);
   });
 
   it('hides expired, cancelled and other states', async () => {
     const provider = await approvalProvider();
     const session = sessionFor(provider.id, unique('estados@test.local'));
     const starts = await slotStarts(provider);
-    const a = await postBooking(session, portalBookingBody(provider, starts[1]!));
-    const b = await postBooking(session, portalBookingBody(provider, starts[2]!));
-    await prisma.bookingRequest.update({ where: { id: a.body.data.request.id }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
-    await prisma.bookingRequest.update({ where: { id: b.body.data.request.id }, data: { status: BookingRequestStatus.REJECTED } });
+    const email = session.email;
+    const a = await bookViaConfirmation(provider, starts[1]!, { email });
+    const b = await bookViaConfirmation(provider, starts[2]!, { email });
+    await prisma.bookingRequest.update({ where: { id: a.requestId }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
+    await prisma.bookingRequest.update({ where: { id: b.requestId }, data: { status: BookingRequestStatus.REJECTED } });
 
     expect((await getAppointments(session)).body.data.requests).toEqual([]);
+  });
+});
+
+describe('self-serve requests ignore holds the patient has not confirmed', () => {
+  it('neither lists nor cancels an unconfirmed hold, nor a PENDING row without confirmedAt', async () => {
+    const provider = await approvalProvider();
+    const session = sessionFor(provider.id, unique('sin-confirmar@test.local'));
+    const [ first, second ] = await slotStarts(provider);
+    const confirmed = await bookViaConfirmation(provider, first!, { email: session.email });
+    const unconfirmed = await prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, provider.id);
+      const { request } = await bookingRequestService.createUnconfirmedWithin(tx, provider.id, {
+        email: session.email, name: 'Lucia', lastName: 'Rojas', typeId: provider.typeId, locationId: provider.locationId,
+        startAt: new Date(second!), endAt: new Date(new Date(second!).getTime() + 3_600_000), patientTimezone: 'America/Bogota',
+        policyVersion: 'v', consentAcceptedAt: new Date(), confirmTokenHash: 'c'.repeat(64), releaseTokenHash: 'r'.repeat(64),
+      }, new Date());
+      return request;
+    });
+
+    expect((await getAppointments(session)).body.data.requests.map((r: { id: string }) => r.id)).toEqual([ confirmed.requestId ]);
+    expect((await cancelRequest(session, unconfirmed.id)).status).toBe(404);
+    await prisma.bookingRequest.update({ where: { id: unconfirmed.id }, data: { status: BookingRequestStatus.PENDING } });
+    expect((await getAppointments(session)).body.data.requests.map((r: { id: string }) => r.id)).toEqual([ confirmed.requestId ]);
+    expect((await cancelRequest(session, unconfirmed.id)).status).toBe(404);
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: unconfirmed.id } })).status).toBe(BookingRequestStatus.PENDING);
   });
 });
 
@@ -280,8 +147,7 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
     const provider = await approvalProvider();
     const session = sessionFor(provider.id, unique('cancela@test.local'));
     const [ start ] = await slotStarts(provider);
-    const created = await postBooking(session, portalBookingBody(provider, start!));
-    const id = created.body.data.request.id as string;
+    const id = (await bookViaConfirmation(provider, start!, { email: session.email })).requestId;
 
     const res = await cancelRequest(session, id);
     expect(res.status).toBe(204);
@@ -294,7 +160,7 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
 
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: id } });
     expect(audits.map((a) => a.description)).toContain('Solicitud de reserva cancelada por el paciente desde el portal');
-    expect((await postBooking(sessionFor(provider.id, unique('otro@test.local')), portalBookingBody(provider, start!))).status).toBe(202);
+    expect((await bookViaConfirmation(provider, start!, { email: unique('otro@test.local') })).row.status).toBe(BookingRequestStatus.PENDING);
   });
 
   it('answers the same 404 for someone else\'s, another provider\'s, resolved, expired and unknown requests', async () => {
@@ -302,9 +168,9 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
     const other = await approvalProvider();
     const owner = sessionFor(provider.id, unique('duena@test.local'));
     const starts = await slotStarts(provider);
-    const mine = (await postBooking(owner, portalBookingBody(provider, starts[1]!))).body.data.request.id as string;
-    const resolved = (await postBooking(owner, portalBookingBody(provider, starts[2]!))).body.data.request.id as string;
-    const expired = (await postBooking(owner, portalBookingBody(provider, starts[3]!))).body.data.request.id as string;
+    const mine = (await bookViaConfirmation(provider, starts[1]!, { email: owner.email })).requestId;
+    const resolved = (await bookViaConfirmation(provider, starts[2]!, { email: owner.email })).requestId;
+    const expired = (await bookViaConfirmation(provider, starts[3]!, { email: owner.email })).requestId;
     await prisma.bookingRequest.update({ where: { id: resolved }, data: { status: BookingRequestStatus.APPROVED } });
     await prisma.bookingRequest.update({ where: { id: expired }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
 
@@ -328,7 +194,7 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
     const provider = await approvalProvider();
     const session = sessionFor(provider.id, unique('guarda@test.local'));
     const [ start ] = await slotStarts(provider);
-    const id = (await postBooking(session, portalBookingBody(provider, start!))).body.data.request.id as string;
+    const id = (await bookViaConfirmation(provider, start!, { email: session.email })).requestId;
 
     expect((await cancelRequest(session, id, { csrf: null })).status).toBe(403);
     expect((await request(app).post(`/v1/portal/requests/${id}/cancel`).set('Origin', ALLOWED_ORIGIN).send()).status).toBe(401);
@@ -339,7 +205,7 @@ describe('POST /v1/portal/requests/:id/cancel', () => {
     const provider = await approvalProvider();
     const session = sessionFor(provider.id, unique('pausa@test.local'));
     const [ start ] = await slotStarts(provider);
-    const id = (await postBooking(session, portalBookingBody(provider, start!))).body.data.request.id as string;
+    const id = (await bookViaConfirmation(provider, start!, { email: session.email })).requestId;
     await prisma.user.update({ where: { id: provider.id }, data: { bookingEnabled: false } });
 
     expect((await cancelRequest(session, id)).status).toBe(204);
@@ -351,8 +217,7 @@ describe('reschedule in approval mode', () => {
     const provider = await createLiveProvider();
     const session = sessionFor(provider.id, unique('mueve@test.local'));
     const [ start, later ] = await slotStarts(provider);
-    const booked = await postBooking(session, portalBookingBody(provider, start!));
-    const appointmentId = booked.body.data.appointment.id as string;
+    const appointmentId = (await bookViaConfirmation(provider, start!, { email: session.email })).appointmentId!;
     await prisma.user.update({ where: { id: provider.id }, data: { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL } });
 
     const res = await portalPost(app, `/v1/portal/appointments/${appointmentId}/reschedule`, session, { startUtc: later, patientTimezone: 'America/Bogota' });

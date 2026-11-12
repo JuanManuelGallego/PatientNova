@@ -14,7 +14,7 @@ import { createPortalAppointmentWithin } from '../../../src/portal/portal-bookin
 import { patientService } from '../../../src/patients/patient.service.js';
 import { unique } from '../helpers.js';
 import {
-  buildPortalApp, createConsentedPatient, createLiveProvider, portalBookingBody, portalPost, sessionFor, slotStarts,
+  bookViaConfirmation, buildPortalApp, createConsentedPatient, createLiveProvider, portalPost, sessionFor, slotStarts,
   type LiveProvider,
 } from './portal-helpers.js';
 
@@ -147,11 +147,10 @@ describe('patient notices', () => {
 });
 
 describe('reminders of portal bookings', () => {
-  async function bookAs(provider: LiveProvider, email: string, overrides: Record<string, unknown> = {}) {
+  async function bookAs(provider: LiveProvider, email: string, patient?: { name: string; lastName: string; phone?: string | null }) {
     const [ start ] = await slotStarts(provider);
-    const res = await portalPost(app, '/v1/portal/bookings', sessionFor(provider.id, email), portalBookingBody(provider, start!, overrides));
-    expect(res.status).toBe(201);
-    return prisma.appointment.findUniqueOrThrow({ where: { id: res.body.data.appointment.id }, include: { reminder: true, patient: true } });
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email, ...(patient && { patient }) });
+    return prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId! }, include: { reminder: true, patient: true } });
   }
 
   it('an existing WhatsApp patient logging in by email gets the reminder on WhatsApp', async () => {
@@ -176,7 +175,7 @@ describe('reminders of portal bookings', () => {
 
   it('a new patient with no typed number is not flagged', async () => {
     const provider = await createLiveProvider();
-    const appt = await bookAs(provider, unique('nuevo@test.local'), { patient: { name: 'Lucia', lastName: 'Rojas' } });
+    const appt = await bookAs(provider, unique('nuevo@test.local'), { name: 'Lucia', lastName: 'Rojas' });
     expect(appt.patient).toMatchObject({ whatsappNumber: null, whatsappUnverified: false });
   });
 
@@ -209,8 +208,7 @@ describe('reminders of portal bookings', () => {
     const session = sessionFor(provider.id, patient.email!);
     await prisma.patient.update({ where: { id: patient.id }, data: { smsNumber: SMS_NUMBER, reminderChannel: Channel.SMS } });
     const [ first, second ] = await slotStarts(provider);
-    const booked = await portalPost(app, '/v1/portal/bookings', session, portalBookingBody(provider, first!));
-    const appointmentId = booked.body.data.appointment.id as string;
+    const appointmentId = (await bookViaConfirmation(provider, first!, { email: patient.email! })).appointmentId!;
     await prisma.reminder.updateMany({ where: { patientId: patient.id }, data: { status: ReminderStatus.SENT } });
 
     const moved = await portalPost(app, `/v1/portal/appointments/${appointmentId}/reschedule`, session, {
@@ -227,8 +225,7 @@ describe('reminders of portal bookings', () => {
     const patient = await createConsentedPatient(provider.id);
     const session = sessionFor(provider.id, patient.email!);
     const [ first, second ] = await slotStarts(provider);
-    const booked = await portalPost(app, '/v1/portal/bookings', session, portalBookingBody(provider, first!));
-    const appointmentId = booked.body.data.appointment.id as string;
+    const appointmentId = (await bookViaConfirmation(provider, first!, { email: patient.email! })).appointmentId!;
     await prisma.patient.update({ where: { id: patient.id }, data: { smsNumber: SMS_NUMBER, reminderChannel: Channel.SMS } });
 
     await portalPost(app, `/v1/portal/appointments/${appointmentId}/reschedule`, session, { startUtc: second, patientTimezone: 'America/Bogota' });

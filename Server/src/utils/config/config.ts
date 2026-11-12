@@ -94,7 +94,6 @@ export const config = {
       confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
       cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
       rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
-      requestReceivedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID'),
       requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
       requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
       confirmLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID'),

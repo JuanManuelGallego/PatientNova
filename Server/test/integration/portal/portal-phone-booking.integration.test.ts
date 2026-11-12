@@ -29,7 +29,7 @@ import {
 } from '../../../generated/prisma/enums.js';
 import { createTestToken, invokeRoute, unique } from '../helpers.js';
 import {
-  buildPortalApp, createLiveProvider, phoneSessionFor, portalBookingBody, portalPost, sessionFor, slotStarts,
+  bookViaConfirmation, buildPortalApp, createLiveProvider, phoneSessionFor, portalPost, slotStarts,
   type LiveProvider, type TestSession,
 } from './portal-helpers.js';
 
@@ -81,10 +81,8 @@ async function patientWith(userId: string, opts: PatientOpts) {
   return patient;
 }
 
-const noTypedPhone = (provider: LiveProvider, start: string) =>
-  portalBookingBody(provider, start, { patient: { name: 'Lucia', lastName: 'Rojas' } });
-
-const book = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
+const bookByPhone = (provider: LiveProvider, phone: string, start: string, channel: Channel = Channel.WHATSAPP) =>
+  bookViaConfirmation(provider, start, { phone, channel, patient: { name: 'Lucia', lastName: 'Rojas' } });
 
 const listAppointments = (s: TestSession) =>
   request(app).get('/v1/portal/appointments').set('Origin', 'http://localhost:3000').set('Cookie', s.cookie);
@@ -180,26 +178,17 @@ describe('booking from a phone session', () => {
     const phone = newPhone();
     const [ start ] = await slotStarts(provider);
 
-    const res = await book(phoneSessionFor(provider.id, phone, channel), noTypedPhone(provider, start!));
+    const { appointmentId } = await bookByPhone(provider, phone, start!, channel);
 
-    expect(res.status).toBe(201);
     const [ patient ] = await patientsOf(provider.id);
     expect(patient).toMatchObject({
       [ field ]: phone, email: null, reminderChannel: channel, whatsappUnverified: false, source: RecordSource.PORTAL,
     });
-    const appt = await prisma.appointment.findUniqueOrThrow({ where: { id: res.body.data.appointment.id }, include: { reminder: true } });
+    const appt = await prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId! }, include: { reminder: true } });
     expect(appt.reminder).toMatchObject({ channel, to: phone });
     const patientMessages = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === phone);
     expect(patientMessages).toHaveLength(1);
     expect(patientMessages[ 0 ]![0]).toBe(channel);
-  });
-
-  it('rejects a typed phone: the number comes from the session', async () => {
-    const provider = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const res = await book(phoneSessionFor(provider.id, newPhone()), portalBookingBody(provider, start!));
-    expect(res.status).toBe(400);
-    expect(await patientsOf(provider.id)).toHaveLength(0);
   });
 
   it('books for the one trusted record without changing it', async () => {
@@ -208,11 +197,10 @@ describe('booking from a phone session', () => {
     const patient = await patientWith(provider.id, { whatsappNumber: phone, consented: true, email: unique('a@test.local') });
     const [ start ] = await slotStarts(provider);
 
-    const res = await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
+    const { appointmentId } = await bookByPhone(provider, phone, start!);
 
-    expect(res.status).toBe(201);
     expect(await patientsOf(provider.id)).toHaveLength(1);
-    const appt = await prisma.appointment.findUniqueOrThrow({ where: { id: res.body.data.appointment.id } });
+    const appt = await prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId! } });
     expect(appt.patientId).toBe(patient.id);
     expect((await listAppointments(phoneSessionFor(provider.id, phone))).body.data.appointments).toHaveLength(1);
   });
@@ -220,15 +208,14 @@ describe('booking from a phone session', () => {
   it('two concurrent bookings by a new number create one patient', async () => {
     const provider = await createLiveProvider();
     const phone = newPhone();
-    const session = phoneSessionFor(provider.id, phone);
     const [ first, second ] = await slotStarts(provider);
 
     const results = await Promise.all([
-      book(session, noTypedPhone(provider, first!)),
-      book(session, noTypedPhone(provider, second!)),
+      bookByPhone(provider, phone, first!),
+      bookByPhone(provider, phone, second!),
     ]);
 
-    expect(results.map((r) => r.status)).toEqual([ 201, 201 ]);
+    expect(results.every((r) => r.appointmentId !== null)).toBe(true);
     const patients = await patientsOf(provider.id);
     expect(patients).toHaveLength(1);
     expect(await prisma.appointment.count({ where: { patientId: patients[ 0 ]!.id } })).toBe(2);
@@ -253,10 +240,10 @@ describe('booking from a phone session', () => {
     const session = phoneSessionFor(provider.id, phone);
     const [ start ] = await slotStarts(provider);
 
-    const res = await book(session, noTypedPhone(provider, start!));
+    const { row, appointmentId } = await bookByPhone(provider, phone, start!);
 
-    expect(res.status).toBe(202);
-    expect(res.body.data.request.status).toBe('PENDING');
+    expect(appointmentId).toBeNull();
+    expect(row.status).toBe('PENDING');
     expect(await patientsOf(provider.id)).toHaveLength(before.length);
     const stored = await prisma.bookingRequest.findFirstOrThrow({ where: { userId: provider.id } });
     expect(stored).toMatchObject({ kind: BookingRequestKind.REVIEW, email: null, verifiedPhone: phone, contactChannel: Channel.WHATSAPP });
@@ -271,10 +258,9 @@ describe('booking from a phone session', () => {
     await patientWith(provider.id, { whatsappNumber: phone, portalAccessEnabled: false });
     const [ start ] = await slotStarts(provider);
 
-    const res = await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
+    await expect(bookByPhone(provider, phone, start!)).rejects.toMatchObject({ errorCode: 409 });
 
-    expect(res.status).toBe(409);
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
+    expect(await prisma.bookingRequest.count({ where: { userId: provider.id, status: { not: 'CANCELLED' } } })).toBe(0);
   });
 
   it('list and consent answers do not reveal whether a number belongs to a patient', async () => {
@@ -306,13 +292,13 @@ describe('a number typed by an email session', () => {
     const [ start ] = await slotStarts(provider);
     const email = unique('correo@test.local');
 
-    const res = await book(sessionFor(provider.id, email), portalBookingBody(provider, start!, { patient: { name: 'Ana', lastName: 'Ruiz', phone: typed } }));
-    expect(res.status).toBe(202);
+    const { requestId, row } = await bookViaConfirmation(provider, start!, { email, patient: { name: 'Ana', lastName: 'Ruiz', phone: typed } });
+    expect(row.status).toBe('PENDING');
 
     const holder = phoneSessionFor(provider.id, typed);
     const list = await listAppointments(holder);
     expect(list.body.data.requests).toEqual([]);
-    const cancel = await portalPost(app, `/v1/portal/requests/${res.body.data.request.id}/cancel`, holder, {});
+    const cancel = await portalPost(app, `/v1/portal/requests/${requestId}/cancel`, holder, {});
     expect(cancel.status).toBe(404);
   });
 
@@ -322,16 +308,16 @@ describe('a number typed by an email session', () => {
     const [ first, second ] = await slotStarts(provider);
     const email = unique('correo@test.local');
 
-    const res = await book(sessionFor(provider.id, email), portalBookingBody(provider, first!, { patient: { name: 'Ana', lastName: 'Ruiz', phone: typed } }));
-    expect(res.status).toBe(201);
+    const res = await bookViaConfirmation(provider, first!, { email, patient: { name: 'Ana', lastName: 'Ruiz', phone: typed } });
+    expect(res.appointmentId).not.toBeNull();
     const [ patient ] = await patientsOf(provider.id);
     expect(patient).toMatchObject({ whatsappNumber: typed, whatsappUnverified: true });
 
     const holder = phoneSessionFor(provider.id, typed);
     expect((await listAppointments(holder)).body.data).toMatchObject({ appointments: [], consentRequired: true });
-    const booked = await book(holder, noTypedPhone(provider, second!));
-    expect(booked.status).toBe(202);
-    expect(await prisma.bookingRequest.findFirstOrThrow({ where: { userId: provider.id } })).toMatchObject({ kind: BookingRequestKind.REVIEW });
+    const booked = await bookByPhone(provider, typed, second!);
+    expect(booked.appointmentId).toBeNull();
+    expect(booked.row).toMatchObject({ kind: BookingRequestKind.REVIEW });
     expect(await patientsOf(provider.id)).toHaveLength(1);
     expect(await prisma.appointment.count({ where: { patientId: patient!.id } })).toBe(1);
   });
@@ -349,40 +335,14 @@ describe('requests from a phone session', () => {
     const phone = newPhone();
     const [ start ] = await slotStarts(provider);
 
-    const res = await book(phoneSessionFor(provider.id, phone, Channel.SMS), noTypedPhone(provider, start!));
+    const { requestId } = await bookByPhone(provider, phone, start!, Channel.SMS);
 
-    expect(res.status).toBe(202);
     const [ raw ] = await prisma.$queryRaw<{ verifiedPhone: string; verifiedPhoneHash: string; email: string | null; contactChannel: Channel }[]>`
-      SELECT "verifiedPhone", "verifiedPhoneHash", "email", "contactChannel" FROM booking_requests WHERE id = ${res.body.data.request.id}::uuid`;
+      SELECT "verifiedPhone", "verifiedPhoneHash", "email", "contactChannel" FROM booking_requests WHERE id = ${requestId}::uuid`;
     expect(raw!.verifiedPhone).not.toContain(phone);
     expect(raw!.verifiedPhoneHash).toBe(phoneHash(phone));
     expect(raw!.email).toBeNull();
     expect(raw!.contactChannel).toBe(Channel.SMS);
-  });
-
-  it('sends the receipt on the session channel', async () => {
-    const provider = await approvalProvider();
-    const phone = newPhone();
-    const [ start ] = await slotStarts(provider);
-
-    await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
-
-    const receipts = mocks.dispatch.mock.calls.filter(([ , opts ]) => opts.to === phone);
-    expect(receipts).toHaveLength(1);
-    expect(receipts[ 0 ]![0]).toBe(Channel.WHATSAPP);
-    expect(receipts[ 0 ]![1].contentSid).toBe(config.twilio.patientPortal.requestReceivedSid);
-  });
-
-  it('caps live requests per number, across both channels', async () => {
-    const provider = await approvalProvider();
-    const phone = newPhone();
-    const starts = await slotStarts(provider);
-    for (const [ i, channel ] of [ Channel.WHATSAPP, Channel.SMS, Channel.WHATSAPP ].entries()) {
-      expect((await book(phoneSessionFor(provider.id, phone, channel), noTypedPhone(provider, starts[ i ]!))).status).toBe(202);
-    }
-    const res = await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, starts[ 3 ]!));
-    expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Request limit reached');
   });
 
   it('lists and cancels only the session\'s own requests', async () => {
@@ -390,8 +350,7 @@ describe('requests from a phone session', () => {
     const phone = newPhone();
     const [ start ] = await slotStarts(provider);
     const session = phoneSessionFor(provider.id, phone);
-    const res = await book(session, noTypedPhone(provider, start!));
-    const id = res.body.data.request.id as string;
+    const id = (await bookByPhone(provider, phone, start!)).requestId;
 
     expect((await listAppointments(session)).body.data.requests.map((r: { id: string }) => r.id)).toEqual([ id ]);
     expect((await portalPost(app, `/v1/portal/requests/${id}/cancel`, phoneSessionFor(provider.id, newPhone()), {})).status).toBe(404);
@@ -405,11 +364,11 @@ describe('requests from a phone session', () => {
     const provider = await approvalProvider();
     const phone = newPhone();
     const [ start ] = await slotStarts(provider);
-    const res = await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
-    await prisma.bookingRequest.update({ where: { id: res.body.data.request.id }, data: { status } });
+    const { requestId } = await bookByPhone(provider, phone, start!);
+    await prisma.bookingRequest.update({ where: { id: requestId }, data: { status } });
     mocks.dispatch.mockClear();
 
-    await deliverBookingRequestNotification({ requestId: res.body.data.request.id, event });
+    await deliverBookingRequestNotification({ requestId, event });
 
     expect(mocks.dispatch).toHaveBeenCalledTimes(1);
     expect(mocks.dispatch.mock.calls[ 0 ]![0]).toBe(Channel.WHATSAPP);
@@ -433,9 +392,9 @@ describe('provider inbox with a phone request', () => {
 
   async function phoneRequest(provider: LiveProvider, phone: string) {
     const [ start ] = await slotStarts(provider);
-    const res = await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
-    expect(res.status).toBe(202);
-    return res.body.data.request.id as string;
+    const { row } = await bookByPhone(provider, phone, start!);
+    expect(row.status).toBe('PENDING');
+    return row.id;
   }
 
   type Headers = Record<string, string>;
@@ -560,9 +519,9 @@ describe('provider inbox with a phone request', () => {
     const email = unique('correo@test.local').toLowerCase();
     const deleted = await patientWith(provider.id, { email, whatsappNumber: newPhone(), whatsappUnverified: true, isDeleted: true, reminderChannel: Channel.EMAIL });
     const [ start ] = await slotStarts(provider);
-    const res = await book(sessionFor(provider.id, email), portalBookingBody(provider, start!));
+    const { requestId } = await bookViaConfirmation(provider, start!, { email });
 
-    expect((await approve(res.body.data.request.id, headers, { restorePatientId: deleted.id })).status).toBe(200);
+    expect((await approve(requestId, headers, { restorePatientId: deleted.id })).status).toBe(200);
 
     expect(await prisma.patient.findUniqueOrThrow({ where: { id: deleted.id } })).toMatchObject({ isDeleted: false, whatsappUnverified: true });
   });
@@ -592,7 +551,7 @@ describe('audit of a phone session', () => {
     const phone = newPhone();
     const [ start ] = await slotStarts(provider);
 
-    await book(phoneSessionFor(provider.id, phone), noTypedPhone(provider, start!));
+    await bookByPhone(provider, phone, start!);
 
     const [ patient ] = await patientsOf(provider.id);
     expect(patient!.email).toBeNull();
@@ -607,8 +566,8 @@ describe('audit of a phone session', () => {
     await prisma.user.update({ where: { id: provider.id }, data: { bookingApprovalMode: BookingApprovalMode.REQUIRE_APPROVAL } });
     const [ verified, typed ] = [ newPhone(), newPhone() ];
     const [ first, second ] = await slotStarts(provider);
-    await book(phoneSessionFor(provider.id, verified), noTypedPhone(provider, first!));
-    await book(phoneSessionFor(provider.id, typed), noTypedPhone(provider, second!));
+    await bookByPhone(provider, verified, first!);
+    await bookByPhone(provider, typed, second!);
     const holder = await patientWith(provider.id, { whatsappNumber: verified });
     const stranger = await patientWith(provider.id, { whatsappNumber: typed, whatsappUnverified: true });
 
