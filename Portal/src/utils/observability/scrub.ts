@@ -9,6 +9,11 @@ const ISO_DATE_PREFIX_RE = /^\d{4}-\d{2}-\d{2}(?!\d)/;
 // production Prisma reads <call> from the source line (`tx.patient.create`), so any receiver must
 // match. Only the operation itself is kept.
 const PRISMA_INVOCATION_RE = /(?:Invalid|It occurred in the) `[\w$.]+\(\)` invocation/;
+const CONFIRMATION_TOKEN_RE = /(\/book\/confirmar\/)[^/?#\s"'<>]+/g;
+
+function maskConfirmationTokens(text: string): string {
+  return text.replace(CONFIRMATION_TOKEN_RE, '$1[token]');
+}
 
 function maskNumbers(text: string): string {
   return text.replace(PHONE_CANDIDATE_RE, (match) => {
@@ -25,7 +30,7 @@ function maskNumbers(text: string): string {
 export function scrubText(text: string): string {
   const prisma = PRISMA_INVOCATION_RE.exec(text);
   if (prisma) return `${prisma[0]} [details removed]`;
-  return maskNumbers(text.replace(EMAIL_RE, '[email]'));
+  return maskNumbers(maskConfirmationTokens(text).replace(EMAIL_RE, '[email]'));
 }
 
 function stripQuery(url: string): string {
@@ -40,6 +45,8 @@ interface BrowserEvent {
   user?: unknown;
   breadcrumbs?: unknown;
   extra?: unknown;
+  transaction?: string;
+  tags?: Record<string, unknown>;
 }
 
 /** Strips personal data from browser error events before they are sent (see Server scrub). */
@@ -51,7 +58,12 @@ export function scrubBrowserEvent<T extends object>(input: T): T {
   }
   if (event.request) {
     const { url } = event.request;
-    event.request = url ? { url: stripQuery(url) } : {};
+    event.request = url ? { url: maskConfirmationTokens(stripQuery(url)) } : {};
+  }
+  if (event.transaction) event.transaction = maskConfirmationTokens(event.transaction);
+  const { tags } = event;
+  for (const [ key, value ] of Object.entries(tags ?? {})) {
+    if (tags && typeof value === 'string') tags[ key ] = maskConfirmationTokens(value);
   }
   delete event.user;
   delete event.extra;

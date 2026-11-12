@@ -52,6 +52,7 @@ const REDACT_PATHS = [
   'req.body.newPassword',
   'req.body.currentPassword',
   'req.body.token',
+  'req.body.releaseToken',
   'req.body.refreshToken',
   'secret',
   'authToken',

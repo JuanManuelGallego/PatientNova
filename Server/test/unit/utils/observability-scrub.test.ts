@@ -71,6 +71,26 @@ describe('error-tracking scrubbing (server)', () => {
       .toEqual({ url: 'https://api.patientnova.net/v1/x' });
   });
 
+  it('replaces a booking confirmation token in the URL, messages, transaction and tags', () => {
+    const token = 'Ab3_dEf-GhIjKlMnOpQrStUvWxYz0123456789abcde';
+    const page = `https://patientnova.net/book/confirmar/${token}`;
+    const out = scrubEvent({
+      message: `Referer ${page}`,
+      exception: { values: [ { value: `Failed loading ${page}?utm=x` } ] },
+      request: { url: `${page}?x=1` },
+      transaction: `GET /book/confirmar/${token}`,
+      tags: { url: page, referer: `${page}#frag`, status: 500 },
+    });
+    expect(JSON.stringify(out)).not.toContain(token);
+    expect(out.request).toEqual({ url: 'https://patientnova.net/book/confirmar/[token]' });
+    expect(out.message).toBe('Referer https://patientnova.net/book/confirmar/[token]');
+    expect(out.transaction).toBe('GET /book/confirmar/[token]');
+    expect(out.tags).toEqual({
+      url: 'https://patientnova.net/book/confirmar/[token]', referer: 'https://patientnova.net/book/confirmar/[token]#frag', status: 500,
+    });
+    expect(scrubText('/book/confirmar/[token]')).toBe('/book/confirmar/[token]');
+  });
+
   it('handles minimal events', () => {
     expect(scrubEvent({})).toEqual({});
     expect(scrubEvent({ user: { email: 'x@y.co' } })).toEqual({ user: {} });

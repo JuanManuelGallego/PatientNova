@@ -34,9 +34,29 @@ describe("error-tracking scrubbing (browser)", () => {
       "Invalid `tx.patient.create()` invocation in\n/app/x.js:1:1\n data { firstName: \"Ana\" }",
       "It occurred in the `tx.patient.update()` invocation: data { notes: \"x\" }",
       "Network request failed (503)",
+      "GET https://patientnova.net/book/confirmar/Ab3_dEf-GhIjKlMnOpQrStUvWxYz0123456789abcde?x=1 failed",
     ];
     for (const text of corpus) expect(scrubText(text), text).toBe(serverScrubText(text));
     expect(scrubText(corpus[4]!)).toBe("Invalid `tx.patient.create()` invocation [details removed]");
+    expect(scrubText(corpus[7]!)).toBe("GET https://patientnova.net/book/confirmar/[token]?x=1 failed");
+  });
+
+  it("never sends a booking confirmation token: URL, messages, transaction and tags", () => {
+    const token = "Ab3_dEf-GhIjKlMnOpQrStUvWxYz0123456789abcde";
+    const page = `https://patientnova.net/book/confirmar/${token}`;
+    const out = scrubBrowserEvent({
+      message: `Unhandled rejection on ${page}`,
+      exception: { values: [ { value: `Failed to fetch while on /book/confirmar/${token}` } ] },
+      request: { url: `${page}?utm_source=email#top`, headers: { Referer: page } },
+      transaction: `/book/confirmar/${token}`,
+      tags: { url: page, "page.path": `/book/confirmar/${token}`, release: "1.2.3" },
+      breadcrumbs: [ { category: "navigation", data: { from: "/book/dra", to: `/book/confirmar/${token}` } } ],
+    });
+    expect(JSON.stringify(out)).not.toContain(token);
+    expect(out.request).toEqual({ url: "https://patientnova.net/book/confirmar/[token]" });
+    expect(out.message).toBe("Unhandled rejection on https://patientnova.net/book/confirmar/[token]");
+    expect(out.transaction).toBe("/book/confirmar/[token]");
+    expect(out.tags).toEqual({ url: "https://patientnova.net/book/confirmar/[token]", "page.path": "/book/confirmar/[token]", release: "1.2.3" });
   });
 
   it("drops the URL fragment as well as the query string", () => {
