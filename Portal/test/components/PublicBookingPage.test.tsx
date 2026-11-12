@@ -533,7 +533,7 @@ describe("PublicBookingPage booking", () => {
         render(<PublicBookingPage slug="dra-ana" />);
         await pickMorningSlot(user);
 
-        expect(await screen.findByTestId("access-notice")).toHaveTextContent("Al pedir el código solicitas a Consultorio Prueba S.A.S.");
+        expect(await screen.findByTestId("access-notice")).toHaveTextContent("Al reservar solicitas a Consultorio Prueba S.A.S.");
         expect(screen.getByText(/código de 6 dígitos para confirmar tu reserva/)).toBeInTheDocument();
     });
 

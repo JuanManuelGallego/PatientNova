@@ -33,5 +33,5 @@ export function consentLabel(provider: Provider): string {
 }
 
 export function accessNotice(provider: Provider): string {
-    return `Al pedir el código solicitas a ${controllerName(provider)} que utilice este contacto para verificar tu acceso a su portal mediante Patient Nova. No incluyas datos de salud en este paso.`;
+    return `Al reservar solicitas a ${controllerName(provider)} que utilice este contacto para enviarte el enlace de confirmación de tu cita mediante Patient Nova. No incluyas datos de salud en este paso.`;
 }
