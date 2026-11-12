@@ -1,92 +1,85 @@
 import { expect, test } from '@playwright/test';
-import { dayPicker, goToTimes, inbox, latestCode, pickSecondDay, stripVercelBypass } from '../../support/portal';
+import {
+    fillDetails,
+    inbox,
+    latestLink,
+    patientEmail,
+    pickSlot,
+    slotOffered,
+    stripVercelBypass,
+    subjects,
+    submitDetails,
+} from '../../support/portal';
 
 const SLUG = 'e2e-publica';
 const PROVIDER_EMAIL = 'e2e-public-provider@example.com';
+const PROVIDER_NAME = 'Dra. Ana Pública';
 
-test.describe('self-booking on the public page', () => {
+test.describe('booking confirmed by the emailed link', () => {
     test.beforeEach(async ({ page }) => {
         await stripVercelBypass(page);
     });
 
-    test('pick a time, verify the email, book, and find it in "Mis citas"', async ({ page }, testInfo) => {
-        const email = `reserva-${testInfo.project.name}-${Date.now()}@example.com`;
+    test('hold the time, confirm from the email, and only then is it booked', async ({ page }, testInfo) => {
+        const email = patientEmail('reserva', testInfo);
         const providerNoticesBefore = (await inbox(PROVIDER_EMAIL)).length;
 
-        await goToTimes(page, SLUG);
-        const dayName = await pickSecondDay(page);
-        const time = page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button').first();
-        const timeText = (await time.textContent())!.trim();
-        await time.click();
-        await page.getByRole('button', { name: 'Continuar' }).click();
-        await expect(page.getByRole('heading', { name: '¿Dónde te enviamos el código?' })).toBeVisible();
+        const slot = await pickSlot(page, SLUG);
 
-        await page.getByLabel('Correo electrónico').fill(email);
-        const send = page.getByRole('button', { name: 'Enviar código' });
-        await expect(send).toBeEnabled({ timeout: 20_000 });
-        await send.click();
-        await expect(page.getByLabel('Código de 6 dígitos')).toBeVisible();
+        const channels = page.getByRole('group', { name: 'Recibir el enlace de confirmación por' });
+        await channels.getByRole('button', { name: 'WhatsApp' }).click();
+        await expect(page.getByLabel('Número de WhatsApp')).toBeVisible();
+        await channels.getByRole('button', { name: 'Correo' }).click();
 
-        // Back to Horario and forward again keeps the code step and sends nothing new.
-        const codesBefore = (await inbox(email)).length;
-        await page.goBack();
-        await expect(page.getByRole('heading', { name: '¿Cuándo te queda bien?' })).toBeVisible();
-        await page.getByRole('button', { name: 'Continuar' }).click();
-        await expect(page.getByLabel('Código de 6 dígitos')).toBeVisible();
-        expect((await inbox(email)).length).toBe(codesBefore);
+        await fillDetails(page, email);
+        await submitDetails(page, 'Reservar cita');
+        const pending = page.getByTestId('booking-pending');
+        await expect(pending).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
+        await expect(pending).toContainText('Tu cita todavía no está confirmada');
+        await expect(page.getByTestId('pending-time')).toContainText(slot.timeText);
 
-        await page.getByLabel('Código de 6 dígitos').fill(await latestCode(email));
+        if (testInfo.project.name === 'public') {
+            await page.getByRole('button', { name: /Corregir/ }).click();
+            await expect(page.getByRole('heading', { name: 'Último paso' })).toBeVisible();
+            await expect(page.getByLabel('Nombre')).toHaveValue('Paciente');
+            await expect(page.getByLabel('Correo electrónico')).toHaveValue(email);
+            await submitDetails(page, 'Reservar cita');
+            await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
+        }
 
-        await page.getByLabel('Nombre').fill('Paciente');
-        await page.getByLabel('Apellidos').fill('E2E');
-        await page.getByRole('checkbox').check();
-        await page.getByRole('button', { name: 'Reservar cita' }).click();
+        const link = await latestLink(email);
+        expect(link).toContain('/book/confirmar/');
+        expect(await subjects(email)).toContain(`Confirma tu cita con ${PROVIDER_NAME}`);
 
-        await expect(page.getByRole('heading', { name: 'Tu cita quedó reservada' })).toBeVisible();
-        await expect(page.getByRole('article')).toContainText(timeText);
+        expect(await slotOffered(page, SLUG, slot)).toBe(0);
+        expect(await subjects(email)).not.toContain(`Cita confirmada con ${PROVIDER_NAME}`);
+        expect((await inbox(PROVIDER_EMAIL)).length).toBe(providerNoticesBefore);
 
-        await expect.poll(async () => (await inbox(email)).map((m) => m.subject))
-            .toContain('Cita confirmada con Dra. Ana Pública');
+        await page.goto(link);
+        await expect(page.getByTestId('confirmation-unconfirmed')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Confirma tu cita' })).toBeVisible();
+        await expect(page.getByTestId('confirmation-time')).toContainText(slot.timeText);
+        expect(await subjects(email)).not.toContain(`Cita confirmada con ${PROVIDER_NAME}`);
+        expect((await inbox(PROVIDER_EMAIL)).length).toBe(providerNoticesBefore);
+
+        await page.getByRole('button', { name: 'Confirmar mi cita' }).click();
+        await expect(page.getByRole('heading', { name: 'Tu cita está confirmada' })).toBeVisible();
+        await expect(page.getByTestId('confirmation-confirmed')).toContainText(slot.timeText);
+        await expect(page.getByRole('button', { name: 'Agregar al calendario' })).toBeVisible();
+
+        await expect.poll(() => subjects(email)).toContain(`Cita confirmada con ${PROVIDER_NAME}`);
         await expect.poll(async () => (await inbox(PROVIDER_EMAIL)).length).toBeGreaterThan(providerNoticesBefore);
         const notice = (await inbox(PROVIDER_EMAIL)).at(-1)!;
         expect(notice.subject).toBe('Nueva cita reservada en línea');
         expect(notice.textContent).not.toContain('Paciente E2E');
 
-        await page.getByRole('link', { name: 'Ver mis citas' }).click();
-        await expect(page).toHaveURL(new RegExp(`/book/${SLUG}/appointments$`));
-        await expect(page.getByRole('list', { name: 'Próximas citas' })).toContainText(timeText);
+        expect(await slotOffered(page, SLUG, slot)).toBe(0);
+    });
 
-        await goToTimes(page, SLUG);
-        await dayPicker(page).getByRole('button', { name: dayName, exact: true }).click();
-        await expect(page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button', { name: timeText, exact: true })).toHaveCount(0);
-
-        // Self-service on the same session (no extra OTP: `otp-request-ip` allows 10 per IP per 15 minutes).
-        await page.goto(`/book/${SLUG}/appointments`);
-        const card = page.getByRole('list', { name: 'Próximas citas' }).getByRole('article').first();
-        await card.getByRole('button', { name: 'Reprogramar' }).click();
-        await expect(page.getByRole('heading', { name: 'Reprogramar cita' })).toBeVisible();
-        await expect(dayPicker(page)).toBeVisible();
-        await pickSecondDay(page);
-        const newTime = page.getByRole('list', { name: /Mañana|Tarde/ }).first().getByRole('button').first();
-        const newTimeText = (await newTime.textContent())!.trim();
-        await newTime.click();
-        await page.getByRole('button', { name: 'Confirmar nuevo horario' }).click();
-        await expect(page.getByRole('status')).toContainText('Tu cita quedó reprogramada');
-        await expect(page.getByRole('list', { name: 'Próximas citas' })).toContainText(newTimeText);
-        await expect.poll(async () => (await inbox(email)).map((m) => m.subject))
-            .toContain('Cita reprogramada con Dra. Ana Pública');
-        await expect.poll(async () => (await inbox(PROVIDER_EMAIL)).map((m) => m.subject))
-            .toContain('Cita reprogramada en línea');
-
-        // Cancelling frees the slot again, which also keeps the shared seeded calendar from filling up across runs.
-        await page.getByRole('list', { name: 'Próximas citas' }).getByRole('article').first()
-            .getByRole('button', { name: 'Cancelar cita' }).click();
-        await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, cancelar cita' }).click();
-        await expect(page.getByRole('status')).toContainText('Tu cita quedó cancelada');
-        await expect(page.getByText('No tienes citas próximas.')).toBeVisible();
-        await expect.poll(async () => (await inbox(email)).map((m) => m.subject))
-            .toContain('Cita cancelada con Dra. Ana Pública');
-        await expect.poll(async () => (await inbox(PROVIDER_EMAIL)).map((m) => m.subject))
-            .toContain('Cita cancelada en línea');
+    test('an unknown link shows the unavailable page and is not indexed', async ({ page }) => {
+        await page.goto('/book/confirmar/este-enlace-no-existe-0000000000000000000000000');
+        await expect(page.getByRole('heading', { name: 'Esta página de reservas no está disponible' })).toBeVisible();
+        await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
     });
 });

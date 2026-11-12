@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { RequestsPage } from '../../pages/RequestsPage';
 import { openProviderPage } from '../../support/provider-context';
 import { createApiClient } from '../../utils/api';
-import { patientEmail, pickSlot, stripVercelBypass, subjects, submitDetails, verifyEmail } from '../../support/portal';
+import { latestLink, patientEmail, pickSlot, requestByEmail, stripVercelBypass, subjects } from '../../support/portal';
 
 const SLUG = 'e2e-publica';
 const PROVIDER_EMAIL = 'e2e-public-provider@example.com';
@@ -26,12 +26,18 @@ test.describe('review routing: a deleted patient books again', () => {
             await api.deletePatient(patientId);
 
             const slot = await pickSlot(page, SLUG);
-            await verifyEmail(page, email);
-            await submitDetails(page, 'Reservar cita');
-            await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeVisible();
-            await expect(page.getByRole('heading', { name: 'Tu cita quedó reservada' })).toHaveCount(0);
+            await requestByEmail(page, email, 'Reservar cita');
 
             const requests = new RequestsPage(provider.page);
+            await requests.goto();
+            await expect(requests.rowsFor(email)).toHaveCount(0);
+
+            await page.goto(await latestLink(email));
+            await page.getByRole('button', { name: 'Confirmar mi cita' }).click();
+            await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Tu cita está confirmada' })).toHaveCount(0);
+            await expect(page.getByTestId('confirmation-requested')).toContainText(slot.timeText);
+
             await requests.goto();
             const row = requests.rowsFor(email);
             await expect(row).toHaveCount(1);
@@ -44,13 +50,6 @@ test.describe('review routing: a deleted patient books again', () => {
             await requests.close();
 
             await expect.poll(() => subjects(email)).toContain(`Cita confirmada con ${PROVIDER_NAME}`);
-
-            await page.goto(`/book/${SLUG}/appointments`);
-            const upcoming = page.getByRole('list', { name: 'Próximas citas' });
-            await expect(upcoming).toContainText(slot.timeText);
-            await upcoming.getByRole('article').first().getByRole('button', { name: 'Cancelar cita' }).click();
-            await page.getByRole('alertdialog').getByRole('button', { name: 'Sí, cancelar cita' }).click();
-            await expect(page.getByRole('status')).toContainText('Tu cita quedó cancelada');
         } finally {
             await provider.context.close();
         }

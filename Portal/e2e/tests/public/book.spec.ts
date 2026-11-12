@@ -61,6 +61,7 @@ test.describe('public booking page', () => {
     const name = page.getByRole('heading', { level: 1, name: 'Dra. Ana Pública' });
     await expect(name).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ver perfil' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Mis citas' })).toHaveCount(0);
 
     await page.getByRole('button', { name: /Control/ }).click();
     const step = page.getByRole('region', { name: '¿Qué necesitas?' });
@@ -76,7 +77,7 @@ test.describe('public booking page', () => {
     await expect(next).toBeInViewport({ ratio: 1 });
     await page.evaluate(() => window.scrollTo(0, 120));
     await expect(next).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole('link', { name: 'Mis citas' })).toBeInViewport();
+    await expect(name).toBeInViewport();
 
     await next.click();
     await expect(page.getByRole('region', { name: '¿Cuándo te queda bien?' }).getByRole('button', { name: 'Atrás' })).toBeVisible();

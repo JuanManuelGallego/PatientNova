@@ -9,19 +9,19 @@ function reply(res, status, body) {
     res.end(JSON.stringify(body));
 }
 
-const messagesFor = (url) => inbox.get((url.searchParams.get('email') ?? '').trim().toLowerCase()) ?? [];
+const messagesFor = (url) => inbox.get((url.searchParams.get('to') ?? url.searchParams.get('email') ?? '').trim().toLowerCase()) ?? [];
 
 const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
 
     if (req.method === 'GET' && url.pathname === '/health') return reply(res, 200, { ok: true });
 
-    if (req.method === 'GET' && url.pathname === '/__test/latest-code') {
+    if (req.method === 'GET' && url.pathname === '/__test/latest-link') {
         for (const message of [ ...messagesFor(url) ].reverse()) {
-            const code = message.textContent.match(/^\s*(\d{6})\s*$/m)?.[ 1 ];
-            if (code) return reply(res, 200, { code, subject: message.subject });
+            const link = message.textContent.match(/https?:\/\/\S+\/book\/confirmar\/[\w-]+/)?.[ 0 ];
+            if (link) return reply(res, 200, { link, subject: message.subject });
         }
-        return reply(res, 404, { error: 'no code' });
+        return reply(res, 404, { error: 'no link' });
     }
 
     if (req.method === 'GET' && url.pathname === '/__test/messages') {

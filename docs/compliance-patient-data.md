@@ -116,7 +116,7 @@ read everything; the keys must never be stored with the backups.
   "Revocation procedure" below).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
-- `policyVersion` identifies the published package (`2026-11-06-r2` for the current text), archived in
+- `policyVersion` identifies the published package (`2026-11-09` for the current text), archived in
   `docs/legal/versions/`. Changing the policy, the notice or the checkbox requires bumping it, archiving the
   text and re-asking consent at the patient's next booking.
 - Approval-mode requests carry the same evidence on `BookingRequest` and copy it to `PatientConsent`
@@ -139,13 +139,13 @@ read everything; the keys must never be stored with the backups.
 
 What the command does, in one transaction with audit rows: revokes every active consent; cancels the patient's live booking requests, so the slots are released; with `--block-portal`, closes the portal; with `--stop-messages`, cancels pending reminders and sets `Patient.messagesStoppedAt`, so no route is chosen and the workers cancel anything queued later. Approving a request made before a revocation is refused (409). Running it again changes nothing.
 
-To return: `--restore-portal` and `--restore-messages` reopen what was closed, audited. Consent is never restored by command: the patient authorizes again, and the old revocation stays on record. Without `--block-portal`, the next login asks for a new authorization.
+To return: `--restore-portal` and `--restore-messages` reopen what was closed, audited. Consent is never restored by command: the patient authorizes again, and the old revocation stays on record. Without `--block-portal`, the next booking asks for a new authorization.
 
-**Phone login and messages.** A number is personal data the patient proves with a code before it
-acts as an identity. `BookingRequest.verifiedPhone` keeps the proven number of a request (encrypted,
+**Phone booking and messages.** A number is personal data the patient proves by opening the confirmation
+link we send to it (there are no login codes) before it acts as an identity. `BookingRequest.verifiedPhone` keeps the proven number of a request (encrypted,
 with a blind index) and is deleted with the request after 90 days. A number typed in the booking form
-is flagged `Patient.whatsappUnverified`: it receives no automated portal message and is not accepted at
-login until the provider endorses it. A provider can still choose it by hand for a reminder. SMS is not
+is flagged `Patient.whatsappUnverified`: it receives no automated portal message and does not identify the
+patient until the provider endorses it or the patient confirms a booking on that number. A provider can still choose it by hand for a reminder. SMS is not
 end-to-end encrypted and both phone channels show on lock screens, so portal notices and portal SMS
 reminders carry only the provider, the time and the place or link, never the appointment type, notes or
 the patient's name.
@@ -160,8 +160,9 @@ by name and includes the address and instructions. Removing the name needs a new
 - [x] Data processing / transmission contracts with each processor: Twilio, Brevo, Google, Cloudflare,
       Sentry, Railway and Vercel, all named in the policy (treated as approved, owner's decision of 2026-11-06).
 - [x] Meta is a recipient of WhatsApp traffic (patient number, provider name, appointment time, place
-      or link, and login codes). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
-      and, since the draft of 2026-11-06, Meta and phone login: counsel to confirm before the portal reaches production.
+      or link, and the booking confirmation link). The policy names Twilio and SMS/WhatsApp "por instrucción de la clínica",
+      and, since the draft of 2026-11-06, Meta: counsel to confirm before the portal reaches production, and that
+      the policy no longer needs to describe login codes (there are none).
 - [x] International transfer basis per processor (adequacy list, authorization, or contract).
 - [x] The `privacidad@` and `legal@` mailboxes are monitored (owner confirmed 2026-11-06).
 - [x] Runbook for the 10/15 business-day deadlines (section 6).
@@ -219,8 +220,7 @@ Juan Manuel Gallego is the operational lead. The backup is Mauricio Gallego, +57
 
 | Data | Kept for | How it ends |
 |---|---|---|
-| Portal OTP rows (hashes) | 24 hours after the last send, needed only for abuse limits | `purge-portal-otps` |
-| Portal session | 2 hours | Stateless JWT expires; nothing stored |
+| Unconfirmed bookings (a held time and its confirmation link, which is stored only as a hash) | 15 minutes as a hold; the row is deleted 48 hours after the hold ends if the patient never confirmed | `purge-booking-requests` |
 | Booking requests | 90 days after they stop being pending, for inbox follow-up. The audit row keeps the event, without contact data | `purge-booking-requests` |
 | Scheduler jobs | Dead-letter queues 30 days, other queues pg-boss defaults | pg-boss; payloads carry ids only |
 | Clinical record | At least 15 years from the last visit (5 in active archive, 10 in central); longer in the cases Resolución 839 lists. The clinic is the custodian | Clinic decides, with procedure; never automatic |
