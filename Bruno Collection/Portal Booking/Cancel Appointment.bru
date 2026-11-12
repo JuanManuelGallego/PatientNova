@@ -21,8 +21,12 @@ body:json {
 }
 
 docs {
-  Cancels one of the session patient's upcoming active appointments (run Create Booking or List
-  Appointments first; both store `portalAppointmentId`). Any appointment of the patient can be
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404) and a `portal_session` cookie. No login issues that cookie now that the
+  codes are gone, so this request only works against a session minted for a future login.
+
+  Cancels one of the session patient's upcoming active appointments (run List Appointments first; it
+  stores `portalAppointmentId`). Any appointment of the patient can be
   cancelled, provider-created ones too, with no cutoff. Needs the session cookie, the exact Origin
   and the CSRF token. The body is an empty object (or none): there is no reason field.
 

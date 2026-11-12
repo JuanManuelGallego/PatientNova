@@ -21,11 +21,11 @@ import {
 const WHATSAPP_NUMBER = '+573001112233';
 const SMS_NUMBER = '+573004445566';
 
-const portal = config.portal as { patientEnabled: boolean };
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
 const scheduler = config.scheduler as { enabled: boolean };
-const was = { portal: portal.patientEnabled, scheduler: scheduler.enabled };
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = was.portal; scheduler.enabled = was.scheduler; });
+const was = { portal: portal.patientEnabled, selfServe: portal.selfServe, scheduler: scheduler.enabled };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = was.portal; portal.selfServe = was.selfServe; scheduler.enabled = was.scheduler; });
 
 let app: express.Express;
 beforeEach(() => {

@@ -16,7 +16,11 @@ script:post-response {
 }
 
 docs {
-  Needs the `portal_session` cookie from Verify OTP. Returns
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404) and a `portal_session` cookie. No login issues that cookie now that the
+  codes are gone, so this request only works against a session minted for a future login.
+
+  Needs the `portal_session` cookie. Returns
   `{ contact, contactChannel, expiresAt, csrfToken, providerSlug, consentRequired, bookingOpen }` with the
   same keys and types whether or not the contact belongs to a patient. `contact` is what the session
   proved, an email or a number, on `contactChannel`. `consentRequired` is false only for an existing

@@ -72,6 +72,7 @@ async function loadAppointment(appointmentId: string) {
         select: {
           displayName: true, firstName: true, lastName: true, timezone: true, bookingSlug: true,
           reminderActive: true, reminderChannel: true, whatsappNumber: true, phoneNumber: true, email: true,
+          publicPhone: true, publicWhatsapp: true,
         },
       },
     },
@@ -105,7 +106,9 @@ function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): M
   if (!route) return null;
   const bookPage = bookingUrl(appt.user.bookingSlug);
   const portalRoot = config.portal.url.replace(/\/+$/, '');
-  const appointmentsUrl = bookPage ? `${bookPage}/appointments` : portalRoot;
+  const appointmentsUrl = config.portal.selfServe ? (bookPage ? `${bookPage}/appointments` : portalRoot) : undefined;
+  const providerContact = { phone: appt.user.publicPhone, whatsapp: appt.user.publicWhatsapp };
+  const links = { providerContact, ...(appointmentsUrl && { appointmentsUrl }) };
   const base = {
     providerName: providerDisplayName(appt.user),
     at: appt.startAt,
@@ -115,16 +118,16 @@ function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): M
   let opts: DispatchOpts;
   if (job.kind === 'patient-meeting-link') {
     if (!appt.meetingUrl) return null;
-    opts = renderPatientNotice('meeting-link', { ...base, meetingUrl: appt.meetingUrl, appointmentsUrl }, route);
+    opts = renderPatientNotice('meeting-link', { ...base, meetingUrl: appt.meetingUrl, ...links }, route);
   } else if (job.kind === 'patient-cancellation') {
     opts = renderPatientNotice('cancellation', { ...base, bookingUrl: bookPage ?? portalRoot }, route);
   } else if (job.kind === 'patient-reschedule') {
     if (!job.previousStartAt) return null;
     opts = renderPatientNotice('reschedule', {
-      ...base, ...placeOf(appt), appointmentsUrl, previousAt: new Date(job.previousStartAt),
+      ...base, ...placeOf(appt), ...links, previousAt: new Date(job.previousStartAt),
     }, route);
   } else {
-    opts = renderPatientNotice('confirmation', { ...base, ...placeOf(appt), appointmentsUrl }, route);
+    opts = renderPatientNotice('confirmation', { ...base, ...placeOf(appt), ...links }, route);
   }
   return { channel: route.channel, opts };
 }

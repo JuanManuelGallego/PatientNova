@@ -24,8 +24,12 @@ body:json {
 }
 
 docs {
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404) and a `portal_session` cookie. No login issues that cookie now that the
+  codes are gone, so this request only works against a session minted for a future login.
+
   Moves one of the session patient's online bookings to `startUtc`, in place (same appointment id).
-  Run Create Booking or List Appointments first (they store `portalAppointmentId`), then Public
+  Run List Appointments first (it stores `portalAppointmentId`), then Public
   Booking > Get Slots for a free time (it stores `slotStartUtc`). Needs the session cookie, the exact
   Origin and the CSRF token. Reschedule Slots (or Public Booking > Get Slots) stores a free `slotStartUtc`.
 

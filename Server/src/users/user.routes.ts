@@ -53,7 +53,7 @@ userRouter.get(
     authenticate,
     asyncHandler(async (req: Request, res: Response) => {
         // portalEnabled lets the Portal hide online-booking settings while ENABLE_PORTAL is off.
-        ok(res, { ...(await userService.findById(req.user!.id)), portalEnabled: config.portal.patientEnabled });
+        ok(res, { ...(await userService.findById(req.user!.id)), portalEnabled: config.portal.patientEnabled, selfServeEnabled: config.portal.selfServe });
     })
 );
 

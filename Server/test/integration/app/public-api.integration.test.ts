@@ -12,6 +12,7 @@ import type { CaptchaVerifier } from '../../../src/captcha/captcha-verifier.js';
 import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from '../../../src/portal/portal-routers.js';
 import { PORTAL_COOKIE_NAME, portalCookieOptions } from '../../../src/auth/portal-cookie.js';
 import { createCsrfToken } from '../../../src/utils/security/csrf.js';
+import { config } from '../../../src/utils/config/config.js';
 import { unique } from '../helpers.js';
 
 const ALLOWED = 'http://localhost:3000';
@@ -57,6 +58,7 @@ function buildPublicApp() {
   return a;
 }
 
+(config.portal as { selfServe: boolean }).selfServe = true;
 const pubApp = buildPublicApp();
 
 describe('anonymous public API class', () => {
@@ -137,7 +139,6 @@ describe('credentialed patient-session class', () => {
     expect((await request(pubApp).post('/v1/portal/verify').send({})).status).toBe(403); // missing Origin
     expect((await request(pubApp).post('/v1/portal/verify').set('Origin', EVIL).send({})).status).toBe(403);
     expect((await request(pubApp).post('/v1/portal/verify').set('Origin', `${ALLOWED}/`).send({})).status).toBe(403); // not exact
-    // otp/verify-style route: exact Origin, no CSRF header
     const ok = await request(pubApp).post('/v1/portal/verify').set('Origin', ALLOWED).send({});
     expect(ok.status).toBe(200);
     expect((await request(pubApp).get('/v1/portal/login-cookie')).status).toBe(200);

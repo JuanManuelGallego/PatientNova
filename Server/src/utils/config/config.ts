@@ -90,7 +90,6 @@ export const config = {
     portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
     portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
     patientPortal: {
-      otpSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID'),
       confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
       cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
       rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
@@ -168,7 +167,7 @@ export const config = {
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
-    otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 60),
+    selfServe: process.env.ENABLE_SELF_SERVE === 'true',
     whatsappDailyCap: positiveIntEnv('PORTAL_WHATSAPP_DAILY_CAP', 60),
   },
 

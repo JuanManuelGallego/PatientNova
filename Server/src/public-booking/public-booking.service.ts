@@ -3,12 +3,12 @@ import { BookingApprovalMode } from '../../generated/prisma/enums.js';
 import { bookingSlugSchema } from '../booking-settings/booking-settings.schemas.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
+import { config } from '../utils/config/config.js';
 import { localToUtc } from '../utils/time/time-utils.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { generateSlots, isSlotAvailable, type SlotRules } from './slot-engine.js';
 import { publicBookingRepository, type ProviderImageKind } from './public-booking.repository.js';
 import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
-import { portalLoginChannels } from '../portal/portal-contact.js';
 import { ProviderImageNotFoundError, ProviderNotFoundError, PublicAppointmentTypeNotFoundError } from './public-booking.errors.js';
 import type { SlotsQuery } from './public-booking.schemas.js';
 
@@ -62,8 +62,9 @@ export const publicBookingService = {
       timezone: provider.timezone,
       bookingOpen,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
-      loginChannels: portalLoginChannels(),
-      reschedulePolicy: selfBooking
+      selfServe: config.portal.selfServe,
+      whatsappConfirmation: true,
+      reschedulePolicy: config.portal.selfServe && selfBooking
         ? { maxReschedules: provider.maxPatientReschedules, minNoticeHours: provider.minRescheduleNoticeHours }
         : null,
       lastBookableDate: DateTime.now().setZone(provider.timezone).plus({ days: provider.maxHorizonDays - 1 }).toISODate(),

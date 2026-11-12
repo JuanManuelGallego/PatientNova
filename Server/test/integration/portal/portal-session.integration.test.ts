@@ -27,10 +27,10 @@ const ALLOWED = ALLOWED_ORIGIN;
 const DEFAULT_POLICY = '2026-10-19';
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 beforeEach(() => {
   app = buildPortalApp();
   policy.version = DEFAULT_POLICY;

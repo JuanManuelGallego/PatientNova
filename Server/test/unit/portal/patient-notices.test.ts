@@ -210,6 +210,18 @@ describe('renderPatientNotice', () => {
       expect(body).toContain(`Puedes reservar de nuevo aquí: ${links.bookingUrl}`);
     });
 
+    it('confirmation email omits "Ver mis citas" without appointmentsUrl and shows the provider contact line', () => {
+      for (const kind of [ 'confirmation', 'reschedule' ] as const) {
+        const { body } = emailOf(kind, { ...PARAMS[kind], appointmentsUrl: undefined, providerContact: contact });
+        expect(body).not.toContain('Puedes ver, cancelar');
+        expect(body).toContain('comunícate directamente');
+      }
+      const link = emailOf('meeting-link', { ...PARAMS['meeting-link'], appointmentsUrl: undefined, providerContact: contact }).body;
+      expect(link).not.toContain('Puedes ver, cancelar');
+      expect(link).toContain('+573001234567');
+      expect(emailOf('confirmation', PARAMS.confirmation).body).toContain('Puedes ver, cancelar');
+    });
+
     it('no WhatsApp variable is empty for a provider without publicWhatsapp', () => {
       const opts = renderPatientNotice('confirm-link', { ...PARAMS['confirm-link'], providerContact: { phone: null, whatsapp: null } }, WHATSAPP);
       for (const value of Object.values(opts.contentVariables ?? {})) expect(value).toMatch(/^\S.*\S$/);

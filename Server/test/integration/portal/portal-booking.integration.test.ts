@@ -44,10 +44,10 @@ import {
 const ZONE = PORTAL_ZONE;
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });

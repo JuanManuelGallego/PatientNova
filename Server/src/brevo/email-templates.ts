@@ -1,27 +1,11 @@
 /**
  * Spanish (es-CO) email templates for patient-facing transactional mail. Plain text only; the
  * client derives the HTML part. Templates never contain secrets in links: the confirmation points
- * to the portal appointments page, which requires an email OTP login.
+ * to the portal appointments page.
  */
 export interface RenderedEmail {
   subject: string;
   body: string;
-}
-
-export function renderOtpEmail(params: { code: string; providerName: string; ttlMinutes: number }): RenderedEmail {
-  return {
-    subject: 'Tu código de verificación',
-    body: [
-      'Hola,',
-      '',
-      `Tu código para continuar con tu cita con ${params.providerName} es:`,
-      '',
-      params.code,
-      '',
-      `Vence en ${params.ttlMinutes} minutos. Si no lo solicitaste, ignora este mensaje.`,
-      'Nunca compartas este código con nadie.',
-    ].join('\n'),
-  };
 }
 
 export interface PlaceParams {
@@ -54,6 +38,10 @@ function contactProviderLine(providerName: string, contact?: EmailProviderContac
   return [ `Para cancelar o cambiar tu cita, comunícate directamente con ${providerName}: ${parts.join(' o ')}` ];
 }
 
+function appointmentsLines(appointmentsUrl?: string): string[] {
+  return appointmentsUrl ? [ '', APPOINTMENTS_LINK_LINE, appointmentsUrl ] : [];
+}
+
 function contactBlock(providerName: string, contact?: EmailProviderContact): string[] {
   const line = contactProviderLine(providerName, contact);
   return line.length ? [ '', ...line ] : [];
@@ -63,7 +51,8 @@ export function renderBookingConfirmationEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
   timezone: string;
-  appointmentsUrl: string;
+  appointmentsUrl?: string;
+  providerContact?: EmailProviderContact;
 }): RenderedEmail {
   return {
     subject: `Cita confirmada con ${params.providerName}`,
@@ -74,9 +63,8 @@ export function renderBookingConfirmationEmail(params: PlaceParams & {
       '',
       `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
       ...placeLines(params),
-      '',
-      APPOINTMENTS_LINK_LINE,
-      params.appointmentsUrl,
+      ...contactBlock(params.providerName, params.providerContact),
+      ...appointmentsLines(params.appointmentsUrl),
     ].join('\n'),
   };
 }
@@ -86,7 +74,8 @@ export function renderPortalMeetingLinkEmail(params: {
   whenLocal: string;
   timezone: string;
   meetingUrl: string;
-  appointmentsUrl: string;
+  appointmentsUrl?: string;
+  providerContact?: EmailProviderContact;
 }): RenderedEmail {
   return {
     subject: `Enlace de tu videollamada con ${params.providerName}`,
@@ -97,14 +86,13 @@ export function renderPortalMeetingLinkEmail(params: {
       '',
       `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
       `Enlace de la videollamada: ${params.meetingUrl}`,
-      '',
-      APPOINTMENTS_LINK_LINE,
-      params.appointmentsUrl,
+      ...contactBlock(params.providerName, params.providerContact),
+      ...appointmentsLines(params.appointmentsUrl),
     ].join('\n'),
   };
 }
 
-const APPOINTMENTS_LINK_LINE = 'Puedes ver, cancelar o reprogramar tus citas aquí (te pediremos verificar tu correo):';
+const APPOINTMENTS_LINK_LINE = 'Puedes ver, cancelar o reprogramar tus citas aquí:';
 
 /** Patient confirmation of a cancellation made in the portal. `whenLocal` is in the patient's zone. */
 export function renderPortalCancellationEmail(params: {
@@ -132,7 +120,8 @@ export function renderPortalRescheduleEmail(params: PlaceParams & {
   whenLocal: string;
   previousLocal: string;
   timezone: string;
-  appointmentsUrl: string;
+  appointmentsUrl?: string;
+  providerContact?: EmailProviderContact;
 }): RenderedEmail {
   return {
     subject: `Cita reprogramada con ${params.providerName}`,
@@ -144,9 +133,8 @@ export function renderPortalRescheduleEmail(params: PlaceParams & {
       `Nueva fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
       `Fecha anterior: ${params.previousLocal}`,
       ...placeLines(params),
-      '',
-      APPOINTMENTS_LINK_LINE,
-      params.appointmentsUrl,
+      ...contactBlock(params.providerName, params.providerContact),
+      ...appointmentsLines(params.appointmentsUrl),
     ].join('\n'),
   };
 }

@@ -23,8 +23,12 @@ body:json {
 }
 
 docs {
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404) and a `portal_session` cookie. No login issues that cookie now that the
+  codes are gone, so this request only works against a session minted for a future login.
+
   Records data-processing consent at the server's current privacy policy version (the client never
   sends a version). Always 204: it records a consent only for an existing patient with portal
   access, and is a no-op otherwise. Needs the session cookie, the exact Origin and the CSRF token
-  from Verify OTP or Get Session.
+  from Get Session.
 }
