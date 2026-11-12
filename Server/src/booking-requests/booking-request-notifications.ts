@@ -19,7 +19,7 @@ export const BOOKING_REQUEST_NOTIFY_QUEUE = 'booking-request-notify';
  * `received`/`nudge` go to the provider (no patient details); `rejected`/`expired` go to the patient. Approval is
  * confirmed through the appointment's own `portal-booking-notify` jobs.
  */
-export type BookingRequestEvent = 'received' | 'nudge' | 'rejected' | 'expired';
+export type BookingRequestEvent = 'received' | 'nudge' | 'rejected' | 'expired' | 'unconfirmed-expired';
 
 /** Job payload: ids only, never patient data. */
 export interface BookingRequestNotificationJob {
@@ -34,6 +34,8 @@ async function loadRequest(requestId: string) {
     where: { id: requestId },
     select: {
       status: true,
+      confirmedAt: true,
+      confirmationSentAt: true,
       contactChannel: true,
       email: true,
       verifiedPhone: true,
@@ -63,7 +65,9 @@ function isDeliverable(request: LoadedRequest | null, event: BookingRequestEvent
     case 'rejected':
       return request.status === BookingRequestStatus.REJECTED;
     case 'expired':
-      return request.status === BookingRequestStatus.EXPIRED;
+      return request.status === BookingRequestStatus.EXPIRED && request.confirmedAt !== null;
+    case 'unconfirmed-expired':
+      return request.status === BookingRequestStatus.EXPIRED && request.confirmedAt === null && request.confirmationSentAt !== null;
   }
 }
 
@@ -82,7 +86,8 @@ function patientMessage(request: LoadedRequest, event: BookingRequestEvent): Mes
   const route = requestRoute(request);
   if (!route) return null;
   const params = { ...noticeTimes(request), bookingUrl: bookingUrl(request.user.bookingSlug) ?? portalBase() };
-  const kind = event === 'rejected' ? 'request-rejected' : 'request-expired';
+  const kinds = { rejected: 'request-rejected', expired: 'request-expired', 'unconfirmed-expired': 'unconfirmed-expired' } as const;
+  const kind = kinds[event as keyof typeof kinds];
   return { channel: route.channel, opts: renderPatientNotice(kind, params, route) };
 }
 
@@ -130,6 +135,10 @@ export async function deliverBookingRequestNotification(job: BookingRequestNotif
     logger.info({ requestId, event }, 'Booking request notification skipped — request no longer in the expected state');
     return;
   }
+  if (event === 'unconfirmed-expired' && request.contactChannel !== Channel.EMAIL && !config.twilio.patientPortal.unconfirmedExpiredSid) {
+    logger.info({ requestId, event }, 'Booking request notification skipped — WhatsApp template not configured');
+    return;
+  }
   const message = PROVIDER_EVENTS.has(event) ? providerMessage(request, event) : patientMessage(request, event);
   if (!message) {
     logger.info({ requestId, event }, 'Booking request notification skipped — disabled or no address');
@@ -168,6 +177,17 @@ export async function enqueueBookingRequestNotifications(
   for (const requestId of requestIds) {
     await getBoss().send(BOOKING_REQUEST_NOTIFY_QUEUE, { requestId, event } satisfies BookingRequestNotificationJob, { db });
   }
+}
+
+export interface ExpiredHolds {
+  all: string[];
+  expired: string[];
+  unconfirmedExpired: string[];
+}
+
+export async function deliverExpiredHoldsNow(holds: ExpiredHolds): Promise<void> {
+  await deliverBookingRequestNotificationsNow('expired', holds.expired);
+  await deliverBookingRequestNotificationsNow('unconfirmed-expired', holds.unconfirmedExpired);
 }
 
 /** Without the scheduler: sent after commit, best effort (a failure never undoes the action that caused it). */

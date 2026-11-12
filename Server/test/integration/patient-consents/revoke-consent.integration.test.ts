@@ -7,7 +7,6 @@ import { config } from '../../../src/utils/config/config.js';
 import { auditLogService } from '../../../src/audit-log/audit-log.service.js';
 import { ensureCurrentConsent, hasCurrentConsent } from '../../../src/patient-consents/patient-consent.service.js';
 import { restorePatientAccess, revokePatientConsents } from '../../../src/patient-consents/consent-revocation.service.js';
-import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
 import { sendReminderWorker } from '../../../src/scheduler/workers/send-reminder.js';
 import { dispatchMessage } from '../../../src/scheduler/dispatch.js';
 import {
@@ -21,7 +20,7 @@ import {
   ReminderStatus,
 } from '../../../generated/prisma/enums.js';
 import { createTestPatient, createTestUser } from '../helpers.js';
-import { createLiveProvider, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
+import { createLiveProvider, createPendingRequestWithin, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
 
 const POLICY = '2026-11-06';
 const OLD_POLICY = '2026-10-01';
@@ -49,7 +48,7 @@ const reminderFor = (userId: string, patientId: string, sendAt: Date) => prisma.
 
 async function liveRequest(provider: LiveProvider, slot: string, email: string) {
   const start = new Date(slot);
-  return prisma.$transaction(async (tx) => (await bookingRequestService.createHoldWithin(tx, provider.id, {
+  return prisma.$transaction(async (tx) => (await createPendingRequestWithin(tx, provider.id, {
     kind: BookingRequestKind.NEW,
     email,
     name: 'Lucia',
@@ -222,6 +221,24 @@ describe('revokePatientConsents', () => {
       expect(result.requestsCancelled).toBe(1);
       expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: mine.id } })).status).toBe(BookingRequestStatus.CANCELLED);
       expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: other.id } })).status).toBe(BookingRequestStatus.PENDING);
+    });
+
+    it('also cancels a live unconfirmed hold of the patient contact, auditing its real previous status', async () => {
+      const provider = await createLiveProvider();
+      const patient = await createTestPatient(provider.id);
+      const [ first ] = await slotStarts(provider);
+      const held = await liveRequest(provider, first!, patient.email!);
+      await prisma.bookingRequest.update({ where: { id: held.id }, data: { status: BookingRequestStatus.UNCONFIRMED } });
+
+      const result = await revokePatientConsents(patient.id);
+
+      expect(result.requestsCancelled).toBe(1);
+      expect(await prisma.bookingRequest.findUniqueOrThrow({ where: { id: held.id } }))
+        .toMatchObject({ status: BookingRequestStatus.CANCELLED, resolvedBy: 'system' });
+      const audit = await prisma.auditLog.findFirstOrThrow({
+        where: { entityType: EntityType.BOOKING_REQUEST, entityId: held.id, actionType: ActionType.UPDATE },
+      });
+      expect(JSON.stringify(audit.fieldsBefore)).toContain('UNCONFIRMED');
     });
   });
 });

@@ -73,31 +73,38 @@ export const providerRequestDetailSelect = {
   consentUserAgent: true,
 } as const;
 
+export const HOLDING_STATUSES = [ BookingRequestStatus.PENDING, BookingRequestStatus.UNCONFIRMED ];
+
 const RESOLVED_STATUSES = [ BookingRequestStatus.APPROVED, BookingRequestStatus.REJECTED, BookingRequestStatus.CANCELLED ];
 
 function tabWhere(tab: BookingRequestTab, now: Date): Prisma.BookingRequestWhereInput {
   switch (tab) {
     case 'pending':
-      return { status: BookingRequestStatus.PENDING, holdExpiresAt: { gt: now } };
+      return { status: BookingRequestStatus.PENDING, confirmedAt: { not: null }, holdExpiresAt: { gt: now } };
     case 'expired':
       return {
+        confirmedAt: { not: null },
         OR: [
           { status: BookingRequestStatus.EXPIRED },
           { status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
         ],
       };
     case 'resolved':
-      return { status: { in: RESOLVED_STATUSES } };
+      return { status: { in: RESOLVED_STATUSES }, confirmedAt: { not: null } };
   }
 }
 
 function liveHoldWhere(userId: string, now: Date, opts: LiveHoldOptions) {
   return {
     userId,
-    status: BookingRequestStatus.PENDING,
+    status: { in: HOLDING_STATUSES },
     holdExpiresAt: { gt: now },
     ...(opts.excludeRequestId && { NOT: { id: opts.excludeRequestId } }),
   };
+}
+
+function selfServeRequestWhere(userId: string, now: Date) {
+  return { ...liveHoldWhere(userId, now, {}), status: BookingRequestStatus.PENDING, confirmedAt: { not: null } };
 }
 
 export const bookingRequestRepository = {
@@ -131,15 +138,21 @@ export const bookingRequestRepository = {
     opts: LiveHoldOptions = {},
   ): Promise<{ startAt: Date; endAt: Date } | null> {
     return tx.bookingRequest.findFirst({
-      where: { ...liveHoldWhere(userId, now, opts), startAt: { lt: end }, endAt: { gt: start } },
+      where: {
+        ...liveHoldWhere(userId, now, opts),
+        status: BookingRequestStatus.PENDING,
+        confirmedAt: { not: null },
+        startAt: { lt: end },
+        endAt: { gt: start },
+      },
       select: { startAt: true, endAt: true },
     });
   },
 
   async findStale(userId: string, now: Date, tx: TransactionClient) {
     return tx.bookingRequest.findMany({
-      where: { userId, status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
-      select: { id: true, holdExpiresAt: true },
+      where: { userId, status: { in: HOLDING_STATUSES }, holdExpiresAt: { lte: now } },
+      select: { id: true, status: true, confirmedAt: true, confirmationSentAt: true, holdExpiresAt: true },
       orderBy: { holdExpiresAt: 'asc' },
     });
   },
@@ -147,18 +160,37 @@ export const bookingRequestRepository = {
   async markExpired(ids: string[], now: Date, tx: TransactionClient): Promise<void> {
     if (ids.length === 0) return;
     await tx.bookingRequest.updateMany({
-      where: { id: { in: ids }, status: BookingRequestStatus.PENDING },
+      where: { id: { in: ids }, status: { in: HOLDING_STATUSES } },
       data: { status: BookingRequestStatus.EXPIRED, resolvedAt: now },
     });
   },
+
 
   async countLive(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput = {}): Promise<number> {
     return tx.bookingRequest.count({ where: { ...liveHoldWhere(userId, now, {}), ...own } });
   },
 
+  async countLivePending(userId: string, now: Date, tx: TransactionClient): Promise<number> {
+    return tx.bookingRequest.count({ where: { userId, status: BookingRequestStatus.PENDING, holdExpiresAt: { gt: now } } });
+  },
+
+  async countLiveUnconfirmed(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput = {}): Promise<number> {
+    return tx.bookingRequest.count({ where: { userId, status: BookingRequestStatus.UNCONFIRMED, holdExpiresAt: { gt: now }, ...own } });
+  },
+
+  async countLiveConfirmed(userId: string, now: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput): Promise<number> {
+    return tx.bookingRequest.count({
+      where: { userId, status: BookingRequestStatus.PENDING, confirmedAt: { not: null }, holdExpiresAt: { gt: now }, ...own },
+    });
+  },
+
+  async countCreatedSince(userId: string, since: Date, tx: TransactionClient, own: Prisma.BookingRequestWhereInput): Promise<number> {
+    return tx.bookingRequest.count({ where: { userId, createdAt: { gte: since }, ...own } });
+  },
+
   async listLiveOwn(userId: string, own: Prisma.BookingRequestWhereInput, now: Date, tx?: TransactionClient) {
     return (tx ?? prisma).bookingRequest.findMany({
-      where: { ...liveHoldWhere(userId, now, {}), ...own },
+      where: { ...selfServeRequestWhere(userId, now), ...own },
       select: requestForDtoSelect,
       orderBy: { startAt: 'asc' },
     });
@@ -170,16 +202,24 @@ export const bookingRequestRepository = {
 
   async findLiveOwn(userId: string, own: Prisma.BookingRequestWhereInput, id: string, now: Date, tx: TransactionClient) {
     return tx.bookingRequest.findFirst({
-      where: { ...liveHoldWhere(userId, now, {}), ...own, id },
+      where: { ...selfServeRequestWhere(userId, now), ...own, id },
       select: { id: true, startAt: true, endAt: true },
     });
   },
 
-  async cancel(id: string, now: Date, tx: TransactionClient): Promise<void> {
+  async cancel(id: string, now: Date, tx: TransactionClient, resolvedBy: 'patient' | 'system' = 'patient'): Promise<void> {
     await tx.bookingRequest.update({
       where: { id },
-      data: { status: BookingRequestStatus.CANCELLED, resolvedAt: now, resolvedBy: 'patient' },
+      data: { status: BookingRequestStatus.CANCELLED, resolvedAt: now, resolvedBy },
     });
+  },
+
+  async markConfirmedPending(
+    id: string,
+    data: { kind: BookingRequestKind; confirmedAt: Date; holdExpiresAt: Date },
+    tx: TransactionClient,
+  ): Promise<void> {
+    await tx.bookingRequest.update({ where: { id }, data: { ...data, status: BookingRequestStatus.PENDING } });
   },
 
   async create(data: CreateBookingRequestData, tx: TransactionClient) {
@@ -203,8 +243,49 @@ export const bookingRequestRepository = {
         consentAcceptedAt: data.consentAcceptedAt,
         consentIp: data.consentIp?.slice(0, 64) ?? null,
         consentUserAgent: data.consentUserAgent?.slice(0, 512) ?? null,
+        confirmedAt: data.consentAcceptedAt,
       },
     });
+  },
+
+  async createUnconfirmed(data: CreateBookingRequestData & { confirmTokenHash: string; releaseTokenHash: string }, tx: TransactionClient) {
+    return tx.bookingRequest.create({
+      data: {
+        userId: data.userId,
+        kind: data.kind ?? 'NEW',
+        status: BookingRequestStatus.UNCONFIRMED,
+        contactChannel: data.contactChannel ?? 'EMAIL',
+        email: data.email,
+        verifiedPhone: data.verifiedPhone ?? null,
+        name: data.name,
+        lastName: data.lastName,
+        phone: data.phone ?? null,
+        typeId: data.typeId,
+        locationId: data.locationId,
+        startAt: data.startAt,
+        endAt: data.endAt,
+        patientTimezone: data.patientTimezone,
+        holdExpiresAt: data.holdExpiresAt,
+        policyVersion: data.policyVersion,
+        consentAcceptedAt: data.consentAcceptedAt,
+        consentIp: data.consentIp?.slice(0, 64) ?? null,
+        consentUserAgent: data.consentUserAgent?.slice(0, 512) ?? null,
+        confirmTokenHash: data.confirmTokenHash,
+        releaseTokenHash: data.releaseTokenHash,
+      },
+    });
+  },
+
+  async findByConfirmTokenHash(hash: string, tx?: TransactionClient) {
+    return (tx ?? prisma).bookingRequest.findUnique({ where: { confirmTokenHash: hash } });
+  },
+
+  async findByReleaseTokenHash(hash: string, tx: TransactionClient) {
+    return tx.bookingRequest.findUnique({ where: { releaseTokenHash: hash } });
+  },
+
+  async markConfirmationSent(id: string, now: Date): Promise<void> {
+    await prisma.bookingRequest.update({ where: { id }, data: { confirmationSentAt: now } });
   },
 
   async listForProvider(
@@ -236,11 +317,13 @@ export const bookingRequestRepository = {
   },
 
   async findForProvider(userId: string, id: string, tx?: TransactionClient) {
-    return (tx ?? prisma).bookingRequest.findFirst({ where: { id, userId }, select: providerRequestDetailSelect });
+    return (tx ?? prisma).bookingRequest.findFirst({ where: { id, userId, confirmedAt: { not: null } }, select: providerRequestDetailSelect });
   },
 
   async countPending(userId: string, now: Date): Promise<number> {
-    return prisma.bookingRequest.count({ where: liveHoldWhere(userId, now, {}) });
+    return prisma.bookingRequest.count({
+      where: { userId, status: BookingRequestStatus.PENDING, confirmedAt: { not: null }, holdExpiresAt: { gt: now } },
+    });
   },
 
   async resolve(
@@ -257,10 +340,9 @@ export const bookingRequestRepository = {
     await tx.bookingRequest.update({ where: { id }, data });
   },
 
-  /** Providers holding PENDING rows past expiry; the sweep expires each under its own lock. */
   async providersWithStale(now: Date): Promise<string[]> {
     const rows = await prisma.bookingRequest.findMany({
-      where: { status: BookingRequestStatus.PENDING, holdExpiresAt: { lte: now } },
+      where: { status: { in: HOLDING_STATUSES }, holdExpiresAt: { lte: now } },
       select: { userId: true },
       distinct: [ 'userId' ],
     });
@@ -272,6 +354,7 @@ export const bookingRequestRepository = {
     return prisma.bookingRequest.findMany({
       where: {
         status: BookingRequestStatus.PENDING,
+        confirmedAt: { not: null },
         nudgedAt: null,
         holdExpiresAt: { gt: now, lte: new Date(now.getTime() + windowMs) },
       },
@@ -288,10 +371,16 @@ export const bookingRequestRepository = {
     return count === 1;
   },
 
-  /** Resolved requests are kept for the inbox history, then deleted; PENDING rows are never purged. */
   async purgeResolvedBefore(before: Date): Promise<number> {
     const { count } = await prisma.bookingRequest.deleteMany({
-      where: { status: { not: BookingRequestStatus.PENDING }, updatedAt: { lt: before } },
+      where: { status: { notIn: HOLDING_STATUSES }, updatedAt: { lt: before } },
+    });
+    return count;
+  },
+
+  async purgeUnconfirmedBefore(before: Date): Promise<number> {
+    const { count } = await prisma.bookingRequest.deleteMany({
+      where: { confirmedAt: null, status: { notIn: HOLDING_STATUSES }, updatedAt: { lt: before } },
     });
     return count;
   },

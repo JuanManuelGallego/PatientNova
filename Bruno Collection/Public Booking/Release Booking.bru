@@ -1,0 +1,28 @@
+meta {
+  name: Release Booking
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/public/booking-confirmations/release
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "releaseToken": "{{releaseToken}}"
+  }
+}
+
+docs {
+  Frees an unconfirmed hold right away ("¿Te equivocaste? Corregir"), for example after mistyping the
+  contact. Use the `releaseToken` that Start Booking stored; it is a different token from the one in the
+  link and is never sent in a message. 204 on success. One 404 "Booking not found" for every other case
+  (unknown token, already confirmed, expired or released).
+}

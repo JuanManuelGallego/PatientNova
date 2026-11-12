@@ -152,6 +152,7 @@ describe('GET /v1/public/providers/:slug', () => {
       bookingOpen: true,
       approvalRequired: false,
       loginChannels: [ 'EMAIL', 'WHATSAPP' ],
+      whatsappConfirmation: true,
       reschedulePolicy: { maxReschedules: 2, minNoticeHours: 0 },
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],
@@ -160,6 +161,20 @@ describe('GET /v1/public/providers/:slug', () => {
     const text = JSON.stringify(res.body);
     expect(text).not.toContain(p.id);
     expect(text).not.toContain('Piso 2');
+  });
+
+  it('offers WhatsApp confirmation only while the confirm-link template is configured', async () => {
+    const p = await createLiveProvider();
+    const sids = config.twilio.patientPortal as { confirmLinkSid: string | null };
+    const was = sids.confirmLinkSid;
+    try {
+      sids.confirmLinkSid = null;
+      expect((await get(`/${p.slug}`)).body.data.whatsappConfirmation).toBe(false);
+      sids.confirmLinkSid = 'HXconfirm';
+      expect((await get(`/${p.slug}`)).body.data.whatsappConfirmation).toBe(true);
+    } finally {
+      sids.confirmLinkSid = was;
+    }
   });
 
   it('shows the optional public profile, and only the contacts chosen for it', async () => {

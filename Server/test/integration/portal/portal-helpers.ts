@@ -2,7 +2,11 @@ import express from 'express';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { prisma } from '../../../src/utils/prisma/prisma-client.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { prisma, type TransactionClient } from '../../../src/utils/prisma/prisma-client.js';
+import { bookingRequestService, type NewBookingRequest } from '../../../src/booking-requests/booking-request.service.js';
+import { bookingRequestRepository } from '../../../src/booking-requests/booking-request.repository.js';
+import { holdExpiry } from '../../../src/booking-requests/booking-request.constants.js';
 import { requestId } from '../../../src/middlewares/request-id.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';
 import { authenticate } from '../../../src/middlewares/authenticate.js';
@@ -11,7 +15,7 @@ import { portalSecret, signPortalToken } from '../../../src/auth/tokens.js';
 import { PORTAL_COOKIE_NAME } from '../../../src/auth/portal-cookie.js';
 import { createCsrfToken } from '../../../src/utils/security/csrf.js';
 import { DateTime } from 'luxon';
-import { Channel, ConsentKind } from '../../../generated/prisma/enums.js';
+import { BookingRequestKind, Channel, ConsentKind } from '../../../generated/prisma/enums.js';
 import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
 import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createTestAppointmentType, createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
@@ -123,4 +127,18 @@ export async function createConsentedPatient(userId: string) {
     data: { patientId: patient.id, userId, kind: ConsentKind.DATA_PROCESSING, policyVersion: PRIVACY_POLICY_VERSION, acceptedAt: new Date() },
   });
   return patient;
+}
+
+export async function createPendingRequestWithin(tx: TransactionClient, userId: string, input: NewBookingRequest, now: Date = new Date()) {
+  const { request, expiredIds } = await bookingRequestService.createUnconfirmedWithin(tx, userId, {
+    ...input,
+    confirmTokenHash: createHash('sha256').update(randomUUID()).digest('hex'),
+    releaseTokenHash: createHash('sha256').update(randomUUID()).digest('hex'),
+  }, now);
+  await bookingRequestRepository.markConfirmedPending(
+    request.id,
+    { kind: input.kind ?? BookingRequestKind.NEW, confirmedAt: now, holdExpiresAt: holdExpiry(now, input.startAt) },
+    tx,
+  );
+  return { request: await tx.bookingRequest.findUniqueOrThrow({ where: { id: request.id } }), expiredIds };
 }

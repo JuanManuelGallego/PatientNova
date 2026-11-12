@@ -1,5 +1,10 @@
 import { ActionType, BookingRequestKind, BookingRequestStatus, EntityType } from '../../generated/prisma/enums.js';
-import { deliverBookingRequestNotificationsNow, sendRequestReceipt } from '../booking-requests/booking-request-notifications.js';
+import {
+  deliverBookingRequestNotificationsNow,
+  deliverExpiredHoldsNow,
+  sendRequestReceipt,
+  type ExpiredHolds,
+} from '../booking-requests/booking-request-notifications.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { ONE_MINUTE_MS } from '../utils/config/constants.js';
@@ -29,7 +34,7 @@ import type { PortalSessionContext } from './portal-session.middleware.js';
 export interface HeldSlot {
   request: PortalRequestDto;
   /** Stale holds expired on the way; delivered after commit by `afterRequestCreated`. */
-  expiredIds: string[];
+  expiredIds: ExpiredHolds;
 }
 
 /** The caller holds the provider lock and has already checked `isSlotFree` (holds counted) on this `tx`. */
@@ -84,7 +89,7 @@ export async function holdSlotWithin(
 export async function afterRequestCreated(held: HeldSlot): Promise<void> {
   await sendRequestReceipt(held.request.id);
   await deliverBookingRequestNotificationsNow('received', [ held.request.id ]);
-  await deliverBookingRequestNotificationsNow('expired', held.expiredIds);
+  await deliverExpiredHoldsNow(held.expiredIds);
 }
 
 export const portalRequestService = {

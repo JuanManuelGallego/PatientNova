@@ -1,0 +1,63 @@
+meta {
+  name: Start Booking
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/public/providers/{{bookingSlug}}/bookings
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "typeId": "{{typeId}}",
+    "locationId": "{{locationId}}",
+    "startUtc": "{{slotStartUtc}}",
+    "patientTimezone": "America/Bogota",
+    "consentAccepted": true,
+    "captchaToken": "{{captchaToken}}",
+    "patient": {
+      "name": "Paciente",
+      "lastName": "Ejemplo"
+    },
+    "contact": {
+      "channel": "EMAIL",
+      "email": "{{portalEmail}}"
+    }
+  }
+}
+
+script:post-response {
+  // Lets this client free the slot (Release Booking). Never sent in a message.
+  const token = res.body?.data?.releaseToken;
+  if (token) bru.setVar("releaseToken", token);
+}
+
+docs {
+  Starts a booking without any login. Run Public Booking > Get Slots first (it stores `slotStartUtc`).
+  Nothing is looked up or booked here: the server holds the time as UNCONFIRMED for 15 minutes and
+  sends a confirmation link (`{PORTAL_URL}/book/confirmar/<token>`) to the contact. The booking exists
+  only once the patient opens the link and confirms (View Confirmation, Confirm Booking).
+
+  Needs a Turnstile token in `captchaToken` (action `booking`; the test secret accepts any value). The
+  body is strict. `contact` is `{ channel: "EMAIL", email }` or `{ channel: "WHATSAPP", phone }` (E.164);
+  `patient.phone` (optional) is only for EMAIL. Limited to 10 starts per IP per 15 minutes.
+
+  202 `{ channel, contact, startUtc, holdExpiresAt, approvalRequired, releaseToken }`: the same shape
+  for every contact, whether or not it belongs to a patient. The link is in the email (or WhatsApp);
+  copy its last path segment into `confirmationToken` for the next requests. `releaseToken` is stored
+  for Release Booking.
+
+  Errors: 404 "Provider not found"; 409 "Slot no longer available" (taken or held by another patient);
+  409 about WhatsApp when it is unavailable right now (template not configured yet, or a per-number,
+  per-provider or daily cap: use email); 409 "Request limit reached" when the contact already holds 3
+  unconfirmed bookings (its confirmed requests are not counted here: that would reveal them); 429 when the
+  provider already has 5 unconfirmed ones, or the email already started 5 bookings with this provider in
+  the last hour.
+}

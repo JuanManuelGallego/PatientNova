@@ -72,7 +72,7 @@ export const publicBookingRepository = {
   async findBookableLocation(userId: string, locationId: string, tx?: TransactionClient) {
     return (tx ?? prisma).appointmentLocation.findFirst({
       where: { id: locationId, userId, ...bookable },
-      select: { id: true, isVirtual: true },
+      select: { id: true, isVirtual: true, name: true, address: true },
     });
   },
 

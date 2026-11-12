@@ -27,6 +27,11 @@ function portalAuthSecret(): string {
   return secret;
 }
 
+function optionalEnv(key: string): string | null {
+  return process.env[ key ]?.trim() || null;
+}
+
+
 function positiveIntEnv(key: string, fallback: number): number {
   const raw = process.env[ key ]?.trim();
   if (!raw) return fallback;
@@ -96,6 +101,8 @@ export const config = {
       requestReceivedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID'),
       requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
       requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
+      confirmLinkSid: optionalEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID'),
+      unconfirmedExpiredSid: optionalEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID'),
     },
   },
 
@@ -167,6 +174,7 @@ export const config = {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
     otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 60),
+    whatsappDailyCap: positiveIntEnv('PORTAL_WHATSAPP_DAILY_CAP', 60),
   },
 
   captcha: captchaConfig(),

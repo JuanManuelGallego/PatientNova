@@ -6,6 +6,8 @@ import {
   renderBookingRequestExpiredEmail,
   renderBookingRequestReceivedEmail,
   renderBookingRequestRejectedEmail,
+  renderConfirmLinkEmail,
+  renderUnconfirmedExpiredEmail,
   renderPortalCancellationEmail,
   renderPortalMeetingLinkEmail,
   renderPortalRescheduleEmail,
@@ -14,6 +16,20 @@ import {
 } from '../brevo/email-templates.js';
 import type { DispatchOpts } from '../scheduler/dispatch.js';
 import type { PatientRoute } from './patient-route.js';
+
+export interface ProviderContact {
+  phone: string | null;
+  whatsapp: string | null;
+}
+
+export const providerContactOf = (p: { publicPhone: string | null; publicWhatsapp: string | null }): ProviderContact => ({
+  phone: p.publicPhone,
+  whatsapp: p.publicWhatsapp,
+});
+
+export function confirmationUrl(token: string): string {
+  return `${config.portal.url.replace(/\/+$/, '')}/book/confirmar/${token}`;
+}
 
 interface Timed {
   providerName: string;
@@ -29,6 +45,8 @@ export interface PatientNoticeParams {
   'request-received': Timed & { appointmentsUrl: string };
   'request-rejected': Timed & { bookingUrl: string };
   'request-expired': Timed & { bookingUrl: string };
+  'confirm-link': Timed & PlaceParams & { token: string; confirmUrl: string; approvalRequired: boolean; providerContact: ProviderContact };
+  'unconfirmed-expired': Timed & { bookingUrl: string };
 }
 
 export type PatientNoticeKind = keyof PatientNoticeParams;
@@ -45,6 +63,11 @@ interface NoticeTemplate<P> {
 }
 
 const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
+
+function configuredSid(sid: string | null, kind: PatientNoticeKind): string {
+  if (!sid) throw new Error(`WhatsApp template for ${kind} is not configured`);
+  return sid;
+}
 
 const emailTimes = (p: Timed) => ({
   providerName: p.providerName,
@@ -114,6 +137,23 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
     email: (p) => renderBookingRequestExpiredEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({ contentSid: config.twilio.patientPortal.requestExpiredSid, contentVariables: slotVariables(p) }),
     sms: (p) => `Tu solicitud de cita con ${p.providerName} para el ${formatWhen(p.at, p.timezone)} venció sin ser confirmada.`,
+  },
+  'confirm-link': {
+    email: (p) => renderConfirmLinkEmail({ ...p, ...emailTimes(p) }),
+    whatsapp: (p) => ({
+      contentSid: configuredSid(config.twilio.patientPortal.confirmLinkSid, 'confirm-link'),
+      contentVariables: { ...slotVariables(p), '4': p.token },
+    }),
+    sms: (p) => p.approvalRequired
+      ? `Tu solicitud de cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)} todavía no se ha enviado. Confírmala en los próximos 15 minutos: ${p.confirmUrl}`
+      : `Tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)} todavía no está confirmada. Confírmala en los próximos 15 minutos: ${p.confirmUrl}`,
+  },
+  'unconfirmed-expired': {    email: (p) => renderUnconfirmedExpiredEmail({ ...p, ...emailTimes(p) }),
+    whatsapp: (p) => ({
+      contentSid: configuredSid(config.twilio.patientPortal.unconfirmedExpiredSid, 'unconfirmed-expired'),
+      contentVariables: slotVariables(p),
+    }),
+    sms: (p) => `No confirmaste tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)}, así que el horario quedó libre. Puedes reservar de nuevo: ${p.bookingUrl}`,
   },
 };
 

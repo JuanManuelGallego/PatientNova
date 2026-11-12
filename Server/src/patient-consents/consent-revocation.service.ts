@@ -3,7 +3,7 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
-import { bookingRequestRepository } from '../booking-requests/booking-request.repository.js';
+import { bookingRequestRepository, HOLDING_STATUSES } from '../booking-requests/booking-request.repository.js';
 import { patientConsentRepository } from './patient-consent.repository.js';
 
 const PRIVACY_OPERATOR = {
@@ -56,17 +56,17 @@ async function cancelLiveRequests(tx: TransactionClient, patientId: string, pati
   const requests = await tx.bookingRequest.findMany({
     where: {
       userId: patient.userId,
-      status: BookingRequestStatus.PENDING,
+      status: { in: HOLDING_STATUSES },
       OR: [
         { patientId },
         ...(patient.emailHash ? [ { emailHash: patient.emailHash } ] : []),
         ...(phones.length > 0 ? [ { verifiedPhoneHash: { in: phones } } ] : []),
       ],
     },
-    select: { id: true },
+    select: { id: true, status: true },
   });
-  for (const { id } of requests) {
-    await bookingRequestRepository.cancel(id, now, tx);
+  for (const { id, status } of requests) {
+    await bookingRequestRepository.cancel(id, now, tx, 'system');
     await logAudit({
       entityType: EntityType.BOOKING_REQUEST,
       entityId: id,
@@ -74,7 +74,7 @@ async function cancelLiveRequests(tx: TransactionClient, patientId: string, pati
       actionType: ActionType.UPDATE,
       description: 'Solicitud de reserva cancelada por revocación del consentimiento',
       affectedFields: [ 'status' ],
-      fieldsBefore: { status: BookingRequestStatus.PENDING },
+      fieldsBefore: { status },
       fieldsAfter: { status: BookingRequestStatus.CANCELLED },
       tx,
       required: true,

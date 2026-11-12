@@ -6,6 +6,7 @@ import { apiError } from '../utils/api/api-utils.js';
 import { publicBookingRouter } from '../public-booking/public-booking.routes.js';
 import { createOtpRequestRouter, createOtpVerifyRouter } from './portal-otp.routes.js';
 import { createPortalSessionRoutes } from './portal-session.routes.js';
+import { createBookingConfirmationRoutes } from './booking-confirmation.routes.js';
 import { createPortalBookingRoutes } from './portal-booking.routes.js';
 
 export const PUBLIC_BODY_LIMIT = '10kb';
@@ -17,6 +18,7 @@ export function createPublicApiRouter(): Router {
   router.use(express.json({ limit: PUBLIC_BODY_LIMIT }));
   router.use('/providers', createOtpRequestRouter());
   router.use('/providers', publicBookingRouter);
+  router.use(createBookingConfirmationRoutes());
   return router;
 }
 

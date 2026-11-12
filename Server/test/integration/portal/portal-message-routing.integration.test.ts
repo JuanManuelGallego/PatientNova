@@ -249,7 +249,7 @@ describe('notices of requests', () => {
         userId: provider.id, email, name: 'Lucia', lastName: 'Rojas', phone: WHATSAPP_NUMBER, status,
         typeId: provider.typeId, locationId: provider.locationId, startAt, endAt: new Date(startAt.getTime() + 3_600_000),
         patientTimezone: 'America/Bogota', holdExpiresAt: new Date(Date.now() + 3_600_000),
-        policyVersion: 'v1', consentAcceptedAt: new Date(),
+        policyVersion: 'v1', consentAcceptedAt: new Date(), confirmedAt: new Date(),
       },
     });
     return { request, email };
