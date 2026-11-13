@@ -2,7 +2,6 @@ import { ActionType, BookingRequestStatus, Channel, EntityType } from '../../gen
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { ONE_HOUR_MS, ONE_MINUTE_MS } from '../utils/config/constants.js';
-import { config } from '../utils/config/config.js';
 import { logger } from '../utils/api/logger.js';
 import { phoneHash } from '../utils/encryption/blind-index.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
@@ -133,7 +132,6 @@ export const bookingStartService = {
     const provider = await publicBookingService.resolveProvider(slug, 'reachable');
     const userId = provider.id;
     const contact = contactOf(body);
-    if (isPhoneContact(contact) && !config.twilio.patientPortal.confirmLinkSid) throw new WhatsAppUnavailableError();
     const confirm = issueRequestToken();
     const release = issueRequestToken();
     const start = new Date(body.startUtc);

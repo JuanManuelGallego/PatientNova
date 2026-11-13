@@ -179,26 +179,6 @@ describe('POST /v1/public/providers/:slug/bookings', () => {
     expect(errors).toHaveBeenCalledWith('Portal WhatsApp cap reached: paid-daily-cap');
   });
 
-  it('without the confirm-link template a WhatsApp start answers 409 and holds nothing; email still works', async () => {
-    const provider = await createLiveProvider();
-    const [ s1, s2 ] = await slotStarts(provider);
-    const sids = config.twilio.patientPortal as { confirmLinkSid: string | null };
-    const was = sids.confirmLinkSid;
-    sids.confirmLinkSid = null;
-    try {
-      const res = await startBooking(provider.slug, waBody(provider, s1!));
-
-      expect(res.status).toBe(409);
-      expect(res.body.error).toBe('Por ahora no podemos enviar mensajes por WhatsApp. Usa tu correo para reservar.');
-      expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
-      expect(await prisma.auditLog.count({ where: { userId: provider.id } })).toBe(0);
-      expect(mocks.dispatch).not.toHaveBeenCalled();
-      expect((await startBooking(provider.slug, emailBody(provider, s2!))).status).toBe(202);
-    } finally {
-      sids.confirmLinkSid = was;
-    }
-  });
-
   it('the 6th live unconfirmed hold for a provider answers 429; confirmed PENDING requests do not count', async () => {
     const provider = await createLiveProvider();
     const starts = await slotStarts(provider);

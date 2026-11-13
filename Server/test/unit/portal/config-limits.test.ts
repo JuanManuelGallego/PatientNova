@@ -48,23 +48,3 @@ describe('PORTAL_WHATSAPP_DAILY_CAP', () => {
     await expect(loadWhatsAppCap(value)).rejects.toThrow('PORTAL_WHATSAPP_DAILY_CAP must be a positive integer');
   });
 });
-
-
-async function loadSids(confirmLink: string, unconfirmed: string) {
-  vi.resetModules();
-  vi.stubEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID', confirmLink);
-  vi.stubEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID', unconfirmed);
-  const { config } = await import('../../../src/utils/config/config.js');
-  const { confirmLinkSid, unconfirmedExpiredSid } = config.twilio.patientPortal;
-  return { confirmLinkSid, unconfirmedExpiredSid };
-}
-
-describe('WhatsApp confirmation template SIDs (optional until Meta approves them)', () => {
-  it('boots without them and reads a blank value as null', async () => {
-    await expect(loadSids('', '  ')).resolves.toEqual({ confirmLinkSid: null, unconfirmedExpiredSid: null });
-  });
-
-  it('reads configured values', async () => {
-    await expect(loadSids('HXconfirm', 'HXexpired')).resolves.toEqual({ confirmLinkSid: 'HXconfirm', unconfirmedExpiredSid: 'HXexpired' });
-  });
-});

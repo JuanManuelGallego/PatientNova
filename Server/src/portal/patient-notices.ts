@@ -64,11 +64,6 @@ interface NoticeTemplate<P> {
 
 const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
 
-function configuredSid(sid: string | null, kind: PatientNoticeKind): string {
-  if (!sid) throw new Error(`WhatsApp template for ${kind} is not configured`);
-  return sid;
-}
-
 const emailTimes = (p: Timed) => ({
   providerName: p.providerName,
   whenLocal: formatWhen(p.at, p.timezone),
@@ -141,7 +136,7 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   'confirm-link': {
     email: (p) => renderConfirmLinkEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: configuredSid(config.twilio.patientPortal.confirmLinkSid, 'confirm-link'),
+      contentSid: config.twilio.patientPortal.confirmLinkSid,
       contentVariables: { ...slotVariables(p), '4': p.token },
     }),
     sms: (p) => p.approvalRequired
@@ -150,7 +145,7 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   },
   'unconfirmed-expired': {    email: (p) => renderUnconfirmedExpiredEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: configuredSid(config.twilio.patientPortal.unconfirmedExpiredSid, 'unconfirmed-expired'),
+      contentSid: config.twilio.patientPortal.unconfirmedExpiredSid,
       contentVariables: slotVariables(p),
     }),
     sms: (p) => `No confirmaste tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)}, así que el horario quedó libre. Puedes reservar de nuevo: ${p.bookingUrl}`,

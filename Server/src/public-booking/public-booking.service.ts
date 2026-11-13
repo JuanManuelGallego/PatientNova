@@ -3,7 +3,6 @@ import { BookingApprovalMode } from '../../generated/prisma/enums.js';
 import { bookingSlugSchema } from '../booking-settings/booking-settings.schemas.js';
 import { bookingSettingsRepository } from '../booking-settings/booking-settings.repository.js';
 import { bookingSettingsService } from '../booking-settings/booking-settings.service.js';
-import { config } from '../utils/config/config.js';
 import { localToUtc } from '../utils/time/time-utils.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { generateSlots, isSlotAvailable, type SlotRules } from './slot-engine.js';
@@ -64,7 +63,6 @@ export const publicBookingService = {
       bookingOpen,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       loginChannels: portalLoginChannels(),
-      whatsappConfirmation: config.twilio.patientPortal.confirmLinkSid !== null,
       reschedulePolicy: selfBooking
         ? { maxReschedules: provider.maxPatientReschedules, minNoticeHours: provider.minRescheduleNoticeHours }
         : null,

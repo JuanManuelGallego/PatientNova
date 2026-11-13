@@ -6,7 +6,6 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
-import { logger } from '../../../src/utils/api/logger.js';
 import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
 import { deliverBookingRequestNotification, type BookingRequestEvent } from '../../../src/booking-requests/booking-request-notifications.js';
 import { ActionType, BookingRequestKind, BookingRequestStatus, Channel, EntityType } from '../../../generated/prisma/enums.js';
@@ -123,29 +122,6 @@ describe('unconfirmed hold expiry', () => {
     expect(channel).toBe(Channel.WHATSAPP);
     expect(opts.contentSid).toBe(config.twilio.patientPortal.unconfirmedExpiredSid);
     expect(opts.contentSid).not.toBe(config.twilio.patientPortal.requestExpiredSid);
-  });
-
-  it('without the unconfirmed-expired template the WhatsApp notice is skipped with an info log and no PII', async () => {
-    const p = await createLiveProvider();
-    const row = await unconfirmed(p, { channel: Channel.WHATSAPP });
-    const sids = config.twilio.patientPortal as { unconfirmedExpiredSid: string | null };
-    const was = sids.unconfirmedExpiredSid;
-    sids.unconfirmedExpiredSid = null;
-    const info = vi.spyOn(logger, 'info');
-    try {
-      await expect(sweepAndDeliver('unconfirmed-expired')).resolves.toBeDefined();
-    } finally {
-      sids.unconfirmedExpiredSid = was;
-    }
-
-    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(BookingRequestStatus.EXPIRED);
-    expect(mocks.dispatch).not.toHaveBeenCalled();
-    expect(info).toHaveBeenCalledWith(
-      { requestId: row.id, event: 'unconfirmed-expired' },
-      'Booking request notification skipped — WhatsApp template not configured',
-    );
-    expect(JSON.stringify(info.mock.calls)).not.toContain(row.verifiedPhone!);
-    info.mockRestore();
   });
 
   it('skips the expiry message when the confirmation link was never sent', async () => {

@@ -135,10 +135,6 @@ export async function deliverBookingRequestNotification(job: BookingRequestNotif
     logger.info({ requestId, event }, 'Booking request notification skipped — request no longer in the expected state');
     return;
   }
-  if (event === 'unconfirmed-expired' && request.contactChannel !== Channel.EMAIL && !config.twilio.patientPortal.unconfirmedExpiredSid) {
-    logger.info({ requestId, event }, 'Booking request notification skipped — WhatsApp template not configured');
-    return;
-  }
   const message = PROVIDER_EVENTS.has(event) ? providerMessage(request, event) : patientMessage(request, event);
   if (!message) {
     logger.info({ requestId, event }, 'Booking request notification skipped — disabled or no address');
