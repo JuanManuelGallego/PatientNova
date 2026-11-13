@@ -42,6 +42,23 @@ function placeLines(p: PlaceParams): string[] {
   ];
 }
 
+export interface EmailProviderContact {
+  phone: string | null;
+  whatsapp: string | null;
+}
+
+function contactProviderLine(providerName: string, contact?: EmailProviderContact): string[] {
+  if (!contact) return [];
+  const parts = [ contact.phone, contact.whatsapp ? `WhatsApp ${contact.whatsapp}` : null ].filter(Boolean);
+  if (parts.length === 0) return [];
+  return [ `Para cancelar o cambiar tu cita, comunícate directamente con ${providerName}: ${parts.join(' o ')}` ];
+}
+
+function contactBlock(providerName: string, contact?: EmailProviderContact): string[] {
+  const line = contactProviderLine(providerName, contact);
+  return line.length ? [ '', ...line ] : [];
+}
+
 export function renderBookingConfirmationEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
@@ -184,6 +201,56 @@ export function renderBookingRequestExpiredEmail(params: {
       '',
       ANOTHER_TIME_LINE,
       params.bookingUrl,
+    ].join('\n'),
+  };
+}
+
+export const CONFIRM_LINK_MINUTES = 15;
+
+export function renderConfirmLinkEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  timezone: string;
+  locationName?: string | null;
+  address?: string | null;
+  confirmUrl: string;
+  approvalRequired: boolean;
+  providerContact?: EmailProviderContact;
+}): RenderedEmail {
+  const when = `${params.whenLocal} (hora de ${params.timezone})`;
+  const lead = params.approvalRequired
+    ? `Tu solicitud de cita del ${when} todavía no se ha enviado. Confírmala en los próximos ${CONFIRM_LINK_MINUTES} minutos con este enlace; si no, el horario quedará libre.`
+    : `Tu cita del ${when} todavía no está confirmada. Confírmala en los próximos ${CONFIRM_LINK_MINUTES} minutos con este enlace; si no, el horario quedará libre.`;
+  return {
+    subject: params.approvalRequired
+      ? `Confirma tu solicitud de cita con ${params.providerName}`
+      : `Confirma tu cita con ${params.providerName}`,
+    body: [
+      'Hola,',
+      '',
+      lead,
+      '',
+      params.confirmUrl,
+      ...(params.locationName || params.address ? [ '' ] : []),
+      ...placeLines({ ...(params.locationName && { locationName: params.locationName }), ...(params.address && { address: params.address }) }),
+      ...contactBlock(params.providerName, params.providerContact),
+      '',
+      'Si no hiciste esta reserva, ignora este mensaje.',
+    ].join('\n'),
+  };
+}
+
+export function renderUnconfirmedExpiredEmail(params: {
+  providerName: string;
+  whenLocal: string;
+  bookingUrl: string;
+}): RenderedEmail {
+  return {
+    subject: `Tu reserva con ${params.providerName} no se confirmó`,
+    body: [
+      'Hola,',
+      '',
+      `No confirmaste tu cita del ${params.whenLocal}, así que el horario quedó libre. Puedes reservar de nuevo aquí: ${params.bookingUrl}`,
     ].join('\n'),
   };
 }

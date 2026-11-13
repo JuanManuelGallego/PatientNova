@@ -73,6 +73,14 @@ export function portalReminder(start: Date, now: Date, route: PatientRoute | nul
   return { ...route, sendMode: ReminderMode.SCHEDULED, sendAt: sendAt.toISOString(), status: ReminderStatus.PENDING };
 }
 
+export async function requireBookableTarget(userId: string, ids: { typeId: string; locationId: string }, tx: TransactionClient) {
+  const type = await publicBookingRepository.findBookableType(userId, ids.typeId, tx);
+  if (!type) throw new PublicAppointmentTypeNotFoundError();
+  const location = await publicBookingRepository.findBookableLocation(userId, ids.locationId, tx);
+  if (!location) throw new PublicLocationNotFoundError();
+  return { type, location };
+}
+
 export function toPortalError(err: unknown): unknown {
   if (
     err instanceof AppointmentConflictError

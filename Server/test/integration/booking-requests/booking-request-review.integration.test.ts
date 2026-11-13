@@ -31,7 +31,7 @@ import { bookingRequestService } from '../../../src/booking-requests/booking-req
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
 import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createTestPatient, createTestToken, createTestUser, csrfHeaders, unique } from '../helpers.js';
-import { createLiveProvider, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
+import { createLiveProvider, createPendingRequestWithin, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
 
 const portal = config.portal as { patientEnabled: boolean };
 const scheduler = config.scheduler as { enabled: boolean };
@@ -68,7 +68,7 @@ const bearer = (p: { id: string; email: string; role: string }) => ({ Authorizat
 async function seedRequest(p: LiveProvider, opts: { start?: string | undefined; email?: string | undefined; now?: Date | undefined; kind?: BookingRequestKind | undefined } = {}) {
   const start = new Date(opts.start ?? (await slotStarts(p))[ 0 ]!);
   const now = opts.now ?? new Date();
-  return prisma.$transaction(async (tx) => (await bookingRequestService.createHoldWithin(tx, p.id, {
+  return prisma.$transaction(async (tx) => (await createPendingRequestWithin(tx, p.id, {
     kind: opts.kind ?? BookingRequestKind.NEW,
     email: opts.email ?? unique('solicitud@test.local').toLowerCase(),
     name: 'Lucia',
@@ -226,7 +226,7 @@ describe('POST /v1/booking-requests/:id/approve', () => {
     expect(appt.reminder).toMatchObject({ channel: Channel.EMAIL, to: req.email });
 
     const audits = await prisma.auditLog.findMany({ where: { entityType: EntityType.BOOKING_REQUEST, entityId: req.id }, orderBy: { eventTimeUtc: 'asc' } });
-    expect(audits.map((a) => a.description)).toEqual([ 'Solicitud de reserva creada desde el portal', 'Solicitud de reserva aprobada' ]);
+    expect(audits.map((a) => a.description)).toEqual([ 'Reserva sin confirmar creada desde el portal', 'Solicitud de reserva aprobada' ]);
     expect(audits[ 1 ]!.source).toBe(ActionSource.API);
     expect(JSON.stringify(audits)).not.toContain(req.email);
 
@@ -450,13 +450,6 @@ describe('booking-request-notify', () => {
     mocks.dispatch.mockClear();
     await deliverBookingRequestNotification({ requestId: req.id, event: 'nudge' });
     expect(mocks.dispatch).not.toHaveBeenCalled();
-  });
-
-  it('enqueues the provider notice with the hold, on the same transaction', async () => {
-    scheduler.enabled = true;
-    const p = await provider();
-    const req = await seedRequest(p);
-    expect(mocks.send).toHaveBeenCalledWith('booking-request-notify', { requestId: req.id, event: 'received' }, expect.anything());
   });
 });
 

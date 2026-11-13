@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Channel } from '../../../generated/prisma/enums.js';
 import { config } from '../../../src/utils/config/config.js';
 import {
+  confirmationUrl,
   renderPatientNotice,
   type PatientNoticeKind,
   type PatientNoticeParams,
@@ -13,6 +14,10 @@ const timed = { providerName: 'Dra. Ana Pública', at: new Date('2027-01-20T15:0
 const links = { appointmentsUrl: 'https://app.test/book/dra/appointments', bookingUrl: 'https://app.test/book/dra' };
 const place = { locationName: 'Consultorio Centro', address: 'Calle 10 # 5-20' };
 
+const contact = { phone: '+573001234567', whatsapp: null };
+const token = 'tok_abc-123';
+const confirmUrl = confirmationUrl(token);
+
 const PARAMS: PatientNoticeParams = {
   confirmation: { ...timed, ...place, appointmentsUrl: links.appointmentsUrl },
   cancellation: { ...timed, bookingUrl: links.bookingUrl },
@@ -21,6 +26,8 @@ const PARAMS: PatientNoticeParams = {
   'request-received': { ...timed, appointmentsUrl: links.appointmentsUrl },
   'request-rejected': { ...timed, bookingUrl: links.bookingUrl },
   'request-expired': { ...timed, bookingUrl: links.bookingUrl },
+  'confirm-link': { ...timed, ...place, token, confirmUrl, approvalRequired: false, providerContact: contact },
+  'unconfirmed-expired': { ...timed, bookingUrl: links.bookingUrl },
 };
 
 const KINDS = Object.keys(PARAMS) as PatientNoticeKind[];
@@ -71,6 +78,8 @@ describe('renderPatientNotice', () => {
     [ 'request-received', config.twilio.patientPortal.requestReceivedSid ],
     [ 'request-rejected', config.twilio.patientPortal.requestRejectedSid ],
     [ 'request-expired', config.twilio.patientPortal.requestExpiredSid ],
+    [ 'confirm-link', config.twilio.patientPortal.confirmLinkSid ],
+    [ 'unconfirmed-expired', config.twilio.patientPortal.unconfirmedExpiredSid ],
   ] as const)('%s uses its own template', (kind, sid) => {
     expect(render(kind, WHATSAPP).contentSid).toBe(sid);
   });
@@ -125,4 +134,87 @@ describe('renderPatientNotice', () => {
       expect(text).not.toContain('Nota clínica');
     },
   );
+
+  describe('confirmation link', () => {
+    const emailOf = (kind: PatientNoticeKind, params: object) =>
+      renderPatientNotice(kind, params as never, EMAIL) as { subject: string; body: string };
+
+    it('builds the link from the portal base', () => {
+      expect(confirmationUrl('abc')).toBe(`${config.portal.url.replace(/\/+$/, '')}/book/confirmar/abc`);
+    });
+
+    it('confirm-link by WhatsApp uses the confirm-link template with the token as the URL-button variable', () => {
+      const opts = render('confirm-link', WHATSAPP);
+      expect(opts).toMatchObject({
+        contentSid: config.twilio.patientPortal.confirmLinkSid,
+        contentVariables: { '1': 'Dra. Ana Pública', '2': expect.any(String), '3': expect.stringMatching(/m\.$/), '4': token },
+      });
+      expect(Object.keys(opts.contentVariables ?? {})).toEqual([ '1', '2', '3', '4' ]);
+    });
+
+    it('confirm-link by email says the appointment is not confirmed until the click, links confirmUrl, and names the 15-minute limit', () => {
+      const { subject, body } = emailOf('confirm-link', PARAMS['confirm-link']);
+      expect(subject).toBe('Confirma tu cita con Dra. Ana Pública');
+      expect(body).toContain('no está confirmada');
+      expect(body).toContain(confirmUrl);
+      expect(body).toContain('15 minutos');
+      expect(body).toContain('Lugar: Consultorio Centro');
+    });
+
+    it('confirm-link email names the time zone of the time and tells a stranger to ignore it', () => {
+      for (const approvalRequired of [ false, true ]) {
+        const { body } = emailOf('confirm-link', { ...PARAMS['confirm-link'], approvalRequired });
+        expect(body).toMatch(/del miércoles, 20 de enero de 2027, 10:00 a\. m\. \(hora de America\/Bogota\) todavía no/);
+        expect(body).toContain('Si no hiciste esta reserva, ignora este mensaje.');
+      }
+    });
+
+    it('confirm-link email in approval mode says the request has not been sent', () => {
+      const { subject, body } = emailOf('confirm-link', { ...PARAMS['confirm-link'], approvalRequired: true });
+      expect(subject).toBe('Confirma tu solicitud de cita con Dra. Ana Pública');
+      expect(body).toContain('todavía no se ha enviado');
+      expect(body).toContain('15 minutos');
+    });
+
+    it('confirm-link email shows only the location name for a virtual place', () => {
+      const { body } = emailOf('confirm-link', { ...PARAMS['confirm-link'], locationName: 'Virtual', address: null, meetingUrl: null, meetingPending: true });
+      expect(body).toContain('Lugar: Virtual');
+      expect(body).not.toContain('videollamada');
+    });
+
+    it('confirm-link email tells the patient to contact the provider to change or cancel', () => {
+      const { body } = emailOf('confirm-link', PARAMS['confirm-link']);
+      expect(body).toContain('comunícate directamente');
+      expect(body).toContain('+573001234567');
+      expect(body).not.toContain('WhatsApp +');
+    });
+
+    it('the contact line names both phone and WhatsApp, and is absent when the provider has neither', () => {
+      const both = emailOf('confirm-link', { ...PARAMS['confirm-link'], providerContact: { phone: '+57300', whatsapp: '+57311' } }).body;
+      expect(both).toContain('comunícate directamente con Dra. Ana Pública: +57300 o WhatsApp +57311');
+      const onlyWa = emailOf('confirm-link', { ...PARAMS['confirm-link'], providerContact: { phone: null, whatsapp: '+57311' } }).body;
+      expect(onlyWa).toContain('Dra. Ana Pública: WhatsApp +57311');
+      const none = emailOf('confirm-link', { ...PARAMS['confirm-link'], providerContact: { phone: null, whatsapp: null } }).body;
+      expect(none).not.toContain('comunícate');
+    });
+
+    it('unconfirmed-expired by WhatsApp uses its own template, never request-expired', () => {
+      const opts = render('unconfirmed-expired', WHATSAPP);
+      expect(opts.contentSid).toBe(config.twilio.patientPortal.unconfirmedExpiredSid);
+      expect(opts.contentSid).not.toBe(config.twilio.patientPortal.requestExpiredSid);
+      expect(Object.keys(opts.contentVariables ?? {})).toEqual([ '1', '2', '3' ]);
+    });
+
+    it('unconfirmed-expired email says it was not confirmed and links to book again', () => {
+      const { subject, body } = emailOf('unconfirmed-expired', PARAMS['unconfirmed-expired']);
+      expect(subject).toBe('Tu reserva con Dra. Ana Pública no se confirmó');
+      expect(body).toContain('No confirmaste tu cita del');
+      expect(body).toContain(`Puedes reservar de nuevo aquí: ${links.bookingUrl}`);
+    });
+
+    it('no WhatsApp variable is empty for a provider without publicWhatsapp', () => {
+      const opts = renderPatientNotice('confirm-link', { ...PARAMS['confirm-link'], providerContact: { phone: null, whatsapp: null } }, WHATSAPP);
+      for (const value of Object.values(opts.contentVariables ?? {})) expect(value).toMatch(/^\S.*\S$/);
+    });
+  });
 });

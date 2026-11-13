@@ -7,19 +7,19 @@ import { logger } from '../utils/api/logger.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { bookingRequestRepository, type CreateBookingRequestData } from './booking-request.repository.js';
 import { ONE_DAY_MS, ONE_HOUR_MS } from '../utils/config/constants.js';
-import { NUDGE_HOURS, RESOLVED_RETENTION_DAYS, holdExpiry, isNudgeDue } from './booking-request.constants.js';
-import { enqueueBookingRequestNotifications } from './booking-request-notifications.js';
+import { NUDGE_HOURS, RESOLVED_RETENTION_DAYS, UNCONFIRMED_RETENTION_HOURS, holdExpiry, isNudgeDue, unconfirmedHoldExpiry } from './booking-request.constants.js';
+import { enqueueBookingRequestNotifications, type ExpiredHolds } from './booking-request-notifications.js';
 
 export type NewBookingRequest = Omit<CreateBookingRequestData, 'userId' | 'holdExpiresAt'>;
 
 export const bookingRequestService = {
-  async expireStaleWithin(tx: TransactionClient, userId: string, now: Date): Promise<string[]> {
+  async expireStaleWithin(tx: TransactionClient, userId: string, now: Date): Promise<ExpiredHolds> {
     await withProviderLock(tx, userId);
     const stale = await bookingRequestRepository.findStale(userId, now, tx);
     const ids = stale.map((s) => s.id);
     await bookingRequestRepository.markExpired(ids, now, tx);
     await runInAuditContext(bookingRequestExpiryAuditContext(userId), async () => {
-      for (const id of ids) {
+      for (const { id, status } of stale) {
         await logAudit({
           entityType: EntityType.BOOKING_REQUEST,
           entityId: id,
@@ -27,20 +27,23 @@ export const bookingRequestService = {
           actionType: ActionType.UPDATE,
           description: 'Solicitud de reserva vencida',
           affectedFields: [ 'status' ],
-          fieldsBefore: { status: BookingRequestStatus.PENDING },
+          fieldsBefore: { status },
           fieldsAfter: { status: BookingRequestStatus.EXPIRED },
           tx,
           required: true,
         });
       }
     });
-    await enqueueBookingRequestNotifications('expired', ids, tx);
-    return ids;
+    const confirmed = stale.filter((s) => s.confirmedAt !== null).map((s) => s.id);
+    const unconfirmed = stale.filter((s) => s.confirmedAt === null && s.confirmationSentAt !== null).map((s) => s.id);
+    await enqueueBookingRequestNotifications('expired', confirmed, tx);
+    await enqueueBookingRequestNotifications('unconfirmed-expired', unconfirmed, tx);
+    return { all: ids, expired: confirmed, unconfirmedExpired: unconfirmed };
   },
 
   /**
-   * `expiredIds`: stale holds this call expired first. Without the scheduler the caller must deliver their `expired`
-   * notices after commit (`deliverBookingRequestNotificationsNow`).
+   * A request from a "Mis citas" session (`POST /v1/portal/bookings`), confirmed by its login: PENDING for the 48h
+   * hold, and the provider is notified. `expiredIds` as in `createUnconfirmedWithin`.
    */
   async createHoldWithin(tx: TransactionClient, userId: string, input: NewBookingRequest, now: Date) {
     const expiredIds = await bookingRequestService.expireStaleWithin(tx, userId, now);
@@ -70,6 +73,38 @@ export const bookingRequestService = {
     return { request, expiredIds };
   },
 
+  async createUnconfirmedWithin(
+    tx: TransactionClient,
+    userId: string,
+    input: NewBookingRequest & { confirmTokenHash: string; releaseTokenHash: string },
+    now: Date,
+  ) {
+    const expiredIds = await bookingRequestService.expireStaleWithin(tx, userId, now);
+    const request = await bookingRequestRepository.createUnconfirmed(
+      { ...input, userId, holdExpiresAt: unconfirmedHoldExpiry(now, input.startAt) },
+      tx,
+    );
+    await logAudit({
+      entityType: EntityType.BOOKING_REQUEST,
+      entityId: request.id,
+      userId,
+      actionType: ActionType.CREATE,
+      description: 'Reserva sin confirmar creada desde el portal',
+      affectedFields: [ 'status', 'startAt', 'endAt', 'typeId', 'locationId', 'holdExpiresAt' ],
+      fieldsAfter: {
+        status: request.status,
+        startAt: request.startAt,
+        endAt: request.endAt,
+        typeId: request.typeId,
+        locationId: request.locationId,
+        holdExpiresAt: request.holdExpiresAt,
+      },
+      tx,
+      required: true,
+    });
+    return { request, expiredIds };
+  },
+
   /**
    * The 15-minute sweep: expire stale holds per provider (each under its own lock, emailing the patient), then nudge
    * each provider once about requests past the middle of their hold. Correctness never depends on it: the clock
@@ -80,7 +115,7 @@ export const bookingRequestService = {
     for (const userId of await bookingRequestRepository.providersWithStale(now)) {
       try {
         const ids = await prisma.$transaction((tx) => bookingRequestService.expireStaleWithin(tx, userId, now), { timeout: 10000 });
-        expired += ids.length;
+        expired += ids.all.length;
       } catch (err) {
         logger.error({ userId, err }, 'Booking request expiry failed for a provider');
       }
@@ -100,6 +135,8 @@ export const bookingRequestService = {
   },
 
   async purgeResolved(now: Date = new Date()): Promise<number> {
-    return bookingRequestRepository.purgeResolvedBefore(new Date(now.getTime() - RESOLVED_RETENTION_DAYS * ONE_DAY_MS));
+    const unconfirmed = await bookingRequestRepository.purgeUnconfirmedBefore(new Date(now.getTime() - UNCONFIRMED_RETENTION_HOURS * ONE_HOUR_MS));
+    const resolved = await bookingRequestRepository.purgeResolvedBefore(new Date(now.getTime() - RESOLVED_RETENTION_DAYS * ONE_DAY_MS));
+    return unconfirmed + resolved;
   },
 };

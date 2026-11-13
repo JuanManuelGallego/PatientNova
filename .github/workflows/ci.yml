@@ -96,6 +96,8 @@ jobs:
       TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID: dummyPatientPortalRequestReceivedSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID: dummyPatientPortalRequestRejectedSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID: dummyPatientPortalRequestExpiredSid
+      TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID: dummyPatientPortalConfirmLinkSid
+      TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID: dummyPatientPortalUnconfirmedSid
       BREVO_API_KEY: xkeysib-dummy
       BREVO_FROM_EMAIL: no-reply@example.com
       BREVO_WEBHOOK_SECRET: dummy-brevo-webhook-secret

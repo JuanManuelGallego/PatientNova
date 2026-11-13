@@ -391,6 +391,7 @@ enum BookingRequestKind {
 }
 
 enum BookingRequestStatus {
+  UNCONFIRMED
   PENDING
   APPROVED
   REJECTED
@@ -420,6 +421,11 @@ model BookingRequest {
   patientTimezone String   @db.VarChar(50)
   holdExpiresAt   DateTime
   nudgedAt        DateTime?
+
+  confirmedAt        DateTime?
+  confirmTokenHash   String?   @unique @db.VarChar(64)
+  releaseTokenHash   String?   @unique @db.VarChar(64)
+  confirmationSentAt DateTime?
 
   policyVersion      String   @db.VarChar(20)
   consentAcceptedAt  DateTime
