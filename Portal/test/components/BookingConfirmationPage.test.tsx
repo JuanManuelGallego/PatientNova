@@ -67,10 +67,11 @@ describe("BookingConfirmationPage", () => {
 
     it("unconfirmed: shows provider, time in the patient zone, place and the confirm button", async () => {
         render(<BookingConfirmationPage token={TOKEN} />);
-        expect(await screen.findByText(/Dra\. Ana Pública/)).toBeInTheDocument();
+        expect(await screen.findByText("Dra. Ana Pública")).toBeInTheDocument();
         expect(screen.getByTestId("confirmation-time")).toHaveTextContent(/10:00/);
         expect(screen.getByText("Consultorio Centro, Calle 1 # 2-3")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Confirmar mi cita" })).toBeEnabled();
+        expect(screen.getByTestId("provider-contact")).toBeInTheDocument();
     });
 
     it("a virtual place shows only its name", async () => {

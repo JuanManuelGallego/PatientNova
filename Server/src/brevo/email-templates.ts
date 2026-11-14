@@ -1,7 +1,7 @@
 /**
  * Spanish (es-CO) email templates for patient-facing transactional mail. Plain text only; the
- * client derives the HTML part. Templates never contain secrets in links: the confirmation points
- * to the portal appointments page.
+ * client derives the HTML part. The confirmation-link email is the only one whose link carries a
+ * secret (the booking token in `confirmUrl`); every other link is public.
  */
 export interface RenderedEmail {
   subject: string;

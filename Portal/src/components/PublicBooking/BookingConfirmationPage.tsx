@@ -120,6 +120,7 @@ function ConfirmationBody({ view, busy, error, onConfirm }: BodyProps) {
                     <button type="button" className={`btn-primary ${styles.submit}`} disabled={busy} aria-busy={busy || undefined} onClick={onConfirm}>
                         {busy ? "Confirmando…" : "Confirmar mi cita"}
                     </button>
+                    <ProviderContactNotice provider={contact} />
                 </>
             ));
         case "confirmed":

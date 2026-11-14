@@ -52,8 +52,8 @@ describe("usePublicMutation", () => {
         const { result } = renderHook(() => usePublicMutation<{ challenge: string }>());
 
         let first!: Promise<{ challenge: string }>;
-        act(() => { first = result.current.mutate("/providers/x/otp", { email: "a@example.com" }); });
-        await expect(result.current.mutate("/providers/x/otp", {})).rejects.toThrow("Request already in progress");
+        act(() => { first = result.current.mutate("/providers/x/bookings", { email: "a@example.com" }); });
+        await expect(result.current.mutate("/providers/x/bookings", {})).rejects.toThrow("Request already in progress");
         await act(async () => { release(respond(202, { success: true, data: { challenge: "c" } })); await first; });
 
         expect(fetchMock).toHaveBeenCalledTimes(1);

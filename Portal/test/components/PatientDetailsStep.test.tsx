@@ -391,6 +391,26 @@ describe("BookingResult", () => {
         expect(await screen.findByRole("heading", { name: "Último paso" })).toBeInTheDocument();
     });
 
+    it("stays on the result with an error when the release fails, since the hold may still be live", async () => {
+        server.release = () => fail(500, "Internal error");
+        const user = userEvent.setup();
+        render(<PublicBookingPage slug="dra-ana" />);
+        await toDetails(user);
+        await fillByEmail(user);
+        await screen.findByRole("heading", { name: "Revisa tu correo" });
+
+        await user.click(screen.getByRole("button", { name: "¿Te equivocaste? Corregir" }));
+
+        expect(await screen.findByRole("alert")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Revisa tu correo" })).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Último paso" })).not.toBeInTheDocument();
+
+        server.release = () => new Response(null, { status: 204 });
+        await user.click(screen.getByRole("button", { name: "¿Te equivocaste? Corregir" }));
+        expect(await screen.findByRole("heading", { name: "Último paso" })).toBeInTheDocument();
+        expect(calls(RELEASE)).toHaveLength(2);
+    });
+
     it("keeps the release token out of the URL and storage", async () => {
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);

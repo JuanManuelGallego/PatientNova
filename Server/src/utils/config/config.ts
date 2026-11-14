@@ -27,7 +27,6 @@ function portalAuthSecret(): string {
   return secret;
 }
 
-
 function positiveIntEnv(key: string, fallback: number): number {
   const raw = process.env[ key ]?.trim();
   if (!raw) return fallback;

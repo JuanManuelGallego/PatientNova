@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Mail, MessageCircle } from "lucide-react";
+import { ApiClientError } from "@/src/api/base/apiClients";
 import { useReleaseBooking } from "@/src/api/portal/useBookingConfirmation";
 import type { BookingPending } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
@@ -10,6 +11,7 @@ import { appointmentsPath, fmtContact, fmtLongDayTime, timezoneName } from "@/sr
 import { ProviderContactNotice } from "./ProviderContactNotice";
 import { StateIcon } from "./PublicChrome";
 import styles from "./BookingFlow.module.css";
+import portal from "./Portal.module.css";
 
 interface BookingResultProps {
     slug: string;
@@ -21,7 +23,7 @@ interface BookingResultProps {
 
 export function BookingResult({ slug, provider, pending, timezone, onCorrect }: BookingResultProps) {
     const heading = useRef<HTMLHeadingElement>(null);
-    const { release, loading } = useReleaseBooking();
+    const { release, loading, error } = useReleaseBooking();
     useEffect(() => {
         window.scrollTo(0, 0);
         heading.current?.focus({ preventScroll: true });
@@ -34,7 +36,10 @@ export function BookingResult({ slug, provider, pending, timezone, onCorrect }: 
         if (loading) return;
         try {
             await release(pending.releaseToken);
-        } catch {
+        } catch (err) {
+            // 404: the hold is already gone (expired, released or confirmed), so the time is free to choose again.
+            // Anything else may have left it live, and a new submit would collide with the patient's own hold.
+            if (!(err instanceof ApiClientError && err.status === 404)) return;
         }
         onCorrect();
     };
@@ -52,6 +57,7 @@ export function BookingResult({ slug, provider, pending, timezone, onCorrect }: 
             {provider.selfServe
                 ? <Link href={appointmentsPath(slug)} className={`btn-secondary ${styles.resultAction}`}>Ver mis citas</Link>
                 : <ProviderContactNotice provider={provider} />}
+            {error && <p className={`error-inline ${portal.error}`} role="alert">{error}</p>}
             <button type="button" className={`btn-secondary ${styles.resultAction}`} disabled={loading} aria-busy={loading || undefined} onClick={correct}>
                 ¿Te equivocaste? Corregir
             </button>
