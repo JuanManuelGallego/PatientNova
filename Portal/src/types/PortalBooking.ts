@@ -1,10 +1,39 @@
-export interface PortalBookingRequest {
+export type BookingContactChoice = { channel: "EMAIL"; email: string } | { channel: "WHATSAPP"; phone: string };
+
+export interface StartBookingRequest {
     typeId: string;
     locationId: string;
     startUtc: string;
     patientTimezone: string;
     consentAccepted: true;
-    patient?: { name: string; lastName: string; phone?: string };
+    captchaToken: string;
+    patient: { name: string; lastName: string; phone?: string };
+    contact: BookingContactChoice;
+}
+
+export interface BookingPending {
+    channel: "EMAIL" | "WHATSAPP";
+    contact: string;
+    startUtc: string;
+    holdExpiresAt: string;
+    approvalRequired: boolean;
+    releaseToken: string;
+}
+
+export type ConfirmationState = "unconfirmed" | "confirmed" | "requested" | "expired" | "unavailable";
+
+export interface BookingConfirmationView {
+    state: ConfirmationState;
+    providerSlug: string;
+    providerName: string;
+    startUtc: string;
+    durationMinutes: number;
+    patientTimezone: string;
+    typeName: string;
+    location: { name: string; address: string | null; isVirtual: boolean };
+    holdExpiresAt: string;
+    approvalRequired: boolean;
+    providerContact: { phone: string | null; whatsapp: string | null };
 }
 
 export interface PortalAppointment {
@@ -32,8 +61,6 @@ export interface PortalPendingRequest {
     type: { name: string };
     location: { name: string; address: string | null; isVirtual: boolean };
 }
-
-export type PortalBookingOutcome = { appointment: PortalAppointment } | { request: PortalPendingRequest };
 
 export interface PortalRescheduleRequest {
     startUtc: string;

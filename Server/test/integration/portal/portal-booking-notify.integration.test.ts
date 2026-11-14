@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn() }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
@@ -57,7 +57,6 @@ describe('patient confirmation', () => {
     expect(s.body).toContain('5 de abril de 2027, 05:00 p. m. (hora de Europe/Madrid)');
     expect(w.body).toContain('Lugar: Consultorio Centro');
     expect(w.body).toContain('Dirección: Calle 10 # 5-20');
-    expect(w.body).toContain(`${config.portal.url}/book/${winter.user.bookingSlug}/appointments`);
   });
 
   it('falls back to the provider zone when no patient zone was stored', async () => {
@@ -188,8 +187,7 @@ describe('reschedule notices', () => {
     expect(opts.subject).toBe('Cita reprogramada con Dra. Ana Pública');
     expect(opts.body).toContain('Nueva fecha y hora: viernes, 22 de enero de 2027, 09:00 p. m. (hora de Europe/Madrid)');
     expect(opts.body).toContain('Fecha anterior: miércoles, 20 de enero de 2027, 04:00 p. m.');
-    expect(opts.body).toContain('Puedes ver, cancelar o reprogramar tus citas');
-    expect(opts.body).toContain(`${config.portal.url}/book/${user.bookingSlug}/appointments`);
+    expect(opts.body).not.toContain(`${user.bookingSlug}/appointments`);
   });
 
   it('tells the provider on WHATSAPP with the reschedule template', async () => {
@@ -240,6 +238,44 @@ describe('reschedule notices', () => {
     await prisma.appointment.update({ where: { id: appt.id }, data: { status: AppointmentStatus.CANCELLED } });
     await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: PREVIOUS });
     expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('the Mis citas link in patient emails', () => {
+  const START = '2027-01-22T20:00:00Z';
+  const portal = config.portal as { selfServe: boolean };
+  const selfServeWas = portal.selfServe;
+  afterEach(() => { portal.selfServe = selfServeWas; });
+
+  async function patientEmails() {
+    const { appt, user } = await bookedAppointment({ startAt: START });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-confirmation' });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-reschedule', previousStartAt: '2027-01-20T15:00:00Z' });
+    await prisma.appointment.update({
+      where: { id: appt.id }, data: { meetingUrl: 'https://meet.google.com/abc-defg-hij', meetingStatus: 'READY' },
+    });
+    await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-meeting-link' });
+    const bodies = mocks.dispatch.mock.calls.map(([ , opts ]) => opts.body as string);
+    expect(bodies).toHaveLength(3);
+    return { bodies, url: `${config.portal.url}/book/${user.bookingSlug}/appointments` };
+  }
+
+  it('is left out while self-serve is off: there is no Mis citas to point to', async () => {
+    portal.selfServe = false;
+    const { bodies } = await patientEmails();
+    for (const body of bodies) {
+      expect(body).not.toContain('/appointments');
+      expect(body).not.toContain('Puedes ver, cancelar o reprogramar');
+    }
+  });
+
+  it('ends each email with the link while self-serve is on, without promising a code', async () => {
+    portal.selfServe = true;
+    const { bodies, url } = await patientEmails();
+    for (const body of bodies) {
+      expect(body).toContain(`Puedes ver, cancelar o reprogramar tus citas aquí:\n${url}`);
+      expect(body).not.toContain('verificar tu correo');
+    }
   });
 });
 

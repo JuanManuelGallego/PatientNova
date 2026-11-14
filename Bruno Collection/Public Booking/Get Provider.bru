@@ -13,10 +13,11 @@ get {
 docs {
   Answers for any provider patients can reach (portal on, active, has a slug). `bookingOpen` is false
   while booking is paused or not ready: `types` and `locations` are then empty and `/slots` answers 404,
-  but login and "Mis citas" keep working. `approvalRequired` is true when the provider reviews each
-  booking (`REQUIRE_APPROVAL`): the form then sends a request instead of reserving. Unknown, deleted or inactive providers get the same 404.
+  but the page itself still answers. `approvalRequired` is true when the provider reviews each
+  booking (`REQUIRE_APPROVAL`): the form then asks the patient to confirm a request instead of a booking. Unknown, deleted or inactive providers get the same 404.
   `specialty`, `bio`, `phone` and `whatsapp` are optional, also shown while paused. `legal` is `{ name, privacyContact, contactHours }` or null: who answers for patient data, shown before the patient authorizes anything.
   `reschedulePolicy` is `{ maxReschedules, minNoticeHours }` only while patients can reschedule (booking open,
-  auto-confirm); otherwise null. `loginChannels` is what the login offers: `EMAIL` and
-  `WHATSAPP`.
+  auto-confirm); otherwise null. `selfServe` is true only when the server runs with
+  `ENABLE_SELF_SERVE=true` ("Mis citas"); there is no login channel list any more. `whatsappConfirmation`
+  is true only while the WhatsApp confirm-link template is configured: otherwise the form offers email only.
 }

@@ -1,29 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 
-export type BookingStep = "need" | "time" | "verify" | "details";
+export type BookingStep = "need" | "time" | "details";
 
 export interface FlowProgress {
     needDone: boolean;
     hasSlot: boolean;
-    verified: boolean;
 }
 
-export function applicableSteps({ typeCount, locationCount, verified }: { typeCount: number; locationCount: number; verified: boolean }): BookingStep[] {
+export function applicableSteps({ typeCount, locationCount }: { typeCount: number; locationCount: number }): BookingStep[] {
     return [
         ...(typeCount > 1 || locationCount > 1 ? [ "need" as const ] : []),
         "time",
-        ...(verified ? [] : [ "verify" as const ]),
         "details",
     ];
 }
 
 /** Where a requested step really lands: history can ask for a step whose choices no longer exist. */
-export function reachableStep(requested: BookingStep | null, steps: BookingStep[], { needDone, hasSlot, verified }: FlowProgress): BookingStep {
+export function reachableStep(requested: BookingStep | null, steps: BookingStep[], { needDone, hasSlot }: FlowProgress): BookingStep {
     const allowed = steps.filter((step) => {
         if (step === "need") return true;
         if (!needDone) return false;
         if (step === "time") return true;
-        return hasSlot && (step === "verify" || verified);
+        return hasSlot;
     });
     const first = steps[ 0 ] as BookingStep;
     if (requested === null) return first;

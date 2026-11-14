@@ -25,11 +25,11 @@ const valid = {
   'error-codes': [],
   challenge_ts: '2026-10-12T11:59:00Z',
   hostname: 'portal.patientnova.net',
-  action: 'otp-request',
+  action: 'booking',
 };
 
 const check = (...args: [ token?: string ]) =>
-  verifier.verify({ token: args.length ? args[ 0 ] : 'tok', ip: '203.0.113.7', action: 'otp-request' });
+  verifier.verify({ token: args.length ? args[ 0 ] : 'tok', ip: '203.0.113.7', action: 'booking' });
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -87,7 +87,7 @@ describe('Turnstile verifier', () => {
       timeoutMs: 3000,
       now: () => NOW,
     });
-    const checkTest = () => testVerifier.verify({ token: 'XXXX.DUMMY.TOKEN.XXXX', ip: undefined, action: 'otp-request' });
+    const checkTest = () => testVerifier.verify({ token: 'XXXX.DUMMY.TOKEN.XXXX', ip: undefined, action: 'booking' });
 
     it('skips hostname and action when our secret is a test secret and Cloudflare flags the answer', async () => {
       fetchMock.mockResolvedValueOnce(siteverify(testKey));

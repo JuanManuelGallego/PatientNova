@@ -10,8 +10,6 @@ vi.mock('../../../src/utils/api/logger.js', () => ({
 import { sendTransactionalEmail } from '../../../src/brevo/transactional.js';
 import {
   renderBookingConfirmationEmail,
-  renderBookingRequestReceivedEmail,
-  renderOtpEmail,
 } from '../../../src/brevo/email-templates.js';
 import { logger } from '../../../src/utils/api/logger.js';
 
@@ -34,15 +32,6 @@ describe('sendTransactionalEmail', () => {
 });
 
 describe('Spanish templates', () => {
-  it('OTP email carries the code (body only, never the subject) and expiry but no link', () => {
-    const e = renderOtpEmail({ code: '123456', providerName: 'Dra. Pérez', ttlMinutes: 10 });
-    expect(e.subject).not.toContain('123456');
-    expect(e.body).toContain('123456');
-    expect(e.body).toContain('Dra. Pérez');
-    expect(e.body).toContain('10 minutos');
-    expect(e.body).not.toMatch(/https?:\/\//);
-  });
-
   it('confirmation links to the appointments page without tokens', () => {
     const url = 'https://patientnova.net/book/dra-perez/appointments';
     const e = renderBookingConfirmationEmail({
@@ -61,6 +50,5 @@ describe('Spanish templates', () => {
     const bare = renderBookingConfirmationEmail({ providerName: 'X', whenLocal: 'y', timezone: 'UTC', appointmentsUrl: url }).body;
     expect(bare).not.toContain('Lugar:');
     expect(bare).not.toContain('Dirección:');
-    expect(renderBookingRequestReceivedEmail({ providerName: 'X', appointmentsUrl: url }).body).toContain(url);
   });
 });

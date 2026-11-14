@@ -21,8 +21,12 @@ body:json {
 }
 
 docs {
-  Cancels one of the session email's pending booking requests (approval mode). Run Create Booking
-  against a provider in `REQUIRE_APPROVAL` mode first; it stores `portalRequestId`. Needs the
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404) and a `portal_session` cookie. No login issues that cookie now that the
+  codes are gone, so this request only works against a session minted for a future login.
+
+  Cancels one of the session email's pending booking requests (approval mode). A booking request
+  to cancel must exist (Confirm Booking on a `REQUIRE_APPROVAL` provider); `portalRequestId` is set by hand. Needs the
   session cookie, the exact Origin and the CSRF token. The body is an empty object (or none).
 
   204 on success: the request becomes CANCELLED and its slot is released. Every other case (not

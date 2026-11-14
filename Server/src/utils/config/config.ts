@@ -27,7 +27,6 @@ function portalAuthSecret(): string {
   return secret;
 }
 
-
 function positiveIntEnv(key: string, fallback: number): number {
   const raw = process.env[ key ]?.trim();
   if (!raw) return fallback;
@@ -90,11 +89,9 @@ export const config = {
     portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
     portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
     patientPortal: {
-      otpSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID'),
       confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
       cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
       rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
-      requestReceivedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID'),
       requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
       requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
       confirmLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID'),
@@ -169,7 +166,7 @@ export const config = {
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
     patientEnabled: process.env.ENABLE_PORTAL === 'true',
-    otpPaidDailyCap: positiveIntEnv('PORTAL_OTP_PAID_DAILY_CAP', 60),
+    selfServe: process.env.ENABLE_SELF_SERVE === 'true',
     whatsappDailyCap: positiveIntEnv('PORTAL_WHATSAPP_DAILY_CAP', 60),
   },
 

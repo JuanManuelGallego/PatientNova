@@ -8,6 +8,7 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.di
 vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mocks.send }) }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
+import { withProviderLock } from '../../../src/utils/prisma/provider-lock.js';
 import { config } from '../../../src/utils/config/config.js';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
@@ -27,7 +28,8 @@ import {
   createConsentedPatient,
   createLiveProvider,
   PORTAL_ZONE,
-  portalBookingBody,
+  bookViaConfirmation,
+  createPendingRequestWithin,
   sessionFor,
   portalPost,
   slotStarts,
@@ -36,10 +38,10 @@ import {
 } from './portal-helpers.js';
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });
@@ -52,8 +54,6 @@ beforeEach(() => {
 
 const HOUR = 3600_000;
 
-const postBooking = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
-
 const postReschedule = (s: TestSession, id: string, body: object, opts: { csrf?: string | null; origin?: string } = {}) =>
   portalPost(app, `/v1/portal/appointments/${id}/reschedule`, s, body, opts);
 
@@ -61,9 +61,9 @@ const moveTo = (startUtc: string, patientTimezone = 'Europe/Madrid') => ({ start
 
 async function bookAt(provider: LiveProvider, startUtc: string, email = unique('mueve@test.local')) {
   const session = sessionFor(provider.id, email);
-  const res = await postBooking(session, portalBookingBody(provider, startUtc));
-  expect(res.status).toBe(201);
-  return { session, appointmentId: res.body.data.appointment.id as string };
+  const { appointmentId } = await bookViaConfirmation(provider, startUtc, { email });
+  expect(appointmentId).not.toBeNull();
+  return { session, appointmentId: appointmentId! };
 }
 
 async function slotsWithin24h(provider: LiveProvider): Promise<string[]> {
@@ -240,24 +240,25 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     expect((await appointment(appointmentId)).startAt.toISOString()).toBe(starts[3]);
   });
 
-  it('lets exactly one of a reschedule and a booking of the same slot win', async () => {
+  it('refuses a slot held by another patients confirmed pending request with the neutral 409, and leaves the appointment', async () => {
     const provider = await createLiveProvider();
     const [ from ] = await slotStarts(provider, 3);
     const [ target ] = await slotStarts(provider, 4);
     const { session, appointmentId } = await bookAt(provider, from!);
+    await prisma.$transaction(async (tx) => {
+      await withProviderLock(tx, provider.id);
+      await createPendingRequestWithin(tx, provider.id, {
+        email: unique('rival@test.local'), name: 'Rival', lastName: 'Rojas', typeId: provider.typeId, locationId: provider.locationId,
+        startAt: new Date(target!), endAt: new Date(new Date(target!).getTime() + HOUR), patientTimezone: 'America/Bogota',
+        policyVersion: 'v', consentAcceptedAt: new Date(),
+      });
+    });
 
-    const [ moved, booked ] = await Promise.all([
-      postReschedule(session, appointmentId, moveTo(target!)),
-      postBooking(sessionFor(provider.id, unique('rival@test.local')), portalBookingBody(provider, target!)),
-    ]);
+    const moved = await postReschedule(session, appointmentId, moveTo(target!));
 
-    // The winner answers 200 (moved) or 201 (booked); the loser gets the one neutral 409.
-    expect([ moved.status === 200, booked.status === 201 ].filter(Boolean)).toHaveLength(1);
-    expect([ moved.status, booked.status ]).toContain(409);
-    expect(await prisma.appointment.count({
-      where: { userId: provider.id, startAt: new Date(target!), status: { in: [ AppointmentStatus.CONFIRMED, AppointmentStatus.SCHEDULED ] } },
-    })).toBe(1);
-    if (moved.status === 409) expect((await appointment(appointmentId)).startAt.toISOString()).toBe(from);
+    expect(moved.status).toBe(409);
+    expect(JSON.stringify(moved.body)).not.toContain(target!);
+    expect((await appointment(appointmentId)).startAt.toISOString()).toBe(from);
   });
 
   it('refuses times the slot engine would not offer with one 409 that never shows the other appointment', async () => {

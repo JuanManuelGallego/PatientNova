@@ -11,14 +11,12 @@ import { useCancelAppointment, useCancelRequest, usePortalAppointments } from "@
 import type { PortalAppointment, PortalPendingRequest } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
-import { accessNotice } from "@/src/config/consentText";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
 import { fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
-import { PortalLogin, SESSION_LOST_NOTICE } from "./PortalLogin";
 import { PortalAppointmentCard } from "./PortalAppointmentCard";
 import { PortalRequestCard } from "./PortalRequestCard";
 import { PortalConsent } from "./PortalConsent";
@@ -30,7 +28,7 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
     const { provider, loading, error, retry } = useFetchPublicProvider(slug);
 
     let body: React.ReactNode;
-    if (error?.status === 404) body = <Unavailable />;
+    if (error?.status === 404 || provider?.selfServe === false) body = <Unavailable />;
     else if (error) body = <ErrorState error={error} onRetry={retry} />;
     else if (loading || !provider) body = <CardSkeleton />;
     else {
@@ -60,22 +58,14 @@ export function PortalAppointmentsPage({ slug }: { slug: string }) {
 function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider }) {
     const { session, loading, error, refetch, clear } = usePortalSession();
     const [ consentedFor, setConsentedFor ] = useState<string | null>(null);
-    const [ notice, setNotice ] = useState<string | undefined>();
 
     if (loading) return <CardSkeleton />;
     if (error) return <ErrorState error={error} onRetry={refetch} />;
-    if (!session || session.providerSlug !== slug.trim().toLowerCase()) {
-        return (
-            <>
-                <PortalLogin slug={slug} notice={notice} channels={provider.loginChannels} onLoggedIn={() => { setNotice(undefined); refetch(); }} />
-                <p className={styles.muted} data-testid="access-notice">{accessNotice(provider)}</p>
-            </>
-        );
-    }
+    if (!session || session.providerSlug !== slug.trim().toLowerCase()) return <Unavailable />;
 
     const sessionKey = `${session.contact}|${session.expiresAt}`;
     if (session.consentRequired && consentedFor !== sessionKey) {
-        const onSessionLost = () => { setNotice(SESSION_LOST_NOTICE); clear(); };
+        const onSessionLost = () => clear();
         return (
             <>
                 <PendingRequestsOnly onSessionLost={onSessionLost} />
@@ -88,8 +78,8 @@ function PortalArea({ slug, provider }: { slug: string; provider: PublicProvider
             slug={slug}
             provider={provider}
             session={session}
-            onLoggedOut={() => { setNotice(undefined); clear(); }}
-            onSessionLost={() => { setNotice(SESSION_LOST_NOTICE); clear(); }}
+            onLoggedOut={clear}
+            onSessionLost={clear}
         />
     );
 }

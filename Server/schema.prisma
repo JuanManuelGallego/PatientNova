@@ -291,7 +291,6 @@ model User {
   googleConnection     GoogleConnection?
   googleOAuthStates    GoogleOAuthState[]
   availabilityRules    AvailabilityRule[]
-  portalOtps           PortalOtp[]
   patientConsents      PatientConsent[]
   bookingRequests      BookingRequest[]
 
@@ -331,33 +330,6 @@ model AvailabilityRule {
 
   @@index([userId, weekday])
   @@map("availability_rules")
-}
-
-model PortalOtp {
-  id        String   @id @default(uuid()) @db.Uuid
-  createdAt DateTime @default(now())
-
-  contactHash     String    @db.VarChar(64)
-  channel         Channel   @default(EMAIL)
-  codeHash        String    @db.VarChar(64)
-  challengeHash   String    @default("") @db.VarChar(64)
-  expiresAt       DateTime
-  attempts        Int       @default(0)
-  consumedAt      DateTime?
-  lastSentAt      DateTime
-  sendWindowStart DateTime
-  sendCount       Int       @default(0)
-  failedCount       Int       @default(0)
-  failedWindowStart DateTime  @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, contactHash])
-  @@index([userId, lastSentAt])
-  @@index([lastSentAt])
-  @@index([channel, lastSentAt])
-  @@map("portal_otps")
 }
 
 enum ConsentKind {
@@ -450,6 +422,7 @@ model BookingRequest {
   @@index([userId, emailHash, status])
   @@index([userId, verifiedPhoneHash, status])
   @@index([userId, startAt])
+  @@index([contactChannel, createdAt])
   @@map("booking_requests")
 }
 

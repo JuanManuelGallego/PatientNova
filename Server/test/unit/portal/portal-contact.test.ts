@@ -23,7 +23,7 @@ describe('contactHashOf', () => {
     expect(contactHashOf(emailContact(' Ana@Example.COM '))).toBe(emailHash('ana@example.com'));
   });
 
-  it('gives WhatsApp and SMS the same hash, so one number has one OTP row', () => {
+  it('gives WhatsApp and SMS the same hash, so one number has one contact hash', () => {
     expect(contactHashOf(whatsapp)).toBe(phoneHash(PHONE));
     expect(contactHashOf(sms)).toBe(contactHashOf(whatsapp));
   });

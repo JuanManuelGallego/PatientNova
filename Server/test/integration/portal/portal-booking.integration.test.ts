@@ -24,29 +24,30 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
 import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
-import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import {
   ActionSource,
   AppointmentStatus,
+  BookingRequestKind,
+  BookingRequestStatus,
   Channel,
   EntityType,
   PatientStatus,
   PortalReminderTiming,
   RecordSource,
 } from '../../../generated/prisma/enums.js';
-import { createTestAppointmentType, createTestLocation, createTestPatient, unique } from '../helpers.js';
+import { createTestPatient, unique } from '../helpers.js';
 import {
-  ALLOWED_ORIGIN, PORTAL_ZONE, buildPortalApp, createLiveProvider, portalBookingBody, portalPost, sessionFor, slotStarts,
+  PORTAL_ZONE, bookViaConfirmation, buildPortalApp, createLiveProvider, sessionFor, slotStarts,
   type LiveProvider, type TestSession,
 } from './portal-helpers.js';
 
 const ZONE = PORTAL_ZONE;
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });
@@ -58,13 +59,6 @@ beforeEach(() => {
   mocks.send.mockReset().mockResolvedValue('job-1');
 });
 
-function localAt(daysAhead: number, hour: number, minute = 0): string {
-  return DateTime.now().setZone(ZONE).plus({ days: daysAhead }).set({ hour, minute, second: 0, millisecond: 0 }).toUTC().toISO()!;
-}
-
-const postBooking = (s: TestSession, body: unknown, csrf: string | null = s.csrf) =>
-  portalPost(app, '/v1/portal/bookings', s, body as object, { csrf });
-
 const getAppointments = (s: TestSession) =>
   request(app).get('/v1/portal/appointments').set('Cookie', s.cookie);
 
@@ -74,24 +68,13 @@ const patientByEmail = (userId: string, email: string) =>
 const appointmentsOf = (userId: string) =>
   prisma.appointment.findMany({ where: { userId }, orderBy: { startAt: 'asc' } });
 
-describe('POST /v1/portal/bookings', () => {
-  it('books for a new patient: creates the patient, consent and a CONFIRMED portal appointment in one go', async () => {
+describe('a booking confirmed through its link', () => {
+  it('creates the patient, consent and a CONFIRMED portal appointment, audited and linked to the new patient', async () => {
     const provider = await createLiveProvider({ price: 150000 });
     const email = unique('nueva@test.local');
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!));
-
-    expect(res.status).toBe(201);
-    expect(res.headers['cache-control']).toBe('no-store');
-    const dto = res.body.data.appointment;
-    expect(Object.keys(dto).sort()).toEqual([
-      'canCancel', 'canReschedule', 'durationMinutes', 'endUtc', 'id', 'location', 'meeting', 'price', 'startUtc', 'status', 'type',
-    ]);
-    expect(dto.meeting).toBeNull();
-    expect(dto).toMatchObject({ startUtc: start, durationMinutes: 60, status: 'CONFIRMED', price: 150000, canCancel: true, canReschedule: true });
-    expect(Object.keys(dto.type)).toEqual([ 'name' ]);
-    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'instructions', 'isVirtual', 'name' ]);
+    const { appointmentId, row } = await bookViaConfirmation(provider, start!, { email });
 
     const [ patient, ...others ] = await patientByEmail(provider.id, email);
     expect(others).toHaveLength(0);
@@ -105,10 +88,9 @@ describe('POST /v1/portal/bookings', () => {
       portalAccessEnabled: true,
       status: PatientStatus.ACTIVE,
     });
-
     const [ appt ] = await appointmentsOf(provider.id);
     expect(appt).toMatchObject({
-      id: dto.id,
+      id: appointmentId,
       patientId: patient!.id,
       status: AppointmentStatus.CONFIRMED,
       source: RecordSource.PORTAL,
@@ -120,59 +102,17 @@ describe('POST /v1/portal/bookings', () => {
     });
     expect(appt!.confirmedAt).toBeInstanceOf(Date);
     expect(appt!.endAt.getTime() - appt!.startAt.getTime()).toBe(60 * 60_000);
+    expect(row).toMatchObject({ status: BookingRequestStatus.APPROVED, patientId: patient!.id });
 
     expect(await prisma.patientConsent.count({ where: { patientId: patient!.id } })).toBe(1);
     const audits = await prisma.auditLog.findMany({ where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL } });
-    expect(audits.map((a) => a.entityType).sort()).toEqual(
-      [ EntityType.APPOINTMENT, EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.REMINDER, EntityType.REMINDER ].sort(),
-    );
+    expect(audits.map((a) => a.entityType).sort()).toEqual([
+      EntityType.APPOINTMENT, EntityType.BOOKING_REQUEST, EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.REMINDER, EntityType.REMINDER,
+    ].sort());
     expect(new Set(audits.map((a) => a.portalPatientId))).toEqual(new Set([ patient!.id ]));
   });
 
-  it('never modifies an existing patient and reuses their consent', async () => {
-    const provider = await createLiveProvider();
-    const existing = await createTestPatient(provider.id, { name: 'Ana', lastName: 'Perez' });
-    const session = sessionFor(provider.id, existing.email!);
-    const consent = await request(app).post('/v1/portal/consent')
-      .set('Origin', ALLOWED_ORIGIN).set('Cookie', session.cookie).set('X-CSRF-Token', session.csrf).send({ accepted: true });
-    expect(consent.status).toBe(204);
-    const [ start ] = await slotStarts(provider);
-
-    const res = await postBooking(session, portalBookingBody(provider, start!, { patient: { name: 'Otro', lastName: 'Nombre', phone: '+15551234567' } }));
-
-    expect(res.status).toBe(201);
-    const after = await prisma.patient.findUniqueOrThrow({ where: { id: existing.id } });
-    expect(after).toMatchObject({ name: 'Ana', lastName: 'Perez', whatsappNumber: null, source: RecordSource.PROVIDER });
-    expect(after.updatedAt).toEqual(existing.updatedAt);
-    expect(await patientByEmail(provider.id, existing.email!)).toHaveLength(1);
-    expect(await prisma.patientConsent.count({ where: { patientId: existing.id } })).toBe(1);
-    const [ appt ] = await appointmentsOf(provider.id);
-    expect(appt!.patientId).toBe(existing.id);
-  });
-
-  it('books a consented patient without a name, and asks for it (400) when one is needed', async () => {
-    const provider = await createLiveProvider();
-    const existing = await createTestPatient(provider.id, { name: 'Ana', lastName: 'Perez' });
-    const session = sessionFor(provider.id, existing.email!);
-    await request(app).post('/v1/portal/consent')
-      .set('Origin', ALLOWED_ORIGIN).set('Cookie', session.cookie).set('X-CSRF-Token', session.csrf).send({ accepted: true });
-    const [ start, second ] = await slotStarts(provider);
-    const { patient: _omitted, ...nameless } = portalBookingBody(provider, start!);
-
-    const ok = await postBooking(session, nameless);
-    expect(ok.status).toBe(201);
-    expect((await appointmentsOf(provider.id))[0]!.patientId).toBe(existing.id);
-
-    const stranger = sessionFor(provider.id, unique('nuevo@test.local'));
-    const { patient: _also, ...namelessSecond } = portalBookingBody(provider, second!);
-    const res = await postBooking(stranger, namelessSecond);
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Patient name is required');
-    expect(await patientByEmail(provider.id, stranger.email)).toHaveLength(0);
-    expect(await appointmentsOf(provider.id)).toHaveLength(1);
-  });
-
-  it('answers a neutral 409 for revoked portal access and writes nothing', async () => {
+  it('answers a neutral 409 for revoked portal access, releases the hold and writes nothing', async () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);
     const revoked = await createTestPatient(provider.id);
@@ -190,12 +130,13 @@ describe('POST /v1/portal/bookings', () => {
     });
 
     for (const p of [ revoked, revokedInactive, revokedDeleted ]) {
-      const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, start!));
-      expect(res.status).toBe(409);
-      expect(res.body.error).toBe('Online booking unavailable');
+      await expect(bookViaConfirmation(provider, start!, { email: p.email! })).rejects.toMatchObject({
+        errorCode: 409, message: 'Online booking unavailable',
+      });
     }
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
-    expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
+    const rows = await prisma.bookingRequest.findMany({ where: { userId: provider.id } });
+    expect(rows.map((r) => [ r.status, r.confirmedAt ])).toEqual([ [ 'CANCELLED', null ], [ 'CANCELLED', null ], [ 'CANCELLED', null ] ]);
     expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(3);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
   });
@@ -209,11 +150,10 @@ describe('POST /v1/portal/bookings', () => {
     await prisma.patient.update({ where: { id: deleted.id }, data: { isDeleted: true, deletedAt: new Date() } });
 
     for (const [ i, p ] of [ inactive, deleted ].entries()) {
-      const res = await postBooking(sessionFor(provider.id, p.email!), portalBookingBody(provider, starts[i]!));
-      expect(res.status).toBe(202);
-      expect(Object.keys(res.body.data)).toEqual([ 'request' ]);
-      const stored = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: res.body.data.request.id } });
-      expect(stored).toMatchObject({ kind: 'REVIEW', status: 'PENDING', email: p.email });
+      const { row, appointmentId } = await bookViaConfirmation(provider, starts[i]!, { email: p.email! });
+      expect(appointmentId).toBeNull();
+      expect(row).toMatchObject({ kind: BookingRequestKind.REVIEW, status: BookingRequestStatus.PENDING, email: p.email });
+      expect(row.confirmedAt).not.toBeNull();
     }
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
@@ -221,163 +161,15 @@ describe('POST /v1/portal/bookings', () => {
     expect(after.map((p) => [ p.status, p.isDeleted ])).toEqual([ [ PatientStatus.INACTIVE, false ], [ PatientStatus.ACTIVE, true ] ]);
   });
 
-  it('lets exactly one of two concurrent bookings of the same slot win', async () => {
-    const provider = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const results = await Promise.all([
-      postBooking(sessionFor(provider.id, unique('a@test.local')), portalBookingBody(provider, start!)),
-      postBooking(sessionFor(provider.id, unique('b@test.local')), portalBookingBody(provider, start!)),
-    ]);
-    expect(results.map((r) => r.status).sort()).toEqual([ 201, 409 ]);
-    expect(results.find((r) => r.status === 409)!.body.error).toBe('Slot no longer available');
-    expect(await appointmentsOf(provider.id)).toHaveLength(1);
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(1);
-  });
-
-  it('creates one patient when the same new email books two slots at once', async () => {
-    const provider = await createLiveProvider();
-    const email = unique('doble@test.local');
-    const [ first, second ] = await slotStarts(provider);
-    const results = await Promise.all([
-      postBooking(sessionFor(provider.id, email), portalBookingBody(provider, first!)),
-      postBooking(sessionFor(provider.id, email), portalBookingBody(provider, second!)),
-    ]);
-    expect(results.map((r) => r.status)).toEqual([ 201, 201 ]);
-    expect(await patientByEmail(provider.id, email)).toHaveLength(1);
-    expect(await appointmentsOf(provider.id)).toHaveLength(2);
-  });
-
-  it('races an admin create of the same slot with exactly one winner', async () => {
-    const provider = await createLiveProvider();
-    const adminPatient = await createTestPatient(provider.id);
-    const [ start ] = await slotStarts(provider);
-    const end = new Date(new Date(start!).getTime() + 60 * 60_000).toISOString();
-
-    const [ portalRes, adminRes ] = await Promise.allSettled([
-      postBooking(sessionFor(provider.id, unique('race@test.local')), portalBookingBody(provider, start!)),
-      appointmentService.create({
-        startAt: start!, endAt: end, price: 0, paid: false, status: AppointmentStatus.SCHEDULED,
-        patientId: adminPatient.id, locationId: provider.locationId, typeId: provider.typeId,
-      }, provider.id),
-    ]);
-
-    const portalWon = portalRes.status === 'fulfilled' && portalRes.value.status === 201;
-    const adminWon = adminRes.status === 'fulfilled';
-    expect(portalWon !== adminWon).toBe(true);
-    if (!portalWon) expect(portalRes.status === 'fulfilled' && portalRes.value.status).toBe(409);
-    expect(await appointmentsOf(provider.id)).toHaveLength(1);
-  });
-
-  it('rejects starts the slot engine would not offer with the same 409', async () => {
-    const provider = await createLiveProvider({ bufferMinutes: 30 });
-    const slots = await slotStarts(provider);
-    const busyPatient = await createTestPatient(provider.id);
-    await prisma.appointment.create({
-      data: {
-        userId: provider.id, patientId: busyPatient.id, startAt: new Date(slots[2]!),
-        endAt: new Date(new Date(slots[2]!).getTime() + 60 * 60_000), price: 0, status: AppointmentStatus.SCHEDULED,
-      },
-    });
-    await prisma.blockedTime.create({
-      data: { userId: provider.id, startTimeUtc: new Date(slots[6]!), endTimeUtc: new Date(new Date(slots[6]!).getTime() + 15 * 60_000) },
-    });
-    const offGrid = new Date(new Date(slots[4]!).getTime() + 30 * 60_000).toISOString();
-
-    const rejected = [
-      slots[1]!,
-      slots[2]!,
-      slots[6]!,
-      offGrid,
-      localAt(3, 20),
-      localAt(-1, 9),
-      localAt(40, 9),
-    ];
-    for (const start of rejected) {
-      const res = await postBooking(sessionFor(provider.id, unique('slot@test.local')), portalBookingBody(provider, start));
-      expect({ start, status: res.status, error: res.body.error }).toEqual({ start, status: 409, error: 'Slot no longer available' });
-    }
-    expect(await appointmentsOf(provider.id)).toHaveLength(1);
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(1);
-  });
-
-  it('rejects an on-grid start whose appointment would overrun the window', async () => {
-    const provider = await createLiveProvider();
-    await prisma.appointmentType.update({ where: { id: provider.typeId }, data: { defaultDuration: 90 } });
-    const session = sessionFor(provider.id, unique('largo@test.local'));
-
-    const overrun = await postBooking(session, portalBookingBody(provider, localAt(3, 17)));
-    expect({ status: overrun.status, error: overrun.body.error }).toEqual({ status: 409, error: 'Slot no longer available' });
-    const fits = await postBooking(session, portalBookingBody(provider, localAt(3, 16)));
-    expect(fits.status).toBe(201);
-    expect(fits.body.data.appointment.durationMinutes).toBe(90);
-  });
-
-  it('allows back-to-back bookings when the buffer is 0', async () => {
-    const provider = await createLiveProvider();
-    const [ first, second ] = await slotStarts(provider);
-    expect((await postBooking(sessionFor(provider.id, unique('b2b@test.local')), portalBookingBody(provider, first!))).status).toBe(201);
-    expect((await postBooking(sessionFor(provider.id, unique('b2b@test.local')), portalBookingBody(provider, second!))).status).toBe(201);
-  });
-
-  it('answers 404 for a type or location that is not bookable online', async () => {
-    const provider = await createLiveProvider();
-    const other = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const session = sessionFor(provider.id, unique('tipo@test.local'));
-    const hiddenType = await createTestAppointmentType(provider.id);
-    const hiddenLocation = await createTestLocation(provider.id);
-    const inactiveType = await createTestAppointmentType(provider.id);
-    await prisma.appointmentType.update({ where: { id: inactiveType.id }, data: { bookableOnline: true, isActive: false } });
-
-    const cases: [ Record<string, unknown>, string ][] = [
-      [ { typeId: hiddenType.id }, 'Appointment type not found' ],
-      [ { typeId: inactiveType.id }, 'Appointment type not found' ],
-      [ { typeId: other.typeId }, 'Appointment type not found' ],
-      [ { locationId: hiddenLocation.id }, 'Location not found' ],
-      [ { locationId: other.locationId }, 'Location not found' ],
-    ];
-    for (const [ override, error ] of cases) {
-      const res = await postBooking(session, portalBookingBody(provider, start!, override));
-      expect({ status: res.status, error: res.body.error }).toEqual({ status: 404, error });
-    }
-    expect(await appointmentsOf(provider.id)).toHaveLength(0);
-  });
-
-  it('validates the body strictly (400) before touching the database', async () => {
-    const provider = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const session = sessionFor(provider.id, unique('body@test.local'));
-    const base = portalBookingBody(provider, start!);
-    const { consentAccepted: _omit, ...withoutConsent } = base;
-
-    const bodies = [
-      withoutConsent,
-      { ...base, consentAccepted: false },
-      { ...base, patient: { name: 'Lucia' } },
-      { ...base, patient: { name: '  ', lastName: 'Rojas' } },
-      { ...base, price: 0 },
-      { ...base, endUtc: start },
-      { ...base, status: 'SCHEDULED' },
-      { ...base, patientTimezone: 'Mars/Olympus_Mons' },
-      { ...base, startUtc: 'mañana' },
-    ];
-    for (const body of bodies) {
-      expect((await postBooking(session, body)).status).toBe(400);
-    }
-    expect(await prisma.patient.count({ where: { userId: provider.id } })).toBe(0);
-  });
-
   it('caps a patient at 3 upcoming portal bookings; provider-created, cancelled and past ones do not count', async () => {
     const provider = await createLiveProvider();
     const email = unique('tope@test.local');
-    const session = sessionFor(provider.id, email);
     const slots = await slotStarts(provider);
 
-    for (const start of slots.slice(0, 3)) {
-      expect((await postBooking(session, portalBookingBody(provider, start))).status).toBe(201);
-    }
-    const fourth = await postBooking(session, portalBookingBody(provider, slots[3]!));
-    expect({ status: fourth.status, error: fourth.body.error }).toEqual({ status: 409, error: 'Booking limit reached' });
+    for (const start of slots.slice(0, 3)) await bookViaConfirmation(provider, start, { email });
+    await expect(bookViaConfirmation(provider, slots[3]!, { email })).rejects.toMatchObject({
+      errorCode: 409, message: 'Booking limit reached',
+    });
 
     const [ patient ] = await patientByEmail(provider.id, email);
     await prisma.appointment.createMany({
@@ -394,39 +186,26 @@ describe('POST /v1/portal/bookings', () => {
       data: { status: AppointmentStatus.CANCELLED },
     });
 
-    expect((await postBooking(session, portalBookingBody(provider, slots[3]!))).status).toBe(201);
+    expect((await bookViaConfirmation(provider, slots[3]!, { email })).appointmentId).not.toBeNull();
   });
 
-  it('rolls back the patient, consent and appointment when a later step fails', async () => {
+  it('rolls back the patient, consent and appointment when a later step fails, and sends nothing', async () => {
     const provider = await createLiveProvider();
     const email = unique('rollback@test.local');
     const [ start ] = await slotStarts(provider);
     failConsent.on = true;
 
-    const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!));
+    await expect(bookViaConfirmation(provider, start!, { email })).rejects.toThrow('consent write failed');
 
-    expect(res.status).toBe(500);
     expect(await patientByEmail(provider.id, email)).toHaveLength(0);
     expect(await appointmentsOf(provider.id)).toHaveLength(0);
     expect(await prisma.patientConsent.count({ where: { userId: provider.id } })).toBe(0);
-    expect(await prisma.auditLog.count({ where: { userId: provider.id, source: ActionSource.PUBLIC_PORTAL } })).toBe(0);
-  });
-
-  it('requires a session and the CSRF header, and rejects a foreign Origin', async () => {
-    const provider = await createLiveProvider();
-    const [ start ] = await slotStarts(provider);
-    const session = sessionFor(provider.id, unique('guard@test.local'));
-
-    expect((await postBooking(session, portalBookingBody(provider, start!), null)).status).toBe(403);
-    const anonymous = await request(app).post('/v1/portal/bookings')
-      .set('Origin', ALLOWED_ORIGIN).send(portalBookingBody(provider, start!));
-    expect(anonymous.status).toBe(401);
-    const foreign = await request(app).post('/v1/portal/bookings')
-      .set('Origin', 'https://evil.example').set('Cookie', session.cookie).set('X-CSRF-Token', session.csrf)
-      .send(portalBookingBody(provider, start!));
-    expect(foreign.status).toBe(403);
-
-    expect(await appointmentsOf(provider.id)).toHaveLength(0);
+    expect(await prisma.auditLog.count({
+      where: { userId: provider.id, entityType: { in: [ EntityType.PATIENT, EntityType.PATIENT_CONSENT, EntityType.APPOINTMENT, EntityType.REMINDER ] } },
+    })).toBe(0);
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+    expect(await prisma.reminder.count({ where: { userId: provider.id } })).toBe(0);
+    expect(await prisma.bookingRequest.count({ where: { userId: provider.id, status: BookingRequestStatus.UNCONFIRMED } })).toBe(1);
   });
 });
 
@@ -455,11 +234,11 @@ describe('GET /v1/portal/appointments', () => {
     const session = sessionFor(provider.id, email);
     const slots = await slotStarts(provider);
 
-    const second = await postBooking(session, portalBookingBody(provider, slots[4]!));
-    const first = await postBooking(session, portalBookingBody(provider, slots[1]!));
-    await postBooking(sessionFor(provider.id, unique('otra@test.local')), portalBookingBody(provider, slots[6]!));
+    const second = await bookViaConfirmation(provider, slots[4]!, { email });
+    const first = await bookViaConfirmation(provider, slots[1]!, { email });
+    await bookViaConfirmation(provider, slots[6]!, { email: unique('otra@test.local') });
     const [ otherStart ] = await slotStarts(other);
-    await postBooking(sessionFor(other.id, email), portalBookingBody(other, otherStart!));
+    await bookViaConfirmation(other, otherStart!, { email });
 
     const [ patient ] = await patientByEmail(provider.id, email);
     await prisma.appointment.createMany({
@@ -473,11 +252,15 @@ describe('GET /v1/portal/appointments', () => {
     expect(res.status).toBe(200);
     expect(shapeOf(res.body.data)).toEqual({ appointments: 'array', requests: 'array', consentRequired: 'boolean' });
     expect(res.body.data.consentRequired).toBe(false);
-    expect(res.body.data.appointments.map((a: { id: string }) => a.id)).toEqual([
-      first.body.data.appointment.id,
-      second.body.data.appointment.id,
+    expect(res.body.data.appointments.map((a: { id: string }) => a.id)).toEqual([ first.appointmentId, second.appointmentId ]);
+    const dto = res.body.data.appointments[0];
+    expect(Object.keys(dto).sort()).toEqual([
+      'canCancel', 'canReschedule', 'durationMinutes', 'endUtc', 'id', 'location', 'meeting', 'price', 'startUtc', 'status', 'type',
     ]);
-    expect(res.body.data.appointments[0]).toEqual(first.body.data.appointment);
+    expect(dto.meeting).toBeNull();
+    expect(dto).toMatchObject({ startUtc: slots[1], durationMinutes: 60, status: 'CONFIRMED', canCancel: true, canReschedule: true });
+    expect(Object.keys(dto.type)).toEqual([ 'name' ]);
+    expect(Object.keys(dto.location).sort()).toEqual([ 'address', 'instructions', 'isVirtual', 'name' ]);
   });
 
   it('requires a session', async () => {
@@ -491,12 +274,15 @@ describe('booking confirmation, reminder and provider notice', () => {
     new Intl.DateTimeFormat('es-ES', { ...opts, timeZone }).format(new Date(iso));
   const timeIn = (iso: string, timeZone: string) => fmt(iso, timeZone, { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  async function soonestSlotWithin24h(provider: LiveProvider): Promise<string> {
+  async function soonestSlotWithin24h(provider: LiveProvider, minHours = 0): Promise<string> {
     const today = DateTime.now().setZone(ZONE);
     const { slots } = await publicBookingService.getSlots(provider.slug, {
       typeId: provider.typeId, from: today.toISODate()!, to: today.plus({ days: 1 }).toISODate()!,
     });
-    const soon = slots.find((s) => new Date(s.startUtc).getTime() - Date.now() < 23 * 3600_000);
+    const soon = slots.find((s) => {
+      const ahead = new Date(s.startUtc).getTime() - Date.now();
+      return ahead >= minHours * 3600_000 && ahead < 23 * 3600_000;
+    });
     return soon!.startUtc;
   }
 
@@ -505,9 +291,8 @@ describe('booking confirmation, reminder and provider notice', () => {
     const email = unique('confirma@test.local');
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!, { patientTimezone: MADRID }));
+    await bookViaConfirmation(provider, start!, { email, patientTimezone: MADRID });
 
-    expect(res.status).toBe(201);
     expect(mocks.send).not.toHaveBeenCalled();
     expect(mocks.dispatch).toHaveBeenCalledTimes(1);
     const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
@@ -528,7 +313,7 @@ describe('booking confirmation, reminder and provider notice', () => {
     });
     const [ start ] = await slotStarts(provider);
 
-    expect((await postBooking(sessionFor(provider.id, unique('aviso@test.local')), portalBookingBody(provider, start!))).status).toBe(201);
+    await bookViaConfirmation(provider, start!, { email: unique('aviso@test.local') });
 
     expect(mocks.dispatch).toHaveBeenCalledTimes(2);
     const [ channel, opts ] = mocks.dispatch.mock.calls[1]!;
@@ -546,19 +331,10 @@ describe('booking confirmation, reminder and provider notice', () => {
     mocks.dispatch.mockResolvedValue({ success: false, error: 'Brevo down' });
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, unique('caido@test.local')), portalBookingBody(provider, start!));
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email: unique('caido@test.local') });
 
-    expect(res.status).toBe(201);
+    expect(appointmentId).not.toBeNull();
     expect(await appointmentsOf(provider.id)).toHaveLength(1);
-  });
-
-  it('sends nothing when the booking rolls back', async () => {
-    const provider = await createLiveProvider();
-    failConsent.on = true;
-    const [ start ] = await slotStarts(provider);
-    expect((await postBooking(sessionFor(provider.id, unique('nada@test.local')), portalBookingBody(provider, start!))).status).toBe(500);
-    expect(mocks.dispatch).not.toHaveBeenCalled();
-    expect(await prisma.reminder.count({ where: { userId: provider.id } })).toBe(0);
   });
 
   it('queues both notifications and the reminder inside the transaction when the scheduler is on', async () => {
@@ -566,12 +342,10 @@ describe('booking confirmation, reminder and provider notice', () => {
     scheduler.enabled = true;
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, unique('cola@test.local')), portalBookingBody(provider, start!));
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email: unique('cola@test.local') });
 
-    expect(res.status).toBe(201);
     expect(mocks.dispatch).not.toHaveBeenCalled();
-    const appointmentId = res.body.data.appointment.id;
-    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId } });
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: appointmentId! } });
     expect(mocks.send.mock.calls).toEqual([
       [ 'send-reminder', { reminderId: reminder.id }, { db: expect.anything(), startAfter: reminder.sendAt } ],
       [ 'portal-booking-notify', { appointmentId, kind: 'patient-confirmation' }, { db: expect.anything() } ],
@@ -584,9 +358,9 @@ describe('booking confirmation, reminder and provider notice', () => {
     const email = unique('recuerda@test.local');
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, email), portalBookingBody(provider, start!, { patientTimezone: MADRID }));
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email, patientTimezone: MADRID });
 
-    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: appointmentId! } });
     expect(reminder).toMatchObject({ channel: Channel.EMAIL, to: email, sendMode: 'SCHEDULED', status: 'PENDING', subject: 'Recordatorio de cita' });
     expect(reminder.sendAt.getTime()).toBe(new Date(start!).getTime() - 24 * 3600_000);
     expect(reminder.body).toContain(`Hora: ${timeIn(start!, MADRID)}`);
@@ -596,21 +370,19 @@ describe('booking confirmation, reminder and provider notice', () => {
     const provider = await createLiveProvider();
     const start = await soonestSlotWithin24h(provider);
 
-    const res = await postBooking(sessionFor(provider.id, unique('pronto@test.local')), portalBookingBody(provider, start));
+    const { appointmentId } = await bookViaConfirmation(provider, start, { email: unique('pronto@test.local') });
 
-    expect(res.status).toBe(201);
-    expect(await prisma.reminder.count({ where: { appointmentId: res.body.data.appointment.id } })).toBe(0);
+    expect(await prisma.reminder.count({ where: { appointmentId: appointmentId! } })).toBe(0);
   });
 
   it('uses the provider preset, so a short-notice booking still gets its reminder', async () => {
     const provider = await createLiveProvider();
     await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.ONE_HOUR_BEFORE } });
-    const start = await soonestSlotWithin24h(provider);
+    const start = await soonestSlotWithin24h(provider, 2);
 
-    const res = await postBooking(sessionFor(provider.id, unique('corto@test.local')), portalBookingBody(provider, start));
+    const { appointmentId } = await bookViaConfirmation(provider, start, { email: unique('corto@test.local') });
 
-    expect(res.status).toBe(201);
-    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: appointmentId! } });
     expect(reminder.sendAt.getTime()).toBe(new Date(start).getTime() - 3600_000);
   });
 
@@ -619,9 +391,9 @@ describe('booking confirmation, reminder and provider notice', () => {
     await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.PREVIOUS_DAY_EVENING } });
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, unique('tarde@test.local')), portalBookingBody(provider, start!, { patientTimezone: MADRID }));
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email: unique('tarde@test.local'), patientTimezone: MADRID });
 
-    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: res.body.data.appointment.id } });
+    const reminder = await prisma.reminder.findUniqueOrThrow({ where: { appointmentId: appointmentId! } });
     const local = DateTime.fromJSDate(reminder.sendAt, { zone: MADRID });
     expect(local.toISODate()).toBe(DateTime.fromISO(start!, { zone: MADRID }).minus({ days: 1 }).toISODate());
     expect([ local.hour, local.minute ]).toEqual([ 18, 0 ]);
@@ -632,9 +404,8 @@ describe('booking confirmation, reminder and provider notice', () => {
     await prisma.user.update({ where: { id: provider.id }, data: { portalReminderTiming: PortalReminderTiming.NONE } });
     const [ start ] = await slotStarts(provider);
 
-    const res = await postBooking(sessionFor(provider.id, unique('apagado@test.local')), portalBookingBody(provider, start!));
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email: unique('apagado@test.local') });
 
-    expect(res.status).toBe(201);
-    expect(await prisma.reminder.count({ where: { appointmentId: res.body.data.appointment.id } })).toBe(0);
+    expect(await prisma.reminder.count({ where: { appointmentId: appointmentId! } })).toBe(0);
   });
 });

@@ -25,10 +25,10 @@ afterEach(() => {
 describe("TurnstileWidget", () => {
     it("renders the widget bound to the action and reports the solved token", async () => {
         const onToken = vi.fn();
-        render(<TurnstileWidget action="otp-request" siteKey="site-key" onToken={onToken} />);
+        render(<TurnstileWidget action="booking" siteKey="site-key" onToken={onToken} />);
 
         await waitFor(() => expect(turnstile.render).toHaveBeenCalledTimes(1));
-        expect(renderOptions()).toMatchObject({ sitekey: "site-key", action: "otp-request", language: "es" });
+        expect(renderOptions()).toMatchObject({ sitekey: "site-key", action: "booking", language: "es" });
 
         act(() => callback("callback")("token-123"));
         expect(onToken).toHaveBeenLastCalledWith("token-123");
@@ -40,7 +40,7 @@ describe("TurnstileWidget", () => {
     it("shows an accessible error and clears the token when the challenge errors", async () => {
         const onToken = vi.fn();
         const onError = vi.fn();
-        render(<TurnstileWidget action="otp-request" siteKey="site-key" onToken={onToken} onError={onError} />);
+        render(<TurnstileWidget action="booking" siteKey="site-key" onToken={onToken} onError={onError} />);
         await waitFor(() => expect(turnstile.render).toHaveBeenCalled());
         expect(onError).not.toHaveBeenCalled();
 
@@ -53,7 +53,7 @@ describe("TurnstileWidget", () => {
     it("resets the single-use token on demand and removes the widget on unmount", async () => {
         const onToken = vi.fn();
         const ref = createRef<TurnstileHandle>();
-        const { unmount } = render(<TurnstileWidget ref={ref} action="otp-request" siteKey="site-key" onToken={onToken} />);
+        const { unmount } = render(<TurnstileWidget ref={ref} action="booking" siteKey="site-key" onToken={onToken} />);
         await waitFor(() => expect(turnstile.render).toHaveBeenCalled());
 
         act(() => ref.current!.reset());
@@ -67,7 +67,7 @@ describe("TurnstileWidget", () => {
     it("without a site key shows an error and never yields a token (no bypass)", () => {
         const onToken = vi.fn();
         const onError = vi.fn();
-        render(<TurnstileWidget action="otp-request" siteKey="" onToken={onToken} onError={onError} />);
+        render(<TurnstileWidget action="booking" siteKey="" onToken={onToken} onError={onError} />);
         expect(screen.getByRole("alert")).toHaveTextContent("No pudimos verificar");
         expect(screen.getByRole("alert")).toHaveClass("error-inline");
         expect(onError).toHaveBeenCalled();

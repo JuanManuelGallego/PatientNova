@@ -89,11 +89,9 @@ jobs:
       TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID: dummyPortalRequestSid
       TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID: dummyPortalRequestNudgeSid
       TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID: dummyPatientPortalOtpSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID: dummyPatientPortalConfirmationSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID: dummyPatientPortalCancelSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID: dummyPatientPortalRescheduleSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID: dummyPatientPortalRequestReceivedSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID: dummyPatientPortalRequestRejectedSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID: dummyPatientPortalRequestExpiredSid
       TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID: dummyPatientPortalConfirmLinkSid
@@ -111,6 +109,7 @@ jobs:
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback
       PORTAL_URL: http://localhost:3000
       ENABLE_PORTAL: "false"
+      ENABLE_SELF_SERVE: "false"
       CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
     steps:
       - uses: actions/checkout@v4
@@ -174,6 +173,7 @@ jobs:
       PUBLIC_RATE_LIMIT_MAX: "100000"
       ENABLE_SCHEDULER: "false"
       ENABLE_PORTAL: "true"
+      ENABLE_SELF_SERVE: "false"
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: e2e-admin@example.com
       ADMIN_PASSWORD: E2e-Admin-Password-1

@@ -14,11 +14,6 @@ export const emailContact = (email: string): PortalContact => ({ channel: Channe
 
 export const isPhoneContact = (contact: PortalContact): boolean => contact.channel !== Channel.EMAIL;
 
-export function portalLoginChannels(): Channel[] {
-  return [ Channel.EMAIL, Channel.WHATSAPP ];
-}
-
-
 export function contactHashOf(contact: PortalContact): string | null {
   return isPhoneContact(contact) ? phoneHash(contact.value) : emailHash(contact.value);
 }

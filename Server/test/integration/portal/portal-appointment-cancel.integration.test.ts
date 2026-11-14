@@ -31,7 +31,7 @@ import {
   buildPortalApp,
   createConsentedPatient,
   createLiveProvider,
-  portalBookingBody,
+  bookViaConfirmation,
   sessionFor,
   portalPost,
   slotStarts,
@@ -40,10 +40,10 @@ import {
 } from './portal-helpers.js';
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });
@@ -56,8 +56,6 @@ beforeEach(() => {
   mocks.cancel.mockReset().mockResolvedValue(undefined);
 });
 
-const postBooking = (s: TestSession, body: object) => portalPost(app, '/v1/portal/bookings', s, body);
-
 const postCancel = (s: TestSession, id: string, opts: { csrf?: string | null; origin?: string; body?: object } = {}) =>
   portalPost(app, `/v1/portal/appointments/${id}/cancel`, s, opts.body, opts);
 
@@ -67,9 +65,9 @@ const listAppointments = (s: TestSession) => request(app).get('/v1/portal/appoin
 async function book(provider: LiveProvider, email = unique('cancela@test.local'), slotIndex = 0) {
   const session = sessionFor(provider.id, email);
   const starts = await slotStarts(provider);
-  const res = await postBooking(session, portalBookingBody(provider, starts[slotIndex]!));
-  expect(res.status).toBe(201);
-  return { session, appointmentId: res.body.data.appointment.id as string, start: starts[slotIndex]! };
+  const { appointmentId } = await bookViaConfirmation(provider, starts[slotIndex]!, { email });
+  expect(appointmentId).not.toBeNull();
+  return { session, appointmentId: appointmentId!, start: starts[slotIndex]! };
 }
 
 async function providerAppointment(provider: LiveProvider, patientId: string, start: Date, data: Record<string, unknown> = {}) {

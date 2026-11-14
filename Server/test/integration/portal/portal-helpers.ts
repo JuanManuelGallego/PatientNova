@@ -6,6 +6,9 @@ import { createHash, randomUUID } from 'node:crypto';
 import { prisma, type TransactionClient } from '../../../src/utils/prisma/prisma-client.js';
 import { bookingRequestService, type NewBookingRequest } from '../../../src/booking-requests/booking-request.service.js';
 import { bookingRequestRepository } from '../../../src/booking-requests/booking-request.repository.js';
+import { issueRequestToken } from '../../../src/booking-requests/request-token.js';
+import { bookingConfirmationService } from '../../../src/portal/booking-confirmation.service.js';
+import { withProviderLock } from '../../../src/utils/prisma/provider-lock.js';
 import { holdExpiry } from '../../../src/booking-requests/booking-request.constants.js';
 import { requestId } from '../../../src/middlewares/request-id.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';
@@ -108,18 +111,6 @@ export async function slotStarts(provider: LiveProvider, daysAhead = 3): Promise
   return slots.map((s) => s.startUtc);
 }
 
-export function portalBookingBody(provider: LiveProvider, startUtc: string, overrides: Record<string, unknown> = {}) {
-  return {
-    typeId: provider.typeId,
-    locationId: provider.locationId,
-    startUtc,
-    patientTimezone: 'America/New_York',
-    consentAccepted: true,
-    patient: { name: 'Lucia', lastName: 'Rojas', phone: '+573001112233' },
-    ...overrides,
-  };
-}
-
 /** An existing (provider-created) patient who already accepted the current policy in the portal. */
 export async function createConsentedPatient(userId: string) {
   const patient = await createTestPatient(userId);
@@ -141,4 +132,49 @@ export async function createPendingRequestWithin(tx: TransactionClient, userId: 
     tx,
   );
   return { request: await tx.bookingRequest.findUniqueOrThrow({ where: { id: request.id } }), expiredIds };
+}
+
+export interface ConfirmedBookingOptions {
+  email?: string;
+  phone?: string;
+  channel?: Channel;
+  patient?: { name: string; lastName: string; phone?: string | null };
+  typeId?: string;
+  locationId?: string;
+  patientTimezone?: string;
+}
+
+export async function bookViaConfirmation(provider: LiveProvider, startUtc: string, opts: ConfirmedBookingOptions = {}) {
+  const email = opts.email ?? (opts.phone ? undefined : `paciente-${Date.now()}-${++seq}@test.local`);
+  const start = new Date(startUtc);
+  const type = await prisma.appointmentType.findUniqueOrThrow({ where: { id: opts.typeId ?? provider.typeId } });
+  const confirm = issueRequestToken();
+  const release = issueRequestToken();
+  const patient = opts.patient ?? { name: 'Lucia', lastName: 'Rojas', phone: email ? '+573001112233' : null };
+  const requestId = await prisma.$transaction(async (tx) => {
+    await withProviderLock(tx, provider.id);
+    const { request } = await bookingRequestService.createUnconfirmedWithin(tx, provider.id, {
+      contactChannel: email ? Channel.EMAIL : (opts.channel ?? Channel.WHATSAPP),
+      email: email ?? null,
+      verifiedPhone: email ? null : opts.phone!,
+      name: patient.name,
+      lastName: patient.lastName,
+      phone: patient.phone || null,
+      typeId: opts.typeId ?? provider.typeId,
+      locationId: opts.locationId ?? provider.locationId,
+      startAt: start,
+      endAt: new Date(start.getTime() + type.defaultDuration * 60_000),
+      patientTimezone: opts.patientTimezone ?? 'America/New_York',
+      policyVersion: PRIVACY_POLICY_VERSION,
+      consentAcceptedAt: new Date(),
+      consentIp: '203.0.113.9',
+      consentUserAgent: 'vitest',
+      confirmTokenHash: confirm.hash,
+      releaseTokenHash: release.hash,
+    }, new Date());
+    return request.id;
+  });
+  const view = await bookingConfirmationService.confirm(confirm.token, { ipAddress: '203.0.113.9', userAgent: 'vitest' });
+  const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+  return { requestId, view, row, appointmentId: row.appointmentId, email };
 }

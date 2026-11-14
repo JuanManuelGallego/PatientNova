@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { faintText, goToTimes, patientEmail, stripVercelBypass, submitDetails, verifyEmail } from '../../support/portal';
+import { faintText, fillDetails, goToTimes, latestLink, patientEmail, stripVercelBypass, submitDetails } from '../../support/portal';
 
 const SLUG = 'e2e-publica';
 
@@ -42,26 +42,30 @@ test('every label reads clearly in a browser with a dark theme saved', async ({ 
     await check('times, time chosen');
 
     await page.getByRole('button', { name: 'Continuar' }).click();
-    await expect(page.getByRole('heading', { name: '¿Dónde te enviamos el código?' })).toBeVisible();
-    await check('verify');
-
-    await verifyEmail(page, patientEmail('legible', testInfo));
-    await expect(page.getByLabel('Nombre')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Último paso' })).toBeVisible();
     await check('details');
 
-    await page.getByRole('button', { name: 'Reservar cita' }).click();
-    await expect(page.getByRole('alert').first()).toBeVisible();
+    const submit = page.getByRole('button', { name: 'Reservar cita' });
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+    await expect(page.getByText('Escribe tu nombre.')).toBeVisible();
     await check('details with errors');
 
+    await page.getByRole('group', { name: 'Recibir el enlace de confirmación por' }).getByRole('button', { name: 'WhatsApp' }).click();
+    await expect(page.getByLabel('Número de WhatsApp')).toBeVisible();
+    await check('details, WhatsApp');
+
+    const email = patientEmail('legible', testInfo);
+    await fillDetails(page, email);
     await submitDetails(page, 'Reservar cita');
-    await expect(page.getByRole('heading', { name: 'Tu cita quedó reservada' })).toBeVisible();
-    await check('result');
+    await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
+    await check('check your email');
 
-    await page.getByRole('link', { name: 'Ver mis citas' }).click();
-    await expect(page.getByRole('list', { name: 'Próximas citas' })).toBeVisible();
-    await check('Mis citas');
+    await page.goto(await latestLink(email));
+    await expect(page.getByRole('heading', { name: 'Confirma tu cita' })).toBeVisible();
+    await check('confirmation link');
 
-    await page.getByRole('button', { name: 'Reprogramar' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Reprogramar cita' })).toBeVisible();
-    await check('reschedule');
+    await page.getByRole('button', { name: 'Confirmar mi cita' }).click();
+    await expect(page.getByRole('heading', { name: 'Tu cita está confirmada' })).toBeVisible();
+    await check('confirmed');
 });

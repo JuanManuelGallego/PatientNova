@@ -145,23 +145,6 @@ export async function deliverBookingRequestNotification(job: BookingRequestNotif
   logger.info({ requestId, event, channel: message.channel, messageId: result.messageSid }, 'Booking request notification sent');
 }
 
-export async function sendRequestReceipt(requestId: string): Promise<void> {
-  try {
-    const request = await loadRequest(requestId);
-    const route = request && requestRoute(request);
-    if (!request || !route) return;
-    const page = bookingUrl(request.user.bookingSlug);
-    const opts = renderPatientNotice('request-received', {
-      ...noticeTimes(request),
-      appointmentsUrl: page ? `${page}/appointments` : portalBase(),
-    }, route);
-    const result = await dispatchMessage(route.channel, opts);
-    if (!result.success) logger.error({ requestId, channel: route.channel }, 'Booking request receipt was not accepted');
-  } catch (err) {
-    logger.error({ requestId, errorName: err instanceof Error ? err.name : undefined }, 'Booking request receipt failed');
-  }
-}
-
 /** Enqueued on the caller's `tx`, so a rollback drops them. No-op without the scheduler. */
 export async function enqueueBookingRequestNotifications(
   event: BookingRequestEvent,

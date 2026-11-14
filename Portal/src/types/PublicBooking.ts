@@ -13,7 +13,8 @@ export interface PublicProvider {
     timezone: string;
     bookingOpen: boolean;
     approvalRequired: boolean;
-    loginChannels?: LoginChannel[];
+    selfServe: boolean;
+    whatsappConfirmation: boolean;
     reschedulePolicy: ReschedulePolicy | null;
     lastBookableDate: string;
     types: PublicAppointmentType[];

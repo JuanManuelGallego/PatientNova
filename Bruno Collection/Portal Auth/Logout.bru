@@ -19,6 +19,9 @@ script:post-response {
 }
 
 docs {
+  Requires the server to run with `ENABLE_SELF_SERVE=true` ("Mis citas" is off by default: every
+  /portal path answers 404).
+
   Clears the `portal_session` cookie (204). The session is a stateless JWT: a copied cookie stays
   valid until it expires (at most 2h). Needs only the exact Origin: it clears the cookie even when
   the session no longer validates.

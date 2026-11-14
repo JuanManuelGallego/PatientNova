@@ -15,15 +15,15 @@ export async function subjects(email: string): Promise<string[]> {
     return (await inbox(email)).map((m) => m.subject);
 }
 
-export async function latestCode(email: string): Promise<string> {
-    let code = '';
+export async function latestLink(email: string, not?: string): Promise<string> {
+    let link = '';
     await expect.poll(async () => {
-        const res = await fetch(`${MOCK_BREVO_URL}/__test/latest-code?email=${encodeURIComponent(email)}`);
+        const res = await fetch(`${MOCK_BREVO_URL}/__test/latest-link?to=${encodeURIComponent(email)}`);
         if (!res.ok) return '';
-        code = ((await res.json()) as { code: string }).code;
-        return code;
-    }, { message: 'OTP email never reached the mock Brevo server', timeout: 15_000 }).toMatch(/^\d{6}$/);
-    return code;
+        link = ((await res.json()) as { link: string }).link;
+        return link === not ? '' : link;
+    }, { message: 'The confirmation link email never reached the mock Brevo server', timeout: 15_000 }).toMatch(/\/book\/confirmar\/[\w-]+$/);
+    return link;
 }
 
 export async function stripVercelBypass(page: Page) {
@@ -75,7 +75,7 @@ export async function pickSlot(page: Page, slug: string, index = 0): Promise<Pic
     const timeText = (await time.textContent())!.trim();
     await time.click();
     await page.getByRole('button', { name: 'Continuar' }).click();
-    await expect(page.getByRole('heading', { name: /Dónde te enviamos el código|Último paso/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Último paso' })).toBeVisible();
     return { dayName, timeText };
 }
 
@@ -89,19 +89,31 @@ export async function slotOffered(page: Page, slug: string, slot: PickedSlot): P
     return page.getByRole('list', { name: /Mañana|Tarde/ }).getByRole('button', { name: slot.timeText, exact: true }).count();
 }
 
-export async function verifyEmail(page: Page, email: string) {
+export async function fillDetails(page: Page, email: string) {
+    await page.getByLabel('Nombre').fill('Paciente');
+    await page.getByLabel('Apellidos').fill('E2E');
+    await page.getByRole('group', { name: 'Recibir el enlace de confirmación por' }).getByRole('button', { name: 'Correo' }).click();
     await page.getByLabel('Correo electrónico').fill(email);
-    const send = page.getByRole('button', { name: 'Enviar código' });
-    await expect(send).toBeEnabled({ timeout: 20_000 });
-    await send.click();
-    await page.getByLabel('Código de 6 dígitos').fill(await latestCode(email));
+    await page.getByRole('checkbox').check();
 }
 
 export async function submitDetails(page: Page, submitLabel: 'Reservar cita' | 'Enviar solicitud') {
-    await page.getByLabel('Nombre').fill('Paciente');
-    await page.getByLabel('Apellidos').fill('E2E');
-    await page.getByRole('checkbox').check();
-    await page.getByRole('button', { name: submitLabel }).click();
+    const submit = page.getByRole('button', { name: submitLabel });
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+}
+
+export async function requestByEmail(page: Page, email: string, submitLabel: 'Reservar cita' | 'Enviar solicitud') {
+    await fillDetails(page, email);
+    await submitDetails(page, submitLabel);
+    await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
+}
+
+export async function confirmFromEmail(page: Page, link: string, finalHeading: string) {
+    await page.goto(link);
+    await expect(page.getByTestId('confirmation-unconfirmed')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar mi cita' }).click();
+    await expect(page.getByRole('heading', { name: finalHeading })).toBeVisible();
 }
 
 /** Text under 4.5:1 against what is behind it, opacity included. Disabled controls count: a patient still has to read them. */

@@ -13,7 +13,7 @@ import { deliverExpiredHoldsNow } from '../booking-requests/booking-request-noti
 import { hashRequestToken, issueRequestToken } from '../booking-requests/request-token.js';
 import {
   EMAIL_SENDS_PER_HOUR,
-  MAX_PENDING_REQUESTS_PER_CONTACT,
+  MAX_UNCONFIRMED_PER_CONTACT,
   MAX_UNCONFIRMED_PER_PROVIDER,
 } from '../booking-requests/booking-request.constants.js';
 import { dispatchMessage } from '../scheduler/dispatch.js';
@@ -42,7 +42,7 @@ const contactOf = (body: StartBookingBody): PortalContact =>
 async function enforceCaps(tx: TransactionClient, userId: string, contact: PortalContact, now: Date): Promise<void> {
   const own = ownRequestWhere(contact);
   if (!own) throw new PortalRequestLimitError();
-  if (await bookingRequestRepository.countLiveUnconfirmed(userId, now, tx, own) >= MAX_PENDING_REQUESTS_PER_CONTACT) {
+  if (await bookingRequestRepository.countLiveUnconfirmed(userId, now, tx, own) >= MAX_UNCONFIRMED_PER_CONTACT) {
     throw new PortalRequestLimitError();
   }
   if (await bookingRequestRepository.countLiveUnconfirmed(userId, now, tx) >= MAX_UNCONFIRMED_PER_PROVIDER) {

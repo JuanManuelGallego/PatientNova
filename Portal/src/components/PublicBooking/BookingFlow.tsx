@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useHistoryOverlay } from "@/src/hooks/useHistoryOverlay";
 import { useMediaQuery } from "@/src/hooks/useMediaQuery";
-import type { PortalBookingOutcome } from "@/src/types/PortalBooking";
+import type { BookingPending } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { appointmentsPath } from "@/src/utils/publicBooking";
 import { BookingResult } from "./BookingResult";
 import { NeedStep, needTitle } from "./NeedStep";
-import { PatientSteps } from "./PatientSteps";
+import { EMPTY_DETAILS, PatientDetailsStep, type DetailsForm } from "./PatientDetailsStep";
 import { ProviderHeader } from "./ProviderHeader";
 import { ProviderPanel, ProviderProfileSheet } from "./ProviderProfile";
 import { Unavailable } from "./PublicStates";
@@ -25,9 +25,9 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
     const timezone = browserTimezone();
     const [ typeId, setTypeId ] = useState<string | null>(null);
     const [ locationId, setLocationId ] = useState<string | null>(null);
-    const [ booked, setBooked ] = useState<PortalBookingOutcome | null>(null);
-    const [ verified, setVerified ] = useState(false);
-    const [ patientStepsReached, setPatientStepsReached ] = useState(false);
+    const [ pending, setPending ] = useState<BookingPending | null>(null);
+    const [ form, setForm ] = useState<DetailsForm>(EMPTY_DETAILS);
+    const [ detailsReached, setDetailsReached ] = useState(false);
     const profile = useHistoryOverlay("profile");
     const desktop = useMediaQuery(DESKTOP);
 
@@ -38,41 +38,31 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
 
     const picker = useSlotChooser(slug, provider, { typeId: type?.id ?? null }, timezone);
     const { slot } = picker;
-    const steps = applicableSteps({ typeCount: types.length, locationCount: locations.length, verified });
-    const flow = useBookingFlow(steps, { needDone, hasSlot: slot !== undefined, verified });
+    const steps = applicableSteps({ typeCount: types.length, locationCount: locations.length });
+    const flow = useBookingFlow(steps, { needDone, hasSlot: slot !== undefined });
 
-    // History can reach these steps too, not only Continuar.
-    if ((flow.step === "verify" || flow.step === "details") && !patientStepsReached) setPatientStepsReached(true);
+    if (flow.step === "details" && !detailsReached) setDetailsReached(true);
 
     if (picker.error?.status === 404) return <Unavailable />;
 
     const summary = <BookingSummary type={type} location={location} slot={slot} timezone={timezone} />;
-    const onBack = flow.isFirst || booked ? undefined : flow.back;
+    const onBack = flow.isFirst || pending ? undefined : flow.back;
     const screen = { steps, step: flow.step, moved: flow.moved, onBack: desktop ? onBack : undefined };
 
-    const bookAnother = () => {
-        setBooked(null);
-        setTypeId(null);
-        setLocationId(null);
-        setVerified(false);
-        setPatientStepsReached(false);
-        picker.reload();
-        flow.go(steps[ 0 ] ?? "time");
-    };
-
     const leaveTimes = () => {
-        setPatientStepsReached(true);
-        flow.go(verified ? "details" : "verify");
+        setDetailsReached(true);
+        flow.go("details");
     };
 
+    const appointmentsHref = provider.selfServe ? appointmentsPath(slug) : undefined;
     const header = (
         <div className={styles.aside}>
-            {desktop ? <ProviderPanel slug={slug} provider={provider} appointmentsHref={appointmentsPath(slug)} /> : (
+            {desktop ? <ProviderPanel slug={slug} provider={provider} appointmentsHref={appointmentsHref} /> : (
                 <ProviderHeader
                     slug={slug}
                     provider={provider}
-                    compact={!flow.isFirst || booked !== null}
-                    appointmentsHref={appointmentsPath(slug)}
+                    compact={!flow.isFirst || pending !== null}
+                    appointmentsHref={appointmentsHref}
                     onOpenProfile={profile.show}
                     onBack={onBack}
                 />
@@ -84,11 +74,11 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
             closeLabel={typeId || locationId || slot ? "Volver a la reserva" : "Reservar una cita"} onClose={profile.hide} />
     );
 
-    if (booked) {
+    if (pending) {
         return (
             <div className={styles.layout}>
                 {header}
-                <BookingResult slug={slug} provider={provider} outcome={booked} location={location} timezone={timezone} onBookAnother={bookAnother} />
+                <BookingResult slug={slug} provider={provider} pending={pending} timezone={timezone} onCorrect={() => setPending(null)} />
                 {profileSheet}
             </div>
         );
@@ -119,8 +109,8 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
                     <SlotChooser picker={picker} />
                 </StepScreen>
             )}
-            {patientStepsReached && (
-                <PatientSteps
+            {detailsReached && (
+                <PatientDetailsStep
                     slug={slug}
                     provider={provider}
                     type={type}
@@ -129,9 +119,9 @@ export function BookingFlow({ slug, provider }: { slug: string; provider: Public
                     timezone={timezone}
                     {...screen}
                     summary={summary}
-                    onVerified={setVerified}
-                    onSessionLost={() => flow.go("verify")}
-                    onBooked={setBooked}
+                    form={form}
+                    onForm={(patch) => setForm((f) => ({ ...f, ...patch }))}
+                    onPending={setPending}
                     onSlotTaken={(message) => { picker.slotTaken(message); flow.go("time"); }}
                 />
             )}

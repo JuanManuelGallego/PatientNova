@@ -11,7 +11,6 @@ import styles from "./BookingFlow.module.css";
 const STEP_LABELS: Record<BookingStep, string> = {
     need: "Tu cita",
     time: "Horario",
-    verify: "Confirma que eres tú",
     details: "Tus datos",
 };
 

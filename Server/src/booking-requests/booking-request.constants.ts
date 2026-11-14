@@ -19,6 +19,8 @@ export function isNudgeDue(createdAt: Date, holdExpiresAt: Date, now: Date): boo
 }
 
 export const UNCONFIRMED_HOLD_MINUTES = 15;
+/** Live unconfirmed holds per contact at start; confirmed requests are capped separately by MAX_PENDING_REQUESTS_PER_CONTACT. */
+export const MAX_UNCONFIRMED_PER_CONTACT = 3;
 export const MAX_UNCONFIRMED_PER_PROVIDER = 5;
 export const EMAIL_SENDS_PER_HOUR = 5;
 export const UNCONFIRMED_RETENTION_HOURS = 48;

@@ -26,9 +26,9 @@ describe("publicApi (anonymous)", () => {
   it("never sends credentials or a CSRF header and unwraps the envelope", async () => {
     csrfStore.set("should-not-be-sent");
     fetchMock.mockResolvedValue(ok({ slots: [] }));
-    await expect(publicApi.post("/providers/dra/otp", { email: "a@b.co" })).resolves.toEqual({ slots: [] });
+    await expect(publicApi.post("/providers/dra/bookings", { email: "a@b.co" })).resolves.toEqual({ slots: [] });
     const [ url, init ] = fetchMock.mock.calls[ 0 ]!;
-    expect(String(url)).toMatch(/\/v1\/public\/providers\/dra\/otp$/);
+    expect(String(url)).toMatch(/\/v1\/public\/providers\/dra\/bookings$/);
     expect(init.credentials).toBe("omit");
     expect(init.headers[ "X-CSRF-Token" ]).toBeUndefined();
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -47,7 +47,7 @@ describe("publicApi (anonymous)", () => {
 describe("portalApi (patient session)", () => {
   it("includes credentials, stores the CSRF token from a response and sends it on mutations only", async () => {
     fetchMock.mockResolvedValueOnce(ok({ csrfToken: "tok-123", email: "a@b.co" }));
-    await portalApi.post("/providers/dra/otp/verify", { code: "123456" });
+    await portalApi.post("/consent", { accepted: true });
     expect(csrfStore.get()).toBe("tok-123");
     expect(fetchMock.mock.calls[ 0 ]![ 1 ].credentials).toBe("include");
 
@@ -125,7 +125,10 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(401, undefined, { 401: "Correo o contraseña incorrectos." })).toBe("Correo o contraseña incorrectos.");
     expect(toSpanishMessage(409, "Slot no longer available")).toBe("Ese horario ya no está disponible. Elige otro.");
     expect(toSpanishMessage(409, "Booking limit reached")).toMatch(/3 citas próximas/);
-    expect(toSpanishMessage(409, "Request limit reached")).toMatch(/3 solicitudes pendientes/);
+    expect(toSpanishMessage(409, "Request limit reached")).toBe(
+      "Ya tienes varias reservas en curso con este profesional. Comunícate directamente con el consultorio para cambiarlas.",
+    );
+    expect(toSpanishMessage(409, "Request limit reached")).not.toMatch(/cancela/i);
     expect(toSpanishMessage(409, "Request capacity reached")).toMatch(/no está recibiendo más solicitudes/);
     expect(toSpanishMessage(409, "Request capacity reached")).not.toMatch(/Ya tienes/);
     expect(toSpanishMessage(404, "Request not found")).toMatch(/solicitud ya no está pendiente/);

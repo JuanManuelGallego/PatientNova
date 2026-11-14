@@ -25,3 +25,12 @@ describe("public booking pages", () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe("confirmation link", () => {
+  it("/book/confirmar is not matched or redirected", () => {
+    expect(config.matcher.some((m) => m.startsWith("/book"))).toBe(false);
+    const response = proxy(new NextRequest("https://patientnova.net/book/confirmar/abc"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+});

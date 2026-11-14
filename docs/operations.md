@@ -333,63 +333,125 @@ rest). A refresh token can stop working without any action in PatientNova.
   patient gets it on their channel and the linked reminder is re-rendered. To find affected appointments:
   `GET /v1/appointments/needs-meeting-link` (admins).
 
-## Patient messages and login by WhatsApp
+## Patient messages and booking confirmation by link
 
-Portal notices and reminders follow each patient's `reminderChannel`, falling back to email, WhatsApp
-and SMS. A patient on WhatsApp who logs in with email gets WhatsApp. Phone login is separate and
-always on while the portal is.
+Patients book without an account. The booking form holds the time for 15 minutes and sends a link
+(`${PORTAL_URL}/book/confirmar/<token>`) by email or WhatsApp, the patient's choice; nothing is booked,
+and the provider hears nothing, until the patient opens the link and clicks "Confirmar mi cita". There
+are no login codes. Portal notices and reminders follow each patient's `reminderChannel`, falling back
+to email, WhatsApp and SMS; the confirmation link goes only to the contact the patient typed.
+
+### Environment
+
+| Variable | Meaning |
+|---|---|
+| `PORTAL_WHATSAPP_DAILY_CAP` | Distinct WhatsApp numbers that may receive a link in 24 hours, across providers. Default 60, also the production value. A non-numeric or non-positive value stops the API at boot, so the cap can never silently vanish. |
+| `ENABLE_SELF_SERVE` | `true` mounts the patient session routes ("Mis citas": list, cancel, reschedule). Off by default and in e2e: every `/v1/portal` path then answers 404 and the Portal hides the link. Nothing issues a patient session at the moment, so leave it off. |
+
+The old `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID`, `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID`
+and `PORTAL_OTP_PAID_DAILY_CAP` are no longer read: remove them from Railway.
 
 ### Templates
 
-All are required at start: the API does not boot without them. In Spanish, `utility` except the code.
+In Spanish, category `utility`. All are required at start, including the two of the confirmation link
+(`..._CONFIRM_LINK_SID` and `..._BOOKING_UNCONFIRMED_SID`): the Server does not boot without them, so Meta
+must approve both before the link flow is deployed.
 
 | Env var | Used for | Variables |
 |---|---|---|
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID` | Login code (`whatsapp/authentication`, 10 min) | code |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID` | Confirmation link, valid 15 minutes | `{{1}}` provider, `{{2}}` date, `{{3}}` time; URL button `https://<portal>/book/confirmar/{{4}}` (`{{4}}` is the bare token) |
+| `TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID` | Link not used in time, the time is free again | `{{1}}` provider, `{{2}}` date, `{{3}}` time |
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID` | Booked, approved, meeting ready | provider, date, time, place |
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID` | Cancelled | provider, date, time |
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID` | Rescheduled | provider, previous date and time, new date, new time, place |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID` | Request receipt | provider, date, time |
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID` | Request rejected | provider, date, time |
 | `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID` | Request expired | provider, date, time |
 | `TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID` | Meeting link (existing template) | provider, link |
 
 A formatted time ends in "a. m."/"p. m.", so a template must not put a full stop right after a time
-variable. The place is the location and address, the meeting link, or "Te enviaremos el enlace pronto".
+variable. Submit the two link templates with exactly this text:
 
-### Before phone login reaches production
+| Template | Body |
+|---|---|
+| Confirm link (`..._CONFIRM_LINK_SID`) | `Tienes una cita pendiente con {{1}} el {{2}} a las {{3}}: confírmala con el botón en los próximos 15 minutos o el horario quedará libre.` URL button "Confirmar mi cita": `https://<portal>/book/confirmar/{{4}}` |
+| Not confirmed (`..._BOOKING_UNCONFIRMED_SID`) | `No confirmaste tu reserva con {{1}} del {{2}} a las {{3}}, así que el horario quedó libre.` |
 
-1. Send real WhatsApp codes to the main Colombian carriers. Check delivery, delay and how the
-   sender appears.
-2. In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS
-   reminders. SMS no longer carries login codes.
-3. Counsel confirms the privacy policy covers login codes over WhatsApp, and names Meta. Any
-   text change bumps `PRIVACY_POLICY_VERSION`, so every patient accepts again once.
-4. Check a full login, booking and message on a real phone.
+ The place is the location and address, the meeting link, or "Te enviaremos el enlace pronto".
+There is no receipt message for an approval-mode request: the page the patient sees after the click is the
+answer, and the provider answers later.
 
-Phone login has no off switch: the login always offers email and WhatsApp. Dropping a channel is a
-code change in `portalLoginChannels`.
+### Deploy checklist (booking confirmation by link)
 
-### Limits
+1. Submit the two Utility templates (wording above) to Meta through Twilio and wait for approval. The
+   Server does not boot without their SIDs, so this blocks the deploy.
+2. Railway: set `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID` and
+   `TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID`. Leave `PORTAL_WHATSAPP_DAILY_CAP` unset (60).
+   After the deploy, remove `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID`,
+   `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID` and `PORTAL_OTP_PAID_DAILY_CAP`.
+3. Deploy the Server first, then the Portal right away. Booking is broken between the two deploys: the old
+   Portal calls endpoints the new API removed (OTP login, `POST /v1/portal/bookings`). Consider pausing
+   online booking for that window.
+4. While the migrations run, the old code can still create booking requests without `confirmedAt` (the
+   backfill in `20261115000000_booking_unconfirmed` covers only rows that existed when it ran). The window
+   is seconds, but such rows would be invisible to the provider. Look for them after the deploy:
+
+   ```sql
+   SELECT id, "userId", status, "createdAt" FROM booking_requests
+   WHERE "confirmedAt" IS NULL AND "confirmTokenHash" IS NULL;
+   ```
+
+   Every match was made by the old code after an OTP login, so its contact was proven. Make them visible:
+
+   ```sql
+   UPDATE booking_requests SET "confirmedAt" = "createdAt"
+   WHERE "confirmedAt" IS NULL AND "confirmTokenHash" IS NULL;
+   ```
+
+### Before WhatsApp confirmation links reach production
+
+1. The templates are approved and both SIDs are set (deploy checklist, steps 1 and 2).
+2. Send real WhatsApp links to the main Colombian carriers. Check delivery, delay, how the sender appears
+   and that the URL button opens `/book/confirmar/<token>` with the token intact.
+3. In the Twilio Console: a usage alert, and Geo Permissions on for every country that receives SMS
+   reminders. SMS does not carry confirmation links.
+4. Leave `PORTAL_WHATSAPP_DAILY_CAP` unset (60), and keep `ENABLE_SELF_SERVE` unset.
+5. Counsel reviews the access notice shown with the booking form and confirms the privacy policy no longer
+   needs to describe login codes. Any text change bumps `PRIVACY_POLICY_VERSION`.
+6. Check a full booking, a confirmation, an unused link and an approval-mode request on a real phone.
+
+The details step always offers Correo and WhatsApp. Turning WhatsApp confirmation off needs a code change,
+because both link SIDs are required. A hit cap tells the patient to use email.
+
+### WhatsApp booking caps
 
 | Limit | Value | Change it with |
 |---|---|---|
-| Numbers per day, all providers | 60 | `PORTAL_OTP_PAID_DAILY_CAP` |
-| Numbers per provider per hour | 30 | `PORTAL_OTP_LIMITS.perProviderPaidPerHour` (code) |
-| Sends per number per hour | 3 | `PORTAL_OTP_LIMITS.perPhonePerHour` (code) |
+| Numbers per day, all providers | 60 | `PORTAL_WHATSAPP_DAILY_CAP` |
+| Numbers per provider per hour | 30 | `PAID_CAP_LIMITS.perProviderNumbersPerHour` (code) |
+| Requests per number per hour | 3 | `PAID_CAP_LIMITS.perPhonePerHour` (code) |
 
-Every code on a phone channel costs money and can be requested anonymously. A hit limit still answers
-the usual 202, so the patient sees no difference, and Sentry records `Portal OTP paid cap reached:
-<phone-cap | provider-paid-cap | paid-daily-cap>`. One `phone-cap` is usually a patient retrying. Many
-`paid-daily-cap` or `provider-paid-cap` events mean number-rotating pumping or a limit set too low:
-check Twilio usage before raising anything. Both shared caps count numbers, not messages, because that
-is what rotating numbers inflates: each number can still receive 3 codes an hour, so the most that can
-be sent is about three times the cap. They can also overshoot slightly under concurrency.
-A non-numeric `PORTAL_OTP_PAID_DAILY_CAP` stops the API at boot, so the cap can never silently vanish.
+Every link sent on WhatsApp costs money and can be requested anonymously. The caps count booking requests
+with `contactChannel = WHATSAPP`, whatever their status, and are checked before the time is held. A hit cap
+creates nothing and tells the patient WhatsApp is unavailable and to use email (409); Sentry records
+`Portal WhatsApp cap reached: <phone-cap | provider-paid-cap | paid-daily-cap>`. One `phone-cap` is usually
+a patient retrying. Many `paid-daily-cap` or `provider-paid-cap` events mean number-rotating pumping or a
+limit set too low: check Twilio usage before raising anything. The shared caps count numbers, not
+messages, because that is what rotating numbers inflates: each number can still receive 3 requests an
+hour, and an unused link also sends one "not confirmed" notice, so the most that can be sent is about six
+messages per number per hour. They can also overshoot slightly under concurrency.
 
-A number without WhatsApp fails after Twilio accepts the message (63024). Neither the code nor a notice
-learns about it: at login the patient recovers with email, and later the appointment still shows in
-"Mis citas".
+Other limits on the same flow: 10 booking starts per IP per 15 minutes, 20 link views, confirmations and
+releases per IP per 15 minutes, 3 unconfirmed holds per contact, 5 booking starts per email address per
+provider per hour (`EMAIL_SENDS_PER_HOUR`, any status, so start-and-release cannot flood one inbox), and
+5 unconfirmed holds per provider (so one visitor cannot occupy a whole calendar; the holds expire by
+themselves after 15 minutes). A hit start cap creates nothing. The limit of 3 live requests per contact is
+checked at the click, in approval mode, because only then has the contact been proven: counting them at
+the start would tell anyone who types an address that it has requests. The provider is never blocked by
+an unconfirmed hold: an appointment or blocked time made over one wins, and the patient's click then
+answers "unavailable" with the provider's contact.
+
+A number without WhatsApp fails after Twilio accepts the message (63024). Nothing learns about it: the
+patient finds no link, lets the time lapse (it frees itself after 15 minutes) and books again by email.
 
 ## CSP rollout (Portal)
 
@@ -407,3 +469,4 @@ CI runs Playwright against a throwaway stack (Postgres + API + Portal inside the
 `pnpm run db:seed-e2e`). Locally: start a database whose name contains `test` or `e2e`, run the API and
 the Portal, then `pnpm e2e` in `Portal/` with the variables from the `e2e` job in `.github/workflows/ci.yml`.
 The suite runs serially because one provider has one calendar and overlapping appointments are rejected.
+A full run starts 8 bookings and makes 17 link view, confirm and release calls from one IP, against limits of 10 and 20 per 15 minutes, so wait 15 minutes before rerunning the public specs, and keep new specs to the starts and clicks they need. Specs read the emailed link from the mock Brevo server (`/__test/latest-link?to=<email>`).

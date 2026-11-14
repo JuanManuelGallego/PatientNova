@@ -7,6 +7,7 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 import { appointmentsPath } from "@/src/utils/publicBooking";
 import { BookingFlow } from "./BookingFlow";
 import styles from "./PublicBooking.module.css";
+import { ProviderContactNotice } from "./ProviderContactNotice";
 import { ProviderProfile } from "./ProviderProfile";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
 import { StateIcon } from "./PublicChrome";
@@ -34,9 +35,13 @@ function BookingPaused({ slug, provider }: { slug: string; provider: PublicProvi
                 <StateIcon icon={CalendarOff} />
                 <h2 className={styles.stateTitle}>Las reservas en línea están en pausa</h2>
                 <p className={styles.muted}>
-                    Por ahora no es posible reservar nuevas citas en línea. Si ya tienes una cita, puedes verla o cancelarla.
+                    {provider.selfServe
+                        ? "Por ahora no es posible reservar nuevas citas en línea. Si ya tienes una cita, puedes verla o cancelarla."
+                        : "Por ahora no es posible reservar nuevas citas en línea."}
                 </p>
-                <Link href={appointmentsPath(slug)} className="btn-primary">Ver mis citas</Link>
+                {provider.selfServe
+                    ? <Link href={appointmentsPath(slug)} className="btn-primary">Ver mis citas</Link>
+                    : <ProviderContactNotice provider={provider} />}
             </section>
         </>
     );

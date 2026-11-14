@@ -9,6 +9,7 @@ import dayjs from "dayjs";
 import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
+import { useAuthContext } from "@/src/providers/AuthContext";
 import { useFetchBookingSettings } from "@/src/api/booking/useFetchBookingSettings";
 import { useUpdateBookingSettings } from "@/src/api/booking/useUpdateBookingSettings";
 import { useFetchSlugSuggestion } from "@/src/api/booking/useFetchSlugSuggestion";
@@ -880,6 +881,7 @@ function parseRules(form: RulesForm) {
 }
 
 function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
+    const selfServeEnabled = !!useAuthContext().user?.selfServeEnabled;
     const [ form, setForm ] = useState<RulesForm>(() => rulesFormOf(settings));
     const [ initial ] = useState(() => parseRules(rulesFormOf(settings)).body);
     const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), { initial });
@@ -957,7 +959,7 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                         min: 1, max: 365, testId: "online-booking-horizon",
                     })}
                 </div>
-                <fieldset className="form-stack form-fieldset-plain">
+                {selfServeEnabled && <fieldset className="form-stack form-fieldset-plain">
                     <legend className="form-label form-fieldset-legend">Reprogramación por pacientes</legend>
                     <div className="form-grid-2">
                         {numberField({
@@ -971,7 +973,7 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                             min: 0, max: MAX_RESCHEDULE_NOTICE_HOURS, step: 1, testId: "online-booking-reschedule-notice",
                         })}
                     </div>
-                </fieldset>
+                </fieldset>}
                 <fieldset className="form-stack form-fieldset-plain">
                     <legend className="form-label form-fieldset-legend">Recordatorio al paciente</legend>
                     <div className="form-grid-2">

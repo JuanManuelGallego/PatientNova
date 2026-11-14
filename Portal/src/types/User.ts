@@ -24,6 +24,7 @@ export interface User {
     bankingKey?: string | null
     consentDocument?: Document | null
     portalEnabled?: boolean
+    selfServeEnabled?: boolean
 }
 
 export interface Document {

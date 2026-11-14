@@ -33,10 +33,10 @@ function buildApp() {
 }
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
+const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portalWas = { ...portal };
+beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
 // A fresh app per test: the public limiter is in-memory per router instance (60/min).
 beforeEach(() => { app = buildApp(); });
 
@@ -151,7 +151,8 @@ describe('GET /v1/public/providers/:slug', () => {
       timezone: TZ,
       bookingOpen: true,
       approvalRequired: false,
-      loginChannels: [ 'EMAIL', 'WHATSAPP' ],
+      selfServe: true,
+      whatsappConfirmation: true,
       reschedulePolicy: { maxReschedules: 2, minNoticeHours: 0 },
       lastBookableDate: DateTime.now().setZone(TZ).plus({ days: 59 }).toISODate(),
       types: [ { id: p.typeId, name: expect.any(String), description: null, durationMinutes: 60, price: 120000 } ],

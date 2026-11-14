@@ -23,7 +23,6 @@ const PARAMS: PatientNoticeParams = {
   cancellation: { ...timed, bookingUrl: links.bookingUrl },
   reschedule: { ...timed, ...place, appointmentsUrl: links.appointmentsUrl, previousAt: new Date('2027-01-19T15:00:00Z') },
   'meeting-link': { ...timed, meetingUrl: 'https://meet.google.com/abc', appointmentsUrl: links.appointmentsUrl },
-  'request-received': { ...timed, appointmentsUrl: links.appointmentsUrl },
   'request-rejected': { ...timed, bookingUrl: links.bookingUrl },
   'request-expired': { ...timed, bookingUrl: links.bookingUrl },
   'confirm-link': { ...timed, ...place, token, confirmUrl, approvalRequired: false, providerContact: contact },
@@ -75,7 +74,6 @@ describe('renderPatientNotice', () => {
     [ 'cancellation', config.twilio.patientPortal.cancelSid ],
     [ 'reschedule', config.twilio.patientPortal.rescheduleSid ],
     [ 'meeting-link', config.twilio.appointmentMeetingLinkSid ],
-    [ 'request-received', config.twilio.patientPortal.requestReceivedSid ],
     [ 'request-rejected', config.twilio.patientPortal.requestRejectedSid ],
     [ 'request-expired', config.twilio.patientPortal.requestExpiredSid ],
     [ 'confirm-link', config.twilio.patientPortal.confirmLinkSid ],
@@ -210,6 +208,18 @@ describe('renderPatientNotice', () => {
       expect(subject).toBe('Tu reserva con Dra. Ana Pública no se confirmó');
       expect(body).toContain('No confirmaste tu cita del');
       expect(body).toContain(`Puedes reservar de nuevo aquí: ${links.bookingUrl}`);
+    });
+
+    it('confirmation email omits "Ver mis citas" without appointmentsUrl and shows the provider contact line', () => {
+      for (const kind of [ 'confirmation', 'reschedule' ] as const) {
+        const { body } = emailOf(kind, { ...PARAMS[kind], appointmentsUrl: undefined, providerContact: contact });
+        expect(body).not.toContain('Puedes ver, cancelar');
+        expect(body).toContain('comunícate directamente');
+      }
+      const link = emailOf('meeting-link', { ...PARAMS['meeting-link'], appointmentsUrl: undefined, providerContact: contact }).body;
+      expect(link).not.toContain('Puedes ver, cancelar');
+      expect(link).toContain('+573001234567');
+      expect(emailOf('confirmation', PARAMS.confirmation).body).toContain('Puedes ver, cancelar');
     });
 
     it('no WhatsApp variable is empty for a provider without publicWhatsapp', () => {
