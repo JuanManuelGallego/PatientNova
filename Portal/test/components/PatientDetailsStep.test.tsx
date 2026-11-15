@@ -137,12 +137,23 @@ describe("PatientDetailsStep", () => {
         expect(screen.queryByLabelText("Número de WhatsApp")).not.toBeInTheDocument();
         expect(screen.getByRole("checkbox")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Resolver captcha" })).toHaveAttribute("data-action", "booking");
-        expect(screen.getByTestId("access-notice")).toHaveTextContent(
-            "Al reservar solicitas a Consultorio Prueba S.A.S. que utilice este contacto para enviarte el enlace de confirmación de tu cita mediante Patient Nova. No incluyas datos de salud en este paso.",
+        const accessHint = "Al reservar pides a Consultorio Prueba S.A.S. que use este contacto para enviarte, mediante Patient Nova, el enlace de confirmación.";
+        expect(screen.getByLabelText("Correo electrónico")).toHaveAccessibleDescription(accessHint);
+        // The sensitive-data line is always on screen; the rest is collapsed but still read as the checkbox's description.
+        expect(screen.getByTestId("consent-sensitive")).toBeVisible();
+        expect(screen.getByTestId("consent-notice")).not.toBeVisible();
+        expect(screen.getByRole("checkbox")).toHaveAccessibleDescription(
+            /no estás obligado a autorizar su tratamiento.*Este portal es voluntario.*Responsable del tratamiento: Consultorio Prueba S\.A\.S\./,
         );
+        const toggle = screen.getByRole("button", { name: "Ver detalles" });
+        expect(toggle).toHaveAttribute("aria-expanded", "false");
+        await user.click(toggle);
+        expect(toggle).toHaveAttribute("aria-expanded", "true");
+        expect(screen.getByTestId("consent-notice")).toBeVisible();
+        expect(screen.getByTestId("consent-controller")).toBeVisible();
 
         await user.click(within(channels).getByRole("button", { name: "WhatsApp" }));
-        expect(screen.getByLabelText("Número de WhatsApp")).toBeInTheDocument();
+        expect(screen.getByLabelText("Número de WhatsApp")).toHaveAccessibleDescription(accessHint);
         expect(screen.queryByLabelText("Correo electrónico")).not.toBeInTheDocument();
     });
 
@@ -160,21 +171,10 @@ describe("PatientDetailsStep", () => {
         expect(sentBody().contact).toEqual({ channel: "EMAIL", email: "ana@example.com" });
     });
 
-    it("shows the optional phone only for the email channel", async () => {
-        const user = userEvent.setup();
-        render(<PublicBookingPage slug="dra-ana" />);
-        await toDetails(user);
-
-        expect(screen.getByLabelText("Teléfono (opcional)")).toBeInTheDocument();
-        await user.click(screen.getByRole("button", { name: "WhatsApp" }));
-        expect(screen.queryByLabelText("Teléfono (opcional)")).not.toBeInTheDocument();
-    });
-
     it("submits contact + patient + captchaToken and never price, end or status", async () => {
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await toDetails(user);
-        await user.type(screen.getByLabelText("Teléfono (opcional)"), "+57 300 111 9999");
         await fillByEmail(user);
 
         await screen.findByRole("heading", { name: "Revisa tu correo" });
@@ -186,7 +186,7 @@ describe("PatientDetailsStep", () => {
             patientTimezone: TZ,
             consentAccepted: true,
             captchaToken: "captcha-booking",
-            patient: { name: "Lucía", lastName: "Rojas", phone: "+573001119999" },
+            patient: { name: "Lucía", lastName: "Rojas" },
             contact: { channel: "EMAIL", email: "ana@example.com" },
         });
         expect(init.credentials).toBe("omit");
@@ -224,16 +224,10 @@ describe("PatientDetailsStep", () => {
         expect(calls(START)).toHaveLength(0);
     });
 
-    it("validates the optional phone and the WhatsApp number", async () => {
+    it("validates the WhatsApp number when it loses focus", async () => {
         const user = userEvent.setup();
         render(<PublicBookingPage slug="dra-ana" />);
         await toDetails(user);
-
-        const phone = screen.getByLabelText("Teléfono (opcional)");
-        await user.type(phone, "300");
-        expect(phone).not.toHaveAttribute("aria-invalid");
-        await user.tab();
-        expect(phone).toHaveAttribute("aria-invalid", "true");
 
         await user.click(screen.getByRole("button", { name: "WhatsApp" }));
         const whatsapp = screen.getByLabelText("Número de WhatsApp");

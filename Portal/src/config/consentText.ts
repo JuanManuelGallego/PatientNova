@@ -18,20 +18,30 @@ function directContact(provider: Provider): string {
     return [ ways, hours ].filter(Boolean).join(", ");
 }
 
+/** Behind "Ver detalles": who is responsible, Patient Nova's role, and the rights the policy details. */
 export function controllerLine(provider: Provider): string {
     const contact = provider.legal?.privacyContact;
-    return `Responsable del tratamiento: ${controllerName(provider)}${contact ? `, ${contact}` : ""}. Patient Nova opera este portal por su cuenta.`;
+    return `Responsable del tratamiento: ${controllerName(provider)}${contact ? `, ${contact}` : ""}. Patient Nova opera este portal como su encargado. Puedes conocer, actualizar y rectificar tus datos o revocar esta autorización cuando quieras.`;
 }
 
+/**
+ * Always visible under the checkbox (Decreto 1377, art. 6): which data is sensitive and that authorizing it is
+ * optional. It never goes behind the details toggle.
+ */
+export const SENSITIVE_DATA_LINE = "Los datos de salud son datos sensibles: no estás obligado a autorizar su tratamiento.";
+
+/** Behind "Ver detalles": the portal is optional, with the way to book without it. */
 export function consentNotice(provider: Provider): string {
     const contact = directContact(provider);
-    return `Tus citas pueden revelar información sobre tu salud. No estás obligado a autorizar el tratamiento de datos sensibles. Este portal es voluntario. Si prefieres no usarlo, puedes solicitar y gestionar tu cita directamente con ${controllerName(provider)}${contact ? ` en ${contact}` : ""}, sin penalización por rechazar este tratamiento digital. No escribas aquí diagnósticos ni información clínica adicional.`;
+    return `Este portal es voluntario; si prefieres no usarlo, puedes pedir y gestionar tu cita directamente con ${controllerName(provider)}${contact ? ` en ${contact}` : ""}, sin penalización.`;
 }
 
+/** The checkbox label; the caller appends the link to the privacy policy and the final full stop. */
 export function consentLabel(provider: Provider): string {
-    return `Autorizo expresamente a ${controllerName(provider)}, mediante Patient Nova como su encargado, a recoger y utilizar mis datos de identificación y contacto y los datos de salud que revele la gestión de mis citas, para mostrarme y gestionar mis citas y solicitudes en este portal y enviar los avisos de su gestión por los canales que tenga autorizados. Conozco mis derechos y el procedimiento de revocación descritos en la`;
+    return `Autorizo expresamente a ${controllerName(provider)} a tratar mis datos de identificación y contacto y los datos de salud que revelen mis citas, para gestionar mis citas y solicitudes en este portal y enviarme sus avisos por los canales autorizados, según la`;
 }
 
+/** Help text of the contact field: the patient asks the clinic to use it for the confirmation link. */
 export function accessNotice(provider: Provider): string {
-    return `Al reservar solicitas a ${controllerName(provider)} que utilice este contacto para enviarte el enlace de confirmación de tu cita mediante Patient Nova. No incluyas datos de salud en este paso.`;
+    return `Al reservar pides a ${controllerName(provider)} que use este contacto para enviarte, mediante Patient Nova, el enlace de confirmación.`;
 }

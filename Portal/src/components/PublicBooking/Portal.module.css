@@ -252,11 +252,69 @@
   color: var(--c-gray-600);
 }
 
+/* Same voice as the step's quiet text (`.quiet` in BookingFlow.module.css). */
 .legal .checkbox {
   max-width: 38rem;
   margin-top: 4px;
   font-size: 14px;
-  color: var(--c-gray-700);
+  line-height: 1.45;
+  color: var(--c-gray-600);
+}
+
+/* Supporting text of a checkbox, aligned with its label (box 20px + gap 10px). */
+.checkboxNote {
+  max-width: calc(38rem - 30px);
+  margin: 6px 0 0 30px;
+}
+
+/* "Ver detalles": a toggle that reads as a link inside the line of fine print. */
+.inlineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--c-brand);
+  cursor: pointer;
+}
+
+.inlineToggle svg {
+  transition: transform 150ms ease;
+}
+
+.inlineToggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.inlineToggle:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inlineToggle svg {
+    transition: none;
+  }
+}
+
+.consentMore {
+  margin-top: 6px;
+}
+
+.consentMore > p + p {
+  margin-top: 6px;
+}
+
+.fieldHint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--c-gray-600);
 }
 
 .account {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessNotice, consentLabel, consentNotice, controllerLine } from "@/src/config/consentText";
+import { accessNotice, consentLabel, consentNotice, controllerLine, SENSITIVE_DATA_LINE } from "@/src/config/consentText";
 
 const provider = {
     displayName: "Dra. Pérez",
@@ -17,10 +17,16 @@ describe("consent text", () => {
 
     it("says health data is involved and the portal is optional, with a real way out", () => {
         const notice = consentNotice(provider);
-        expect(notice).toContain("No estás obligado a autorizar el tratamiento de datos sensibles");
+        expect(SENSITIVE_DATA_LINE).toBe("Los datos de salud son datos sensibles: no estás obligado a autorizar su tratamiento.");
         expect(notice).toContain("Este portal es voluntario");
         expect(notice).toContain("+573001112222, Lunes a viernes, 8:00 a 17:00");
         expect(consentLabel(provider)).toContain("datos de salud");
+    });
+
+    it("names Patient Nova's role and the patient's rights beside the checkbox", () => {
+        expect(controllerLine(provider)).toContain("Patient Nova opera este portal como su encargado.");
+        expect(controllerLine(provider)).toContain("revocar esta autorización cuando quieras");
+        expect(accessNotice(provider)).toContain("mediante Patient Nova, el enlace de confirmación");
     });
 
     it("offers both ways of reaching the clinic when they differ", () => {
@@ -30,7 +36,7 @@ describe("consent text", () => {
 
     it("falls back to the public name while the legal identity is missing", () => {
         const bare = { ...provider, legal: null };
-        expect(controllerLine(bare)).toBe("Responsable del tratamiento: Dra. Pérez. Patient Nova opera este portal por su cuenta.");
+        expect(controllerLine(bare)).toMatch(/^Responsable del tratamiento: Dra\. Pérez\. Patient Nova/);
         expect(consentLabel(bare)).toContain("Autorizo expresamente a Dra. Pérez");
     });
 });

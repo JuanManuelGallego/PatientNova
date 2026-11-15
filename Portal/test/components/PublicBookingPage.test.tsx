@@ -148,6 +148,44 @@ describe("PublicBookingPage", () => {
         expect(screen.getByRole("button", { name: "Ver horarios" })).toBeEnabled();
     });
 
+    describe("bringing the place into view after the type", () => {
+        /** The places below the dock: heading at 900, group ending at 1100, dock from 700. */
+        function placesBelowDock() {
+            const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => undefined);
+            vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+                const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+                if (this.getAttribute("aria-label") === "Lugar") return box(930, 1100);
+                if (this.textContent === "¿Dónde prefieres atenderte?") return box(900, 920);
+                if (this.previousElementSibling?.tagName === "SECTION") return box(700, 800); // the dock
+                return box(0, 0);
+            });
+            return scrollBy;
+        }
+
+        it("scrolls the place question above the dock once a type is chosen", async () => {
+            routeFetch(200, 200, threeTypes({ locations: twoPlaces }));
+            const scrollBy = placesBelowDock();
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+
+            await chooseType(user);
+            // The group's bottom (1100) plus a 16px gap lands on the dock's top (700).
+            expect(scrollBy).toHaveBeenCalledTimes(1);
+            expect(scrollBy.mock.calls[ 0 ]![ 0 ]).toMatchObject({ top: 416 });
+        });
+
+        it("leaves the page alone once a place is chosen", async () => {
+            routeFetch(200, 200, threeTypes({ locations: twoPlaces }));
+            const scrollBy = placesBelowDock();
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+
+            await user.click(await screen.findByRole("button", { name: /Sede Norte/ }));
+            await chooseType(user);
+            expect(scrollBy).not.toHaveBeenCalled();
+        });
+    });
+
     it("lists each of four places as its own option, with its name and detail", async () => {
         routeFetch(200, 200, threeTypes({
             locations: [

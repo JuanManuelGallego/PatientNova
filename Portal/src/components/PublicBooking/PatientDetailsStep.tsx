@@ -3,13 +3,12 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ApiClientError } from "@/src/api/base/apiClients";
 import { useStartBooking } from "@/src/api/portal/useBookingConfirmation";
-import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { TurnstileWidget, type TurnstileHandle } from "@/src/components/TurnstileWidget";
 import { accessNotice } from "@/src/config/consentText";
 import type { BookingPending, StartBookingRequest } from "@/src/types/PortalBooking";
 import type { PublicAppointmentType, PublicLocation, PublicProvider, PublicSlot } from "@/src/types/PublicBooking";
-import { APPROVAL_FOLLOW_UP, fmtBookingPolicy, isE164, PHONE_FORMAT_HINT } from "@/src/utils/publicBooking";
-import { ConsentLabel, ConsentNotice } from "./ConsentNotice";
+import { APPROVAL_FOLLOW_UP, fmtBookingPolicy, isE164 } from "@/src/utils/publicBooking";
+import { ConsentDisclosure, ConsentLabel, consentDescribedBy } from "./ConsentNotice";
 import { ContactChoiceField, type ConfirmationChannel } from "./ContactChoiceField";
 import { StepScreen } from "./StepScreen";
 import type { BookingStep } from "./useBookingFlow";
@@ -24,15 +23,14 @@ export interface DetailsForm {
     channel: ConfirmationChannel;
     email: string;
     whatsapp: string;
-    phone: string;
     consent: boolean;
 }
 
-export const EMPTY_DETAILS: DetailsForm = { name: "", lastName: "", channel: "EMAIL", email: "", whatsapp: "", phone: "", consent: false };
+export const EMPTY_DETAILS: DetailsForm = { name: "", lastName: "", channel: "EMAIL", email: "", whatsapp: "", consent: false };
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Field = "name" | "lastName" | "contact" | "phone" | "consent";
+type Field = "name" | "lastName" | "contact" | "consent";
 
 interface PatientDetailsStepProps {
     slug: string;
@@ -53,12 +51,12 @@ interface PatientDetailsStepProps {
 }
 
 export function PatientDetailsStep({ slug, provider, type, location, slot, timezone, steps, step, moved, onBack, summary, form, onForm, onPending, onSlotTaken }: PatientDetailsStepProps) {
-    const { name, lastName, email, whatsapp, phone, consent } = form;
+    const { name, lastName, email, whatsapp, consent } = form;
     const { approvalRequired, displayName: providerName, whatsappConfirmation } = provider;
     const channels: ConfirmationChannel[] = whatsappConfirmation ? [ "EMAIL", "WHATSAPP" ] : [ "EMAIL" ];
     const channel = whatsappConfirmation ? form.channel : "EMAIL";
     const [ attempted, setAttempted ] = useState(false);
-    const [ touched, setTouched ] = useState({ contact: false, phone: false });
+    const [ touched, setTouched ] = useState({ contact: false });
     const [ captchaToken, setCaptchaToken ] = useState<string | null>(null);
     const ids = useId();
     const formId = `${ids}-form`;
@@ -66,7 +64,6 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
     const nameRef = useRef<HTMLInputElement>(null);
     const lastNameRef = useRef<HTMLInputElement>(null);
     const contactRef = useRef<HTMLInputElement>(null);
-    const phoneRef = useRef<HTMLInputElement>(null);
     const consentRef = useRef<HTMLInputElement>(null);
     const { startBooking, loading, error, reset } = useStartBooking(slug);
 
@@ -77,21 +74,19 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
         name: !name.trim(),
         lastName: !lastName.trim(),
         contact: byEmail ? !EMAIL_SHAPE.test(email.trim()) : !isE164(whatsapp),
-        phone: byEmail && phone !== "" && !isE164(phone),
         consent: !consent,
     };
     const shown: Record<Field, boolean> = {
         name: attempted && invalid.name,
         lastName: attempted && invalid.lastName,
         contact: (attempted || touched.contact) && invalid.contact,
-        phone: (attempted || touched.phone) && invalid.phone,
         consent: attempted && invalid.consent,
     };
     const errorId = (field: Field) => `${ids}-${field}-error`;
 
     const chooseChannel = (next: ConfirmationChannel) => {
         onForm({ channel: next });
-        setTouched((t) => ({ ...t, contact: false }));
+        setTouched({ contact: false });
         reset();
     };
 
@@ -101,7 +96,7 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
         const firstInvalid = (Object.keys(invalid) as Field[]).find((f) => invalid[ f ]);
         if (firstInvalid) {
             setAttempted(true);
-            ({ name: nameRef, lastName: lastNameRef, contact: contactRef, phone: phoneRef, consent: consentRef })[ firstInvalid ].current?.focus();
+            ({ name: nameRef, lastName: lastNameRef, contact: contactRef, consent: consentRef })[ firstInvalid ].current?.focus();
             return;
         }
         const body: StartBookingRequest = {
@@ -111,7 +106,7 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
             patientTimezone: timezone,
             consentAccepted: true,
             captchaToken,
-            patient: { name: name.trim(), lastName: lastName.trim(), ...(byEmail && phone && { phone }) },
+            patient: { name: name.trim(), lastName: lastName.trim() },
             contact: byEmail ? { channel: "EMAIL", email: email.trim() } : { channel: "WHATSAPP", phone: whatsapp },
         };
         try {
@@ -161,34 +156,24 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
                     </label>
                     {shown.lastName && <span id={errorId("lastName")} className={portal.fieldError}>Escribe tus apellidos.</span>}
                 </div>
-                <ContactChoiceField channels={channels} channel={channel} email={email} whatsapp={whatsapp} invalid={shown.contact} inputRef={contactRef}
+                <ContactChoiceField channels={channels} channel={channel} email={email} whatsapp={whatsapp} invalid={shown.contact}
+                    hint={accessNotice(provider)} inputRef={contactRef}
                     onChannel={chooseChannel} onEmail={(value) => onForm({ email: value })} onWhatsapp={(value) => onForm({ whatsapp: value })}
-                    onTouched={() => setTouched((t) => ({ ...t, contact: true }))} />
-                {byEmail && (
-                    <div>
-                        <div className="form-label">
-                            <label htmlFor={`${ids}-phone`}>Teléfono (opcional)</label>
-                            <CountryCodeInput ref={phoneRef} id={`${ids}-phone`} name="phone" autoComplete="tel" placeholder="300 123 4567"
-                                aria-invalid={shown.phone || undefined} aria-describedby={shown.phone ? errorId("phone") : undefined}
-                                value={phone} onChange={(value) => onForm({ phone: value })} onBlur={() => setTouched((t) => ({ ...t, phone: true }))} />
-                        </div>
-                        {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
-                    </div>
-                )}
+                    onTouched={() => setTouched({ contact: true })} />
                 <div className={portal.legal}>
-                    <p className={portal.fine} data-testid="access-notice">{accessNotice(provider)}</p>
-                    <ConsentNotice provider={provider} className={portal.fine} />
                     <div>
                         <label className={portal.checkbox}>
                             <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => onForm({ consent: e.target.checked })}
-                                aria-invalid={shown.consent || undefined} aria-describedby={shown.consent ? errorId("consent") : undefined} />
-                            <ConsentLabel provider={provider} />
+                                aria-invalid={shown.consent || undefined}
+                                aria-describedby={[ shown.consent && errorId("consent"), consentDescribedBy(`${ids}-consent`) ].filter(Boolean).join(" ")} />
+                            <ConsentLabel provider={provider}  />
                         </label>
                         {shown.consent && (
-                            <span id={errorId("consent")} className={`${portal.fieldError} ${portal.checkboxError}`}>
+                            <span id={errorId("consent")} className={`${portal.fine} ${portal.checkboxNote}`}>
                                 Marca la autorización para continuar, o contacta directamente a la clínica.
                             </span>
                         )}
+                        <ConsentDisclosure provider={provider} idPrefix={`${ids}-consent`} className={portal.checkboxNote} />
                     </div>
                 </div>
                 {provider.selfServe && <p className={styles.quiet} data-testid="booking-policy">{fmtBookingPolicy(provider.reschedulePolicy)}</p>}
