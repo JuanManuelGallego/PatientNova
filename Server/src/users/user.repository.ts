@@ -1,12 +1,13 @@
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
 import bcrypt from 'bcrypt';
-import type { CreateUserDto, UpdateUserDto, ListUsersQuery } from './user.schemas.js';
+import type { CreateUserDto, UpdateUserDto, SuperAdminUpdateUserDto, ListUsersQuery } from './user.schemas.js';
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import { UserEmailConflictError } from './user.errors.js';
+import { superAdminUpdateUserSchema } from './user.schemas.js';
+import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { userInclude, userListInclude } from './user.types.js';
 import { Channel } from '../../generated/prisma/enums.js';
-import { softDelete, restore } from '../utils/prisma/softDelete.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
@@ -74,17 +75,56 @@ export const userRepository = {
         });
     },
 
+    async adminUpdate(id: string, dto: SuperAdminUpdateUserDto) {
+        const current = await prisma.user.findUnique({ where: { id }, select: { email: true, role: true, status: true } });
+        if (!current) throw new UserNotFoundError(id);
+
+        const email = dto.email?.toLowerCase();
+        if (email !== undefined && email !== current.email) {
+            await assertUnique(
+                () => prisma.user.findFirst({ where: { email, NOT: { id } }, select: { id: true } }),
+                UserEmailConflictError,
+                email,
+            );
+        }
+
+        const data = buildUpdateData(
+            { ...dto, ...(email !== undefined && { email }) },
+            [ ...schemaKeys(superAdminUpdateUserSchema) ] as (keyof SuperAdminUpdateUserDto)[],
+            {
+                phoneNumber: emptyToNull,
+                whatsappNumber: emptyToNull,
+            },
+        );
+        const credentialsChanged =
+            (email !== undefined && email !== current.email) ||
+            (dto.role !== undefined && dto.role !== current.role) ||
+            (dto.status !== undefined && dto.status !== current.status);
+        if (credentialsChanged) data.refreshTokenVersion = { increment: 1 };
+
+        return prisma.user.update({ where: { id }, data, select: userInclude });
+    },
+
     async delete(id: string) {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        return softDelete(prisma.user, id)
+        // Bumping the version revokes every refresh token of the deleted user.
+        return prisma.user.update({
+            where: { id },
+            data: { isDeleted: true, deletedAt: new Date(), refreshTokenVersion: { increment: 1 } },
+            select: userInclude,
+        });
     },
 
     async restore(id: string) {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        return restore(prisma.user, id);
+        return prisma.user.update({
+            where: { id },
+            data: { isDeleted: false, deletedAt: null },
+            select: userInclude,
+        });
     },
 };

@@ -10,6 +10,7 @@ const PROTECTED_PATHS = [
   "/medical-records",
   "/requests",
   "/activity",
+  "/admin/users",
 ];
 
 export function proxy(req: NextRequest) {
@@ -42,5 +43,6 @@ export const config = {
     "/medical-records/:path*",
     "/requests/:path*",
     "/activity/:path*",
+    "/admin/users/:path*",
   ],
 };

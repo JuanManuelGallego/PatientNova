@@ -5,7 +5,8 @@ import {
     superAdminUpdateUserSchema,
 } from './user.schemas.js';
 import { userService } from './user.service.js';
-import { authenticate, requireSuperAdmin } from '../middlewares/authenticate.js';
+import { authenticate } from '../middlewares/authenticate.js';
+import { requireActiveSuperAdmin } from '../middlewares/require-active-super-admin.js';
 import { validateBody } from '../middlewares/validate.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
@@ -21,7 +22,7 @@ export const userRouter = Router();
 userRouter.post(
     '/',
     authenticate,
-    requireSuperAdmin,
+    requireActiveSuperAdmin,
     validateBody(createUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const user = await userService.create(req.body, req.user!.id);
@@ -36,7 +37,7 @@ userRouter.post(
 userRouter.get(
     '/',
     authenticate,
-    requireSuperAdmin,
+    requireActiveSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         const query = req.query as { includeDeleted?: string };
         const includeDeleted = query.includeDeleted === 'true';
@@ -64,7 +65,7 @@ userRouter.get(
 userRouter.get(
     '/:id',
     authenticate,
-    requireSuperAdmin,
+    requireActiveSuperAdmin,
     asyncHandler(async (req: Request, res: Response) => {
         ok(res, await userService.findById(req.params.id as string));
     })
@@ -93,10 +94,10 @@ userRouter.use('/me/consent-document', consentDocumentRouter);
 userRouter.patch(
     '/:id',
     authenticate,
-    requireSuperAdmin,
+    requireActiveSuperAdmin,
     validateBody(superAdminUpdateUserSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const user = await userService.update(req.params.id as string, req.body, req.user!.id);
+        const user = await userService.adminUpdate(req.params.id as string, req.body, req.user!.id);
         ok(res, user);
     })
 );
@@ -108,7 +109,7 @@ userRouter.patch(
 userRouter.post(
   '/:id/delete',
   authenticate,
-  requireSuperAdmin,
+  requireActiveSuperAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const user = await userService.delete(req.params.id as string, req.user!.id);
     ok(res, user);
@@ -122,7 +123,7 @@ userRouter.post(
 userRouter.post(
   '/:id/restore',
   authenticate,
-  requireSuperAdmin,
+  requireActiveSuperAdmin,
   asyncHandler(async (req: Request, res: Response) => {
     const user = await userService.restore(req.params.id as string, req.user!.id);
     ok(res, user);

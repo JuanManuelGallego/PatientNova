@@ -8,6 +8,7 @@ export interface UserForAuth {
   role: string;
   timezone: string | null;
   status: string;
+  isDeleted: boolean;
   failedLoginAttempts: number;
   lockedUntil: Date | null;
   refreshTokenVersion: number;
@@ -20,6 +21,7 @@ const authSelect = {
   role: true,
   timezone: true,
   status: true,
+  isDeleted: true,
   failedLoginAttempts: true,
   lockedUntil: true,
   refreshTokenVersion: true,

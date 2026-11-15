@@ -1,4 +1,4 @@
-import { isAdminRole, type User } from "@/src/types/User";
+import { isAdminRole, isSuperAdmin, type User } from "@/src/types/User";
 
 /**
  * Provider navigation: the one source the sidebar renders. Add a page here,
@@ -14,6 +14,7 @@ export type NavItemId =
     | "reminders"
     | "requests"
     | "activity"
+    | "users"
     | "settings";
 
 export interface NavContext {
@@ -37,6 +38,7 @@ export interface NavGroup<Id extends string = NavItemId> {
 }
 
 export const ACTIVITY_PATH = "/activity";
+export const ADMIN_USERS_PATH = "/admin/users";
 /** Where "Mi cuenta" leads. */
 export const ACCOUNT_PATH = "/settings/account";
 
@@ -63,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Administración",
         items: [
             { id: "activity", path: ACTIVITY_PATH, label: "Actividad", visible: (ctx) => isAdminRole(ctx.user?.role) },
+            { id: "users", path: ADMIN_USERS_PATH, label: "Usuarios", visible: (ctx) => isSuperAdmin(ctx.user?.role) },
             { id: "settings", path: "/settings", href: settingsHref("account"), label: "Configuración" },
         ],
     },

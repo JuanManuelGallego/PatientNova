@@ -28,6 +28,7 @@ export function TabNav({
           key={tab.key}
           type="button"
           onClick={() => onSelect(tab.key)}
+          aria-pressed={active === tab.key}
           className={`filter-chip ${active === tab.key ? " filter-chip--active" : ""}`}
           data-testid={
             testIdPrefix

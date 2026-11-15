@@ -112,6 +112,7 @@ export const NAV_ICONS = {
   reminders: Bell,
   requests: Inbox,
   activity: History,
+  users: UserCog,
   settings: Settings,
 } as const satisfies Record<string, LucideIcon>;
 

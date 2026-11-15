@@ -49,5 +49,12 @@ describe("provider navigation", () => {
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("from")).toBe("/activity");
   });
+
+  it("sends /admin/users without a cookie to login", () => {
+    const response = proxy(new NextRequest("https://patientnova.net/admin/users"));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("from")).toBe("/admin/users");
+  });
 });
 

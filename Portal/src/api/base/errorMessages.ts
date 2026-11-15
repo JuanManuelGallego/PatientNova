@@ -12,6 +12,7 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /blocked time overlaps with an existing blocked slot/i, "Ya existe un bloqueo en ese horario." ],
     [ /patient with this email already exists/i, "Ya existe un paciente con este correo electrónico." ],
     [ /user with email .* already exists/i, "Ya existe un usuario con este correo electrónico." ],
+    [ /cannot remove your own super admin access/i, "No puedes quitarte tu propio acceso de superadministrador." ],
     [ /named .* already exists/i, "Ya existe un registro con ese nombre. Usa un nombre diferente." ],
     [ /consent document for user .* already exists/i, "Ya existe un consentimiento cargado." ],
     [ /medical record for patient .* already exists/i, "Este paciente ya tiene una historia clínica." ],

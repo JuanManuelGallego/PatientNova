@@ -45,6 +45,12 @@ export const userListInclude = {
   avatar: false,
   logo: false,
   altLogo: false,
+  bankName: false,
+  accountNumber: false,
+  nationalId: false,
+  bankingKey: false,
+  consentDocument: false,
+  isDeleted: true,
 } as const;
 
 export type UserListItemResponse = Prisma.UserGetPayload<{ select: typeof userListInclude }>;

@@ -2,23 +2,12 @@ import { useChangePassword } from "@/src/api/auth/useChangePassword";
 import { mutationErrorMessage } from "@/src/api/base/useApiMutation";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { FieldError, InlineError } from "@/src/components/Info/InlineError";
-import { ACTION_ICONS } from "@/src/config/icons";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
 import { SettingsSection } from "./SettingsSection";
-
-export const PW_RULES = [
-  { label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
-  { label: "Al menos una mayúscula", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "Al menos una minúscula", test: (p: string) => /[a-z]/.test(p) },
-  { label: "Al menos un número", test: (p: string) => /[0-9]/.test(p) },
-  {
-    label: "Al menos un símbolo especial",
-    test: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p),
-  },
-];
+import { PasswordRules, meetsPasswordRules } from "./PasswordRules";
 
 export function SecurityTab() {
   const { user, refreshUser } = useAuthContext();
@@ -30,7 +19,7 @@ export function SecurityTab() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const rulesOk = PW_RULES.every((r) => r.test(next));
+  const rulesOk = meetsPasswordRules(next);
   const mismatch = confirm.length > 0 && next !== confirm;
   const canSubmit =
     current && next && confirm && rulesOk && !mismatch && !saving;
@@ -87,6 +76,7 @@ export function SecurityTab() {
               onChange={(e) => setNext(e.target.value)}
               autoComplete="new-password"
               placeholder="••••••••"
+              aria-describedby={next.length > 0 ? "security-password-rules" : undefined}
               data-testid="security-new-password-input"
               required
             />
@@ -108,50 +98,7 @@ export function SecurityTab() {
             />
             {mismatch && <FieldError id="security-confirm-error" message="Las contraseñas no coinciden" />}
           </label>
-          {next.length > 0 && (
-            <div
-              data-testid="password-rules"
-              style={{
-                background: "var(--c-gray-50)",
-                borderRadius: "var(--r-lg)",
-                padding: "12px 14px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--c-gray-400)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 8,
-                }}
-              >
-                Requisitos
-              </div>
-              {PW_RULES.map((r) => {
-                const ok = r.test(next);
-                return (
-                  <div
-                    key={r.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      fontSize: 12,
-                      color: ok ? "var(--c-success)" : "var(--c-gray-400)",
-                      marginBottom: 5,
-                    }}
-                  >
-                    <span style={{ fontWeight: 700 }}>
-                      {ok ? <ACTION_ICONS.confirm size={12} /> : "○"}
-                    </span>
-                    {r.label}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {next.length > 0 && <PasswordRules password={next} id="security-password-rules" />}
           {error && <InlineError message={error} />}
           {success && (
             <SuccessBanner message="Contraseña actualizada. Las otras sesiones activas serán cerradas." />
