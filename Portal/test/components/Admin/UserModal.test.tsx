@@ -8,13 +8,14 @@ import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 const createUser = vi.fn();
 const updateUser = vi.fn();
 const refreshUser = vi.fn();
+const logout = vi.fn();
 
 vi.mock("@/src/api/users/useManageUser", () => ({
     useCreateUser: () => ({ createUser, loading: false, error: null }),
     useUpdateUser: () => ({ updateUser, loading: false, error: null }),
 }));
 vi.mock("@/src/providers/AuthContext", () => ({
-    useAuthContext: () => ({ user: { id: "u-me", role: "SUPER_ADMIN" }, refreshUser }),
+    useAuthContext: () => ({ user: { id: "u-me", role: "SUPER_ADMIN" }, refreshUser, logout }),
 }));
 
 const base = {
@@ -39,7 +40,7 @@ function open(user: unknown) {
 }
 
 beforeEach(() => {
-    [ createUser, updateUser, refreshUser, onClose, onSaved ].forEach((m) => m.mockReset());
+    [ createUser, updateUser, refreshUser, logout, onClose, onSaved ].forEach((m) => m.mockReset());
     createUser.mockResolvedValue({});
     updateUser.mockResolvedValue({});
 });
@@ -75,9 +76,9 @@ describe("UserModal", () => {
     });
 
     it("warns about signing in again only when editing your own record", () => {
-        const hint = "Si cambias tu correo, tendrás que iniciar sesión de nuevo.";
+        const hint = "Si cambias tu correo, se cerrará tu sesión al guardar.";
         const { unmount } = open(me);
-        expect(screen.getByText(hint)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Correo/)).toHaveAccessibleDescription(hint);
         unmount();
         open(ana);
         expect(screen.queryByText(hint)).toBeNull();
@@ -149,5 +150,60 @@ describe("UserModal", () => {
         await u.click(screen.getByRole("button", { name: "Guardar" }));
         expect(await screen.findByText("Ya existe un usuario con este correo electrónico.")).toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("is a dialog named by its title", () => {
+        const { unmount } = open(null);
+        expect(screen.getByRole("dialog", { name: "Nuevo usuario" })).toBeInTheDocument();
+        unmount();
+        open(ana);
+        expect(screen.getByRole("dialog", { name: "Editar usuario" })).toBeInTheDocument();
+    });
+
+    it("marks each password rule in text, not only in color", async () => {
+        const u = userEvent.setup();
+        open(null);
+        const password = screen.getByLabelText(/Contraseña inicial/);
+        expect(password).toHaveAccessibleDescription(/Mínimo 8 caracteres: pendiente/);
+        await u.type(password, "Clave123!");
+        expect(password).toHaveAccessibleDescription(/Mínimo 8 caracteres: cumplido/);
+        expect(password).not.toHaveAccessibleDescription(/pendiente/);
+    });
+
+    it("signs you out after you change your own email", async () => {
+        const u = userEvent.setup();
+        open(me);
+        const email = screen.getByLabelText(/Correo/);
+        await u.clear(email);
+        await u.type(email, "nuevo@example.com");
+        await u.click(screen.getByRole("button", { name: "Guardar" }));
+        await waitFor(() => expect(logout).toHaveBeenCalled());
+        expect(updateUser).toHaveBeenCalledWith("u-me", { email: "nuevo@example.com" });
+        expect(onClose).toHaveBeenCalled();
+        expect(refreshUser).not.toHaveBeenCalled();
+    });
+
+    it("treats a change of case in the email as no change", async () => {
+        const u = userEvent.setup();
+        open(me);
+        const email = screen.getByLabelText(/Correo/);
+        await u.clear(email);
+        await u.type(email, "Me@Example.com");
+        await u.click(screen.getByRole("button", { name: "Guardar" }));
+        await waitFor(() => expect(onClose).toHaveBeenCalled());
+        expect(updateUser).not.toHaveBeenCalled();
+        expect(logout).not.toHaveBeenCalled();
+    });
+
+    it("shows the full name as the Nombre visible fallback", () => {
+        open(ana);
+        expect(screen.getByLabelText(/Nombre visible/)).toHaveAttribute("placeholder", "Ana Pérez");
+    });
+
+    it("links the self-lock hint to the role and status selects", () => {
+        open(me);
+        const hint = "No puedes cambiar tu propio rol ni estado.";
+        expect(screen.getByLabelText(/Rol/)).toHaveAccessibleDescription(hint);
+        expect(screen.getByLabelText(/Estado/)).toHaveAccessibleDescription(hint);
     });
 });

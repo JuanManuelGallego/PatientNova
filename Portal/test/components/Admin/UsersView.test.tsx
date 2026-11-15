@@ -66,18 +66,31 @@ describe("UsersView", () => {
         expect(within(hers).getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
     });
 
-    it("asks for deleted users when the filter is on", async () => {
+    it("splits active and deleted accounts into tabs from one request", async () => {
+        users = [ me, ana, { ...ana, id: "u-gone", isDeleted: true } ];
         render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
-        expect(fetchArgs[0]).toEqual({ includeDeleted: false });
-        await userEvent.click(screen.getByText("Mostrar eliminados"));
-        expect(fetchArgs[fetchArgs.length - 1]).toEqual({ includeDeleted: true });
+        expect(fetchArgs.every((a) => JSON.stringify(a) === JSON.stringify({ includeDeleted: true }))).toBe(true);
+        expect(screen.getByRole("button", { name: "Activos" })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByTestId("user-row-u-ana")).toBeInTheDocument();
+        expect(screen.queryByTestId("user-row-u-gone")).toBeNull();
+        await userEvent.click(screen.getByRole("button", { name: "Eliminados" }));
+        expect(screen.getByRole("button", { name: "Eliminados" })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByTestId("user-row-u-gone")).toBeInTheDocument();
+        expect(screen.queryByTestId("user-row-u-ana")).toBeNull();
+    });
+
+    it("says so when no account is deleted", async () => {
+        render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
+        await userEvent.click(screen.getByRole("button", { name: "Eliminados" }));
+        expect(screen.getByText("Sin cuentas eliminadas")).toBeInTheDocument();
     });
 
     it("shows a deleted row with only Restaurar", async () => {
         users = [ me, { ...ana, isDeleted: true } ];
         render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
+        await userEvent.click(screen.getByRole("button", { name: "Eliminados" }));
         const row = screen.getByTestId("user-row-u-ana");
-        expect(within(row).getByText("Eliminado")).toBeInTheDocument();
+        expect(within(row).getByTestId("user-status-pill")).toHaveTextContent("Eliminado");
         expect(within(row).queryByRole("button", { name: "Editar" })).toBeNull();
         expect(within(row).queryByRole("button", { name: "Eliminar" })).toBeNull();
         await userEvent.click(within(row).getByRole("button", { name: "Restaurar" }));
@@ -85,10 +98,11 @@ describe("UsersView", () => {
         expect(restoreUser).toHaveBeenCalledWith("u-ana");
     });
 
-    it("disables Restaurar while a restore is in flight", () => {
+    it("disables Restaurar while a restore is in flight", async () => {
         users = [ me, { ...ana, isDeleted: true } ];
         restoring = true;
         render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
+        await userEvent.click(screen.getByRole("button", { name: "Eliminados" }));
         expect(within(screen.getByTestId("user-row-u-ana")).getByRole("button", { name: "Restaurar" })).toBeDisabled();
     });
 
@@ -96,6 +110,7 @@ describe("UsersView", () => {
         users = [ me, { ...ana, isDeleted: true } ];
         restoreUser.mockRejectedValue(new ApiClientError("No pudimos restaurar", 409));
         render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
+        await userEvent.click(screen.getByRole("button", { name: "Eliminados" }));
         await userEvent.click(within(screen.getByTestId("user-row-u-ana")).getByRole("button", { name: "Restaurar" }));
         expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos restaurar");
         expect(refetch).not.toHaveBeenCalled();
