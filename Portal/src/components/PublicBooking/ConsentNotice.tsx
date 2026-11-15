@@ -7,16 +7,10 @@ import { consentLabel, consentNotice, controllerLine, SENSITIVE_DATA_LINE } from
 import type { PublicProvider } from "@/src/types/PublicBooking";
 import styles from "./Portal.module.css";
 
-/** The ids the checkbox reads as its description: the visible line and both collapsed paragraphs. */
 export function consentDescribedBy(idPrefix: string): string {
     return `${idPrefix}-sensitive ${idPrefix}-notice ${idPrefix}-details`;
 }
 
-/**
- * The layered notice under the authorization checkbox. The sensitive-data line stays visible; the voluntary
- * alternative, the controller and the rights sit behind "Ver detalles". The collapsed text stays in the DOM and in the
- * checkbox's description, so a screen reader always reads all of it.
- */
 export function ConsentDisclosure({ provider, idPrefix, className }: { provider: PublicProvider; idPrefix: string; className?: string }) {
     const [ open, setOpen ] = useState(false);
     const moreId = `${idPrefix}-more`;

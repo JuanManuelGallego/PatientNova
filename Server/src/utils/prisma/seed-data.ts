@@ -23,18 +23,6 @@ import {
   SubsystemType,
 } from '../../../generated/prisma/client.ts';
 
-/**
- * Complete mock clinical data for the existing provider account below: profile, availability,
- * appointment types and locations, patients (portal and provider sourced), medical records with
- * family genograms and evolution notes, appointments in the past and future, reminders for past
- * visits, booking requests in every state, and blocked time.
- *
- * Every row has a deterministic id. Re-running the script removes only those ids and writes them
- * again, so real data in the same account is left untouched. Future reminders and booking holds are
- * not queued for sending: nothing reaches a real patient. Contacts use example.com and +57 300 0000 numbers.
- *
- * Refuses to run when NODE_ENV resolves to production (unset NODE_ENV counts as production).
- */
 const TARGET_EMAIL = 'admin@patientnova.net';
 const TZ = 'America/Bogota';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -68,7 +56,6 @@ const G = {
 const uuid = (group: string, n: number) => `${group}-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const patientId = (i: number) => uuid(G.patient, i + 1);
 
-/** Index into a seed list that must exist; fails loudly instead of yielding undefined. */
 function at<T>(list: readonly T[], index: number): T {
   const value = list[index];
   if (value === undefined) throw new Error(`Seed index ${index} is out of range`);
@@ -185,7 +172,6 @@ async function seedData() {
       throw new Error(`No user with email ${TARGET_EMAIL}. Create it first (db:seed-admin).`);
     }
     const userId = user.id;
-    // Project rule: lock the provider before writing appointments or blocked time.
     await withProviderLock(tx, userId);
 
     const patientIds = PATIENTS.map((_, i) => patientId(i));
@@ -194,7 +180,6 @@ async function seedData() {
     const typeIds = Object.values(TYPES).map((t) => t.id);
     const locationIds = Object.values(LOCATIONS).map((l) => l.id);
 
-    // Clean up previously seeded mock rows only, in dependency order.
     await tx.patientConsent.deleteMany({ where: { patientId: { in: patientIds } } });
     await tx.bookingRequest.deleteMany({ where: { userId, id: { in: requestIds } } });
     await tx.blockedTime.deleteMany({ where: { userId, id: { in: blockedIds } } });
@@ -261,7 +246,6 @@ async function seedData() {
       ),
     });
 
-    // Medical records (one per patient for the first six), family members, subsystems, and notes.
     await tx.medicalRecord.createMany({
       data: RECORDS.map((r, i) => {
         const p = at(PATIENTS, i);
@@ -300,7 +284,6 @@ async function seedData() {
       })),
     });
 
-    // Appointments: a 9:00 initial visit and a 15:00 follow-up each weekday, with gaps.
     const appointmentRows: Prisma.AppointmentCreateManyInput[] = [];
     const reminderRows: Prisma.ReminderCreateManyInput[] = [];
     const completedByPatient = new Map<number, Date[]>();
@@ -406,7 +389,6 @@ async function seedData() {
       }
     }
 
-    // Booking requests. Pending holds are nudged already so the sweep never messages anyone.
     const holdFor = (start: Date) => new Date(Math.min(nowDate.getTime() + 48 * 60 * 60 * 1000, start.getTime()));
     const approvedAppointments: Prisma.AppointmentCreateManyInput[] = [];
 
@@ -498,7 +480,6 @@ async function seedData() {
     await tx.appointment.createMany({ data: [ ...appointmentRows, ...approvedAppointments ] });
     await tx.reminder.createMany({ data: reminderRows });
 
-    // Evolution notes: the first three completed visits of each of the six record holders.
     const noteRows: Prisma.EvolutionNoteCreateManyInput[] = [];
     let noteN = 0;
     RECORDS.forEach((_, i) => {

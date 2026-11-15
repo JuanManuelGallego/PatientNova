@@ -33,7 +33,6 @@ export function requestContact(request: { contactChannel: Channel; email: string
   return value ? { channel: request.contactChannel, value } : null;
 }
 
-/** A new portal patient's contact is only the one that confirmed the link: never a number typed in the form. */
 export function newPatientContact(contact: PortalContact) {
   switch (contact.channel) {
     case Channel.WHATSAPP:

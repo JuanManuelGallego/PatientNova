@@ -139,7 +139,6 @@ describe("PatientDetailsStep", () => {
         expect(screen.getByRole("button", { name: "Resolver captcha" })).toHaveAttribute("data-action", "booking");
         const accessHint = "Al reservar pides a Consultorio Prueba S.A.S. que use este contacto para enviarte, mediante Patient Nova, el enlace de confirmación.";
         expect(screen.getByLabelText("Correo electrónico")).toHaveAccessibleDescription(accessHint);
-        // The sensitive-data line is always on screen; the rest is collapsed but still read as the checkbox's description.
         expect(screen.getByTestId("consent-sensitive")).toBeVisible();
         expect(screen.getByTestId("consent-notice")).not.toBeVisible();
         expect(screen.getByRole("checkbox")).toHaveAccessibleDescription(

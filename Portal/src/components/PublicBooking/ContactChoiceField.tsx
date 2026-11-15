@@ -17,7 +17,6 @@ interface ContactChoiceFieldProps {
     email: string;
     whatsapp: string;
     invalid: boolean;
-    /** Help text under the contact input, read as its description. */
     hint?: string;
     inputRef: Ref<HTMLInputElement>;
     onChannel: (channel: ConfirmationChannel) => void;

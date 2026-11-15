@@ -17,10 +17,6 @@ export function needTitle(provider: PublicProvider) {
     return provider.types.length > 1 ? "¿Qué necesitas?" : "Tu cita";
 }
 
-/**
- * Brings the place question into view once a type is picked, so a long list of types does not hide it
- * below the dock. Nothing moves when it is already visible, and its heading never leaves the top.
- */
 function revealPlaces(heading: HTMLElement, group: HTMLElement) {
     const dock = group.closest(`.${styles.stepCard}`)?.querySelector<HTMLElement>(`.${styles.dock}`);
     const visibleBottom = dock ? dock.getBoundingClientRect().top : window.innerHeight;
@@ -39,7 +35,6 @@ export function NeedStep({ provider, typeId, locationId, onType, onLocation }: N
     const places = useRef<HTMLDivElement>(null);
     const [ reveal, setReveal ] = useState(0);
 
-    // After the commit, so the dock already shows the chosen type at its new height.
     useEffect(() => {
         if (reveal && placeHeading.current && places.current) revealPlaces(placeHeading.current, places.current);
     }, [ reveal ]);

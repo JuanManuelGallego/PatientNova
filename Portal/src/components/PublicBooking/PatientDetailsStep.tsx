@@ -169,7 +169,7 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
                             <ConsentLabel provider={provider}  />
                         </label>
                         {shown.consent && (
-                            <span id={errorId("consent")} className={`${portal.fine} ${portal.checkboxNote}`}>
+                            <span id={errorId("consent")} className={`${portal.fieldError} ${portal.checkboxError}`}>
                                 Marca la autorización para continuar, o contacta directamente a la clínica.
                             </span>
                         )}
