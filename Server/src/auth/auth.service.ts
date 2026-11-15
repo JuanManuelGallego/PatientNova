@@ -54,7 +54,7 @@ export const authService = {
   async login(email: string, password: string): Promise<LoginResult> {
     const user = await authRepository.findByEmail(email);
 
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user || user.isDeleted || user.status !== 'ACTIVE') {
       await bcrypt.compare(password, await getDummyHash());
       logger.info({ maskedEmail: maskEmail(email) }, 'Login failed: invalid credentials or inactive');
       throw new AuthInvalidCredentialsError();
@@ -133,7 +133,7 @@ export const authService = {
     }
 
     const user = await authRepository.findByIdForAuth(payload.id);
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user || user.isDeleted || user.status !== 'ACTIVE') {
       logger.info({ userId: payload.id }, 'Token refresh failed: user not found or inactive');
       throw new AuthRefreshTokenRevokedError();
     }

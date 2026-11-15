@@ -113,6 +113,7 @@ describe("toSpanishMessage", () => {
     expect(toSpanishMessage(409, undefined)).toMatch(/conflicto/);
     expect(toSpanishMessage(404, 'Blocked time with id "x" not found')).toBe("No encontramos lo que buscas.");
     expect(toSpanishMessage(409, "Blocked time overlaps with an existing blocked slot (a – b)")).toBe("Ya existe un bloqueo en ese horario.");
+    expect(toSpanishMessage(409, "You cannot remove your own super admin access")).toBe("No puedes quitarte tu propio acceso de superadministrador.");
     expect(toSpanishMessage(409, 'Cannot schedule or confirm appointment "1" in the past')).toBe("No se puede programar ni confirmar una cita en el pasado.");
     expect(toSpanishMessage(409, 'An appointment location named "Sede" already exists')).toMatch(/Ya existe un registro con ese nombre/);
     expect(toSpanishMessage(422, "A meeting URL is required for virtual appointments")).toMatch(/enlace de reunión/);
@@ -123,6 +124,7 @@ describe("toSpanishMessage", () => {
     );
     expect(toSpanishMessage(423, "Account has been locked")).toMatch(/cuenta está bloqueada/);
     expect(toSpanishMessage(401, undefined, { 401: "Correo o contraseña incorrectos." })).toBe("Correo o contraseña incorrectos.");
+    expect(toSpanishMessage(409, 'A user with email "ana@x.co" already exists')).toBe("Ya existe un usuario con este correo electrónico.");
     expect(toSpanishMessage(409, "Slot no longer available")).toBe("Ese horario ya no está disponible. Elige otro.");
     expect(toSpanishMessage(409, "Booking limit reached")).toMatch(/3 citas próximas/);
     expect(toSpanishMessage(409, "Request limit reached")).toBe(

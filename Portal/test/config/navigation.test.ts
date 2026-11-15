@@ -42,6 +42,11 @@ describe("visibleGroups", () => {
         expect(groups.find((g) => g.id === "clinic")?.items.map((i) => i.id)).toContain("requests");
     });
 
+    it("shows Usuarios only to a super admin", () => {
+        const admin = visibleGroups(NAV_GROUPS, ctx(AdminRole.SUPER_ADMIN, false)).find((g) => g.id === "admin");
+        expect(admin?.items.map((i) => i.id)).toEqual([ "activity", "users", "settings" ]);
+    });
+
     it("hides Actividad when there is no user", () => {
         const admin = visibleGroups(NAV_GROUPS, ctx(null, false)).find((g) => g.id === "admin");
         expect(admin?.items.map((i) => i.id)).toEqual([ "settings" ]);
@@ -51,7 +56,7 @@ describe("visibleGroups", () => {
 describe("labels", () => {
     it("uses sentence-case Spanish labels in menu order", () => {
         expect(NAV_GROUPS.flatMap((g) => g.items).map((i) => i.label)).toEqual([
-            "Vista general", "Pacientes", "Historias clínicas", "Citas", "Calendario", "Recordatorios", "Solicitudes", "Actividad", "Configuración",
+            "Vista general", "Pacientes", "Historias clínicas", "Citas", "Calendario", "Recordatorios", "Solicitudes", "Actividad", "Usuarios", "Configuración",
         ]);
     });
 });

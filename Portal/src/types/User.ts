@@ -27,6 +27,12 @@ export interface User {
     selfServeEnabled?: boolean
 }
 
+export type ManagedUser = Omit<User, "avatar" | "logo" | "altLogo" | "consentDocument" | "bankName" | "accountNumber" | "nationalId" | "bankingKey" | "portalEnabled" | "selfServeEnabled"> & {
+    isDeleted: boolean
+    lastLoginAt: string | null
+    createdAt: string
+}
+
 export interface Document {
     id: string
     name: string
@@ -39,6 +45,9 @@ export enum AdminRole {
     ADMIN = 'ADMIN',
     SUPER_ADMIN = 'SUPER_ADMIN'
 }
+
+/** SUPER_ADMIN only: manages provider accounts. */
+export const isSuperAdmin = (role?: AdminRole | null): boolean => role === AdminRole.SUPER_ADMIN;
 
 /** ADMIN and SUPER_ADMIN: the roles that may write and see admin pages. */
 export const isAdminRole = (role?: AdminRole | null): boolean =>

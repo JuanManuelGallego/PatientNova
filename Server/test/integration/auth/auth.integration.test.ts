@@ -82,6 +82,17 @@ describe('authService (integration)', () => {
       .rejects.toThrow(AuthRefreshTokenRevokedError);
   });
 
+  it('rejects login for a deleted user', async () => {
+    await prisma.user.update({ where: { id: user.id }, data: { isDeleted: true } });
+    await expect(authService.login(user.email, PASSWORD)).rejects.toThrow(AuthInvalidCredentialsError);
+  });
+
+  it('rejects refresh for a deleted user', async () => {
+    const { refreshToken } = await authService.login(user.email, PASSWORD);
+    await prisma.user.update({ where: { id: user.id }, data: { isDeleted: true } });
+    await expect(authService.refreshToken(refreshToken)).rejects.toThrow(AuthRefreshTokenRevokedError);
+  });
+
   it('rejects an expired/garbage refresh token', async () => {
     await expect(authService.refreshToken('not-a-real-token'))
       .rejects.toThrow(AuthRefreshTokenRevokedError);

@@ -46,6 +46,7 @@ pnpm run test:integration
 
 - Use only `src/auth/tokens.ts` for JWTs (HS256, issuer, per-kind audience; separate `PORTAL_AUTH_SECRET`). Never call `jwt.sign/verify` directly.
 - Provider cookie-authenticated writes require `X-CSRF-Token = createCsrfToken(sid, AUTH_SECRET)`; GET/HEAD/OPTIONS and Bearer requests are exempt. `fetchWithAuth` obtains it from `GET /v1/auth/csrf` and keeps it in memory.
+- Super-admin user edits go through `userService.adminUpdate`: a super admin cannot change their own role or status or delete themselves (`UserSelfLockoutError`); delete and role/status/email changes bump `refreshTokenVersion`; login and refresh refuse deleted users; super-admin user routes use `requireActiveSuperAdmin`, which re-reads the actor, so a demoted, deactivated or deleted super admin's live token is refused.
 - Twilio/Brevo webhook signature checks are always enforced, with no environment bypass. Test with real signatures or mocked middleware.
 - Unset/blank `NODE_ENV` resolves to production and requires `ENCRYPTION_KEY`. Set `NODE_ENV=development` explicitly locally.
 - Log paths with `loggedPath(req)`, never `req.originalUrl` (queries may carry PII). Use `maskEmail`/`maskPhone` under `maskedEmail`/`maskedTo`; logger redaction is only a safety net.
