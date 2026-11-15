@@ -6,7 +6,6 @@ import { ApiClientError, parseEnvelope } from "./apiClients";
 /** Same error as the patient-facing clients: Spanish `message`, raw server text in `details`. */
 export { ApiClientError as ApiMutationError };
 
-/** The Spanish text to show for an error thrown by `mutate`: never a browser's English "Failed to fetch". */
 export function mutationErrorMessage(err: unknown, fallback: string): string {
     if (err instanceof ApiClientError) return err.message;
     // Only ApiClientError carries curated Spanish; a fetch TypeError / abort is a connection failure.

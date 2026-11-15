@@ -2,18 +2,14 @@ import { useId, type ReactNode } from "react";
 
 interface SettingsSectionProps {
     title: string;
-    /** One line; links to the place that owns a related setting. */
     description?: ReactNode;
-    /** Save feedback, e.g. `SaveStatusIndicator`. */
     status?: ReactNode;
-    /** Header buttons, e.g. "Nuevo". */
     actions?: ReactNode;
     id?: string;
     testId?: string;
     children: ReactNode;
 }
 
-/** The frame every Settings section uses: titled card, optional status and actions in the header. */
 export function SettingsSection({ title, description, status, actions, id, testId, children }: SettingsSectionProps) {
     const headingId = useId();
     return (

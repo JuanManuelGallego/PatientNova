@@ -48,7 +48,6 @@ export function SecurityTab() {
       setTimeout(() => setSuccess(false), 5000);
       void refreshUser();
     } catch (err) {
-      // The hook's `error` is still the previous value here; the thrown one is current.
       setError(mutationErrorMessage(err, "Error al cambiar contraseña"));
     }
   }

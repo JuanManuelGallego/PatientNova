@@ -3914,7 +3914,6 @@ tr:hover td {
   flex: 1;
 }
 
-/* ── Settings: one width, stacked sections ── */
 .settings-content {
   max-width: 720px;
   width: 100%;
@@ -3926,7 +3925,6 @@ tr:hover td {
   gap: 20px;
 }
 
-/* One row at every width: the status never wraps to its own line, so content doesn't jump when "Guardado" appears. */
 .settings-section__header {
   gap: 12px;
   flex-wrap: nowrap;

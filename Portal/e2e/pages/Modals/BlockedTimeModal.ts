@@ -51,7 +51,6 @@ export class BlockedTimeModal {
     endTimeUtc?: string;
   }): Promise<string> {
     await this.descriptionInput.fill(data.description);
-    // The inputs are antd pickers: typed text is ignored, so pick through the panel like a user.
     if (data.startTimeUtc) {
       await ReminderModal.pickDateTime(this.page, this.startTimeInput, data.startTimeUtc);
     }
@@ -70,7 +69,6 @@ export class BlockedTimeModal {
     const response = await responsePromise;
     expect(response.ok()).toBeTruthy();
 
-    // Fail here, not in a later calendar search, if the requested times did not reach the form.
     const sent = response.request().postDataJSON();
     if (data.startTimeUtc) expect(sent.startTimeUtc).toBe(new Date(data.startTimeUtc).toISOString());
     if (data.endTimeUtc) expect(sent.endTimeUtc).toBe(new Date(data.endTimeUtc).toISOString());

@@ -14,7 +14,6 @@ interface ImageFieldProps {
   onChange: (value: string | null) => void;
   onError?: (message: string) => void;
   maxSide?: number;
-  /** Output format. When omitted, PNG sources stay PNG, others become WebP. */
   format?: ImageFormat;
   sizeErrorMessage?: string;
   selectLabel?: string;
@@ -82,7 +81,7 @@ export function ImageField({
             style={{ width: "100%" }}
             onClick={() => inputRef.current?.click()}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center" }}>
               <Camera size={14} /> {selectLabel}
             </div>
           </button>
@@ -93,7 +92,7 @@ export function ImageField({
               style={{ width: "100%", color: "var(--c-error)" }}
               onClick={() => onChange(null)}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center" }}>
                 <ACTION_ICONS.delete size={14} /> {removeLabel}
               </div>
             </button>
@@ -172,7 +171,9 @@ export function ImageField({
             style={{ flex: 1, color: "var(--c-error)" }}
             onClick={() => onChange(null)}
           >
-            <ACTION_ICONS.delete size={14} /> {removeLabel}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center" }}>
+              <ACTION_ICONS.delete size={14} /> {removeLabel}
+            </div>
           </button>
         )}
       </div>

@@ -14,7 +14,6 @@ interface ConsentDocumentMetadata {
 const ERR_UPLOAD = "No se pudo subir el formulario de consentimiento.";
 const ERR_DELETE = "No se pudo eliminar el formulario de consentimiento.";
 
-/** Upload and delete set `error` and also throw it, so callers can keep a dialog open. */
 export function useConsentDocument() {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);

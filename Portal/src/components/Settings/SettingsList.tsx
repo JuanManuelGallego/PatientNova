@@ -11,7 +11,6 @@ interface SettingsListProps<T extends { id: string }> {
     newLabel: string;
     newTestId: string;
     onNew: () => void;
-    /** Undefined until the first load finishes. */
     items: T[] | undefined;
     loading: boolean;
     error: string | null;
@@ -22,7 +21,6 @@ interface SettingsListProps<T extends { id: string }> {
     testId?: string;
 }
 
-/** A Settings CRUD list: "Nuevo" in the header, then the items, the load error, a skeleton or the empty state. */
 export function SettingsList<T extends { id: string }>({
     title, description, newLabel, newTestId, onNew, items, loading, error, onRetry, empty, renderItem, status, testId,
 }: SettingsListProps<T>) {

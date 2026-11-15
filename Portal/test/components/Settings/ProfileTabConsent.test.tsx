@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileTab } from "@/src/components/Settings/ProfileTab";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
-// The real useConsentDocument, with only the network mocked.
 const fetchWithAuth = vi.fn();
 vi.mock("@/src/api/base/fetchWithAuth", () => ({ fetchWithAuth: (...args: unknown[]) => fetchWithAuth(...args) }));
 vi.mock("@/src/api/users/useUpdateProfile", () => ({

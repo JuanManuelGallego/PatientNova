@@ -89,7 +89,6 @@ export function ProfileTab() {
   } = useConsentDocument();
   const [ consentError, setConsentError ] = useState<string | null>(null);
   const [ confirmingDelete, setConfirmingDelete ] = useState(false);
-  // Set before the request starts, so the dialog can't be dismissed mid-request.
   const [ deleting, setDeleting ] = useState(false);
 
   const consentRef = useRef<HTMLInputElement>(null);
@@ -110,7 +109,6 @@ export function ProfileTab() {
     return <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="profile-save-state" />;
   }
 
-  /** The save or image error of this section, at its bottom. */
   function sectionError(section: ProfileSection) {
     const message = imageError?.section === section
       ? imageError.message
@@ -181,7 +179,7 @@ export function ProfileTab() {
     }
   }
 
-  // ── Timezone (immediate save) ───────────────────────────────────────────────
+  // ── Timezone (immediate save, kept as-is) ───────────────────────────────────
 
   function handleTimezoneChange(value: string) {
     setTimezone(value);

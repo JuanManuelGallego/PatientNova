@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** `active` turns true on `flash()` and back to false after `ms`, for a brief "Guardado". */
 export function useSavedFlash(ms = 3000) {
     const [ active, setActive ] = useState(false);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

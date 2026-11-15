@@ -25,7 +25,6 @@ export function GoogleIntegrationTab() {
   const [ verifiedNotice, setVerifiedNotice ] = useState<string | null>(null);
   const [ confirmingDisconnect, setConfirmingDisconnect ] = useState(false);
   const [ dialogError, setDialogError ] = useState<string | null>(null);
-  // Our own flag, set before the request starts, so the dialog can't be dismissed mid-request.
   const [ disconnectPending, setDisconnectPending ] = useState(false);
   const connection = data;
 
@@ -51,7 +50,6 @@ export function GoogleIntegrationTab() {
     try {
       await disconnect();
     } catch (cause) {
-      // Stays open: the account is still connected and the provider can retry or go back.
       setDialogError(mutationErrorMessage(cause, "No se pudo desconectar la cuenta de Google."));
       return;
     } finally {
