@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { activityHref } from "@/src/config/navigation";
 import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { DrawerShell, DrawerState, Row, Section } from "@/src/components/Drawers/DrawerUtils";
@@ -256,7 +257,7 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
             )}
             <Section title="Información del sistema" quiet>
               <Link
-                href={`/settings?tab=Registro+de+actividad&entityId=${request.id}`}
+                href={activityHref({ entityId: request.id })}
                 className="drawer-link"
                 data-testid="request-drawer-audit-link"
               >

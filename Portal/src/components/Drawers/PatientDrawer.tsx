@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { activityHref } from "@/src/config/navigation";
 import Link from "next/link";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
@@ -285,12 +286,12 @@ export function PatientDrawer({
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{patient.id}</span>} />
         <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
         <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES", { timeZone: timezone })} />
-        <Link href={`/settings?tab=Registro+de+actividad&entityId=${patient.id}`} className="drawer-link">
+        <Link href={activityHref({ entityId: patient.id })} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>
         {user?.portalEnabled && (
           <Link
-            href={`/settings?tab=Registro+de+actividad&portalPatientId=${patient.id}`}
+            href={activityHref({ portalPatientId: patient.id })}
             className="drawer-link"
             data-testid="patient-drawer-portal-activity-link"
           >

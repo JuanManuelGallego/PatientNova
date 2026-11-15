@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { activityHref } from "@/src/config/navigation";
 import {
   Reminder,
   ReminderStatus,
@@ -192,7 +193,7 @@ export function ReminderDrawer({
         <Row icon={DETAIL_ICONS.calendar} label="Creado" value={fmtDateTime(reminder.createdAt, timezone)} />
         <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={fmtDateTime(reminder.updatedAt, timezone)} />
         <Row icon={DETAIL_ICONS.id} label="Twilio ID" value={<span className="mono">{reminder.messageId ?? "-"}</span>} />
-        <Link href={`/settings?tab=Registro+de+actividad&entityId=${reminder.id}`} className="drawer-link">
+        <Link href={activityHref({ entityId: reminder.id })} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>
       </Section>

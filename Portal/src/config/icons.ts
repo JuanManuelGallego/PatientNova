@@ -65,6 +65,7 @@ import {
   Loader2,
   type LucideIcon,
   Inbox,
+  History,
   TimerOff,
   Copy,
   Download,
@@ -110,6 +111,7 @@ export const NAV_ICONS = {
   calendar: CalendarDays,
   reminders: Bell,
   requests: Inbox,
+  activity: History,
   settings: Settings,
 } as const satisfies Record<string, LucideIcon>;
 

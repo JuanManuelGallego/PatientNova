@@ -40,6 +40,10 @@ export enum AdminRole {
     SUPER_ADMIN = 'SUPER_ADMIN'
 }
 
+/** ADMIN and SUPER_ADMIN: the roles that may write and see admin pages. */
+export const isAdminRole = (role?: AdminRole | null): boolean =>
+    role === AdminRole.ADMIN || role === AdminRole.SUPER_ADMIN;
+
 export enum AdminStatus {
     ACTIVE = 'ACTIVE',
     INACTIVE = 'INACTIVE',

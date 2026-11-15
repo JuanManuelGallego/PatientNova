@@ -4,26 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { useTheme } from "@/src/providers/ThemeContext";
-import { useRouter } from "next/navigation";
-import { NAV_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { Moon, Sun } from "lucide-react";
+import { NAV_ICONS } from "@/src/config/icons";
+import { UserMenu } from "@/src/components/UserMenu";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
-
-const NAV_ITEMS = [
-  { id: "dashboard" as const, path: "/dashboard", label: "Vista General" },
-  { id: "patients" as const, path: "/patients", label: "Pacientes" },
-  {
-    id: "medical-records" as const,
-    path: "/medical-records",
-    label: "Historias Clinicas",
-  },
-  { id: "appointments" as const, path: "/appointments", label: "Citas" },
-  { id: "calendar" as const, path: "/calendar", label: "Calendario" },
-  { id: "reminders" as const, path: "/reminders", label: "Recordatorios" },
-  { id: "requests" as const, path: "/requests", label: "Solicitudes", requiresInbox: true },
-  { id: "settings" as const, path: "/settings", label: "Configuración" },
-];
+import { NAV_FOOTER, NAV_GROUPS, isNavItemActive, visibleGroups, visibleItems, type NavContext, type NavItem } from "@/src/config/navigation";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -32,11 +16,34 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuthContext();
-  const { isDark, toggleTheme } = useTheme();
-  const LogoutIcon = ACTION_ICONS.logout;
+  const { user } = useAuthContext();
   const inbox = usePendingRequests();
+  const navContext: NavContext = { user, inboxEnabled: inbox.enabled };
+
+  function renderItem(item: NavItem) {
+    const isActive = isNavItemActive(pathname, item.path);
+    const Icon = NAV_ICONS[item.id];
+    return (
+      <Link
+        key={item.id}
+        href={item.path}
+        onClick={onClose}
+        aria-current={isActive ? "page" : undefined}
+        data-testid={`sidebar-link-${item.id}`}
+      >
+        <div className={`nav-item ${isActive ? "active" : ""}`}>
+          <Icon size={18} />
+          {item.label}
+          {item.id === "requests" && inbox.pending > 0 && (
+            <span className="nav-badge" data-testid="sidebar-requests-badge">
+              <span aria-hidden="true">{inbox.pending > 99 ? "99+" : inbox.pending}</span>
+              <span className="sr-only">, {inbox.pending} pendientes</span>
+            </span>
+          )}
+        </div>
+      </Link>
+    );
+  }
 
   return (
     <aside
@@ -64,79 +71,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="sidebar-divider" />
 
       {/* Navigation */}
-      <nav className="sidebar-nav" data-testid="sidebar-nav">
-        {NAV_ITEMS.filter((item) => !("requiresInbox" in item) || inbox.enabled).map((item) => {
-          const isActive = pathname === item.path;
-          const Icon = NAV_ICONS[item.id];
-          return (
-            <Link
-              key={item.id}
-              href={item.path}
-              onClick={onClose}
-              aria-current={isActive ? "page" : undefined}
-              data-testid={`sidebar-link-${item.id}`}
-            >
-              <div className={`nav-item ${isActive ? "active" : ""}`}>
-                <Icon size={18} />
-                {item.label}
-                {item.id === "requests" && inbox.pending > 0 && (
-                  <span className="nav-badge" data-testid="sidebar-requests-badge">
-                    <span aria-hidden="true">{inbox.pending > 99 ? "99+" : inbox.pending}</span>
-                    <span className="sr-only">, {inbox.pending} pendientes</span>
-                  </span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
+      <nav className="sidebar-nav" aria-label="Secciones" data-testid="sidebar-nav">
+        {visibleGroups(NAV_GROUPS, navContext).map((group) => (
+          <div key={group.id} className="sidebar-group" role="group" aria-labelledby={group.label ? `sidebar-group-${group.id}` : undefined}>
+            {group.label && (
+              <div id={`sidebar-group-${group.id}`} className="sidebar-group-label">{group.label}</div>
+            )}
+            {group.items.map(renderItem)}
+          </div>
+        ))}
+      </nav>
+      <nav className="sidebar-footer-nav" aria-label="Configuración">
+        {visibleItems(NAV_FOOTER, navContext).map(renderItem)}
       </nav>
 
       {/* User section */}
       <div className="sidebar-user" data-testid="sidebar-user">
-        <div className="sidebar-user__inner">
-          <div className="sidebar-user__avatar">
-            {user?.avatar ? (
-              <Image
-                onClick={() => {
-                  router.push("/settings");
-                }}
-                src={user.avatar}
-                alt={user.displayName}
-                width={36}
-                height={36}
-                sizes="36px"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : user ? (
-              `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-            ) : (
-              "?"
-            )}
-          </div>
-          <div className="sidebar-user__info">
-            <div className="sidebar-user__name">{user?.displayName ?? `${user?.firstName} ${user?.lastName}`}</div>
-            <div className="sidebar-user__role">{user?.jobTitle ?? ""}</div>
-          </div>
-          <button
-            onClick={toggleTheme}
-            title={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-            className="sidebar-logout"
-            data-testid="sidebar-theme-toggle"
-          >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <button
-            onClick={async () => {
-              await logout();
-              router.replace("/login");
-            }}
-            title="Cerrar sesión"
-            className="sidebar-logout"
-            data-testid="sidebar-logout"
-          >
-            <LogoutIcon size={18} />
-          </button>
-        </div>
+        <UserMenu onNavigate={onClose} drawerOpen={isOpen} />
       </div>
     </aside>
   );

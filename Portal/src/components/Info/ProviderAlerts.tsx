@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { AdminRole } from "@/src/types/User";
+import { isAdminRole } from "@/src/types/User";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
@@ -15,7 +15,7 @@ import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 
 export function ProviderAlerts() {
   const { user } = useAuthContext();
-  const isAdmin = user?.role === AdminRole.ADMIN || user?.role === AdminRole.SUPER_ADMIN;
+  const isAdmin = isAdminRole(user?.role);
   if (!isAdmin) return null;
 
   return (

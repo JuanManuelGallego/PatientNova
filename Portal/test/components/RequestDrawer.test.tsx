@@ -189,7 +189,7 @@ describe("RequestDrawer", () => {
   it("links to the request's activity log", () => {
     renderDrawer();
     expect(screen.getByTestId("request-drawer-audit-link"))
-      .toHaveAttribute("href", "/settings?tab=Registro+de+actividad&entityId=r1");
+      .toHaveAttribute("href", "/activity?entityId=r1");
   });
 
   it("offers no actions on a resolved request", () => {

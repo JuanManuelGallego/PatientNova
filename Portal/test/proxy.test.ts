@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { config, proxy } from "@/src/proxy";
+import { NAV_FOOTER, NAV_GROUPS } from "@/src/config/navigation";
 
 describe("login redirect", () => {
   it.each([
@@ -34,3 +35,19 @@ describe("confirmation link", () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe("provider navigation", () => {
+  const paths = [ ...NAV_GROUPS.flatMap((g) => g.items), ...NAV_FOOTER ].map((i) => i.path);
+
+  it.each(paths)("%s is matched by the proxy", (path) => {
+    expect(config.matcher).toContain(`${path}/:path*`);
+  });
+
+  it("sends /activity without a cookie to login", () => {
+    const response = proxy(new NextRequest("https://patientnova.net/activity"));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("from")).toBe("/activity");
+  });
+});
+
