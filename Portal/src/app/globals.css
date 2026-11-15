@@ -788,7 +788,7 @@ body {
 }
 
 .btn-action-delete {
-  padding: 5px 12px;
+  padding: 5px 9px;
   font-size: 12px;
   font-weight: 550;
   background: var(--c-error-bg);
@@ -803,7 +803,8 @@ body {
 }
 
 .btn-action-delete:hover {
-  background: #fee2e2;
+  background: var(--c-error-bg);
+  box-shadow: inset 0 0 0 1px var(--c-error-border);
 }
 .btn-action-delete:focus-visible {
   outline: 2px solid var(--c-error);
@@ -1053,7 +1054,51 @@ body {
 .form-input-hint {
   font-size: 11px;
   color: var(--c-gray-400);
-  align-self: flex-end;
+  align-self: flex-start;
+  text-align: left;
+}
+
+/* Upload dropzone: icon centred above the text */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.dropzone__icon {
+  display: flex;
+  justify-content: center;
+}
+
+/* One radio look everywhere */
+.radio {
+  accent-color: var(--c-brand);
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* Form date pickers (class applied by DateTimePicker / AppointmentDateTimePicker) match .form-input.
+   .form-input has no fixed height; its computed height is 44px (controller-measured:
+   line box + 2x10px padding + 2x1.5px border), so the picker pins 44px with border-box. */
+.ant-picker.form-picker {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--c-input-bg);
+  border-width: 1.5px;
+  font-size: 14px;
+}
+
+.ant-picker.form-picker .ant-picker-input > input {
+  font-size: 14px;
+  font-family: inherit;
 }
 
 .template-btn {
@@ -1924,6 +1969,7 @@ body {
 
 @media (min-width: 640px) {
   .drawer-footer > .btn-drawer-delete:not(:only-child),
+  .drawer-footer > .btn-action-delete:not(:only-child),
   .drawer-footer > .btn-drawer-activate:not(:only-child) {
     flex: 0 0 52px;
   }
@@ -2230,6 +2276,7 @@ body {
   border: 1px solid var(--c-gray-100);
   overflow: hidden;
   animation: fadeIn 0.3s ease;
+  container-type: inline-size;
 }
 
 .table-full {
@@ -2258,6 +2305,46 @@ tr:hover td {
   padding: 14px 20px;
   width: 0;
   white-space: nowrap;
+}
+
+/* Trailing actions column stays reachable when the table still scrolls sideways. */
+.col--actions {
+  position: sticky;
+  right: 0;
+  background: var(--c-surface);
+}
+
+th.col--actions {
+  background: var(--c-gray-50);
+}
+
+/* A secondary column with an active filter/sort stays visible (DataTable sets data-forced-cols). */
+.table-full[data-forced-cols~="1"] :is(th, td):nth-child(1),
+.table-full[data-forced-cols~="2"] :is(th, td):nth-child(2),
+.table-full[data-forced-cols~="3"] :is(th, td):nth-child(3),
+.table-full[data-forced-cols~="4"] :is(th, td):nth-child(4),
+.table-full[data-forced-cols~="5"] :is(th, td):nth-child(5),
+.table-full[data-forced-cols~="6"] :is(th, td):nth-child(6),
+.table-full[data-forced-cols~="7"] :is(th, td):nth-child(7),
+.table-full[data-forced-cols~="8"] :is(th, td):nth-child(8),
+.table-full[data-forced-cols~="9"] :is(th, td):nth-child(9),
+.table-full[data-forced-cols~="10"] :is(th, td):nth-child(10),
+.table-full[data-forced-cols~="11"] :is(th, td):nth-child(11),
+.table-full[data-forced-cols~="12"] :is(th, td):nth-child(12) {
+  display: table-cell;
+}
+
+/* Narrow table card: drop secondary columns and tighten cell padding. */
+@container (max-width: 1100px) {
+  .col--secondary {
+    display: none;
+  }
+
+  .th,
+  .td {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 }
 
 /* responsive: table footer wraps on mobile */
@@ -2349,6 +2436,11 @@ tr:hover td {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.td-identity__text {
+  min-width: 0;
+  max-width: 200px;
 }
 
 .td-actions {
@@ -2553,22 +2645,28 @@ tr:hover td {
 /* ================================================================
    Stat Card
    ================================================================ */
-/* responsive: stat card adjusts padding on mobile */
+/* The card is a size container; its inner box sizes padding and the value
+   in cqi, so a narrow card (5 per row) trades padding and font for fit. */
 .stat-card {
   background: var(--c-surface);
   border-radius: var(--r-3xl);
-  padding: 18px 20px;
   box-shadow: var(--shadow-card-lg);
   border: 1px solid var(--c-gray-100);
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.stat-card__inner {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  white-space: nowrap;
+  min-width: 0;
+  padding: 18px clamp(12px, 8cqi, 20px);
 }
 
 @media (min-width: 768px) {
-  .stat-card {
-    padding: 24px 28px;
+  .stat-card__inner {
+    padding: 24px clamp(12px, 8cqi, 28px);
     gap: 6px;
   }
 }
@@ -2577,11 +2675,14 @@ tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
 .stat-card__icon {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   opacity: 0.7;
 }
 
@@ -2591,6 +2692,10 @@ tr:hover td {
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (min-width: 768px) {
@@ -2599,23 +2704,30 @@ tr:hover td {
   }
 }
 
-/* responsive: stat value scales down on mobile */
+/* "$ 6.690.000" is about 5.9em wide: at a 169px card (167px inside the
+   border) the font is 22.5px, so the value is ~133px in 140px of content. */
 .stat-card__value {
-  font-size: 28px;
+  font-size: clamp(20px, 13.5cqi, 28px);
   font-weight: 700;
   color: var(--c-gray-900);
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 768px) {
   .stat-card__value {
-    font-size: 36px;
+    font-size: clamp(20px, 13.5cqi, 36px);
   }
 }
 
 .stat-card__sub {
   font-size: 13px;
   color: var(--c-gray-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* responsive: stats grid — 1 col mobile → 2 cols sm → 4 cols lg */
@@ -2635,31 +2747,9 @@ tr:hover td {
 
 @media (min-width: 1024px) {
   .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 20px;
     margin-bottom: 36px;
-  }
-}
-
-/* responsive: 5-col stats variant — 2 cols mobile → 3 cols md → 5 cols lg */
-.stats-grid--5 {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-@media (min-width: 768px) {
-  .stats-grid--5 {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .stats-grid--5 {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
   }
 }
 
@@ -3116,7 +3206,7 @@ tr:hover td {
 }
 
 .cal-chip {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 5px;
   border-radius: 4px;
@@ -3128,21 +3218,21 @@ tr:hover td {
 }
 
 .cal-chip--cancelled {
-  opacity: 0.45;
+  opacity: 0.7;
   text-decoration: line-through;
 }
 
 .cal-chip--no-show {
-  opacity: 0.45;
+  opacity: 0.7;
   text-decoration: line-through;
 }
 
 .cal-chip--completed {
-  opacity: 0.65;
+  opacity: 0.8;
 }
 
 .cal-overflow-btn {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--c-gray-400);
   padding-left: 4px;
   background: none;
@@ -3370,7 +3460,7 @@ tr:hover td {
 .bulk-info__title {
   font-size: 14px;
   font-weight: 600;
-  color: #1e40af;
+  color: var(--c-gray-900);
   margin-bottom: 3px;
 }
 

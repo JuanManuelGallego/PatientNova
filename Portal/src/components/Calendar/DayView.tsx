@@ -3,7 +3,7 @@ import { flagUrl } from "@/src/components/CountryCodeInput";
 import { ApptChip } from "./ApptChip";
 import { BlockedTimeBlock } from "./BlockedTimeBlock";
 import { HOUR_HEIGHT, layoutDayAppointments, layoutBlockedTimes } from "./constants";
-import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { fmtHourLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { DayViewProps } from "./types";
 
@@ -63,11 +63,11 @@ export function DayView({
               style={{
                 ...calendarStyles.dayTimeLabel,
                 height: HOUR_HEIGHT,
-                borderTop: "1px solid var(--c-gray-100, #f3f4f6)",
+                borderTop: "1px solid var(--c-gray-100)",
                 boxSizing: "border-box",
               }}
             >
-              {String(hour).padStart(2, "0")}:00
+              {fmtHourLabel(hour)}
             </div>
           ))}
         </div>
@@ -76,7 +76,7 @@ export function DayView({
           style={{
             flex: 1,
             position: "relative",
-            borderLeft: "1px solid var(--c-gray-100, #f3f4f6)",
+            borderLeft: "1px solid var(--c-gray-100)",
             minWidth: 0,
           }}
         >
@@ -85,7 +85,7 @@ export function DayView({
               key={`bg-${hour}`}
               style={{
                 height: HOUR_HEIGHT,
-                borderTop: "1px solid var(--c-gray-100, #f3f4f6)",
+                borderTop: "1px solid var(--c-gray-100)",
                 boxSizing: "border-box",
               }}
             />
@@ -135,7 +135,7 @@ export function DayView({
                 right: 0,
                 top: nowTop,
                 height: 2,
-                background: "var(--c-danger, #ef4444)",
+                background: "var(--c-error)",
                 zIndex: 2,
                 pointerEvents: "none",
               }}

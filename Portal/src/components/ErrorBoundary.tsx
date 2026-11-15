@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
             return (
                 <div style={{ padding: 32, textAlign: "center" }}>
                     <h2 style={{ marginBottom: 8 }}>Algo salió mal</h2>
-                    <p style={{ color: "var(--c-text-muted)", marginBottom: 16 }}>
+                    <p style={{ color: "var(--c-gray-400)", marginBottom: 16 }}>
                         {this.state.error?.message ?? "Error inesperado"}
                     </p>
                     <button

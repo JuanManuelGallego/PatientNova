@@ -66,6 +66,10 @@ export function ImageField({
             width={100}
             height={100}
             style={{
+              width: 100,
+              height: 100,
+              aspectRatio: "1",
+              flexShrink: 0,
               borderRadius: "50%",
               objectFit: "cover",
               border: "3px solid var(--c-gray-200)",

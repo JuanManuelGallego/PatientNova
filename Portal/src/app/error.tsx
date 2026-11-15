@@ -21,14 +21,14 @@ export default function GlobalError({
             alignItems: "center",
             justifyContent: "center",
             minHeight: "100vh",
-            background: "var(--c-bg)",
+            background: "var(--c-page-bg)",
             gap: 16,
             padding: 24,
         }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--c-text)" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--c-gray-900)" }}>
                 Algo salió mal
             </h2>
-            <p style={{ color: "var(--c-text-sub)", fontSize: 14, textAlign: "center" }}>
+            <p style={{ color: "var(--c-gray-500)", fontSize: 14, textAlign: "center" }}>
                 {error.message || "Ocurrió un error inesperado."}
             </p>
             <button

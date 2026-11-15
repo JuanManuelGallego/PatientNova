@@ -2,6 +2,7 @@ import { sectionGridStyle } from "@/src/config/antTheme";
 import { createEmptyNote, EvolutionNote } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
 import { fmtCalendarDay } from "@/src/utils/TimeUtils";
+import { ACTION_ICONS } from "@/src/config/icons";
 
 type EvolutionNotesProps = {
   evolutionNotes: EvolutionNote[];
@@ -45,11 +46,13 @@ export function EvolutionNotes({
               </div>
               <button
                 type="button"
-                className="btn-secondary btn-sm"
+                className="btn-action-delete"
                 onClick={() => removeRow(index)}
+                title="Eliminar nota de evolución"
+                aria-label="Eliminar nota de evolución"
                 data-testid={`evolution-note-delete-${note.id}`}
               >
-                Eliminar
+                <ACTION_ICONS.delete size={14} aria-hidden="true" />
               </button>
             </div>
             <div style={sectionGridStyle}>

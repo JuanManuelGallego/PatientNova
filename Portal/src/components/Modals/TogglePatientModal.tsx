@@ -34,7 +34,7 @@ export function TogglePatientModal({
   return (
     <ConfirmDialog
       icon={isActive ? ACTION_ICONS.cancel : ACTION_ICONS.retry}
-      title={isActive ? "Desactivar Paciente" : "Reactivar Paciente"}
+      title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
       confirmLabel={isActive ? "Sí, desactivar" : "Sí, reactivar"}
       confirmVariant={isActive ? "danger" : "success"}
       loadingLabel={isActive ? "Desactivando…" : "Reactivando…"}

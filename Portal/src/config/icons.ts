@@ -70,6 +70,7 @@ import {
   Copy,
   Download,
   RotateCcw,
+  LogIn,
   User,
   UserCog,
   Tag,
@@ -84,6 +85,7 @@ export const AUDIT_ACTION_ICONS: Record<string, LucideIcon> = {
   UPDATE: Pencil,
   DELETE: Trash2,
   RESTORE: RotateCcw,
+  LOGIN: LogIn,
 };
 
 export const AUDIT_ENTITY_ICONS: Record<string, LucideIcon> = {

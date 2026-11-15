@@ -50,10 +50,35 @@ export type ColumnFilterConfig =
       triggerTestId?: string;
     };
 
+/** Whether a column filter currently narrows the rows. */
+function isFilterActive(filter: ColumnFilterConfig | undefined): boolean {
+  if (!filter) return false;
+  switch (filter.kind) {
+    case "custom":
+      return Boolean(filter.active);
+    case "enum":
+      return filter.value.length > 0;
+    case "date-range":
+      return (
+        filter.value !== null && filter.value[0] !== "" && filter.value[1] !== ""
+      );
+    default:
+      return filter.value !== "";
+  }
+}
+
 export interface ColumnDef {
   label: string;
   sortKey?: string;
   filter?: ColumnFilterConfig;
+  /**
+   * "secondary" columns are hidden when the table card is narrow (the caller
+   * puts `col--secondary` on the matching `td`). "actions" marks the trailing
+   * actions column, which stays pinned to the right edge (`col--actions` on the `td`).
+   * A secondary column whose filter is active, or that is the current sort,
+   * stays visible (the table marks it in `data-forced-cols`) so active state is never hidden.
+   */
+  priority?: "secondary" | "actions";
 }
 
 interface TableFooterProps {
@@ -332,6 +357,18 @@ export function DataTable<T>({
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
 
+  // 1-based positions of secondary columns that must stay visible on narrow tables.
+  const forcedCols = columns
+    .map((col, i) =>
+      col.priority === "secondary" &&
+      (isFilterActive(col.filter) ||
+        Boolean(col.sortKey && onSort && orderBy === col.sortKey))
+        ? i + 1
+        : null,
+    )
+    .filter((n): n is number => n !== null)
+    .join(" ");
+
   const closePopover = useCallback(() => setOpenColumnIndex(null), []);
 
   // Stable across re-renders that don't change the open column, so the
@@ -346,7 +383,11 @@ export function DataTable<T>({
     <div className="table-card">
       {/* responsive: horizontal scroll wrapper for narrow viewports */}
       <div className="table-scroll">
-        <table className="table-full" data-testid={testId}>
+        <table
+          className="table-full"
+          data-testid={testId}
+          data-forced-cols={forcedCols || undefined}
+        >
           <thead>
             <tr>
               {columns.map((col, i) => {
@@ -361,21 +402,11 @@ export function DataTable<T>({
                     : "none"
                   : undefined;
                 const filter = col.filter;
-                const filterActive = filter
-                  ? filter.kind === "custom"
-                    ? Boolean(filter.active)
-                    : filter.kind === "enum"
-                      ? filter.value.length > 0
-                      : filter.kind === "date-range"
-                        ? filter.value !== null &&
-                          filter.value[0] !== "" &&
-                          filter.value[1] !== ""
-                        : filter.value !== ""
-                  : false;
+                const filterActive = isFilterActive(filter);
                 return (
                   <th
                     key={col.sortKey ?? col.label}
-                    className="th"
+                    className={`th${col.priority === "secondary" ? " col--secondary" : ""}${col.priority === "actions" ? " col--actions" : ""}`}
                     aria-sort={ariaSort}
                     ref={(el) => {
                       headerRefs.current[i] = el;

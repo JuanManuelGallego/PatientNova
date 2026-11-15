@@ -15,6 +15,8 @@ import { SettingsSection } from "./SettingsSection";
 
 const WHATSAPP_ERROR_ID = "reminders-whatsapp-error";
 const SMS_ERROR_ID = "reminders-sms-error";
+const WHATSAPP_MISSING_ID = "reminders-whatsapp-missing";
+const SMS_MISSING_ID = "reminders-sms-missing";
 
 export function RemindersTab() {
   const { user } = useAuthContext();
@@ -68,6 +70,10 @@ export function RemindersTab() {
       ...overrides,
     });
   }
+
+  const activeChannel = reminderChannel ?? Channel.WHATSAPP;
+  const whatsappMissing = reminderActive && activeChannel === Channel.WHATSAPP && !whatsappNumber.trim();
+  const smsMissing = reminderActive && activeChannel === Channel.SMS && !phoneNumber.trim();
 
   return (
     <div className="settings-stack">
@@ -137,10 +143,15 @@ export function RemindersTab() {
                     handleFieldChange({ whatsappNumber: v });
                   }}
                   aria-invalid={!!whatsappError || undefined}
-                  aria-describedby={whatsappError ? WHATSAPP_ERROR_ID : undefined}
+                  aria-describedby={[whatsappError && WHATSAPP_ERROR_ID, whatsappMissing && WHATSAPP_MISSING_ID].filter(Boolean).join(" ") || undefined}
                   data-testid="reminders-whatsapp-input"
                 />
                 {whatsappError && <FieldError id={WHATSAPP_ERROR_ID} message={whatsappError} />}
+                {whatsappMissing && (
+                  <span id={WHATSAPP_MISSING_ID} role="status" className="form-input-hint" style={{ color: "var(--c-warning-dark)" }}>
+                    No tienes un número de WhatsApp. No recibirás avisos hasta que lo agregues.
+                  </span>
+                )}
               </label>
               <label className="form-label">
                 Teléfono (SMS)
@@ -151,10 +162,15 @@ export function RemindersTab() {
                     handleFieldChange({ phoneNumber: value });
                   }}
                   aria-invalid={!!smsError || undefined}
-                  aria-describedby={smsError ? SMS_ERROR_ID : undefined}
+                  aria-describedby={[smsError && SMS_ERROR_ID, smsMissing && SMS_MISSING_ID].filter(Boolean).join(" ") || undefined}
                   data-testid="reminders-sms-input"
                 />
                 {smsError && <FieldError id={SMS_ERROR_ID} message={smsError} />}
+                {smsMissing && (
+                  <span id={SMS_MISSING_ID} role="status" className="form-input-hint" style={{ color: "var(--c-warning-dark)" }}>
+                    No tienes un número para SMS. No recibirás avisos hasta que lo agregues.
+                  </span>
+                )}
               </label>
               <label className="form-label">
                 Correo electrónico

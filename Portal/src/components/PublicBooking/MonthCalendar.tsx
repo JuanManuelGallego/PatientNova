@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, fmtDayParts, fmtMonth, monthGrid, monthOf } from "@/src/utils/publicBooking";
 import styles from "./SlotChooser.module.css";
 
-const WEEKDAYS = [ "D", "L", "M", "M", "J", "V", "S" ];
+const WEEKDAYS = [ "L", "M", "X", "J", "V", "S", "D" ];
 
 interface MonthCalendarProps {
     month: string;

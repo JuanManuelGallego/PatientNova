@@ -89,9 +89,10 @@ export function LocationCard({
             className="btn-action-delete"
             onClick={onDelete}
             title="Eliminar"
+            aria-label={`Eliminar consultorio ${loc.name}`}
             data-testid={`location-delete-button-${loc.id}`}
           >
-            <ACTION_ICONS.close size={14} />
+            <ACTION_ICONS.delete size={14} aria-hidden="true" />
           </button>
         </div>
       </div>

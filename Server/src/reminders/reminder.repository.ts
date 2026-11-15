@@ -137,10 +137,11 @@ export const reminderRepository = {
 
     // Default to current month in user's timezone when no range specified
     let effectiveFrom = dateFrom;
-    const effectiveTo = dateTo;
+    let effectiveTo = dateTo;
     if (!dateFrom && !dateTo) {
-      const { start } = getCurrentMonthBoundsInTz(timezone);
+      const { start, end } = getCurrentMonthBoundsInTz(timezone);
       effectiveFrom = start.toISOString();
+      effectiveTo = end.toISOString();
     }
 
     const where: Prisma.ReminderWhereInput = {

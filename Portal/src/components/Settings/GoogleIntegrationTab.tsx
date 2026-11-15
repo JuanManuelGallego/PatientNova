@@ -84,6 +84,7 @@ export function GoogleIntegrationTab() {
   const lastCheckedAt = connection?.lastCheckedAt;
   const disconnectedAt = connection?.disconnectedAt;
   const isUnknown = !connection && !connectionError;
+  const notConnected = !isUnknown && !isConnected && !isExpired && !connectionError;
   const isLoading = loadingConnection || startingOAuth || waitingForOAuth || disconnecting || verifying;
   const displayedError = actionError || popupError || oauthStartError || connectionError || verifyError;
   const at = (iso: string) => `${fmtDate(iso, timezone)} a las ${fmtTime(iso, timezone)}`;
@@ -106,7 +107,7 @@ export function GoogleIntegrationTab() {
         ? "La cuenta está conectada."
         : isExpired
           ? `Reconéctala para seguir generando enlaces de Meet.${disconnectedAt ? ` Google dejó de aceptarla el ${at(disconnectedAt)}` : ""}`
-          : "En espera de activación.";
+          : "Conecta tu cuenta de Google para crear enlaces de Meet.";
 
   return (
     <div className="settings-stack">
@@ -120,14 +121,16 @@ export function GoogleIntegrationTab() {
               width: 56,
               height: 56,
               borderRadius: 12,
-              background: isConnected ? "var(--c-green-100)" : isExpired ? "var(--c-warning-surface)" : "var(--c-gray-100)",
+              background: isConnected ? "var(--c-success-bg)" : isExpired ? "var(--c-warning-surface)" : "var(--c-gray-100)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {isConnected ? (
-              <STATUS_ICONS.success size={28} style={{ color: "var(--c-green)" }} />
+              <STATUS_ICONS.success size={28} style={{ color: "var(--c-success)" }} />
+            ) : notConnected ? (
+              <STATUS_ICONS.info size={28} style={{ color: "var(--c-gray-400)" }} />
             ) : (
               <STATUS_ICONS.warning size={28} style={{ color: isExpired ? "var(--c-warning-dark)" : "var(--c-gray-400)" }} />
             )}
@@ -160,7 +163,7 @@ export function GoogleIntegrationTab() {
                 </button>
               </div>
             </div>
-            <p aria-live="polite" data-testid="google-verified-notice" style={{ marginTop: verifiedNotice ? 6 : 0, color: "var(--c-green)" }}>
+            <p aria-live="polite" data-testid="google-verified-notice" style={{ marginTop: verifiedNotice ? 6 : 0, color: "var(--c-success)" }}>
               {verifiedNotice}
             </p>
           </div>

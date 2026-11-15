@@ -48,21 +48,43 @@ function getDisplayTimezone(): string {
     return displayTimezone ?? browserTimezone();
 }
 
-/** Short label for a timezone, e.g. "Bogota (GMT-5)". */
+/** Short label for a timezone, e.g. "Bogotá (GMT-5)". */
 function fmtTimezoneLabel(timezone: string = getDisplayTimezone()): string {
-    const city = timezone.split("/").pop()?.replace(/_/g, " ") ?? timezone;
+    const listed = COMMON_TIMEZONES.find((tz) => tz.value === timezone)?.label.split("— ")[1];
+    const city = listed ?? timezone.split("/").pop()?.replace(/_/g, " ") ?? timezone;
     const offset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "shortOffset" })
         .formatToParts(new Date())
         .find((p) => p.type === "timeZoneName")?.value;
     return offset ? `${city} (${offset})` : city;
 }
 
+/** Same shape as fmtDateTime (no seconds); used by the activity log. */
 function fmtTimestamp(iso: string | undefined, timezone?: string): string {
-    if (!iso) return "Invalid Date"
-    return new Date(iso).toLocaleString("es-ES", {
-        timeZone: timezone ?? getDisplayTimezone(),
-        day: "numeric", month: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true, second: "numeric",
-    });
+    return fmtDateTime(iso, timezone);
+}
+
+/** Compact hour label for the calendar axis: 15 -> "3 p. m.", 0 -> "12 a. m.". */
+function fmtHourLabel(hour: number): string {
+    const h12 = hour % 12 === 0 ? 12 : hour % 12;
+    return `${h12} ${hour < 12 ? "a. m." : "p. m."}`;
+}
+
+/** Month heading: "Noviembre de 2026". `month` is 0-based. */
+function fmtMonthLabel(month: number, year: number): string {
+    return `${MONTH_NAMES_ES[ month ]} de ${year}`;
+}
+
+/** Week heading: "9–15 de noviembre de 2026", "30 de noviembre – 6 de diciembre de 2026". */
+function fmtWeekRange(start: Date, end: Date): string {
+    const sm = MONTH_NAMES_ES[ start.getMonth() ]!.toLowerCase();
+    const em = MONTH_NAMES_ES[ end.getMonth() ]!.toLowerCase();
+    if (start.getFullYear() !== end.getFullYear()) {
+        return `${start.getDate()} de ${sm} de ${start.getFullYear()} – ${end.getDate()} de ${em} de ${end.getFullYear()}`;
+    }
+    if (start.getMonth() === end.getMonth()) {
+        return `${start.getDate()}–${end.getDate()} de ${em} de ${end.getFullYear()}`;
+    }
+    return `${start.getDate()} de ${sm} – ${end.getDate()} de ${em} de ${end.getFullYear()}`;
 }
 
 function fmtDateTime(iso: string | undefined, timezone?: string): string {
@@ -333,11 +355,11 @@ function getAppointmentEndTime(startAt: string, duration: AppointmentDuration): 
     return new Date(start.getTime() + dur * 60000).toISOString();
 }
 
-/** 06:00 tomorrow in the display timezone. */
-function getTomorrowSixAm(timezone?: string): string {
+/** Tomorrow at `time` ("HH:mm:ss") in the display timezone. */
+function getTomorrowAt(time: string, timezone?: string): string {
     const [ y, m, d ] = todayFormattedString(timezone).split("-").map(Number);
     const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-    return localDateTimeToUtc(tomorrow, "06:00:00", timezone ?? getDisplayTimezone());
+    return localDateTimeToUtc(tomorrow, time, timezone ?? getDisplayTimezone());
 }
 
 function getDate(date: string): string {
@@ -484,7 +506,10 @@ export {
     getDuration,
     getReminderSendAt,
     getReminderType,
-    getTomorrowSixAm,
+    getTomorrowAt,
+    fmtHourLabel,
+    fmtMonthLabel,
+    fmtWeekRange,
     isoToLocal,
     isReminderTypeFeasible,
     todayString,

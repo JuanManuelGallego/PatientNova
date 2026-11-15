@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { providerRole } from "@/src/utils/providerRole";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MapPin, MessageCircle, Phone, Video } from "lucide-react";
@@ -118,7 +119,7 @@ interface ProviderIdentityProps {
 function ProviderIdentity({ slug, provider, headingLevel }: ProviderIdentityProps) {
     const [ logoFailed, setLogoFailed ] = useState(false);
     const Heading = headingLevel === 1 ? "h1" : "h2";
-    const role = [ provider.jobTitle, provider.specialty ].filter(Boolean).join(" · ");
+    const role = providerRole(provider.jobTitle, provider.specialty);
     return (
         <div className={styles.identity}>
             {provider.hasLogo && !logoFailed && (

@@ -253,6 +253,7 @@ export function PracticeProfile() {
           </div>
         ) : (
           <div
+            className="dropzone"
             style={{
               padding: 32,
               borderRadius: "var(--r-md)",
@@ -261,7 +262,7 @@ export function PracticeProfile() {
               textAlign: "center",
             }}
           >
-            <div style={{ marginBottom: 12 }}>
+            <div className="dropzone__icon">
               <ClipboardList size={32} aria-hidden="true" />
             </div>
             <p style={{ fontSize: 13, color: "var(--c-gray-500)", margin: "0 0 12px 0" }}>

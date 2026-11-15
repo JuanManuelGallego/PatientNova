@@ -186,7 +186,7 @@ function RemindersPageContent() {
                 className="btn-primary btn-hero"
                 data-testid="reminders-new-button"
               >
-                Nuevo Recordatorio
+                Nuevo recordatorio
               </button>
             </>
           }
@@ -195,8 +195,10 @@ function RemindersPageContent() {
           <StatCard
             label="Activos"
             value={
-              (stats?.byStatus[ ReminderStatus.PENDING ] || 0) +
-              (stats?.byStatus[ ReminderStatus.QUEUED ] || 0)
+              stats
+                ? (stats.byStatus[ ReminderStatus.PENDING ] || 0) +
+                  (stats.byStatus[ ReminderStatus.QUEUED ] || 0)
+                : undefined
             }
             sub="este mes"
             accent="var(--c-link)"
@@ -204,14 +206,14 @@ function RemindersPageContent() {
           />
           <StatCard
             label="Enviados"
-            value={stats?.byStatus[ ReminderStatus.SENT ] || 0}
+            value={stats ? stats.byStatus[ ReminderStatus.SENT ] || 0 : undefined}
             sub="este mes"
             accent="var(--c-success)"
             icon={Megaphone}
           />
           <StatCard
             label="Fallidos"
-            value={stats?.byStatus[ ReminderStatus.FAILED ] || 0}
+            value={stats ? stats.byStatus[ ReminderStatus.FAILED ] || 0 : undefined}
             sub="este mes"
             accent="var(--c-error)"
             icon={AlertTriangle}
@@ -254,6 +256,7 @@ function RemindersPageContent() {
           <ActiveRemindersTab
             reminders={reminders}
             loading={loading}
+            hasError={!!error}
             page={page}
             total={total}
             totalPages={totalPages}
@@ -274,6 +277,7 @@ function RemindersPageContent() {
           <HistoryRemindersTab
             reminders={reminders}
             loading={loading}
+            hasError={!!error}
             page={page}
             total={total}
             totalPages={totalPages}
@@ -360,6 +364,7 @@ function RemindersPageContent() {
 function ActiveRemindersTab({
   reminders,
   loading,
+  hasError,
   page,
   total,
   totalPages,
@@ -377,6 +382,7 @@ function ActiveRemindersTab({
 }: {
   reminders: Reminder[];
   loading: boolean;
+  hasError: boolean;
   page: number;
   total: number;
   totalPages: number;
@@ -428,7 +434,7 @@ function ActiveRemindersTab({
       },
       { label: "Dentro de" },
       { label: "Creado el" },
-      { label: "" },
+      { label: "", priority: "actions" },
     ],
     [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
   );
@@ -464,7 +470,7 @@ function ActiveRemindersTab({
           <td className="td td--date">{fmtDateTime(reminder.sendAt, timezone)}</td>
           <td className="td td--date">{fmtRelative(reminder.sendAt)}</td>
           <td className="td td--subtle">{fmtDateTime(reminder.sendAt, timezone)}</td>
-          <td className="td" onClick={(e) => e.stopPropagation()}>
+          <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
             <div className="td-actions">
               <button
                 onClick={() => setEditReminder(reminder)}
@@ -476,6 +482,7 @@ function ActiveRemindersTab({
               <button
                 onClick={() => setCancelReminder(reminder)}
                 className="btn-action-delete"
+                aria-label="Cancelar recordatorio"
                 data-testid={`reminder-row-cancel-button-${reminder.id}`}
               >
                 <ACTION_ICONS.close size={14} />
@@ -484,13 +491,13 @@ function ActiveRemindersTab({
           </td>
         </tr>
       )}
-      emptyState={
+      emptyState={hasError ? undefined : (
         <EmptyState
           icon={STATUS_ICONS.bell}
           title="Sin recordatorios activos"
-          sub="Haz clic en Nuevo Recordatorio para programar el primero."
+          sub="Haz clic en Nuevo recordatorio para programar el primero."
         />
-      }
+      )}
       footer={
         <DataTableFooter
           page={page}
@@ -508,6 +515,7 @@ function ActiveRemindersTab({
 function HistoryRemindersTab({
   reminders,
   loading,
+  hasError,
   page,
   total,
   totalPages,
@@ -524,6 +532,7 @@ function HistoryRemindersTab({
 }: {
   reminders: Reminder[];
   loading: boolean;
+  hasError: boolean;
   page: number;
   total: number;
   totalPages: number;
@@ -575,10 +584,11 @@ function HistoryRemindersTab({
       {
         label: "Última actualización",
         sortKey: "updatedAt",
+        priority: "secondary",
       },
-      { label: "ID Mensaje" },
+      { label: "ID Mensaje", priority: "secondary" },
       { label: "Error" },
-      { label: "" },
+      { label: "", priority: "actions" },
     ],
     [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
   );
@@ -612,8 +622,8 @@ function HistoryRemindersTab({
             <ReminderStatusPill status={reminder.status} />
           </td>
           <td className="td td--muted">{fmtDateTime(reminder.sendAt, timezone)}</td>
-          <td className="td td--muted">{fmtDateTime(reminder.updatedAt, timezone)}</td>
-          <td className="td td--mono">
+          <td className="td td--muted col--secondary">{fmtDateTime(reminder.updatedAt, timezone)}</td>
+          <td className="td td--mono col--secondary">
             {reminder.messageId ? (
               <span title={reminder.messageId}>{reminder.messageId}</span>
             ) : (
@@ -627,7 +637,7 @@ function HistoryRemindersTab({
               <span className="td-error__empty">—</span>
             )}
           </td>
-          <td className="td" onClick={(e) => e.stopPropagation()}>
+          <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
             {reminder.status === ReminderStatus.FAILED && (
               <div className="td-actions">
                 <button
@@ -644,13 +654,13 @@ function HistoryRemindersTab({
           </td>
         </tr>
       )}
-      emptyState={
+      emptyState={hasError ? undefined : (
         <EmptyState
           icon={STATUS_ICONS.clipboard}
           title="Sin historial aún"
           sub="Los recordatorios enviados, fallidos y cancelados aparecerán aquí."
         />
-      }
+      )}
       footer={
         <DataTableFooter
           page={page}
@@ -674,7 +684,7 @@ function BulkTab() {
           <Megaphone size={20} />
         </span>
         <div>
-          <div className="bulk-info__title">Envío Masivo</div>
+          <div className="bulk-info__title">Envío masivo</div>
           <div className="bulk-info__desc">
             Envía el mismo mensaje a múltiples pacientes a la vez. Solo se
             incluyen pacientes con estado <strong>Activo</strong> y número
@@ -706,7 +716,7 @@ function ReminderTabs({
       items={[
         { key: ActiveTab.Active, label: "Activos" },
         { key: ActiveTab.History, label: "Historial" },
-        { key: ActiveTab.Bulk, label: "Envío Masivo" },
+        { key: ActiveTab.Bulk, label: "Envío masivo" },
       ]}
       active={activeTab}
       onSelect={(key) => onTabChange(key as ActiveTab)}

@@ -36,7 +36,7 @@ export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProp
     >
       {!compact && (
         <span style={{
-          background: cfg.bg, color: cfg.color, fontSize: 11,
+          background: cfg.bg, color: cfg.color, fontSize: 12,
           padding: "2px 8px", borderRadius: 6, flexShrink: 0,
         }}>
           {cfg.label}

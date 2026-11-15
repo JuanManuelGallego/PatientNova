@@ -41,7 +41,7 @@ export function CancelAppointmentModal({
   return (
     <ConfirmDialog
       icon={STATUS_ICONS.ban}
-      title="Cancelar Cita"
+      title="Cancelar cita"
       confirmLabel="Sí, cancelar"
       loadingLabel="Cancelando…"
       loading={loading}

@@ -30,7 +30,7 @@ export function CancelReminderModal({
   return (
     <ConfirmDialog
       icon={STATUS_ICONS.ban}
-      title="Cancelar Recordatorio"
+      title="Cancelar recordatorio"
       confirmLabel="Sí, cancelar"
       loadingLabel="Cancelando…"
       loading={loading}

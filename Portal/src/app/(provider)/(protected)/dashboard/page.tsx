@@ -38,6 +38,7 @@ import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { settingsHref } from "@/src/config/navigation";
+import { fmtMoney } from "@/src/utils/money";
 
 export default function DashboardPage() {
   const timezone = useDisplayTimezone();
@@ -81,13 +82,14 @@ export default function DashboardPage() {
 
   const statsLoading =
     loadingPatientStats || loadingApptStats || loadingReminderStats;
-  const pendingReminders =
-    (reminderStats?.byStatus[ ReminderStatus.PENDING ] ?? 0) +
-    (reminderStats?.byStatus[ ReminderStatus.QUEUED ] ?? 0);
+  const pendingReminders = reminderStats
+    ? (reminderStats.byStatus[ ReminderStatus.PENDING ] ?? 0) +
+      (reminderStats.byStatus[ ReminderStatus.QUEUED ] ?? 0)
+    : undefined;
 
   return (
     <PageLayout>
-      <PageHeader title="Vista General" subtitle={todayString(timezone)} />
+      <PageHeader title="Vista general" subtitle={todayString(timezone)} />
       <div className="dash-welcome fade-in">
         <div className="dash-welcome__text">
           <span className="dash-welcome__greeting">
@@ -108,63 +110,65 @@ export default function DashboardPage() {
             onClick={() => setShowApptModal(true)}
             data-testid="dashboard-new-appointment-button"
           >
-            Nueva Cita
+            Nueva cita
           </button>
           <button
             className="btn-primary btn-hero"
             onClick={() => setShowPatientModal(true)}
             data-testid="dashboard-new-patient-button"
           >
-            Nuevo Paciente
+            Nuevo paciente
           </button>
         </div>
       </div>
-      <div className="stats-grid stats-grid--5 fade-in">
+      <div className="stats-grid fade-in">
         {statsLoading ? (
           [ 1, 2, 3, 4, 5 ].map((i) => (
             <div key={i} className="stat-card" style={{ minHeight: 90 }}>
-              <div className="dash-skeleton-row">
-                <div className="skeleton-bar" style={{ width: "60%" }} />
-              </div>
-              <div className="dash-skeleton-row">
-                <div className="skeleton-bar" style={{ width: "40%" }} />
+              <div className="stat-card__inner">
+                <div className="dash-skeleton-row">
+                  <div className="skeleton-bar" style={{ width: "60%" }} />
+                </div>
+                <div className="dash-skeleton-row">
+                  <div className="skeleton-bar" style={{ width: "40%" }} />
+                </div>
               </div>
             </div>
           ))
         ) : (
           <>
             <StatCard
-              label="Citas Hoy"
-              value={apptStats?.todayCount ?? 0}
+              label="Citas hoy"
+              value={apptStats?.todayCount}
               sub="programadas"
               accent="var(--c-brand-accent)"
               icon={CalendarCheck}
             />
             <StatCard
               label="Pacientes"
-              value={patientStats?.total ?? 0}
-              sub={`${patientStats?.byStatus[ PatientStatus.ACTIVE ] ?? 0} activos`}
+              value={patientStats?.total}
+              sub={patientStats ? `${patientStats.byStatus[ PatientStatus.ACTIVE ] ?? 0} activos` : "—"}
               accent="var(--c-brand)"
               icon={Users}
             />
             <StatCard
               label="Recordatorios"
               value={pendingReminders}
-              sub="este mes"
+              sub="pendientes este mes"
               accent="var(--c-link)"
               icon={Bell}
             />
             <StatCard
-              label="Sin Pagar"
-              value={apptStats?.unpaidCount ?? 0}
-              sub={`$ ${(apptStats?.unpaidRevenue ?? 0).toLocaleString("es-ES")}`}
+              label="Sin pagar"
+              value={apptStats?.unpaidCount}
+              sub={apptStats ? fmtMoney(apptStats.unpaidRevenue) : "—"}
               accent="var(--c-error)"
               icon={AlertCircle}
             />
             <StatCard
               label="Ingresos"
-              value={`$ ${(apptStats?.paidRevenue ?? 0).toLocaleString("es-ES")}`}
-              sub="total cobrado"
+              value={apptStats ? fmtMoney(apptStats.paidRevenue) : undefined}
+              sub="total histórico cobrado"
               accent="var(--c-success)"
               icon={DollarSign}
             />
@@ -175,9 +179,9 @@ export default function DashboardPage() {
         <div className="dash-card">
           <div className="dash-card__header">
             <div>
-              <h2 className="dash-card__title">Citas de Hoy</h2>
+              <h2 className="dash-card__title">Citas de hoy</h2>
               <p className="dash-card__sub">
-                {apptStats?.todayCount ?? 0} citas programadas
+                {apptStats ? apptStats.todayCount : "—"} citas programadas
               </p>
             </div>
             <Link href="/appointments" className="dash-card__link">
@@ -250,8 +254,8 @@ export default function DashboardPage() {
         <div className="dash-card">
           <div className="dash-card__header">
             <div>
-              <h2 className="dash-card__title">Recordatorios Activos</h2>
-              <p className="dash-card__sub">{pendingReminders} pendientes este mes</p>
+              <h2 className="dash-card__title">Recordatorios activos</h2>
+              <p className="dash-card__sub">{pendingReminders ?? "—"} pendientes este mes</p>
             </div>
             <Link href="/reminders" className="dash-card__link">
               Ver todos →
@@ -319,21 +323,21 @@ export default function DashboardPage() {
         <PendingRequestsCard />
       </div>
       <div className="dash-quick-nav fade-in">
-        <h3 className="dash-section-title">Acceso Rápido</h3>
+        <h3 className="dash-section-title">Acceso rápido</h3>
         <div className="dash-nav-grid">
           {[
             {
               href: "/patients",
               Icon: Users,
               label: "Pacientes",
-              desc: `${patientStats?.total ?? 0} registrados`,
+              desc: `${patientStats ? patientStats.total : "—"} registrados`,
               accent: "var(--c-brand)",
             },
             {
               href: "/appointments",
               Icon: FileText,
               label: "Citas",
-              desc: `${apptStats?.total ?? 0} en total`,
+              desc: `${apptStats ? apptStats.total : "—"} en total`,
               accent: "var(--c-brand-accent)",
             },
             {
@@ -347,7 +351,7 @@ export default function DashboardPage() {
               href: "/reminders",
               Icon: Bell,
               label: "Recordatorios",
-              desc: `${reminderStats?.total ?? 0} este mes`,
+              desc: `${reminderStats ? reminderStats.total : "—"} programados este mes`,
               accent: "var(--c-link)",
             },
             {

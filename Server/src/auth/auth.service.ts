@@ -16,7 +16,7 @@ import {
 import { UserNotFoundError } from '../utils/errors/errors.js';
 import type { UserResponse } from '../users/user.dto.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
-import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
+import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 
 interface RefreshTokenPayload {
   type: string;
@@ -84,7 +84,10 @@ export const authService = {
       entityType: EntityType.USER,
       entityId: user.id,
       userId: user.id,
-      actionType: ActionType.UPDATE,
+      actionType: ActionType.LOGIN,
+      source: ActionSource.API,
+      actorId: user.id,
+      actorDisplayName: user.email,
       description: `Usuario ${user.email} inició sesión`,
       affectedFields: ['lastLoginAt'],
       fieldsAfter: { lastLoginAt: updatedUser.lastLoginAt },

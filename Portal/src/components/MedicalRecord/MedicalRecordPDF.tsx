@@ -95,14 +95,14 @@ function FamilyMembers(form: FormValues) {
 function Antecedents(form: FormValues) {
   return (
     [
-      [ "Desarrollo Temprano", form.earlyDevelopment ],
-      [ "Escolar y Laboral", form.schoolAndWork ],
-      [ "Hábitos y Estilo de Vida", form.lifestyleHabits ],
-      [ "Eventos Traumáticos o Estresores Previos", form.traumaticEvents ],
-      [ "Consideraciones Emocionales", form.emotionalConsiderations ],
-      [ "Consideraciones Físicas, Etiología y de Salud", form.physicalConsiderations ],
-      [ "Antecedentes Mentales", form.mentalHistory ],
-      [ "Objetivo Clínico", form.objective ],
+      [ "Desarrollo temprano", form.earlyDevelopment ],
+      [ "Escolar y laboral", form.schoolAndWork ],
+      [ "Hábitos y estilo de vida", form.lifestyleHabits ],
+      [ "Eventos traumáticos o estresores previos", form.traumaticEvents ],
+      [ "Consideraciones emocionales", form.emotionalConsiderations ],
+      [ "Consideraciones físicas, etiología y de salud", form.physicalConsiderations ],
+      [ "Antecedentes mentales", form.mentalHistory ],
+      [ "Objetivo clínico", form.objective ],
     ] as [ string, string | undefined ][]
   ).map(([ label, value ], i, arr) => (
     <View key={label}>
@@ -329,18 +329,18 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
       title={`Historia Clínica — ${val(form.name, "Paciente")}`}
       author={AUTHOR}
       creator={AUTHOR}
-      subject="Historia Clínica Psicológica"
+      subject="Historia clínica psicológica"
       language="es"
     >
       <PageLayout user={user}>
         <View>
           <View style={S.headerTop}>
-            <Text style={S.headerTitle}>Historia Clínica</Text>
+            <Text style={S.headerTitle}>Historia clínica</Text>
             <Image src={user?.altLogo} style={S.headerLogo} />
           </View>
           <View style={S.row2}>
             <View style={S.col}>
-              <Field label="Nombre Completo" value={form.name} />
+              <Field label="Nombre completo" value={form.name} />
             </View>
             <View style={S.col}>
               <Field label="Documento nacional" value={form.nationalId || "—"} />
@@ -352,7 +352,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
           <View style={S.row2}>
             <View style={S.col}>
               <Field
-                label="Fecha de Nacimiento"
+                label="Fecha de nacimiento"
                 value={form.birthDate ? fmtCalendarDay(form.birthDate) : "—"}
               />
             </View>
@@ -360,15 +360,15 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
               <Field label="Edad" value={form.birthDate ? String(getAge(form.birthDate) ?? "—") : "—"} />
             </View>
             <View style={S.col}>
-              <Field label="Lugar de Nacimiento" value={form.birthPlace || "—"} />
+              <Field label="Lugar de nacimiento" value={form.birthPlace || "—"} />
             </View>
           </View>
           <View style={S.divider} />
-          <Field isText label="Motivo de Consulta" value={form.consultationReason || "—"} last />
+          <Field isText label="Motivo de consulta" value={form.consultationReason || "—"} last />
         </View>
         <View style={S.divider} />
         <View>
-          <Text style={[ S.fieldTitle, { marginTop: -20 } ]}>Composición Familiar</Text>
+          <Text style={[ S.fieldTitle, { marginTop: -20 } ]}>Composición familiar</Text>
           {FamilyMembers(form)}
           <Field isText label="Observaciones" value={form.familyObservations || "—"} last />
           <View style={[ S.divider, { marginTop: 20 } ]} />
@@ -388,7 +388,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
           </View>
         )}
         <View>
-          <Text style={S.fieldTitle}>Notas de Evolución</Text>
+          <Text style={S.fieldTitle}>Notas de evolución</Text>
           {EvolutionNotes(form)}
         </View>
       </PageLayout>

@@ -52,6 +52,8 @@ export function PatientAutocomplete({
       status: PatientStatus.ACTIVE,
       search: debouncedSearch,
       page: 0,
+      orderBy: "name" as const,
+      order: "asc" as const,
     }),
     [debouncedSearch],
   );
@@ -217,6 +219,8 @@ export function PatientAutocomplete({
           break;
         case "Enter":
           e.preventDefault();
+          // Results still belong to the previous search: wait for them.
+          if (searchText !== debouncedSearch || loading) break;
           if (highlightIdx >= 0 && patients[highlightIdx]) {
             handleOptionClick(patients[highlightIdx].id);
           }
@@ -229,7 +233,7 @@ export function PatientAutocomplete({
           break;
       }
     },
-    [disabled, open, highlightIdx, patients, handleOptionClick],
+    [disabled, open, highlightIdx, patients, handleOptionClick, searchText, debouncedSearch, loading],
   );
 
   const showDropdown = open && (loading || patients.length > 0 || debouncedSearch.trim());

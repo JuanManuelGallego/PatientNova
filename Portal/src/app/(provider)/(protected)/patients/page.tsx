@@ -123,12 +123,13 @@ function PatientsPageContent() {
       },
       { label: "Correo" },
       { label: "WhatsApp" },
-      { label: "SMS" },
+      { label: "SMS", priority: "secondary" },
       {
         label: "Registrado",
         sortKey: "createdAt",
+        priority: "secondary",
       },
-      { label: "" },
+      { label: "", priority: "actions" },
     ],
     [],
   );
@@ -155,29 +156,29 @@ function PatientsPageContent() {
                 className="btn-primary btn-hero"
                 data-testid="patients-new-button"
               >
-                Nuevo Paciente
+                Nuevo paciente
               </button>
             </>
           }
         />
         <div className="stats-grid">
           <StatCard
-            label="Total Pacientes"
-            value={stats?.total ?? 0}
+            label="Total pacientes"
+            value={stats?.total}
             sub="en el sistema"
             accent="var(--c-brand)"
             icon={Users}
           />
           <StatCard
             label="Activos"
-            value={stats?.byStatus[PatientStatus.ACTIVE] ?? 0}
+            value={stats ? (stats.byStatus[PatientStatus.ACTIVE] ?? 0) : undefined}
             sub="reciben notificaciones"
             accent="var(--c-success)"
             icon={UserCheck}
           />
           <StatCard
             label="Inactivos"
-            value={stats?.byStatus[PatientStatus.INACTIVE] ?? 0}
+            value={stats ? (stats.byStatus[PatientStatus.INACTIVE] ?? 0) : undefined}
             sub="sin notificaciones"
             accent="var(--c-warning)"
             icon={UserX}
@@ -243,10 +244,10 @@ function PatientsPageContent() {
               <td className="td">
                 <ChannelPill type={Channel.WHATSAPP} value={p.whatsappNumber} />
               </td>
-              <td className="td">
+              <td className="td col--secondary">
                 <ChannelPill type={Channel.SMS} value={p.smsNumber} />
               </td>
-              <td className="td td--muted td--nowrap">
+              <td className="td td--muted td--nowrap col--secondary">
                 {new Date(p.createdAt).toLocaleDateString("es-ES", {
                   timeZone: timezone,
                   day: "numeric",
@@ -254,7 +255,7 @@ function PatientsPageContent() {
                   year: "numeric",
                 })}
               </td>
-              <td className="td" onClick={(e) => e.stopPropagation()}>
+              <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
                   <button
                     onClick={(e) => {
@@ -274,9 +275,10 @@ function PatientsPageContent() {
                     className={isActive ? "btn-action-delete" : "btn-action-activate"}
                     data-testid={`patient-delete-button-${p.id}`}
                     title={isActive ? "Desactivar paciente" : "Reactivar paciente"}
+                    aria-label={isActive ? "Desactivar paciente" : "Reactivar paciente"}
                   >
                     {isActive ? (
-                      <ACTION_ICONS.close size={14} />
+                      <ACTION_ICONS.cancel size={14} aria-hidden="true" />
                     ) : (
                       <ACTION_ICONS.retry size={14} />
                     )}
@@ -286,7 +288,7 @@ function PatientsPageContent() {
             </tr>
           );
           }}
-          emptyState={
+          emptyState={error ? undefined : (
             <EmptyState
               icon={STATUS_ICONS.search}
               title={
@@ -297,10 +299,10 @@ function PatientsPageContent() {
               sub={
                 searchProps.value
                   ? "Prueba ajustando los filtros de búsqueda."
-                  : 'Haz clic en "Nuevo Paciente" para agregar el primero.'
+                  : 'Haz clic en "Nuevo paciente" para agregar el primero.'
               }
             />
-          }
+          )}
           footer={
             <DataTableFooter
               page={page}

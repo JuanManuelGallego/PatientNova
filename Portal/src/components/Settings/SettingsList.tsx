@@ -8,9 +8,10 @@ import { SettingsSection } from "./SettingsSection";
 interface SettingsListProps<T extends { id: string }> {
     title: string;
     description: string;
-    newLabel: string;
-    newTestId: string;
-    onNew: () => void;
+    /** Omit all three when the primary action lives in the page header. */
+    newLabel?: string;
+    newTestId?: string;
+    onNew?: () => void;
     items: T[] | undefined;
     loading: boolean;
     error: string | null;
@@ -65,7 +66,7 @@ export function SettingsList<T extends { id: string }>({
             title={title}
             description={description}
             status={status}
-            actions={<button type="button" className="btn-primary" onClick={onNew} data-testid={newTestId}>{newLabel}</button>}
+            actions={onNew && newLabel ? <button type="button" className="btn-primary" onClick={onNew} data-testid={newTestId}>{newLabel}</button> : undefined}
             id={id}
             testId={testId}
         >

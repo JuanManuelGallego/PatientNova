@@ -1,3 +1,4 @@
+import { providerRole } from "@/src/utils/providerRole";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import type { PublicProvider } from "@/src/types/PublicBooking";
@@ -16,7 +17,7 @@ interface ProviderHeaderProps {
 
 /** Phones only: desktop has the whole profile in `ProviderPanel`. */
 export function ProviderHeader({ slug, provider, compact = false, appointmentsHref, onOpenProfile, onBack }: ProviderHeaderProps) {
-    const role = [ provider.jobTitle, provider.specialty ].filter(Boolean).join(" · ");
+    const role = providerRole(provider.jobTitle, provider.specialty);
     return (
         <header className={styles.header} data-compact={compact || undefined}>
             <ProviderAvatar slug={slug} provider={provider} className={styles.headerPhoto} />

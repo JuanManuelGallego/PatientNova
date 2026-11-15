@@ -80,7 +80,7 @@ export function DayPanel({
             )}
             {blockedTimes.length > 0 && (
               <>
-                <h3 className="cal-day-panel__section-title">Horarios Bloqueados</h3>
+                <h3 className="cal-day-panel__section-title">Horarios bloqueados</h3>
                 <div className="cal-day-panel__blocked-list">
                   {blockedTimes.map((bt) => (
                     <div
@@ -123,7 +123,7 @@ export function DayPanel({
               onClose();
             }}
           >
-            Bloquear Horario
+            Bloquear horario
           </button>
           <button
             className="btn-primary btn-hero"
@@ -133,7 +133,7 @@ export function DayPanel({
               onClose();
             }}
           >
-            Nueva Cita
+            Nueva cita
           </button>
         </div>
       </div>

@@ -91,6 +91,13 @@ describe("ProviderProfile", () => {
         expect(within(places[ 1 ]!).queryByRole("link")).toBeNull();
     });
 
+    it("shows a specialty that repeats the title only once", () => {
+        const repeated = { ...provider, jobTitle: "Psicóloga clínica", specialty: "Psicología clínica y sistémica" } as PublicProvider;
+        render(<ProviderProfile slug="dra-ana" provider={repeated} />);
+        expect(screen.getByText("Psicología clínica y sistémica")).toBeInTheDocument();
+        expect(screen.queryByText(/Psicóloga clínica/)).toBeNull();
+    });
+
     it("hides empty parts and shows initials when the profile is sparse", () => {
         render(<ProviderProfile slug="dra-ana" provider={sparse} />);
         expect(screen.getByText("AP")).toBeInTheDocument();

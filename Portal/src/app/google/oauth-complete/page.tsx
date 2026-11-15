@@ -73,7 +73,7 @@ function GoogleOAuthCompleteContent() {
     return (
       <div className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
         <div className="card" style={{ textAlign: "center", padding: 40, maxWidth: 400 }}>
-          <STATUS_ICONS.success size={48} style={{ color: "var(--c-green)", marginBottom: 16 }} />
+          <STATUS_ICONS.success size={48} style={{ color: "var(--c-success)", marginBottom: 16 }} />
           <h2 style={{ marginBottom: 8 }}>Google account connected!</h2>
           <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
             You can now close this window and continue.
@@ -98,7 +98,7 @@ function GoogleOAuthCompleteContent() {
   return (
     <div className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
       <div className="card" style={{ textAlign: "center", padding: 40, maxWidth: 400 }}>
-        <STATUS_ICONS.danger size={48} style={{ color: "var(--c-red)", marginBottom: 16 }} />
+        <STATUS_ICONS.danger size={48} style={{ color: "var(--c-error)", marginBottom: 16 }} />
         <h2 style={{ marginBottom: 8 }}>Authorization failed</h2>
         <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
           {errorMessage}

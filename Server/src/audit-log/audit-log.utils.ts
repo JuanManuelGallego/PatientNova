@@ -59,6 +59,8 @@ export async function logAudit(params: {
   actionType: ActionType;
   description: string;
   source?: ActionSource;
+  actorId?: string;
+  actorDisplayName?: string;
   affectedFields?: string[];
   fieldsBefore?: Record<string, unknown> | null;
   fieldsAfter?: Record<string, unknown> | null;

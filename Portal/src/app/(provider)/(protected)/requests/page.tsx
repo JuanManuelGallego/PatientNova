@@ -81,7 +81,7 @@ function RequestsPageContent() {
           loading={loading}
           skeletonCount={4}
           testId="requests-table"
-          emptyState={<EmptyState icon={Inbox} {...EMPTY[ tab ]} />}
+          emptyState={error ? undefined : <EmptyState icon={Inbox} {...EMPTY[ tab ]} />}
           renderRow={(r) => (
             <tr key={r.id} className="table-row" onClick={() => setOpenId(r.id)} data-testid={`request-row-${r.id}`}>
               <td className="td">

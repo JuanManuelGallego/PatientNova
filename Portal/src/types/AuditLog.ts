@@ -19,6 +19,7 @@ export enum ActionType {
   UPDATE = "UPDATE",
   DELETE = "DELETE",
   RESTORE = "RESTORE",
+  LOGIN = "LOGIN",
 }
 
 export enum ActionSource {
@@ -66,12 +67,12 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.APPOINTMENT]: { label: "Cita", color: "#4F46E5", bg: "#EEF2FF" },           
   [EntityType.PATIENT]: { label: "Paciente", color: "#0891B2", bg: "#ECFEFF" },     
   [EntityType.REMINDER]: { label: "Recordatorio", color: "#DB2777", bg: "#FDF2F8" },
-  [EntityType.MEDICAL_RECORD]: { label: "Historia Clinica", color: "#C026D3", bg: "#FDF4FF" },
-  [EntityType.APPOINTMENT_TYPE]: { label: "Tipo de Cita", color: "#4D7C0F", bg: "#F7FEE7" },  
-  [EntityType.APPOINTMENT_LOCATION]: { label: "Ubicacion", color: "#0D9488", bg: "#F0FDFA" }, 
-  [EntityType.BLOCKED_TIME]: { label: "Tiempo Bloqueado", color: "#4B5563", bg: "#F9FAFB" },
+  [EntityType.MEDICAL_RECORD]: { label: "Historia clínica", color: "#C026D3", bg: "#FDF4FF" },
+  [EntityType.APPOINTMENT_TYPE]: { label: "Tipo de cita", color: "#4D7C0F", bg: "#F7FEE7" },  
+  [EntityType.APPOINTMENT_LOCATION]: { label: "Ubicación", color: "#0D9488", bg: "#F0FDFA" }, 
+  [EntityType.BLOCKED_TIME]: { label: "Tiempo bloqueado", color: "#4B5563", bg: "#F9FAFB" },
   [EntityType.CONSENT_DOCUMENT]: { label: "Consentimiento", color: "#475569", bg: "#F8FAFC" },
-  [EntityType.GOOGLE_CONNECTION]: { label: "Conexión Google", color: "#2563EB", bg: "#EFF6FF" },
+  [EntityType.GOOGLE_CONNECTION]: { label: "Conexión de Google", color: "#2563EB", bg: "#EFF6FF" },
   [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
   [EntityType.BOOKING_REQUEST]: { label: "Solicitud de reserva", color: "#B45309", bg: "#FFFBEB" },
   [EntityType.PATIENT_CONSENT]: { label: "Consentimiento", color: "#334155", bg: "#F1F5F9" },
@@ -84,6 +85,7 @@ export const ACTION_TYPE_CONFIG: Record<ActionType, { label: string; color: stri
   [ActionType.UPDATE]: { label: "Actualización", color: "#0284C7" },
   [ActionType.DELETE]: { label: "Eliminación", color: "#E11D48" },
   [ActionType.RESTORE]: { label: "Restauración", color: "#0D9488" },
+  [ActionType.LOGIN]: { label: "Inicio de sesión", color: "#6366F1" },
 };
 
 export const actionTypeLabel = (action: ActionType): string => ACTION_TYPE_CONFIG[action]?.label ?? action;

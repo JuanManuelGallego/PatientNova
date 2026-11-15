@@ -50,6 +50,13 @@ describe("UsersView", () => {
         expect(within(screen.getByTestId("user-row-u-ana")).getByText("Nunca ha iniciado sesión")).toBeInTheDocument();
     });
 
+    it("puts Nuevo usuario in the page header, not in the Cuentas card", () => {
+        render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);
+        const button = screen.getByTestId("users-new-button");
+        expect(button.closest(".page-header__actions")).not.toBeNull();
+        expect(screen.getByRole("heading", { name: "Usuarios" })).toBeInTheDocument();
+    });
+
     it("labels a VIEWER as Lector", () => {
         users = [ me, { ...ana, id: "u-vi", role: "VIEWER", status: "ACTIVE" } ];
         render(<FocusTrapProvider><UsersView /></FocusTrapProvider>);

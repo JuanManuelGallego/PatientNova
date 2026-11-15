@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { Patient, PatientStatus } from "@/src/types/Patient";
@@ -10,9 +10,22 @@ vi.mock("@/src/api/patients/useFetchPatients", () => ({
   useFetchPatients: vi.fn(),
 }));
 
-vi.mock("@/src/hooks/useDebounceState", () => ({
-  useDebounceState: (value: unknown) => value,
-}));
+const debounceMode = vi.hoisted(() => ({ real: false }));
+
+vi.mock("@/src/hooks/useDebounceState", async () => {
+  const react = await import("react");
+  return {
+    useDebounceState: <T,>(value: T, delay: number) => {
+      const [debounced, setDebounced] = react.useState(value);
+      react.useEffect(() => {
+        if (!debounceMode.real) return;
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+      }, [value, delay]);
+      return debounceMode.real ? debounced : value;
+    },
+  };
+});
 
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 const mockUseFetchPatients = vi.mocked(useFetchPatients);
@@ -76,6 +89,49 @@ describe("PatientAutocomplete", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    debounceMode.real = false;
+  });
+
+  it("does not select a stale result when Enter is pressed before the search settles", async () => {
+    debounceMode.real = true;
+    vi.useFakeTimers();
+    const santiago = makePatient({ id: "p-s", name: "Santiago", lastName: "Rey" });
+    const mariana = makePatient({ id: "p-m", name: "Mariana", lastName: "Paz" });
+    const valentina = makePatient({ id: "p-v", name: "Valentina", lastName: "Gil" });
+    mockUseFetchPatients.mockImplementation((filters?: FetchPatientsFilters) => {
+      const list = filters?.search === "Valen" ? [valentina] : [santiago, mariana];
+      return {
+        patients: list,
+        loading: false,
+        error: null,
+        fetchPatients: vi.fn(),
+        total: list.length,
+        totalPages: 1,
+      };
+    });
+    const { onChange } = renderAutocomplete();
+    const input = screen.getByRole("combobox");
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "Valen" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onChange).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onChange).toHaveBeenCalledWith("p-v", valentina);
+  });
+
+  it("lists patients alphabetically", async () => {
+    const user = userEvent.setup();
+    renderAutocomplete();
+    await user.click(screen.getByRole("combobox"));
+    expect(mockUseFetchPatients).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: "name", order: "asc" }),
+    );
   });
 
   it("opens dropdown on focus and shows all patients", async () => {

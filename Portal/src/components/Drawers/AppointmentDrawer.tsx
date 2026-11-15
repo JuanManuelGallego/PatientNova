@@ -25,6 +25,7 @@ import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { OnlineBadge } from "../OnlineBadge";
 import { useFetchAppointment } from "@/src/api/appointments/useFetchAppointment";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fmtMoney } from "@/src/utils/money";
 
 export function AppointmentDrawer({
   appt,
@@ -143,7 +144,7 @@ export function AppointmentDrawer({
         </LinkedCard>
       </Section>
 
-      <Section title="Fecha y Hora" testId="appointment-drawer-section-fecha-hora">
+      <Section title="Fecha y hora" testId="appointment-drawer-section-fecha-hora">
         <Row icon={DETAIL_ICONS.calendar} label="Fecha" value={fmtDate(appointment.startAt, timezone)} testId="appointment-drawer-date" />
         <Row icon={DETAIL_ICONS.clock} label="Hora" value={fmtTime(appointment.startAt, timezone)} testId="appointment-drawer-time" />
         <Row icon={DETAIL_ICONS.timer} label="Duración" value={getDuration(appointment.startAt, appointment.endAt)} testId="appointment-drawer-duration" />
@@ -183,7 +184,7 @@ export function AppointmentDrawer({
       </Section>
 
       <Section title="Pago" testId="appointment-drawer-section-pago">
-        <Row icon={DETAIL_ICONS.dollar} label="Precio" value={`$${appointment.price}`} testId="appointment-drawer-price" />
+        <Row icon={DETAIL_ICONS.dollar} label="Precio" value={fmtMoney(Number(appointment.price))} testId="appointment-drawer-price" />
         <div className="drawer-action-row">
           <Row icon={DETAIL_ICONS.creditCard} label="Estado" value={<PayStatusPill paid={appointment.paid} />} testId="appointment-drawer-paid-status" />
           {!appointment.paid && appointment.status !== AppointmentStatus.CANCELLED && onPay && (
@@ -195,11 +196,11 @@ export function AppointmentDrawer({
       </Section>
 
       <Section title="Notas" testId="appointment-drawer-section-notas">
-        <Row icon={DETAIL_ICONS.note} label="Notas" value={appointment.notes || "Ninguna Nota"} testId="appointment-drawer-notes" />
+        <Row icon={DETAIL_ICONS.note} label="Notas" value={appointment.notes || "Ninguna nota"} testId="appointment-drawer-notes" />
       </Section>
 
       {appointment.reminder && (
-        <Section title="Recordatorio Vinculado">
+        <Section title="Recordatorio vinculado">
           <div className="card-list">
             <LinkedCard
               onClick={onViewReminder ? () => onViewReminder(appointment.reminder!) : undefined}
