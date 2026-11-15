@@ -11,6 +11,10 @@ interface ConsentDocumentMetadata {
     updatedAt: string;
 }
 
+const ERR_UPLOAD = "No se pudo subir el formulario de consentimiento.";
+const ERR_DELETE = "No se pudo eliminar el formulario de consentimiento.";
+
+/** Upload and delete set `error` and also throw it, so callers can keep a dialog open. */
 export function useConsentDocument() {
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
@@ -35,14 +39,13 @@ export function useConsentDocument() {
 
     // Upload a new consent document
     const uploadDocument = useCallback(
-        async (file: File): Promise<ConsentDocumentMetadata | null> => {
-            if (!file.type.includes("pdf")) {
-                setError("Por favor selecciona un archivo PDF");
-                return null;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                setError("El archivo debe ser menor a 10 MB");
-                return null;
+        async (file: File): Promise<ConsentDocumentMetadata> => {
+            const invalid = !file.type.includes("pdf")
+                ? "Por favor selecciona un archivo PDF"
+                : file.size > 10 * 1024 * 1024 ? "El archivo debe ser menor a 10 MB" : null;
+            if (invalid) {
+                setError(invalid);
+                throw new Error(invalid);
             }
 
             setLoading(true);
@@ -65,16 +68,15 @@ export function useConsentDocument() {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify(body),
                             });
-                            if (!res.ok) throw new Error("Failed to upload document");
+                            if (!res.ok) throw new Error(ERR_UPLOAD);
                             const json = await res.json();
                             const uploadedDoc = json.data;
                             setDocument(uploadedDoc);
                             setError(null);
                             resolve(uploadedDoc);
-                        } catch (err) {
-                            const msg = err instanceof Error ? err.message : "Error al subir el documento";
-                            setError(msg);
-                            reject(err);
+                        } catch {
+                            setError(ERR_UPLOAD);
+                            reject(new Error(ERR_UPLOAD));
                         } finally {
                             setLoading(false);
                         }
@@ -82,15 +84,13 @@ export function useConsentDocument() {
                     reader.onerror = () => {
                         setError("Error al leer el archivo");
                         setLoading(false);
-                        reject(new Error("Failed to read file"));
+                        reject(new Error("Error al leer el archivo"));
                     };
                     reader.readAsDataURL(file);
                 });
             } catch (err) {
-                const msg = err instanceof Error ? err.message : "Error desconocido";
-                setError(msg);
                 setLoading(false);
-                return null;
+                throw err;
             }
         },
         [],
@@ -104,12 +104,12 @@ export function useConsentDocument() {
             const res = await fetchWithAuth(`${API_BASE}/consent-document`, {
                 method: "DELETE",
             });
-            if (!res.ok) throw new Error("Failed to delete document");
+            if (!res.ok) throw new Error(ERR_DELETE);
             setDocument(null);
             setError(null);
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : "Error al eliminar el documento";
-            setError(msg);
+        } catch {
+            setError(ERR_DELETE);
+            throw new Error(ERR_DELETE);
         } finally {
             setLoading(false);
         }
