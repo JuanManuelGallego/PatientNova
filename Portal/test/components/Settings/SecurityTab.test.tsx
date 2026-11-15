@@ -42,4 +42,19 @@ describe("SecurityTab", () => {
         expect(changePassword).toHaveBeenCalledWith("OldPass1!", "NewPass1!");
         expect(refreshUser).toHaveBeenCalledTimes(1);
     });
+
+    it("shows the server's message when the change is refused", async () => {
+        changePassword.mockRejectedValue(new Error("La contraseña actual es incorrecta"));
+        render(<SecurityTab />);
+        await userEvent.type(screen.getByTestId("security-current-password-input"), "OldPass1!");
+        await userEvent.type(screen.getByTestId("security-new-password-input"), "NewPass1!");
+        await userEvent.type(screen.getByTestId("security-confirm-password-input"), "NewPass1!");
+        await userEvent.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
+        expect(screen.getByRole("alert")).toHaveTextContent("La contraseña actual es incorrecta");
+    });
+
+    it("frames the form as the Contraseña section", () => {
+        render(<SecurityTab />);
+        expect(screen.getByRole("region", { name: "Contraseña" })).toBeInTheDocument();
+    });
 });

@@ -5,7 +5,10 @@ import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnect
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useDisconnectGoogle } from "@/src/api/google/useDisconnectGoogle";
 import { useVerifyGoogleConnection } from "@/src/api/google/useVerifyGoogleConnection";
-import { STATUS_ICONS } from "@/src/config/icons";
+import { DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { InlineError } from "@/src/components/Info/InlineError";
+import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
+import { SettingsSection } from "./SettingsSection";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
@@ -14,11 +17,13 @@ export function GoogleIntegrationTab() {
   const timezone = useDisplayTimezone();
   const { fetchConnection, loading: loadingConnection, error: connectionError, data } = useFetchGoogleConnection();
   const { startOAuth, loading: startingOAuth, error: oauthStartError } = useStartGoogleOAuth();
-  const { disconnect, loading: disconnecting, error: disconnectError } = useDisconnectGoogle();
+  const { disconnect, loading: disconnecting } = useDisconnectGoogle();
   const { verifyConnection, loading: verifying, error: verifyError } = useVerifyGoogleConnection();
 
   const [ actionError, setActionError ] = useState<string | null>(null);
   const [ verifiedNotice, setVerifiedNotice ] = useState<string | null>(null);
+  const [ confirmingDisconnect, setConfirmingDisconnect ] = useState(false);
+  const [ dialogError, setDialogError ] = useState<string | null>(null);
   const connection = data;
 
   const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
@@ -38,15 +43,16 @@ export function GoogleIntegrationTab() {
   }, [ openOAuth, startOAuth ]);
 
   const handleDisconnect = useCallback(async () => {
-    if (!confirm("¿Estás seguro de desconectar tu cuenta de Google? Los enlaces de Google Meet existentes seguirán funcionando.")) {
-      return;
-    }
+    setDialogError(null);
     try {
       await disconnect();
-      await fetchConnection();
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : "No se pudo desconectar la cuenta de Google.");
+      // Stays open: the account is still connected and the provider can retry or go back.
+      setDialogError(cause instanceof Error ? cause.message : "No se pudo desconectar la cuenta de Google.");
+      return;
     }
+    setConfirmingDisconnect(false);
+    await fetchConnection();
   }, [ disconnect, fetchConnection ]);
 
   const handleVerify = useCallback(async () => {
@@ -67,7 +73,7 @@ export function GoogleIntegrationTab() {
   const disconnectedAt = connection?.disconnectedAt;
   const isUnknown = !connection && !connectionError;
   const isLoading = loadingConnection || startingOAuth || waitingForOAuth || disconnecting || verifying;
-  const displayedError = actionError || popupError || oauthStartError || connectionError || disconnectError || verifyError;
+  const displayedError = actionError || popupError || oauthStartError || connectionError || verifyError;
   const at = (iso: string) => `${fmtDate(iso, timezone)} a las ${fmtTime(iso, timezone)}`;
 
   const heading = isUnknown
@@ -91,15 +97,11 @@ export function GoogleIntegrationTab() {
           : "En espera de activación.";
 
   return (
-    <div className="form-stack" style={{ maxWidth: 600 }}>
-      <div>
-        <h3 style={{ marginBottom: 4 }}>Integración con Google Meet</h3>
-        <p style={{ color: "var(--c-gray-500)", fontSize: 14 }}>
-          Conecta tu cuenta de Google para generar enlaces de Google Meet automaticamente.
-        </p>
-      </div>
-
-      <div className="card" style={{ padding: 18 }}>
+    <div className="settings-stack">
+      <SettingsSection
+        title="Google Meet"
+        description="Genera enlaces de Google Meet automáticamente para tus citas virtuales."
+      >
         <div aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
           <div
             style={{
@@ -176,7 +178,7 @@ export function GoogleIntegrationTab() {
               </button>
               <button
                 className="btn-danger"
-                onClick={handleDisconnect}
+                onClick={() => { setDialogError(null); setConfirmingDisconnect(true); }}
                 disabled={isLoading}
                 data-testid="google-disconnect-button"
               >
@@ -193,12 +195,27 @@ export function GoogleIntegrationTab() {
         )}
 
         {displayedError && (
-          <div role="alert" className="error-inline" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>
-            <STATUS_ICONS.warning size={14} />
-            {displayedError}
-          </div>
+          <div style={{ marginTop: 12 }}><InlineError message={displayedError} /></div>
         )}
-      </div>
+      </SettingsSection>
+
+      {confirmingDisconnect && (
+        <ConfirmDialog
+          icon={DETAIL_ICONS.link}
+          title="¿Desconectar tu cuenta de Google?"
+          confirmLabel="Desconectar"
+          loadingLabel="Desconectando…"
+          loading={disconnecting}
+          error={dialogError}
+          testId="google-disconnect-dialog"
+          onClose={() => { setConfirmingDisconnect(false); setDialogError(null); }}
+          onConfirm={handleDisconnect}
+        >
+          <p className="modal-confirm__text">
+            Los enlaces de Google Meet ya creados seguirán funcionando. Las nuevas citas virtuales necesitarán un enlace manual.
+          </p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

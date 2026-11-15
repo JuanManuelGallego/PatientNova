@@ -1,0 +1,94 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProfileTab as Tab } from "@/src/components/Settings/ProfileTab";
+import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
+
+const ProfileTab = () => <FocusTrapProvider><Tab /></FocusTrapProvider>;
+
+const autosave = {
+    saving: false,
+    status: "idle" as "idle" | "saved" | "error",
+    error: null as string | null,
+    schedule: vi.fn(),
+    flush: vi.fn(),
+};
+const consent = {
+    document: { name: "consentimiento.pdf", sizeBytes: 2048, updatedAt: "2026-11-01T12:00:00.000Z" } as unknown,
+    loading: false,
+    fetchDocument: vi.fn(),
+    uploadDocument: vi.fn(),
+    deleteDocument: vi.fn(),
+};
+
+vi.mock("@/src/api/users/useUpdateProfile", () => ({ useAutoSaveProfile: () => autosave }));
+vi.mock("@/src/api/consent/useConsentDocument", () => ({ useConsentDocument: () => consent }));
+vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
+vi.mock("@/src/providers/AuthContext", () => ({
+    useAuthContext: () => ({
+        user: { firstName: "Ana", lastName: "Ruiz", displayName: "", jobTitle: "", email: "ana@example.com", timezone: "America/Bogota" },
+    }),
+}));
+
+beforeEach(() => {
+    autosave.saving = false;
+    autosave.status = "idle";
+    autosave.error = null;
+    autosave.schedule.mockReset();
+    autosave.flush.mockReset();
+    consent.deleteDocument.mockReset().mockResolvedValue(undefined);
+});
+
+const consentSection = () => screen.getByRole("region", { name: "Formulario de consentimiento" });
+
+describe("ProfileTab", () => {
+    it("asks before deleting the consent form and deletes only on confirm", async () => {
+        render(<ProfileTab />);
+        await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
+
+        const dialog = screen.getByTestId("consent-delete-dialog");
+        expect(dialog).toHaveTextContent("consentimiento.pdf");
+        expect(consent.deleteDocument).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByTestId("consent-delete-dialog-confirm-button"));
+        expect(consent.deleteDocument).toHaveBeenCalledTimes(1);
+        expect(screen.queryByTestId("consent-delete-dialog")).toBeNull();
+    });
+
+    it("keeps the form when the deletion is cancelled", async () => {
+        render(<ProfileTab />);
+        await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
+        await userEvent.click(screen.getByTestId("consent-delete-dialog-cancel-button"));
+
+        expect(screen.queryByTestId("consent-delete-dialog")).toBeNull();
+        expect(consent.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it("keeps the dialog open with the error when deletion fails", async () => {
+        consent.deleteDocument.mockRejectedValue(new Error("No se pudo eliminar"));
+        render(<ProfileTab />);
+        await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
+        await userEvent.click(screen.getByTestId("consent-delete-dialog-confirm-button"));
+
+        const dialog = screen.getByTestId("consent-delete-dialog");
+        expect(dialog).toHaveTextContent("No se pudo eliminar");
+    });
+
+    it("shows an autosave error only in the section being edited", async () => {
+        const { rerender } = render(<ProfileTab />);
+        await userEvent.type(screen.getByTestId("profile-bank-name-input"), "B");
+        autosave.error = "Error al guardar";
+        rerender(<ProfileTab />);
+
+        const banking = screen.getByRole("region", { name: "Información bancaria" });
+        expect(within(banking).getByRole("alert")).toHaveTextContent("Error al guardar");
+        expect(within(screen.getByRole("region", { name: "Información personal" })).queryByRole("alert")).toBeNull();
+    });
+
+    it("shows the account email read-only", () => {
+        render(<ProfileTab />);
+        const email = screen.getByTestId("profile-email");
+        expect(email).toHaveValue("ana@example.com");
+        expect(email).toBeDisabled();
+    });
+});

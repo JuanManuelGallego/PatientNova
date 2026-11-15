@@ -1,10 +1,12 @@
 import { useChangePassword } from "@/src/api/auth/useChangePassword";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
-import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { FieldError, InlineError } from "@/src/components/Info/InlineError";
+import { ACTION_ICONS } from "@/src/config/icons";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { useState } from "react";
+import { SettingsSection } from "./SettingsSection";
 
 export const PW_RULES = [
   { label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
@@ -23,11 +25,7 @@ export function SecurityTab() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const {
-    changePassword,
-    loading: saving,
-    error: apiError,
-  } = useChangePassword();
+  const { changePassword, loading: saving } = useChangePassword();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,140 +46,133 @@ export function SecurityTab() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 5000);
       void refreshUser();
-    } catch {
-      const msg = apiError ?? "Error al cambiar contraseña";
-      setError(msg);
+    } catch (err) {
+      // The hook's `error` is still the previous value here; the thrown one is current.
+      setError(err instanceof Error ? err.message : "Error al cambiar contraseña");
     }
   }
 
   return (
-    <div style={{ maxWidth: 460 }}>
-      <div className="dash-card">
-        <div className="dash-card__header">
-          <span className="dash-card__title">Cambiar contraseña</span>
-        </div>
-        <div className="dash-card__body">
-          <p data-testid="security-last-password-change" style={{ fontSize: 13, color: "var(--c-gray-500)", margin: "0 0 12px" }}>
-            {user?.lastPasswordChange &&
-              `Último cambio de contraseña: ${fmtDateTime(user.lastPasswordChange, timezone)}`
-            }
-          </p>
-          <form className="form-stack" onSubmit={handleSubmit}>
-            <label className="form-label">
-              Contraseña actual
-              <input
-                className="form-input"
-                type="password"
-                value={current}
-                onChange={(e) => setCurrent(e.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                data-testid="security-current-password-input"
-                required
-              />
-            </label>
-            <label className="form-label">
-              Nueva contraseña
-              <input
-                className="form-input"
-                type="password"
-                value={next}
-                onChange={(e) => setNext(e.target.value)}
-                autoComplete="new-password"
-                placeholder="••••••••"
-                data-testid="security-new-password-input"
-                required
-              />
-            </label>
-            <label className="form-label">
-              Confirmar nueva contraseña
-              <input
-                className="form-input"
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                autoComplete="new-password"
-                placeholder="••••••••"
-                style={mismatch ? { borderColor: "var(--c-error)" } : undefined}
-                data-testid="security-confirm-password-input"
-                required
-              />
-              {mismatch && (
-                <span style={{ fontSize: 12, color: "var(--c-error)" }}>
-                  Las contraseñas no coinciden
-                </span>
-              )}
-            </label>
-            {next.length > 0 && (
-              <div
-                data-testid="password-rules"
-                style={{
-                  background: "var(--c-gray-50)",
-                  borderRadius: "var(--r-lg)",
-                  padding: "12px 14px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "var(--c-gray-400)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    marginBottom: 8,
-                  }}
-                >
-                  Requisitos
-                </div>
-                {PW_RULES.map((r) => {
-                  const ok = r.test(next);
-                  return (
-                    <div
-                      key={r.label}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 7,
-                        fontSize: 12,
-                        color: ok ? "var(--c-success)" : "var(--c-gray-400)",
-                        marginBottom: 5,
-                      }}
-                    >
-                      <span style={{ fontWeight: 700 }}>
-                        {ok ? <ACTION_ICONS.confirm size={12} /> : "○"}
-                      </span>
-                      {r.label}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {error && (
-              <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <STATUS_ICONS.warning size={14} /> {error}
-              </div>
-            )}
-            {success && (
-              <SuccessBanner message="Contraseña actualizada. Las otras sesiones activas serán cerradas." />
-            )}
+    <div className="settings-stack">
+      <SettingsSection
+        title="Contraseña"
+        description={
+          user?.lastPasswordChange ? (
+            <span data-testid="security-last-password-change">
+              {`Último cambio de contraseña: ${fmtDateTime(user.lastPasswordChange, timezone)}`}
+            </span>
+          ) : undefined
+        }
+      >
+        <form className="form-stack" onSubmit={handleSubmit}>
+          <label className="form-label">
+            Contraseña actual
+            <input
+              className="form-input"
+              type="password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              data-testid="security-current-password-input"
+              required
+            />
+          </label>
+          <label className="form-label">
+            Nueva contraseña
+            <input
+              className="form-input"
+              type="password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              data-testid="security-new-password-input"
+              required
+            />
+          </label>
+          <label className="form-label">
+            Confirmar nueva contraseña
+            <input
+              className="form-input"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              style={mismatch ? { borderColor: "var(--c-error)" } : undefined}
+              aria-invalid={mismatch || undefined}
+              aria-describedby={mismatch ? "security-confirm-error" : undefined}
+              data-testid="security-confirm-password-input"
+              required
+            />
+            {mismatch && <FieldError id="security-confirm-error" message="Las contraseñas no coinciden" />}
+          </label>
+          {next.length > 0 && (
             <div
+              data-testid="password-rules"
               style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                marginTop: 4,
+                background: "var(--c-gray-50)",
+                borderRadius: "var(--r-lg)",
+                padding: "12px 14px",
               }}
             >
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={!canSubmit}
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--c-gray-400)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 8,
+                }}
               >
-                {saving ? "Actualizando…" : "Cambiar contraseña"}
-              </button>
+                Requisitos
+              </div>
+              {PW_RULES.map((r) => {
+                const ok = r.test(next);
+                return (
+                  <div
+                    key={r.label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      fontSize: 12,
+                      color: ok ? "var(--c-success)" : "var(--c-gray-400)",
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>
+                      {ok ? <ACTION_ICONS.confirm size={12} /> : "○"}
+                    </span>
+                    {r.label}
+                  </div>
+                );
+              })}
             </div>
-          </form>
-        </div>
-      </div>
+          )}
+          {error && <InlineError message={error} />}
+          {success && (
+            <SuccessBanner message="Contraseña actualizada. Las otras sesiones activas serán cerradas." />
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              marginTop: 4,
+            }}
+          >
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={!canSubmit}
+            >
+              {saving ? "Actualizando…" : "Cambiar contraseña"}
+            </button>
+          </div>
+        </form>
+      </SettingsSection>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useFetchNeedsMeetingLink } from "@/src/api/appointments/useFetchNeedsMeetingLink";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { STATUS_ICONS } from "@/src/config/icons";
+import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 
 export function ProviderAlerts() {
@@ -78,7 +79,7 @@ function NeedsMeetingLinkAlert() {
   );
 }
 
-const INTEGRATIONS_HREF = { pathname: "/settings", query: { tab: "Integraciones" } };
+const INTEGRATIONS_HREF = settingsTabHref(SettingsTab.Integrations);
 
 function GoogleExpiredAlert() {
   const { data: connection, fetchConnection } = useFetchGoogleConnection();

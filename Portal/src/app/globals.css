@@ -3914,6 +3914,59 @@ tr:hover td {
   flex: 1;
 }
 
+/* ── Settings: one width, stacked sections ── */
+.settings-content {
+  max-width: 720px;
+  width: 100%;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section__header {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-section__heading {
+  min-width: 0;
+}
+
+.settings-section .dash-card__title {
+  margin: 0;
+}
+
+.settings-section__description {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--c-gray-500);
+}
+
+.settings-section__aside {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-list__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--c-gray-100);
+  border-radius: var(--r-lg);
+}
+
 /* List inside card */
 .dash-list {
   display: flex;
