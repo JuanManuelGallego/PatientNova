@@ -1,7 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GoogleIntegrationTab } from "@/src/components/Settings/GoogleIntegrationTab";
+import { GoogleIntegrationTab as Tab } from "@/src/components/Settings/GoogleIntegrationTab";
+import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
+import { ApiMutationError } from "@/src/api/base/useApiMutation";
 import type { GoogleConnectionStatus } from "@/src/types/Google";
 
 let connectionState: { data?: Partial<GoogleConnectionStatus>; loading: boolean; error: string | null };
@@ -10,6 +12,9 @@ const fetchConnection = vi.fn();
 const verifyConnection = vi.fn();
 const openOAuth = vi.fn();
 const startOAuth = vi.fn();
+const disconnect = vi.fn();
+
+const GoogleIntegrationTab = () => <FocusTrapProvider><Tab /></FocusTrapProvider>;
 let verifyError: string | null = null;
 
 vi.mock("@/src/api/google/useFetchGoogleConnection", () => ({
@@ -22,7 +27,7 @@ vi.mock("@/src/api/google/useStartGoogleOAuth", () => ({
   useStartGoogleOAuth: () => ({ startOAuth, loading: false, error: null }),
 }));
 vi.mock("@/src/api/google/useDisconnectGoogle", () => ({
-  useDisconnectGoogle: () => ({ disconnect: vi.fn(), loading: false, error: null }),
+  useDisconnectGoogle: () => ({ disconnect, loading: false, error: null }),
 }));
 vi.mock("@/src/hooks/useGoogleOAuthPopup", () => ({
   useGoogleOAuthPopup: () => ({ openOAuth, waiting: false, error: null }),
@@ -39,6 +44,7 @@ beforeEach(() => {
   verifyConnection.mockReset().mockResolvedValue({ status: "connected", connected: true });
   openOAuth.mockReset().mockImplementation(async (getAuthUrl: () => Promise<unknown>) => { await getAuthUrl(); return true; });
   startOAuth.mockReset().mockResolvedValue({ authUrl: "https://accounts.google.test" });
+  disconnect.mockReset().mockResolvedValue(undefined);
 });
 
 describe("GoogleIntegrationTab", () => {
@@ -128,5 +134,84 @@ describe("GoogleIntegrationTab", () => {
     expect(screen.getByTestId("google-connection-heading")).toHaveTextContent("Cuenta de Google no conectada");
     expect(screen.getByTestId("google-connect-button")).toBeInTheDocument();
     expect(screen.queryByTestId("google-reconnect-button")).not.toBeInTheDocument();
+  });
+
+  it("asks before disconnecting and disconnects only on confirm", async () => {
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+
+    expect(screen.getByTestId("google-disconnect-dialog")).toBeInTheDocument();
+    expect(disconnect).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(fetchConnection).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("google-disconnect-dialog")).toBeNull();
+  });
+
+  it("keeps the account connected when the dialog is cancelled", async () => {
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-cancel-button"));
+
+    expect(screen.queryByTestId("google-disconnect-dialog")).toBeNull();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open with the error when disconnecting fails", async () => {
+    disconnect.mockRejectedValue(new ApiMutationError("No se pudo desconectar", 500));
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    expect(screen.getByTestId("google-disconnect-dialog")).toHaveTextContent("No se pudo desconectar");
+    expect(screen.getByTestId("google-disconnect-dialog-confirm-button")).toBeEnabled();
+  });
+
+  it("says the connection failed instead of the browser's English text", async () => {
+    disconnect.mockRejectedValue(new TypeError("Failed to fetch"));
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    const dialog = screen.getByTestId("google-disconnect-dialog");
+    expect(dialog).toHaveTextContent("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
+    expect(dialog).not.toHaveTextContent("Failed to fetch");
+  });
+
+  it("stays open while disconnecting, so a late failure is still shown", async () => {
+    let fail: (e: Error) => void = () => {};
+    disconnect.mockReturnValue(new Promise((_, reject) => { fail = reject; }));
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByTestId("google-disconnect-dialog")).toBeInTheDocument();
+
+    await act(async () => fail(new ApiMutationError("No se pudo desconectar", 500)));
+    expect(screen.getByTestId("google-disconnect-dialog")).toHaveTextContent("No se pudo desconectar");
+  });
+
+  it("never uses the browser's confirm", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("frames the integration as the Google Meet section", () => {
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    expect(screen.getByRole("region", { name: "Google Meet" })).toBeInTheDocument();
   });
 });

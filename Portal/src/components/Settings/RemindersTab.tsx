@@ -1,14 +1,20 @@
+import Link from "next/link";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
+import { FieldError, InlineError } from "@/src/components/Info/InlineError";
 import { useState } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { useAutoSaveProfile } from "@/src/api/users/useUpdateProfile";
 import { User } from "@/src/types/User";
-import { STATUS_ICONS } from "@/src/config/icons";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
+import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
+import { SettingsSection } from "./SettingsSection";
+
+const WHATSAPP_ERROR_ID = "reminders-whatsapp-error";
+const SMS_ERROR_ID = "reminders-sms-error";
 
 export function RemindersTab() {
   const { user } = useAuthContext();
@@ -25,7 +31,8 @@ export function RemindersTab() {
   );
 
   const autosave = useAutoSaveProfile();
-  const [ error, setError ] = useState<string | null>(null);
+  const [ whatsappError, setWhatsappError ] = useState<string | null>(null);
+  const [ smsError, setSmsError ] = useState<string | null>(null);
 
   const validNumber = (value: string) => {
     const trimmed = value.trim();
@@ -44,20 +51,15 @@ export function RemindersTab() {
   }
 
   function handleFieldChange(overrides: Partial<User> = {}) {
-    setError(null);
     const resolvedWhatsapp = overrides.whatsappNumber ?? whatsappNumber;
     const resolvedPhone = overrides.phoneNumber ?? phoneNumber;
 
-    if (resolvedWhatsapp && !validatePhoneNumber(resolvedWhatsapp)) {
-      setError(
-        "Por favor, ingresa un número de WhatsApp válido (formato E.164).",
-      );
-      return;
-    }
-    if (resolvedPhone && !validatePhoneNumber(resolvedPhone)) {
-      setError("Por favor, ingresa un número de SMS válido (formato E.164).");
-      return;
-    }
+    const badWhatsapp = !!resolvedWhatsapp && !validatePhoneNumber(resolvedWhatsapp);
+    const badPhone = !!resolvedPhone && !validatePhoneNumber(resolvedPhone);
+    setWhatsappError(badWhatsapp ? "Por favor, ingresa un número de WhatsApp válido (formato E.164)." : null);
+    setSmsError(badPhone ? "Por favor, ingresa un número de SMS válido (formato E.164)." : null);
+    if (badWhatsapp || badPhone) return;
+
     autosave.schedule({
       phoneNumber: resolvedPhone.trim() || undefined,
       whatsappNumber: resolvedWhatsapp.trim() || undefined,
@@ -68,141 +70,111 @@ export function RemindersTab() {
   }
 
   return (
-    <div style={{ maxWidth: 660 }}>
-      <div className="dash-card">
-        <div className="dash-card__header">
-          <span className="dash-card__title">
-            Tus avisos
-          </span>
+    <div className="settings-stack">
+      <SettingsSection
+        title="Tus avisos"
+        description="Agenda diaria, reservas en línea, respuestas de tus pacientes y envíos fallidos."
+        status={
           <SaveStatusIndicator
             saving={autosave.saving}
             status={autosave.status}
             error={autosave.error}
             testId="reminders-save-state"
           />
-        </div>
-        <div className="dash-card__body">
-          <div style={{ paddingTop: 5 }}>
-            <label className="form-label" data-testid="reminders-channel-selector">
-              Canal de tus avisos
-              <CustomSelect
-                value={reminderChannel ?? Channel.WHATSAPP}
-                onChange={(value) => {
-                  const channel = value as Channel;
-                  setReminderChannel(channel);
-                  saveNow({ reminderChannel: channel });
-                }}
-                options={Object.values(Channel).map((ch) => ({
-                  value: ch,
-                  label: CHANNEL_CFG[ ch ].label,
-                }))}
-              />
-              <span className="form-input-hint">
-                Por aquí recibes tu agenda diaria, los avisos de reservas en
-                línea, las confirmaciones y cancelaciones que tus pacientes
-                responden a sus recordatorios y las alertas de recordatorios
-                fallidos. Los recordatorios a tus pacientes salen por el canal
-                de cada paciente, que eliges en su ficha.
-              </span>
-            </label>
-          </div>
-        </div>
-        <div className="dash-card__body">
-          <div className="form-stack">
-            <div
-              style={{
-                borderTop: "1px solid var(--c-gray-100)",
-                paddingTop: 16,
+        }
+      >
+        <div className="form-stack">
+          <label className="form-label" data-testid="reminders-channel-selector">
+            Canal de tus avisos
+            <CustomSelect
+              value={reminderChannel ?? Channel.WHATSAPP}
+              onChange={(value) => {
+                const channel = value as Channel;
+                setReminderChannel(channel);
+                saveNow({ reminderChannel: channel });
               }}
-            >
-              <span
-                className="form-input-hint"
-                style={{ marginBottom: 12, display: "block" }}
-              >
-                Activa o desactiva tus avisos automáticos, incluidos los de
-                confirmaciones y cancelaciones de tus pacientes. No detiene los
-                recordatorios a tus pacientes: el de las citas reservadas en
-                línea se configura en Reserva en línea.
-              </span>
-              <Switch
-                checked={reminderActive}
-                onChange={(checked) => {
-                  setReminderActive(checked);
-                  saveNow({ reminderActive: checked });
-                }}
-                label="Avisos automáticos"
-                onText="Activados"
-                offText="Desactivados"
-                testId="reminders-active-toggle"
-              />
-            </div>
-            {reminderActive && (
-              <>
-                <div
-                  style={{
-                    borderTop: "1px solid var(--c-gray-100)",
-                    paddingTop: 16,
-                  }}
-                >
-                  <span
-                    className="form-input-hint"
-                    style={{ marginBottom: 12, display: "block" }}
-                  >
-                    Datos de contacto del profesional. Se usan para los
-                    avisos del sistema por el canal que elegiste arriba.
-                  </span>
-                  <div className="form-grid-2">
-                    <label className="form-label">
-                      WhatsApp
-                      <CountryCodeInput
-                        value={whatsappNumber || undefined}
-                        onChange={(v) => {
-                          setWhatsappNumber(v);
-                          handleFieldChange({ whatsappNumber: v });
-                        }}
-                      />
-                    </label>
-                    <label className="form-label">
-                      Teléfono (SMS)
-                      <CountryCodeInput
-                        value={phoneNumber || undefined}
-                        onChange={(value) => {
-                          setPhoneNumber(value);
-                          handleFieldChange({ phoneNumber: value });
-                        }}
-                      />
-                    </label>
-                    <label className="form-label">
-                      Correo electrónico
-                      <input
-                        className="form-input"
-                        type="email"
-                        value={user?.email ?? ""}
-                        disabled
-                        readOnly
-                        data-testid="reminders-user-email"
-                      />
-                      <span className="form-input-hint">
-                        Se usa el correo de tu cuenta cuando el canal es Email.
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </>
-            )}
-            {error && (
-              <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <STATUS_ICONS.warning size={14} /> {error}
-              </div>
-            )}
-            {autosave.error && (
-              <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <STATUS_ICONS.warning size={14} /> {autosave.error}
-              </div>
-            )}
+              options={Object.values(Channel).map((ch) => ({
+                value: ch,
+                label: CHANNEL_CFG[ ch ].label,
+              }))}
+            />
+            <span className="form-input-hint">
+              Los recordatorios a tus pacientes usan el canal de cada paciente.
+            </span>
+          </label>
+
+          <div style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
+            <Switch
+              checked={reminderActive}
+              onChange={(checked) => {
+                setReminderActive(checked);
+                saveNow({ reminderActive: checked });
+              }}
+              label="Avisos automáticos"
+              onText="Activados"
+              offText="Desactivados"
+              testId="reminders-active-toggle"
+            />
+            <span className="form-input-hint" style={{ display: "block", marginTop: 8 }}>
+              No detiene los recordatorios a tus pacientes.
+              {user?.portalEnabled && (
+                <>
+                  {" "}El de las reservas en línea está en{" "}
+                  <Link href={settingsTabHref(SettingsTab.OnlineBooking)}>Reserva en línea</Link>.
+                </>
+              )}
+            </span>
           </div>
+
+          {reminderActive && (
+            <div className="form-grid-2" style={{ borderTop: "1px solid var(--c-gray-100)", paddingTop: 16 }}>
+              <label className="form-label">
+                WhatsApp
+                <CountryCodeInput
+                  value={whatsappNumber || undefined}
+                  onChange={(v) => {
+                    setWhatsappNumber(v);
+                    handleFieldChange({ whatsappNumber: v });
+                  }}
+                  aria-invalid={!!whatsappError || undefined}
+                  aria-describedby={whatsappError ? WHATSAPP_ERROR_ID : undefined}
+                  data-testid="reminders-whatsapp-input"
+                />
+                {whatsappError && <FieldError id={WHATSAPP_ERROR_ID} message={whatsappError} />}
+              </label>
+              <label className="form-label">
+                Teléfono (SMS)
+                <CountryCodeInput
+                  value={phoneNumber || undefined}
+                  onChange={(value) => {
+                    setPhoneNumber(value);
+                    handleFieldChange({ phoneNumber: value });
+                  }}
+                  aria-invalid={!!smsError || undefined}
+                  aria-describedby={smsError ? SMS_ERROR_ID : undefined}
+                  data-testid="reminders-sms-input"
+                />
+                {smsError && <FieldError id={SMS_ERROR_ID} message={smsError} />}
+              </label>
+              <label className="form-label">
+                Correo electrónico
+                <input
+                  className="form-input"
+                  type="email"
+                  value={user?.email ?? ""}
+                  disabled
+                  readOnly
+                  data-testid="reminders-user-email"
+                />
+                <span className="form-input-hint">
+                  Se usa el correo de tu cuenta cuando el canal es Email.
+                </span>
+              </label>
+            </div>
+          )}
+          {autosave.error && <InlineError message={autosave.error} />}
         </div>
-      </div>
+      </SettingsSection>
     </div>
   );
 }

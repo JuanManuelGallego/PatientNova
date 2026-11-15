@@ -3914,6 +3914,61 @@ tr:hover td {
   flex: 1;
 }
 
+.settings-content {
+  max-width: 720px;
+  width: 100%;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section__header {
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.settings-section__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-section .dash-card__title {
+  margin: 0;
+}
+
+.settings-section__description {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--c-gray-500);
+}
+
+.settings-section__aside {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-list__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--c-gray-100);
+  border-radius: var(--r-lg);
+}
+
 /* List inside card */
 .dash-list {
   display: flex;

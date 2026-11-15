@@ -1,17 +1,20 @@
 import { useAutoSaveProfile } from "@/src/api/users/useUpdateProfile";
 import { useConsentDocument } from "@/src/api/consent/useConsentDocument";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
+import { InlineError } from "@/src/components/Info/InlineError";
+import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { TextField } from "@/src/components/Form/TextField";
 import { ImageField } from "@/src/components/Form/ImageField";
 import { User } from "@/src/types/User";
 import { getInitials } from "@/src/utils/AvatarHelper";
-import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS } from "@/src/config/icons";
 import { Upload, FileText, ClipboardList } from "lucide-react";
 import { COMMON_TIMEZONES } from "@/src/utils/TimeUtils";
 import { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { SettingsSection } from "./SettingsSection";
 
 // ─── Editable text fields ──────────────────────────────────────────────────
 
@@ -75,7 +78,7 @@ export function ProfileTab() {
 
   const autosave = useAutoSaveProfile();
   const [ activeSection, setActiveSection ] = useState<ProfileSection | null>(null);
-  const [ error, setError ] = useState<string | null>(null);
+  const [ imageError, setImageError ] = useState<{ section: ProfileSection; message: string } | null>(null);
 
   const {
     document,
@@ -85,6 +88,8 @@ export function ProfileTab() {
     deleteDocument,
   } = useConsentDocument();
   const [ consentError, setConsentError ] = useState<string | null>(null);
+  const [ confirmingDelete, setConfirmingDelete ] = useState(false);
+  const [ deleting, setDeleting ] = useState(false);
 
   const consentRef = useRef<HTMLInputElement>(null);
 
@@ -104,17 +109,16 @@ export function ProfileTab() {
     return <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="profile-save-state" />;
   }
 
-  function saveError(section: ProfileSection) {
-    if (activeSection !== section || !autosave.error) return null;
-    return (
-      <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
-        <STATUS_ICONS.warning size={14} /> {autosave.error}
-      </div>
-    );
+  function sectionError(section: ProfileSection) {
+    const message = imageError?.section === section
+      ? imageError.message
+      : activeSection === section ? autosave.error : null;
+    if (!message) return null;
+    return <div style={{ marginTop: 12 }}><InlineError message={message} /></div>;
   }
 
   function scheduleSave(section: ProfileSection, overrides: Partial<User> = {}) {
-    setError(null);
+    setImageError(null);
     setActiveSection(section);
     autosave.schedule({
       firstName: (overrides.firstName ?? fields.firstName).trim() || undefined,
@@ -138,8 +142,8 @@ export function ProfileTab() {
     scheduleSave(section, { [ key ]: value } as Partial<User>);
   }
 
-  function handleImageError(message: string) {
-    setError(message || null);
+  function imageErrorFor(section: ProfileSection) {
+    return (message: string) => setImageError(message ? { section, message } : null);
   }
 
   // ── Consent document ───────────────────────────────────────────────────────
@@ -161,13 +165,17 @@ export function ProfileTab() {
   }
 
   async function handleConsentDelete() {
+    setConsentError(null);
+    setDeleting(true);
     try {
-      setConsentError(null);
       await deleteDocument();
+      setConfirmingDelete(false);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Error al eliminar el documento";
       setConsentError(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -182,29 +190,9 @@ export function ProfileTab() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "272px 1fr",
-        gap: 24,
-        maxWidth: 880,
-      }}
-    >
-      {/* Profile photo */}
-      <div className="dash-card" style={{ height: "fit-content" }}>
-        <div className="dash-card__header">
-          <span className="dash-card__title">Foto de perfil</span>
-          {saveIndicator("photo")}
-        </div>
-        <div
-          className="dash-card__body"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 18,
-          }}
-        >
+    <div className="settings-stack">
+      <SettingsSection title="Foto de perfil" status={saveIndicator("photo")}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <ImageField
             variant="circle"
             value={avatar}
@@ -213,313 +201,262 @@ export function ProfileTab() {
               setAvatar(value);
               scheduleSave("photo", { avatar: value ?? undefined });
             }}
-            onError={handleImageError}
+            onError={imageErrorFor("photo")}
             maxSide={256}
             format="image/jpeg"
             selectLabel="Seleccionar imagen"
             removeLabel="Eliminar foto"
           />
+        </div>
+        {sectionError("photo")}
+      </SettingsSection>
+
+      <SettingsSection title="Información personal" status={saveIndicator("personal")}>
+        <div className="form-stack">
+          <div className="form-grid-2">
+            <TextField
+              testId="profile-first-name-input"
+              label="Nombre"
+              value={fields.firstName}
+              onChange={(v) => setField("personal", "firstName", v)}
+              placeholder="Juan"
+            />
+            <TextField
+              testId="profile-last-name-input"
+              label="Apellido"
+              value={fields.lastName}
+              onChange={(v) => setField("personal", "lastName", v)}
+              placeholder="García"
+            />
+          </div>
+          <TextField
+            label="Nombre en pantalla"
+            value={fields.displayName}
+            onChange={(v) => setField("personal", "displayName", v)}
+            placeholder="Dr. Juan García"
+            hint="Aparece en la barra lateral y en la vista general."
+          />
+          <TextField
+            label="Cargo"
+            value={fields.jobTitle}
+            onChange={(v) => setField("personal", "jobTitle", v)}
+            placeholder="Médico general"
+          />
+          <label className="form-label">
+            Correo electrónico
+            <input
+              className="form-input"
+              type="email"
+              value={user?.email ?? ""}
+              disabled
+              readOnly
+              data-testid="profile-email"
+            />
+          </label>
+          <label className="form-label">
+            Zona horaria
+            <CustomSelect
+              value={timezone}
+              onChange={handleTimezoneChange}
+              options={COMMON_TIMEZONES.map((tz) => ({
+                value: tz.value,
+                label: tz.label,
+              }))}
+            />
+            <span className="form-input-hint">
+              Las horas que ves y las de tus avisos usan esta zona.
+            </span>
+          </label>
+        </div>
+        {sectionError("personal")}
+      </SettingsSection>
+
+      <SettingsSection title="Logos" description="PNG, SVG o WebP · Máx. 5 MB." status={saveIndicator("logos")}>
+        <div className="form-grid-2">
+          <ImageField
+            label="Logo principal"
+            hint="Úsalo sobre fondos claros. Recomendado: fondo transparente."
+            value={logo}
+            onChange={(value) => {
+              setLogo(value);
+              scheduleSave("logos", { logo: value ?? undefined });
+            }}
+            onError={imageErrorFor("logos")}
+            maxSide={800}
+            sizeErrorMessage="El logo debe ser menor a 5 MB"
+            selectLabel="Subir"
+            removeLabel="Eliminar"
+          />
+          <ImageField
+            label="Logo alternativo (icono)"
+            hint="Úsalo sobre fondos oscuros o de color."
+            value={altLogo}
+            onChange={(value) => {
+              setAltLogo(value);
+              scheduleSave("logos", { altLogo: value ?? undefined });
+            }}
+            onError={imageErrorFor("logos")}
+            maxSide={800}
+            sizeErrorMessage="El logo debe ser menor a 5 MB"
+            selectLabel="Subir"
+            removeLabel="Eliminar"
+          />
+        </div>
+        {sectionError("logos")}
+      </SettingsSection>
+
+      <SettingsSection
+        title="Información bancaria"
+        description="Se envía a tus pacientes para que paguen sus consultas."
+        status={saveIndicator("banking")}
+      >
+        <div className="form-grid-2">
+          <TextField
+            testId="profile-bank-name-input"
+            label="Nombre del banco"
+            value={fields.bankName}
+            onChange={(v) => setField("banking", "bankName", v)}
+            placeholder="Bancolombia"
+          />
+          <TextField
+            label="Número de cuenta"
+            value={fields.accountNumber}
+            onChange={(v) => setField("banking", "accountNumber", v)}
+            placeholder="123465789"
+          />
+          <TextField
+            label="Cédula"
+            value={fields.nationalId}
+            onChange={(v) => setField("banking", "nationalId", v)}
+            placeholder="123456789"
+          />
+          <TextField
+            label="Llave"
+            value={fields.bankingKey}
+            onChange={(v) => setField("banking", "bankingKey", v)}
+            placeholder="@llaveBancolombia"
+          />
+        </div>
+        {sectionError("banking")}
+      </SettingsSection>
+
+      <SettingsSection
+        title="Formulario de consentimiento"
+        description="Un PDF que tus pacientes deben completar · Máx. 10 MB."
+      >
+        {document ? (
           <div
             style={{
-              borderTop: "1px solid var(--c-gray-100)",
-              paddingTop: 16,
-              width: "100%",
+              padding: 16,
+              borderRadius: "var(--r-md)",
+              border: "1px solid var(--c-gray-200)",
+              background: "var(--c-gray-50)",
             }}
           >
-            <label className="form-label">
-              Correo electrónico
-              <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
-                {user?.email}
-              </p>
-            </label>
-            {saveError("photo")}
-          </div>
-        </div>
-      </div>
-
-      {/* Personal info */}
-      <div className="dash-card">
-        <div className="dash-card__header">
-          <span className="dash-card__title">Información personal</span>
-          {saveIndicator("personal")}
-        </div>
-        <div className="dash-card__body">
-          <div className="form-stack">
-            <div className="form-grid-2">
-              <TextField
-                testId="profile-first-name-input"
-                label="Nombre"
-                value={fields.firstName}
-                onChange={(v) => setField("personal", "firstName", v)}
-                placeholder="Juan"
-              />
-              <TextField
-                testId="profile-last-name-input"
-                label="Apellido"
-                value={fields.lastName}
-                onChange={(v) => setField("personal", "lastName", v)}
-                placeholder="García"
-              />
-            </div>
-            <TextField
-              label="Nombre en pantalla"
-              value={fields.displayName}
-              onChange={(v) => setField("personal", "displayName", v)}
-              placeholder="Dr. Juan García"
-              hint="Aparece en la barra lateral y en el dashboard"
-            />
-            <TextField
-              label="Cargo"
-              value={fields.jobTitle}
-              onChange={(v) => setField("personal", "jobTitle", v)}
-              placeholder="Médico general"
-            />
-            <label className="form-label">
-              Zona horaria
-              <CustomSelect
-                value={timezone}
-                onChange={handleTimezoneChange}
-                options={COMMON_TIMEZONES.map((tz) => ({
-                  value: tz.value,
-                  label: tz.label,
-                }))}
-              />
-              <span className="form-input-hint">
-                Afecta el cálculo de &quot;citas de hoy&quot; en el servidor
-              </span>
-            </label>
-          </div>
-          {saveError("personal")}
-        </div>
-      </div>
-
-      {/* Logos */}
-      <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
-        <div className="dash-card__header">
-          <span className="dash-card__title">Logos</span>
-          {saveIndicator("logos")}
-        </div>
-        <div className="dash-card__body">
-          <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
-            Sube el logo principal y el alternativo (p. ej. versión oscura o
-            monocromática). Formatos admitidos: PNG, SVG, WebP · Máx. 5 MB.
-          </p>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}
-          >
-            <ImageField
-              label="Logo principal"
-              hint="Úsalo sobre fondos claros. Recomendado: fondo transparente."
-              value={logo}
-              onChange={(value) => {
-                setLogo(value);
-                scheduleSave("logos", { logo: value ?? undefined });
-              }}
-              onError={handleImageError}
-              maxSide={800}
-              sizeErrorMessage="El logo debe ser menor a 5 MB"
-              selectLabel="Subir"
-              removeLabel="Eliminar"
-            />
-            <ImageField
-              label="Logo alternativo (icono)"
-              hint="Úsalo sobre fondos oscuros o de color."
-              value={altLogo}
-              onChange={(value) => {
-                setAltLogo(value);
-                scheduleSave("logos", { altLogo: value ?? undefined });
-              }}
-              onError={handleImageError}
-              maxSide={800}
-              sizeErrorMessage="El logo debe ser menor a 5 MB"
-              selectLabel="Subir"
-              removeLabel="Eliminar"
-            />
-          </div>
-          {saveError("logos")}
-        </div>
-      </div>
-
-      {/* Banking info */}
-      <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
-        <div className="dash-card__header">
-          <span className="dash-card__title">Información Bancaria</span>
-          {saveIndicator("banking")}
-        </div>
-        <div className="dash-card__body">
-          <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
-            Información a mandar a tus pacientes para que puedan hacer el pago
-            de sus consultas.
-          </p>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}
-          >
-            <TextField
-              testId="profile-bank-name-input"
-              label="Nombre del banco"
-              value={fields.bankName}
-              onChange={(v) => setField("banking", "bankName", v)}
-              placeholder="Bancolombia"
-            />
-            <TextField
-              label="Numero de cuenta"
-              value={fields.accountNumber}
-              onChange={(v) => setField("banking", "accountNumber", v)}
-              placeholder="123465789"
-            />
-            <TextField
-              label="Cedula"
-              value={fields.nationalId}
-              onChange={(v) => setField("banking", "nationalId", v)}
-              placeholder="123456789"
-            />
-            <TextField
-              label="Llave"
-              value={fields.bankingKey}
-              onChange={(v) => setField("banking", "bankingKey", v)}
-              placeholder="@llaveBancolombia"
-            />
-          </div>
-          {saveError("banking")}
-        </div>
-      </div>
-
-      {/* Consent form */}
-      <div className="dash-card" style={{ gridColumn: "1 / -1" }}>
-        <div className="dash-card__header">
-          <span className="dash-card__title">Formulario de Consentimiento</span>
-        </div>
-        <div className="dash-card__body">
-          <p style={{ fontSize: 13, color: "var(--c-gray-400)", marginTop: 0 }}>
-            Sube un formulario de consentimiento en PDF que tus pacientes
-            deberán completar. Solo se permite un documento por usuario.
-          </p>
-          {document ? (
-            <div
-              style={{
-                padding: 16,
-                borderRadius: "var(--r-md)",
-                border: "1px solid var(--c-gray-200)",
-                background: "var(--c-gray-50)",
-                marginBottom: 16,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 24 }}>
-                    <FileText size={24} />
-                  </span>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "var(--c-gray-900)",
-                      }}
-                    >
-                      {document.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--c-gray-500)",
-                        marginTop: 4,
-                      }}
-                    >
-                      {(document.sizeBytes / 1024).toFixed(2)} KB · Actualizado{" "}
-                      {new Date(document.updatedAt).toLocaleDateString(undefined, { timeZone: displayTimezone })}
-                    </div>
-                  </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, minWidth: 0 }}>
+              <FileText size={24} aria-hidden="true" style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--c-gray-900)",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {document.name}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--c-gray-500)", marginTop: 4 }}>
+                  {(document.sizeBytes / 1024).toFixed(2)} KB · Actualizado{" "}
+                  {new Date(document.updatedAt).toLocaleDateString(undefined, { timeZone: displayTimezone })}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ flex: 1 }}
-                  onClick={() => consentRef.current?.click()}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Upload size={14} /> Reemplazar
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ flex: 1, color: "var(--c-error)" }}
-                  onClick={handleConsentDelete}
-                  disabled={docLoading}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <ACTION_ICONS.delete size={14} /> Eliminar
-                  </div>
-                </button>
-              </div>
             </div>
-          ) : (
-            <div
-              style={{
-                padding: 32,
-                borderRadius: "var(--r-md)",
-                border: "2px dashed var(--c-gray-200)",
-                background: "var(--c-gray-50)",
-                textAlign: "center",
-                marginBottom: 16,
-              }}
-            >
-              <div style={{ fontSize: 32, marginBottom: 12 }}>
-                <ClipboardList size={32} />
-              </div>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "var(--c-gray-500)",
-                  margin: "0 0 12px 0",
-                }}
-              >
-                No hay ningún formulario de consentimiento cargado
-              </p>
+            <div style={{ display: "flex", gap: 8 }}>
               <button
                 type="button"
                 className="btn-secondary"
+                style={{ flex: 1 }}
                 onClick={() => consentRef.current?.click()}
                 disabled={docLoading}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Upload size={14} /> Subir PDF
-                </div>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <Upload size={14} aria-hidden="true" /> Reemplazar
+                </span>
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ flex: 1, color: "var(--c-error)" }}
+                onClick={() => { setConsentError(null); setConfirmingDelete(true); }}
+                disabled={docLoading}
+              >
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <ACTION_ICONS.delete size={14} aria-hidden="true" /> Eliminar
+                </span>
               </button>
             </div>
-          )}
-          <input
-            ref={consentRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            style={{ display: "none" }}
-            onChange={handleConsentFileChange}
-          />
-          <p style={{ fontSize: 12, color: "var(--c-gray-400)", margin: 0 }}>
-            Formato: PDF · Máx. 10 MB
-          </p>
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: 32,
+              borderRadius: "var(--r-md)",
+              border: "2px dashed var(--c-gray-200)",
+              background: "var(--c-gray-50)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ marginBottom: 12 }}>
+              <ClipboardList size={32} aria-hidden="true" />
+            </div>
+            <p style={{ fontSize: 13, color: "var(--c-gray-500)", margin: "0 0 12px 0" }}>
+              No hay ningún formulario de consentimiento cargado
+            </p>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => consentRef.current?.click()}
+              disabled={docLoading}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Upload size={14} aria-hidden="true" /> Subir PDF
+              </span>
+            </button>
+          </div>
+        )}
+        <input
+          ref={consentRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          style={{ display: "none" }}
+          onChange={handleConsentFileChange}
+        />
+        {consentError && !confirmingDelete && (
+          <div style={{ marginTop: 12 }}><InlineError message={consentError} /></div>
+        )}
+      </SettingsSection>
 
-      {error && (
-        <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <STATUS_ICONS.warning size={14} /> {error}
-        </div>
-      )}
-      {consentError && (
-        <div className="error-inline" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <STATUS_ICONS.warning size={14} /> {consentError}
-        </div>
+      {confirmingDelete && document && (
+        <ConfirmDialog
+          icon={ACTION_ICONS.delete}
+          title="¿Eliminar el formulario de consentimiento?"
+          confirmLabel="Eliminar"
+          loadingLabel="Eliminando…"
+          loading={docLoading || deleting}
+          error={consentError}
+          testId="consent-delete-dialog"
+          onClose={() => {
+            if (deleting) return;
+            setConfirmingDelete(false);
+            setConsentError(null);
+          }}
+          onConfirm={handleConsentDelete}
+        >
+          <p className="modal-confirm__text">
+            Se eliminará «{document.name}». Puedes subir otro cuando quieras.
+          </p>
+        </ConfirmDialog>
       )}
     </div>
   );

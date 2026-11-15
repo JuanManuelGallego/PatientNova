@@ -604,6 +604,14 @@ describe("OnlineBookingTab: rules", () => {
 });
 
 describe("OnlineBookingTab: status summary", () => {
+    it("frames every section as a titled region", () => {
+        settings = makeSettings({ ...WITH_LINK, readiness: READY });
+        renderTab();
+        for (const name of [ "Reserva en línea", "Confirmación de reservas", "Enlace de reserva", "Perfil público", "Disponibilidad semanal", "Reglas de reserva" ]) {
+            expect(screen.getByRole("region", { name })).toBeInTheDocument();
+        }
+    });
+
     it("says plainly when the link is live and hides the checklist", () => {
         settings = makeSettings({ bookingEnabled: true, live: true, ...WITH_LINK, readiness: READY });
         renderTab();

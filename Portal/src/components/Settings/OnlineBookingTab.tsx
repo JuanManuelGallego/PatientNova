@@ -47,6 +47,9 @@ import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
 import { SaveStatusIndicator, type SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
+import { FieldError, InlineError } from "@/src/components/Info/InlineError";
+import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
+import { SettingsSection } from "./SettingsSection";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVING } from "@/src/constants/ui";
 import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
@@ -62,41 +65,16 @@ const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label:
     { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
     { key: "hasLegalIdentity", label: "Responsable de los datos y contacto directo", fixLabel: "Completar perfil", href: `#${PROFILE_SECTION_ID}` },
     { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
-    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: "/settings?tab=Tipos+de+Cita" },
-    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: "/settings?tab=Ubicaciones" },
+    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: settingsTabHref(SettingsTab.AppointmentTypes) },
+    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: settingsTabHref(SettingsTab.Locations) },
 ];
 
 type SaveFn = (body: BookingSettingsUpdate) => Promise<BookingSettings>;
-
-function ErrorLine({ message }: { message: string }) {
-    return (
-        <div className="error-inline" role="alert" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <STATUS_ICONS.warning size={14} /> {message}
-        </div>
-    );
-}
-
-function FieldError({ id, message }: { id?: string; message: string }) {
-    return (
-        <span id={id} role="alert" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--c-error)" }}>
-            <STATUS_ICONS.warning size={12} aria-hidden="true" /> {message}
-        </span>
-    );
-}
 
 function WarningHint({ testId, children }: { testId: string; children: ReactNode }) {
     return (
         <div className="form-input-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--c-warning-dark)" }} data-testid={testId}>
             <STATUS_ICONS.warning size={14} />
-            {children}
-        </div>
-    );
-}
-
-function CardHeader({ title, children }: { title: string; children?: ReactNode }) {
-    return (
-        <div className="dash-card__header" style={{ gap: 12 }}>
-            <span className="dash-card__title">{title}</span>
             {children}
         </div>
     );
@@ -112,12 +90,12 @@ export function OnlineBookingTab() {
     const [ statusError, setStatusError ] = useState<string | null>(null);
 
     if (!current) {
-        if (error) return <ErrorLine message={error || ERR_LOAD} />;
+        if (error) return <InlineError message={error || ERR_LOAD} />;
         return <p className="form-input-hint">{loading ? LBL_LOADING : ""}</p>;
     }
 
     return (
-        <div style={{ maxWidth: 760, display: "flex", flexDirection: "column", gap: 20 }} data-testid="online-booking-tab">
+        <div className="settings-stack" data-testid="online-booking-tab">
             <StatusSection
                 settings={current}
                 onToggle={async (enabled) => {
@@ -173,9 +151,8 @@ function StatusSection({ settings, onToggle, error }: {
             : { text: "La reserva en línea está desactivada.", bg: "var(--c-page-bg)", border: "var(--c-gray-100)", Icon: STATUS_ICONS.pending, iconColor: "var(--c-gray-500)" };
 
     return (
-        <div className="dash-card">
-            <CardHeader title="Reserva en línea" />
-            <div className="dash-card__body form-stack">
+        <SettingsSection title="Reserva en línea">
+            <div className="form-stack">
                 <div
                     style={{
                         display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
@@ -222,9 +199,9 @@ function StatusSection({ settings, onToggle, error }: {
                         </ul>
                     </>
                 )}
-                {error && <ErrorLine message={error} />}
+                {error && <InlineError message={error} />}
             </div>
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -255,11 +232,8 @@ function ApprovalSection({ settings, save, onSaved }: { settings: BookingSetting
     }
 
     return (
-        <div className="dash-card" data-testid="online-booking-approval">
-            <CardHeader title="Confirmación de reservas">
-                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-approval-save-state" />
-            </CardHeader>
-            <div className="dash-card__body form-stack">
+        <SettingsSection title="Confirmación de reservas" status={<SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-approval-save-state" />} testId="online-booking-approval">
+            <div className="form-stack">
                 <fieldset className="form-stack form-fieldset-plain">
                     <legend className="sr-only">Cómo se confirman las reservas en línea</legend>
                     {APPROVAL_OPTIONS.map((opt) => (
@@ -285,9 +259,9 @@ function ApprovalSection({ settings, save, onSaved }: { settings: BookingSetting
                         Si vuelves a la confirmación automática, las solicitudes pendientes siguen esperando tu respuesta.
                     </span>
                 )}
-                {autosave.error && <ErrorLine message={autosave.error} />}
+                {autosave.error && <InlineError message={autosave.error} />}
             </div>
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -335,11 +309,8 @@ function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; s
     }
 
     return (
-        <div className="dash-card" id={LINK_SECTION_ID}>
-            <CardHeader title="Enlace de reserva">
-                <SaveStatusIndicator saving={false} status={status} testId="online-booking-slug-save-state" />
-            </CardHeader>
-            <div className="dash-card__body form-stack">
+        <SettingsSection title="Enlace de reserva" status={<SaveStatusIndicator saving={false} status={status} testId="online-booking-slug-save-state" />} id={LINK_SECTION_ID}>
+            <div className="form-stack">
                 {settings.bookingSlug && settings.bookingUrl ? (
                     <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
                         <div ref={qrRef} data-testid="online-booking-qr">
@@ -381,7 +352,7 @@ function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; s
                         </button>
                     </div>
                 )}
-                {error && <ErrorLine message={error} />}
+                {error && <InlineError message={error} />}
             </div>
             {editing && (
                 <SlugModal
@@ -392,7 +363,7 @@ function LinkSection({ settings, save, onSaved }: { settings: BookingSettings; s
                     onClose={() => setEditing(false)}
                 />
             )}
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -496,7 +467,7 @@ function SlugModal({ settings, suggestion, save, onSaved, onClose }: {
                             Si quitas el enlace, la reserva en línea se desactivará y los enlaces y códigos QR que ya compartiste dejarán de funcionar.
                         </WarningHint>
                     )}
-                    {error && <ErrorLine message={error} />}
+                    {error && <InlineError message={error} />}
                     <div className="modal-footer modal-footer--stretch">
                         <button type="button" className="btn-secondary btn-block" onClick={close} disabled={saving} data-testid="online-booking-slug-cancel">
                             Cancelar
@@ -597,16 +568,13 @@ function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> }) {
     }
 
     return (
-        <div className="dash-card" id={AVAILABILITY_SECTION_ID}>
-            <CardHeader title="Disponibilidad semanal">
-                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="availability-save-state" />
-            </CardHeader>
-            <div className="dash-card__body form-stack" data-testid="online-booking-availability">
+        <SettingsSection title="Disponibilidad semanal" status={<SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="availability-save-state" />} id={AVAILABILITY_SECTION_ID}>
+            <div className="form-stack" data-testid="online-booking-availability">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Horarios en los que los pacientes pueden reservar.
                     Las citas y bloqueos de tu agenda se descuentan automáticamente.
                 </span>
-                {loadError && <ErrorLine message={loadError} />}
+                {loadError && <InlineError message={loadError} />}
                 {!rules && loading && <p className="form-input-hint">{LBL_LOADING}</p>}
                 {rules && WEEKDAYS_ES.map(({ weekday, label }) => {
                     const dayRules = rules.filter((r) => r.weekday === weekday);
@@ -683,13 +651,13 @@ function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> }) {
                         </div>
                     );
                 })}
-                {validation && dirty && !anyDayError && <ErrorLine message={validation} />}
+                {validation && dirty && !anyDayError && <InlineError message={validation} />}
                 {validation && dirty && (
                     <WarningHint testId="availability-unsaved">Corrige los horarios marcados para guardar los cambios.</WarningHint>
                 )}
-                {autosave.error && <ErrorLine message={autosave.error} />}
+                {autosave.error && <InlineError message={autosave.error} />}
             </div>
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -770,11 +738,8 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
     }
 
     return (
-        <div className="dash-card" id={PROFILE_SECTION_ID}>
-            <CardHeader title="Perfil público">
-                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-profile-save-state" />
-            </CardHeader>
-            <div className="dash-card__body form-stack" data-testid="online-booking-profile">
+        <SettingsSection title="Perfil público" status={<SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-profile-save-state" />} id={PROFILE_SECTION_ID}>
+            <div className="form-stack" data-testid="online-booking-profile">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
                 </span>
@@ -812,9 +777,9 @@ function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSe
                     <input className="form-input" maxLength={MAX_CONTACT_HOURS_LENGTH} placeholder="Lunes a viernes, 8:00 a 17:00"
                         value={form.contactHours} onChange={(e) => change({ contactHours: e.target.value })} data-testid="online-booking-contact-hours" />
                 </label>
-                {autosave.error && <ErrorLine message={autosave.error} />}
+                {autosave.error && <InlineError message={autosave.error} />}
             </div>
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -928,11 +893,8 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
     }
 
     return (
-        <div className="dash-card">
-            <CardHeader title="Reglas de reserva">
-                <SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-rules-save-state" />
-            </CardHeader>
-            <div className="dash-card__body form-stack">
+        <SettingsSection title="Reglas de reserva" status={<SaveStatusIndicator saving={autosave.saving} status={autosave.status} error={autosave.error} testId="online-booking-rules-save-state" />}>
+            <div className="form-stack">
                 <div className="form-grid-2">
                     <label className="form-label" data-testid="online-booking-interval">
                         Intervalo entre horarios (min)
@@ -989,8 +951,8 @@ function RulesSection({ settings, save, onSaved }: { settings: BookingSettings; 
                 {invalid && (
                     <WarningHint testId="online-booking-rules-unsaved">Corrige los campos marcados para guardar los cambios.</WarningHint>
                 )}
-                {autosave.error && <ErrorLine message={autosave.error} />}
+                {autosave.error && <InlineError message={autosave.error} />}
             </div>
-        </div>
+        </SettingsSection>
     );
 }
