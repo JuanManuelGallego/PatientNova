@@ -100,7 +100,7 @@ describe("UserMenu", () => {
         await userEvent.click(trigger());
 
         const account = screen.getByTestId("sidebar-account-link");
-        expect(account).toHaveAttribute("href", "/settings");
+        expect(account).toHaveAttribute("href", "/settings/account");
         await userEvent.click(account);
 
         expect(onNavigate).toHaveBeenCalledTimes(1);

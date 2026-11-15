@@ -13,6 +13,7 @@ const verifyConnection = vi.fn();
 const openOAuth = vi.fn();
 const startOAuth = vi.fn();
 const disconnect = vi.fn();
+const reportAttention = vi.fn();
 
 const GoogleIntegrationTab = () => <FocusTrapProvider><Tab /></FocusTrapProvider>;
 let verifyError: string | null = null;
@@ -31,6 +32,9 @@ vi.mock("@/src/api/google/useDisconnectGoogle", () => ({
 }));
 vi.mock("@/src/hooks/useGoogleOAuthPopup", () => ({
   useGoogleOAuthPopup: () => ({ openOAuth, waiting: false, error: null }),
+}));
+vi.mock("@/src/providers/SettingsAttentionContext", () => ({
+  useSettingsAttention: () => ({ sections: new Set(), report: reportAttention }),
 }));
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({ user: { role } }),
@@ -126,7 +130,7 @@ describe("GoogleIntegrationTab", () => {
     expect(screen.queryByTestId("google-verify-button")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("google-reconnect-button"));
-    expect(startOAuth).toHaveBeenCalledWith("/settings", true);
+    expect(startOAuth).toHaveBeenCalledWith("/settings/integrations", true);
     unmount();
 
     connectionState.data = { status: "not_connected", connected: false };
@@ -196,6 +200,17 @@ describe("GoogleIntegrationTab", () => {
 
     await act(async () => fail(new ApiMutationError("No se pudo desconectar", 500)));
     expect(screen.getByTestId("google-disconnect-dialog")).toHaveTextContent("No se pudo desconectar");
+  });
+
+  it("tells the menu whether Google needs attention", () => {
+    connectionState.data = { status: "expired", connected: false };
+    const { unmount } = render(<GoogleIntegrationTab />);
+    expect(reportAttention).toHaveBeenLastCalledWith({ integrations: true });
+    unmount();
+
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    expect(reportAttention).toHaveBeenLastCalledWith({ integrations: false });
   });
 
   it("never uses the browser's confirm", async () => {

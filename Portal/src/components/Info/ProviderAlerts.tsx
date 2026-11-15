@@ -11,7 +11,8 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useFetchNeedsMeetingLink } from "@/src/api/appointments/useFetchNeedsMeetingLink";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { STATUS_ICONS } from "@/src/config/icons";
-import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
+import { settingsHref } from "@/src/config/navigation";
+import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 
 export function ProviderAlerts() {
@@ -79,12 +80,13 @@ function NeedsMeetingLinkAlert() {
   );
 }
 
-const INTEGRATIONS_HREF = settingsTabHref(SettingsTab.Integrations);
+const INTEGRATIONS_HREF = settingsHref("integrations");
 
 function GoogleExpiredAlert() {
   const { data: connection, fetchConnection } = useFetchGoogleConnection();
   const { startOAuth, loading: startingOAuth, error: startError } = useStartGoogleOAuth();
   const [ resultError, setResultError ] = useState<string | null>(null);
+  const { refresh: refreshAttention } = useSettingsAttention();
 
   const { openOAuth, waiting, error: popupError } = useGoogleOAuthPopup(
     useCallback(async (result) => {
@@ -94,7 +96,8 @@ function GoogleExpiredAlert() {
       }
       setResultError(null);
       await fetchConnection();
-    }, [ fetchConnection ]),
+      refreshAttention();
+    }, [ fetchConnection, refreshAttention ]),
   );
 
   if (connection?.status !== "expired") return null;
@@ -121,7 +124,7 @@ function GoogleExpiredAlert() {
           disabled={busy}
           onClick={() => {
             setResultError(null);
-            void openOAuth(() => startOAuth("/settings", true));
+            void openOAuth(() => startOAuth(INTEGRATIONS_HREF, true));
           }}
           data-testid="google-expired-reconnect"
         >

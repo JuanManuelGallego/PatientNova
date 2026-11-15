@@ -10,6 +10,7 @@ import type { AppointmentType } from "@/src/types/Appointment";
 const updateSettings = vi.fn();
 const saveAvailability = vi.fn();
 const fetchSettings = vi.fn();
+const reportAttention = vi.fn();
 let settings: BookingSettings;
 let rules: AvailabilityRule[];
 let suggestion: string | null;
@@ -17,6 +18,9 @@ let appointmentTypes: AppointmentType[];
 let user: UserEvent;
 let selfServeEnabled: boolean | undefined;
 
+vi.mock("@/src/providers/SettingsAttentionContext", () => ({
+    useSettingsAttention: () => ({ sections: new Set(), report: reportAttention }),
+}));
 vi.mock("@/src/providers/AuthContext", () => ({
     useAuthContext: () => ({ user: { portalEnabled: true, selfServeEnabled } }),
 }));
@@ -604,6 +608,16 @@ describe("OnlineBookingTab: rules", () => {
 });
 
 describe("OnlineBookingTab: status summary", () => {
+    it("tells the menu whether booking needs attention, and updates it after a change", async () => {
+        settings = makeSettings({ bookingEnabled: true, live: false });
+        renderTab();
+        expect(reportAttention).toHaveBeenLastCalledWith({ booking: true });
+
+        await user.click(screen.getByTestId("online-booking-enabled-toggle"));
+        await settle(0);
+        expect(reportAttention).toHaveBeenLastCalledWith({ booking: false });
+    });
+
     it("frames every section as a titled region", () => {
         settings = makeSettings({ ...WITH_LINK, readiness: READY });
         renderTab();
@@ -622,7 +636,7 @@ describe("OnlineBookingTab: status summary", () => {
     it("links pending items to where they are fixed", () => {
         settings = makeSettings({ readiness: { ...READY, hasBookableType: false } });
         renderTab();
-        expect(screen.getByRole("link", { name: "Ir a Tipos de Cita" })).toHaveAttribute("href", "/settings?tab=Tipos+de+Cita");
+        expect(screen.getByRole("link", { name: "Ir a Tipos de cita" })).toHaveAttribute("href", "/settings/services#appointment-types");
         expect(screen.queryByRole("link", { name: "Ir a Ubicaciones" })).not.toBeInTheDocument();
     });
 

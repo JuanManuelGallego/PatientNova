@@ -22,22 +22,23 @@ export interface NavContext {
     inboxEnabled: boolean;
 }
 
-export interface NavItem {
-    id: NavItemId;
+export interface NavItem<Id extends string = NavItemId> {
+    id: Id;
     path: string;
+    href?: string;
     label: string;
     visible?: (ctx: NavContext) => boolean;
 }
 
-export interface NavGroup {
+export interface NavGroup<Id extends string = NavItemId> {
     id: string;
     label?: string;
-    items: NavItem[];
+    items: NavItem<Id>[];
 }
 
 export const ACTIVITY_PATH = "/activity";
 /** Where "Mi cuenta" leads. */
-export const ACCOUNT_PATH = "/settings";
+export const ACCOUNT_PATH = "/settings/account";
 
 /** The sidebar, top to bottom. */
 export const NAV_GROUPS: NavGroup[] = [
@@ -62,15 +63,15 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Administración",
         items: [
             { id: "activity", path: ACTIVITY_PATH, label: "Actividad", visible: (ctx) => isAdminRole(ctx.user?.role) },
-            { id: "settings", path: "/settings", label: "Configuración" },
+            { id: "settings", path: "/settings", href: settingsHref("account"), label: "Configuración" },
         ],
     },
 ];
 
-const isVisible = (item: NavItem, ctx: NavContext) => !item.visible || item.visible(ctx);
+const isVisible = <Id extends string>(item: NavItem<Id>, ctx: NavContext) => !item.visible || item.visible(ctx);
 
 /** Drops hidden items, then groups left empty. */
-export function visibleGroups(groups: NavGroup[], ctx: NavContext): NavGroup[] {
+export function visibleGroups<Id extends string>(groups: NavGroup<Id>[], ctx: NavContext): NavGroup<Id>[] {
     return groups
         .map((group) => ({ ...group, items: group.items.filter((item) => isVisible(item, ctx)) }))
         .filter((group) => group.items.length > 0);
@@ -87,4 +88,40 @@ export function activityHref(filter: { entityId?: string; portalPatientId?: stri
     if (filter.portalPatientId) params.set("portalPatientId", filter.portalPatientId);
     const query = params.toString();
     return query ? `${ACTIVITY_PATH}?${query}` : ACTIVITY_PATH;
+}
+
+export type SettingsSectionId = "account" | "notifications" | "practice" | "services" | "booking" | "integrations";
+
+export function settingsHref(id: SettingsSectionId, anchor?: string): string {
+    return `/settings/${id}${anchor ? `#${anchor}` : ""}`;
+}
+
+export const SETTINGS_NAV: NavGroup<SettingsSectionId>[] = [
+    {
+        id: "you",
+        label: "Tu cuenta",
+        items: [
+            { id: "account", path: settingsHref("account"), label: "Cuenta" },
+            { id: "notifications", path: settingsHref("notifications"), label: "Notificaciones" },
+        ],
+    },
+    {
+        id: "clinic",
+        label: "Tu consulta",
+        items: [
+            { id: "practice", path: settingsHref("practice"), label: "Consultorio" },
+            { id: "services", path: settingsHref("services"), label: "Servicios" },
+            { id: "booking", path: settingsHref("booking"), label: "Reserva en línea", visible: (ctx) => !!ctx.user?.portalEnabled },
+        ],
+    },
+    {
+        id: "connections",
+        label: "Conexiones",
+        items: [ { id: "integrations", path: settingsHref("integrations"), label: "Integraciones" } ],
+    },
+];
+
+export function settingsSectionOf(pathname: string): SettingsSectionId | null {
+    const item = SETTINGS_NAV.flatMap((g) => g.items).find((i) => isNavItemActive(pathname, i.path));
+    return item?.id ?? null;
 }

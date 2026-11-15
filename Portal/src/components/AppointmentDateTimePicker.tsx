@@ -121,7 +121,6 @@ export function AppointmentDateTimePicker({
             disabledMinutes: (hour) => {
               const minutes: number[] = [];
 
-              // Closing hour: only the exact hour mark is bookable.
               if (hour === BUSINESS_LAST_HOUR) {
                 for (let i = 5; i < 60; i += 5) minutes.push(i);
               }

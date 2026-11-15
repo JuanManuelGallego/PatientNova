@@ -48,7 +48,8 @@ import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
 import { SaveStatusIndicator, type SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
 import { FieldError, InlineError } from "@/src/components/Info/InlineError";
-import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
+import { settingsHref } from "@/src/config/navigation";
+import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 import { SettingsSection } from "./SettingsSection";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { ERR_LOAD, ERR_SAVE, LBL_LOADING, LBL_SAVING } from "@/src/constants/ui";
@@ -65,8 +66,8 @@ const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label:
     { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
     { key: "hasLegalIdentity", label: "Responsable de los datos y contacto directo", fixLabel: "Completar perfil", href: `#${PROFILE_SECTION_ID}` },
     { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
-    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de Cita", href: settingsTabHref(SettingsTab.AppointmentTypes) },
-    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: settingsTabHref(SettingsTab.Locations) },
+    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de cita", href: settingsHref("services", "appointment-types") },
+    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: settingsHref("services", "locations") },
 ];
 
 type SaveFn = (body: BookingSettingsUpdate) => Promise<BookingSettings>;
@@ -88,6 +89,12 @@ export function OnlineBookingTab() {
     const current = latest ?? settings;
 
     const [ statusError, setStatusError ] = useState<string | null>(null);
+
+    const { report } = useSettingsAttention();
+    const needsAttention = current ? current.bookingEnabled && !current.live : undefined;
+    useEffect(() => {
+        if (needsAttention !== undefined) report({ booking: needsAttention });
+    }, [ needsAttention, report ]);
 
     if (!current) {
         if (error) return <InlineError message={error || ERR_LOAD} />;

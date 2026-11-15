@@ -8,10 +8,12 @@ import { AppointmentType } from "@/src/types/Appointment";
 import { useState } from "react";
 import { useSavedFlash } from "@/src/hooks/useSavedFlash";
 import { SettingsList } from "./SettingsList";
+import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 
-export function AppointmentTypesTab() {
+export function AppointmentTypesTab({ onReady }: { onReady?: () => void } = {}) {
   const { data, loading, error, fetchAppointmentTypes } = useFetchAppointmentTypes();
   const saved = useSavedFlash();
+  const { refresh: refreshAttention } = useSettingsAttention();
 
   const [ modalType, setModalType ] = useState<AppointmentType | null | undefined>(undefined);
   const [ deleteTarget, setDeleteTarget ] = useState<AppointmentType | null>(null);
@@ -19,11 +21,13 @@ export function AppointmentTypesTab() {
   function handleSaved() {
     saved.flash();
     fetchAppointmentTypes();
+    refreshAttention();
   }
 
   return (
     <div className="settings-stack">
       <SettingsList<AppointmentType>
+        id="appointment-types"
         title="Tipos de cita"
         description="Configura los tipos de cita que ofreces"
         newLabel="Nuevo tipo"
@@ -34,6 +38,7 @@ export function AppointmentTypesTab() {
         error={error}
         onRetry={() => fetchAppointmentTypes()}
         empty={{ icon: Brain, title: "Sin tipos de cita configurados", sub: "Agrega los tipos de cita que ofreces a tus pacientes." }}
+        onReady={onReady}
         status={<SaveStatusIndicator saving={false} status={saved.active ? "saved" : "idle"} testId="appointment-types-save-state" />}
         renderItem={(t) => (
           <AppointmentTypeCard
@@ -58,6 +63,7 @@ export function AppointmentTypesTab() {
           onDelete={() => {
             setDeleteTarget(null);
             fetchAppointmentTypes();
+            refreshAttention();
           }}
         />
       )}

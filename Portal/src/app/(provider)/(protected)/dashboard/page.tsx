@@ -37,6 +37,7 @@ import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { settingsHref } from "@/src/config/navigation";
 
 export default function DashboardPage() {
   const timezone = useDisplayTimezone();
@@ -357,7 +358,7 @@ export default function DashboardPage() {
               accent: "var(--c-warning)",
             },
             {
-              href: "/settings",
+              href: settingsHref("account"),
               Icon: Settings,
               label: "Configuración",
               desc: "Preferencias",

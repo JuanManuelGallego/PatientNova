@@ -56,7 +56,6 @@ export const QUERY_PARAMS = {
   auditPortalPatientId: "portalPatientId",
 
   // settings
-  settingsTab: "tab",
 
   // medical records
   recordPatientId: "patientId",

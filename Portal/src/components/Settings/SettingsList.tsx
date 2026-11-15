@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { LucideIcon } from "@/src/config/icons";
 import { EmptyState } from "@/src/components/EmptyState";
 import { InlineError } from "@/src/components/Info/InlineError";
@@ -18,13 +18,20 @@ interface SettingsListProps<T extends { id: string }> {
     empty: { icon: LucideIcon; title: string; sub: string };
     renderItem: (item: T) => ReactNode;
     status?: ReactNode;
+    id?: string;
     testId?: string;
+    onReady?: () => void;
 }
 
 export function SettingsList<T extends { id: string }>({
-    title, description, newLabel, newTestId, onNew, items, loading, error, onRetry, empty, renderItem, status, testId,
+    title, description, newLabel, newTestId, onNew, items, loading, error, onRetry, empty, renderItem, status, id, testId, onReady,
 }: SettingsListProps<T>) {
     const showSkeleton = useDelayedLoading(loading);
+    const settled = items !== undefined || !!error;
+
+    useEffect(() => {
+        if (settled) onReady?.();
+    }, [ settled, onReady ]);
 
     let body: ReactNode = null;
     if (items && items.length > 0) {
@@ -59,6 +66,7 @@ export function SettingsList<T extends { id: string }>({
             description={description}
             status={status}
             actions={<button type="button" className="btn-primary" onClick={onNew} data-testid={newTestId}>{newLabel}</button>}
+            id={id}
             testId={testId}
         >
             {body}

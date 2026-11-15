@@ -6,6 +6,7 @@ import Sidebar from "@/src/components/Sidebar";
 let pathname = "/dashboard";
 let role: string | null = "ADMIN";
 let inbox = { enabled: true, pending: 0 };
+let attention = new Set<string>();
 
 vi.mock("next/navigation", () => ({
     usePathname: () => pathname,
@@ -20,6 +21,9 @@ vi.mock("@/src/providers/AuthContext", () => ({
 vi.mock("@/src/providers/ThemeContext", () => ({
     useTheme: () => ({ isDark: false, toggleTheme: vi.fn() }),
 }));
+vi.mock("@/src/providers/SettingsAttentionContext", () => ({
+    useSettingsAttention: () => ({ sections: attention, report: vi.fn() }),
+}));
 vi.mock("@/src/providers/PendingRequestsContext", () => ({
     usePendingRequests: () => ({ ...inbox, refetch: vi.fn() }),
 }));
@@ -28,9 +32,21 @@ beforeEach(() => {
     pathname = "/dashboard";
     role = "ADMIN";
     inbox = { enabled: true, pending: 0 };
+    attention = new Set();
 });
 
 describe("Sidebar", () => {
+    it("puts a dot on Configuración when a section needs attention", () => {
+        const { unmount } = render(<Sidebar isOpen onClose={vi.fn()} />);
+        expect(screen.queryByTestId("sidebar-settings-attention")).toBeNull();
+        unmount();
+
+        attention = new Set([ "integrations" ]);
+        render(<Sidebar isOpen onClose={vi.fn()} />);
+        expect(screen.getByTestId("sidebar-link-settings")).toContainElement(screen.getByTestId("sidebar-settings-attention"));
+        expect(screen.getByTestId("sidebar-settings-attention")).toHaveTextContent("requiere atención");
+    });
+
     it("marks Configuración active on a settings sub-route", () => {
         pathname = "/settings/account";
         render(<Sidebar isOpen onClose={vi.fn()} />);
@@ -38,6 +54,7 @@ describe("Sidebar", () => {
         const settings = screen.getByTestId("sidebar-link-settings");
         expect(settings).toHaveAttribute("aria-current", "page");
         expect(settings.querySelector(".nav-item")).toHaveClass("active");
+        expect(settings).toHaveAttribute("href", "/settings/account");
         expect(screen.getByTestId("sidebar-link-patients")).not.toHaveAttribute("aria-current");
     });
 

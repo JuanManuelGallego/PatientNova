@@ -36,6 +36,11 @@ describe('googleOAuthService (integration)', () => {
       expect(new URL(reconnect.authUrl).searchParams.get('prompt')).toBe('consent');
     });
 
+    it('accepts the Integraciones page as the return path', async () => {
+      const result = await googleOAuthService.generateAuthUrl(userId, '/settings/integrations');
+      expect(result.authUrl).toContain('accounts.google.com');
+    });
+
     it('throws an auth error for invalid returnPath', async () => {
       await expect(
         googleOAuthService.generateAuthUrl(userId, '/invalid')

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ProfileTab } from "@/src/components/Settings/ProfileTab";
+import { PracticeProfile as ProfileTab } from "@/src/components/Settings/PracticeProfile";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
 const fetchWithAuth = vi.fn();
@@ -25,7 +25,7 @@ beforeEach(() => {
 
 const renderTab = () => render(<FocusTrapProvider><ProfileTab /></FocusTrapProvider>);
 
-describe("ProfileTab consent form (real hook)", () => {
+describe("PracticeProfile consent form (real hook)", () => {
     it("keeps the dialog open with a Spanish error when the server refuses the deletion", async () => {
         renderTab();
         await userEvent.click(await screen.findByRole("button", { name: /Eliminar/ }));

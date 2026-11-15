@@ -3919,6 +3919,79 @@ tr:hover td {
   width: 100%;
 }
 
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-nav {
+  display: none;
+}
+
+.settings-nav-select {
+  max-width: 720px;
+}
+
+@media (min-width: 1200px) {
+  .settings-layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 720px);
+    gap: 32px;
+    align-items: start;
+  }
+
+  .settings-nav {
+    display: block;
+    position: sticky;
+    top: 24px;
+  }
+
+  .settings-nav a {
+    text-decoration: none;
+  }
+
+  .settings-nav .sidebar-group {
+    gap: 0;
+  }
+
+  .settings-nav .sidebar-group + .sidebar-group {
+    margin-top: 16px;
+  }
+
+  .settings-nav .sidebar-group-label {
+    margin: 0 14px 6px;
+  }
+
+  .settings-nav .sidebar-group a {
+    display: block;
+    margin-left: 14px;
+    padding: 2px 0 2px 8px;
+    border-left: 2px solid var(--c-gray-200);
+  }
+
+  .settings-nav .sidebar-group a[aria-current="page"] {
+    border-left-color: var(--c-brand);
+  }
+
+  .settings-nav .nav-item {
+    padding: 8px 12px;
+    color: var(--c-gray-700);
+  }
+
+  .settings-nav .nav-item:hover {
+    color: var(--c-gray-900);
+  }
+
+  .settings-nav .nav-item.active {
+    color: var(--c-brand);
+  }
+
+  .settings-nav-select {
+    display: none;
+  }
+}
+
 .settings-stack {
   display: flex;
   flex-direction: column;
@@ -5066,6 +5139,15 @@ thead tr {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.nav-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--c-warning-dark);
+  flex-shrink: 0;
 }
 
 /* Count on a sidebar entry (pending booking requests). */

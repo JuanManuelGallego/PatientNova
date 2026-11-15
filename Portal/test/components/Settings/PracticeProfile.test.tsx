@@ -1,10 +1,10 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ProfileTab as Tab } from "@/src/components/Settings/ProfileTab";
+import { PracticeProfile as Tab } from "@/src/components/Settings/PracticeProfile";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
-const ProfileTab = () => <FocusTrapProvider><Tab /></FocusTrapProvider>;
+const PracticeProfile = () => <FocusTrapProvider><Tab /></FocusTrapProvider>;
 
 const autosave = {
     saving: false,
@@ -41,9 +41,9 @@ beforeEach(() => {
 
 const consentSection = () => screen.getByRole("region", { name: "Formulario de consentimiento" });
 
-describe("ProfileTab", () => {
+describe("PracticeProfile", () => {
     it("asks before deleting the consent form and deletes only on confirm", async () => {
-        render(<ProfileTab />);
+        render(<PracticeProfile />);
         await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
 
         const dialog = screen.getByTestId("consent-delete-dialog");
@@ -56,7 +56,7 @@ describe("ProfileTab", () => {
     });
 
     it("keeps the form when the deletion is cancelled", async () => {
-        render(<ProfileTab />);
+        render(<PracticeProfile />);
         await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
         await userEvent.click(screen.getByTestId("consent-delete-dialog-cancel-button"));
 
@@ -66,7 +66,7 @@ describe("ProfileTab", () => {
 
     it("keeps the dialog open with the error when deletion fails", async () => {
         consent.deleteDocument.mockRejectedValue(new Error("No se pudo eliminar"));
-        render(<ProfileTab />);
+        render(<PracticeProfile />);
         await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
         await userEvent.click(screen.getByTestId("consent-delete-dialog-confirm-button"));
 
@@ -77,7 +77,7 @@ describe("ProfileTab", () => {
     it("stays open while deleting, so a late failure is still shown", async () => {
         let fail: (e: Error) => void = () => {};
         consent.deleteDocument.mockReturnValue(new Promise((_, reject) => { fail = reject; }));
-        render(<ProfileTab />);
+        render(<PracticeProfile />);
         await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
         await userEvent.click(screen.getByTestId("consent-delete-dialog-confirm-button"));
 
@@ -89,20 +89,23 @@ describe("ProfileTab", () => {
     });
 
     it("shows an autosave error only in the section being edited", async () => {
-        const { rerender } = render(<ProfileTab />);
+        const { rerender } = render(<PracticeProfile />);
         await userEvent.type(screen.getByTestId("profile-bank-name-input"), "B");
         autosave.error = "Error al guardar";
-        rerender(<ProfileTab />);
+        rerender(<PracticeProfile />);
 
         const banking = screen.getByRole("region", { name: "Información bancaria" });
         expect(within(banking).getByRole("alert")).toHaveTextContent("Error al guardar");
-        expect(within(screen.getByRole("region", { name: "Información personal" })).queryByRole("alert")).toBeNull();
+        expect(within(screen.getByRole("region", { name: "Logos" })).queryByRole("alert")).toBeNull();
     });
 
-    it("shows the account email read-only", () => {
-        render(<ProfileTab />);
-        const email = screen.getByTestId("profile-email");
-        expect(email).toHaveValue("ana@example.com");
-        expect(email).toBeDisabled();
+    it("saves only practice fields, keeping earlier edits in the same payload", async () => {
+        render(<PracticeProfile />);
+        await userEvent.type(screen.getByTestId("profile-bank-name-input"), "B");
+        await userEvent.type(screen.getByLabelText("Número de cuenta"), "1");
+
+        const payload = autosave.schedule.mock.calls.at(-1)?.[ 0 ];
+        expect(Object.keys(payload).sort()).toEqual([ "accountNumber", "altLogo", "bankName", "bankingKey", "logo", "nationalId" ]);
+        expect(payload).toMatchObject({ bankName: "B", accountNumber: "1" });
     });
 });
