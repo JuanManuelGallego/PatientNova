@@ -14,12 +14,13 @@ import { LINK_SECTION_ID, PROFILE_SECTION_ID, AVAILABILITY_SECTION_ID, type Save
 import { SlugModal } from "./SlugModal";
 import { SettingsSection } from "../SettingsSection";
 
-const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string; fixLabel: string; href: string }> = [
-    { key: "hasSlug", label: "Enlace de reserva definido", fixLabel: "Definir enlace", href: `#${LINK_SECTION_ID}` },
-    { key: "hasLegalIdentity", label: "Responsable de los datos y contacto directo", fixLabel: "Completar tu página pública", href: `#${PROFILE_SECTION_ID}` },
-    { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fixLabel: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` },
-    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fixLabel: "Ir a Tipos de cita", href: settingsHref("services", "appointment-types") },
-    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fixLabel: "Ir a Ubicaciones", href: settingsHref("services", "locations") },
+// The link item has no fix: "Crear enlace" sits just below it in this card.
+const READINESS_ITEMS: Array<{ key: keyof BookingSettings[ "readiness" ]; label: string; fix?: { label: string; href: string } }> = [
+    { key: "hasSlug", label: "Enlace de reserva definido" },
+    { key: "hasLegalIdentity", label: "Responsable de los datos y contacto directo", fix: { label: "Completar tu página pública", href: `#${PROFILE_SECTION_ID}` } },
+    { key: "hasAvailability", label: "Al menos una franja de disponibilidad semanal", fix: { label: "Agregar disponibilidad", href: `#${AVAILABILITY_SECTION_ID}` } },
+    { key: "hasBookableType", label: "Un tipo de cita disponible en línea", fix: { label: "Ir a Tipos de cita", href: settingsHref("services", "appointment-types") } },
+    { key: "hasBookableLocation", label: "Una ubicación disponible en línea", fix: { label: "Ir a Ubicaciones", href: settingsHref("services", "locations") } },
 ];
 
 /** Status, what is still missing, and the link with its QR: everything needed to start taking bookings. */
@@ -57,7 +58,12 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
     const qrRef = useRef<HTMLDivElement>(null);
     const statusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    useEffect(() => () => clearTimeout(statusTimer.current), []);
+    const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    useEffect(() => () => {
+        clearTimeout(statusTimer.current);
+        clearTimeout(copiedTimer.current);
+    }, []);
 
     function handleSaved(next: BookingSettings) {
         onSaved(next);
@@ -73,7 +79,8 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
         try {
             await navigator.clipboard.writeText(settings.bookingUrl);
             setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            clearTimeout(copiedTimer.current);
+            copiedTimer.current = setTimeout(() => setCopied(false), 2000);
         } catch {
             setError("No pudimos copiar el enlace. Cópialo manualmente.");
         }
@@ -121,6 +128,7 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
                         ? "Si la desactivas, tus pacientes aún pueden ver y cancelar sus citas."
                         : "Permite que tus pacientes reserven desde tu enlace público, según tu disponibilidad semanal."}
                 </span>
+                {toggleError && <InlineError message={toggleError} />}
                 {!ready && (
                     <>
                         {!canToggle && (
@@ -135,13 +143,8 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
                                         <Icon size={14} aria-hidden="true" style={{ color: ok ? "var(--c-success)" : "var(--c-warning-dark)" }} />
                                         <span style={{ fontWeight: ok ? 400 : 600 }}>{item.label}</span>
                                         <span className="sr-only">{ok ? "(listo)" : "(pendiente)"}</span>
-                                        {!ok && item.key === "hasSlug" && (
-                                            <button type="button" className="btn-text" onClick={() => setEditing(true)} data-testid="online-booking-readiness-slug">
-                                                {item.fixLabel}
-                                            </button>
-                                        )}
-                                        {!ok && item.key !== "hasSlug" && (
-                                            <Link href={item.href} style={{ color: "var(--c-brand)", textDecoration: "underline" }}>{item.fixLabel}</Link>
+                                        {!ok && item.fix && (
+                                            <Link href={item.fix.href} style={{ color: "var(--c-brand)", textDecoration: "underline" }}>{item.fix.label}</Link>
                                         )}
                                     </li>
                                 );
@@ -175,9 +178,6 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
                                     <ACTION_ICONS.edit size={14} /> Cambiar enlace
                                 </button>
                             </div>
-                            {!settings.bookingEnabled && (
-                                <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>El enlace no recibirá reservas hasta que actives la reserva en línea.</span>
-                            )}
                         </div>
                     </div>
                 ) : (
@@ -190,7 +190,6 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
                         </button>
                     </div>
                 )}
-                {toggleError && <InlineError message={toggleError} />}
                 {error && <InlineError message={error} />}
             </div>
             {editing && (

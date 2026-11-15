@@ -156,6 +156,23 @@ describe("OnlineBookingTab: status", () => {
         expect(screen.getByRole("alert")).toHaveTextContent("Completa la configuración");
     });
 
+    it("shows a toggle error next to the toggle, above the link", async () => {
+        settings = makeSettings({ ...WITH_LINK, readiness: READY });
+        updateSettings.mockRejectedValue(new Error("No se pudo activar."));
+        renderTab();
+        await user.click(screen.getByTestId("online-booking-enabled-toggle"));
+        await settle(0);
+        const alert = screen.getByRole("alert");
+        expect(alert.compareDocumentPosition(screen.getByTestId("online-booking-url")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("says only once that booking is off", () => {
+        settings = makeSettings({ ...WITH_LINK, bookingEnabled: false, readiness: READY });
+        renderTab();
+        expect(screen.getByTestId("online-booking-status")).toHaveTextContent("La reserva en línea está desactivada.");
+        expect(screen.queryByText(/El enlace no recibirá reservas/)).not.toBeInTheDocument();
+    });
+
     it("disables the toggle while the request is in flight", async () => {
         settings = makeSettings({ readiness: READY });
         let resolve!: (s: BookingSettings) => void;
@@ -314,6 +331,23 @@ describe("OnlineBookingTab: link", () => {
         await settle(0);
         expect(writeText).toHaveBeenCalledWith("https://app.test/book/dra");
         expect(screen.getByText("¡Copiado!")).toBeInTheDocument();
+    });
+
+    it("cancels the copy confirmation timer when the page closes", async () => {
+        vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+        settings = makeSettings(WITH_LINK);
+        const { unmount } = renderTab();
+        const set = vi.spyOn(globalThis, "setTimeout");
+        await user.click(screen.getByTestId("online-booking-copy"));
+        await settle(0);
+        const copyTimer = set.mock.results[ set.mock.calls.findIndex((c) => c[ 1 ] === 2000) ]?.value;
+        set.mockRestore();
+        expect(copyTimer).toBeDefined();
+
+        const clear = vi.spyOn(globalThis, "clearTimeout");
+        unmount();
+        expect(clear).toHaveBeenCalledWith(copyTimer);
+        clear.mockRestore();
     });
 });
 
@@ -634,18 +668,23 @@ describe("OnlineBookingTab: status summary", () => {
         expect(within(overview).getByTestId("online-booking-qr")).toBeInTheDocument();
     });
 
-    it("opens the link modal from the checklist and ticks the item once saved", async () => {
-        settings = makeSettings({ readiness: { ...READY, hasSlug: false } });
-        updateSettings.mockImplementation(async (body) => ({ ...settings, ...body, bookingUrl: "https://app.test/book/test-user", readiness: READY }));
+    it("has one way to create the link, and ticks only that item once saved", async () => {
+        settings = makeSettings({ readiness: { ...READY, hasSlug: false, hasAvailability: false } });
+        updateSettings.mockImplementation(async (body) => ({
+            ...settings, ...body, bookingUrl: "https://app.test/book/test-user", readiness: { ...READY, hasAvailability: false },
+        }));
         renderTab();
-        await user.click(screen.getByTestId("online-booking-readiness-slug"));
-        expect(screen.getByTestId("online-booking-slug-input")).toHaveValue("test-user");
+        const slugItem = () => screen.getByText("Enlace de reserva definido").closest("li")!;
+        expect(within(slugItem()).queryByRole("button")).toBeNull();
+        expect(within(slugItem()).queryByRole("link")).toBeNull();
+
+        await user.click(screen.getByTestId("online-booking-slug-create"));
         await user.click(screen.getByTestId("online-booking-slug-save"));
         await settle(0);
 
-        const overview = screen.getByRole("region", { name: "Reserva en línea" });
-        expect(within(overview).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/test-user");
-        expect(screen.queryByTestId("online-booking-readiness")).not.toBeInTheDocument();
+        expect(within(screen.getByRole("region", { name: "Reserva en línea" })).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/test-user");
+        expect(slugItem()).toHaveTextContent("(listo)");
+        expect(screen.getByText("Al menos una franja de disponibilidad semanal").closest("li")).toHaveTextContent("(pendiente)");
     });
 
     it("points the checklist at sections further down the page", () => {
