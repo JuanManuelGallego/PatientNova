@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileTab as Tab } from "@/src/components/Settings/ProfileTab";
@@ -72,6 +72,20 @@ describe("ProfileTab", () => {
 
         const dialog = screen.getByTestId("consent-delete-dialog");
         expect(dialog).toHaveTextContent("No se pudo eliminar");
+    });
+
+    it("stays open while deleting, so a late failure is still shown", async () => {
+        let fail: (e: Error) => void = () => {};
+        consent.deleteDocument.mockReturnValue(new Promise((_, reject) => { fail = reject; }));
+        render(<ProfileTab />);
+        await userEvent.click(within(consentSection()).getByRole("button", { name: /Eliminar/ }));
+        await userEvent.click(screen.getByTestId("consent-delete-dialog-confirm-button"));
+
+        await userEvent.keyboard("{Escape}");
+        expect(screen.getByTestId("consent-delete-dialog")).toBeInTheDocument();
+
+        await act(async () => fail(new Error("No se pudo eliminar el formulario de consentimiento.")));
+        expect(screen.getByTestId("consent-delete-dialog")).toHaveTextContent("No se pudo eliminar el formulario de consentimiento.");
     });
 
     it("shows an autosave error only in the section being edited", async () => {

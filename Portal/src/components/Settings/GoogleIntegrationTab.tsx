@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useDisconnectGoogle } from "@/src/api/google/useDisconnectGoogle";
+import { mutationErrorMessage } from "@/src/api/base/useApiMutation";
 import { useVerifyGoogleConnection } from "@/src/api/google/useVerifyGoogleConnection";
 import { DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { InlineError } from "@/src/components/Info/InlineError";
@@ -24,6 +25,8 @@ export function GoogleIntegrationTab() {
   const [ verifiedNotice, setVerifiedNotice ] = useState<string | null>(null);
   const [ confirmingDisconnect, setConfirmingDisconnect ] = useState(false);
   const [ dialogError, setDialogError ] = useState<string | null>(null);
+  // Our own flag, set before the request starts, so the dialog can't be dismissed mid-request.
+  const [ disconnectPending, setDisconnectPending ] = useState(false);
   const connection = data;
 
   const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
@@ -44,12 +47,15 @@ export function GoogleIntegrationTab() {
 
   const handleDisconnect = useCallback(async () => {
     setDialogError(null);
+    setDisconnectPending(true);
     try {
       await disconnect();
     } catch (cause) {
       // Stays open: the account is still connected and the provider can retry or go back.
-      setDialogError(cause instanceof Error ? cause.message : "No se pudo desconectar la cuenta de Google.");
+      setDialogError(mutationErrorMessage(cause, "No se pudo desconectar la cuenta de Google."));
       return;
+    } finally {
+      setDisconnectPending(false);
     }
     setConfirmingDisconnect(false);
     await fetchConnection();
@@ -205,10 +211,14 @@ export function GoogleIntegrationTab() {
           title="¿Desconectar tu cuenta de Google?"
           confirmLabel="Desconectar"
           loadingLabel="Desconectando…"
-          loading={disconnecting}
+          loading={disconnecting || disconnectPending}
           error={dialogError}
           testId="google-disconnect-dialog"
-          onClose={() => { setConfirmingDisconnect(false); setDialogError(null); }}
+          onClose={() => {
+            if (disconnectPending) return;
+            setConfirmingDisconnect(false);
+            setDialogError(null);
+          }}
           onConfirm={handleDisconnect}
         >
           <p className="modal-confirm__text">

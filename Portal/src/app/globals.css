@@ -3926,13 +3926,16 @@ tr:hover td {
   gap: 20px;
 }
 
+/* One row at every width: the status never wraps to its own line, so content doesn't jump when "Guardado" appears. */
 .settings-section__header {
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .settings-section__heading {
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .settings-section .dash-card__title {
@@ -3950,6 +3953,7 @@ tr:hover td {
   align-items: center;
   gap: 12px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .settings-list {

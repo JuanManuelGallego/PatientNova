@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GoogleIntegrationTab as Tab } from "@/src/components/Settings/GoogleIntegrationTab";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
+import { ApiMutationError } from "@/src/api/base/useApiMutation";
 import type { GoogleConnectionStatus } from "@/src/types/Google";
 
 let connectionState: { data?: Partial<GoogleConnectionStatus>; loading: boolean; error: string | null };
@@ -160,7 +161,7 @@ describe("GoogleIntegrationTab", () => {
   });
 
   it("keeps the dialog open with the error when disconnecting fails", async () => {
-    disconnect.mockRejectedValue(new Error("No se pudo desconectar"));
+    disconnect.mockRejectedValue(new ApiMutationError("No se pudo desconectar", 500));
     connectionState.data = { status: "connected", connected: true };
     render(<GoogleIntegrationTab />);
     await userEvent.click(screen.getByTestId("google-disconnect-button"));
@@ -168,6 +169,33 @@ describe("GoogleIntegrationTab", () => {
 
     expect(screen.getByTestId("google-disconnect-dialog")).toHaveTextContent("No se pudo desconectar");
     expect(screen.getByTestId("google-disconnect-dialog-confirm-button")).toBeEnabled();
+  });
+
+  it("says the connection failed instead of the browser's English text", async () => {
+    disconnect.mockRejectedValue(new TypeError("Failed to fetch"));
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    const dialog = screen.getByTestId("google-disconnect-dialog");
+    expect(dialog).toHaveTextContent("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
+    expect(dialog).not.toHaveTextContent("Failed to fetch");
+  });
+
+  it("stays open while disconnecting, so a late failure is still shown", async () => {
+    let fail: (e: Error) => void = () => {};
+    disconnect.mockReturnValue(new Promise((_, reject) => { fail = reject; }));
+    connectionState.data = { status: "connected", connected: true };
+    render(<GoogleIntegrationTab />);
+    await userEvent.click(screen.getByTestId("google-disconnect-button"));
+    await userEvent.click(screen.getByTestId("google-disconnect-dialog-confirm-button"));
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByTestId("google-disconnect-dialog")).toBeInTheDocument();
+
+    await act(async () => fail(new ApiMutationError("No se pudo desconectar", 500)));
+    expect(screen.getByTestId("google-disconnect-dialog")).toHaveTextContent("No se pudo desconectar");
   });
 
   it("never uses the browser's confirm", async () => {

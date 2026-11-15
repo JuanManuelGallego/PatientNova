@@ -89,6 +89,8 @@ export function ProfileTab() {
   } = useConsentDocument();
   const [ consentError, setConsentError ] = useState<string | null>(null);
   const [ confirmingDelete, setConfirmingDelete ] = useState(false);
+  // Set before the request starts, so the dialog can't be dismissed mid-request.
+  const [ deleting, setDeleting ] = useState(false);
 
   const consentRef = useRef<HTMLInputElement>(null);
 
@@ -165,14 +167,17 @@ export function ProfileTab() {
   }
 
   async function handleConsentDelete() {
+    setConsentError(null);
+    setDeleting(true);
     try {
-      setConsentError(null);
       await deleteDocument();
       setConfirmingDelete(false);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Error al eliminar el documento";
       setConsentError(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -440,10 +445,14 @@ export function ProfileTab() {
           title="¿Eliminar el formulario de consentimiento?"
           confirmLabel="Eliminar"
           loadingLabel="Eliminando…"
-          loading={docLoading}
+          loading={docLoading || deleting}
           error={consentError}
           testId="consent-delete-dialog"
-          onClose={() => { setConfirmingDelete(false); setConsentError(null); }}
+          onClose={() => {
+            if (deleting) return;
+            setConfirmingDelete(false);
+            setConsentError(null);
+          }}
           onConfirm={handleConsentDelete}
         >
           <p className="modal-confirm__text">

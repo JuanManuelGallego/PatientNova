@@ -1,4 +1,5 @@
 import { useChangePassword } from "@/src/api/auth/useChangePassword";
+import { mutationErrorMessage } from "@/src/api/base/useApiMutation";
 import { SuccessBanner } from "@/src/components/Info/SuccessBanner";
 import { FieldError, InlineError } from "@/src/components/Info/InlineError";
 import { ACTION_ICONS } from "@/src/config/icons";
@@ -48,7 +49,7 @@ export function SecurityTab() {
       void refreshUser();
     } catch (err) {
       // The hook's `error` is still the previous value here; the thrown one is current.
-      setError(err instanceof Error ? err.message : "Error al cambiar contraseña");
+      setError(mutationErrorMessage(err, "Error al cambiar contraseña"));
     }
   }
 

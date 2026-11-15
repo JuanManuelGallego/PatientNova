@@ -6,6 +6,14 @@ import { ApiClientError, parseEnvelope } from "./apiClients";
 /** Same error as the patient-facing clients: Spanish `message`, raw server text in `details`. */
 export { ApiClientError as ApiMutationError };
 
+/** The Spanish text to show for an error thrown by `mutate`: never a browser's English "Failed to fetch". */
+export function mutationErrorMessage(err: unknown, fallback: string): string {
+    if (err instanceof ApiClientError) return err.message;
+    // Only ApiClientError carries curated Spanish; a fetch TypeError / abort is a connection failure.
+    if (err instanceof Error) return toSpanishMessage(0);
+    return fallback;
+}
+
 /**
  * Generic hook for data mutations (POST, PATCH, PUT, DELETE).
  * Call `mutate(url, body?)` to execute the request.
@@ -32,11 +40,7 @@ export function useApiMutation<TOutput = void>(
             });
             return await parseEnvelope<TOutput>(res);
         } catch (err) {
-            // Only ApiClientError carries curated Spanish; a fetch TypeError / abort is a connection failure.
-            const msg = err instanceof ApiClientError ? err.message
-                : err instanceof Error ? toSpanishMessage(0)
-                : errorMessage;
-            setError(msg);
+            setError(mutationErrorMessage(err, errorMessage));
             throw err;
         } finally {
             inflight.current = false;

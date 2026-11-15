@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityTab } from "@/src/components/Settings/SecurityTab";
+import { ApiMutationError } from "@/src/api/base/useApiMutation";
 
 const changePassword = vi.fn();
 const refreshUser = vi.fn();
@@ -44,13 +45,24 @@ describe("SecurityTab", () => {
     });
 
     it("shows the server's message when the change is refused", async () => {
-        changePassword.mockRejectedValue(new Error("La contraseña actual es incorrecta"));
+        changePassword.mockRejectedValue(new ApiMutationError("La contraseña actual es incorrecta", 401));
         render(<SecurityTab />);
         await userEvent.type(screen.getByTestId("security-current-password-input"), "OldPass1!");
         await userEvent.type(screen.getByTestId("security-new-password-input"), "NewPass1!");
         await userEvent.type(screen.getByTestId("security-confirm-password-input"), "NewPass1!");
         await userEvent.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
         expect(screen.getByRole("alert")).toHaveTextContent("La contraseña actual es incorrecta");
+    });
+
+    it("says the connection failed instead of the browser's English text", async () => {
+        changePassword.mockRejectedValue(new TypeError("Failed to fetch"));
+        render(<SecurityTab />);
+        await userEvent.type(screen.getByTestId("security-current-password-input"), "OldPass1!");
+        await userEvent.type(screen.getByTestId("security-new-password-input"), "NewPass1!");
+        await userEvent.type(screen.getByTestId("security-confirm-password-input"), "NewPass1!");
+        await userEvent.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
+        expect(screen.getByRole("alert")).toHaveTextContent("No pudimos conectar con el servidor. Revisa tu conexión a internet.");
+        expect(screen.getByRole("alert")).not.toHaveTextContent("Failed to fetch");
     });
 
     it("frames the form as the Contraseña section", () => {
