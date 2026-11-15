@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const downloadMock = vi.hoisted(() => vi.fn());
 vi.mock("@/src/utils/appointmentCalendar", () => ({ downloadAppointmentIcs: downloadMock }));
+vi.mock("@/src/utils/TimeUtils", async (importOriginal) => ({
+    ...await importOriginal<typeof import("@/src/utils/TimeUtils")>(),
+    browserTimezone: () => "America/Bogota",
+}));
 
 import { BookingConfirmationPage } from "@/src/components/PublicBooking/BookingConfirmationPage";
 
@@ -65,7 +69,7 @@ describe("BookingConfirmationPage", () => {
         expect(calls("/booking-confirmations/confirm")).toHaveLength(0);
     });
 
-    it("unconfirmed: shows provider, time in the patient zone, place and the confirm button", async () => {
+    it("unconfirmed: shows provider, time in the browser zone, place and the confirm button", async () => {
         render(<BookingConfirmationPage token={TOKEN} />);
         expect(await screen.findByText("Dra. Ana Pública")).toBeInTheDocument();
         expect(screen.getByTestId("confirmation-time")).toHaveTextContent(/10:00/);

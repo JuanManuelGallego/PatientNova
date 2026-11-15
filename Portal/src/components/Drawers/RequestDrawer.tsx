@@ -245,7 +245,6 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
                 : <Row icon={null} label="Correo (verificado)" value={request.email} />}
               <Row icon={null} label="Nombre (sin verificar)" value={`${request.name} ${request.lastName}`} />
               {!request.verifiedPhone && <Row icon={null} label="Teléfono (sin verificar)" value={request.phone ?? "—"} />}
-              <Row icon={null} label="Zona horaria" value={request.patientTimezone} />
               <Row
                 icon={null}
                 label="Consentimiento"

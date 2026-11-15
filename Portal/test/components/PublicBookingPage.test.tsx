@@ -242,7 +242,6 @@ describe("PublicBookingPage", () => {
         const morning = await toTimes(user);
         expect(morning).toHaveTextContent(/10:00/);
         expect(screen.getByRole("list", { name: "Tarde" })).toHaveTextContent(/03:00/);
-        expect(screen.getByText(/Horas en tu zona horaria/)).toHaveTextContent(/Tokio|Tokyo/);
 
         const url = new URL(String(fetchMock.mock.calls.find(([ u ]) => String(u).includes("/slots?"))![ 0 ]));
         expect(url.searchParams.get("from")).toBe(addCalendarDays(tokyoToday, -2));

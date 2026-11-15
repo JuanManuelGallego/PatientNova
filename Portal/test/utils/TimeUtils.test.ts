@@ -14,7 +14,6 @@ import {
     setDisplayTimezone,
     toWallClock,
     fromWallClock,
-    fmtTimezoneLabel,
     getDisplayTimezone,
     browserTimezone,
     subscribeDisplayTimezone,
@@ -179,9 +178,6 @@ describe("display timezone (provider's, not the browser's)", () => {
         expect(toWallClock(iso).slice(11)).toBe("06:00:00");
     });
 
-    it("labels the timezone with its offset", () => {
-        expect(fmtTimezoneLabel("America/Bogota")).toBe("Bogota (GMT-5)");
-    });
 });
 
 describe("display timezone store", () => {

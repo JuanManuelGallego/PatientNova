@@ -6,8 +6,6 @@ import esEs from "antd/locale/es_ES";
 
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
-import { TimezoneFooter } from "@/src/components/DateTimePicker";
-import { browserTimezone } from "@/src/utils/TimeUtils";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
 
@@ -65,7 +63,6 @@ export function AppointmentDateTimePicker({
 
   // Business hours are wall-clock hours in the provider's timezone (see ZonedDatePicker).
   const now = () => nowInZone(timezone);
-  const showZone = timezone !== browserTimezone();
 
   const handleChange = (selectedDate: Dayjs | null) => {
     if (!selectedDate) return;
@@ -138,7 +135,6 @@ export function AppointmentDateTimePicker({
             disabledSeconds: () => [],
           };
         }}
-        renderExtraFooter={showZone ? () => <TimezoneFooter timezone={timezone} /> : undefined}
         style={{ width: "100%" }}
       />
     </ConfigProvider>

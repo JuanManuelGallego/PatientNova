@@ -1,4 +1,4 @@
-import { COMMON_TIMEZONES, fmtTime, fmtTimezoneLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
+import { fmtTime, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
 import type { LoginChannel, PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
 
 
@@ -163,8 +163,4 @@ const COP = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP",
 
 export function fmtCop(value: number): string {
     return COP.format(value);
-}
-
-export function timezoneName(timezone: string): string {
-    return COMMON_TIMEZONES.find((z) => z.value === timezone)?.label ?? fmtTimezoneLabel(timezone);
 }

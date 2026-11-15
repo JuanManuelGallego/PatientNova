@@ -13,7 +13,7 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 import type { PortalSession } from "@/src/types/PortalSession";
 import { browserTimezone } from "@/src/utils/TimeUtils";
 import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
-import { fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
+import { fmtContact, fmtLongDayTime } from "@/src/utils/publicBooking";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
@@ -226,7 +226,6 @@ function UpcomingAppointments({ slug, provider, onSessionLost }: UpcomingAppoint
                         <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancellingRequest(r); }} />
                     </>
                 )}
-                <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
                 {cancellingRequest && (
                     <CancelRequestDialog
                         request={cancellingRequest}
@@ -301,7 +300,6 @@ function PendingRequestsOnly({ onSessionLost }: { onSessionLost: () => void }) {
             {!!requests?.length && (
                 <>
                     <RequestList requests={requests} timezone={timezone} onCancel={(r) => { setStatus(null); setCancelling(r); }} />
-                    <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
                 </>
             )}
             {cancelling && (

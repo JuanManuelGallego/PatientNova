@@ -48,15 +48,6 @@ function getDisplayTimezone(): string {
     return displayTimezone ?? browserTimezone();
 }
 
-/** Short label for a timezone, e.g. "Bogota (GMT-5)". */
-function fmtTimezoneLabel(timezone: string = getDisplayTimezone()): string {
-    const city = timezone.split("/").pop()?.replace(/_/g, " ") ?? timezone;
-    const offset = new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "shortOffset" })
-        .formatToParts(new Date())
-        .find((p) => p.type === "timeZoneName")?.value;
-    return offset ? `${city} (${offset})` : city;
-}
-
 function fmtTimestamp(iso: string | undefined, timezone?: string): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {
@@ -501,7 +492,6 @@ export {
     nextCalendarDay,
     getDisplayTimezone,
     browserTimezone,
-    fmtTimezoneLabel,
     getColombianHolidays,
     getAge,
     MONTH_NAMES_ES,

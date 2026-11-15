@@ -504,7 +504,7 @@ describe("OnlineBookingTab: rules", () => {
             "Ninguno", "1 hora antes", "1 día antes", "Mañana del día de la cita", "Mañana del día anterior", "Tarde del día anterior",
         ]);
         await user.click(screen.getByRole("option", { name: "Tarde del día anterior" }));
-        expect(field).toHaveTextContent("la tarde del día anterior (18:00, hora del paciente)");
+        expect(field).toHaveTextContent("la tarde del día anterior (18:00)");
         await settle();
         expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ portalReminderTiming: "PREVIOUS_DAY_EVENING" }));
     });

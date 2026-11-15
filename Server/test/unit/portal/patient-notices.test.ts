@@ -162,7 +162,7 @@ describe('renderPatientNotice', () => {
     it('confirm-link email names the time zone of the time and tells a stranger to ignore it', () => {
       for (const approvalRequired of [ false, true ]) {
         const { body } = emailOf('confirm-link', { ...PARAMS['confirm-link'], approvalRequired });
-        expect(body).toMatch(/del miércoles, 20 de enero de 2027, 10:00 a\. m\. \(hora de America\/Bogota\) todavía no/);
+        expect(body).toMatch(/del miércoles, 20 de enero de 2027, 10:00 a\. m\. todavía no/);
         expect(body).toContain('Si no hiciste esta reserva, ignora este mensaje.');
       }
     });

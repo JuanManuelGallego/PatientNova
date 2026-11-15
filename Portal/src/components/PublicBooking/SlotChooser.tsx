@@ -5,7 +5,7 @@ import { ArrowRight, CalendarDays } from "lucide-react";
 import { useHistoryOverlay } from "@/src/hooks/useHistoryOverlay";
 import type { PublicSlot } from "@/src/types/PublicBooking";
 import { fmtTime } from "@/src/utils/TimeUtils";
-import { fmtDayParts, fmtShortDayTime, lastDayOfMonth, monthOf, timezoneName } from "@/src/utils/publicBooking";
+import { fmtDayParts, fmtShortDayTime, lastDayOfMonth, monthOf } from "@/src/utils/publicBooking";
 import { MonthCalendar } from "./MonthCalendar";
 import { ErrorState } from "./PublicStates";
 import { PublicSheet } from "./PublicSheet";
@@ -92,7 +92,6 @@ export function SlotChooser({ picker }: { picker: SlotChooserState }) {
                     </div>
                 </>
             )}
-            <p className={styles.note}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             {calendarSheet.open && (
                 <PublicSheet title="Calendario de horarios" onClose={calendarSheet.hide}>
                     <div className={styles.sheetCalendar}>

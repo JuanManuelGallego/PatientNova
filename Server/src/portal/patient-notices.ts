@@ -65,7 +65,6 @@ const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
 const emailTimes = (p: Timed) => ({
   providerName: p.providerName,
   whenLocal: formatWhen(p.at, p.timezone),
-  timezone: p.timezone,
 });
 
 const slotVariables = (p: Timed) => ({

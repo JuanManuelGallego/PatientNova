@@ -43,7 +43,6 @@ import {
     timeToMinutes,
 } from "@/src/utils/bookingAvailability";
 import { isE164, normalizePhone } from "@/src/utils/publicBooking";
-import { fmtTimezoneLabel } from "@/src/utils/TimeUtils";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
@@ -138,7 +137,6 @@ export function OnlineBookingTab() {
             <LinkSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <PublicProfileSection settings={current} save={updateSettings} onSaved={setCurrent} />
             <AvailabilitySection
-                timezone={current.timezone}
                 onSaved={async () => {
                     const fresh = await fetchSettings();
                     if (fresh) setCurrent(fresh);
@@ -549,7 +547,7 @@ function TimeField({ value, onChange, label, invalid, testId }: {
     );
 }
 
-function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved: () => Promise<void> }) {
+function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> }) {
     const { availability, loading, error: loadError } = useFetchAvailability();
     const { saveAvailability } = useSaveAvailability();
     const [ draft, setDraft ] = useState<AvailabilityRule[] | null>(null);
@@ -605,7 +603,7 @@ function AvailabilitySection({ timezone, onSaved }: { timezone: string; onSaved:
             </CardHeader>
             <div className="dash-card__body form-stack" data-testid="online-booking-availability">
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
-                    Horarios en los que los pacientes pueden reservar, en tu zona horaria ({fmtTimezoneLabel(timezone)}).
+                    Horarios en los que los pacientes pueden reservar.
                     Las citas y bloqueos de tu agenda se descuentan automáticamente.
                 </span>
                 {loadError && <ErrorLine message={loadError} />}
@@ -828,7 +826,7 @@ function reminderTimingHint(timing: PortalReminderTiming): string {
     if (!preset) return "Se envía por el canal de cada paciente.";
     const { label, clock } = REMINDER_TYPE_CONFIG[ preset.type ];
     const when = clock
-        ? `la ${label.toLowerCase()} (${clock.hour}:${String(clock.minute).padStart(2, "0")}, hora del paciente)`
+        ? `la ${label.toLowerCase()} (${clock.hour}:${String(clock.minute).padStart(2, "0")})`
         : `${label} de la cita`;
     return `Se envía ${when}, por el canal de cada paciente. Si la cita se reserva o se mueve después de ese momento, no se envía.`;
 }
