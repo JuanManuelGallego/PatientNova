@@ -15,6 +15,7 @@ import {
 } from '../brevo/email-templates.js';
 import type { DispatchOpts } from '../scheduler/dispatch.js';
 import type { PatientRoute } from './patient-route.js';
+import { zoneLabel } from '../utils/time/time-utils.js';
 
 export interface ProviderContact {
   phone: string | null;
@@ -34,6 +35,7 @@ interface Timed {
   providerName: string;
   at: Date;
   timezone: string;
+  patientZoneUnknown?: boolean;
 }
 
 export interface PatientNoticeParams {
@@ -64,7 +66,7 @@ const oneLine = (value: string) => value.replace(/\s+/g, ' ').trim();
 
 const emailTimes = (p: Timed) => ({
   providerName: p.providerName,
-  whenLocal: formatWhen(p.at, p.timezone),
+  whenLocal: p.patientZoneUnknown ? `${formatWhen(p.at, p.timezone)} (${zoneLabel(p.timezone)})` : formatWhen(p.at, p.timezone),
 });
 
 const slotVariables = (p: Timed) => ({

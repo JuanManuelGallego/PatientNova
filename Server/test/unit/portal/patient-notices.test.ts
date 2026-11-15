@@ -82,6 +82,21 @@ describe('renderPatientNotice', () => {
     expect(render(kind, WHATSAPP).contentSid).toBe(sid);
   });
 
+  it.each(KINDS)('%s email names the zone only when the patient zone is unknown', (kind) => {
+    const known = render(kind, EMAIL).body!;
+    expect(known).not.toContain('hora de');
+    const unknown = renderPatientNotice(kind, { ...PARAMS[kind], patientZoneUnknown: true } as never, EMAIL).body!;
+    expect(unknown).toContain('(hora de Colombia)');
+  });
+
+  it('never names the zone in WhatsApp or SMS', () => {
+    for (const kind of KINDS) {
+      for (const route of [ WHATSAPP, SMS ]) {
+        expect(textOf(renderPatientNotice(kind, { ...PARAMS[kind], patientZoneUnknown: true } as never, route))).not.toContain('hora de');
+      }
+    }
+  });
+
   it('fills the variables each approved template expects', () => {
     expect(render('confirmation', WHATSAPP).contentVariables).toEqual({
       '1': 'Dra. Ana Pública',

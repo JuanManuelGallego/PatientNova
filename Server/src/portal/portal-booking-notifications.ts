@@ -113,6 +113,7 @@ function patientMessage(appt: BookedAppointment, job: BookingNotificationJob): M
     providerName: providerDisplayName(appt.user),
     at: appt.startAt,
     timezone: appt.patientTimezone ?? appt.user.timezone,
+    patientZoneUnknown: appt.patientTimezone === null,
   };
 
   let opts: DispatchOpts;

@@ -95,3 +95,32 @@ export function getCurrentMonthBoundsInTz(timezone: string, now: Date = new Date
   const local = localNow(timezone, now);
   return { start: local.startOf('month').toJSDate(), end: local.endOf('month').toJSDate() };
 }
+
+/**
+ * Places for the zones providers pick in Profile settings (`COMMON_TIMEZONES` in
+ * `Portal/src/utils/TimeUtils.ts`; keep both in step). Other zones fall back to their city.
+ */
+const ZONE_PLACES: Record<string, string> = {
+  'America/Bogota': 'Colombia',
+  'America/Lima': 'Perú',
+  'America/Guayaquil': 'Ecuador',
+  'America/Caracas': 'Venezuela',
+  'America/La_Paz': 'Bolivia',
+  'America/Santiago': 'Chile',
+  'America/Sao_Paulo': 'Brasil',
+  'America/Argentina/Buenos_Aires': 'Argentina',
+  'America/Mexico_City': 'Ciudad de México',
+  'America/New_York': 'Nueva York',
+  'America/Chicago': 'Chicago',
+  'America/Denver': 'Denver',
+  'America/Los_Angeles': 'Los Ángeles',
+  'Europe/Madrid': 'España',
+  'Europe/London': 'Londres',
+};
+
+/** Patient-facing name of a zone, e.g. "hora de Colombia". */
+export function zoneLabel(timezone: string): string {
+  if (timezone === 'UTC') return 'hora UTC';
+  const place = ZONE_PLACES[timezone] ?? timezone.split('/').pop()!.replace(/_/g, ' ');
+  return `hora de ${place}`;
+}

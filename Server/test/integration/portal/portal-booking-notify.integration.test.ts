@@ -62,7 +62,7 @@ describe('patient confirmation', () => {
   it('falls back to the provider zone when no patient zone was stored', async () => {
     const { appt } = await bookedAppointment({ startAt: '2027-01-20T15:00:00Z', patientTimezone: null });
     await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-confirmation' });
-    expect(mocks.dispatch.mock.calls[0]![1].body).toContain('10:00 a. m.');
+    expect(mocks.dispatch.mock.calls[0]![1].body).toContain('10:00 a. m. (hora de Colombia)');
   });
 });
 
