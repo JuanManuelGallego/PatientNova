@@ -164,7 +164,6 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
                 <ContactChoiceField channels={channels} channel={channel} email={email} whatsapp={whatsapp} invalid={shown.contact} inputRef={contactRef}
                     onChannel={chooseChannel} onEmail={(value) => onForm({ email: value })} onWhatsapp={(value) => onForm({ whatsapp: value })}
                     onTouched={() => setTouched((t) => ({ ...t, contact: true }))} />
-                <p className={styles.quiet} data-testid="access-notice">{accessNotice(provider)}</p>
                 {byEmail && (
                     <div>
                         <div className="form-label">
@@ -176,18 +175,21 @@ export function PatientDetailsStep({ slug, provider, type, location, slot, timez
                         {shown.phone && <span id={errorId("phone")} className={portal.fieldError}>{PHONE_FORMAT_HINT}</span>}
                     </div>
                 )}
-                <ConsentNotice provider={provider} />
-                <div>
-                    <label className={portal.checkbox}>
-                        <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => onForm({ consent: e.target.checked })}
-                            aria-invalid={shown.consent || undefined} aria-describedby={shown.consent ? errorId("consent") : undefined} />
-                        <ConsentLabel provider={provider} />
-                    </label>
-                    {shown.consent && (
-                        <span id={errorId("consent")} className={`${portal.fieldError} ${portal.checkboxError}`}>
-                            Marca la autorización para continuar, o contacta directamente a la clínica.
-                        </span>
-                    )}
+                <div className={portal.legal}>
+                    <p className={portal.fine} data-testid="access-notice">{accessNotice(provider)}</p>
+                    <ConsentNotice provider={provider} className={portal.fine} />
+                    <div>
+                        <label className={portal.checkbox}>
+                            <input ref={consentRef} type="checkbox" checked={consent} onChange={(e) => onForm({ consent: e.target.checked })}
+                                aria-invalid={shown.consent || undefined} aria-describedby={shown.consent ? errorId("consent") : undefined} />
+                            <ConsentLabel provider={provider} />
+                        </label>
+                        {shown.consent && (
+                            <span id={errorId("consent")} className={`${portal.fieldError} ${portal.checkboxError}`}>
+                                Marca la autorización para continuar, o contacta directamente a la clínica.
+                            </span>
+                        )}
+                    </div>
                 </div>
                 {provider.selfServe && <p className={styles.quiet} data-testid="booking-policy">{fmtBookingPolicy(provider.reschedulePolicy)}</p>}
                 <div className={portal.captcha}>

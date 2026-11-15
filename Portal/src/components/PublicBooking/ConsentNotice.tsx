@@ -4,11 +4,11 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 import styles from "./Portal.module.css";
 
 /** What the patient reads before authorizing. It stays beside the checkbox, never behind a link. */
-export function ConsentNotice({ provider }: { provider: PublicProvider }) {
+export function ConsentNotice({ provider, className = styles.lead }: { provider: PublicProvider; className?: string }) {
     return (
         <>
-            <p className={styles.lead} data-testid="consent-controller">{controllerLine(provider)}</p>
-            <p className={styles.lead} data-testid="consent-notice">{consentNotice(provider)}</p>
+            <p className={className} data-testid="consent-controller">{controllerLine(provider)}</p>
+            <p className={className} data-testid="consent-notice">{consentNotice(provider)}</p>
         </>
     );
 }

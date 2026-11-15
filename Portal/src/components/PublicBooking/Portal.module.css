@@ -235,6 +235,30 @@
   font-weight: 600;
 }
 
+/* The privacy notice and authorization of the booking form: one block after the fields, set a step below them. */
+.legal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-gray-200);
+}
+
+.fine {
+  margin: 0;
+  max-width: 38rem;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-gray-600);
+}
+
+.legal .checkbox {
+  max-width: 38rem;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--c-gray-700);
+}
+
 .account {
   display: flex;
   align-items: center;
