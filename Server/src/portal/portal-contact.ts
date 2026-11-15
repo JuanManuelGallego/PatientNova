@@ -33,19 +33,17 @@ export function requestContact(request: { contactChannel: Channel; email: string
   return value ? { channel: request.contactChannel, value } : null;
 }
 
-export function newPatientContact(contact: PortalContact, typedPhone: string | null | undefined) {
+/** A new portal patient's contact is only the one that confirmed the link: never a number typed in the form. */
+export function newPatientContact(contact: PortalContact) {
   switch (contact.channel) {
     case Channel.WHATSAPP:
       return { whatsappNumber: contact.value, reminderChannel: Channel.WHATSAPP };
     case Channel.SMS:
       return { smsNumber: contact.value, reminderChannel: Channel.SMS };
     case Channel.EMAIL:
-      return { email: contact.value, whatsappNumber: typedPhone || null, reminderChannel: Channel.EMAIL };
+      return { email: contact.value, reminderChannel: Channel.EMAIL };
   }
 }
-
-export const typedPhoneIsUnverified = (contact: PortalContact, typedPhone: string | null | undefined): boolean =>
-  !isPhoneContact(contact) && !!typedPhone;
 
 export function sessionContactView(contact: PortalContact) {
   return {

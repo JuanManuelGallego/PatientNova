@@ -244,7 +244,6 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
                 ? <Row icon={null} label={`${request.contactChannel === "SMS" ? "SMS" : "WhatsApp"} (verificado)`} value={request.verifiedPhone} testId="request-verified-phone" />
                 : <Row icon={null} label="Correo (verificado)" value={request.email} />}
               <Row icon={null} label="Nombre (sin verificar)" value={`${request.name} ${request.lastName}`} />
-              {!request.verifiedPhone && <Row icon={null} label="Teléfono (sin verificar)" value={request.phone ?? "—"} />}
               <Row
                 icon={null}
                 label="Consentimiento"

@@ -384,7 +384,6 @@ model BookingRequest {
   verifiedPhone     String? @db.Text
   name              String  @db.Text
   lastName          String  @db.Text
-  phone             String? @db.Text
   emailHash         String? @db.VarChar(64)
   verifiedPhoneHash String? @db.VarChar(64)
 

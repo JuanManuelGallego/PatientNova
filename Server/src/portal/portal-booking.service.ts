@@ -35,7 +35,7 @@ import { portalActionContext } from './portal-appointment-actions.js';
 import { portalRequestService } from './portal-request.service.js';
 import type { PortalRequestDto } from './portal-request.dto.js';
 import { PortalBookingLimitError, PortalBookingUnavailableError, PortalPatientDetailsRequiredError, SlotUnavailableError } from './portal-booking.errors.js';
-import { newPatientContact, typedPhoneIsUnverified } from './portal-contact.js';
+import { newPatientContact } from './portal-contact.js';
 import { enqueuePortalNotifications, type PortalEvent } from './portal-booking-notifications.js';
 import { enqueueProvisionMeet, meetingPendingMode } from './portal-meeting.service.js';
 import type { PortalSessionContext } from './portal-session.middleware.js';
@@ -136,7 +136,6 @@ export async function createPortalAppointmentWithin(tx: TransactionClient, input
 export interface TypedPatient {
   name: string;
   lastName: string;
-  phone?: string | null | undefined;
 }
 
 export interface IdentityBookingInput {
@@ -160,9 +159,9 @@ async function createPortalPatient(tx: TransactionClient, identity: PortalIdenti
   const patient = await createPatientWithin(tx, {
     name: typed.name,
     lastName: typed.lastName,
-    ...newPatientContact(identity.contact, typed.phone),
+    ...newPatientContact(identity.contact),
     status: PatientStatus.ACTIVE,
-  }, identity.userId, { source: RecordSource.PORTAL, whatsappUnverified: typedPhoneIsUnverified(identity.contact, typed.phone) });
+  }, identity.userId, { source: RecordSource.PORTAL });
   bindAuditPortalPatient(patient.id);
   return patient.id;
 }

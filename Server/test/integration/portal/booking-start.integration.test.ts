@@ -65,7 +65,7 @@ function emailBody(p: LiveProvider, startUtc: string, over: Record<string, unkno
     patientTimezone: 'America/New_York',
     consentAccepted: true,
     captchaToken: 'good',
-    patient: { name: 'Lucia', lastName: 'Rojas', phone: '+573001112233' },
+    patient: { name: 'Lucia', lastName: 'Rojas' },
     contact: { channel: 'EMAIL', email: email() },
     ...over,
   };
@@ -261,7 +261,7 @@ describe('POST /v1/public/providers/:slug/bookings', () => {
     expect(JSON.stringify(second.body)).toContain('Slot no longer available');
   });
 
-  it('requires CAPTCHA and a strict body; patient.phone with WHATSAPP is 400', async () => {
+  it('requires CAPTCHA and a strict body, which takes no patient phone on any channel', async () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);
     expect((await startBooking(provider.slug, emailBody(provider, start!, { captchaToken: 'bad' }))).status).toBe(400);
@@ -269,11 +269,11 @@ describe('POST /v1/public/providers/:slug/bookings', () => {
     expect((await startBooking(provider.slug, noCaptcha)).status).toBe(400);
     expect((await startBooking(provider.slug, { ...emailBody(provider, start!), extra: 1 })).status).toBe(400);
     expect((await startBooking(provider.slug, emailBody(provider, start!, { consentAccepted: false }))).status).toBe(400);
-    const withPhone = await startBooking(provider.slug, emailBody(provider, start!, {
-      contact: { channel: 'WHATSAPP', phone: '+573009998877' },
-    }));
-    expect(withPhone.status).toBe(400);
-    expect(JSON.stringify(withPhone.body)).toContain('phone is only for email bookings');
+    const typedPhone = { patient: { name: 'Lucia', lastName: 'Rojas', phone: '+573001112233' } };
+    expect((await startBooking(provider.slug, emailBody(provider, start!, typedPhone))).status).toBe(400);
+    expect((await startBooking(provider.slug, emailBody(provider, start!, {
+      ...typedPhone, contact: { channel: 'WHATSAPP', phone: '+573009998877' },
+    }))).status).toBe(400);
     expect(await prisma.bookingRequest.count({ where: { userId: provider.id } })).toBe(0);
   });
 

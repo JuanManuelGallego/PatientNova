@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { e164OrEmpty, e164Regex } from '../utils/validation/middleware.js';
+import { e164Regex } from '../utils/validation/middleware.js';
 import { isValidIANATimezone } from '../utils/time/time-utils.js';
 
 export const createPortalBookingSchema = z.strictObject({
@@ -11,7 +11,6 @@ export const createPortalBookingSchema = z.strictObject({
   patient: z.strictObject({
     name: z.string().trim().min(1, 'name is required').max(100),
     lastName: z.string().trim().min(1, 'lastName is required').max(100),
-    phone: e164OrEmpty.optional(),
   }).optional(),
 });
 
@@ -35,16 +34,11 @@ export const startBookingSchema = z.strictObject({
   patient: z.strictObject({
     name: z.string().trim().min(1, 'name is required').max(100),
     lastName: z.string().trim().min(1, 'lastName is required').max(100),
-    phone: e164OrEmpty.optional(),
   }),
   contact: z.discriminatedUnion('channel', [
     z.strictObject({ channel: z.literal('EMAIL'), email: startEmail }),
     z.strictObject({ channel: z.literal('WHATSAPP'), phone: startPhone }),
   ]),
-}).superRefine((body, ctx) => {
-  if (body.contact.channel === 'WHATSAPP' && body.patient.phone) {
-    ctx.addIssue({ code: 'custom', path: [ 'patient', 'phone' ], message: 'phone is only for email bookings' });
-  }
 });
 
 export type StartBookingBody = z.infer<typeof startBookingSchema>;

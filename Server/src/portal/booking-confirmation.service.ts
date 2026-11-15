@@ -115,7 +115,7 @@ async function confirmWithin(tx: TransactionClient, hash: string, userId: string
   if (approval) return enterInboxWithin(tx, row, BookingRequestKind.NEW, now);
 
   const booked = await bookForIdentityWithin(tx, { userId, contact: proven(row) }, {
-    patient: { name: row.name, lastName: row.lastName, phone: row.phone },
+    patient: { name: row.name, lastName: row.lastName },
     type,
     location,
     start: row.startAt,

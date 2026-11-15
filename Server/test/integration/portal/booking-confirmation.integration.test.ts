@@ -62,7 +62,7 @@ const newEmail = () => `confirma${++seq}-${Date.now()}@test.local`;
 
 type Contact = { channel: 'EMAIL'; email: string } | { channel: 'WHATSAPP'; phone: string };
 
-function startBody(p: LiveProvider, startUtc: string, contact: Contact, phone?: string) {
+function startBody(p: LiveProvider, startUtc: string, contact: Contact) {
   return {
     typeId: p.typeId,
     locationId: p.locationId,
@@ -70,14 +70,14 @@ function startBody(p: LiveProvider, startUtc: string, contact: Contact, phone?: 
     patientTimezone: 'America/New_York',
     consentAccepted: true,
     captchaToken: 'good',
-    patient: { name: 'Lucia', lastName: 'Rojas', ...(phone && { phone }) },
+    patient: { name: 'Lucia', lastName: 'Rojas' },
     contact,
   };
 }
 
-async function book(p: LiveProvider, startUtc: string, contact: Contact = { channel: 'EMAIL', email: newEmail() }, phone?: string) {
+async function book(p: LiveProvider, startUtc: string, contact: Contact = { channel: 'EMAIL', email: newEmail() }) {
   const before = mocks.dispatch.mock.calls.length;
-  const res = await request(app).post(`/v1/public/providers/${p.slug}/bookings`).send(startBody(p, startUtc, contact, phone));
+  const res = await request(app).post(`/v1/public/providers/${p.slug}/bookings`).send(startBody(p, startUtc, contact));
   expect(res.status).toBe(202);
   const [ , opts ] = mocks.dispatch.mock.calls[before]!;
   const token = contact.channel === 'EMAIL'
@@ -205,7 +205,7 @@ describe('POST /v1/public/booking-confirmations/confirm', () => {
     const provider = await createLiveProvider();
     const [ start ] = await slotStarts(provider);
     const email = newEmail();
-    const token = await book(provider, start!, { channel: 'EMAIL', email }, '+573001112233');
+    const token = await book(provider, start!, { channel: 'EMAIL', email });
     const booked = await rowOf(provider.id);
 
     const res = await confirm(token);
@@ -215,7 +215,7 @@ describe('POST /v1/public/booking-confirmations/confirm', () => {
     expect(res.body.data.state).toBe('confirmed');
     const [ patient ] = await prisma.patient.findMany({ where: { userId: provider.id } });
     expect(patient).toMatchObject({
-      name: 'Lucia', lastName: 'Rojas', email, whatsappNumber: '+573001112233', whatsappUnverified: true,
+      name: 'Lucia', lastName: 'Rojas', email, whatsappNumber: null, whatsappUnverified: false,
       reminderChannel: Channel.EMAIL, source: RecordSource.PORTAL, status: PatientStatus.ACTIVE,
     });
     const [ consent ] = await prisma.patientConsent.findMany({ where: { userId: provider.id } });
@@ -247,7 +247,7 @@ describe('POST /v1/public/booking-confirmations/confirm', () => {
     });
     const before = await prisma.patient.findUniqueOrThrow({ where: { id: known.id } });
     const [ start ] = await slotStarts(provider);
-    const token = await book(provider, start!, { channel: 'EMAIL', email: known.email! }, '+573001112233');
+    const token = await book(provider, start!, { channel: 'EMAIL', email: known.email! });
 
     expect((await confirm(token)).body.data.state).toBe('confirmed');
 
