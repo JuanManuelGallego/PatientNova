@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { config, proxy } from "@/src/proxy";
-import { NAV_FOOTER, NAV_GROUPS } from "@/src/config/navigation";
+import { NAV_GROUPS } from "@/src/config/navigation";
 
 describe("login redirect", () => {
   it.each([
@@ -37,7 +37,7 @@ describe("confirmation link", () => {
 });
 
 describe("provider navigation", () => {
-  const paths = [ ...NAV_GROUPS.flatMap((g) => g.items), ...NAV_FOOTER ].map((i) => i.path);
+  const paths = NAV_GROUPS.flatMap((g) => g.items).map((i) => i.path);
 
   it.each(paths)("%s is matched by the proxy", (path) => {
     expect(config.matcher).toContain(`${path}/:path*`);

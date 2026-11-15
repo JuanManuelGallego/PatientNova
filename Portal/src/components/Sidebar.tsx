@@ -7,7 +7,7 @@ import { useAuthContext } from "@/src/providers/AuthContext";
 import { NAV_ICONS } from "@/src/config/icons";
 import { UserMenu } from "@/src/components/UserMenu";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
-import { NAV_FOOTER, NAV_GROUPS, isNavItemActive, visibleGroups, visibleItems, type NavContext, type NavItem } from "@/src/config/navigation";
+import { NAV_GROUPS, isNavItemActive, visibleGroups, type NavContext, type NavItem } from "@/src/config/navigation";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -80,9 +80,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {group.items.map(renderItem)}
           </div>
         ))}
-      </nav>
-      <nav className="sidebar-footer-nav" aria-label="Configuración">
-        {visibleItems(NAV_FOOTER, navContext).map(renderItem)}
       </nav>
 
       {/* User section */}

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-    NAV_FOOTER,
     NAV_GROUPS,
     activityHref,
     isNavItemActive,
@@ -26,9 +25,9 @@ describe("isNavItemActive", () => {
 });
 
 describe("visibleGroups", () => {
-    it("hides the admin group and the inbox from a viewer without the inbox", () => {
+    it("leaves a viewer without the inbox only Configuración under Administración", () => {
         const groups = visibleGroups(NAV_GROUPS, ctx(AdminRole.VIEWER, false));
-        expect(groups.some((g) => g.id === "admin")).toBe(false);
+        expect(groups.find((g) => g.id === "admin")?.items.map((i) => i.id)).toEqual([ "settings" ]);
         expect(groups.flatMap((g) => g.items).some((i) => i.id === "requests")).toBe(false);
     });
 
@@ -36,21 +35,21 @@ describe("visibleGroups", () => {
         const groups = visibleGroups(NAV_GROUPS, ctx(AdminRole.ADMIN, true));
         const admin = groups.find((g) => g.id === "admin");
         expect(admin?.label).toBe("Administración");
-        expect(admin?.items.map((i) => i.id)).toContain("activity");
+        expect(admin?.items.map((i) => i.id)).toEqual([ "activity", "settings" ]);
         expect(groups.find((g) => g.id === "clinic")?.items.map((i) => i.id)).toContain("requests");
     });
 
-    it("hides the admin group when there is no user", () => {
-        expect(visibleGroups(NAV_GROUPS, ctx(null, false)).some((g) => g.id === "admin")).toBe(false);
+    it("hides Actividad when there is no user", () => {
+        const admin = visibleGroups(NAV_GROUPS, ctx(null, false)).find((g) => g.id === "admin");
+        expect(admin?.items.map((i) => i.id)).toEqual([ "settings" ]);
     });
 });
 
 describe("labels", () => {
     it("uses sentence-case Spanish labels in menu order", () => {
         expect(NAV_GROUPS.flatMap((g) => g.items).map((i) => i.label)).toEqual([
-            "Vista general", "Pacientes", "Historias clínicas", "Citas", "Calendario", "Recordatorios", "Solicitudes", "Actividad",
+            "Vista general", "Pacientes", "Historias clínicas", "Citas", "Calendario", "Recordatorios", "Solicitudes", "Actividad", "Configuración",
         ]);
-        expect(NAV_FOOTER.map((i) => i.label)).toEqual([ "Configuración" ]);
     });
 });
 

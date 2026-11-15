@@ -39,7 +39,7 @@ export const ACTIVITY_PATH = "/activity";
 /** Where "Mi cuenta" leads. */
 export const ACCOUNT_PATH = "/settings";
 
-/** The scrolling part of the sidebar. */
+/** The sidebar, top to bottom. */
 export const NAV_GROUPS: NavGroup[] = [
     {
         id: "main",
@@ -62,13 +62,9 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Administración",
         items: [
             { id: "activity", path: ACTIVITY_PATH, label: "Actividad", visible: (ctx) => isAdminRole(ctx.user?.role) },
+            { id: "settings", path: "/settings", label: "Configuración" },
         ],
     },
-];
-
-/** Pinned below the scrolling list. */
-export const NAV_FOOTER: NavItem[] = [
-    { id: "settings", path: "/settings", label: "Configuración" },
 ];
 
 const isVisible = (item: NavItem, ctx: NavContext) => !item.visible || item.visible(ctx);
@@ -78,10 +74,6 @@ export function visibleGroups(groups: NavGroup[], ctx: NavContext): NavGroup[] {
     return groups
         .map((group) => ({ ...group, items: group.items.filter((item) => isVisible(item, ctx)) }))
         .filter((group) => group.items.length > 0);
-}
-
-export function visibleItems(items: NavItem[], ctx: NavContext): NavItem[] {
-    return items.filter((item) => isVisible(item, ctx));
 }
 
 /** Active on the page itself and on any sub-route, never on a sibling sharing a prefix. */

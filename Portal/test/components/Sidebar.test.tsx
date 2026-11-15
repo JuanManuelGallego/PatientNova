@@ -41,14 +41,14 @@ describe("Sidebar", () => {
         expect(screen.getByTestId("sidebar-link-patients")).not.toHaveAttribute("aria-current");
     });
 
-    it("hides the inbox and the admin group from a viewer without the inbox", () => {
+    it("hides the inbox and Actividad from a viewer without the inbox", () => {
         role = "VIEWER";
         inbox = { enabled: false, pending: 0 };
         render(<Sidebar isOpen onClose={vi.fn()} />);
 
         expect(screen.queryByTestId("sidebar-link-requests")).toBeNull();
         expect(screen.queryByTestId("sidebar-link-activity")).toBeNull();
-        expect(screen.queryByText("Administración")).toBeNull();
+        expect(screen.getByTestId("sidebar-link-settings")).toBeInTheDocument();
     });
 
     it("shows group headers, Actividad and a capped inbox badge to an admin", () => {
@@ -69,10 +69,11 @@ describe("Sidebar", () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it("pins Configuración outside the scrolling list", () => {
+    it("lists Configuración last in Administración", () => {
         render(<Sidebar isOpen onClose={vi.fn()} />);
 
-        expect(within(screen.getByTestId("sidebar-nav")).queryByTestId("sidebar-link-settings")).toBeNull();
-        expect(screen.getByTestId("sidebar-link-settings")).toBeInTheDocument();
+        const admin = screen.getByRole("group", { name: "Administración" });
+        const links = within(admin).getAllByRole("link").map((a) => a.getAttribute("data-testid"));
+        expect(links).toEqual([ "sidebar-link-activity", "sidebar-link-settings" ]);
     });
 });

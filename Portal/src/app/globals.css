@@ -4775,12 +4775,6 @@ tr:hover td {
   color: var(--c-gray-500);
 }
 
-/* Settings stays reachable when the list above scrolls. */
-.sidebar-footer-nav {
-  padding: 8px 12px;
-  border-top: 1px solid var(--c-gray-200);
-}
-
 .sidebar-nav a {
   text-decoration: none;
 }
