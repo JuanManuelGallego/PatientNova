@@ -618,12 +618,43 @@ describe("OnlineBookingTab: status summary", () => {
         expect(reportAttention).toHaveBeenLastCalledWith({ booking: false });
     });
 
-    it("frames every section as a titled region", () => {
+    it("shows the overview first, then the sections in the spec's order", () => {
         settings = makeSettings({ ...WITH_LINK, readiness: READY });
         renderTab();
-        for (const name of [ "Reserva en línea", "Confirmación de reservas", "Enlace de reserva", "Perfil público", "Disponibilidad semanal", "Reglas de reserva" ]) {
-            expect(screen.getByRole("region", { name })).toBeInTheDocument();
-        }
+        expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent))
+            .toEqual([ "Reserva en línea", "Disponibilidad semanal", "Reglas de reserva", "Confirmación de reservas", "Tu página pública" ]);
+    });
+
+    it("keeps the status, the link and the QR in the overview", () => {
+        settings = makeSettings({ ...WITH_LINK, readiness: READY });
+        renderTab();
+        const overview = screen.getByRole("region", { name: "Reserva en línea" });
+        expect(within(overview).getByTestId("online-booking-enabled-toggle")).toBeInTheDocument();
+        expect(within(overview).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/dra");
+        expect(within(overview).getByTestId("online-booking-qr")).toBeInTheDocument();
+    });
+
+    it("opens the link modal from the checklist and ticks the item once saved", async () => {
+        settings = makeSettings({ readiness: { ...READY, hasSlug: false } });
+        updateSettings.mockImplementation(async (body) => ({ ...settings, ...body, bookingUrl: "https://app.test/book/test-user", readiness: READY }));
+        renderTab();
+        await user.click(screen.getByTestId("online-booking-readiness-slug"));
+        expect(screen.getByTestId("online-booking-slug-input")).toHaveValue("test-user");
+        await user.click(screen.getByTestId("online-booking-slug-save"));
+        await settle(0);
+
+        const overview = screen.getByRole("region", { name: "Reserva en línea" });
+        expect(within(overview).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/test-user");
+        expect(screen.queryByTestId("online-booking-readiness")).not.toBeInTheDocument();
+    });
+
+    it("points the checklist at sections further down the page", () => {
+        settings = makeSettings({ readiness: { ...READY, hasLegalIdentity: false, hasAvailability: false } });
+        renderTab();
+        expect(screen.getByRole("link", { name: "Completar tu página pública" })).toHaveAttribute("href", "#online-booking-profile");
+        expect(screen.getByRole("link", { name: "Agregar disponibilidad" })).toHaveAttribute("href", "#online-booking-availability");
+        expect(document.getElementById("online-booking-profile")).toHaveTextContent("Tu página pública");
+        expect(document.getElementById("online-booking-availability")).toHaveTextContent("Disponibilidad semanal");
     });
 
     it("says plainly when the link is live and hides the checklist", () => {
