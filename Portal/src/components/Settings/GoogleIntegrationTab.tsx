@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFetchGoogleConnection } from "@/src/api/google/useFetchGoogleConnection";
 import { useStartGoogleOAuth } from "@/src/api/google/useStartGoogleOAuth";
 import { useDisconnectGoogle } from "@/src/api/google/useDisconnectGoogle";
 import { mutationErrorMessage } from "@/src/api/base/useApiMutation";
+import { settingsHref } from "@/src/config/navigation";
+import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 import { useVerifyGoogleConnection } from "@/src/api/google/useVerifyGoogleConnection";
 import { DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { InlineError } from "@/src/components/Info/InlineError";
@@ -28,6 +30,12 @@ export function GoogleIntegrationTab() {
   const [ disconnectPending, setDisconnectPending ] = useState(false);
   const connection = data;
 
+  const { report } = useSettingsAttention();
+  const status = connection?.status;
+  useEffect(() => {
+    if (status) report({ integrations: status === "expired" });
+  }, [ status, report ]);
+
   const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
     useCallback(async (result) => {
       if (result.success) {
@@ -41,7 +49,7 @@ export function GoogleIntegrationTab() {
 
   const handleConnect = useCallback(async (isReconnect = false) => {
     setActionError(null);
-    await openOAuth(() => startOAuth("/settings", isReconnect));
+    await openOAuth(() => startOAuth(settingsHref("integrations"), isReconnect));
   }, [ openOAuth, startOAuth ]);
 
   const handleDisconnect = useCallback(async () => {

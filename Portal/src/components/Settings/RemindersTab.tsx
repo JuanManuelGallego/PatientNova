@@ -10,7 +10,7 @@ import { validatePhoneNumber } from "@/src/utils/DataValidator";
 import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { Switch } from "@/src/components/Form/Switch";
-import { SettingsTab, settingsTabHref } from "@/src/config/settingsTabs";
+import { settingsHref } from "@/src/config/navigation";
 import { SettingsSection } from "./SettingsSection";
 
 const WHATSAPP_ERROR_ID = "reminders-whatsapp-error";
@@ -120,7 +120,7 @@ export function RemindersTab() {
               {user?.portalEnabled && (
                 <>
                   {" "}El de las reservas en línea está en{" "}
-                  <Link href={settingsTabHref(SettingsTab.OnlineBooking)}>Reserva en línea</Link>.
+                  <Link href={settingsHref("booking")}>Reserva en línea</Link>.
                 </>
               )}
             </span>

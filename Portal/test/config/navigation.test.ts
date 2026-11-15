@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
     NAV_GROUPS,
+    SETTINGS_NAV,
+    settingsHref,
+    settingsSectionOf,
     activityHref,
     isNavItemActive,
     visibleGroups,
@@ -67,5 +70,35 @@ describe("isAdminRole", () => {
         expect(isAdminRole(AdminRole.SUPER_ADMIN)).toBe(true);
         expect(isAdminRole(AdminRole.VIEWER)).toBe(false);
         expect(isAdminRole(undefined)).toBe(false);
+    });
+});
+
+describe("settings navigation", () => {
+    it("addresses settings sections by English path, with an optional anchor", () => {
+        expect(settingsHref("services")).toBe("/settings/services");
+        expect(settingsHref("services", "locations")).toBe("/settings/services#locations");
+    });
+
+    it("lists the settings menu in spec order with Spanish labels", () => {
+        expect(SETTINGS_NAV.map((g) => g.label)).toEqual([ "Tu cuenta", "Tu consulta", "Conexiones" ]);
+        expect(SETTINGS_NAV.flatMap((g) => g.items).map((i) => i.label)).toEqual([
+            "Cuenta", "Notificaciones", "Consultorio", "Servicios", "Reserva en línea", "Integraciones",
+        ]);
+    });
+
+    it("hides Reserva en línea without the portal", () => {
+        const visible = (portalEnabled: boolean) =>
+            visibleGroups(SETTINGS_NAV, { user: { portalEnabled } as User, inboxEnabled: false }).flatMap((g) => g.items).map((i) => i.id);
+        expect(visible(false)).not.toContain("booking");
+        expect(visible(true)).toContain("booking");
+    });
+
+    it.each([
+        [ "/settings/services", "services" ],
+        [ "/settings/account", "account" ],
+        [ "/settings", null ],
+        [ "/settingsx", null ],
+    ])("finds the section of %s", (pathname, id) => {
+        expect(settingsSectionOf(pathname)).toBe(id);
     });
 });

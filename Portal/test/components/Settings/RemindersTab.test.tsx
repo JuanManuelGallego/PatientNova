@@ -33,7 +33,7 @@ describe("RemindersTab", () => {
     it("links the portal reminder hint to Reserva en línea when the portal is on", () => {
         portalEnabled = true;
         render(<RemindersTab />);
-        expect(screen.getByRole("link", { name: "Reserva en línea" })).toHaveAttribute("href", "/settings?tab=Reserva+en+l%C3%ADnea");
+        expect(screen.getByRole("link", { name: "Reserva en línea" })).toHaveAttribute("href", "/settings/booking");
     });
 
     it("has no Reserva en línea link when the portal is off", () => {

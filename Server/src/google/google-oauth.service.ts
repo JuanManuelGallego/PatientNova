@@ -17,7 +17,7 @@ export interface GoogleConnectionStatus {
   disconnectedAt: Date | null;
 }
 
-const ALLOWED_RETURN_PATHS = ['/appointments', '/settings', '/'];
+const ALLOWED_RETURN_PATHS = ['/appointments', '/settings', '/settings/integrations', '/'];
 
 function getOAuthClient(): OAuth2Client {
   if (!config.google.clientId || !config.google.clientSecret || !config.google.oauthRedirectUri) {

@@ -6,33 +6,28 @@ import { DeleteLocationModal } from './Modals/DeleteLocationModal';
 import { DeleteAppointmentTypeModal } from './Modals/DeleteAppointmentTypeModal';
 
 export class SettingsPage extends BasePage {
-  readonly tabProfile: Locator;
-  readonly tabSecurity: Locator;
-  readonly tabLocations: Locator;
-  readonly tabAppointmentTypes: Locator;
-  readonly tabReminders: Locator;
   readonly newLocationButton: Locator;
   readonly newTypeButton: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.tabProfile = this.page.getByTestId('settings-tab-perfil');
-    this.tabSecurity = this.page.getByTestId('settings-tab-seguridad');
-    this.tabLocations = this.page.getByTestId('settings-tab-ubicaciones');
-    this.tabAppointmentTypes = this.page.getByTestId('settings-tab-tipos-de-cita');
-    this.tabReminders = this.page.getByTestId('settings-tab-recordatorios');
     this.newLocationButton = this.page.getByTestId('settings-new-location-button');
     this.newTypeButton = this.page.getByTestId('settings-new-type-button');
   }
 
-  async goToProfile() { await this.tabProfile.click(); }
-  async goToSecurity() { await this.tabSecurity.click(); }
-  async goToLocations() { await this.tabLocations.click(); }
-  async goToAppointmentTypes() { await this.tabAppointmentTypes.click(); }
-  async goToReminders() { await this.tabReminders.click(); }
+  private async open(path: string, heading: string) {
+    if (!this.page.url().endsWith(path)) await this.page.goto(path);
+    await expect(this.page.getByRole('heading', { level: 2, name: heading })).toBeVisible();
+  }
+
+  async goToProfile() { await this.open('/settings/account', 'Información personal'); }
+  async goToSecurity() { await this.open('/settings/account', 'Contraseña'); }
+  async goToLocations() { await this.open('/settings/services', 'Ubicaciones de citas'); }
+  async goToAppointmentTypes() { await this.open('/settings/services', 'Tipos de cita'); }
+  async goToReminders() { await this.open('/settings/notifications', 'Tus avisos'); }
 
   async openLocationModal() {
-    await this.tabLocations.click();
+    await this.goToLocations();
     await this.newLocationButton.click();
     const modal = new LocationModal(this.page);
     await modal.waitForOpen();
@@ -40,7 +35,7 @@ export class SettingsPage extends BasePage {
   }
 
   async openAppointmentTypeModal() {
-    await this.tabAppointmentTypes.click();
+    await this.goToAppointmentTypes();
     await this.newTypeButton.click();
     const modal = new AppointmentTypeModal(this.page);
     await modal.waitForOpen();

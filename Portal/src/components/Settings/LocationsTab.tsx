@@ -8,10 +8,12 @@ import { AppointmentLocation } from "@/src/types/Appointment";
 import { useState } from "react";
 import { useSavedFlash } from "@/src/hooks/useSavedFlash";
 import { SettingsList } from "./SettingsList";
+import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 
-export function LocationsTab() {
+export function LocationsTab({ onReady }: { onReady?: () => void } = {}) {
   const { data, loading, error, fetchLocations } = useFetchLocations();
   const saved = useSavedFlash();
+  const { refresh: refreshAttention } = useSettingsAttention();
 
   const [ modalLocation, setModalLocation ] = useState<AppointmentLocation | null | undefined>(undefined);
   const [ deleteTarget, setDeleteTarget ] = useState<AppointmentLocation | null>(null);
@@ -19,11 +21,13 @@ export function LocationsTab() {
   function handleSaved() {
     saved.flash();
     fetchLocations();
+    refreshAttention();
   }
 
   return (
     <div className="settings-stack">
       <SettingsList<AppointmentLocation>
+        id="locations"
         title="Ubicaciones de citas"
         description="Configura los lugares donde atiendes pacientes"
         newLabel="Nueva ubicación"
@@ -34,6 +38,7 @@ export function LocationsTab() {
         error={error}
         onRetry={() => fetchLocations()}
         empty={{ icon: MapPin, title: "Sin ubicaciones configuradas", sub: "Agrega los lugares o salas donde atiendes a tus pacientes." }}
+        onReady={onReady}
         status={<SaveStatusIndicator saving={false} status={saved.active ? "saved" : "idle"} testId="locations-save-state" />}
         renderItem={(loc) => (
           <LocationCard
@@ -58,6 +63,7 @@ export function LocationsTab() {
           onDelete={() => {
             setDeleteTarget(null);
             fetchLocations();
+            refreshAttention();
           }}
         />
       )}

@@ -14,6 +14,10 @@ const startOAuth = vi.fn();
 const useFetchGoogleConnection = vi.fn();
 let pendingRequests = 0;
 
+const refreshAttention = vi.fn();
+vi.mock("@/src/providers/SettingsAttentionContext", () => ({
+  useSettingsAttention: () => ({ sections: new Set(), report: vi.fn(), refresh: refreshAttention }),
+}));
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({ user: role ? { role, portalEnabled } : null }),
 }));
@@ -91,7 +95,7 @@ describe("ProviderAlerts", () => {
     connection = { status: "expired", connected: false };
     render(<ProviderAlerts />);
     const link = screen.getByRole("link", { name: "No uso Google Meet" });
-    expect(link).toHaveAttribute("href", "/settings?tab=Integraciones");
+    expect(link).toHaveAttribute("href", "/settings/integrations");
   });
 
   it("is not a live region, so it isn't re-announced on every page", () => {
@@ -125,7 +129,7 @@ describe("ProviderAlerts", () => {
     render(<ProviderAlerts />);
 
     await userEvent.click(screen.getByTestId("google-expired-reconnect"));
-    expect(startOAuth).toHaveBeenCalledWith("/settings", true);
+    expect(startOAuth).toHaveBeenCalledWith("/settings/integrations", true);
 
     await act(async () => {
       window.dispatchEvent(new MessageEvent("message", {
@@ -135,6 +139,7 @@ describe("ProviderAlerts", () => {
       }));
     });
     await waitFor(() => expect(fetchConnection).toHaveBeenCalledTimes(1));
+    expect(refreshAttention).toHaveBeenCalledTimes(1);
   });
 
   it("shows a failed reconnect inside the banner", async () => {
