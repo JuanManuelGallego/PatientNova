@@ -37,7 +37,6 @@ function holdInput(p: LiveProvider, start: Date, email = 'lucia@example.com') {
     email,
     name: 'Lucia',
     lastName: 'Rojas',
-    phone: '+573001112233',
     typeId: p.typeId,
     locationId: p.locationId,
     startAt: start,
@@ -88,9 +87,9 @@ describe('booking request holds', () => {
     const start = await firstStart(p);
     const request = await requestHold(p, start, 'Lucia@Example.com');
 
-    const [ raw ] = await prisma.$queryRaw<{ email: string; name: string; lastName: string; phone: string; emailHash: string }[]>`
-      SELECT "email", "name", "lastName", "phone", "emailHash" FROM booking_requests WHERE id = ${request.id}::uuid`;
-    for (const value of [ raw!.email, raw!.name, raw!.lastName, raw!.phone ]) expect(value.startsWith('enc:')).toBe(true);
+    const [ raw ] = await prisma.$queryRaw<{ email: string; name: string; lastName: string; emailHash: string }[]>`
+      SELECT "email", "name", "lastName", "emailHash" FROM booking_requests WHERE id = ${request.id}::uuid`;
+    for (const value of [ raw!.email, raw!.name, raw!.lastName ]) expect(value.startsWith('enc:')).toBe(true);
     expect(raw!.emailHash).toMatch(/^[0-9a-f]{64}$/);
 
     const read = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: request.id } });

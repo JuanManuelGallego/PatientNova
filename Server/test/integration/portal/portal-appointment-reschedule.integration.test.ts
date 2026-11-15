@@ -112,7 +112,7 @@ describe('POST /v1/portal/appointments/:id/reschedule', () => {
     const toPatient = mocks.dispatch.mock.calls[0]![1];
     const toProvider = mocks.dispatch.mock.calls[1]![1];
     expect(toPatient).toMatchObject({ to: session.email, subject: expect.stringMatching(/^Cita reprogramada con /) });
-    expect(toPatient.body).toContain('(hora de Europe/Madrid)');
+    expect(toPatient.body).not.toContain('hora de');
     expect(toPatient.body).toContain('Fecha anterior:');
     expect(toProvider).toMatchObject({ subject: 'Cita reprogramada en línea' });
     expect(toProvider.body).toMatch(/Antes: .*\nAhora: /);

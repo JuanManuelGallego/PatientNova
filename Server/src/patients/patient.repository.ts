@@ -65,7 +65,6 @@ async function sortByDecryptedField(
 
 export interface CreatePatientOptions {
   source?: RecordSource;
-  whatsappUnverified?: boolean;
 }
 
 export const patientRepository = {
@@ -74,7 +73,6 @@ export const patientRepository = {
       return await (tx ?? prisma).patient.create({
         data: {
           ...(opts.source && { source: opts.source }),
-          ...(opts.whatsappUnverified && dto.whatsappNumber && { whatsappUnverified: true }),
           name: dto.name,
           lastName: dto.lastName,
           whatsappNumber: dto.whatsappNumber ?? null,

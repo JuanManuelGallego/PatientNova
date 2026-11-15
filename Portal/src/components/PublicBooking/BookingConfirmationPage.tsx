@@ -7,7 +7,8 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { useConfirmBooking, useConfirmationView } from "@/src/api/portal/useBookingConfirmation";
 import type { BookingConfirmationView, PortalAppointment } from "@/src/types/PortalBooking";
 import { downloadAppointmentIcs } from "@/src/utils/appointmentCalendar";
-import { fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
+import { fmtLongDayTime } from "@/src/utils/publicBooking";
+import { browserTimezone } from "@/src/utils/TimeUtils";
 import { ProviderContactNotice } from "./ProviderContactNotice";
 import { StateIcon } from "./PublicChrome";
 import { ErrorState, PublicPageShell, Unavailable } from "./PublicStates";
@@ -93,14 +94,13 @@ function ConfirmationBody({ view, busy, error, onConfirm }: BodyProps) {
     const heading = useRef<HTMLHeadingElement>(null);
     useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [ view.state ]);
 
-    const zone = view.patientTimezone;
+    const zone = browserTimezone();
     const contact = { displayName: view.providerName, phone: view.providerContact.phone, whatsapp: view.providerContact.whatsapp };
     const summary = (
         <div className={styles.lead}>
             <p>{view.providerName}</p>
             <p data-testid="confirmation-time">{fmtLongDayTime(view.startUtc, zone)}</p>
             <p>{placeOf(view)}</p>
-            <p className={styles.muted}>Horas en tu zona horaria: {timezoneName(zone)}</p>
         </div>
     );
     const title = (text: string) => (

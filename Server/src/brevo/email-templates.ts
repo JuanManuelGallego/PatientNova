@@ -50,7 +50,6 @@ function contactBlock(providerName: string, contact?: EmailProviderContact): str
 export function renderBookingConfirmationEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   appointmentsUrl?: string;
   providerContact?: EmailProviderContact;
 }): RenderedEmail {
@@ -61,7 +60,7 @@ export function renderBookingConfirmationEmail(params: PlaceParams & {
       '',
       `Tu cita con ${params.providerName} quedó confirmada.`,
       '',
-      `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
+      `Fecha y hora: ${params.whenLocal}`,
       ...placeLines(params),
       ...contactBlock(params.providerName, params.providerContact),
       ...appointmentsLines(params.appointmentsUrl),
@@ -72,7 +71,6 @@ export function renderBookingConfirmationEmail(params: PlaceParams & {
 export function renderPortalMeetingLinkEmail(params: {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   meetingUrl: string;
   appointmentsUrl?: string;
   providerContact?: EmailProviderContact;
@@ -84,7 +82,7 @@ export function renderPortalMeetingLinkEmail(params: {
       '',
       `Ya está listo el enlace de tu cita virtual con ${params.providerName}.`,
       '',
-      `Fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
+      `Fecha y hora: ${params.whenLocal}`,
       `Enlace de la videollamada: ${params.meetingUrl}`,
       ...contactBlock(params.providerName, params.providerContact),
       ...appointmentsLines(params.appointmentsUrl),
@@ -98,7 +96,6 @@ const APPOINTMENTS_LINK_LINE = 'Puedes ver, cancelar o reprogramar tus citas aqu
 export function renderPortalCancellationEmail(params: {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   bookingUrl: string;
 }): RenderedEmail {
   return {
@@ -106,7 +103,7 @@ export function renderPortalCancellationEmail(params: {
     body: [
       'Hola,',
       '',
-      `Tu cita con ${params.providerName} del ${params.whenLocal} (hora de ${params.timezone}) quedó cancelada.`,
+      `Tu cita con ${params.providerName} del ${params.whenLocal} quedó cancelada.`,
       '',
       'Si quieres, puedes reservar una nueva cita aquí:',
       params.bookingUrl,
@@ -119,7 +116,6 @@ export function renderPortalRescheduleEmail(params: PlaceParams & {
   providerName: string;
   whenLocal: string;
   previousLocal: string;
-  timezone: string;
   appointmentsUrl?: string;
   providerContact?: EmailProviderContact;
 }): RenderedEmail {
@@ -130,7 +126,7 @@ export function renderPortalRescheduleEmail(params: PlaceParams & {
       '',
       `Tu cita con ${params.providerName} quedó reprogramada.`,
       '',
-      `Nueva fecha y hora: ${params.whenLocal} (hora de ${params.timezone})`,
+      `Nueva fecha y hora: ${params.whenLocal}`,
       `Fecha anterior: ${params.previousLocal}`,
       ...placeLines(params),
       ...contactBlock(params.providerName, params.providerContact),
@@ -145,7 +141,6 @@ const ANOTHER_TIME_LINE = 'Si quieres, puedes solicitar otro horario aquí:';
 export function renderBookingRequestRejectedEmail(params: {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   bookingUrl: string;
 }): RenderedEmail {
   return {
@@ -153,7 +148,7 @@ export function renderBookingRequestRejectedEmail(params: {
     body: [
       'Hola,',
       '',
-      `${params.providerName} no pudo confirmar tu solicitud de cita del ${params.whenLocal} (hora de ${params.timezone}).`,
+      `Tu solicitud de cita con ${params.providerName} del ${params.whenLocal} no fue confirmada.`,
       '',
       ANOTHER_TIME_LINE,
       params.bookingUrl,
@@ -164,7 +159,6 @@ export function renderBookingRequestRejectedEmail(params: {
 export function renderBookingRequestExpiredEmail(params: {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   bookingUrl: string;
 }): RenderedEmail {
   return {
@@ -172,7 +166,7 @@ export function renderBookingRequestExpiredEmail(params: {
     body: [
       'Hola,',
       '',
-      `Tu solicitud de cita con ${params.providerName} del ${params.whenLocal} (hora de ${params.timezone}) venció sin ser confirmada.`,
+      `Tu solicitud de cita con ${params.providerName} del ${params.whenLocal} venció sin ser confirmada.`,
       '',
       ANOTHER_TIME_LINE,
       params.bookingUrl,
@@ -185,14 +179,13 @@ export const CONFIRM_LINK_MINUTES = 15;
 export function renderConfirmLinkEmail(params: {
   providerName: string;
   whenLocal: string;
-  timezone: string;
   locationName?: string | null;
   address?: string | null;
   confirmUrl: string;
   approvalRequired: boolean;
   providerContact?: EmailProviderContact;
 }): RenderedEmail {
-  const when = `${params.whenLocal} (hora de ${params.timezone})`;
+  const when = params.whenLocal;
   const lead = params.approvalRequired
     ? `Tu solicitud de cita del ${when} todavía no se ha enviado. Confírmala en los próximos ${CONFIRM_LINK_MINUTES} minutos con este enlace; si no, el horario quedará libre.`
     : `Tu cita del ${when} todavía no está confirmada. Confírmala en los próximos ${CONFIRM_LINK_MINUTES} minutos con este enlace; si no, el horario quedará libre.`;

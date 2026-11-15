@@ -82,7 +82,7 @@ describe('a booking confirmed through its link', () => {
       name: 'Lucia',
       lastName: 'Rojas',
       email,
-      whatsappNumber: '+573001112233',
+      whatsappNumber: null,
       reminderChannel: Channel.EMAIL,
       source: RecordSource.PORTAL,
       portalAccessEnabled: true,
@@ -300,7 +300,7 @@ describe('booking confirmation, reminder and provider notice', () => {
     expect(opts.to).toBe(email);
     expect(opts.subject).toMatch(/^Cita confirmada con /);
     expect(opts.body).toContain(timeIn(start!, MADRID));
-    expect(opts.body).toContain(`(hora de ${MADRID})`);
+    expect(opts.body).not.toContain("hora de");
     expect(opts.body).not.toContain(timeIn(start!, ZONE));
     expect(opts.body).toContain(`${config.portal.url}/book/${provider.slug}/appointments`);
   });

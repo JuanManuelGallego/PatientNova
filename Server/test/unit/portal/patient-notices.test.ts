@@ -82,6 +82,21 @@ describe('renderPatientNotice', () => {
     expect(render(kind, WHATSAPP).contentSid).toBe(sid);
   });
 
+  it.each(KINDS)('%s email names the zone only when the patient zone is unknown', (kind) => {
+    const known = render(kind, EMAIL).body!;
+    expect(known).not.toContain('hora de');
+    const unknown = renderPatientNotice(kind, { ...PARAMS[kind], patientZoneUnknown: true } as never, EMAIL).body!;
+    expect(unknown).toContain('(hora de Colombia)');
+  });
+
+  it('never names the zone in WhatsApp or SMS', () => {
+    for (const kind of KINDS) {
+      for (const route of [ WHATSAPP, SMS ]) {
+        expect(textOf(renderPatientNotice(kind, { ...PARAMS[kind], patientZoneUnknown: true } as never, route))).not.toContain('hora de');
+      }
+    }
+  });
+
   it('fills the variables each approved template expects', () => {
     expect(render('confirmation', WHATSAPP).contentVariables).toEqual({
       '1': 'Dra. Ana Pública',
@@ -162,7 +177,7 @@ describe('renderPatientNotice', () => {
     it('confirm-link email names the time zone of the time and tells a stranger to ignore it', () => {
       for (const approvalRequired of [ false, true ]) {
         const { body } = emailOf('confirm-link', { ...PARAMS['confirm-link'], approvalRequired });
-        expect(body).toMatch(/del miércoles, 20 de enero de 2027, 10:00 a\. m\. \(hora de America\/Bogota\) todavía no/);
+        expect(body).toMatch(/del miércoles, 20 de enero de 2027, 10:00 a\. m\. todavía no/);
         expect(body).toContain('Si no hiciste esta reserva, ignora este mensaje.');
       }
     });

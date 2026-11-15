@@ -147,9 +147,9 @@ describe('patient notices', () => {
 });
 
 describe('reminders of portal bookings', () => {
-  async function bookAs(provider: LiveProvider, email: string, patient?: { name: string; lastName: string; phone?: string | null }) {
+  async function bookAs(provider: LiveProvider, email: string) {
     const [ start ] = await slotStarts(provider);
-    const { appointmentId } = await bookViaConfirmation(provider, start!, { email, ...(patient && { patient }) });
+    const { appointmentId } = await bookViaConfirmation(provider, start!, { email });
     return prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId! }, include: { reminder: true, patient: true } });
   }
 
@@ -163,20 +163,14 @@ describe('reminders of portal bookings', () => {
     expect(appt.reminder).toMatchObject({ channel: Channel.WHATSAPP, to: WHATSAPP_NUMBER, status: ReminderStatus.PENDING });
   });
 
-  it('a new patient stays on email and the typed number is flagged', async () => {
+  it('a new patient keeps only the email that confirmed, and stays on it', async () => {
     const provider = await createLiveProvider();
     const email = unique('nuevo@test.local');
 
     const appt = await bookAs(provider, email);
 
     expect(appt.reminder).toMatchObject({ channel: Channel.EMAIL, to: email });
-    expect(appt.patient).toMatchObject({ whatsappNumber: '+573001112233', whatsappUnverified: true, reminderChannel: Channel.EMAIL });
-  });
-
-  it('a new patient with no typed number is not flagged', async () => {
-    const provider = await createLiveProvider();
-    const appt = await bookAs(provider, unique('nuevo@test.local'), { name: 'Lucia', lastName: 'Rojas' });
-    expect(appt.patient).toMatchObject({ whatsappNumber: null, whatsappUnverified: false });
+    expect(appt.patient).toMatchObject({ whatsappNumber: null, whatsappUnverified: false, reminderChannel: Channel.EMAIL });
   });
 
   it('a patient with no usable route still gets the appointment, without a reminder', async () => {
@@ -243,7 +237,7 @@ describe('notices of requests', () => {
     const startAt = new Date(start!);
     const request = await prisma.bookingRequest.create({
       data: {
-        userId: provider.id, email, name: 'Lucia', lastName: 'Rojas', phone: WHATSAPP_NUMBER, status,
+        userId: provider.id, email, name: 'Lucia', lastName: 'Rojas', status,
         typeId: provider.typeId, locationId: provider.locationId, startAt, endAt: new Date(startAt.getTime() + 3_600_000),
         patientTimezone: 'America/Bogota', holdExpiresAt: new Date(Date.now() + 3_600_000),
         policyVersion: 'v1', consentAcceptedAt: new Date(), confirmedAt: new Date(),
@@ -255,7 +249,7 @@ describe('notices of requests', () => {
   it.each([
     [ 'REJECTED', 'rejected' ],
     [ 'EXPIRED', 'expired' ],
-  ] as const)('a %s request goes to its contact, never to the typed number', async (status, event) => {
+  ] as const)('a %s request goes to the contact that sent it', async (status, event) => {
     const { request, email } = await requestIn(status);
     await deliverBookingRequestNotification({ requestId: request.id, event });
     expect(mocks.dispatch).toHaveBeenCalledTimes(1);

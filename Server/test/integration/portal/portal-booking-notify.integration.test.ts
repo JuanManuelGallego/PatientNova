@@ -53,8 +53,8 @@ describe('patient confirmation', () => {
     expect(channel).toBe(Channel.EMAIL);
     expect(w.to).toBe(winter.patient.email);
     expect(w.subject).toBe('Cita confirmada con Dra. Ana Pública');
-    expect(w.body).toContain('20 de enero de 2027, 04:00 p. m. (hora de Europe/Madrid)');
-    expect(s.body).toContain('5 de abril de 2027, 05:00 p. m. (hora de Europe/Madrid)');
+    expect(w.body).toContain('20 de enero de 2027, 04:00 p. m.');
+    expect(s.body).toContain('5 de abril de 2027, 05:00 p. m.');
     expect(w.body).toContain('Lugar: Consultorio Centro');
     expect(w.body).toContain('Dirección: Calle 10 # 5-20');
   });
@@ -62,7 +62,7 @@ describe('patient confirmation', () => {
   it('falls back to the provider zone when no patient zone was stored', async () => {
     const { appt } = await bookedAppointment({ startAt: '2027-01-20T15:00:00Z', patientTimezone: null });
     await deliverBookingNotification({ appointmentId: appt.id, kind: 'patient-confirmation' });
-    expect(mocks.dispatch.mock.calls[0]![1].body).toContain('10:00 a. m. (hora de America/Bogota)');
+    expect(mocks.dispatch.mock.calls[0]![1].body).toContain('10:00 a. m. (hora de Colombia)');
   });
 });
 
@@ -133,7 +133,7 @@ describe('cancellation notices', () => {
     expect(channel).toBe(Channel.EMAIL);
     expect(opts.to).toBe(patient.email);
     expect(opts.subject).toBe('Cita cancelada con Dra. Ana Pública');
-    expect(opts.body).toContain('del miércoles, 20 de enero de 2027, 04:00 p. m. (hora de Europe/Madrid) quedó cancelada');
+    expect(opts.body).toContain('del miércoles, 20 de enero de 2027, 04:00 p. m. quedó cancelada');
     expect(opts.body).toContain(`${config.portal.url}/book/${user.bookingSlug}`);
     expect(opts.body).not.toContain('/appointments');
   });
@@ -185,7 +185,7 @@ describe('reschedule notices', () => {
 
     const [ , opts ] = mocks.dispatch.mock.calls[0]!;
     expect(opts.subject).toBe('Cita reprogramada con Dra. Ana Pública');
-    expect(opts.body).toContain('Nueva fecha y hora: viernes, 22 de enero de 2027, 09:00 p. m. (hora de Europe/Madrid)');
+    expect(opts.body).toContain('Nueva fecha y hora: viernes, 22 de enero de 2027, 09:00 p. m.');
     expect(opts.body).toContain('Fecha anterior: miércoles, 20 de enero de 2027, 04:00 p. m.');
     expect(opts.body).not.toContain(`${user.bookingSlug}/appointments`);
   });

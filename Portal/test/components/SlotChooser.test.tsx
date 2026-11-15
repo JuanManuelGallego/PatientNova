@@ -264,10 +264,10 @@ describe("SlotChooser", () => {
         await waitFor(() => expect(slotCalls().at(-1)!.get("typeId")).toBe("t2"));
     });
 
-    it("states the time zone", async () => {
+    it("never mentions the time zone", async () => {
         serve([ at(addCalendarDays(today, 1)) ]);
         render(<Harness />);
         await strip();
-        expect(screen.getByText(/Horas en tu zona horaria: Colombia/)).toBeInTheDocument();
+        expect(screen.queryByText(/zona horaria/i)).not.toBeInTheDocument();
     });
 });

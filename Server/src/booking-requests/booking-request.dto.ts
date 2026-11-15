@@ -20,7 +20,6 @@ export interface ProviderRequestDto {
   contactChannel: Channel;
   email: string | null;
   verifiedPhone: string | null;
-  phone: string | null;
   patientTimezone: string;
   appointmentId: string | null;
   patientId: string | null;
@@ -71,7 +70,6 @@ export function toProviderRequestDto(r: ProviderRequestRow, now: Date): Provider
     contactChannel: r.contactChannel,
     email: r.email,
     verifiedPhone: r.verifiedPhone,
-    phone: r.phone,
     patientTimezone: r.patientTimezone,
     appointmentId: r.appointmentId,
     patientId: r.patientId,

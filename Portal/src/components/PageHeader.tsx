@@ -11,7 +11,6 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, actions, style }: PageHeaderProps) {
   const timezone = useDisplayTimezone();
-    // Times are shown in the provider's timezone; say so when the device is elsewhere.
     const zoneNote = timezone !== browserTimezone() ? `Hora de ${fmtTimezoneLabel(timezone)}` : null;
     return (
         <div className="page-header" style={style}>

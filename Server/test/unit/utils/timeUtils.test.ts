@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTodayBoundsInTz } from '../../../src/utils/time/time-utils.js';
+import { getTodayBoundsInTz, zoneLabel } from '../../../src/utils/time/time-utils.js';
 
 describe('getTodayBoundsInTz', () => {
   it('returns a start and end Date for a valid timezone', () => {
@@ -153,5 +153,17 @@ describe('day / month bounds across DST', () => {
   it('getLocalTimeParts reports hour 0 at midnight (never 24)', () => {
     const p = getLocalTimeParts('America/Bogota', new Date('2026-10-06T05:00:00Z'));
     expect(p).toEqual({ year: 2026, month: 10, day: 6, hour: 0, minute: 0 });
+  });
+});
+
+describe('zoneLabel', () => {
+  it('names the zones providers pick by their place', () => {
+    expect(zoneLabel('America/Bogota')).toBe('hora de Colombia');
+    expect(zoneLabel('Europe/Madrid')).toBe('hora de España');
+    expect(zoneLabel('UTC')).toBe('hora UTC');
+  });
+
+  it('falls back to the city of any other zone', () => {
+    expect(zoneLabel('America/Costa_Rica')).toBe('hora de Costa Rica');
   });
 });

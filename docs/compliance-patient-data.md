@@ -116,7 +116,7 @@ read everything; the keys must never be stored with the backups.
   "Revocation procedure" below).
 - Partial unique index `(patientId, kind, policyVersion) WHERE revokedAt IS NULL` makes
   `ensureCurrentConsent` idempotent.
-- `policyVersion` identifies the published package (`2026-11-09` for the current text), archived in
+- `policyVersion` identifies the published package (`2026-11-14` for the current text), archived in
   `docs/legal/versions/`. Changing the policy, the notice or the checkbox requires bumping it, archiving the
   text and re-asking consent at the patient's next booking.
 - Approval-mode requests carry the same evidence on `BookingRequest` and copy it to `PatientConsent`
@@ -124,8 +124,10 @@ read everything; the keys must never be stored with the backups.
 - **Existing patients** (0.21) have no record: they accept at first portal use, before any data
   about them is shown.
 - **UI gate (0.22):** one checkbox, never pre-ticked, with the text in `Portal/src/config/consentText.ts`. It names
-  health data, the purposes and who receives the authorization. Beside it the patient sees the clinic's legal name
-  and privacy contact, that the portal is optional, and how to reach the clinic directly. Booking cannot go live
+  health data, the purposes and who receives the authorization. Under it, always visible, a line says health data is
+  sensitive and authorizing it is optional; "Ver detalles" on the same page expands the clinic's legal name and privacy
+  contact, that the portal is optional, how to reach the clinic directly, and the rights (all part of the checkbox's
+  accessible description even while collapsed). Whether that collapsed layer is enough is pending counsel review. Booking cannot go live
   without those (`legalIdentity` readiness). Consent rows store the version, not the label, so any change to this
   text must bump `PRIVACY_POLICY_VERSION`.
 

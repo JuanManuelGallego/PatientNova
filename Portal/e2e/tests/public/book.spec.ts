@@ -34,7 +34,6 @@ test.describe('public booking page', () => {
 
     await goToTimes(page, SLUG);
     await expect(page.getByRole('button', { name: /Primer horario disponible/ })).toBeVisible();
-    await expect(page.getByText(/Horas en tu zona horaria: Colombia/)).toBeVisible();
 
     await page.waitForLoadState('networkidle');
     expect(authCalls).toEqual([]);

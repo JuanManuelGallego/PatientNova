@@ -6,7 +6,7 @@ import esEs from "antd/locale/es_ES";
 dayjs.locale("es");
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
-import { browserTimezone, calendarDayOf, calendarDayToIso, fmtTimezoneLabel } from "@/src/utils/TimeUtils";
+import { calendarDayOf, calendarDayToIso } from "@/src/utils/TimeUtils";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "./ZonedDatePicker";
 
@@ -54,7 +54,6 @@ export function DateTimePicker({
           : fromPickerValue(selectedDate, timezone),
     );
   };
-  const showZone = showTime && mode === "instant" && timezone !== browserTimezone();
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
@@ -96,7 +95,6 @@ export function DateTimePicker({
               }
             : undefined
         }
-        renderExtraFooter={showZone ? () => <TimezoneFooter timezone={timezone} /> : undefined}
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}
         getPopupContainer={
@@ -105,14 +103,5 @@ export function DateTimePicker({
         data-testid={testId}
       />
     </ConfigProvider>
-  );
-}
-
-/** Shown in pickers only when the device's timezone differs from the provider's. */
-export function TimezoneFooter({ timezone }: { timezone: string }) {
-  return (
-    <span style={{ fontSize: 12, color: "var(--c-gray-500, #6b7280)" }}>
-      Hora de {fmtTimezoneLabel(timezone)}
-    </span>
   );
 }

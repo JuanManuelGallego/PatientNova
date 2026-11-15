@@ -22,10 +22,8 @@ describe('createPortalBookingSchema', () => {
     expect(createPortalBookingSchema.safeParse({ ...rest, patient: { name: 'Lucia' } }).success).toBe(false);
   });
 
-  it('accepts an optional E.164 or empty phone', () => {
-    expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '+573001112233' } }).success).toBe(true);
-    expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '' } }).success).toBe(true);
-    expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '3001112233' } }).success).toBe(false);
+  it('takes no typed phone: the only contact is the one that confirms', () => {
+    expect(createPortalBookingSchema.safeParse({ ...valid, patient: { ...valid.patient, phone: '+573001112233' } }).success).toBe(false);
   });
 
   it.each([

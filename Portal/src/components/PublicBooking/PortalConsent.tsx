@@ -4,7 +4,7 @@ import { useId, useState, type FormEvent } from "react";
 import { ApiClientError } from "@/src/api/base/apiClients";
 import { useAcceptConsent } from "@/src/api/portal/usePortalAuth";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import { ConsentLabel, ConsentNotice } from "./ConsentNotice";
+import { ConsentDisclosure, ConsentLabel, consentDescribedBy } from "./ConsentNotice";
 import styles from "./Portal.module.css";
 
 interface PortalConsentProps {
@@ -33,11 +33,14 @@ export function PortalConsent({ provider, onAccepted, onSessionLost }: PortalCon
         <section className={`dash-card ${styles.card}`} aria-labelledby={`${ids}-title`}>
             <h1 id={`${ids}-title`} className={styles.title}>Antes de continuar</h1>
             <form className={styles.form} onSubmit={onSubmit}>
-                <ConsentNotice provider={provider} />
-                <label className={styles.checkbox}>
-                    <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-                    <ConsentLabel provider={provider} />
-                </label>
+                <div>
+                    <label className={styles.checkbox}>
+                        <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)}
+                            aria-describedby={consentDescribedBy(`${ids}-consent`)} />
+                        <ConsentLabel provider={provider} />
+                    </label>
+                    <ConsentDisclosure provider={provider} idPrefix={`${ids}-consent`} className={styles.checkboxNote} />
+                </div>
                 {error && <p className={`error-inline ${styles.error}`} role="alert">{error}</p>}
                 <button type="submit" className={`btn-primary ${styles.submit}`} disabled={!checked || loading}>
                     {loading ? "Guardando…" : "Continuar"}

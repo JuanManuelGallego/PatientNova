@@ -7,7 +7,7 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { useReleaseBooking } from "@/src/api/portal/useBookingConfirmation";
 import type { BookingPending } from "@/src/types/PortalBooking";
 import type { PublicProvider } from "@/src/types/PublicBooking";
-import { appointmentsPath, fmtContact, fmtLongDayTime, timezoneName } from "@/src/utils/publicBooking";
+import { appointmentsPath, fmtContact, fmtLongDayTime } from "@/src/utils/publicBooking";
 import { ProviderContactNotice } from "./ProviderContactNotice";
 import { StateIcon } from "./PublicChrome";
 import styles from "./BookingFlow.module.css";
@@ -53,7 +53,6 @@ export function BookingResult({ slug, provider, pending, timezone, onCorrect }: 
                 Ábrelo y confirma en los próximos 15 minutos; si no, el horario quedará libre.
             </p>
             <p className={styles.quiet} data-testid="pending-time">{fmtLongDayTime(pending.startUtc, timezone)}</p>
-            <p className={styles.quiet}>Horas en tu zona horaria: {timezoneName(timezone)}</p>
             {provider.selfServe
                 ? <Link href={appointmentsPath(slug)} className={`btn-secondary ${styles.resultAction}`}>Ver mis citas</Link>
                 : <ProviderContactNotice provider={provider} />}

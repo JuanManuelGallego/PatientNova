@@ -73,7 +73,6 @@ async function seedRequest(p: LiveProvider, opts: { start?: string | undefined; 
     email: opts.email ?? unique('solicitud@test.local').toLowerCase(),
     name: 'Lucia',
     lastName: 'Rojas',
-    phone: '+573001112233',
     typeId: p.typeId,
     locationId: p.locationId,
     startAt: start,
@@ -213,7 +212,7 @@ describe('POST /v1/booking-requests/:id/approve', () => {
     expect(stored.resolvedBy).toBe(p.id);
 
     const patient = await prisma.patient.findUniqueOrThrow({ where: { id: stored.patientId! } });
-    expect(patient).toMatchObject({ email: req.email, name: 'Lucia', lastName: 'Rojas', whatsappNumber: '+573001112233', source: RecordSource.PORTAL });
+    expect(patient).toMatchObject({ email: req.email, name: 'Lucia', lastName: 'Rojas', whatsappNumber: null, source: RecordSource.PORTAL });
     const consent = await prisma.patientConsent.findFirstOrThrow({ where: { patientId: patient.id } });
     expect(consent).toMatchObject({ kind: ConsentKind.DATA_PROCESSING, ipAddress: '203.0.113.9', userAgent: 'test-agent' });
     expect(consent.acceptedAt.getTime()).toBe(req.consentAcceptedAt.getTime());

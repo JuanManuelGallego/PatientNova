@@ -138,7 +138,7 @@ export interface ConfirmedBookingOptions {
   email?: string;
   phone?: string;
   channel?: Channel;
-  patient?: { name: string; lastName: string; phone?: string | null };
+  patient?: { name: string; lastName: string };
   typeId?: string;
   locationId?: string;
   patientTimezone?: string;
@@ -150,7 +150,7 @@ export async function bookViaConfirmation(provider: LiveProvider, startUtc: stri
   const type = await prisma.appointmentType.findUniqueOrThrow({ where: { id: opts.typeId ?? provider.typeId } });
   const confirm = issueRequestToken();
   const release = issueRequestToken();
-  const patient = opts.patient ?? { name: 'Lucia', lastName: 'Rojas', phone: email ? '+573001112233' : null };
+  const patient = opts.patient ?? { name: 'Lucia', lastName: 'Rojas' };
   const requestId = await prisma.$transaction(async (tx) => {
     await withProviderLock(tx, provider.id);
     const { request } = await bookingRequestService.createUnconfirmedWithin(tx, provider.id, {
@@ -159,7 +159,6 @@ export async function bookViaConfirmation(provider: LiveProvider, startUtc: stri
       verifiedPhone: email ? null : opts.phone!,
       name: patient.name,
       lastName: patient.lastName,
-      phone: patient.phone || null,
       typeId: opts.typeId ?? provider.typeId,
       locationId: opts.locationId ?? provider.locationId,
       startAt: start,

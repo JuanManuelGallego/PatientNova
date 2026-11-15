@@ -13,3 +13,10 @@ One folder per `PRIVACY_POLICY_VERSION`. A consent row stores only the version, 
   - `politica-privacidad.md` s.9: patient session cookie (two hours) -> "no establece ninguna cookie de sesión".
   - `politica-privacidad.md` s.10: "Los códigos temporales y las sesiones expiran" -> links expire after 15 minutes, unconfirmed bookings are deleted after 48 hours (resolved requests still after 90 days).
   - `condiciones-portal.md`: "No compartas códigos o enlaces de acceso" -> "No compartas los enlaces de confirmación".
+- `2026-11-14`: shorter authorization text with the same scope, shown in layers so the booking form reads as a form. **Pending counsel review**, like `2026-11-09`, including whether the collapsed layer is acceptable. Only `autorizacion-portal.md` changed; the policy and both conditions are verbatim.
+  - Layers: the contact help, the checkbox and the sensitive-data line are always visible; the voluntary notice and the controller line sit behind "Ver detalles" on the same page, and stay in the checkbox's accessible description.
+  - Datos sensibles (new, visible): "Los datos de salud son datos sensibles: no estás obligado a autorizar su tratamiento." It carries the statutory statement that was in the Aviso.
+  - Aviso (collapsed): the remaining statements of voluntariness become one sentence with the direct contact; "No escribas aquí diagnósticos..." is gone (the form has no free-text field).
+  - Casilla: "recoger y utilizar" -> "tratar"; "mediante Patient Nova como su encargado" and "Conozco mis derechos y el procedimiento de revocación" move to the controller line; ends "según la Política de privacidad".
+  - Línea del responsable (collapsed): "opera este portal por su cuenta" -> "como su encargado", plus the rights to know, update and rectify and to revoke at any time.
+  - Ayuda del campo de contacto (was "Al reservar"): same request in fewer words, under the contact field; "No incluyas datos de salud en este paso" is gone.

@@ -17,6 +17,7 @@ interface ContactChoiceFieldProps {
     email: string;
     whatsapp: string;
     invalid: boolean;
+    hint?: string;
     inputRef: Ref<HTMLInputElement>;
     onChannel: (channel: ConfirmationChannel) => void;
     onEmail: (value: string) => void;
@@ -24,9 +25,12 @@ interface ContactChoiceFieldProps {
     onTouched: () => void;
 }
 
-export function ContactChoiceField({ channels, channel, email, whatsapp, invalid, inputRef, onChannel, onEmail, onWhatsapp, onTouched }: ContactChoiceFieldProps) {
+export function ContactChoiceField({ channels, channel, email, whatsapp, invalid, hint, inputRef, onChannel, onEmail, onWhatsapp, onTouched }: ContactChoiceFieldProps) {
     const ids = useId();
     const errorId = `${ids}-contact-error`;
+    const hintId = `${ids}-contact-hint`;
+    const describedBy = [ hint && hintId, invalid && errorId ].filter(Boolean).join(" ") || undefined;
+    const hintText = hint && <span id={hintId} className={styles.fieldHint}>{hint}</span>;
     return (
         <>
             {channels.length > 1 && (
@@ -50,20 +54,22 @@ export function ContactChoiceField({ channels, channel, email, whatsapp, invalid
                     <label className="form-label">
                         Correo electrónico
                         <input ref={inputRef} className="form-input" type="email" name="email" autoComplete="email" inputMode="email" required maxLength={254}
-                            aria-invalid={invalid || undefined} aria-describedby={invalid ? errorId : undefined}
+                            aria-invalid={invalid || undefined} aria-describedby={describedBy}
                             value={email} onChange={(e) => onEmail(e.target.value)} onBlur={onTouched} />
                     </label>
                     {invalid && <span id={errorId} className={styles.fieldError}>Escribe un correo válido.</span>}
+                    {hintText}
                 </div>
             ) : (
                 <div>
                     <div className="form-label">
                         <label htmlFor={`${ids}-whatsapp`}>Número de WhatsApp</label>
                         <CountryCodeInput ref={inputRef} id={`${ids}-whatsapp`} name="whatsapp" autoComplete="tel" placeholder="300 123 4567"
-                            aria-invalid={invalid || undefined} aria-describedby={invalid ? errorId : undefined}
+                            aria-invalid={invalid || undefined} aria-describedby={describedBy}
                             value={whatsapp} onChange={onWhatsapp} onBlur={onTouched} />
                     </div>
                     {invalid && <span id={errorId} className={styles.fieldError}>{PHONE_FORMAT_HINT}</span>}
+                    {hintText}
                 </div>
             )}
         </>

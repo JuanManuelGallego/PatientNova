@@ -25,7 +25,7 @@ import {
   enqueueBookingRequestNotifications,
 } from './booking-request-notifications.js';
 import { isTrustedPhoneMatch } from '../portal/patient-resolution.js';
-import { newPatientContact, requestContact, typedPhoneIsUnverified } from '../portal/portal-contact.js';
+import { newPatientContact, requestContact } from '../portal/portal-contact.js';
 import {
   BookingRequestCandidateError,
   BookingRequestNotFoundError,
@@ -187,9 +187,9 @@ async function resolveApprovalPatient(
   const patient = await createPatientWithin(tx, {
     name: request.name,
     lastName: request.lastName,
-    ...newPatientContact(contact, request.phone),
+    ...newPatientContact(contact),
     status: PatientStatus.ACTIVE,
-  }, userId, { source: RecordSource.PORTAL, whatsappUnverified: typedPhoneIsUnverified(contact, request.phone) });
+  }, userId, { source: RecordSource.PORTAL });
   return patient.id;
 }
 

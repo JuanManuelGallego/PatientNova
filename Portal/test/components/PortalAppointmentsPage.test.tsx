@@ -222,7 +222,6 @@ describe("PortalAppointmentsPage upcoming appointments", () => {
         expect(winter).toHaveTextContent("Consultorio Centro, Calle 10");
         expect(winter).toHaveTextContent("Timbre 2");
         expect(winter).toHaveTextContent("Confirmada");
-        expect(screen.getByText(/Horas en tu zona horaria/)).toBeInTheDocument();
         expect(call("/portal/appointments")[ 0 ][ 1 ].credentials).toBe("include");
     });
 

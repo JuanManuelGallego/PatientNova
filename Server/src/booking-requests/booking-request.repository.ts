@@ -17,7 +17,6 @@ export interface CreateBookingRequestData {
   verifiedPhone?: string | null;
   name: string;
   lastName: string;
-  phone?: string | null;
   typeId: string;
   locationId: string;
   startAt: Date;
@@ -55,7 +54,6 @@ export const providerRequestSelect = {
   contactChannel: true,
   email: true,
   verifiedPhone: true,
-  phone: true,
   patientTimezone: true,
   appointmentId: true,
   patientId: true,
@@ -259,7 +257,6 @@ export const bookingRequestRepository = {
         verifiedPhone: data.verifiedPhone ?? null,
         name: data.name,
         lastName: data.lastName,
-        phone: data.phone ?? null,
         typeId: data.typeId,
         locationId: data.locationId,
         startAt: data.startAt,

@@ -47,7 +47,7 @@ docs {
 
   Needs a Turnstile token in `captchaToken` (action `booking`; the test secret accepts any value). The
   body is strict. `contact` is `{ channel: "EMAIL", email }` or `{ channel: "WHATSAPP", phone }` (E.164);
-  `patient.phone` (optional) is only for EMAIL. Limited to 10 starts per IP per 15 minutes.
+  `patient` is only `{ name, lastName }` (no phone). Limited to 10 starts per IP per 15 minutes.
 
   202 `{ channel, contact, startUtc, holdExpiresAt, approvalRequired, releaseToken }`: the same shape
   for every contact, whether or not it belongs to a patient. The link is in the email (or WhatsApp);

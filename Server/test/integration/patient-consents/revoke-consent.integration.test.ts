@@ -53,7 +53,6 @@ async function liveRequest(provider: LiveProvider, slot: string, email: string) 
     email,
     name: 'Lucia',
     lastName: 'Rojas',
-    phone: '+573001112233',
     typeId: provider.typeId,
     locationId: provider.locationId,
     startAt: start,

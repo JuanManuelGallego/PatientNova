@@ -54,7 +54,6 @@ function makeRequest(overrides: Partial<BookingRequestDetail> = {}): BookingRequ
     contactChannel: "EMAIL",
     email: "lucia@test.local",
     verifiedPhone: null,
-    phone: "+573001112233",
     patientTimezone: "America/New_York",
     appointmentId: null,
     patientId: null,
@@ -103,16 +102,15 @@ describe("RequestDrawer", () => {
 
   describe("a request from a phone session", () => {
     const phoneRequest = (overrides: Partial<BookingRequestDetail> = {}) => makeRequest({
-      contactChannel: "WHATSAPP", email: null, verifiedPhone: "+573001112233", phone: null, ...overrides,
+      contactChannel: "WHATSAPP", email: null, verifiedPhone: "+573001112233", ...overrides,
     });
 
-    it("shows the proven number and no email or typed phone rows", () => {
+    it("shows the proven number and no email row", () => {
       request = phoneRequest();
       renderDrawer();
       expect(screen.getByTestId("request-verified-phone")).toHaveTextContent("WhatsApp (verificado)");
       expect(screen.getByTestId("request-verified-phone")).toHaveTextContent("+573001112233");
       expect(screen.queryByText("Correo (verificado)")).not.toBeInTheDocument();
-      expect(screen.queryByText("Teléfono (sin verificar)")).not.toBeInTheDocument();
     });
 
     it("says a new patient will be created when nothing matches", () => {

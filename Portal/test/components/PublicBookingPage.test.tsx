@@ -148,6 +148,42 @@ describe("PublicBookingPage", () => {
         expect(screen.getByRole("button", { name: "Ver horarios" })).toBeEnabled();
     });
 
+    describe("bringing the place into view after the type", () => {
+        function placesBelowDock() {
+            const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => undefined);
+            vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+                const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 0, width: 0, height: bottom - top, x: 0, y: top, toJSON: () => ({}) });
+                if (this.getAttribute("aria-label") === "Lugar") return box(930, 1100);
+                if (this.textContent === "¿Dónde prefieres atenderte?") return box(900, 920);
+                if (this.previousElementSibling?.tagName === "SECTION") return box(700, 800);
+                return box(0, 0);
+            });
+            return scrollBy;
+        }
+
+        it("scrolls the place question above the dock once a type is chosen", async () => {
+            routeFetch(200, 200, threeTypes({ locations: twoPlaces }));
+            const scrollBy = placesBelowDock();
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+
+            await chooseType(user);
+            expect(scrollBy).toHaveBeenCalledTimes(1);
+            expect(scrollBy.mock.calls[ 0 ]![ 0 ]).toMatchObject({ top: 416 });
+        });
+
+        it("leaves the page alone once a place is chosen", async () => {
+            routeFetch(200, 200, threeTypes({ locations: twoPlaces }));
+            const scrollBy = placesBelowDock();
+            const user = userEvent.setup();
+            render(<PublicBookingPage slug="dra-ana" />);
+
+            await user.click(await screen.findByRole("button", { name: /Sede Norte/ }));
+            await chooseType(user);
+            expect(scrollBy).not.toHaveBeenCalled();
+        });
+    });
+
     it("lists each of four places as its own option, with its name and detail", async () => {
         routeFetch(200, 200, threeTypes({
             locations: [
@@ -242,7 +278,6 @@ describe("PublicBookingPage", () => {
         const morning = await toTimes(user);
         expect(morning).toHaveTextContent(/10:00/);
         expect(screen.getByRole("list", { name: "Tarde" })).toHaveTextContent(/03:00/);
-        expect(screen.getByText(/Horas en tu zona horaria/)).toHaveTextContent(/Tokio|Tokyo/);
 
         const url = new URL(String(fetchMock.mock.calls.find(([ u ]) => String(u).includes("/slots?"))![ 0 ]));
         expect(url.searchParams.get("from")).toBe(addCalendarDays(tokyoToday, -2));

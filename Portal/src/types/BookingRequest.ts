@@ -17,7 +17,6 @@ export interface BookingRequest {
     contactChannel: "EMAIL" | "WHATSAPP" | "SMS";
     email: string | null;
     verifiedPhone: string | null;
-    phone: string | null;
     patientTimezone: string;
     appointmentId: string | null;
     patientId: string | null;

@@ -37,17 +37,16 @@ describe('Spanish templates', () => {
     const e = renderBookingConfirmationEmail({
       providerName: 'Dra. Pérez',
       whenLocal: 'martes, 20 de octubre de 2026, 10:30',
-      timezone: 'America/New_York',
       locationName: 'Consultorio Centro',
       address: 'Calle 10 # 5-20',
       appointmentsUrl: url,
     });
     expect(e.body).toContain(url);
-    expect(e.body).toContain('martes, 20 de octubre de 2026, 10:30 (hora de America/New_York)');
+    expect(e.body).toContain('martes, 20 de octubre de 2026, 10:30');
     expect(e.body).toContain('Lugar: Consultorio Centro');
     expect(e.body).toContain('Dirección: Calle 10 # 5-20');
     expect(e.body).not.toMatch(/[?&](token|code|key)=/i);
-    const bare = renderBookingConfirmationEmail({ providerName: 'X', whenLocal: 'y', timezone: 'UTC', appointmentsUrl: url }).body;
+    const bare = renderBookingConfirmationEmail({ providerName: 'X', whenLocal: 'y', appointmentsUrl: url }).body;
     expect(bare).not.toContain('Lugar:');
     expect(bare).not.toContain('Dirección:');
   });

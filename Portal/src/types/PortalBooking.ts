@@ -7,7 +7,7 @@ export interface StartBookingRequest {
     patientTimezone: string;
     consentAccepted: true;
     captchaToken: string;
-    patient: { name: string; lastName: string; phone?: string };
+    patient: { name: string; lastName: string };
     contact: BookingContactChoice;
 }
 

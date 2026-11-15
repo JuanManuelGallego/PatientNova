@@ -49,7 +49,6 @@ async function unconfirmed(p: LiveProvider, opts: RowOpts = {}) {
     verifiedPhone: channel === Channel.WHATSAPP ? `+57300${String(1000000 + ++seq)}` : null,
     name: 'Lucia',
     lastName: 'Rojas',
-    phone: null,
     typeId: p.typeId,
     locationId: p.locationId,
     startAt: start,
@@ -221,7 +220,7 @@ describe('unconfirmed hold expiry', () => {
       patientTimezone: 'America/New_York',
       consentAccepted: true,
       captchaToken: 'good',
-      patient: { name: 'Ana', lastName: 'Perez', phone: '+573001112233' },
+      patient: { name: 'Ana', lastName: 'Perez' },
       contact: { channel: 'EMAIL', email: 'nueva@example.com' },
     } as never, { ipAddress: '203.0.113.5', userAgent: 'vitest' } as never);
 
@@ -250,7 +249,7 @@ describe('unconfirmed hold expiry', () => {
 
     await bookingStartService.start(p.slug, {
       typeId: p.typeId, locationId: p.locationId, startUtc: next, patientTimezone: 'America/New_York', consentAccepted: true,
-      captchaToken: 'good', patient: { name: 'Ana', lastName: 'Perez', phone: '+573001112233' },
+      captchaToken: 'good', patient: { name: 'Ana', lastName: 'Perez' },
       contact: { channel: 'EMAIL', email: 'otra@example.com' },
     } as never, { ipAddress: '203.0.113.5', userAgent: 'vitest' } as never);
 

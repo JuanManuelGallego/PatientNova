@@ -153,7 +153,6 @@ export const bookingStartService = {
             verifiedPhone: isPhoneContact(contact) ? contact.value : null,
             name: body.patient.name,
             lastName: body.patient.lastName,
-            phone: body.patient.phone || null,
             typeId: type.id,
             locationId: location.id,
             startAt: start,
