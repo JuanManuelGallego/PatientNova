@@ -458,27 +458,11 @@ describe("OnlineBookingTab: rules", () => {
     const type = (defaultDuration: number, bookableOnline = true): AppointmentType =>
         ({ id: `t${defaultDuration}`, name: `Cita ${defaultDuration}`, defaultDuration, bookableOnline });
 
-    it("warns when the interval lets online bookings leave gaps, ignoring types not bookable online", async () => {
-        appointmentTypes = [ type(60), type(45, false) ];
-        renderTab();
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
-        await user.click(within(screen.getByTestId("online-booking-interval")).getByRole("combobox"));
-        await user.click(screen.getByRole("option", { name: "60 min" }));
-        expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
-    });
-
-    it("ignores inactive types in the interval warning", () => {
-        appointmentTypes = [ type(60), { ...type(45), isActive: false } ];
-        renderTab();
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
-    });
-
-    it("shows no interval warning without bookable types", () => {
-        appointmentTypes = [ type(60, false) ];
+    it("never warns about the interval, whatever the appointment lengths", () => {
+        appointmentTypes = [ type(50), type(60) ];
         renderTab();
         expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
+        expect(screen.queryByText(/espacios libres entre citas/)).not.toBeInTheDocument();
     });
 
     it("autosaves buffer, lead time (hours → minutes) and horizon in one request", async () => {

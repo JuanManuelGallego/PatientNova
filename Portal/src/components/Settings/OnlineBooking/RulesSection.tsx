@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import {
     BookingSettings,
     BookingSettingsUpdate,
@@ -13,7 +12,6 @@ import {
     SLOT_INTERVAL_OPTIONS,
 } from "@/src/types/Booking";
 import { REMINDER_TYPE_CONFIG } from "@/src/types/Reminder";
-import { intervalGapWarning } from "@/src/utils/bookingAvailability";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { FieldError, InlineError } from "@/src/components/Info/InlineError";
@@ -88,12 +86,6 @@ export function RulesSection({ settings, save, onSaved }: { settings: BookingSet
     const autosave = useDebouncedSave<BookingSettingsUpdate>(async (body) => onSaved(await save(body)), { initial });
     const { errors, invalid } = parseRules(form);
     const ids = useId();
-    const { appointmentTypes } = useFetchAppointmentTypes();
-    const gapWarning = intervalGapWarning(
-        form.interval,
-        toNumber(form.buffer),
-        appointmentTypes.filter((t) => t.bookableOnline && t.isActive !== false).map((t) => t.defaultDuration),
-    );
 
     function change(patch: Partial<RulesForm>) {
         const next = { ...form, ...patch };
@@ -142,7 +134,6 @@ export function RulesSection({ settings, save, onSaved }: { settings: BookingSet
                             options={SLOT_INTERVAL_OPTIONS.map((n) => ({ value: String(n), label: `${n} min` }))}
                         />
                         <span className="form-input-hint">Cada cuánto se ofrece un horario de inicio. La duración la define el tipo de cita.</span>
-                        {gapWarning && <WarningHint testId="online-booking-interval-warning">{gapWarning}</WarningHint>}
                     </label>
                     {numberField({
                         field: "buffer", label: "Tiempo entre citas (min)", hint: "Margen libre antes y después de cada cita reservada en línea.",
