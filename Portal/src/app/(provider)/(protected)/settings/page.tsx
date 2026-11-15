@@ -7,7 +7,6 @@ import { SecurityTab } from "@/src/components/Settings/SecurityTab";
 import { LocationsTab } from "@/src/components/Settings/LocationsTab";
 import { RemindersTab } from "@/src/components/Settings/RemindersTab";
 import { AppointmentTypesTab } from "@/src/components/Settings/AppointmentTypesTab";
-import { AuditLogsTab } from "@/src/components/Settings/AuditLogsTab";
 import { GoogleIntegrationTab } from "@/src/components/Settings/GoogleIntegrationTab";
 import { OnlineBookingTab } from "@/src/components/Settings/OnlineBookingTab";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -15,7 +14,7 @@ import { TabNav } from "@/src/components/TabNav";
 import { QUERY_PARAMS } from "@/src/utils/listQuery";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", OnlineBooking = "Reserva en línea", Integrations = "Integraciones", Notifications = "Recordatorios", AuditLogs = "Registro de actividad" }
+enum ActiveTab { Profile = "Perfil", Security = "Seguridad", Locations = "Ubicaciones", AppointmentTypes = "Tipos de Cita", OnlineBooking = "Reserva en línea", Integrations = "Integraciones", Notifications = "Recordatorios" }
 
 export default function SettingsPage() {
     const { user } = useAuthContext();
@@ -26,7 +25,7 @@ export default function SettingsPage() {
         <PageLayout>
             <PageHeader
                 title="Configuración"
-                subtitle="Gestiona tu perfil y seguridad"
+                subtitle="Gestiona tu cuenta y tu consulta"
                 style={{ marginBottom: 28 }}
             />
             <div style={{ marginBottom: 28 }}>
@@ -47,7 +46,6 @@ export default function SettingsPage() {
             {tab === ActiveTab.OnlineBooking && user?.portalEnabled && (<OnlineBookingTab />)}
             {tab === ActiveTab.Integrations && (<GoogleIntegrationTab />)}
             {tab === ActiveTab.Notifications && (<RemindersTab />)}
-            {tab === ActiveTab.AuditLogs && (<AuditLogsTab />)}
         </PageLayout>
     );
 }

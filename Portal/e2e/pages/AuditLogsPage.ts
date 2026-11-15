@@ -17,7 +17,7 @@ export class AuditLogsPage extends BasePage {
   }
 
   async goToAuditLogs() {
-    await this.page.goto('/settings?tab=Registro+de+actividad');
+    await this.page.goto('/activity');
   }
 
   auditRow(id: string): Locator {

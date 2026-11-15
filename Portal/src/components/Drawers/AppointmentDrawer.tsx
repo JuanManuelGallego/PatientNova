@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { activityHref } from "@/src/config/navigation";
 import {
   Appointment,
   AppointmentStatus,
@@ -220,7 +221,7 @@ export function AppointmentDrawer({
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{appointment.id}</span>} />
         <Row icon={DETAIL_ICONS.calendar} label="Creada" value={new Date(appointment.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
-        <Link href={`/settings?tab=Registro+de+actividad&entityId=${appointment.id}`} className="drawer-link" data-testid="appointment-drawer-audit-link">
+        <Link href={activityHref({ entityId: appointment.id })} className="drawer-link" data-testid="appointment-drawer-audit-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </Link>
       </Section>

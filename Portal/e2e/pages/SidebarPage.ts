@@ -7,6 +7,7 @@ export class SidebarPage extends BasePage {
   readonly hamburger: Locator;
   readonly backdrop: Locator;
   readonly userSection: Locator;
+  readonly userMenuButton: Locator;
   readonly themeToggle: Locator;
   readonly logoutButton: Locator;
   readonly brandName: Locator;
@@ -20,6 +21,7 @@ export class SidebarPage extends BasePage {
     this.hamburger = page.getByTestId('hamburger-button');
     this.backdrop = page.getByTestId('sidebar-backdrop');
     this.userSection = page.getByTestId('sidebar-user');
+    this.userMenuButton = page.getByTestId('sidebar-user-menu-button');
     this.themeToggle = page.getByTestId('sidebar-theme-toggle');
     this.logoutButton = page.getByTestId('sidebar-logout');
     this.brandName = page.locator('.sidebar-brand__name');
@@ -32,6 +34,7 @@ export class SidebarPage extends BasePage {
       calendar: page.getByTestId('sidebar-link-calendar'),
       reminders: page.getByTestId('sidebar-link-reminders'),
       settings: page.getByTestId('sidebar-link-settings'),
+      activity: page.getByTestId('sidebar-link-activity'),
     };
   }
 
@@ -95,8 +98,14 @@ export class SidebarPage extends BasePage {
     await expect(this.sidebar).not.toHaveClass(/sidebar--open/);
   }
 
-  async expectLogoutButtonVisible() {
+  /** Theme and logout live behind the account button. */
+  async openUserMenu() {
+    await this.userMenuButton.click();
     await expect(this.logoutButton).toBeVisible();
+  }
+
+  async expectLogoutButtonVisible() {
+    await this.openUserMenu();
   }
 
   async navigateToDashboard() {

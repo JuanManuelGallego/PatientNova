@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useAuthContext } from "@/src/providers/AuthContext";
-import { AdminRole } from "@/src/types/User";
+import { isAdminRole } from "@/src/types/User";
 import { useFetchPendingRequestsCount } from "@/src/api/booking-requests/useFetchPendingRequestsCount";
 
 const REFRESH_MS = 2 * 60_000;
@@ -23,7 +23,7 @@ const PendingRequestsContext = createContext<PendingRequestsValue>({
 /** One shared count for the sidebar badge, the alert and the dashboard card, refreshed every two minutes. */
 export function PendingRequestsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
-  const enabled = !!user?.portalEnabled && (user.role === AdminRole.ADMIN || user.role === AdminRole.SUPER_ADMIN);
+  const enabled = !!user?.portalEnabled && isAdminRole(user.role);
   const { pending, refetch } = useFetchPendingRequestsCount(enabled);
 
   useEffect(() => {

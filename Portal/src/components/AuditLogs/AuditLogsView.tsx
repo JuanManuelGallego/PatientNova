@@ -54,7 +54,7 @@ const ACTION_OPTIONS: SelectOption[] = withAllOption(
   "Todas",
 );
 
-export function AuditLogsTab() {
+export function AuditLogsView() {
   const timezone = useDisplayTimezone();
   const [viewLog, setViewLog] = useState<AuditLog | null>(null);
   const [entityType, setEntityType] = useQueryState(QUERY_PARAMS.auditEntityType, parseAsArrayOf(parseAsString).withDefault([]));
@@ -162,27 +162,11 @@ export function AuditLogsTab() {
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
           marginBottom: 20,
         }}
       >
-        <div>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--c-gray-700)",
-            }}
-          >
-            Registro de actividad
-          </div>
-          <div
-            style={{ fontSize: 12, color: "var(--c-gray-400)", marginTop: 2 }}
-          >
-            Historial de acciones realizadas en el sistema
-          </div>
-        </div>
         <button
           onClick={() => fetchAuditLogs()}
           className="btn-secondary btn-secondary--sm"

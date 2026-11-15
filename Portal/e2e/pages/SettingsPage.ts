@@ -11,7 +11,6 @@ export class SettingsPage extends BasePage {
   readonly tabLocations: Locator;
   readonly tabAppointmentTypes: Locator;
   readonly tabReminders: Locator;
-  readonly tabAuditLogs: Locator;
   readonly newLocationButton: Locator;
   readonly newTypeButton: Locator;
 
@@ -22,7 +21,6 @@ export class SettingsPage extends BasePage {
     this.tabLocations = this.page.getByTestId('settings-tab-ubicaciones');
     this.tabAppointmentTypes = this.page.getByTestId('settings-tab-tipos-de-cita');
     this.tabReminders = this.page.getByTestId('settings-tab-recordatorios');
-    this.tabAuditLogs = this.page.getByTestId('settings-tab-registro-de-actividad');
     this.newLocationButton = this.page.getByTestId('settings-new-location-button');
     this.newTypeButton = this.page.getByTestId('settings-new-type-button');
   }
@@ -32,7 +30,6 @@ export class SettingsPage extends BasePage {
   async goToLocations() { await this.tabLocations.click(); }
   async goToAppointmentTypes() { await this.tabAppointmentTypes.click(); }
   async goToReminders() { await this.tabReminders.click(); }
-  async goToAuditLogs() { await this.tabAuditLogs.click(); }
 
   async openLocationModal() {
     await this.tabLocations.click();

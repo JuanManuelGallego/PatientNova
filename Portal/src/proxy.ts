@@ -8,6 +8,8 @@ const PROTECTED_PATHS = [
   "/reminders",
   "/settings",
   "/medical-records",
+  "/requests",
+  "/activity",
 ];
 
 export function proxy(req: NextRequest) {
@@ -38,5 +40,7 @@ export const config = {
     "/reminders/:path*",
     "/settings/:path*",
     "/medical-records/:path*",
+    "/requests/:path*",
+    "/activity/:path*",
   ],
 };
