@@ -156,6 +156,23 @@ describe("OnlineBookingTab: status", () => {
         expect(screen.getByRole("alert")).toHaveTextContent("Completa la configuración");
     });
 
+    it("shows a toggle error next to the toggle, above the link", async () => {
+        settings = makeSettings({ ...WITH_LINK, readiness: READY });
+        updateSettings.mockRejectedValue(new Error("No se pudo activar."));
+        renderTab();
+        await user.click(screen.getByTestId("online-booking-enabled-toggle"));
+        await settle(0);
+        const alert = screen.getByRole("alert");
+        expect(alert.compareDocumentPosition(screen.getByTestId("online-booking-url")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("says only once that booking is off", () => {
+        settings = makeSettings({ ...WITH_LINK, bookingEnabled: false, readiness: READY });
+        renderTab();
+        expect(screen.getByTestId("online-booking-status")).toHaveTextContent("La reserva en línea está desactivada.");
+        expect(screen.queryByText(/El enlace no recibirá reservas/)).not.toBeInTheDocument();
+    });
+
     it("disables the toggle while the request is in flight", async () => {
         settings = makeSettings({ readiness: READY });
         let resolve!: (s: BookingSettings) => void;
@@ -315,6 +332,23 @@ describe("OnlineBookingTab: link", () => {
         expect(writeText).toHaveBeenCalledWith("https://app.test/book/dra");
         expect(screen.getByText("¡Copiado!")).toBeInTheDocument();
     });
+
+    it("cancels the copy confirmation timer when the page closes", async () => {
+        vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+        settings = makeSettings(WITH_LINK);
+        const { unmount } = renderTab();
+        const set = vi.spyOn(globalThis, "setTimeout");
+        await user.click(screen.getByTestId("online-booking-copy"));
+        await settle(0);
+        const copyTimer = set.mock.results[ set.mock.calls.findIndex((c) => c[ 1 ] === 2000) ]?.value;
+        set.mockRestore();
+        expect(copyTimer).toBeDefined();
+
+        const clear = vi.spyOn(globalThis, "clearTimeout");
+        unmount();
+        expect(clear).toHaveBeenCalledWith(copyTimer);
+        clear.mockRestore();
+    });
 });
 
 describe("OnlineBookingTab: availability", () => {
@@ -424,27 +458,11 @@ describe("OnlineBookingTab: rules", () => {
     const type = (defaultDuration: number, bookableOnline = true): AppointmentType =>
         ({ id: `t${defaultDuration}`, name: `Cita ${defaultDuration}`, defaultDuration, bookableOnline });
 
-    it("warns when the interval lets online bookings leave gaps, ignoring types not bookable online", async () => {
-        appointmentTypes = [ type(60), type(45, false) ];
-        renderTab();
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
-        await user.click(within(screen.getByTestId("online-booking-interval")).getByRole("combobox"));
-        await user.click(screen.getByRole("option", { name: "60 min" }));
-        expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
-    });
-
-    it("ignores inactive types in the interval warning", () => {
-        appointmentTypes = [ type(60), { ...type(45), isActive: false } ];
-        renderTab();
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("duran 60 min");
-        expect(screen.getByTestId("online-booking-interval-warning")).toHaveTextContent("usa 60 min");
-    });
-
-    it("shows no interval warning without bookable types", () => {
-        appointmentTypes = [ type(60, false) ];
+    it("never warns about the interval, whatever the appointment lengths", () => {
+        appointmentTypes = [ type(50), type(60) ];
         renderTab();
         expect(screen.queryByTestId("online-booking-interval-warning")).not.toBeInTheDocument();
+        expect(screen.queryByText(/espacios libres entre citas/)).not.toBeInTheDocument();
     });
 
     it("autosaves buffer, lead time (hours → minutes) and horizon in one request", async () => {
@@ -618,12 +636,48 @@ describe("OnlineBookingTab: status summary", () => {
         expect(reportAttention).toHaveBeenLastCalledWith({ booking: false });
     });
 
-    it("frames every section as a titled region", () => {
+    it("shows the overview first, then the sections in the spec's order", () => {
         settings = makeSettings({ ...WITH_LINK, readiness: READY });
         renderTab();
-        for (const name of [ "Reserva en línea", "Confirmación de reservas", "Enlace de reserva", "Perfil público", "Disponibilidad semanal", "Reglas de reserva" ]) {
-            expect(screen.getByRole("region", { name })).toBeInTheDocument();
-        }
+        expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent))
+            .toEqual([ "Reserva en línea", "Disponibilidad semanal", "Reglas de reserva", "Confirmación de reservas", "Tu página pública" ]);
+    });
+
+    it("keeps the status, the link and the QR in the overview", () => {
+        settings = makeSettings({ ...WITH_LINK, readiness: READY });
+        renderTab();
+        const overview = screen.getByRole("region", { name: "Reserva en línea" });
+        expect(within(overview).getByTestId("online-booking-enabled-toggle")).toBeInTheDocument();
+        expect(within(overview).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/dra");
+        expect(within(overview).getByTestId("online-booking-qr")).toBeInTheDocument();
+    });
+
+    it("has one way to create the link, and ticks only that item once saved", async () => {
+        settings = makeSettings({ readiness: { ...READY, hasSlug: false, hasAvailability: false } });
+        updateSettings.mockImplementation(async (body) => ({
+            ...settings, ...body, bookingUrl: "https://app.test/book/test-user", readiness: { ...READY, hasAvailability: false },
+        }));
+        renderTab();
+        const slugItem = () => screen.getByText("Enlace de reserva definido").closest("li")!;
+        expect(within(slugItem()).queryByRole("button")).toBeNull();
+        expect(within(slugItem()).queryByRole("link")).toBeNull();
+
+        await user.click(screen.getByTestId("online-booking-slug-create"));
+        await user.click(screen.getByTestId("online-booking-slug-save"));
+        await settle(0);
+
+        expect(within(screen.getByRole("region", { name: "Reserva en línea" })).getByTestId("online-booking-url")).toHaveTextContent("https://app.test/book/test-user");
+        expect(slugItem()).toHaveTextContent("(listo)");
+        expect(screen.getByText("Al menos una franja de disponibilidad semanal").closest("li")).toHaveTextContent("(pendiente)");
+    });
+
+    it("points the checklist at sections further down the page", () => {
+        settings = makeSettings({ readiness: { ...READY, hasLegalIdentity: false, hasAvailability: false } });
+        renderTab();
+        expect(screen.getByRole("link", { name: "Completar tu página pública" })).toHaveAttribute("href", "#online-booking-profile");
+        expect(screen.getByRole("link", { name: "Agregar disponibilidad" })).toHaveAttribute("href", "#online-booking-availability");
+        expect(document.getElementById("online-booking-profile")).toHaveTextContent("Tu página pública");
+        expect(document.getElementById("online-booking-availability")).toHaveTextContent("Disponibilidad semanal");
     });
 
     it("says plainly when the link is live and hides the checklist", () => {
