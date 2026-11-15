@@ -6,6 +6,7 @@ import { LocationAndTimeStep } from "@/src/components/Modals/AppointmentModal/Lo
 import { AppointmentDuration, AppointmentForm, AppointmentPaidStatus, AppointmentStatus } from "@/src/types/Appointment";
 import { ReminderType } from "@/src/types/Reminder";
 import { ApiMutationError } from "@/src/api/base/useApiMutation";
+import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
 const createMeet = vi.fn();
 const startOAuth = vi.fn();
@@ -43,7 +44,7 @@ const initialForm: AppointmentForm = {
 function Harness({ meetingUrl }: { meetingUrl?: string }) {
   const [ form, setForm ] = useState<AppointmentForm>({ ...initialForm, meetingUrl });
   return (
-    <>
+    <FocusTrapProvider>
       <LocationAndTimeStep
         form={form}
         set={(field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
@@ -53,7 +54,7 @@ function Harness({ meetingUrl }: { meetingUrl?: string }) {
         locations={[ { id: "virtual", name: "Virtual", isVirtual: true } ]}
       />
       <output data-testid="meeting-url">{form.meetingUrl}</output>
-    </>
+    </FocusTrapProvider>
   );
 }
 
@@ -120,13 +121,38 @@ describe("LocationAndTimeStep Google Meet", () => {
     expect(screen.getByRole("button", { name: /Reconectar y generar/ })).toBeInTheDocument();
   });
 
-  it("requires confirmation before replacing an existing URL", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("asks in an in-app dialog before replacing an existing URL, and keeps it on Regresar", async () => {
+    const confirm = vi.spyOn(window, "confirm");
     render(<Harness meetingUrl="https://zoom.us/j/123" />);
 
     expect(screen.getByRole("button", { name: /Regenerar Google Meet/ })).toBeInTheDocument();
     await userEvent.click(screen.getByTestId("generate-meet-link-button"));
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(screen.getByRole("alertdialog", { name: /Reemplazar el enlace/ })).toBeInTheDocument();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(createMeet).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByTestId("replace-meet-link-dialog-cancel-button"));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(createMeet).not.toHaveBeenCalled();
+    expect(screen.getByTestId("meeting-url")).toHaveTextContent("https://zoom.us/j/123");
+  });
+
+  it("replaces the existing URL once the dialog is confirmed", async () => {
+    render(<Harness meetingUrl="https://zoom.us/j/123" />);
+    await userEvent.click(screen.getByTestId("generate-meet-link-button"));
+    await userEvent.click(screen.getByTestId("replace-meet-link-dialog-confirm-button"));
+
+    await waitFor(() => expect(screen.getByTestId("meeting-url")).toHaveTextContent("https://meet.google.com/new"));
+    expect(createMeet).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the dialog with Escape without replacing the URL", async () => {
+    render(<Harness meetingUrl="https://zoom.us/j/123" />);
+    await userEvent.click(screen.getByTestId("generate-meet-link-button"));
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(createMeet).not.toHaveBeenCalled();
   });
 
