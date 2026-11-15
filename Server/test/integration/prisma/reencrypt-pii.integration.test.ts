@@ -182,7 +182,6 @@ async function seedEveryModel() {
     verifiedPhone: '+573001112255',
     name: 'Rosa',
     lastName: 'Gómez',
-    phone: '+573001112266',
   };
   const request = await prisma.bookingRequest.create({
     data: {

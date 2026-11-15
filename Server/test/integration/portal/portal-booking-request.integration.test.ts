@@ -63,7 +63,6 @@ describe('an approval-mode booking confirmed through its link', () => {
       email,
       name: 'Lucia',
       lastName: 'Rojas',
-      phone: '+573001112233',
       emailHash: emailHash(email),
       patientTimezone: 'America/New_York',
       typeId: provider.typeId,

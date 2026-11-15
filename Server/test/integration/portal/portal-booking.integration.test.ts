@@ -82,7 +82,7 @@ describe('a booking confirmed through its link', () => {
       name: 'Lucia',
       lastName: 'Rojas',
       email,
-      whatsappNumber: '+573001112233',
+      whatsappNumber: null,
       reminderChannel: Channel.EMAIL,
       source: RecordSource.PORTAL,
       portalAccessEnabled: true,

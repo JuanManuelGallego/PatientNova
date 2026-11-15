@@ -326,7 +326,7 @@ async function seedData() {
         const isPast = start.getTime() < nowDate.getTime();
         const id = uuid(G.appointment, k);
 
-        let status: AppointmentStatus = AppointmentStatus.SCHEDULED;
+        let status: AppointmentStatus;
         let cancelledAt: Date | null = null;
         let cancelledBy: CancelledBy | null = null;
         let completedAt: Date | null = null;
