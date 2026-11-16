@@ -77,6 +77,8 @@ export interface ColumnDef {
    * actions column, which stays pinned to the right edge (`col--actions` on the `td`).
    * A secondary column whose filter is active, or that is the current sort,
    * stays visible (the table marks it in `data-forced-cols`) so active state is never hidden.
+   * While secondary columns are hidden, their filter and sort controls move to a
+   * bar above the table, so hiding a column never removes a way to narrow the rows.
    */
   priority?: "secondary" | "actions";
 }
@@ -355,7 +357,24 @@ export function DataTable<T>({
   total,
 }: DataTableProps<T>) {
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
+  // Which trigger opened the popover: the column header or the compact bar.
+  const [openFrom, setOpenFrom] = useState<"header" | "compact">("header");
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
+  const compactRefs = useRef<Array<HTMLElement | null>>([]);
+
+  const toggleFilter = (i: number, from: "header" | "compact") => {
+    setOpenFrom(from);
+    setOpenColumnIndex(openColumnIndex === i && openFrom === from ? null : i);
+  };
+
+  // Secondary columns with a filter or a sort: their controls also live in the compact bar.
+  const compactColumns = columns
+    .map((col, i) => ({ col, i }))
+    .filter(
+      ({ col }) =>
+        col.priority === "secondary" &&
+        (col.filter || (col.sortKey && onSort)),
+    );
 
   // 1-based positions of secondary columns that must stay visible on narrow tables.
   const forcedCols = columns
@@ -375,12 +394,69 @@ export function DataTable<T>({
   // popover's outside-click/positioning effects don't re-run needlessly.
   const getAnchor = useCallback(
     () =>
-      openColumnIndex !== null ? headerRefs.current[openColumnIndex] : null,
-    [openColumnIndex],
+      openColumnIndex !== null
+        ? (openFrom === "compact" ? compactRefs : headerRefs).current[openColumnIndex]
+        : null,
+    [openColumnIndex, openFrom],
   );
 
   return (
     <div className="table-card">
+      {compactColumns.length > 0 && (
+        <div
+          className="table-compact-controls"
+          role="group"
+          aria-label="Filtros y orden de columnas ocultas"
+        >
+          {compactColumns.map(({ col, i }) => {
+            const filter = col.filter;
+            const isSorted = Boolean(col.sortKey && orderBy === col.sortKey);
+            return (
+              <React.Fragment key={col.sortKey ?? col.label}>
+                {filter && (
+                  <button
+                    type="button"
+                    ref={(el) => {
+                      compactRefs.current[i] = el;
+                    }}
+                    className={`table-compact-control${isFilterActive(filter) ? " table-compact-control--active" : ""}`}
+                    aria-expanded={openColumnIndex === i && openFrom === "compact"}
+                    aria-label={`Filtrar por ${col.label}`}
+                    data-testid={filter.triggerTestId ? `${filter.triggerTestId}-compact` : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFilter(i, "compact");
+                    }}
+                  >
+                    <span>{col.label}</span>
+                    <ACTION_ICONS.filter size={14} aria-hidden="true" />
+                  </button>
+                )}
+                {col.sortKey && onSort && (
+                  <button
+                    type="button"
+                    className={`table-compact-control${isSorted ? " table-compact-control--active" : ""}`}
+                    aria-label={`Ordenar por ${col.label}`}
+                    aria-pressed={isSorted}
+                    onClick={() => onSort(col.sortKey!)}
+                  >
+                    <span>{col.label}</span>
+                    {isSorted ? (
+                      order === "asc" ? (
+                        <ChevronUp size={14} aria-hidden="true" />
+                      ) : (
+                        <ChevronDown size={14} aria-hidden="true" />
+                      )
+                    ) : (
+                      <ChevronsUpDown size={14} aria-hidden="true" />
+                    )}
+                  </button>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
       {/* responsive: horizontal scroll wrapper for narrow viewports */}
       <div className="table-scroll">
         <table
@@ -441,14 +517,12 @@ export function DataTable<T>({
                         <button
                           type="button"
                           className={`th-filter-btn${filterActive ? " th-filter-btn--active" : ""}`}
-                          aria-expanded={openColumnIndex === i}
+                          aria-expanded={openColumnIndex === i && openFrom === "header"}
                           aria-label={`Filtrar por ${col.label}`}
                           data-testid={filter.triggerTestId}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenColumnIndex(
-                              openColumnIndex === i ? null : i,
-                            );
+                            toggleFilter(i, "header");
                           }}
                         >
                           <ACTION_ICONS.filter size={14} />

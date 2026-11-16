@@ -22,7 +22,7 @@ export
 
     viewToggleBtnActive: {
       background: "var(--c-brand)",
-      color: "#fff",
+      color: "var(--c-white)",
     } as React.CSSProperties,
 
     viewToggleBtnDisabled: {
@@ -79,13 +79,13 @@ export
 
     weekDayNumToday: {
       background: "var(--c-brand)",
-      color: "#fff",
+      color: "var(--c-white)",
     } as React.CSSProperties,
 
     weekDayCount: {
       fontSize: 12,
       background: "var(--c-brand)",
-      color: "#fff",
+      color: "var(--c-white)",
       borderRadius: 10,
       padding: "1px 6px",
       fontWeight: 600,

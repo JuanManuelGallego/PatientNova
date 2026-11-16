@@ -3,6 +3,7 @@ import {
     fmtDate,
     fmtTime,
     fmtDateTime,
+    fmtDateTimeSeconds,
     fmtRelative,
     getDate,
     getDuration,
@@ -114,6 +115,10 @@ describe("calendar and activity formatting", () => {
         const iso = "2026-11-15T18:01:49Z";
         expect(fmtTimestamp(iso, "America/Bogota")).toBe(fmtDateTime(iso, "America/Bogota"));
         expect(fmtTimestamp(iso, "America/Bogota").replace(/\s/g, " ")).toBe("15 nov 2026, 01:01 p. m.");
+    });
+
+    it("fmtDateTimeSeconds keeps the seconds for the activity drawer", () => {
+        expect(fmtDateTimeSeconds("2026-11-15T18:01:49Z", "America/Bogota").replace(/\s/g, " ")).toBe("15 nov 2026, 01:01:49 p. m.");
     });
 });
 

@@ -95,6 +95,15 @@ function fmtDateTime(iso: string | undefined, timezone?: string): string {
     });
 }
 
+/** fmtDateTime with seconds: the activity drawer orders events within one minute. */
+function fmtDateTimeSeconds(iso: string | undefined, timezone?: string): string {
+    if (!iso) return "Invalid Date"
+    return new Date(iso).toLocaleString("es-ES", {
+        timeZone: timezone ?? getDisplayTimezone(),
+        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+    });
+}
+
 const fmtDatePlusOneHour = (isoStr: string): string => {
   const date = new Date(isoStr);
   date.setTime(date.getTime() + 60 * 60 * 1000);
@@ -499,6 +508,7 @@ export {
     fmtDatePlusOneHour,
     fmtRelative,
     fmtTimestamp,
+    fmtDateTimeSeconds,
     fmtSendTime,
     localDateTimeToUtc,
     getDate,

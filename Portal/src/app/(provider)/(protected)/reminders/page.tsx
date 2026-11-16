@@ -586,7 +586,7 @@ function HistoryRemindersTab({
         sortKey: "updatedAt",
         priority: "secondary",
       },
-      { label: "ID Mensaje", priority: "secondary" },
+      { label: "ID del mensaje", priority: "secondary" },
       { label: "Error" },
       { label: "", priority: "actions" },
     ],

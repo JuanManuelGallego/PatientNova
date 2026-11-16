@@ -139,7 +139,7 @@ export function PatientDrawer({
         <button
           type="button"
           onClick={onDelete}
-          className={patient.status === PatientStatus.ACTIVE ? "btn-action-delete" : "btn-drawer-activate"}
+          className={patient.status === PatientStatus.ACTIVE ? "btn-drawer-delete" : "btn-drawer-activate"}
           data-testid="patient-drawer-delete-button"
           aria-label={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}
           title={patient.status === PatientStatus.ACTIVE ? "Desactivar paciente" : "Reactivar paciente"}

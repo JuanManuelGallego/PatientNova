@@ -41,7 +41,7 @@ describe("GoogleOAuthCompletePage", () => {
     Object.defineProperty(window, "opener", { configurable: true, value: null });
     render(<GoogleOAuthCompletePage />);
 
-    expect(await screen.findByText("Authorization failed")).toBeInTheDocument();
-    expect(screen.getByText(/permission was not granted/)).toBeInTheDocument();
+    expect(await screen.findByText("No se pudo conectar Google")).toBeInTheDocument();
+    expect(screen.getByText(/No se concedió el permiso de Google Meet/)).toBeInTheDocument();
   });
 });

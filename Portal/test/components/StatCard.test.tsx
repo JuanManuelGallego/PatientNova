@@ -14,4 +14,10 @@ describe("StatCard", () => {
     expect(card).toHaveTextContent("—");
     expect(card).not.toHaveTextContent("0");
   });
+
+  it("sizes the value by its length instead of cutting it", () => {
+    render(<StatCard label="Ingresos" value="$ 12.690.000" sub="total" accent="red" />);
+    const value = screen.getByText("$ 12.690.000");
+    expect(value.style.getPropertyValue("--stat-chars")).toBe("12");
+  });
 });

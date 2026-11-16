@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { CSSProperties } from "react";
 
 export function StatCard({
   label,
@@ -24,7 +25,12 @@ export function StatCard({
             </span>
           )}
         </div>
-        <span className="stat-card__value">{value ?? "—"}</span>
+        <span
+          className="stat-card__value"
+          style={{ "--stat-chars": String(value ?? "—").length } as CSSProperties}
+        >
+          {value ?? "—"}
+        </span>
         <span className="stat-card__sub">{sub}</span>
       </div>
     </div>

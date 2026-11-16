@@ -113,7 +113,7 @@ export function UsersView() {
             <PageHeader
                 title="Usuarios"
                 subtitle="Cuentas de los profesionales que usan Patient Nova"
-                actions={<button type="button" className="btn-primary" onClick={() => setModalUser(null)} data-testid="users-new-button">Nuevo usuario</button>}
+                actions={<button type="button" className="btn-primary btn-hero" onClick={() => setModalUser(null)} data-testid="users-new-button">Nuevo usuario</button>}
             />
             <TabNav
                 items={TABS}
