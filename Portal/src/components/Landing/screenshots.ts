@@ -5,18 +5,12 @@ import bookingAvailability from "@/src/assets/screenshots/booking-availability.p
 import reminders from "@/src/assets/screenshots/reminders.png";
 import medicalRecord from "@/src/assets/screenshots/medical-record.png";
 
-/**
- * The product screenshots on the marketing pages. The images come from `pnpm run screenshots`
- * (e2e/screenshots.config.ts), taken on made-up data; sizes are the captured pixels (2x).
- * Retake them when these screens change visibly.
- */
 export interface Screenshot {
     src: StaticImageData | string;
     width: number;
     height: number;
     alt: string;
     caption?: string;
-    /** A single card rather than an app screen: no window frame, narrower. */
     bare?: boolean;
 }
 

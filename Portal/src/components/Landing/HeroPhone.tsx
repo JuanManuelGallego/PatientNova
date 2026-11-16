@@ -16,12 +16,6 @@ const TIMES = [
     { time: "4:30 p. m." },
 ];
 
-/**
- * The landing hero's picture: the patient's side of the product, drawn in markup so it stays sharp
- * and costs no image download. It copies the real booking flow (the time step of `BookingFlow`,
- * with `SlotChooser`'s day strip and times) and the WhatsApp reminder that follows. Keep it in step
- * when that flow changes. The example provider and times are illustrative.
- */
 export function HeroPhone() {
     return (
         <div

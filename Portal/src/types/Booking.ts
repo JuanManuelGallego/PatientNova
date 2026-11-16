@@ -42,7 +42,6 @@ export interface BookingSettings {
     legalName: string | null;
     privacyContact: string | null;
     contactHours: string | null;
-    /** Opt-in: search engines may index the public booking page while booking is open. */
     searchIndexable: boolean;
     readiness: BookingReadiness;
     live: boolean;

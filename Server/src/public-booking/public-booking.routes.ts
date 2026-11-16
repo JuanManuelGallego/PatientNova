@@ -8,10 +8,6 @@ import { asyncHandler } from '../utils/api/async-handler.js';
 
 export const publicBookingRouter = Router();
 
-/**
- * GET /providers
- * Slugs of booking pages whose providers opted in to search indexing and are bookable now (the sitemap).
- */
 publicBookingRouter.get(
   '/',
   asyncHandler(async (_req: Request, res: Response) => {

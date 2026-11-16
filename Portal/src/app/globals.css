@@ -4416,7 +4416,6 @@ th.col--actions {
   gap: 12px;
 }
 
-/* Login is for existing providers: a quiet text button, so the contact button leads. */
 .landing-nav__login {
   background: none;
   border: none;
@@ -4443,7 +4442,6 @@ th.col--actions {
   text-decoration: none;
 }
 
-/* Product pages in the nav, desktop only: the footer lists them on smaller screens. */
 .landing-nav__links {
   display: none;
 }
@@ -4485,7 +4483,6 @@ th.col--actions {
   outline-offset: 2px;
 }
 
-/* Phones: the hero button is on the first screen, and both would not fit beside the brand. */
 @media (max-width: 559px) {
   .landing-nav__contact {
     display: none;
@@ -4556,7 +4553,6 @@ th.col--actions {
   color: var(--c-white);
   line-height: 1.12;
   letter-spacing: -0.025em;
-  /* Wide enough for two lines at 54px, so the button stays above the fold on a laptop. */
   max-width: 900px;
   margin: 0 auto 20px;
   text-wrap: balance;
@@ -4583,8 +4579,6 @@ th.col--actions {
   color: var(--c-brand-sub);
 }
 
-/* The call to action on the purple gradient (hero and closing banner): white, so it reads as the
-   one thing to click there, where a purple button would blend in. */
 .landing-cta-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4619,7 +4613,6 @@ th.col--actions {
   outline-offset: 3px;
 }
 
-/* The second channel: same size, outlined, so the white button stays the first choice. */
 .landing-btn-on-dark--outline {
   background: transparent;
   color: var(--c-white);
@@ -4710,7 +4703,6 @@ th.col--actions {
   position: relative;
 }
 
-/* Only cards with a page react to the pointer: the others are not links. */
 .landing-feature-card--link:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.09);
@@ -5331,7 +5323,6 @@ th.col--actions {
   color: var(--c-brand);
 }
 
-/* Landing hero, split: copy beside the HeroPhone picture from 1024px; stacked and centered below. */
 .landing-hero--split {
   overflow-x: clip;
 }
@@ -5370,7 +5361,6 @@ th.col--actions {
   }
 }
 
-/* The phone: the patient's booking step and the WhatsApp reminder (HeroPhone.tsx). */
 .hero-phone {
   position: relative;
   width: 288px;
@@ -5421,7 +5411,6 @@ th.col--actions {
   font-weight: 700;
 }
 
-/* The booking page's provider name is a serif (Newsreader there); Georgia spares a font download. */
 .hero-phone__name {
   display: block;
   font-family: var(--font-provider), Georgia, serif;
@@ -5508,7 +5497,6 @@ th.col--actions {
   background: var(--c-gray-200);
 }
 
-/* The reminder hangs off the phone's lower left corner, over the empty bottom of the screen. */
 .hero-phone__message {
   position: absolute;
   left: -24px;
@@ -5575,8 +5563,6 @@ th.col--actions {
   }
 }
 
-/* Product screenshots (ProductShot.tsx): wider than the 760px prose column, so their text stays
-   legible; a bare card keeps its own edges at its natural width. */
 .product-shot {
   margin: 28px 0 0;
   width: min(1056px, calc(100vw - 40px));
@@ -5638,7 +5624,6 @@ th.col--actions {
   margin-top: 64px;
 }
 
-/* Marketing pages are light only (MarketingFrame); <body> resolved its color before the reset. */
 .marketing-frame {
   color-scheme: light;
   color: var(--c-gray-900);
@@ -5655,9 +5640,6 @@ th.col--actions {
   opacity: 0.8;
 }
 
-/* ================================================================
-   Landing and product pages (/reserva-en-linea, /recordatorios, ...)
-   ================================================================ */
 @media (min-width: 1024px) {
   .landing-features-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -5677,7 +5659,6 @@ th.col--actions {
   text-decoration: underline;
 }
 
-/* Stretches the link over its card, so the whole card is one click target. */
 .landing-feature-card__link::after {
   content: "";
   position: absolute;
@@ -5694,7 +5675,6 @@ th.col--actions {
   outline-offset: 2px;
 }
 
-/* Trust strip under the hero. */
 .landing-trust {
   background: var(--c-white);
   border-bottom: 1px solid var(--c-gray-100);
@@ -5725,7 +5705,6 @@ th.col--actions {
   color: var(--c-brand);
 }
 
-/* Testimonials (src/config/testimonials.ts): one centered column, up to three side by side. */
 .landing-testimonials {
   display: grid;
   grid-template-columns: 1fr;

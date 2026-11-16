@@ -12,8 +12,6 @@ import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP, WHATSAPP_CONTACT_HREF } from
 import { TESTIMONIALS } from "@/src/config/testimonials";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
-// A server component on purpose: search engines index the HTML, so the content must not wait on
-// the session probe. Only the login buttons and the signed-in redirect run on the client.
 export const metadata = pageMetadata({
   path: "/",
   title: "Patient Nova | Agenda, reservas en línea e historia clínica para tu consulta",
@@ -21,7 +19,6 @@ export const metadata = pageMetadata({
     "Software para profesionales de la salud: reservas en línea, recordatorios por WhatsApp, SMS y correo, calendario e historia clínica en un solo lugar.",
 });
 
-// Read by Google for the site name in results and the brand's logo and contact.
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@graph": [
@@ -141,7 +138,6 @@ export default function LandingPage() {
     <MarketingFrame>
       <script
         type="application/ld+json"
-        // Escaped `<` keeps the JSON from closing the script element.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, "\\u003c") }}
       />
       <LandingSessionRedirect />
@@ -204,7 +200,6 @@ export default function LandingPage() {
             <div className="landing-features-grid">
               {FEATURES.map((f) => {
                 const Icon = f.icon;
-                // A card with a page is clickable as a whole: its link stretches over the card.
                 return (
                   <div
                     key={f.title}

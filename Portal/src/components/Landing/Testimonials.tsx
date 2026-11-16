@@ -1,6 +1,5 @@
 import type { Testimonial } from "@/src/config/testimonials";
 
-/** Social proof between the features and the steps. Renders nothing until there are quotes. */
 export function Testimonials({ items }: { items: readonly Testimonial[] }) {
     if (items.length === 0) return null;
     return (
@@ -34,7 +33,6 @@ export function Testimonials({ items }: { items: readonly Testimonial[] }) {
     );
 }
 
-/** "Dra. Ana Pérez" -> "AP": titles ending in a period are skipped. */
 function initials(name: string): string {
     return name
         .split(/\s+/)

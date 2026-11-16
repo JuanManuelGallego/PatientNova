@@ -3,21 +3,10 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { CONTACT_HREF, MARKETING_PAGES, SUPPORT_EMAIL, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
 
-/*
- * The chrome shared by the landing page and the product pages (server components). The footer
- * links every product page, which is how crawlers and visitors find them from any page.
- */
-
-/**
- * Marketing pages are light only, like /book: a provider who saved the dark theme would otherwise
- * get dark tokens on the hero gradient (near-black title on purple). `<body>` has already resolved
- * its color from the dark theme, so the frame sets its own.
- */
 export function MarketingFrame({ children }: { children: React.ReactNode }) {
     return <div data-theme="light" className="marketing-frame">{children}</div>;
 }
 
-/** The sign-up: accounts are created by support, so contacting it is how a visitor starts. */
 export function MarketingContactLink({ className, testId, children }: {
     className: string;
     testId: string;
@@ -30,7 +19,6 @@ export function MarketingContactLink({ className, testId, children }: {
     );
 }
 
-/** The calls to action on the purple gradient: email (white) and WhatsApp (outlined) side by side. */
 export function MarketingContactButtons({ label, testId, whatsappTestId }: {
     label: string;
     testId: string;
@@ -55,7 +43,6 @@ export function MarketingContactButtons({ label, testId, whatsappTestId }: {
     );
 }
 
-/** The nav's actions: a quiet login for providers and the contact button for everyone else. */
 export function MarketingNavActions({ login }: { login: React.ReactNode }) {
     return (
         <>
@@ -67,7 +54,6 @@ export function MarketingNavActions({ login }: { login: React.ReactNode }) {
     );
 }
 
-/** `current` is the product page being shown, marked for assistive technology and styled. */
 export function MarketingNav({ action, current }: { action: React.ReactNode; current?: string }) {
     return (
         <nav className="landing-nav">
@@ -82,7 +68,6 @@ export function MarketingNav({ action, current }: { action: React.ReactNode; cur
                     />
                     <span className="landing-nav__logo-text">Patient Nova</span>
                 </Link>
-                {/* Desktop only: on smaller screens the footer lists the same pages. */}
                 <ul className="landing-nav__links">
                     {MARKETING_PAGES.map((p) => (
                         <li key={p.path}>
@@ -102,7 +87,6 @@ export function MarketingNav({ action, current }: { action: React.ReactNode; cur
     );
 }
 
-/** The login entry on pages without the auth provider: a plain link to the login page. */
 export function MarketingLoginLink() {
     return (
         <Link href="/login" className="landing-nav__login" data-testid="marketing-login-link">

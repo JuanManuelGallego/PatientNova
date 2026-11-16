@@ -11,8 +11,6 @@ export const metadata = pageMetadata({
         "Historia clínica digital para profesionales de la salud: antecedentes, notas de evolución, documentos y exportación a PDF, con historias individuales y familiares.",
 });
 
-// Written for every health professional; the field list states honestly that today's structure is the
-// psychological consultation's. Update it as other specialties' structures are added.
 export default function ClinicalRecordPage() {
     return (
         <FeaturePage

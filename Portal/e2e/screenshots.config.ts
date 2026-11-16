@@ -2,21 +2,6 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { defineConfig, devices } from '@playwright/test';
 
-/*
- * Captures the product screenshots shown on the marketing pages (src/assets/screenshots/).
- * Not part of the e2e suite: run it by hand against a local stack seeded with made-up data.
- *
- *   cd Server && pnpm run db:seed-data      # made-up patients, records, appointments, requests
- *   cd Portal && pnpm run screenshots
- *
- * The login comes from the environment or from the gitignored `e2e/.env.screenshots`:
- *   SCREENSHOT_EMAIL=admin@patientnova.net   (the account db:seed-data fills; the default)
- *   SCREENSHOT_PASSWORD=...                  (that account's local password)
- *
- * Never point it at production or real patients: these images are published.
- */
-// Read literally (KEY=VALUE per line, optional surrounding quotes): `process.loadEnvFile` would cut an
-// unquoted value at `#`, which passwords often contain.
 const envFile = join(__dirname, '.env.screenshots');
 if (existsSync(envFile)) {
   for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {

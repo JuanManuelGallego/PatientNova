@@ -61,7 +61,6 @@ function parseProfile(form: ProfileForm) {
     return { body, errors, invalid: Object.values(errors).some(Boolean) };
 }
 
-/** Saved at once, like the other switches: indexing is a choice, not a field being typed. */
 function SearchVisibilityToggle({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const [ saving, setSaving ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);

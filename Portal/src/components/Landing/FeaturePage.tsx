@@ -8,14 +8,9 @@ export interface FeatureSection {
     title: string;
     paragraphs?: string[];
     bullets?: string[];
-    /** A screenshot of the product, shown after the section's text. */
     shot?: Screenshot;
 }
 
-/**
- * One product page: a hero with the page's single <h1>, sections with <h2>s, links to the other
- * product pages and the contact banner. Server-rendered: the text is in the HTML crawlers read.
- */
 export function FeaturePage({ path, badge, title, intro, sections }: {
     path: string;
     badge: string;

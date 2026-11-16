@@ -38,7 +38,6 @@ export const publicBookingRepository = {
     });
   },
 
-  /** Slugs of providers who opted in to search indexing; the caller keeps only live ones. */
   async listSearchIndexable() {
     return prisma.user.findMany({
       where: { searchIndexable: true, bookingEnabled: true, bookingSlug: { not: null }, isDeleted: false },

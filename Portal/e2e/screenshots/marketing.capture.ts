@@ -2,37 +2,26 @@ import { test, type Page } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 
-/*
- * The product screenshots on the marketing pages. See ../screenshots.config.ts for how to run it.
- * The data comes from `db:seed-data` (made-up patients); the account's own photo is replaced by
- * its initials and provider alerts are hidden, so nothing real reaches a published image.
- */
-
 const email = process.env.SCREENSHOT_EMAIL || 'admin@patientnova.net';
 const password = process.env.SCREENSHOT_PASSWORD;
 const outDir = process.env.SCREENSHOT_OUT || join(__dirname, '..', '..', 'src', 'assets', 'screenshots');
 
-/** A seeded patient (db:seed-data `patientId(0)`): Laura Gómez Rojas, individual record with notes. */
 const RECORD_PATIENT_ID = '0a7a0001-0000-4000-8000-000000000001';
 
-/** The API limits each IP to a few dozen requests a minute; one screen fires many. */
 const RATE_WINDOW_MS = 65_000;
 
 interface Shot {
   name: string;
   path: string;
-  /** What to capture: the whole 1440×900 view, the content area beside the sidebar, or one element. */
   area?: { content: number } | { selector: string };
   prepare?: (page: Page) => Promise<void>;
 }
 
-/** The content area starts after the sidebar (260 CSS px), keeping the page's own left margin. */
 const CONTENT_X = 260;
 
 const SHOTS: Shot[] = [
   { name: 'calendar', path: '/calendar' },
   { name: 'requests', path: '/requests', area: { content: 600 } },
-  // The availability card, not the link card: in this local stack the link and its QR point to localhost.
   { name: 'booking-availability', path: '/settings/booking', area: { selector: '#online-booking-availability' } },
   {
     name: 'reminders',
@@ -70,10 +59,7 @@ async function open(page: Page, path: string) {
   throw new Error(`Rate limited on ${path}; wait a minute and run again.`);
 }
 
-/** Hides what must not or need not be published, then lets fonts and layout settle. */
 async function clean(page: Page) {
-  // A failed dev build renders nothing but Next's overlay, which the style below hides: refuse to
-  // save a blank screen.
   await page.locator('.sidebar-user__name').waitFor({ state: 'visible', timeout: 15_000 });
   await page.addStyleTag({
     content: `
@@ -82,7 +68,6 @@ async function clean(page: Page) {
     `,
   });
   await page.evaluate(() => {
-    // The account's own photo is real: show its initials instead, as the app does without a photo.
     document.querySelectorAll('.sidebar-user__avatar').forEach((el) => {
       const name = document.querySelector('.sidebar-user__name')?.textContent ?? '';
       el.textContent = name.split(/\s+/).filter((w) => w && !w.endsWith('.')).slice(0, 2).map((w) => w[ 0 ]).join('');
@@ -96,7 +81,6 @@ test('marketing screenshots', async ({ page }) => {
   test.setTimeout(SHOTS.length * 3 * RATE_WINDOW_MS);
   mkdirSync(outDir, { recursive: true });
   await login(page);
-  // SCREENSHOT_ONLY=reminders,calendar retakes just those.
   const only = process.env.SCREENSHOT_ONLY?.split(',').map((n) => n.trim());
   for (const shot of SHOTS.filter((s) => !only || only.includes(s.name))) {
     await open(page, shot.path);

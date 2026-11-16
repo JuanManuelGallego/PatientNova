@@ -1,11 +1,6 @@
 import { API_BASE } from "@/src/config/api";
 import type { PublicProvider } from "@/src/types/PublicBooking";
 
-/**
- * Server-side reads of the public provider API for metadata and the sitemap. Cached (one call per
- * slug per window, shared across visitors, so the public per-IP limiter never sees page traffic) and
- * failing closed: any error, timeout or non-200 answer means "not indexable".
- */
 const REVALIDATE_SECONDS = 300;
 const TIMEOUT_MS = 3000;
 

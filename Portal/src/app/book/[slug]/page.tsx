@@ -18,10 +18,6 @@ function describe(p: PublicProvider): string {
     return `Reserva en línea tu cita con ${p.displayName}${role ? `, ${role}` : ""}.`;
 }
 
-/**
- * `noindex` unless the provider opted in and booking is open (`indexable`, decided by the API). Any
- * failure to read the profile keeps the page out of search: indexing is never the fallback.
- */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const slug = (await params).slug.toLowerCase();
     const provider = await fetchPublicProvider(slug);

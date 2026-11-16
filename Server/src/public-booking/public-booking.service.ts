@@ -61,7 +61,6 @@ export const publicBookingService = {
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
-      // The provider's opt-in, honoured only while patients can book: a paused page drops out of search.
       indexable: bookingOpen && provider.searchIndexable,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       selfServe: config.portal.selfServe,
@@ -81,7 +80,6 @@ export const publicBookingService = {
     };
   },
 
-  /** Booking pages that may be indexed: opted in and live now (the sitemap). Only slugs leave. */
   async listIndexable(): Promise<{ providers: Array<{ slug: string }> }> {
     if (!config.portal.patientEnabled) return { providers: [] };
     const candidates = await publicBookingRepository.listSearchIndexable();
