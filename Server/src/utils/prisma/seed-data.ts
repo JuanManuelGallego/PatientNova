@@ -27,7 +27,9 @@ const TARGET_EMAIL = 'admin@patientnova.net';
 const TZ = 'America/Bogota';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// The name shows in the marketing screenshots (Portal `pnpm run screenshots`): made up, like the rest.
 const PROFILE = {
+  displayName: 'Dra. Ana Restrepo',
   jobTitle: 'Psicóloga clínica',
   specialty: 'Psicología clínica y sistémica',
   bio: 'Acompañamiento psicológico para adultos, parejas y familias, con enfoque sistémico y un cuidado estricto de la confidencialidad.',

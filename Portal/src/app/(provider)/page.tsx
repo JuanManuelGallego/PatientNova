@@ -5,6 +5,8 @@ import {
   MarketingContactButtons, MarketingCta, MarketingFooter, MarketingFrame, MarketingNav, MarketingNavActions,
 } from "@/src/components/Landing/MarketingChrome";
 import { HeroPhone } from "@/src/components/Landing/HeroPhone";
+import { ProductShot } from "@/src/components/Landing/ProductShot";
+import { SCREENSHOTS } from "@/src/components/Landing/screenshots";
 import { Testimonials } from "@/src/components/Landing/Testimonials";
 import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
 import { TESTIMONIALS } from "@/src/config/testimonials";
@@ -221,6 +223,9 @@ export default function LandingPage() {
                   </div>
                 );
               })}
+            </div>
+            <div className="landing-shot">
+              <ProductShot shot={SCREENSHOTS.calendar} />
             </div>
           </div>
         </section>

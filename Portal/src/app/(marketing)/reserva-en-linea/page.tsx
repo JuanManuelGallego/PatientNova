@@ -1,4 +1,5 @@
 import { FeaturePage } from "@/src/components/Landing/FeaturePage";
+import { SCREENSHOTS } from "@/src/components/Landing/screenshots";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 const PATH = "/reserva-en-linea";
@@ -34,12 +35,21 @@ export default function OnlineBookingPage() {
                         "Tiempo de descanso entre citas y cada cuánto empiezan los horarios disponibles.",
                         "Confirmación inmediata, o revisar y aprobar cada solicitud antes de que se convierta en cita.",
                     ],
+                    shot: SCREENSHOTS.bookingAvailability,
+                },
+                {
+                    title: "Apruebas cada solicitud, si quieres",
+                    paragraphs: [
+                        "Con el modo de aprobación, la reserva que confirma el paciente llega a tus solicitudes y guarda el horario mientras decides. La apruebas y se convierte en cita, o la rechazas y el horario se libera; si no respondes a tiempo, vence sola.",
+                    ],
+                    shot: SCREENSHOTS.requests,
                 },
                 {
                     title: "Sin cruces con tu agenda",
                     paragraphs: [
                         "Las reservas en línea y las citas que agendas tú comparten el mismo calendario. Un horario ocupado, bloqueado o apartado por otra reserva no se ofrece, y tu agenda siempre tiene prioridad sobre una reserva que el paciente aún no ha confirmado.",
                     ],
+                    shot: SCREENSHOTS.calendar,
                 },
                 {
                     title: "Citas virtuales con Google Meet",

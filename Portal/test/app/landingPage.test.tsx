@@ -82,6 +82,12 @@ describe("landing page", () => {
     expect(picture).toHaveTextContent("¿Cuándo te queda bien?");
   });
 
+  it("shows the provider's side as a described calendar screenshot", () => {
+    render(<LandingPage />);
+    const shot = screen.getByRole("img", { name: /Calendario semanal de Patient Nova/ });
+    expect(shot.closest("figure")).toHaveTextContent("en el mismo calendario");
+  });
+
   it("shows no testimonials section while there are none", () => {
     render(<LandingPage />);
     expect(screen.queryByRole("heading", { name: "Lo que dicen quienes ya lo usan" })).not.toBeInTheDocument();

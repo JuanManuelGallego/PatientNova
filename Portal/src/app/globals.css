@@ -5575,6 +5575,69 @@ th.col--actions {
   }
 }
 
+/* Product screenshots (ProductShot.tsx): wider than the 760px prose column, so their text stays
+   legible; a bare card keeps its own edges at its natural width. */
+.product-shot {
+  margin: 28px 0 0;
+  width: min(1056px, calc(100vw - 40px));
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.product-shot--bare {
+  width: min(720px, 100%);
+  left: auto;
+  transform: none;
+}
+
+.product-shot__frame {
+  overflow: hidden;
+  border: 1px solid var(--c-gray-200);
+  border-radius: 14px;
+  background: var(--c-white);
+  box-shadow: 0 24px 48px -24px rgba(30, 20, 70, 0.28);
+}
+
+.product-shot--bare .product-shot__frame {
+  border: none;
+  border-radius: var(--r-3xl);
+  background: transparent;
+}
+
+.product-shot__bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c-gray-100);
+  background: var(--c-gray-50);
+}
+
+.product-shot__bar span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-gray-300);
+}
+
+.product-shot__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.product-shot__caption {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-gray-500);
+  text-align: center;
+}
+
+.landing-shot {
+  margin-top: 64px;
+}
+
 /* Marketing pages are light only (MarketingFrame); <body> resolved its color before the reset. */
 .marketing-frame {
   color-scheme: light;

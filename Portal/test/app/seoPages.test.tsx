@@ -13,13 +13,13 @@ import type { PublicProvider } from "@/src/types/PublicBooking";
 vi.mock("@/src/components/PublicBooking/PublicBookingPage", () => ({ PublicBookingPage: () => null }));
 
 const PAGES = [
-  { name: "reserva en línea", Page: OnlineBookingPage, meta: bookingMeta, path: "/reserva-en-linea" },
-  { name: "recordatorios", Page: RemindersPage, meta: remindersMeta, path: "/recordatorios" },
-  { name: "historia clínica", Page: ClinicalRecordPage, meta: recordMeta, path: "/historia-clinica" },
-  { name: "preguntas frecuentes", Page: FaqPage, meta: faqMeta, path: "/preguntas-frecuentes" },
+  { name: "reserva en línea", Page: OnlineBookingPage, meta: bookingMeta, path: "/reserva-en-linea", shots: 3 },
+  { name: "recordatorios", Page: RemindersPage, meta: remindersMeta, path: "/recordatorios", shots: 1 },
+  { name: "historia clínica", Page: ClinicalRecordPage, meta: recordMeta, path: "/historia-clinica", shots: 1 },
+  { name: "preguntas frecuentes", Page: FaqPage, meta: faqMeta, path: "/preguntas-frecuentes", shots: 0 },
 ];
 
-describe.each(PAGES)("product page: $name", ({ Page, meta, path }) => {
+describe.each(PAGES)("product page: $name", ({ Page, meta, path, shots: expectedShots }) => {
   it("has one h1, its own canonical and the shared preview image", () => {
     render(<Page />);
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
@@ -33,6 +33,13 @@ describe.each(PAGES)("product page: $name", ({ Page, meta, path }) => {
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/login");
     for (const other of PAGES.filter((p) => p.path !== path)) expect(hrefs).toContain(other.path);
+  });
+
+  it("shows its product screenshots, each described for screen readers", () => {
+    const { container } = render(<Page />);
+    const shots = [ ...container.querySelectorAll("figure.product-shot img") ];
+    expect(shots).toHaveLength(expectedShots);
+    shots.forEach((img) => expect(img.getAttribute("alt")!.length).toBeGreaterThan(40));
   });
 
   it("marks itself as the current page in the nav", () => {

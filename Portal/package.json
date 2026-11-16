@@ -13,7 +13,8 @@
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "e2e:ui": "playwright test --ui -c e2e/playwright.config.ts",
     "e2e:debug": "playwright test --debug -c e2e/playwright.config.ts",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "screenshots": "playwright test -c e2e/screenshots.config.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

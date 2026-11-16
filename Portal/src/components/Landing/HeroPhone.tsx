@@ -33,9 +33,9 @@ export function HeroPhone() {
                 <div className="hero-phone__screen">
                     <div className="hero-phone__notch" />
                     <div className="hero-phone__provider">
-                        <span className="hero-phone__avatar">LG</span>
+                        <span className="hero-phone__avatar">NR</span>
                         <span>
-                            <span className="hero-phone__name">Dra. Laura Gómez</span>
+                            <span className="hero-phone__name">Dra. Natalia Ríos</span>
                             <span className="hero-phone__role">Nutricionista dietista</span>
                         </span>
                     </div>
@@ -69,7 +69,7 @@ export function HeroPhone() {
                     <span className="hero-phone__message-time">ahora</span>
                 </div>
                 <p className="hero-phone__message-text">
-                    Recordatorio: tu cita con Dra. Laura Gómez es mañana, martes 18, a las 9:00 a. m. en el
+                    Recordatorio: tu cita con Dra. Natalia Ríos es mañana, martes 18, a las 9:00 a. m. en el
                     Consultorio 302.
                 </p>
             </div>

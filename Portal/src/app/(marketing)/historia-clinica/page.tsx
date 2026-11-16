@@ -1,4 +1,5 @@
 import { FeaturePage } from "@/src/components/Landing/FeaturePage";
+import { SCREENSHOTS } from "@/src/components/Landing/screenshots";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 const PATH = "/historia-clinica";
@@ -31,6 +32,7 @@ export default function ClinicalRecordPage() {
                         "Desarrollo temprano, escolaridad y trabajo, hábitos y estilo de vida.",
                         "Eventos traumáticos, consideraciones emocionales y físicas, antecedentes de salud mental.",
                     ],
+                    shot: SCREENSHOTS.medicalRecord,
                 },
                 {
                     title: "Historia familiar",

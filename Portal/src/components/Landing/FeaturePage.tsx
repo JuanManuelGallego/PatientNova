@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ProductShot } from "./ProductShot";
+import type { Screenshot } from "./screenshots";
 import { MARKETING_PAGES } from "@/src/config/site";
 import { MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav, MarketingNavActions } from "./MarketingChrome";
 
@@ -6,6 +8,8 @@ export interface FeatureSection {
     title: string;
     paragraphs?: string[];
     bullets?: string[];
+    /** A screenshot of the product, shown after the section's text. */
+    shot?: Screenshot;
 }
 
 /**
@@ -42,6 +46,7 @@ export function FeaturePage({ path, badge, title, intro, sections }: {
                                         {s.bullets.map((b) => <li key={b}>{b}</li>)}
                                     </ul>
                                 )}
+                                {s.shot && <ProductShot shot={s.shot} />}
                             </section>
                         ))}
                     </div>

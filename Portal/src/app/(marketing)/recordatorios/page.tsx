@@ -1,4 +1,5 @@
 import { FeaturePage } from "@/src/components/Landing/FeaturePage";
+import { SCREENSHOTS } from "@/src/components/Landing/screenshots";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 const PATH = "/recordatorios";
@@ -47,6 +48,7 @@ export default function RemindersPage() {
                         "En la sección de recordatorios ves cuáles están programados, cuáles se enviaron y cuáles fallaron, para que nada se quede sin avisar.",
                         "Las citas reservadas en línea guardan la zona horaria del paciente, así que quien vive en otro país recibe la hora correcta en sus mensajes.",
                     ],
+                    shot: SCREENSHOTS.reminders,
                 },
             ]}
         />
