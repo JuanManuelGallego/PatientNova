@@ -14,6 +14,7 @@ describe("admin users page", () => {
         render(<AdminUsersPage />);
         expect(screen.getByText("No tienes acceso a esta página")).toBeInTheDocument();
         expect(screen.getByText("Solo un superadministrador puede gestionar usuarios.")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Usuarios" })).toBeInTheDocument();
         expect(screen.queryByTestId("users-view")).toBeNull();
     });
 
@@ -21,6 +22,5 @@ describe("admin users page", () => {
         role = "SUPER_ADMIN";
         render(<AdminUsersPage />);
         expect(screen.getByTestId("users-view")).toBeInTheDocument();
-        expect(screen.getByRole("heading", { name: "Usuarios" })).toBeInTheDocument();
     });
 });

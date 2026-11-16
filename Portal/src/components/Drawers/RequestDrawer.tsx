@@ -98,6 +98,7 @@ function CandidatesSection({ request, choice, onChoose, timezone }: {
           <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
             <input
               type="radio"
+              className="radio"
               name="request-patient"
               checked={choice === null}
               onChange={() => onChoose(null)}
@@ -115,6 +116,7 @@ function CandidatesSection({ request, choice, onChoose, timezone }: {
             <label key={c.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
               <input
                 type="radio"
+                className="radio"
                 name="request-patient"
                 checked={choice === c.id}
                 onChange={() => onChoose(c.id)}
@@ -129,6 +131,7 @@ function CandidatesSection({ request, choice, onChoose, timezone }: {
             <label key={c.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
               <input
                 type="radio"
+                className="radio"
                 name="request-patient"
                 checked={choice === c.id}
                 onChange={() => onChoose(c.id)}

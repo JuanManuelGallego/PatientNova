@@ -30,7 +30,7 @@ import {
   getDuration,
   getReminderSendAt,
   getAppointmentEndTime,
-  getTomorrowSixAm,
+  getTomorrowAt,
   getReminderType,
 } from "@/src/utils/TimeUtils";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
@@ -74,14 +74,14 @@ export function AppointmentModal({
   const selectedPatient = isEdit ? (fetchedPatient ?? appt?.patient) : userSelectedPatient;
 
   const { appointments } = useFetchAppointments({
-    dateFrom: getTomorrowSixAm(timezone),
+    dateFrom: getTomorrowAt("06:00:00", timezone),
     status: DEFAULT_APPT_STATUS,
   });
   const { createAppointment } = useCreateAppointment();
   const { updateAppointment } = useUpdateAppointment();
   const { locations } = useFetchLocations();
   const { appointmentTypes } = useFetchAppointmentTypes();
-  const { blockedTimes } = useFetchBlockedTimes({ dateFrom: getTomorrowSixAm(timezone) });
+  const { blockedTimes } = useFetchBlockedTimes({ dateFrom: getTomorrowAt("06:00:00", timezone) });
 
   const [ step, setStep ] = useState(1);
   const [ saving, setSaving ] = useState(false);
@@ -89,7 +89,7 @@ export function AppointmentModal({
 
   const [ form, setForm ] = useState<AppointmentForm>({
     patientId: appt?.patient.id ?? "",
-    startAt: appt?.startAt ?? prefillDate ?? getTomorrowSixAm(timezone),
+    startAt: appt?.startAt ?? prefillDate ?? getTomorrowAt("09:00:00", timezone),
     status: appt?.status ?? AppointmentStatus.SCHEDULED,
     typeId: appt?.appointmentType.id ?? "",
     locationId: appt?.appointmentLocation.id ?? "",
@@ -284,7 +284,7 @@ export function AppointmentModal({
     .filter((a) => a.id !== appt?.id)
     .map((a) => a.startAt);
   const blockedSlots = blockedTimes.map((bt) => ({ start: bt.startTimeUtc, end: bt.endTimeUtc }));
-  const steps = [ "Paciente & Tipo", "Lugar & Hora", "Pago & Estado" ];
+  const steps = [ "Paciente y tipo", "Lugar y hora", "Pago y estado" ];
 
   return (
     <div
@@ -292,7 +292,7 @@ export function AppointmentModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={isEdit ? "Editar Cita" : "Nueva Cita"}
+      aria-label={isEdit ? "Editar cita" : "Nueva cita"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
       data-testid="appointment-modal-dialog"
@@ -304,7 +304,7 @@ export function AppointmentModal({
         <div className="modal-header modal-header--top">
           <div>
             <h2 className="modal-title">
-              {isEdit ? "Editar Cita" : "Nueva Cita"}
+              {isEdit ? "Editar cita" : "Nueva cita"}
             </h2>
             <p className="modal-subtitle">
               {steps[ step - 1 ]} — Paso {step} de {steps.length}

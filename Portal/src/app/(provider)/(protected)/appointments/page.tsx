@@ -61,6 +61,7 @@ import {
 import { useDrawerNavigation } from "@/src/hooks/useDrawerNavigation";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fmtMoney } from "@/src/utils/money";
 
 enum AppointmentTab {
   Upcoming = "upcoming",
@@ -187,6 +188,7 @@ function AppointmentsPageContent() {
       { label: "Paciente" },
       {
         label: "Tipo",
+        priority: "secondary",
         filter: {
           kind: "single-enum",
           options: TYPE_OPTIONS(appointmentTypes),
@@ -200,7 +202,7 @@ function AppointmentsPageContent() {
         },
       },
       {
-        label: "Fecha y Hora",
+        label: "Fecha y hora",
         sortKey: "startAt",
         filter: {
           kind: "date-range",
@@ -215,6 +217,7 @@ function AppointmentsPageContent() {
       },
       {
         label: "Ubicación",
+        priority: "secondary",
         filter: {
           kind: "single-enum",
           options: LOCATION_OPTIONS(locations),
@@ -227,7 +230,7 @@ function AppointmentsPageContent() {
           triggerTestId: "appointment-location-filter-trigger",
         },
       },
-      { label: "Recordatorio" },
+      { label: "Recordatorio", priority: "secondary" },
       {
         label: "Estado",
         sortKey: "status",
@@ -258,7 +261,7 @@ function AppointmentsPageContent() {
           triggerTestId: "appointment-paid-filter-trigger",
         },
       },
-      { label: "" },
+      { label: "", priority: "actions" },
     ],
     [status, paid, dateRange, typeId, locationId, activeTab, appointmentTypes, locations, setStatus, setPaid, setDateRange, setTypeId, setLocationId, setPage],
   );
@@ -316,37 +319,37 @@ function AppointmentsPageContent() {
                 className="btn-primary btn-hero"
                 data-testid="appointments-new-button"
               >
-                Nueva Cita
+                Nueva cita
               </button>
             </>
           }
         />
-        <div className="stats-grid stats-grid--5">
+        <div className="stats-grid">
           <StatCard
             label="Hoy"
-            value={stats?.todayCount ?? 0}
+            value={stats?.todayCount}
             sub="citas de hoy"
             accent="var(--c-brand-accent)"
             icon={CalendarCheck}
           />
           <StatCard
-            label="Próximas"
-            value={stats?.byStatus[ AppointmentStatus.SCHEDULED ] ?? 0}
-            sub="sin confirmar"
+            label="Sin confirmar"
+            value={stats?.byStatus[ AppointmentStatus.SCHEDULED ]}
+            sub="citas programadas"
             accent="var(--c-warning)"
             icon={Clock}
           />
           <StatCard
             label="Sin pagar"
-            value={stats?.unpaidCount ?? 0}
+            value={stats?.unpaidCount}
             sub="requieren cobro"
             accent="var(--c-error)"
             icon={AlertCircle}
           />
           <StatCard
             label="Ingresos del mes"
-            value={`$ ${stats?.paidRevenueThisMonth.toLocaleString("es-ES") ?? 0}`}
-            sub="total cobrado"
+            value={stats ? fmtMoney(stats.paidRevenueThisMonth) : undefined}
+            sub="cobrado este mes"
             accent="var(--c-success)"
             icon={DollarSign}
           />
@@ -401,15 +404,20 @@ function AppointmentsPageContent() {
                   >
                     {getInitials(a.patient.name, a.patient.lastName)}
                   </div>
-                  <div>
-                    <div className="td-name__primary">
+                  <div className="td-identity__text">
+                    <div
+                      className="td-name__primary text-ellipsis"
+                      title={`${a.patient.name} ${a.patient.lastName}`}
+                    >
                       {a.patient.name} {a.patient.lastName}
                     </div>
-                    <div className="td-name__secondary">{a.patient.email}</div>
+                    <div className="td-name__secondary text-ellipsis" title={a.patient.email ?? undefined}>
+                      {a.patient.email}
+                    </div>
                   </div>
                 </div>
               </td>
-              <td className="td">
+              <td className="td col--secondary">
                 <span
                   className="appointment-type-label"
                 >
@@ -422,7 +430,7 @@ function AppointmentsPageContent() {
                 </span>
               </td>
               <td className="td td--datetime">{fmtDateTime(a.startAt, timezone)}</td>
-              <td className="td td--muted">
+              <td className="td td--muted col--secondary">
                 <div
                   className="location-label"
                 >
@@ -454,13 +462,13 @@ function AppointmentsPageContent() {
                   )}
                 </div>
               </td>
-              <td className="td">
+              <td className="td col--secondary">
                 {a.reminder ? (
                   <ReminderStatusPill
                     status={a.reminder?.status || ReminderStatus.FAILED}
                   />
                 ) : (
-                  <EmptyStatusPill label="Sin Recordatorio" />
+                  <EmptyStatusPill label="Sin recordatorio" />
                 )}
               </td>
               <td className="td" onClick={(e) => e.stopPropagation()}>
@@ -501,7 +509,7 @@ function AppointmentsPageContent() {
                   )}
                 </div>
               </td>
-              <td className="td" onClick={(e) => e.stopPropagation()}>
+              <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
                   <div className="td-actions">
                     <button
                       onClick={() => setEditAppt(a)}
@@ -514,6 +522,7 @@ function AppointmentsPageContent() {
                     (<button
                         onClick={() => setDeleteAppt(a)}
                         className="btn-action-delete"
+                        aria-label="Cancelar cita"
                         data-testid={`appointment-delete-button-${a.id}`}
                       >
                         <ACTION_ICONS.close size={14} />
@@ -523,13 +532,13 @@ function AppointmentsPageContent() {
               </td>
             </tr>
           )}
-          emptyState={
+          emptyState={error ? undefined : (
             <EmptyState
               icon={STATUS_ICONS.search}
               title="Sin resultados"
               sub="Prueba ajustando los filtros o crea una nueva cita."
             />
-          }
+          )}
           footer={
             <DataTableFooter
               page={page}

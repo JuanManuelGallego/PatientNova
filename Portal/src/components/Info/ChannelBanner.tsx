@@ -32,10 +32,10 @@ export function ChannelBox({
         gap: 10,
         padding,
         borderRadius: 8,
-        background: "var(--c-brand-50, #f0f7ff)",
-        border: "1px solid var(--c-brand-200, #bfdbfe)",
+        background: "var(--c-info-bg)",
+        border: "1px solid var(--c-info-border)",
         fontSize: 14,
-        color: "var(--c-brand)",
+        color: "var(--c-gray-900)",
       }}
     >
       {Icon && <Icon size={iconSize} />}

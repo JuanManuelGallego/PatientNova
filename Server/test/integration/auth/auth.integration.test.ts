@@ -31,6 +31,12 @@ describe('authService (integration)', () => {
     expect(updated!.lastLoginAt).toBeInstanceOf(Date);
   });
 
+  it('records a LOGIN audit row attributed to the user via the API', async () => {
+    await authService.login(user.email, PASSWORD);
+    const row = await prisma.auditLog.findFirst({ where: { userId: user.id }, orderBy: { eventTimeUtc: 'desc' } });
+    expect(row).toMatchObject({ actionType: 'LOGIN', source: 'API', actorId: user.id, actorDisplayName: user.email });
+  });
+
   it('rejects invalid password and increments failed attempts', async () => {
     await expect(authService.login(user.email, 'wrong-password'))
       .rejects.toThrow(AuthInvalidCredentialsError);

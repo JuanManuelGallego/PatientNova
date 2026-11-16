@@ -50,10 +50,27 @@ export type ColumnFilterConfig =
       triggerTestId?: string;
     };
 
+function isFilterActive(filter: ColumnFilterConfig | undefined): boolean {
+  if (!filter) return false;
+  switch (filter.kind) {
+    case "custom":
+      return Boolean(filter.active);
+    case "enum":
+      return filter.value.length > 0;
+    case "date-range":
+      return (
+        filter.value !== null && filter.value[0] !== "" && filter.value[1] !== ""
+      );
+    default:
+      return filter.value !== "";
+  }
+}
+
 export interface ColumnDef {
   label: string;
   sortKey?: string;
   filter?: ColumnFilterConfig;
+  priority?: "secondary" | "actions";
 }
 
 interface TableFooterProps {
@@ -330,7 +347,33 @@ export function DataTable<T>({
   total,
 }: DataTableProps<T>) {
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
+  const [openFrom, setOpenFrom] = useState<"header" | "compact">("header");
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
+  const compactRefs = useRef<Array<HTMLElement | null>>([]);
+
+  const toggleFilter = (i: number, from: "header" | "compact") => {
+    setOpenFrom(from);
+    setOpenColumnIndex(openColumnIndex === i && openFrom === from ? null : i);
+  };
+
+  const compactColumns = columns
+    .map((col, i) => ({ col, i }))
+    .filter(
+      ({ col }) =>
+        col.priority === "secondary" &&
+        (col.filter || (col.sortKey && onSort)),
+    );
+
+  const forcedCols = columns
+    .map((col, i) =>
+      col.priority === "secondary" &&
+      (isFilterActive(col.filter) ||
+        Boolean(col.sortKey && onSort && orderBy === col.sortKey))
+        ? i + 1
+        : null,
+    )
+    .filter((n): n is number => n !== null)
+    .join(" ");
 
   const closePopover = useCallback(() => setOpenColumnIndex(null), []);
 
@@ -338,15 +381,76 @@ export function DataTable<T>({
   // popover's outside-click/positioning effects don't re-run needlessly.
   const getAnchor = useCallback(
     () =>
-      openColumnIndex !== null ? headerRefs.current[openColumnIndex] : null,
-    [openColumnIndex],
+      openColumnIndex !== null
+        ? (openFrom === "compact" ? compactRefs : headerRefs).current[openColumnIndex]
+        : null,
+    [openColumnIndex, openFrom],
   );
 
   return (
     <div className="table-card">
+      {compactColumns.length > 0 && (
+        <div
+          className="table-compact-controls"
+          role="group"
+          aria-label="Filtros y orden de columnas ocultas"
+        >
+          {compactColumns.map(({ col, i }) => {
+            const filter = col.filter;
+            const isSorted = Boolean(col.sortKey && orderBy === col.sortKey);
+            return (
+              <React.Fragment key={col.sortKey ?? col.label}>
+                {filter && (
+                  <button
+                    type="button"
+                    ref={(el) => {
+                      compactRefs.current[i] = el;
+                    }}
+                    className={`table-compact-control${isFilterActive(filter) ? " table-compact-control--active" : ""}`}
+                    aria-expanded={openColumnIndex === i && openFrom === "compact"}
+                    aria-label={`Filtrar por ${col.label}`}
+                    data-testid={filter.triggerTestId ? `${filter.triggerTestId}-compact` : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFilter(i, "compact");
+                    }}
+                  >
+                    <span>{col.label}</span>
+                    <ACTION_ICONS.filter size={14} aria-hidden="true" />
+                  </button>
+                )}
+                {col.sortKey && onSort && (
+                  <button
+                    type="button"
+                    className={`table-compact-control${isSorted ? " table-compact-control--active" : ""}`}
+                    aria-label={`Ordenar por ${col.label}`}
+                    aria-pressed={isSorted}
+                    onClick={() => onSort(col.sortKey!)}
+                  >
+                    <span>{col.label}</span>
+                    {isSorted ? (
+                      order === "asc" ? (
+                        <ChevronUp size={14} aria-hidden="true" />
+                      ) : (
+                        <ChevronDown size={14} aria-hidden="true" />
+                      )
+                    ) : (
+                      <ChevronsUpDown size={14} aria-hidden="true" />
+                    )}
+                  </button>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
       {/* responsive: horizontal scroll wrapper for narrow viewports */}
       <div className="table-scroll">
-        <table className="table-full" data-testid={testId}>
+        <table
+          className="table-full"
+          data-testid={testId}
+          data-forced-cols={forcedCols || undefined}
+        >
           <thead>
             <tr>
               {columns.map((col, i) => {
@@ -361,21 +465,11 @@ export function DataTable<T>({
                     : "none"
                   : undefined;
                 const filter = col.filter;
-                const filterActive = filter
-                  ? filter.kind === "custom"
-                    ? Boolean(filter.active)
-                    : filter.kind === "enum"
-                      ? filter.value.length > 0
-                      : filter.kind === "date-range"
-                        ? filter.value !== null &&
-                          filter.value[0] !== "" &&
-                          filter.value[1] !== ""
-                        : filter.value !== ""
-                  : false;
+                const filterActive = isFilterActive(filter);
                 return (
                   <th
                     key={col.sortKey ?? col.label}
-                    className="th"
+                    className={`th${col.priority === "secondary" ? " col--secondary" : ""}${col.priority === "actions" ? " col--actions" : ""}`}
                     aria-sort={ariaSort}
                     ref={(el) => {
                       headerRefs.current[i] = el;
@@ -410,14 +504,12 @@ export function DataTable<T>({
                         <button
                           type="button"
                           className={`th-filter-btn${filterActive ? " th-filter-btn--active" : ""}`}
-                          aria-expanded={openColumnIndex === i}
+                          aria-expanded={openColumnIndex === i && openFrom === "header"}
                           aria-label={`Filtrar por ${col.label}`}
                           data-testid={filter.triggerTestId}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenColumnIndex(
-                              openColumnIndex === i ? null : i,
-                            );
+                            toggleFilter(i, "header");
                           }}
                         >
                           <ACTION_ICONS.filter size={14} />

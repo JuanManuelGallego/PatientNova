@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
-  MONTH_NAMES_ES,
+  fmtMonthLabel,
+  fmtWeekRange,
   getColombianHolidays,
   addDays,
 } from "@/src/utils/TimeUtils";
@@ -49,12 +50,7 @@ export function useCalendarData({
 
   const weekLabel = useMemo(() => {
     const end = addDays(weekStart, 6);
-    const sm = MONTH_NAMES_ES[ weekStart.getMonth() ];
-    const em = MONTH_NAMES_ES[ end.getMonth() ];
-    if (weekStart.getMonth() === end.getMonth()) {
-      return `${weekStart.getDate()} – ${end.getDate()} ${sm} ${weekStart.getFullYear()}`;
-    }
-    return `${weekStart.getDate()} ${sm} – ${end.getDate()} ${em} ${end.getFullYear()}`;
+    return fmtWeekRange(weekStart, end);
   }, [ weekStart ]);
 
   const apptByDate = useMemo(() => {
@@ -102,7 +98,7 @@ export function useCalendarData({
 
   const navLabel =
     viewMode === ViewMode.Month
-      ? `${MONTH_NAMES_ES[ calMonth ]} ${calYear}`
+      ? fmtMonthLabel(calMonth, calYear)
       : weekLabel
 
   const hourRange = useMemo(() => {

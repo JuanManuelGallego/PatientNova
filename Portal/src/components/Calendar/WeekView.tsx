@@ -1,5 +1,5 @@
 import { HOUR_HEIGHT, toDateStr, DAY_NAMES_ES, layoutDayAppointments, layoutBlockedTimes, layoutHolds } from "./constants";
-import { localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { fmtHourLabel, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { calendarStyles } from "./styles";
 import { WeekViewProps } from "./types";
 import { ApptChip } from "./ApptChip";
@@ -54,11 +54,11 @@ export function WeekView({
                 style={{
                   ...calendarStyles.weekDayHeader,
                   background: isToday
-                    ? "var(--c-primary-50, #eff6ff)"
-                    : "var(--c-gray-50, #f9fafb)",
+                    ? "var(--c-today-bg)"
+                    : "var(--c-gray-50)",
                   borderBottom: isToday
-                    ? "2px solid var(--c-primary, #2563eb)"
-                    : "2px solid var(--c-gray-200, #e5e7eb)",
+                    ? "2px solid var(--c-brand)"
+                    : "2px solid var(--c-gray-200)",
                 }}
               >
                 <span style={calendarStyles.weekDayName}>
@@ -103,11 +103,11 @@ export function WeekView({
                 style={{
                   ...calendarStyles.weekTimeLabel,
                   height: HOUR_HEIGHT,
-                  borderTop: "1px solid var(--c-gray-100, #f3f4f6)",
+                  borderTop: "1px solid var(--c-gray-100)",
                   boxSizing: "border-box",
                 }}
               >
-                {String(hour).padStart(2, "0")}:00
+                {fmtHourLabel(hour)}
               </div>
             ))}
           </div>
@@ -130,13 +130,13 @@ export function WeekView({
                   style={{
                     flex: 1,
                     position: "relative",
-                    borderLeft: "1px solid var(--c-gray-100, #f3f4f6)",
+                    borderLeft: "1px solid var(--c-gray-100)",
                     minWidth: 0,
                     background: isToday
-                      ? "var(--c-primary-50, #eff6ff)"
+                      ? "var(--c-today-bg)"
                       : holiday
                         ? "rgba(255, 215, 0, 0.07)"
-                        : "var(--c-surface, #fff)",
+                        : "var(--c-surface)",
                   }}
                 >
                   {hours.map((hour) => (
@@ -144,7 +144,7 @@ export function WeekView({
                       key={`bg-${hour}`}
                       style={{
                         height: HOUR_HEIGHT,
-                        borderTop: "1px solid var(--c-gray-100, #f3f4f6)",
+                        borderTop: "1px solid var(--c-gray-100)",
                         boxSizing: "border-box",
                       }}
                     />
@@ -203,7 +203,7 @@ export function WeekView({
                         right: 0,
                         top: nowTop,
                         height: 2,
-                        background: "var(--c-danger, #ef4444)",
+                        background: "var(--c-error)",
                         zIndex: 2,
                         pointerEvents: "none",
                       }}

@@ -155,7 +155,7 @@ function MedicalRecordsPageContent() {
       />
       {error && <ErrorBanner msg={error} onRetry={fetchPatients} />}
       <div style={{ display: "grid", gap: 24 }}>
-        <MedicalRecordCard title="Seleccionar Paciente">
+        <MedicalRecordCard title="Seleccionar paciente">
           <label className="form-label">
             <RequiredField label="Paciente" />
             {loadingPatients ? (
@@ -195,11 +195,11 @@ function MedicalRecordsPageContent() {
         )}
         {showRecord && (
           <>
-            <MedicalRecordCard title="Datos Generales" actions={saveIndicator("general")}>
+            <MedicalRecordCard title="Datos generales" actions={saveIndicator("general")}>
               <GeneralDataSection form={form} onChange={fieldsIn.general} />
               {saveError("general")}
             </MedicalRecordCard>
-            <MedicalRecordCard title="Composición Familiar" actions={saveIndicator("family")}>
+            <MedicalRecordCard title="Composición familiar" actions={saveIndicator("family")}>
               <FamilyTable
                 familyMembers={form.familyMembers ?? []}
                 onChange={(familyMembers) => fieldsIn.family("familyMembers", familyMembers)}
@@ -225,7 +225,7 @@ function MedicalRecordsPageContent() {
                 {saveError("details")}
               </MedicalRecordCard>
             }
-            <MedicalRecordCard title="Notas de Evolución" actions={saveIndicator("evolution")}>
+            <MedicalRecordCard title="Notas de evolución" actions={saveIndicator("evolution")}>
               <EvolutionNotes
                 evolutionNotes={form.evolutionNotes ?? []}
                 onChange={(evolutionNotes) => fieldsIn.evolution("evolutionNotes", evolutionNotes)}

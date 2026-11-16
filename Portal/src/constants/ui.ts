@@ -18,13 +18,13 @@ export const LBL_NEXT = "Siguiente →" as const;
 export const LBL_BACK = "← Atrás" as const;
 
 // Entity-specific create/save labels
-export const LBL_CREATE_PATIENT = "Crear Paciente" as const;
-export const LBL_CREATE_APPOINTMENT = "Crear Cita" as const;
-export const LBL_CREATE_REMINDER = "Crear Recordatorio" as const;
+export const LBL_CREATE_PATIENT = "Crear paciente" as const;
+export const LBL_CREATE_APPOINTMENT = "Crear cita" as const;
+export const LBL_CREATE_REMINDER = "Crear recordatorio" as const;
 export const LBL_CREATE_LOCATION = "Crear ubicación" as const;
 export const LBL_CREATE_APPT_TYPE = "Crear tipo" as const;
 
-export const LBL_SAVE_CHANGES = "Guardar Cambios" as const;
+export const LBL_SAVE_CHANGES = "Guardar cambios" as const;
 
 // ── Status / feedback labels ───────────────────────────────────────
 export const LBL_LOADING = "Cargando…" as const;

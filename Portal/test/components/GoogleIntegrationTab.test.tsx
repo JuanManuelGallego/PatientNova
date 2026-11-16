@@ -136,6 +136,7 @@ describe("GoogleIntegrationTab", () => {
     connectionState.data = { status: "not_connected", connected: false };
     render(<GoogleIntegrationTab />);
     expect(screen.getByTestId("google-connection-heading")).toHaveTextContent("Cuenta de Google no conectada");
+    expect(screen.getByText("Conecta tu cuenta de Google para crear enlaces de Meet.")).toBeInTheDocument();
     expect(screen.getByTestId("google-connect-button")).toBeInTheDocument();
     expect(screen.queryByTestId("google-reconnect-button")).not.toBeInTheDocument();
   });

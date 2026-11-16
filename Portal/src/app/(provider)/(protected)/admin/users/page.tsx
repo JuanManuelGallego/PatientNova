@@ -12,19 +12,20 @@ export default function AdminUsersPage() {
     const { user } = useAuthContext();
     return (
         <PageLayout>
-            <PageHeader
-                title="Usuarios"
-                subtitle="Cuentas de los profesionales que usan Patient Nova"
-                style={{ marginBottom: 28 }}
-            />
             {isSuperAdmin(user?.role) ? (
                 <UsersView />
             ) : (
+                <>
+                <PageHeader
+                    title="Usuarios"
+                    subtitle="Cuentas de los profesionales que usan Patient Nova"
+                />
                 <EmptyState
                     icon={NAV_ICONS.users}
                     title="No tienes acceso a esta página"
                     sub="Solo un superadministrador puede gestionar usuarios."
                 />
+                </>
             )}
         </PageLayout>
     );

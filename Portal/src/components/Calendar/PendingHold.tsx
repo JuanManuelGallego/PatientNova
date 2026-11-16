@@ -28,7 +28,7 @@ export function PendingHoldBlock({ hold, onSelectHold, style }: PendingHoldProps
         display: "flex",
         alignItems: "flex-start",
         padding: "2px 4px",
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 600,
         textAlign: "left",
         overflow: "hidden",

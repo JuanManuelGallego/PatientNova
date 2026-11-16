@@ -158,7 +158,7 @@ export function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> 
                                             aria-label={`${label}: quitar franja`}
                                             data-testid={`availability-remove-${weekday}-${i}`}
                                         >
-                                            <ACTION_ICONS.close size={14} />
+                                            <ACTION_ICONS.delete size={14} aria-hidden="true" />
                                         </button>
                                     </div>
                                 ))}

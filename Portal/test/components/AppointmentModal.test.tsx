@@ -244,16 +244,16 @@ describe("AppointmentModal", () => {
   /* ── Rendering modes ────────────────────────────────────────────── */
 
   describe("rendering modes", () => {
-    it("shows 'Nueva Cita' title in create mode", () => {
+    it("shows 'Nueva cita' title in create mode", () => {
       render(<AppointmentModal onClose={mockOnClose} onSaved={mockOnSaved} />);
       expect(screen.getByRole("dialog")).toHaveAttribute(
         "aria-label",
-        "Nueva Cita",
+        "Nueva cita",
       );
-      expect(screen.getByText("Nueva Cita")).toBeInTheDocument();
+      expect(screen.getByText("Nueva cita")).toBeInTheDocument();
     });
 
-    it("shows 'Editar Cita' title in edit mode", () => {
+    it("shows 'Editar cita' title in edit mode", () => {
       render(
         <AppointmentModal
           appt={makeAppt()}
@@ -263,9 +263,9 @@ describe("AppointmentModal", () => {
       );
       expect(screen.getByRole("dialog")).toHaveAttribute(
         "aria-label",
-        "Editar Cita",
+        "Editar cita",
       );
-      expect(screen.getByText("Editar Cita")).toBeInTheDocument();
+      expect(screen.getByText("Editar cita")).toBeInTheDocument();
     });
 
     it("renders step indicator with 3 segments", () => {
@@ -438,10 +438,10 @@ describe("AppointmentModal", () => {
         />,
       );
       await user.click(screen.getByText("Continuar →"));
-      expect(screen.getByText(/Lugar & Hora/)).toBeInTheDocument();
+      expect(screen.getByText(/Lugar y hora/)).toBeInTheDocument();
 
       await user.click(screen.getByText(/Atrás/));
-      expect(screen.getByText(/Paciente & Tipo/)).toBeInTheDocument();
+      expect(screen.getByText(/Paciente y tipo/)).toBeInTheDocument();
     });
 
     it("back button is not visible on step 1", () => {

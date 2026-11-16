@@ -370,7 +370,7 @@ describe('Audit writing: auth (integration)', () => {
 
     const log = await getLatestAuditLog('USER', user.id);
     expect(log).toBeTruthy();
-    expect(log!.actionType).toBe('UPDATE');
+    expect(log!.actionType).toBe('LOGIN');
     expect(log!.description).toContain('inició sesión');
     expect(log!.affectedFields).toContain('lastLoginAt');
     expect(log!.ipAddress).toBeNull();

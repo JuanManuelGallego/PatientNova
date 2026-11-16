@@ -3,7 +3,7 @@ import {
   ACTION_TYPE_CONFIG,
   ACTION_SOURCE_CONFIG,
 } from "@/src/types/AuditLog";
-import { calendarDayOf, fmtCalendarDay, fmtDateTime } from "@/src/utils/TimeUtils";
+import { calendarDayOf, fmtCalendarDay, fmtDateTime, fmtDateTimeSeconds } from "@/src/utils/TimeUtils";
 import { DrawerShell, Section, Row } from "./DrawerUtils";
 import { DETAIL_ICONS } from "@/src/config/icons";
 import { EntityTypePill } from "../Info/EntityTypePill";
@@ -78,7 +78,7 @@ const FIELD_LABELS: Record<string, string> = {
   smsNumber: "SMS",
   reminderChannel: "Canal de recordatorios",
   phone: "Teléfono",
-  dateOfBirth: "Fecha de Nacimiento",
+  dateOfBirth: "Fecha de nacimiento",
   notes: "Notas",
   status: "Estado",
   type: "Tipo",
@@ -89,7 +89,7 @@ const FIELD_LABELS: Record<string, string> = {
   paid: "Pagado",
   location: "Ubicación",
   locationId: "Ubicación",
-  typeId: "Tipo de Cita",
+  typeId: "Tipo de cita",
   patientId: "Paciente",
   appointmentId: "Cita",
   startAt: "Inicio",
@@ -219,7 +219,7 @@ export function AuditDrawer({
       </Section>
 
       <Section title="Información del sistema" quiet>
-        <Row icon={DETAIL_ICONS.clock} label="Fecha" value={<span className="td--dateTime">{fmtDateTime(log.eventTimeUtc, timezone)}</span>} />
+        <Row icon={DETAIL_ICONS.clock} label="Fecha" value={<span className="td--dateTime">{fmtDateTimeSeconds(log.eventTimeUtc, timezone)}</span>} />
       </Section>
     </DrawerShell>
   );

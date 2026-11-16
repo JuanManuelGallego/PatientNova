@@ -26,6 +26,8 @@ function AvatarFallback({ initials }: { initials: string }) {
       style={{
         width: 100,
         height: 100,
+        aspectRatio: "1",
+        flexShrink: 0,
         borderRadius: "50%",
         background: "var(--c-brand-accent)",
         display: "flex",

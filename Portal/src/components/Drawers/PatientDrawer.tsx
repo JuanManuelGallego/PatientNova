@@ -165,7 +165,7 @@ export function PatientDrawer({
       panelTestId="patient-drawer-panel"
       closeTestId="patient-drawer-close-button"
     >
-      <Section title="Información de Contacto">
+      <Section title="Información de contacto">
         {patient.email && <Row icon={DETAIL_ICONS.mail} label="Correo" value={<a href={`mailto:${patient.email}`} className="td-email-link">{patient.email}</a>} />}
         {patient.whatsappNumber && <Row icon={CHANNEL_ICONS.WHATSAPP} label="WhatsApp" testId="patient-drawer-whatsapp" value={<span className="mono">{patient.whatsappNumber}{patient.whatsappUnverified && <span className="form-input-hint" data-testid="patient-drawer-whatsapp-unverified"> Número sin verificar</span>}</span>} />}
         {patient.smsNumber && <Row icon={CHANNEL_ICONS.SMS} label="SMS" testId="patient-drawer-sms" value={<span className="mono">{patient.smsNumber}</span>} />}
@@ -175,8 +175,8 @@ export function PatientDrawer({
         {patient.reminderChannel && <Row icon={CHANNEL_ICONS[ patient.reminderChannel ]} label="Canal de recordatorios" testId="patient-drawer-reminder-channel" value={CHANNEL_CFG[ patient.reminderChannel ].label} />}
       </Section>
 
-      <Section title="Información Adicional">
-        {patient.dateOfBirth && <Row icon={DETAIL_ICONS.calendar} label="Fecha de Nacimiento" value={fmtCalendarDay(patient.dateOfBirth)} />}
+      <Section title="Información adicional">
+        {patient.dateOfBirth && <Row icon={DETAIL_ICONS.calendar} label="Fecha de nacimiento" value={fmtCalendarDay(patient.dateOfBirth)} />}
         {patient.notes && (
           <div className="drawer-notes">
             <div className="notes-label">Notas</div>
@@ -190,7 +190,7 @@ export function PatientDrawer({
       </Section>
 
       {appointments && appointments.length > 0 && (
-        <Section title="Citas Vinculadas">
+        <Section title="Citas vinculadas">
           <TabNav
             wrapperClassName="filter-chips"
             items={[
@@ -237,7 +237,7 @@ export function PatientDrawer({
       )}
 
       {reminders && reminders.length > 0 && (
-        <Section title="Recordatorios Vinculados">
+        <Section title="Recordatorios vinculados">
           <TabNav
             wrapperClassName="filter-chips"
             items={[

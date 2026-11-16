@@ -8,7 +8,6 @@ const STATUS_ICON: Record<AdminStatus, { Icon: LucideIcon; color: string }> = {
     [AdminStatus.PENDING]: { Icon: STATUS_ICONS.pending, color: "var(--c-link)" },
 };
 
-/** An account's state: a deleted account reads "Eliminado" whatever its status. */
 export function UserStatusPill({ status, isDeleted }: { status: AdminStatus; isDeleted: boolean }) {
     const { Icon, color } = isDeleted
         ? { Icon: STATUS_ICONS.trash, color: "var(--c-error)" }

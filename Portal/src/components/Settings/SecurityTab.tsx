@@ -62,7 +62,6 @@ export function SecurityTab() {
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
               autoComplete="current-password"
-              placeholder="••••••••"
               data-testid="security-current-password-input"
               required
             />
@@ -75,7 +74,6 @@ export function SecurityTab() {
               value={next}
               onChange={(e) => setNext(e.target.value)}
               autoComplete="new-password"
-              placeholder="••••••••"
               aria-describedby={next.length > 0 ? "security-password-rules" : undefined}
               data-testid="security-new-password-input"
               required
@@ -89,7 +87,6 @@ export function SecurityTab() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               autoComplete="new-password"
-              placeholder="••••••••"
               style={mismatch ? { borderColor: "var(--c-error)" } : undefined}
               aria-invalid={mismatch || undefined}
               aria-describedby={mismatch ? "security-confirm-error" : undefined}

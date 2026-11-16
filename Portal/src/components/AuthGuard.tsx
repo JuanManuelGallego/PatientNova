@@ -22,7 +22,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 alignItems: "center",
                 justifyContent: "center",
                 minHeight: "100vh",
-                background: "var(--c-bg)",
+                background: "var(--c-page-bg)",
                 flexDirection: "column",
                 gap: 16,
             }}>

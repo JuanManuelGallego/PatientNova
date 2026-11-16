@@ -36,15 +36,15 @@ function GoogleOAuthCompleteContent() {
       setStatus("error");
       notifiedRef.current = true;
       const errorMessages: Record<string, string> = {
-        invalid_state: "Invalid or expired authorization state. Please try again.",
-        state_consumed: "This authorization has already been used. Please try again.",
-        token_revoked: "Your Google authorization was revoked. Please reconnect.",
-        scope_missing: "Required Google Meet permission was not granted. Please try again.",
-        config_missing: "Google integration is not configured. Contact your administrator.",
-        callback_failed: "Authorization failed. Please try again.",
-        missing_parameters: "Missing authorization parameters. Please try again.",
+        invalid_state: "La autorización expiró o no es válida. Inténtalo de nuevo.",
+        state_consumed: "Esta autorización ya se usó. Inténtalo de nuevo.",
+        token_revoked: "Google revocó la autorización. Vuelve a conectar tu cuenta.",
+        scope_missing: "No se concedió el permiso de Google Meet. Inténtalo de nuevo y acepta ese permiso.",
+        config_missing: "La integración con Google no está configurada. Contacta al administrador.",
+        callback_failed: "No se pudo conectar tu cuenta de Google. Inténtalo de nuevo.",
+        missing_parameters: "Faltan datos de la autorización. Inténtalo de nuevo.",
       };
-      const msg = errorMessages[error ?? ""] ?? "Authorization failed. Please try again.";
+      const msg = errorMessages[error ?? ""] ?? "No se pudo conectar tu cuenta de Google. Inténtalo de nuevo.";
       setErrorMessage(msg);
       const message = {
         type: "GOOGLE_OAUTH_COMPLETE",
@@ -63,7 +63,7 @@ function GoogleOAuthCompleteContent() {
       <div className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
         <div className="card" style={{ textAlign: "center", padding: 40 }}>
           <div className="spinner" style={{ margin: "0 auto 16px" }} />
-          <p style={{ color: "var(--c-gray-500)" }}>Completing Google authorization...</p>
+          <p style={{ color: "var(--c-gray-500)" }}>Conectando tu cuenta de Google…</p>
         </div>
       </div>
     );
@@ -73,21 +73,21 @@ function GoogleOAuthCompleteContent() {
     return (
       <div className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
         <div className="card" style={{ textAlign: "center", padding: 40, maxWidth: 400 }}>
-          <STATUS_ICONS.success size={48} style={{ color: "var(--c-green)", marginBottom: 16 }} />
-          <h2 style={{ marginBottom: 8 }}>Google account connected!</h2>
+          <STATUS_ICONS.success size={48} style={{ color: "var(--c-success)", marginBottom: 16 }} />
+          <h2 style={{ marginBottom: 8 }}>Cuenta de Google conectada</h2>
           <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
-            You can now close this window and continue.
+            Ya puedes cerrar esta ventana y continuar.
           </p>
           <button
             onClick={() => window.close()}
             className="btn-primary"
             style={{ width: "100%" }}
           >
-            Close Window
+            Cerrar ventana
           </button>
           {rp && (
             <p style={{ marginTop: 16, fontSize: 14, color: "var(--c-gray-400)" }}>
-              Redirecting to <strong>{rp}</strong>...
+              Volviendo a <strong>{rp}</strong>…
             </p>
           )}
         </div>
@@ -98,8 +98,8 @@ function GoogleOAuthCompleteContent() {
   return (
     <div className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
       <div className="card" style={{ textAlign: "center", padding: 40, maxWidth: 400 }}>
-        <STATUS_ICONS.danger size={48} style={{ color: "var(--c-red)", marginBottom: 16 }} />
-        <h2 style={{ marginBottom: 8 }}>Authorization failed</h2>
+        <STATUS_ICONS.danger size={48} style={{ color: "var(--c-error)", marginBottom: 16 }} />
+        <h2 style={{ marginBottom: 8 }}>No se pudo conectar Google</h2>
         <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
           {errorMessage}
         </p>
@@ -114,14 +114,14 @@ function GoogleOAuthCompleteContent() {
           className="btn-primary"
           style={{ width: "100%", marginBottom: 12 }}
         >
-          {rp ? "Continue to App" : "Close Window"}
+          {rp ? "Volver a Patient Nova" : "Cerrar ventana"}
         </button>
         <button
           onClick={() => window.close()}
           className="btn-secondary"
           style={{ width: "100%" }}
         >
-          Close Window
+          Cerrar ventana
         </button>
       </div>
     </div>
@@ -134,7 +134,7 @@ export default function GoogleOAuthCompletePage() {
       <div className="page-container" role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
         <div className="card" style={{ textAlign: "center", padding: 40 }}>
           <div className="spinner" style={{ margin: "0 auto 16px" }} />
-          <p style={{ color: "var(--c-gray-500)" }}>Completing Google authorization...</p>
+          <p style={{ color: "var(--c-gray-500)" }}>Conectando tu cuenta de Google…</p>
         </div>
       </div>
     )}>

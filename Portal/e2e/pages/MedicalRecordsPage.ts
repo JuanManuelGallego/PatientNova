@@ -24,11 +24,11 @@ export class MedicalRecordsPage extends BasePage {
     this.createFamilyButton = this.page.getByTestId('medical-records-create-family-button');
     this.downloadPdfButton = this.page.getByTestId('medical-records-download-pdf-button');
     this.saveStatusIndicator = this.page.getByTestId('save-status-indicator');
-    this.generalDataCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Datos Generales' });
-    this.familyCompositionCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Composición Familiar' });
+    this.generalDataCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Datos generales' });
+    this.familyCompositionCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Composición familiar' });
     this.antecedentsCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Antecedentes' });
     this.familySpecificCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Aspectos específicos de la familia' });
-    this.evolutionNotesCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Notas de Evolución' });
+    this.evolutionNotesCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Notas de evolución' });
     this.documentsCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Documentos relacionados' });
     this.familyTableAddButton = this.page.getByTestId('family-table-add-button');
     this.evolutionNotesAddButton = this.page.getByTestId('evolution-notes-add-button');

@@ -121,7 +121,7 @@ function CalendarContent() {
     <>
       <PageLayout>
         <PageHeader
-          title="Agenda"
+          title="Calendario"
           subtitle={todayString(timezone)}
           actions={
             <div style={{ display: "flex", gap: 8 }}>
@@ -130,14 +130,14 @@ function CalendarContent() {
                 className="btn-secondary"
                 data-testid="calendar-block-time-button"
               >
-                Bloquear Horario
+                Bloquear horario
               </button>
               <button
                 onClick={() => setShowCreate(true)}
                 className="btn-primary btn-hero"
                 data-testid="calendar-new-appointment-button"
               >
-                Nueva Cita
+                Nueva cita
               </button>
             </div>
           }

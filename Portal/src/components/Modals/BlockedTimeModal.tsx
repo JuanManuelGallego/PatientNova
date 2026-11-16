@@ -150,7 +150,7 @@ export function BlockedTimeModal({
         <div className="modal-header">
           <div>
             <h2 className="modal-title">
-              {isEdit ? "Editar Horario Bloqueado" : "Bloquear Horario"}
+              {isEdit ? "Editar horario bloqueado" : "Bloquear horario"}
             </h2>
             <p className="modal-subtitle">
               {isEdit
@@ -223,6 +223,8 @@ export function BlockedTimeModal({
               <button
                 onClick={handleDelete}
                 className="btn-action-delete"
+                title="Eliminar bloqueo"
+                aria-label="Eliminar bloqueo"
                 disabled={saving}
                 data-testid="blocked-time-modal-delete-button"
               >

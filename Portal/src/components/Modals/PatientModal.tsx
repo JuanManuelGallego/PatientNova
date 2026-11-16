@@ -156,7 +156,7 @@ export function PatientModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={isEdit ? "Editar Paciente" : "Nuevo Paciente"}
+      aria-label={isEdit ? "Editar paciente" : "Nuevo paciente"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
       data-testid="patient-modal-dialog"
@@ -169,7 +169,7 @@ export function PatientModal({
         <div className="modal-header">
           <div>
             <h2 className="modal-title">
-              {isEdit ? "Editar Paciente" : "Nuevo Paciente"}
+              {isEdit ? "Editar paciente" : "Nuevo paciente"}
             </h2>
             <p className="modal-subtitle">
               {isEdit

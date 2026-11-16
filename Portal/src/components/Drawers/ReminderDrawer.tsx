@@ -153,7 +153,7 @@ export function ReminderDrawer({
       )}
 
       {reminder.appointment && (
-        <Section title="Citas Vinculadas">
+        <Section title="Citas vinculadas">
           <div className="card-list">
             <LinkedCard
               onClick={onViewAppointment ? () => onViewAppointment(reminder.appointment!) : undefined}

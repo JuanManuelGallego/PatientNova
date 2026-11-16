@@ -2,6 +2,7 @@ import { AppointmentType } from "@/src/types/Appointment";
 
 import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { OnlineBadge } from "@/src/components/OnlineBadge";
+import { fmtMoney } from "@/src/utils/money";
 
 export function AppointmentTypeCard({
   type,
@@ -52,7 +53,7 @@ export function AppointmentTypeCard({
           >
             {type.defaultDuration} min
             {type.defaultPrice
-              ? ` · $${type.defaultPrice.toLocaleString()}`
+              ? ` · ${fmtMoney(type.defaultPrice)}`
               : ""}
             {type.description ? ` · ${type.description}` : ""}
           </div>
@@ -65,9 +66,10 @@ export function AppointmentTypeCard({
             className="btn-action-delete"
             onClick={onDelete}
             title="Desactivar"
+            aria-label={`Desactivar tipo de cita ${type.name}`}
             data-testid={`appointment-type-delete-button-${type.id}`}
           >
-            <ACTION_ICONS.close size={14} />
+            <ACTION_ICONS.delete size={14} aria-hidden="true" />
           </button>
         </div>
       </div>

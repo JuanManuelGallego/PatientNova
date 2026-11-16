@@ -80,6 +80,18 @@ describe('reminderRepository (integration)', () => {
   });
 });
 
+describe('reminderRepository.getStats default month bounds', () => {
+  it('does not count reminders scheduled in a future month when no range is given', async () => {
+    const nextMonth = new Date();
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 2);
+    await reminderRepository.create(baseDto(), userId);
+    await reminderRepository.create(baseDto({ sendAt: nextMonth }), userId);
+
+    const stats = await reminderRepository.getStats({ includeDeleted: false }, userId);
+    expect(stats.total).toBe(1);
+  });
+});
+
 describe('reminderService (integration, enqueue=false)', () => {
   it('creates a reminder without touching pg-boss', async () => {
     const created = await reminderService.create(baseDto(), userId, false);

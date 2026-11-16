@@ -3,11 +3,16 @@ import {
     fmtDate,
     fmtTime,
     fmtDateTime,
+    fmtDateTimeSeconds,
     fmtRelative,
     getDate,
     getDuration,
     getAppointmentEndTime,
-    getTomorrowSixAm,
+    getTomorrowAt,
+    fmtHourLabel,
+    fmtMonthLabel,
+    fmtWeekRange,
+    fmtTimestamp,
     getColombianHolidays,
     isoToLocal,
     getReminderSendAt,
@@ -75,13 +80,45 @@ describe("getAppointmentEndTime", () => {
     });
 });
 
-describe("getTomorrowSixAm", () => {
-    it("returns an ISO string set to 6:00 AM local", () => {
-        const result = getTomorrowSixAm();
-        const date = new Date(result);
+describe("getTomorrowAt", () => {
+    afterEach(() => setDisplayTimezone(undefined));
+
+    it("returns tomorrow at the given local time", () => {
+        const date = new Date(getTomorrowAt("06:00:00"));
         expect(date.getHours()).toBe(6);
         expect(date.getMinutes()).toBe(0);
         expect(date.getSeconds()).toBe(0);
+    });
+
+    it("defaults a new appointment to tomorrow 09:00 in the display timezone", () => {
+        setDisplayTimezone("America/Bogota");
+        expect(toWallClock(getTomorrowAt("09:00:00")).slice(11)).toBe("09:00:00");
+    });
+});
+
+describe("calendar and activity formatting", () => {
+    it("labels the hour axis compactly in 12h", () => {
+        expect(fmtHourLabel(15)).toBe("3 p. m.");
+        expect(fmtHourLabel(0)).toBe("12 a. m.");
+        expect(fmtHourLabel(12)).toBe("12 p. m.");
+        expect(fmtHourLabel(6)).toBe("6 a. m.");
+    });
+
+    it("labels weeks and months without a mid-phrase capital", () => {
+        expect(fmtWeekRange(new Date(2026, 10, 9), new Date(2026, 10, 15))).toBe("9–15 de noviembre de 2026");
+        expect(fmtWeekRange(new Date(2026, 10, 30), new Date(2026, 11, 6))).toBe("30 de noviembre – 6 de diciembre de 2026");
+        expect(fmtWeekRange(new Date(2026, 11, 28), new Date(2027, 0, 3))).toBe("28 de diciembre de 2026 – 3 de enero de 2027");
+        expect(fmtMonthLabel(10, 2026)).toBe("Noviembre de 2026");
+    });
+
+    it("fmtTimestamp has the fmtDateTime shape, without seconds", () => {
+        const iso = "2026-11-15T18:01:49Z";
+        expect(fmtTimestamp(iso, "America/Bogota")).toBe(fmtDateTime(iso, "America/Bogota"));
+        expect(fmtTimestamp(iso, "America/Bogota").replace(/\s/g, " ")).toBe("15 nov 2026, 01:01 p. m.");
+    });
+
+    it("fmtDateTimeSeconds keeps the seconds for the activity drawer", () => {
+        expect(fmtDateTimeSeconds("2026-11-15T18:01:49Z", "America/Bogota").replace(/\s/g, " ")).toBe("15 nov 2026, 01:01:49 p. m.");
     });
 });
 
@@ -173,14 +210,14 @@ describe("display timezone (provider's, not the browser's)", () => {
         expect(isoToLocal("2026-10-19T14:05:00.000Z")).toBe("2026-10-19T09:05");
     });
 
-    it("getTomorrowSixAm is 06:00 tomorrow in the display timezone", () => {
+    it("getTomorrowAt(06:00) is 06:00 tomorrow in the display timezone", () => {
         setDisplayTimezone("America/Bogota");
-        const iso = getTomorrowSixAm();
+        const iso = getTomorrowAt("06:00:00");
         expect(toWallClock(iso).slice(11)).toBe("06:00:00");
     });
 
     it("labels the timezone with its offset", () => {
-        expect(fmtTimezoneLabel("America/Bogota")).toBe("Bogota (GMT-5)");
+        expect(fmtTimezoneLabel("America/Bogota")).toBe("Bogotá (GMT-5)");
     });
 });
 

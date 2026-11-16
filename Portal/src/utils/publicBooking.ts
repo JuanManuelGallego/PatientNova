@@ -1,4 +1,5 @@
 import { fmtTime, localDateTimeToUtc, todayFormattedString, zonedDateTimeParts } from "./TimeUtils";
+import { fmtMoney } from "./money";
 import type { LoginChannel, PublicSlot, ReschedulePolicy } from "@/src/types/PublicBooking";
 
 
@@ -88,10 +89,10 @@ export function addMonths(month: string, count: number): string {
 
 export const lastDayOfMonth = (month: string) => addCalendarDays(`${addMonths(month, 1)}-01`, -1);
 
-/** The days of `month` for a Sunday-first grid; `null` fills the cells before the 1st. */
+/** The days of `month` for a Monday-first grid; `null` fills the cells before the 1st. */
 export function monthGrid(month: string): (string | null)[] {
     const first = `${month}-01`;
-    return [ ...Array<null>(asDate(first).getUTCDay()).fill(null), ...calendarDaysBetween(first, lastDayOfMonth(month)) ];
+    return [ ...Array<null>((asDate(first).getUTCDay() + 6) % 7).fill(null),...calendarDaysBetween(first, lastDayOfMonth(month)) ];
 }
 
 export const fmtMonth = (month: string) => part(`${month}-01`, { month: "long", year: "numeric" });
@@ -159,8 +160,6 @@ export function fmtBookingPolicy(policy: ReschedulePolicy | null): string {
     return `${cancel} y reprogramarla hasta ${plural(policy.maxReschedules, "vez", "veces")}${notice}.`;
 }
 
-const COP = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-
 export function fmtCop(value: number): string {
-    return COP.format(value);
+    return fmtMoney(value);
 }

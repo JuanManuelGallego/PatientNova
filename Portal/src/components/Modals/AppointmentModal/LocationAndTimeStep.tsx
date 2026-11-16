@@ -14,10 +14,11 @@ import {
 } from "@/src/types/Reminder";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
 import { Patient, getPatientContact } from "@/src/types/Patient";
-import { STATUS_ICONS, ACTION_ICONS } from "@/src/config/icons";
+import { STATUS_ICONS, ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
+import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React, { useState, useCallback } from "react";
@@ -70,6 +71,7 @@ export function LocationAndTimeStep({
   const { startOAuth, loading: startingOAuth, error: oauthStartError } = useStartGoogleOAuth();
   const [ needsReconnect, setNeedsReconnect ] = useState(false);
   const [ actionError, setActionError ] = useState<string | null>(null);
+  const [ confirmingReplace, setConfirmingReplace ] = useState(false);
   const isConnected = connection?.connected === true && !needsReconnect;
   const mustReconnect = needsReconnect || connection?.status === "expired";
 
@@ -100,9 +102,8 @@ export function LocationAndTimeStep({
     }, [ generateMeet ]),
   );
 
-  const handleGenerateMeet = useCallback(async () => {
+  const runGenerateMeet = useCallback(async () => {
     if (!isVirtual) return;
-    if (form.meetingUrl && !window.confirm("Ya existe una URL de videollamada. ¿Quieres reemplazarla por un nuevo enlace de Google Meet?")) return;
 
     if (isConnected) {
       await generateMeet();
@@ -110,7 +111,21 @@ export function LocationAndTimeStep({
     }
 
     await openOAuth(() => startOAuth("/appointments", mustReconnect));
-  }, [ form.meetingUrl, generateMeet, isConnected, isVirtual, mustReconnect, openOAuth, startOAuth ]);
+  }, [ generateMeet, isConnected, isVirtual, mustReconnect, openOAuth, startOAuth ]);
+
+  const handleGenerateMeet = useCallback(async () => {
+    if (!isVirtual) return;
+    if (form.meetingUrl) {
+      setConfirmingReplace(true);
+      return;
+    }
+    await runGenerateMeet();
+  }, [ form.meetingUrl, isVirtual, runGenerateMeet ]);
+
+  const confirmReplace = useCallback(() => {
+    setConfirmingReplace(false);
+    void runGenerateMeet();
+  }, [ runGenerateMeet ]);
 
   const meetingUrlInvalid = Boolean(form.meetingUrl && !validateHttpUrl(form.meetingUrl));
   const googleError = actionError || popupError || oauthStartError || createMeetError || connectionError;
@@ -211,6 +226,19 @@ export function LocationAndTimeStep({
               </div>
             )}
           </div>
+          {confirmingReplace && (
+            <ConfirmDialog
+              icon={DETAIL_ICONS.link}
+              title="¿Reemplazar el enlace de videollamada?"
+              confirmLabel="Reemplazar"
+              nested
+              testId="replace-meet-link-dialog"
+              onClose={() => setConfirmingReplace(false)}
+              onConfirm={confirmReplace}
+            >
+              Generaremos un nuevo enlace de Google Meet en lugar del que ya tiene esta cita.
+            </ConfirmDialog>
+          )}
         </div>
       )}
 

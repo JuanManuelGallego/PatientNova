@@ -47,7 +47,7 @@ export function ApprovalSection({ settings, save, onSaved }: { settings: Booking
                                 value={opt.value}
                                 checked={mode === opt.value}
                                 onChange={() => handleChange(opt.value)}
-                                style={{ marginTop: 3 }}
+                                className="radio"
                                 data-testid={`online-booking-approval-${opt.value.toLowerCase().replace("_", "-")}`}
                             />
                             <span>

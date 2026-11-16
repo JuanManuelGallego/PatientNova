@@ -748,6 +748,7 @@ enum ActionType {
   UPDATE
   DELETE
   RESTORE
+  LOGIN
 }
 
 enum ActionSource {

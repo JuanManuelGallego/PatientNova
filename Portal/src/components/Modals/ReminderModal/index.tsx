@@ -282,7 +282,7 @@ const [ form, setForm ] = useState<ReminderForm>({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={isEdit ? "Editar Recordatorio" : "Nuevo Recordatorio"}
+      aria-label={isEdit ? "Editar recordatorio" : "Nuevo recordatorio"}
       ref={trapRef}
       onKeyDown={trapKeyDown}
       data-testid="reminder-modal-dialog"
@@ -294,7 +294,7 @@ const [ form, setForm ] = useState<ReminderForm>({
         <div className="modal-header modal-header--top">
           <div>
             <h2 className="modal-title">
-              {isEdit ? "Editar Recordatorio" : "Nuevo Recordatorio"}
+              {isEdit ? "Editar recordatorio" : "Nuevo recordatorio"}
             </h2>
             <p className="modal-subtitle">
               Paso {step} de {totalSteps}

@@ -8,6 +8,7 @@ import { mutationErrorMessage } from "@/src/api/base/useApiMutation";
 import { InlineError } from "@/src/components/Info/InlineError";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
 import { SettingsList } from "@/src/components/Settings/SettingsList";
+import { PageHeader } from "@/src/components/PageHeader";
 import { TabNav } from "@/src/components/TabNav";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
@@ -35,7 +36,6 @@ export function UsersView() {
     const { user: me } = useAuthContext();
     const timezone = useDisplayTimezone();
     const [ tab, setTab ] = useState<UsersTab>(UsersTab.Active);
-    // One request for both tabs: switching is instant and never shows the other tab's rows.
     const { users, loading, error, refetch } = useFetchUsers({ includeDeleted: true });
     const shown = users?.filter((u) => u.isDeleted === (tab === UsersTab.Deleted));
     const { deleteUser, loading: deleting } = useDeleteUser();
@@ -109,6 +109,11 @@ export function UsersView() {
 
     return (
         <div className="settings-stack">
+            <PageHeader
+                title="Usuarios"
+                subtitle="Cuentas de los profesionales que usan Patient Nova"
+                actions={<button type="button" className="btn-primary btn-hero" onClick={() => setModalUser(null)} data-testid="users-new-button">Nuevo usuario</button>}
+            />
             <TabNav
                 items={TABS}
                 active={tab}
@@ -119,9 +124,6 @@ export function UsersView() {
             <SettingsList<ManagedUser>
                 title="Cuentas"
                 description="Crea, edita o desactiva el acceso de cada profesional"
-                newLabel="Nuevo usuario"
-                newTestId="users-new-button"
-                onNew={() => setModalUser(null)}
                 items={shown}
                 loading={loading}
                 error={error}

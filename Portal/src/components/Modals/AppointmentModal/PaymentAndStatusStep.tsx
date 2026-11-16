@@ -18,6 +18,7 @@ import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React from "react";
 import { SetField } from "./types";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fmtMoney } from "@/src/utils/money";
 
 const CREATABLE_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.SCHEDULED,
@@ -145,7 +146,7 @@ export function PaymentAndStatusStep({
             "Ubicación",
             locations.find((l) => l.id === form.locationId)?.name || "—",
           ],
-          [ "Precio", `$${form.price}` ],
+          [ "Precio", fmtMoney(Number(form.price)) ],
           [
             "Recordatorio",
             form.reminderType !== ReminderType.NONE

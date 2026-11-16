@@ -89,6 +89,7 @@ export function AppointmentDateTimePicker({
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
       <ZonedDatePicker
+        className="form-picker"
         value={date ? toPickerValue(date, timezone) : null}
         onChange={handleChange}
         showTime={{

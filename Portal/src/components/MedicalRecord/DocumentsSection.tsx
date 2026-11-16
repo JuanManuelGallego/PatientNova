@@ -169,6 +169,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
+        className="dropzone"
         style={{
           border: `2px dashed ${dragging ? "var(--c-brand)" : "var(--c-gray-200)"}`,
           borderRadius: "var(--r-md)",
@@ -179,15 +180,15 @@ export function DocumentsSection({ documents, onChange }: Props) {
           transition: "border-color 0.15s, background 0.15s",
         }}
       >
-        <div style={{ fontSize: 28, marginBottom: 8 }}>
-          <FolderOpen size={28} />
+        <div className="dropzone__icon">
+          <FolderOpen size={28} aria-hidden="true" />
         </div>
         <p
           style={{
             margin: 0,
             fontWeight: 600,
             fontSize: 14,
-            color: "var(--c-text)",
+            color: "var(--c-gray-900)",
           }}
         >
           {uploading
@@ -407,7 +408,7 @@ function ActionBtn({
         cursor: "pointer",
         fontSize: 14,
         lineHeight: 1,
-        color: "var(--c-text)",
+        color: "var(--c-gray-900)",
       }}
     >
       {children}

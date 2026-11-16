@@ -58,6 +58,7 @@ export function DateTimePicker({
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
       <ZonedDatePicker
+        className="form-picker"
         value={date ? toValue(date) : null}
         onChange={handleChange}
         showTime={

@@ -22,6 +22,7 @@ import {
 import { Clock } from "lucide-react";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
+import { PageHeader } from "@/src/components/PageHeader";
 import { withAllOption } from "@/src/utils/options";
 import {
   PAGE_SIZE,
@@ -104,7 +105,7 @@ export function AuditLogsView() {
   const columns = useMemo<ColumnDef[]>(
     () => [
       {
-        label: "Accion",
+        label: "Acción",
         sortKey: "actionType",
         filter: {
           kind: "enum",
@@ -127,9 +128,10 @@ export function AuditLogsView() {
           triggerTestId: "audit-entity-filter-trigger",
         },
       },
-      { label: "Descripcion" },
+      { label: "Descripción" },
       {
         label: "Origen",
+        priority: "secondary",
         filter: {
           kind: "enum",
           options: SOURCE_OPTIONS,
@@ -159,27 +161,25 @@ export function AuditLogsView() {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
-        <button
-          onClick={() => fetchAuditLogs()}
-          className="btn-secondary btn-secondary--sm"
-          title="Actualizar"
-          data-testid="audit-refresh-button"
-        >
-          <ACTION_ICONS.retry size={14} className={loading ? "animate-spin" : ""} />
-        </button>
-      </div>
+      <PageHeader
+        title="Actividad"
+        subtitle="Historial de acciones realizadas en el sistema"
+        actions={
+          <button
+            onClick={() => fetchAuditLogs()}
+            className="btn-secondary btn-secondary--sm"
+            title="Actualizar"
+            aria-label="Actualizar actividad"
+            data-testid="audit-refresh-button"
+          >
+            <ACTION_ICONS.retry size={14} className={loading ? "animate-spin" : ""} />
+          </button>
+        }
+      />
 
       <FilterBar
         {...searchProps}
-        placeholder="Buscar por actor, descripcion o entidad…"
+        placeholder="Buscar por actor, descripción o entidad…"
         testId="audit-search-input"
       />
       {(entityId || portalPatientId) && (
@@ -231,18 +231,18 @@ export function AuditLogsView() {
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
             <td className="td td--date"><ActionLabel action={log.actionType} /></td>
             <td className="td td--date"><EntityTypeLabel entityType={log.entityType} /></td>
-            <td className="td td--date">{log.description}</td>
-            <td className="td td--date">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
+            <td className="td td--date td--wrap">{log.description}</td>
+            <td className="td td--date col--secondary">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
         )}
-        emptyState={
+        emptyState={error ? undefined : (
           <EmptyState
             icon={Clock}
             title="Sin registros de actividad"
             sub="Las acciones realizadas en el sistema aparecerán aquí."
           />
-        }
+        )}
         footer={
           <DataTableFooter
             page={page}

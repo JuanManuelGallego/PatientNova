@@ -81,9 +81,9 @@ test.describe('Patients', () => {
     await patientPage.expectPatientVisible(patient.name);
 
     const drawer = await patientPage.openDrawer(patient.name);
-    await drawer.expectSection('Información de Contacto');
+    await drawer.expectSection('Información de contacto');
     await expect(drawer.whatsappNumber).toContainText(phone);
-    await drawer.expectSection('Información Adicional');
+    await drawer.expectSection('Información adicional');
     await drawer.expectSection('Información del sistema');
 
     await drawer.edit();
