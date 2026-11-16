@@ -12,6 +12,8 @@ export interface PublicProvider {
     hasLogo: boolean;
     timezone: string;
     bookingOpen: boolean;
+    /** The provider opted in to search indexing and booking is open: the page may be indexed. */
+    indexable: boolean;
     approvalRequired: boolean;
     selfServe: boolean;
     whatsappConfirmation: boolean;

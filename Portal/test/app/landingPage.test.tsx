@@ -11,6 +11,8 @@ const replace = vi.hoisted(() => vi.fn());
 vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => auth.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/src/components/Modals/LoginModal", () => ({ LoginModal: () => <div role="dialog">login</div> }));
+const fetchSlugs = vi.hoisted(() => vi.fn<() => Promise<string[]>>());
+vi.mock("@/src/utils/seo/publicProviders", () => ({ fetchIndexableProviderSlugs: fetchSlugs }));
 
 describe("landing page", () => {
   beforeEach(() => {
@@ -20,9 +22,17 @@ describe("landing page", () => {
 
   it("renders its content while the session probe is still pending (crawlers see it)", () => {
     render(<LandingPage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("La plataforma moderna para profesionales de la salud");
-    expect(screen.getByText("Gestión de pacientes")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Agenda, reservas en línea e historia clínica para tu consulta");
+    expect(screen.getByText("Recordatorios automáticos")).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("links every product page from its cards and footer", () => {
+    render(<LandingPage />);
+    const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    for (const path of [ "/reserva-en-linea", "/recordatorios", "/historia-clinica", "/preguntas-frecuentes" ]) {
+      expect(hrefs).toContain(path);
+    }
   });
 
   it("opens the login modal from either button", () => {
@@ -72,10 +82,20 @@ describe("robots and sitemap", () => {
     expect(rules.disallow).toContain("/dashboard");
   });
 
-  it("lists the landing page and the legal pages, never booking pages", () => {
-    const urls = sitemap().map((e) => e.url);
+  it("lists the product and legal pages, plus only the booking pages the API reports as indexable", async () => {
+    fetchSlugs.mockResolvedValue([ "dra-ana" ]);
+    const urls = (await sitemap()).map((e) => e.url);
     expect(urls).toContain("https://www.patientnova.net/");
+    expect(urls).toContain("https://www.patientnova.net/reserva-en-linea");
+    expect(urls).toContain("https://www.patientnova.net/preguntas-frecuentes");
     expect(urls).toContain("https://www.patientnova.net/privacy-policy");
+    expect(urls.filter((u) => u.includes("/book"))).toEqual([ "https://www.patientnova.net/book/dra-ana" ]);
+  });
+
+  it("still lists the static pages when the provider list is unavailable", async () => {
+    fetchSlugs.mockResolvedValue([]);
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain("https://www.patientnova.net/");
     expect(urls.some((u) => u.includes("/book"))).toBe(false);
   });
 });

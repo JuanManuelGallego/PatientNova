@@ -61,6 +61,7 @@ describe('booking settings routes (integration)', () => {
       specialty: null,
       publicPhone: null,
       publicWhatsapp: null,
+      searchIndexable: false,
       readiness: { hasSlug: false, hasLegalIdentity: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
       live: false,
     });
@@ -123,6 +124,17 @@ describe('booking settings routes (integration)', () => {
 
     const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'portalReminderTiming' } } });
     expect(audit).not.toBeNull();
+  });
+
+  it('PATCH /settings stores the search-indexing opt-in, boolean only, and audits it', async () => {
+    const res = await patchSettings({ searchIndexable: true });
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).data.searchIndexable).toBe(true);
+    expect((await patchSettings({ searchIndexable: 'yes' })).statusCode).toBe(400);
+
+    const audit = await prisma.auditLog.findFirst({ where: { entityId: userId, affectedFields: { has: 'searchIndexable' } } });
+    expect(audit?.fieldsBefore).toMatchObject({ searchIndexable: false });
+    expect(audit?.fieldsAfter).toMatchObject({ searchIndexable: true });
   });
 
   it('PATCH /settings stores the public profile, trimmed and audited, and blank clears it', async () => {

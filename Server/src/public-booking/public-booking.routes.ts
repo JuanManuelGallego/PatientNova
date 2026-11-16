@@ -9,6 +9,19 @@ import { asyncHandler } from '../utils/api/async-handler.js';
 export const publicBookingRouter = Router();
 
 /**
+ * GET /providers
+ * Slugs of booking pages whose providers opted in to search indexing and are bookable now (the sitemap).
+ */
+publicBookingRouter.get(
+  '/',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const list = await publicBookingService.listIndexable();
+    res.set('Cache-Control', 'public, max-age=300');
+    ok(res, list);
+  })
+);
+
+/**
  * GET /providers/:slug
  * Public provider card: name, title, time zone, bookable types and in-person locations.
  */

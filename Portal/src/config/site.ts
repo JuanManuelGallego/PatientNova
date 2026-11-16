@@ -5,5 +5,21 @@
  */
 export const SITE_URL = "https://www.patientnova.net";
 
-/** Public pages listed in the sitemap. Booking pages are `noindex` and stay out of it. */
-export const INDEXABLE_PATHS = [ "/", "/privacy-policy", "/terms-of-service", "/patient-terms" ] as const;
+export const SUPPORT_EMAIL = "support@patientnova.net";
+
+/** Product pages, in the order the nav and footer list them. */
+export const MARKETING_PAGES = [
+    { path: "/reserva-en-linea", label: "Reserva en línea" },
+    { path: "/recordatorios", label: "Recordatorios" },
+    { path: "/historia-clinica", label: "Historia clínica" },
+    { path: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
+] as const;
+
+/** Public pages listed in the sitemap. Booking pages join only when their provider opts in. */
+export const INDEXABLE_PATHS = [
+    "/",
+    ...MARKETING_PAGES.map((p) => p.path),
+    "/privacy-policy",
+    "/terms-of-service",
+    "/patient-terms",
+] as const;

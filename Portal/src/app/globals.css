@@ -5215,6 +5215,105 @@ th.col--actions {
 }
 
 /* ================================================================
+   Landing and product pages (/reserva-en-linea, /recordatorios, ...)
+   ================================================================ */
+@media (min-width: 1024px) {
+  .landing-features-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.landing-feature-card__link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-brand);
+  text-decoration: none;
+}
+
+.landing-feature-card__link:hover {
+  text-decoration: underline;
+}
+
+.landing-footer__links {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.marketing-prose {
+  max-width: 760px;
+  color: var(--c-gray-700);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.marketing-prose h2 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--c-gray-900);
+  margin: 0 0 12px;
+}
+
+.marketing-prose p {
+  margin: 0 0 12px;
+}
+
+.marketing-prose ul {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.marketing-prose li {
+  margin-bottom: 6px;
+}
+
+.marketing-prose a {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.marketing-prose__section + .marketing-prose__section {
+  margin-top: 36px;
+}
+
+.marketing-related {
+  list-style: none;
+  padding: 0 !important;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.marketing-faq {
+  border-bottom: 1px solid var(--c-gray-100);
+  padding: 16px 0;
+}
+
+.marketing-faq summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.marketing-faq summary h2,
+.marketing-faq summary h3 {
+  display: inline;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--c-gray-900);
+}
+
+.marketing-faq p {
+  margin: 10px 0 0;
+}
+
+.marketing-prose > h2 + .marketing-faq {
+  margin-top: 4px;
+}
+
+/* ================================================================
    Login — Password toggle
    ================================================================ */
 .password-wrapper {

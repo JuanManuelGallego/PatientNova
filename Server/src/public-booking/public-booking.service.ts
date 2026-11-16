@@ -61,6 +61,8 @@ export const publicBookingService = {
       hasLogo: IMAGE_DATA_URL.test(images?.logo ?? ''),
       timezone: provider.timezone,
       bookingOpen,
+      // The provider's opt-in, honoured only while patients can book: a paused page drops out of search.
+      indexable: bookingOpen && provider.searchIndexable,
       approvalRequired: bookingOpen && provider.bookingApprovalMode === BookingApprovalMode.REQUIRE_APPROVAL,
       selfServe: config.portal.selfServe,
       whatsappConfirmation: true,
@@ -77,6 +79,14 @@ export const publicBookingService = {
       })),
       locations: locations.map((l) => ({ id: l.id, name: l.name, address: l.isVirtual ? null : l.address, isVirtual: l.isVirtual })),
     };
+  },
+
+  /** Booking pages that may be indexed: opted in and live now (the sitemap). Only slugs leave. */
+  async listIndexable(): Promise<{ providers: Array<{ slug: string }> }> {
+    if (!config.portal.patientEnabled) return { providers: [] };
+    const candidates = await publicBookingRepository.listSearchIndexable();
+    const live = await Promise.all(candidates.map((c) => bookingSettingsService.isBookingLive(c.id)));
+    return { providers: candidates.filter((_, i) => live[i]).map((c) => ({ slug: c.bookingSlug! })) };
   },
 
   async getImage(slug: string, kind: ProviderImageKind): Promise<{ contentType: string; bytes: Buffer }> {

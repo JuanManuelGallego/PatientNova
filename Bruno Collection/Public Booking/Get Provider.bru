@@ -20,4 +20,6 @@ docs {
   auto-confirm); otherwise null. `selfServe` is true only when the server runs with
   `ENABLE_SELF_SERVE=true` ("Mis citas"); there is no login channel list any more. `whatsappConfirmation`
   is true only while the WhatsApp confirm-link template is configured: otherwise the form offers email only.
+  `indexable` is true only when the provider opted in (`searchIndexable`) and booking is open: the Portal
+  then lets search engines index the page; otherwise it is `noindex`.
 }

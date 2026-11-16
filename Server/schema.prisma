@@ -272,6 +272,8 @@ model User {
   legalName           String? @db.VarChar(200)
   privacyContact      String? @db.VarChar(200)
   contactHours        String? @db.VarChar(120)
+  // Opt-in: lets search engines index the public booking page while booking is open (noindex otherwise).
+  searchIndexable     Boolean @default(false)
 
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)
