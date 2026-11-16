@@ -2444,6 +2444,12 @@ th.col--actions {
   white-space: nowrap;
 }
 
+.td--wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 12ch;
+}
+
 .td--nowrap {
   white-space: nowrap;
 }
@@ -2462,6 +2468,9 @@ th.col--actions {
   font-size: 14px;
   font-weight: 600;
   color: var(--c-gray-900);
+  /* Long names wrap instead of widening the table past its card. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .td-name__secondary {

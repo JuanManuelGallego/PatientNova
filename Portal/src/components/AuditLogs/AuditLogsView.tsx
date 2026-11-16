@@ -231,7 +231,7 @@ export function AuditLogsView() {
           <tr key={log.id} className="table-row" onClick={() => setViewLog(log)} data-testid={`audit-row-${log.id}`}>
             <td className="td td--date"><ActionLabel action={log.actionType} /></td>
             <td className="td td--date"><EntityTypeLabel entityType={log.entityType} /></td>
-            <td className="td td--date">{log.description}</td>
+            <td className="td td--date td--wrap">{log.description}</td>
             <td className="td td--date col--secondary">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>

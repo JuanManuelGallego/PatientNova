@@ -55,8 +55,10 @@ export class AppointmentsPage extends BasePage {
   }
 
   async openDrawer(patientName: string) {
+    // Click the patient cell: the status, payment and actions cells stop
+    // propagation, so the row's centre would not open the drawer.
     const row = this.table.getByRole('row').filter({ hasText: patientName });
-    await row.click();
+    await row.locator('td').first().click();
     const drawer = new AppointmentDrawer(this.page);
     await drawer.waitForOpen();
     return drawer;

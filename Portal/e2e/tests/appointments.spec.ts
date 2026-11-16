@@ -453,7 +453,10 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(6, 0, 0, 0);
+    // Same slot as the create modal's default start (09:00 tomorrow), so the
+    // submit below always collides with this appointment and never leaves an
+    // untracked one behind for later tests.
+    tomorrow.setHours(9, 0, 0, 0);
     const startA = tomorrow.toISOString();
     const endA = addHours(startA, 1);
 
