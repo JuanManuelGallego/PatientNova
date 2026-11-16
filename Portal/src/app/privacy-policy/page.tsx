@@ -3,6 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Política de Privacidad | Patient Nova",
   description: "Política de tratamiento de datos personales de Patient Nova para cuentas, clínicas y pacientes.",
+  alternates: { canonical: "/privacy-policy" },
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.

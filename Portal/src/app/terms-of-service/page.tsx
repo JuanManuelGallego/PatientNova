@@ -3,6 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Términos para profesionales | Patient Nova",
   description: "Términos que regulan el uso de Patient Nova por profesionales y entidades de salud.",
+  alternates: { canonical: "/terms-of-service" },
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.

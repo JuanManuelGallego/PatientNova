@@ -3,6 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Condiciones del portal | Patient Nova",
   description: "Condiciones de uso del portal de pacientes de Patient Nova.",
+  alternates: { canonical: "/patient-terms" },
 };
 
 // Keep this as a fixed revision date. It must change when this document changes.

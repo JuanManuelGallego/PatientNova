@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { Providers } from "@/src/providers/Providers";
+import { SITE_URL } from "@/src/config/site";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -10,8 +11,10 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative canonical and Open Graph URLs against the production host.
+  metadataBase: new URL(SITE_URL),
   title: "Patient Nova",
-  description: "Dashboard para gestionar pacientes, citas y más.",
+  description: "Gestión clínica para profesionales de la salud: pacientes, citas, calendario y recordatorios.",
 };
 
 export const viewport: Viewport = {
@@ -26,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={dmSans.className}>
+    <html lang="es-CO" className={dmSans.className}>
       <body>
         <Providers>
           {children}
