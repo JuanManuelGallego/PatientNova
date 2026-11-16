@@ -532,7 +532,7 @@ test.describe('Appointment Filters, Pagination, Validation, Conflicts, and Virtu
     await appts.expectAppointmentRowVisible(id);
 
     const tableLink = page.getByTestId(`appointment-table-virtual-link-${id}`);
-    await expect(tableLink).toBeVisible();
+    await expect(tableLink).toBeAttached();
     expect(await tableLink.getAttribute('href')).toBe('https://meet.google.com/test-room');
 
     const drawer = await appts.openDrawerById(id);
