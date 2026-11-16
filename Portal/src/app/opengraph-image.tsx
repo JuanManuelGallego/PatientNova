@@ -2,9 +2,6 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-// The link preview (WhatsApp, LinkedIn, email, search) for every page that does not set its own.
-// Generated once at build time; the colors follow the landing hero. A page that declares its own
-// `openGraph` replaces the inherited image, so it must list `/opengraph-image` itself (see the landing).
 export const alt = "Patient Nova: gestión clínica para profesionales de la salud";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

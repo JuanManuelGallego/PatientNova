@@ -1,0 +1,17 @@
+meta {
+  name: List Indexable Providers
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/public/providers
+  body: none
+  auth: none
+}
+
+docs {
+  `{ providers: [{ slug }] }`: booking pages whose providers opted in to search indexing
+  (`searchIndexable`) and whose booking is live now. Only slugs leave; the Portal's sitemap reads it.
+  Cacheable for 5 minutes. Empty while the portal is off.
+}

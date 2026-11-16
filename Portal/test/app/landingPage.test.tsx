@@ -11,6 +11,8 @@ const replace = vi.hoisted(() => vi.fn());
 vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => auth.value }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("@/src/components/Modals/LoginModal", () => ({ LoginModal: () => <div role="dialog">login</div> }));
+const fetchSlugs = vi.hoisted(() => vi.fn<() => Promise<string[]>>());
+vi.mock("@/src/utils/seo/publicProviders", () => ({ fetchIndexableProviderSlugs: fetchSlugs }));
 
 describe("landing page", () => {
   beforeEach(() => {
@@ -20,15 +22,80 @@ describe("landing page", () => {
 
   it("renders its content while the session probe is still pending (crawlers see it)", () => {
     render(<LandingPage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("La plataforma moderna para profesionales de la salud");
-    expect(screen.getByText("Gestión de pacientes")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Agenda, reservas en línea e historia clínica para tu consulta");
+    expect(screen.getByText("Recordatorios automáticos")).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("opens the login modal from either button", () => {
+  it("links every product page from its cards and footer", () => {
     render(<LandingPage />);
-    fireEvent.click(screen.getByTestId("landing-cta-button"));
+    const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    for (const path of [ "/reserva-en-linea", "/recordatorios", "/historia-clinica", "/preguntas-frecuentes" ]) {
+      expect(hrefs).toContain(path);
+    }
+  });
+
+  it("opens the login modal from the nav", () => {
+    render(<LandingPage />);
+    fireEvent.click(screen.getByTestId("landing-login-button"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("sends visitors to support from the hero, the nav and the closing banner (accounts are created by support)", () => {
+    render(<LandingPage />);
+    for (const id of [ "landing-cta-button", "marketing-nav-contact", "marketing-cta-contact" ]) {
+      const href = screen.getByTestId(id).getAttribute("href")!;
+      expect(href).toMatch(/^mailto:support@patientnova\.net\?subject=Quiero%20probar%20Patient%20Nova&body=/);
+    }
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("offers WhatsApp beside email in the hero and the closing banner, in a new tab", () => {
+    render(<LandingPage />);
+    for (const id of [ "landing-cta-whatsapp", "marketing-cta-whatsapp" ]) {
+      const link = screen.getByTestId(id);
+      expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/573044873415\?text=Hola%2C%20quiero%20probar/);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
+
+  it("shows the trust strip and answers the price question by sending to support", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("region", { name: "Seguridad y soporte" })).toHaveTextContent("Ley 1581 de 2012");
+    const price = screen.getByText("¿Cuánto cuesta?").closest("details")!;
+    expect(price).toHaveTextContent("planes y precios");
+    expect(price.querySelector('a[href^="https://wa.me/"]')).not.toBeNull();
+  });
+
+  it("hides the feature icons from assistive technology, so card titles are read once", () => {
+    const { container } = render(<LandingPage />);
+    const icons = container.querySelectorAll(".landing-feature-card__icon");
+    expect(icons.length).toBe(6);
+    icons.forEach((icon) => expect(icon).toHaveAttribute("aria-hidden", "true"));
+    expect(container.querySelectorAll(".landing-feature-card--link")).toHaveLength(3);
+  });
+
+  it("shows the patient's side in the hero as one described picture", () => {
+    render(<LandingPage />);
+    const picture = screen.getByRole("img", { name: /elige día y hora.*recordatorio de la cita por WhatsApp/ });
+    expect(picture).toHaveTextContent("¿Cuándo te queda bien?");
+  });
+
+  it("shows the provider's side as a described calendar screenshot", () => {
+    render(<LandingPage />);
+    const shot = screen.getByRole("img", { name: /Calendario semanal de Patient Nova/ });
+    expect(shot.closest("figure")).toHaveTextContent("en el mismo calendario");
+  });
+
+  it("shows no testimonials section while there are none", () => {
+    render(<LandingPage />);
+    expect(screen.queryByRole("heading", { name: "Lo que dicen quienes ya lo usan" })).not.toBeInTheDocument();
+  });
+
+  it("stays light even when the provider saved the dark theme", () => {
+    const { container } = render(<LandingPage />);
+    expect(container.querySelector(".marketing-frame")).toHaveAttribute("data-theme", "light");
   });
 
   it("sends a signed-in provider to the dashboard once the probe settles", () => {
@@ -54,6 +121,7 @@ describe("landing page", () => {
     const types = json["@graph"].map((n: { "@type": string }) => n["@type"]);
     expect(types).toEqual([ "WebSite", "Organization" ]);
     expect(json["@graph"][1].logo).toBe("https://www.patientnova.net/icon.png");
+    expect(json["@graph"][1].contactPoint.telephone).toBe("+573044873415");
   });
 });
 
@@ -72,10 +140,20 @@ describe("robots and sitemap", () => {
     expect(rules.disallow).toContain("/dashboard");
   });
 
-  it("lists the landing page and the legal pages, never booking pages", () => {
-    const urls = sitemap().map((e) => e.url);
+  it("lists the product and legal pages, plus only the booking pages the API reports as indexable", async () => {
+    fetchSlugs.mockResolvedValue([ "dra-ana" ]);
+    const urls = (await sitemap()).map((e) => e.url);
     expect(urls).toContain("https://www.patientnova.net/");
+    expect(urls).toContain("https://www.patientnova.net/reserva-en-linea");
+    expect(urls).toContain("https://www.patientnova.net/preguntas-frecuentes");
     expect(urls).toContain("https://www.patientnova.net/privacy-policy");
+    expect(urls.filter((u) => u.includes("/book"))).toEqual([ "https://www.patientnova.net/book/dra-ana" ]);
+  });
+
+  it("still lists the static pages when the provider list is unavailable", async () => {
+    fetchSlugs.mockResolvedValue([]);
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain("https://www.patientnova.net/");
     expect(urls.some((u) => u.includes("/book"))).toBe(false);
   });
 });

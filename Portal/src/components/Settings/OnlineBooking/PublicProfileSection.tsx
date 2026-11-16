@@ -14,6 +14,7 @@ import { CountryCodeInput } from "@/src/components/CountryCodeInput";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
 import { FieldError, InlineError } from "@/src/components/Info/InlineError";
 import { useDebouncedSave } from "@/src/hooks/useDebouncedSave";
+import { Switch } from "@/src/components/Form/Switch";
 import { PROFILE_SECTION_ID, type SaveFn } from "./shared";
 import { SettingsSection } from "../SettingsSection";
 
@@ -60,6 +61,44 @@ function parseProfile(form: ProfileForm) {
     return { body, errors, invalid: Object.values(errors).some(Boolean) };
 }
 
+function SearchVisibilityToggle({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
+    const [ saving, setSaving ] = useState(false);
+    const [ error, setError ] = useState<string | null>(null);
+
+    async function handleChange(searchIndexable: boolean) {
+        setSaving(true);
+        setError(null);
+        try {
+            onSaved(await save({ searchIndexable }));
+        } catch {
+            setError("No pudimos guardar este cambio. Inténtalo de nuevo.");
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <div style={{ borderBottom: "1px solid var(--c-gray-100)", paddingBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 600, color: "var(--c-gray-900)" }}>Aparecer en Google</span>
+                <Switch
+                    checked={settings.searchIndexable}
+                    disabled={saving}
+                    onChange={handleChange}
+                    label="Aparecer en Google"
+                    testId="online-booking-search-indexable"
+                />
+            </div>
+            <span className="form-input-hint" style={{ display: "block", marginTop: 8 }}>
+                Permite que Google y otros buscadores muestren tu página de reservas, con tu nombre, especialidad y presentación,
+                mientras las reservas estén abiertas. Desactivado, solo la encuentra quien tiene tu enlace.
+                Los buscadores pueden tardar algunos días en reflejar el cambio.
+            </span>
+            {error && <InlineError message={error} />}
+        </div>
+    );
+}
+
 export function PublicProfileSection({ settings, save, onSaved }: { settings: BookingSettings; save: SaveFn; onSaved: (s: BookingSettings) => void }) {
     const [ form, setForm ] = useState<ProfileForm>(() => profileFormOf(settings));
     const [ initial ] = useState(() => parseProfile(profileFormOf(settings)).body);
@@ -99,6 +138,7 @@ export function PublicProfileSection({ settings, save, onSaved }: { settings: Bo
                 <span className="form-input-hint" style={{ alignSelf: "flex-start" }}>
                     Todo lo que escribas aquí es visible para cualquier persona con tu enlace de reserva.
                 </span>
+                <SearchVisibilityToggle settings={settings} save={save} onSaved={onSaved} />
                 <label className="form-label">
                     Especialidad
                     <input className="form-input" maxLength={MAX_SPECIALTY_LENGTH} placeholder="Psicología clínica"

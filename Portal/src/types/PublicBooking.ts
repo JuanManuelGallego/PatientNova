@@ -12,6 +12,7 @@ export interface PublicProvider {
     hasLogo: boolean;
     timezone: string;
     bookingOpen: boolean;
+    indexable: boolean;
     approvalRequired: boolean;
     selfServe: boolean;
     whatsappConfirmation: boolean;

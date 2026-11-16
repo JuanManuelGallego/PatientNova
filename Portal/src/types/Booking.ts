@@ -42,6 +42,7 @@ export interface BookingSettings {
     legalName: string | null;
     privacyContact: string | null;
     contactHours: string | null;
+    searchIndexable: boolean;
     readiness: BookingReadiness;
     live: boolean;
 }
@@ -49,7 +50,7 @@ export interface BookingSettings {
 export type BookingSettingsUpdate = Partial<Pick<BookingSettings,
     "bookingSlug" | "bookingEnabled" | "bookingApprovalMode" | "slotIntervalMinutes" | "bufferMinutes" | "minLeadMinutes" | "maxHorizonDays"
     | "maxPatientReschedules" | "minRescheduleNoticeHours" | "portalReminderTiming"
-    | "bio" | "specialty" | "publicPhone" | "publicWhatsapp" | "legalName" | "privacyContact" | "contactHours">>;
+    | "bio" | "specialty" | "publicPhone" | "publicWhatsapp" | "legalName" | "privacyContact" | "contactHours" | "searchIndexable">>;
 
 export const MAX_PATIENT_RESCHEDULES = 10;
 export const MAX_RESCHEDULE_NOTICE_HOURS = 168;

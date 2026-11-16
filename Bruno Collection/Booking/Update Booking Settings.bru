@@ -29,7 +29,8 @@ body:json {
     "bio": "Atiendo adultos y parejas.",
     "specialty": "Psicología clínica",
     "publicPhone": "+573001112222",
-    "publicWhatsapp": "+573001112222"
+    "publicWhatsapp": "+573001112222",
+    "searchIndexable": false
   }
 }
 
@@ -49,4 +50,6 @@ docs {
   `bio` (600), `specialty` (120), `publicPhone` and `publicWhatsapp` (E.164)
   appear on the public booking page. Empty string or null clears them. They are separate from the
   profile's `phoneNumber`/`whatsappNumber`, which stay private.
+  `searchIndexable` (default false) lets search engines index the public booking page and lists it in
+  the sitemap, only while booking is open; otherwise the page stays `noindex`.
 }

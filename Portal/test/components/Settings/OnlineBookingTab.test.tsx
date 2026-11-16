@@ -87,6 +87,7 @@ function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings
         legalName: null,
         privacyContact: null,
         contactHours: null,
+        searchIndexable: false,
         readiness: { hasSlug: false, hasLegalIdentity: false, hasAvailability: false, hasBookableType: false, hasBookableLocation: false },
         live: false,
         ...overrides,
@@ -717,6 +718,24 @@ describe("OnlineBookingTab: public profile", () => {
             legalName: null, privacyContact: null, contactHours: null,
         });
         expect(screen.getByTestId("online-booking-profile-save-state")).toHaveTextContent("Guardado");
+    });
+
+    it("saves the search-indexing opt-in at once, on its own", async () => {
+        renderTab();
+        const toggle = screen.getByTestId("online-booking-search-indexable");
+        expect(toggle).not.toBeChecked();
+        await user.click(toggle);
+        expect(updateSettings).toHaveBeenCalledWith({ searchIndexable: true });
+        await settle(0);
+        expect(screen.getByTestId("online-booking-search-indexable")).toBeChecked();
+    });
+
+    it("shows an error and keeps the old state when the opt-in cannot be saved", async () => {
+        updateSettings.mockRejectedValueOnce(new Error("boom"));
+        renderTab();
+        await user.click(screen.getByTestId("online-booking-search-indexable"));
+        expect(await screen.findByText("No pudimos guardar este cambio. Inténtalo de nuevo.")).toBeInTheDocument();
+        expect(screen.getByTestId("online-booking-search-indexable")).not.toBeChecked();
     });
 
     it("shows a stored phone split into its country code and number", () => {

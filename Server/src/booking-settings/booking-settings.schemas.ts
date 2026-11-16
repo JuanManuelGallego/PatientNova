@@ -48,6 +48,7 @@ export const updateBookingSettingsSchema = z
     legalName: publicText(MAX_LEGAL_TEXT_LENGTH),
     privacyContact: publicText(MAX_LEGAL_TEXT_LENGTH),
     contactHours: publicText(MAX_CONTACT_HOURS_LENGTH),
+    searchIndexable: z.boolean().optional(),
   })
   .refine(
     (d) => Object.keys(d).length > 0,

@@ -23,6 +23,7 @@ export const bookingSettingsSelect = {
   legalName: true,
   privacyContact: true,
   contactHours: true,
+  searchIndexable: true,
 } as const;
 
 export interface BookingReadiness {
@@ -46,7 +47,7 @@ export const bookingSettingsRepository = {
       [
         'bookingSlug', 'bookingEnabled', 'bookingApprovalMode', 'slotIntervalMinutes', 'bufferMinutes', 'minLeadMinutes', 'maxHorizonDays',
         'maxPatientReschedules', 'minRescheduleNoticeHours', 'portalReminderTiming',
-        'bio', 'specialty', 'publicPhone', 'publicWhatsapp', 'legalName', 'privacyContact', 'contactHours',
+        'bio', 'specialty', 'publicPhone', 'publicWhatsapp', 'legalName', 'privacyContact', 'contactHours', 'searchIndexable',
       ],
     );
     return (tx ?? prisma).user.update({ where: { id: userId }, data, select: bookingSettingsSelect });

@@ -11,7 +11,6 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  // Resolves relative canonical and Open Graph URLs against the production host.
   metadataBase: new URL(SITE_URL),
   title: "Patient Nova",
   description: "Gestión clínica para profesionales de la salud: pacientes, citas, calendario y recordatorios.",

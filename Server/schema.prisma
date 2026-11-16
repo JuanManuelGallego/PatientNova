@@ -272,6 +272,7 @@ model User {
   legalName           String? @db.VarChar(200)
   privacyContact      String? @db.VarChar(200)
   contactHours        String? @db.VarChar(120)
+  searchIndexable     Boolean @default(false)
 
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)

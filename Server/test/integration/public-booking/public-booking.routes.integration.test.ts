@@ -150,6 +150,7 @@ describe('GET /v1/public/providers/:slug', () => {
       hasLogo: false,
       timezone: TZ,
       bookingOpen: true,
+      indexable: false,
       approvalRequired: false,
       selfServe: true,
       whatsappConfirmation: true,
@@ -188,6 +189,15 @@ describe('GET /v1/public/providers/:slug', () => {
     expect((await get(`/${p.slug}`)).body.data).toMatchObject({
       bookingOpen: false, specialty: 'Psicología clínica', phone: '+573001112222', reschedulePolicy: null,
     });
+  });
+
+  it('is indexable only when the provider opted in and booking is open', async () => {
+    const p = await createLiveProvider();
+    expect((await get(`/${p.slug}`)).body.data.indexable).toBe(false);
+    await prisma.user.update({ where: { id: p.id }, data: { searchIndexable: true } });
+    expect((await get(`/${p.slug}`)).body.data.indexable).toBe(true);
+    await prisma.user.update({ where: { id: p.id }, data: { bookingEnabled: false } });
+    expect((await get(`/${p.slug}`)).body.data.indexable).toBe(false);
   });
 
   it('states the reschedule policy only where patients can reschedule', async () => {
@@ -235,6 +245,38 @@ describe('GET /v1/public/providers/:slug', () => {
     expect(res.headers['set-cookie']).toBeUndefined();
     expect(res.headers['access-control-allow-origin']).toBe(ALLOWED);
     expect(res.headers['access-control-allow-credentials']).toBeUndefined();
+  });
+});
+
+describe('GET /v1/public/providers', () => {
+  it('lists only slugs of opted-in providers whose booking is live, cacheable', async () => {
+    const listed = await createLiveProvider();
+    const notOptedIn = await createLiveProvider();
+    const paused = await createLiveProvider();
+    const notReady = await createLiveProvider();
+    const inactive = await createLiveProvider();
+    await prisma.user.updateMany({ where: { id: { in: [ listed.id, paused.id, notReady.id, inactive.id ] } }, data: { searchIndexable: true } });
+    await prisma.user.update({ where: { id: paused.id }, data: { bookingEnabled: false } });
+    await prisma.availabilityRule.deleteMany({ where: { userId: notReady.id } });
+    await prisma.user.update({ where: { id: inactive.id }, data: { status: AdminStatus.INACTIVE } });
+
+    const res = await get('');
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('public, max-age=300');
+    expect(res.body.data).toEqual({ providers: [ { slug: listed.slug } ] });
+    expect(JSON.stringify(res.body)).not.toContain(listed.id);
+    expect(JSON.stringify(res.body)).not.toContain(notOptedIn.slug);
+  });
+
+  it('lists nothing while the portal is off', async () => {
+    const p = await createLiveProvider();
+    await prisma.user.update({ where: { id: p.id }, data: { searchIndexable: true } });
+    portal.patientEnabled = false;
+    try {
+      expect((await get('')).body.data).toEqual({ providers: [] });
+    } finally {
+      portal.patientEnabled = true;
+    }
   });
 });
 

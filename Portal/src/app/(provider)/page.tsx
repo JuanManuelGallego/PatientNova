@@ -1,32 +1,24 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import { Users, FileText, CalendarDays, Bell } from "lucide-react";
+import Link from "next/link";
+import { Bell, CalendarDays, FileText, Link2, Lock, MessageCircle, ShieldCheck, Video } from "lucide-react";
 import { LandingLoginButton, LandingSessionRedirect } from "@/src/components/Landing/LandingAuth";
-import { SITE_URL } from "@/src/config/site";
+import {
+  MarketingContactButtons, MarketingCta, MarketingFooter, MarketingFrame, MarketingNav, MarketingNavActions,
+} from "@/src/components/Landing/MarketingChrome";
+import { HeroPhone } from "@/src/components/Landing/HeroPhone";
+import { ProductShot } from "@/src/components/Landing/ProductShot";
+import { SCREENSHOTS } from "@/src/components/Landing/screenshots";
+import { Testimonials } from "@/src/components/Landing/Testimonials";
+import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
+import { TESTIMONIALS } from "@/src/config/testimonials";
+import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
-const TITLE = "Patient Nova | Gestión clínica para profesionales de la salud";
-const DESCRIPTION =
-  "Gestiona pacientes, citas, calendario y recordatorios automáticos de tu práctica clínica en un solo lugar.";
+export const metadata = pageMetadata({
+  path: "/",
+  title: "Patient Nova | Agenda, reservas en línea e historia clínica para tu consulta",
+  description:
+    "Software para profesionales de la salud: reservas en línea, recordatorios por WhatsApp, SMS y correo, calendario e historia clínica en un solo lugar.",
+});
 
-// A server component on purpose: search engines index the HTML, so the content must not wait on
-// the session probe. Only the login buttons and the signed-in redirect run on the client.
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: "Patient Nova",
-    title: TITLE,
-    description: DESCRIPTION,
-    locale: "es_CO",
-    // Declaring `openGraph` here drops the inherited `app/opengraph-image`, so list it again.
-    images: [ { url: "/opengraph-image", width: 1200, height: 630, alt: "Patient Nova" } ],
-  },
-};
-
-// Read by Google for the site name in results and the brand's logo and contact.
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@graph": [
@@ -44,11 +36,12 @@ const STRUCTURED_DATA = {
       name: "Patient Nova",
       url: `${SITE_URL}/`,
       logo: `${SITE_URL}/icon.png`,
-      email: "support@patientnova.net",
+      email: SUPPORT_EMAIL,
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "customer support",
-        email: "support@patientnova.net",
+        email: SUPPORT_EMAIL,
+        telephone: SUPPORT_WHATSAPP,
         availableLanguage: "Spanish",
       },
     },
@@ -57,126 +50,184 @@ const STRUCTURED_DATA = {
 
 const FEATURES = [
   {
-    icon: Users,
-    title: "Gestión de pacientes",
-    desc: "Mantén un historial completo de cada paciente. Busca, filtra y accede a perfiles en segundos.",
-  },
-  {
-    icon: FileText,
-    title: "Citas",
-    desc: "Agenda y gestiona citas con seguimiento de estado, registros de pagos e historial completo.",
-  },
-  {
-    icon: CalendarDays,
-    title: "Calendario",
-    desc: "Vista mensual para visualizar tu agenda de un vistazo con todas tus citas superpuestas.",
+    icon: Link2,
+    title: "Reserva en línea",
+    desc: "Tus pacientes eligen servicio, día y hora desde tu enlace, sin crear cuenta, y confirman por correo o WhatsApp.",
+    href: "/reserva-en-linea",
   },
   {
     icon: Bell,
-    title: "Recordatorios",
-    desc: "Envía recordatorios automáticos para reducir ausencias y mantener informados a tus pacientes.",
+    title: "Recordatorios automáticos",
+    desc: "Por WhatsApp, SMS o correo, en el momento que elijas. Menos ausencias, menos mensajes a mano.",
+    href: "/recordatorios",
   },
+  {
+    icon: FileText,
+    title: "Historia clínica",
+    desc: "Antecedentes, notas de evolución, documentos y exportación a PDF, también para historias familiares.",
+    href: "/historia-clinica",
+  },
+  {
+    icon: CalendarDays,
+    title: "Agenda y calendario",
+    desc: "Tus citas, pagos y bloqueos en un calendario. Las reservas en línea nunca se cruzan con tu agenda.",
+  },
+  {
+    icon: Video,
+    title: "Citas virtuales",
+    desc: "Conecta Google y las citas virtuales que reservan tus pacientes reciben su enlace de Meet solas.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Datos protegidos",
+    desc: "Datos de pacientes cifrados, acceso por usuario y registro de actividad, bajo la Ley 1581 de 2012.",
+  },
+];
+
+const TRUST = [
+  { icon: Lock, text: "Datos de pacientes cifrados" },
+  { icon: ShieldCheck, text: "Tratamiento de datos bajo la Ley 1581 de 2012" },
+  { icon: MessageCircle, text: "Soporte en español por WhatsApp" },
 ];
 
 const STEPS = [
   {
     num: "01",
-    title: "Inicia sesión de forma segura",
-    desc: "Accede a tu dashboard con autenticación empresarial y gestión automática de sesiones.",
+    title: "Escríbenos",
+    desc: "Por WhatsApp o por correo, cuéntanos sobre tu consulta. Nosotros creamos tu cuenta.",
   },
   {
     num: "02",
-    title: "Configura tu práctica",
-    desc: "Agrega pacientes, configura tipos de citas y personaliza tu flujo de trabajo en minutos.",
+    title: "Configuramos tu consulta contigo",
+    desc: "Tus servicios, tus consultorios o la opción virtual, y tu horario de atención. Te acompañamos en cada paso.",
   },
   {
     num: "03",
-    title: "Gestiona de forma más inteligente",
-    desc: "Sigue métricas clave, reduce ausencias y enfócate en lo que importa: tus pacientes.",
+    title: "Comparte tu enlace",
+    desc: "Publica tu enlace de reservas o su código QR y deja que tus pacientes agenden solos.",
+  },
+];
+
+const QUICK_FAQS: { q: string; a: React.ReactNode }[] = [
+  {
+    q: "¿Mis pacientes necesitan una cuenta?",
+    a: "No. Reservan desde tu enlace y confirman con el enlace que reciben por correo o WhatsApp.",
+  },
+  {
+    q: "¿Puedo aprobar cada reserva?",
+    a: "Sí. Con el modo de aprobación, cada reserva llega a tus solicitudes y aparta el horario mientras decides.",
+  },
+  {
+    q: "¿Funciona en el celular?",
+    a: "Sí, en el navegador del computador, la tableta o el celular, para ti y para tus pacientes.",
+  },
+  {
+    q: "¿Cuánto cuesta?",
+    a: (
+      <>
+        Escríbenos por <a href={WHATSAPP_CONTACT_HREF} target="_blank" rel="noopener noreferrer">WhatsApp</a> o
+        a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> y te contamos los planes y precios según tu
+        consulta.
+      </>
+    ),
   },
 ];
 
 export default function LandingPage() {
   return (
-    <>
+    <MarketingFrame>
       <script
         type="application/ld+json"
-        // Escaped `<` keeps the JSON from closing the script element.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, "\\u003c") }}
       />
       <LandingSessionRedirect />
-      <nav className="landing-nav">
-        <div className="landing-nav__inner">
-          <div className="landing-nav__brand">
-            <Image
-              src="/favicon.ico"
-              alt="Patient Nova"
-              width={32}
-              height={32}
-              style={{ borderRadius: "var(--r-md)" }}
-            />
-            <span className="landing-nav__logo-text">Patient Nova</span>
-          </div>
-          <div className="landing-nav__actions">
-            <LandingLoginButton className="btn-primary" testId="landing-login-button">
-              Iniciar sesión
-            </LandingLoginButton>
-          </div>
-        </div>
-      </nav>
+      <MarketingNav
+        action={
+          <MarketingNavActions
+            login={
+              <LandingLoginButton className="landing-nav__login" testId="landing-login-button">
+                Iniciar sesión
+              </LandingLoginButton>
+            }
+          />
+        }
+      />
       <main>
-        <section className="landing-hero">
-          <div className="landing-container">
-            <div className="landing-hero__badge">
-              Gestión clínica, reinventada
+        <section className="landing-hero landing-hero--split">
+          <div className="landing-container landing-hero__grid">
+            <div className="landing-hero__copy">
+              <div className="landing-hero__badge">
+                Para profesionales de la salud
+              </div>
+              <h1 className="landing-hero__title">
+                Agenda, reservas en línea e historia clínica para tu consulta
+              </h1>
+              <p className="landing-hero__subtitle">
+                Tus pacientes reservan desde un enlace y reciben recordatorios por WhatsApp, SMS o correo. Tú
+                llevas la agenda y la historia clínica en el mismo lugar.
+              </p>
+              <MarketingContactButtons
+                label="Quiero probarlo"
+                testId="landing-cta-button"
+                whatsappTestId="landing-cta-whatsapp"
+              />
+              <p className="landing-hero__note">Te ayudamos a configurar tu cuenta y tu enlace de reservas.</p>
             </div>
-            <h1 className="landing-hero__title">
-              La plataforma moderna para profesionales de la salud
-            </h1>
-            <p className="landing-hero__subtitle">
-              Gestiona pacientes, citas, recordatorios y toda tu práctica clínica
-              — todo en un solo lugar.
-            </p>
-            <LandingLoginButton className="btn-primary landing-hero__cta" testId="landing-cta-button">
-              Comenzar ahora
-            </LandingLoginButton>
+            <HeroPhone />
           </div>
+        </section>
+        <section className="landing-trust" aria-label="Seguridad y soporte">
+          <ul className="landing-container landing-trust__list">
+            {TRUST.map(({ icon: Icon, text }) => (
+              <li key={text} className="landing-trust__item">
+                <Icon size={18} aria-hidden="true" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </section>
         <section className="landing-section">
           <div className="landing-container">
             <div className="landing-section-header">
               <h2 className="landing-section-title">
-                Todo lo que necesitas para gestionar tu clínica
+                Todo lo que necesitas para gestionar tu consulta
               </h2>
               <p className="landing-section-subtitle">
-                Patient Nova centraliza todas tus operaciones clínicas en una
-                plataforma intuitiva.
+                Patient Nova reúne la agenda, las reservas, los recordatorios y la historia clínica en una
+                plataforma pensada para tu consulta, sea cual sea tu especialidad.
               </p>
             </div>
             <div className="landing-features-grid">
               {FEATURES.map((f) => {
                 const Icon = f.icon;
                 return (
-                  <div key={f.title} className="landing-feature-card">
-                    <span
-                      className="landing-feature-card__icon"
-                      role="img"
-                      aria-label={f.title}
-                    >
+                  <div
+                    key={f.title}
+                    className={f.href ? "landing-feature-card landing-feature-card--link" : "landing-feature-card"}
+                  >
+                    <span className="landing-feature-card__icon" aria-hidden="true">
                       <Icon size={28} />
                     </span>
                     <h3 className="landing-feature-card__title">{f.title}</h3>
                     <p className="landing-feature-card__desc">{f.desc}</p>
+                    {f.href && (
+                      <Link href={f.href} className="landing-feature-card__link">
+                        Conoce más <span className="sr-only">sobre {f.title.toLowerCase()}</span>
+                      </Link>
+                    )}
                   </div>
                 );
               })}
+            </div>
+            <div className="landing-shot">
+              <ProductShot shot={SCREENSHOTS.calendar} />
             </div>
           </div>
         </section>
         <section className="landing-section landing-section--white">
           <div className="landing-container">
             <div className="landing-section-header">
-              <h2 className="landing-section-title">Comienza en minutos</h2>
+              <h2 className="landing-section-title">Así empiezas</h2>
             </div>
             <div className="landing-steps">
               {STEPS.map((step) => (
@@ -189,57 +240,24 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-        <section className="landing-cta-banner">
-          <div className="landing-container">
-            <h2 className="landing-cta-banner__title">
-              ¿Listo para optimizar tu práctica clínica?
-            </h2>
-            <p className="landing-cta-banner__subtitle">
-              Únete a los profesionales de la salud que confían en Patient Nova.
-            </p>
-            <p className="landing-cta-banner__subtitle">
-              Contacta
-              <a
-                href="mailto:support@patientnova.net"
-                className="landing-cta-link"
-              >
-                {" soporte "}
-              </a>
-              para iniciar tu registro.
+        <section className="landing-section">
+          <div className="landing-container marketing-prose">
+            <h2>Preguntas frecuentes</h2>
+            {QUICK_FAQS.map((f) => (
+              <details key={f.q} className="marketing-faq">
+                <summary><h3>{f.q}</h3></summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+            <p>
+              <Link href="/preguntas-frecuentes">Ver todas las preguntas frecuentes</Link>
             </p>
           </div>
         </section>
+        <Testimonials items={TESTIMONIALS} />
+        <MarketingCta />
       </main>
-      <footer className="landing-footer">
-        <div className="landing-container landing-footer__inner">
-          <div className="landing-footer__brand">
-            <Image
-              src="/favicon.ico"
-              alt="Patient Nova"
-              width={22}
-              height={22}
-              style={{ borderRadius: "var(--r-sm)" }}
-            />
-            <span className="landing-footer__brand-text">Patient Nova</span>
-          </div>
-          <p className="landing-footer__tagline">
-            Gestión clínica moderna para profesionales de la salud.
-          </p>
-          <div className="landing-footer__links">
-            <a href="/privacy-policy" className="landing-footer__link">
-              Política de privacidad
-            </a>
-            <span aria-hidden="true">·</span>
-            <a href="/terms-of-service" className="landing-footer__link">
-              Términos de servicio
-            </a>
-          </div>
-          <p className="landing-footer__copy">
-            © {new Date().getFullYear()} Patient Nova. Todos los derechos
-            reservados.
-          </p>
-        </div>
-      </footer>
-    </>
+      <MarketingFooter />
+    </MarketingFrame>
   );
 }

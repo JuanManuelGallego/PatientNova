@@ -59,6 +59,7 @@ const settings = {
   legalName: null,
   privacyContact: null,
   contactHours: null,
+  searchIndexable: false,
 };
 const ready = { hasSlug: true, hasLegalIdentity: true, hasAvailability: true, hasBookableType: true, hasBookableLocation: true };
 
