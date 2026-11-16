@@ -13,7 +13,6 @@ export const PW_RULES = [
 
 export const meetsPasswordRules = (p: string) => PW_RULES.every((r) => r.test(p));
 
-/** The password checklist: an icon and hidden text mark each rule, so it never relies on color alone. */
 export function PasswordRules({ password, id }: { password: string; id?: string }) {
     return (
         <div

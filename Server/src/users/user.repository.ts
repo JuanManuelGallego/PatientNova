@@ -109,7 +109,6 @@ export const userRepository = {
         const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
         if (!user) throw new UserNotFoundError(id);
 
-        // Bumping the version revokes every refresh token of the deleted user.
         return prisma.user.update({
             where: { id },
             data: { isDeleted: true, deletedAt: new Date(), refreshTokenVersion: { increment: 1 } },

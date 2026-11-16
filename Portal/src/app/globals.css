@@ -1059,7 +1059,6 @@ body {
   text-align: left;
 }
 
-/* Upload dropzone: icon centred above the text */
 .dropzone {
   display: flex;
   flex-direction: column;
@@ -1074,7 +1073,6 @@ body {
   justify-content: center;
 }
 
-/* One radio look everywhere */
 .radio {
   accent-color: var(--c-brand);
   width: 16px;
@@ -1084,9 +1082,6 @@ body {
   cursor: pointer;
 }
 
-/* Form date pickers (class applied by DateTimePicker / AppointmentDateTimePicker) match .form-input.
-   .form-input has no fixed height; its computed height is 44px (controller-measured:
-   line box + 2x10px padding + 2x1.5px border), so the picker pins 44px with border-box. */
 .ant-picker.form-picker {
   box-sizing: border-box;
   height: 44px;
@@ -2307,12 +2302,10 @@ tr:hover td {
   white-space: nowrap;
 }
 
-/* Trailing actions column stays reachable when the table still scrolls sideways. */
 .col--actions {
   position: sticky;
   right: 0;
   background: var(--c-surface);
-  /* Edge so cells scrolling underneath stay visibly separate. */
   box-shadow: inset 1px 0 0 var(--c-gray-100);
 }
 
@@ -2320,7 +2313,6 @@ th.col--actions {
   background: var(--c-gray-50);
 }
 
-/* A secondary column with an active filter/sort stays visible (DataTable sets data-forced-cols). */
 .table-full[data-forced-cols~="1"] :is(th, td):nth-child(1),
 .table-full[data-forced-cols~="2"] :is(th, td):nth-child(2),
 .table-full[data-forced-cols~="3"] :is(th, td):nth-child(3),
@@ -2336,7 +2328,6 @@ th.col--actions {
   display: table-cell;
 }
 
-/* Filter/sort controls of secondary columns, shown only while those columns are hidden. */
 .table-compact-controls {
   display: none;
   flex-wrap: wrap;
@@ -2377,7 +2368,6 @@ th.col--actions {
   color: var(--c-brand);
 }
 
-/* Narrow table card: drop secondary columns and tighten cell padding. */
 @container (max-width: 1100px) {
   .col--secondary {
     display: none;
@@ -2692,8 +2682,7 @@ th.col--actions {
 /* ================================================================
    Stat Card
    ================================================================ */
-/* The card is a size container; its inner box sizes padding and the value
-   in cqi, so a narrow card (5 per row) trades padding and font for fit. */
+/* responsive: stat card adjusts padding on mobile */
 .stat-card {
   background: var(--c-surface);
   border-radius: var(--r-3xl);
@@ -2751,9 +2740,7 @@ th.col--actions {
   }
 }
 
-/* The value is never cut: StatCard sets --stat-chars to its length and the
-   font shrinks with it. A digit is ~0.54em, and the content box is ~84cqi
-   wide, so 150cqi / chars keeps "$ 12.690.000" (12 chars) inside the card. */
+/* responsive: stat value scales down on mobile */
 .stat-card__value {
   font-size: clamp(16px, calc(150cqi / var(--stat-chars, 11)), 28px);
   font-weight: 700;
@@ -2799,7 +2786,6 @@ th.col--actions {
   }
 }
 
-/* Read by screen readers, not shown. */
 .sr-only {
   position: absolute;
   width: 1px;

@@ -8,7 +8,6 @@ import { SettingsSection } from "./SettingsSection";
 interface SettingsListProps<T extends { id: string }> {
     title: string;
     description: string;
-    /** Omit all three when the primary action lives in the page header. */
     newLabel?: string;
     newTestId?: string;
     onNew?: () => void;

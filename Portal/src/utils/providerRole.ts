@@ -1,7 +1,6 @@
 const normalize = (s: string) =>
     s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map((w) => w.slice(0, 6));
 
-/** "Psicóloga clínica" and "Psicología clínica y sistémica" say the same thing: show the longer once. */
 export function providerRole(jobTitle?: string | null, specialty?: string | null): string {
     const title = jobTitle?.trim() ?? "";
     const spec = specialty?.trim() ?? "";

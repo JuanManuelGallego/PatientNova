@@ -36,7 +36,6 @@ export function UsersView() {
     const { user: me } = useAuthContext();
     const timezone = useDisplayTimezone();
     const [ tab, setTab ] = useState<UsersTab>(UsersTab.Active);
-    // One request for both tabs: switching is instant and never shows the other tab's rows.
     const { users, loading, error, refetch } = useFetchUsers({ includeDeleted: true });
     const shown = users?.filter((u) => u.isDeleted === (tab === UsersTab.Deleted));
     const { deleteUser, loading: deleting } = useDeleteUser();

@@ -58,23 +58,19 @@ function fmtTimezoneLabel(timezone: string = getDisplayTimezone()): string {
     return offset ? `${city} (${offset})` : city;
 }
 
-/** Same shape as fmtDateTime (no seconds); used by the activity log. */
 function fmtTimestamp(iso: string | undefined, timezone?: string): string {
     return fmtDateTime(iso, timezone);
 }
 
-/** Compact hour label for the calendar axis: 15 -> "3 p. m.", 0 -> "12 a. m.". */
 function fmtHourLabel(hour: number): string {
     const h12 = hour % 12 === 0 ? 12 : hour % 12;
     return `${h12} ${hour < 12 ? "a. m." : "p. m."}`;
 }
 
-/** Month heading: "Noviembre de 2026". `month` is 0-based. */
 function fmtMonthLabel(month: number, year: number): string {
     return `${MONTH_NAMES_ES[ month ]} de ${year}`;
 }
 
-/** Week heading: "9–15 de noviembre de 2026", "30 de noviembre – 6 de diciembre de 2026". */
 function fmtWeekRange(start: Date, end: Date): string {
     const sm = MONTH_NAMES_ES[ start.getMonth() ]!.toLowerCase();
     const em = MONTH_NAMES_ES[ end.getMonth() ]!.toLowerCase();
@@ -95,7 +91,6 @@ function fmtDateTime(iso: string | undefined, timezone?: string): string {
     });
 }
 
-/** fmtDateTime with seconds: the activity drawer orders events within one minute. */
 function fmtDateTimeSeconds(iso: string | undefined, timezone?: string): string {
     if (!iso) return "Invalid Date"
     return new Date(iso).toLocaleString("es-ES", {

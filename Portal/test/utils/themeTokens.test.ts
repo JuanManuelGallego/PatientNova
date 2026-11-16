@@ -13,7 +13,6 @@ function sourceFiles(dir: string): string[] {
     });
 }
 
-/** The declarations of the first block that opens with `selector`. */
 function block(selector: string) {
     const start = globals.indexOf(`${selector} {`);
     expect(start, selector).toBeGreaterThanOrEqual(0);
@@ -21,7 +20,6 @@ function block(selector: string) {
 }
 
 describe("color tokens", () => {
-    // An undefined token does not fail: the property silently takes its fallback or the inherited value.
     it("declares every --c-* token used anywhere in src, in both themes", () => {
         const light = block('[data-theme="light"]');
         const dark = block('[data-theme="dark"]');

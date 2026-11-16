@@ -1,8 +1,6 @@
 import { test, expect } from '../fixtures';
 import { createTestPatient, createTestAppointment, createTestReminder } from '../utils/helpers';
 
-// At 1280x720 the content column is ~933px wide. Every list table must fit it, with the
-// trailing column (actions / date) visible, so status, payment and actions never need sideways scrolling.
 const PAGES = [
   { name: 'Citas', path: '/appointments', hasActions: true },
   { name: 'Pacientes', path: '/patients', hasActions: true },
@@ -15,8 +13,6 @@ test.describe('List tables fit at 1280px', () => {
 
   for (const { name, path, hasActions } of PAGES) {
     test(`${name} table fits without sideways scrolling`, async ({ page, api, trackedPatients, trackedAppointments, trackedReminders }) => {
-      // Real, widest-case rows: a long name and email, an appointment and a cancelled
-      // reminder (the history tab), so the measurement never sees skeleton or empty-state rows.
       const longName = 'Patient With A Remarkably Long Full Name For Table Fit';
       const patient = await createTestPatient(api, {
         name: longName,
@@ -32,7 +28,6 @@ test.describe('List tables fit at 1280px', () => {
 
       await page.goto(path);
       const table = page.locator('table').first();
-      // Wait for real data rows: skeleton and empty-state rows have no `table-row` class.
       const dataRow = table.locator('tbody tr.table-row').first();
       await expect(dataRow).toBeVisible();
 
@@ -54,8 +49,6 @@ test.describe('List tables fit at 1280px', () => {
       expect(m.scrollWidth).toBeLessThanOrEqual(m.clientWidth);
       expect(m.rects.some((r) => r.actions), 'actions column header present').toBe(hasActions);
 
-      // No visible header may sit under the sticky actions column, and every
-      // visible header must end inside the viewport.
       const actions = m.rects.find((r) => r.actions);
       for (const r of m.rects) {
         expect(r.right, `${r.label} inside viewport`).toBeLessThanOrEqual(1280);

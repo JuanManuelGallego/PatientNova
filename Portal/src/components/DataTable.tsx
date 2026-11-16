@@ -50,7 +50,6 @@ export type ColumnFilterConfig =
       triggerTestId?: string;
     };
 
-/** Whether a column filter currently narrows the rows. */
 function isFilterActive(filter: ColumnFilterConfig | undefined): boolean {
   if (!filter) return false;
   switch (filter.kind) {
@@ -71,15 +70,6 @@ export interface ColumnDef {
   label: string;
   sortKey?: string;
   filter?: ColumnFilterConfig;
-  /**
-   * "secondary" columns are hidden when the table card is narrow (the caller
-   * puts `col--secondary` on the matching `td`). "actions" marks the trailing
-   * actions column, which stays pinned to the right edge (`col--actions` on the `td`).
-   * A secondary column whose filter is active, or that is the current sort,
-   * stays visible (the table marks it in `data-forced-cols`) so active state is never hidden.
-   * While secondary columns are hidden, their filter and sort controls move to a
-   * bar above the table, so hiding a column never removes a way to narrow the rows.
-   */
   priority?: "secondary" | "actions";
 }
 
@@ -357,7 +347,6 @@ export function DataTable<T>({
   total,
 }: DataTableProps<T>) {
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
-  // Which trigger opened the popover: the column header or the compact bar.
   const [openFrom, setOpenFrom] = useState<"header" | "compact">("header");
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
   const compactRefs = useRef<Array<HTMLElement | null>>([]);
@@ -367,7 +356,6 @@ export function DataTable<T>({
     setOpenColumnIndex(openColumnIndex === i && openFrom === from ? null : i);
   };
 
-  // Secondary columns with a filter or a sort: their controls also live in the compact bar.
   const compactColumns = columns
     .map((col, i) => ({ col, i }))
     .filter(
@@ -376,7 +364,6 @@ export function DataTable<T>({
         (col.filter || (col.sortKey && onSort)),
     );
 
-  // 1-based positions of secondary columns that must stay visible on narrow tables.
   const forcedCols = columns
     .map((col, i) =>
       col.priority === "secondary" &&

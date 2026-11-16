@@ -169,7 +169,7 @@ describe("month helpers", () => {
         const grid = monthGrid("2026-12"); // 1 December 2026 is a Tuesday
         expect(grid.slice(0, 2)).toEqual([ null, "2026-12-01" ]);
         expect(grid.at(-1)).toBe("2026-12-31");
-        expect(monthGrid("2026-11").slice(0, 7)).toEqual([ ...Array(6).fill(null), "2026-11-01" ]); // a Sunday
+        expect(monthGrid("2026-11").slice(0, 7)).toEqual([ ...Array(6).fill(null), "2026-11-01" ]);
     });
 
     it("crosses the year and knows February", () => {

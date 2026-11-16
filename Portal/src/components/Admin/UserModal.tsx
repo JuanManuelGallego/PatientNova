@@ -32,14 +32,12 @@ interface Form {
 
 const TEXT_KEYS = [ "firstName", "lastName", "displayName", "jobTitle", "email" ] as const;
 
-/** The server's limits (`user.schemas.ts`); email follows RFC 5321. */
 const MAX_LENGTH: Record<typeof TEXT_KEYS[number], number> = {
     firstName: 100, lastName: 100, displayName: 100, jobTitle: 120, email: 254,
 };
 
 const HINT: React.CSSProperties = { fontSize: 12, color: "var(--c-gray-500)", margin: 0 };
 
-/** Only the current role/status of a legacy row is offered beyond the two assignable ones. */
 function options<T extends string>(base: T[], current: T | undefined): T[] {
     return current && !base.includes(current) ? [ ...base, current ] : base;
 }
@@ -97,9 +95,7 @@ export function UserModal({ user, onClose, onSaved }: UserModalProps) {
         const changes: Record<string, string> = {};
         for (const k of TEXT_KEYS) {
             let value = form[k].trim();
-            // The server stores emails lowercased: a change of case alone is no change.
             if (k === "email") value = value.toLowerCase();
-            // The server rejects an empty displayName: fall back to the full name, as on create.
             if (k === "displayName" && !value && current.displayName) value = fullName;
             if (value !== (current[k] ?? "")) changes[k] = value;
         }
@@ -121,7 +117,6 @@ export function UserModal({ user, onClose, onSaved }: UserModalProps) {
                 if (Object.keys(changes).length > 0) {
                     await updateUser(user.id, changes);
                     if (isSelf && changes.email !== undefined) {
-                        // The new email revoked this session's refresh token: end it now, not mid-task later.
                         onClose();
                         await logout();
                         return;
