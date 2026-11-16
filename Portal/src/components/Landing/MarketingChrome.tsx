@@ -67,7 +67,8 @@ export function MarketingNavActions({ login }: { login: React.ReactNode }) {
     );
 }
 
-export function MarketingNav({ action }: { action: React.ReactNode }) {
+/** `current` is the product page being shown, marked for assistive technology and styled. */
+export function MarketingNav({ action, current }: { action: React.ReactNode; current?: string }) {
     return (
         <nav className="landing-nav">
             <div className="landing-nav__inner">
@@ -81,6 +82,20 @@ export function MarketingNav({ action }: { action: React.ReactNode }) {
                     />
                     <span className="landing-nav__logo-text">Patient Nova</span>
                 </Link>
+                {/* Desktop only: on smaller screens the footer lists the same pages. */}
+                <ul className="landing-nav__links">
+                    {MARKETING_PAGES.map((p) => (
+                        <li key={p.path}>
+                            <Link
+                                href={p.path}
+                                className="landing-nav__link"
+                                aria-current={p.path === current ? "page" : undefined}
+                            >
+                                {p.label}
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
                 <div className="landing-nav__actions">{action}</div>
             </div>
         </nav>

@@ -22,7 +22,7 @@ export function FeaturePage({ path, badge, title, intro, sections }: {
     const others = MARKETING_PAGES.filter((p) => p.path !== path);
     return (
         <>
-            <MarketingNav action={<MarketingNavActions login={<MarketingLoginLink />} />} />
+            <MarketingNav current={path} action={<MarketingNavActions login={<MarketingLoginLink />} />} />
             <main>
                 <section className="landing-hero">
                     <div className="landing-container">

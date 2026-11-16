@@ -35,6 +35,12 @@ describe.each(PAGES)("product page: $name", ({ Page, meta, path }) => {
     for (const other of PAGES.filter((p) => p.path !== path)) expect(hrefs).toContain(other.path);
   });
 
+  it("marks itself as the current page in the nav", () => {
+    render(<Page />);
+    const current = screen.getAllByRole("link").filter((a) => a.getAttribute("aria-current") === "page");
+    expect(current.map((a) => a.getAttribute("href"))).toEqual([ path ]);
+  });
+
   it("offers the contact button in the nav and the closing banner", () => {
     render(<Page />);
     expect(screen.getByTestId("marketing-nav-contact")).toHaveAttribute("href", expect.stringMatching(/^mailto:/));

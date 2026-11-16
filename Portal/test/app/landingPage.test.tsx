@@ -60,6 +60,27 @@ describe("landing page", () => {
     }
   });
 
+  it("shows the trust strip and answers the price question by sending to support", () => {
+    render(<LandingPage />);
+    expect(screen.getByRole("region", { name: "Seguridad y soporte" })).toHaveTextContent("Ley 1581 de 2012");
+    const price = screen.getByText("¿Cuánto cuesta?").closest("details")!;
+    expect(price).toHaveTextContent("planes y precios");
+    expect(price.querySelector('a[href^="https://wa.me/"]')).not.toBeNull();
+  });
+
+  it("hides the feature icons from assistive technology, so card titles are read once", () => {
+    const { container } = render(<LandingPage />);
+    const icons = container.querySelectorAll(".landing-feature-card__icon");
+    expect(icons.length).toBe(6);
+    icons.forEach((icon) => expect(icon).toHaveAttribute("aria-hidden", "true"));
+    expect(container.querySelectorAll(".landing-feature-card--link")).toHaveLength(3);
+  });
+
+  it("shows no testimonials section while there are none", () => {
+    render(<LandingPage />);
+    expect(screen.queryByRole("heading", { name: "Lo que dicen quienes ya lo usan" })).not.toBeInTheDocument();
+  });
+
   it("stays light even when the provider saved the dark theme", () => {
     const { container } = render(<LandingPage />);
     expect(container.querySelector(".marketing-frame")).toHaveAttribute("data-theme", "light");

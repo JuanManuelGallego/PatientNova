@@ -4443,6 +4443,48 @@ th.col--actions {
   text-decoration: none;
 }
 
+/* Product pages in the nav, desktop only: the footer lists them on smaller screens. */
+.landing-nav__links {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .landing-nav__links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.landing-nav__link {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-gray-600);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.landing-nav__link:hover {
+  color: var(--c-brand);
+  background: var(--c-gray-50);
+}
+
+.landing-nav__link[aria-current="page"] {
+  color: var(--c-brand);
+  font-weight: 600;
+}
+
+.landing-nav__link:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
 /* Phones: the hero button is on the first screen, and both would not fit beside the brand. */
 @media (max-width: 559px) {
   .landing-nav__contact {
@@ -4665,7 +4707,12 @@ th.col--actions {
   }
 }
 
-.landing-feature-card:hover {
+.landing-feature-card--link {
+  position: relative;
+}
+
+/* Only cards with a page react to the pointer: the others are not links. */
+.landing-feature-card--link:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.09);
 }
@@ -5322,6 +5369,136 @@ th.col--actions {
 
 .landing-feature-card__link:hover {
   text-decoration: underline;
+}
+
+/* Stretches the link over its card, so the whole card is one click target. */
+.landing-feature-card__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.landing-feature-card__link:focus-visible {
+  outline: none;
+}
+
+.landing-feature-card__link:focus-visible::after {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+}
+
+/* Trust strip under the hero. */
+.landing-trust {
+  background: var(--c-white);
+  border-bottom: 1px solid var(--c-gray-100);
+}
+
+.landing-trust__list {
+  list-style: none;
+  margin: 0 auto;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 32px;
+}
+
+.landing-trust__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-700);
+}
+
+.landing-trust__item svg {
+  flex-shrink: 0;
+  color: var(--c-brand);
+}
+
+/* Testimonials (src/config/testimonials.ts): one centered column, up to three side by side. */
+.landing-testimonials {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .landing-testimonials[data-count="2"] {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-testimonials[data-count="3"] {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: none;
+  }
+}
+
+.landing-testimonial {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--c-page-bg);
+  border: 1px solid var(--c-gray-100);
+  border-radius: var(--r-3xl);
+  padding: 28px 24px;
+}
+
+.landing-testimonial__quote {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--c-gray-700);
+}
+
+.landing-testimonial__quote p::before {
+  content: "“";
+}
+
+.landing-testimonial__quote p::after {
+  content: "”";
+}
+
+.landing-testimonial__author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-testimonial__avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-full);
+  background: var(--c-brand);
+  color: var(--c-white);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.landing-testimonial__name {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-gray-900);
+}
+
+.landing-testimonial__role {
+  display: block;
+  font-size: 13px;
+  color: var(--c-gray-500);
 }
 
 .landing-footer__links {

@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Bell, CalendarDays, FileText, Link2, ShieldCheck, Video } from "lucide-react";
+import { Bell, CalendarDays, FileText, Link2, Lock, MessageCircle, ShieldCheck, Video } from "lucide-react";
 import { LandingLoginButton, LandingSessionRedirect } from "@/src/components/Landing/LandingAuth";
 import {
   MarketingContactButtons, MarketingCta, MarketingFooter, MarketingFrame, MarketingNav, MarketingNavActions,
 } from "@/src/components/Landing/MarketingChrome";
-import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "@/src/config/site";
+import { Testimonials } from "@/src/components/Landing/Testimonials";
+import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
+import { TESTIMONIALS } from "@/src/config/testimonials";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 // A server component on purpose: search engines index the HTML, so the content must not wait on
@@ -82,16 +84,22 @@ const FEATURES = [
   },
 ];
 
+const TRUST = [
+  { icon: Lock, text: "Datos de pacientes cifrados" },
+  { icon: ShieldCheck, text: "Tratamiento de datos bajo la Ley 1581 de 2012" },
+  { icon: MessageCircle, text: "Soporte en español por WhatsApp" },
+];
+
 const STEPS = [
   {
     num: "01",
     title: "Escríbenos",
-    desc: `Cuéntanos sobre tu consulta en ${SUPPORT_EMAIL} y creamos tu cuenta.`,
+    desc: "Por WhatsApp o por correo, cuéntanos sobre tu consulta. Nosotros creamos tu cuenta.",
   },
   {
     num: "02",
-    title: "Configura tu consulta",
-    desc: "Agrega tus servicios, tus consultorios o la opción virtual, y tu horario de atención.",
+    title: "Configuramos tu consulta contigo",
+    desc: "Tus servicios, tus consultorios o la opción virtual, y tu horario de atención. Te acompañamos en cada paso.",
   },
   {
     num: "03",
@@ -100,7 +108,7 @@ const STEPS = [
   },
 ];
 
-const QUICK_FAQS = [
+const QUICK_FAQS: { q: string; a: React.ReactNode }[] = [
   {
     q: "¿Mis pacientes necesitan una cuenta?",
     a: "No. Reservan desde tu enlace y confirman con el enlace que reciben por correo o WhatsApp.",
@@ -112,6 +120,16 @@ const QUICK_FAQS = [
   {
     q: "¿Funciona en el celular?",
     a: "Sí, en el navegador del computador, la tableta o el celular, para ti y para tus pacientes.",
+  },
+  {
+    q: "¿Cuánto cuesta?",
+    a: (
+      <>
+        Escríbenos por <a href={WHATSAPP_CONTACT_HREF} target="_blank" rel="noopener noreferrer">WhatsApp</a> o
+        a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> y te contamos los planes y precios según tu
+        consulta.
+      </>
+    ),
   },
 ];
 
@@ -156,6 +174,16 @@ export default function LandingPage() {
             <p className="landing-hero__note">Te ayudamos a configurar tu cuenta y tu enlace de reservas.</p>
           </div>
         </section>
+        <section className="landing-trust" aria-label="Seguridad y soporte">
+          <ul className="landing-container landing-trust__list">
+            {TRUST.map(({ icon: Icon, text }) => (
+              <li key={text} className="landing-trust__item">
+                <Icon size={18} aria-hidden="true" />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </section>
         <section className="landing-section">
           <div className="landing-container">
             <div className="landing-section-header">
@@ -170,13 +198,13 @@ export default function LandingPage() {
             <div className="landing-features-grid">
               {FEATURES.map((f) => {
                 const Icon = f.icon;
+                // A card with a page is clickable as a whole: its link stretches over the card.
                 return (
-                  <div key={f.title} className="landing-feature-card">
-                    <span
-                      className="landing-feature-card__icon"
-                      role="img"
-                      aria-label={f.title}
-                    >
+                  <div
+                    key={f.title}
+                    className={f.href ? "landing-feature-card landing-feature-card--link" : "landing-feature-card"}
+                  >
+                    <span className="landing-feature-card__icon" aria-hidden="true">
                       <Icon size={28} />
                     </span>
                     <h3 className="landing-feature-card__title">{f.title}</h3>
@@ -195,7 +223,7 @@ export default function LandingPage() {
         <section className="landing-section landing-section--white">
           <div className="landing-container">
             <div className="landing-section-header">
-              <h2 className="landing-section-title">Comienza en minutos</h2>
+              <h2 className="landing-section-title">Así empiezas</h2>
             </div>
             <div className="landing-steps">
               {STEPS.map((step) => (
@@ -222,6 +250,7 @@ export default function LandingPage() {
             </p>
           </div>
         </section>
+        <Testimonials items={TESTIMONIALS} />
         <MarketingCta />
       </main>
       <MarketingFooter />

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
     MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav, MarketingNavActions,
 } from "@/src/components/Landing/MarketingChrome";
-import { SUPPORT_EMAIL } from "@/src/config/site";
+import { SUPPORT_EMAIL, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 const PATH = "/preguntas-frecuentes";
@@ -32,8 +32,9 @@ const FAQS: Faq[] = [
         q: "¿Cómo empiezo?",
         a: (
             <>
-                Escríbenos a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. Creamos tu cuenta y te
-                ayudamos a configurar tus servicios, tu horario y tu enlace de reservas.
+                Escríbenos por <a href={WHATSAPP_CONTACT_HREF} target="_blank" rel="noopener noreferrer">WhatsApp</a>{" "}
+                o a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. Creamos tu cuenta y te ayudamos a
+                configurar tus servicios, tu horario y tu enlace de reservas.
             </>
         ),
     },
@@ -41,8 +42,9 @@ const FAQS: Faq[] = [
         q: "¿Cuánto cuesta?",
         a: (
             <>
-                Escríbenos a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> y te contamos los planes y
-                precios según tu consulta.
+                Escríbenos por <a href={WHATSAPP_CONTACT_HREF} target="_blank" rel="noopener noreferrer">WhatsApp</a>{" "}
+                o a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> y te contamos los planes y precios
+                según tu consulta.
             </>
         ),
     },
@@ -94,7 +96,7 @@ const FAQS: Faq[] = [
 export default function FaqPage() {
     return (
         <>
-            <MarketingNav action={<MarketingNavActions login={<MarketingLoginLink />} />} />
+            <MarketingNav current={PATH} action={<MarketingNavActions login={<MarketingLoginLink />} />} />
             <main>
                 <section className="landing-hero">
                     <div className="landing-container">
