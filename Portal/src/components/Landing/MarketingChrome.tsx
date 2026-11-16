@@ -1,11 +1,72 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MARKETING_PAGES, SUPPORT_EMAIL } from "@/src/config/site";
+import { MessageCircle } from "lucide-react";
+import { CONTACT_HREF, MARKETING_PAGES, SUPPORT_EMAIL, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
+
+/*
+ * The chrome shared by the landing page and the product pages (server components). The footer
+ * links every product page, which is how crawlers and visitors find them from any page.
+ */
 
 /**
- * The nav and footer shared by the landing page and the product pages (server components). The
- * footer links every product page, which is how crawlers and visitors find them from any page.
+ * Marketing pages are light only, like /book: a provider who saved the dark theme would otherwise
+ * get dark tokens on the hero gradient (near-black title on purple). `<body>` has already resolved
+ * its color from the dark theme, so the frame sets its own.
  */
+export function MarketingFrame({ children }: { children: React.ReactNode }) {
+    return <div data-theme="light" className="marketing-frame">{children}</div>;
+}
+
+/** The sign-up: accounts are created by support, so contacting it is how a visitor starts. */
+export function MarketingContactLink({ className, testId, children }: {
+    className: string;
+    testId: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <a href={CONTACT_HREF} className={className} data-testid={testId}>
+            {children}
+        </a>
+    );
+}
+
+/** The calls to action on the purple gradient: email (white) and WhatsApp (outlined) side by side. */
+export function MarketingContactButtons({ label, testId, whatsappTestId }: {
+    label: string;
+    testId: string;
+    whatsappTestId: string;
+}) {
+    return (
+        <div className="landing-cta-actions">
+            <MarketingContactLink className="landing-btn-on-dark" testId={testId}>
+                {label}
+            </MarketingContactLink>
+            <a
+                href={WHATSAPP_CONTACT_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="landing-btn-on-dark landing-btn-on-dark--outline"
+                data-testid={whatsappTestId}
+            >
+                <MessageCircle size={18} aria-hidden="true" />
+                Escríbenos por WhatsApp
+            </a>
+        </div>
+    );
+}
+
+/** The nav's actions: a quiet login for providers and the contact button for everyone else. */
+export function MarketingNavActions({ login }: { login: React.ReactNode }) {
+    return (
+        <>
+            {login}
+            <MarketingContactLink className="btn-primary landing-nav__contact" testId="marketing-nav-contact">
+                Quiero probarlo
+            </MarketingContactLink>
+        </>
+    );
+}
+
 export function MarketingNav({ action }: { action: React.ReactNode }) {
     return (
         <nav className="landing-nav">
@@ -29,7 +90,7 @@ export function MarketingNav({ action }: { action: React.ReactNode }) {
 /** The login entry on pages without the auth provider: a plain link to the login page. */
 export function MarketingLoginLink() {
     return (
-        <Link href="/login" className="btn-primary" data-testid="marketing-login-link">
+        <Link href="/login" className="landing-nav__login" data-testid="marketing-login-link">
             Iniciar sesión
         </Link>
     );
@@ -45,7 +106,13 @@ export function MarketingCta() {
                 <p className="landing-cta-banner__subtitle">
                     Escríbenos y te ayudamos a configurar tu cuenta, tus servicios y tu enlace de reservas.
                 </p>
-                <p className="landing-cta-banner__subtitle">
+                <MarketingContactButtons
+                    label="Quiero probar Patient Nova"
+                    testId="marketing-cta-contact"
+                    whatsappTestId="marketing-cta-whatsapp"
+                />
+                <p className="landing-cta-banner__note">
+                    O escríbenos directamente a{" "}
                     <a href={`mailto:${SUPPORT_EMAIL}`} className="landing-cta-link">
                         {SUPPORT_EMAIL}
                     </a>

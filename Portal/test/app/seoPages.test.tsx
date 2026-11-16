@@ -5,6 +5,7 @@ import OnlineBookingPage, { metadata as bookingMeta } from "@/src/app/(marketing
 import RemindersPage, { metadata as remindersMeta } from "@/src/app/(marketing)/recordatorios/page";
 import ClinicalRecordPage, { metadata as recordMeta } from "@/src/app/(marketing)/historia-clinica/page";
 import FaqPage, { metadata as faqMeta } from "@/src/app/(marketing)/preguntas-frecuentes/page";
+import MarketingLayout from "@/src/app/(marketing)/layout";
 import { generateMetadata } from "@/src/app/book/[slug]/page";
 import { fetchPublicProvider } from "@/src/utils/seo/publicProviders";
 import type { PublicProvider } from "@/src/types/PublicBooking";
@@ -32,6 +33,20 @@ describe.each(PAGES)("product page: $name", ({ Page, meta, path }) => {
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/login");
     for (const other of PAGES.filter((p) => p.path !== path)) expect(hrefs).toContain(other.path);
+  });
+
+  it("offers the contact button in the nav and the closing banner", () => {
+    render(<Page />);
+    expect(screen.getByTestId("marketing-nav-contact")).toHaveAttribute("href", expect.stringMatching(/^mailto:/));
+    expect(screen.getByTestId("marketing-cta-contact")).toHaveAttribute("href", expect.stringMatching(/^mailto:/));
+    expect(screen.getByTestId("marketing-cta-whatsapp")).toHaveAttribute("href", expect.stringMatching(/^https:\/\/wa\.me\//));
+  });
+});
+
+describe("marketing layout", () => {
+  it("keeps the product pages light even when the provider saved the dark theme", () => {
+    const { container } = render(<MarketingLayout><p>x</p></MarketingLayout>);
+    expect(container.firstElementChild).toHaveAttribute("data-theme", "light");
   });
 });
 

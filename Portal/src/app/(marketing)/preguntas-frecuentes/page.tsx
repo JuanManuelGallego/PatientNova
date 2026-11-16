@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav } from "@/src/components/Landing/MarketingChrome";
+import {
+    MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav, MarketingNavActions,
+} from "@/src/components/Landing/MarketingChrome";
 import { SUPPORT_EMAIL } from "@/src/config/site";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
@@ -92,7 +94,7 @@ const FAQS: Faq[] = [
 export default function FaqPage() {
     return (
         <>
-            <MarketingNav action={<MarketingLoginLink />} />
+            <MarketingNav action={<MarketingNavActions login={<MarketingLoginLink />} />} />
             <main>
                 <section className="landing-hero">
                     <div className="landing-container">

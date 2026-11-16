@@ -7,6 +7,22 @@ export const SITE_URL = "https://www.patientnova.net";
 
 export const SUPPORT_EMAIL = "support@patientnova.net";
 
+/**
+ * Where "Quiero probarlo" leads: accounts are created by support, so the contact is the sign-up.
+ * The prefilled questions are what support needs to set the account up.
+ */
+export const CONTACT_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Quiero probar Patient Nova")}&body=${
+    encodeURIComponent("Hola, me interesa Patient Nova para mi consulta.\n\nMi nombre:\nMi especialidad:\nCiudad:\n")
+}`;
+
+/** Support's WhatsApp, in E.164. */
+export const SUPPORT_WHATSAPP = "+573044873415";
+
+/** The same contact over WhatsApp, which many professionals answer before email. */
+export const WHATSAPP_CONTACT_HREF = `https://wa.me/${SUPPORT_WHATSAPP.slice(1)}?text=${
+    encodeURIComponent("Hola, quiero probar Patient Nova para mi consulta.")
+}`;
+
 /** Product pages, in the order the nav and footer list them. */
 export const MARKETING_PAGES = [
     { path: "/reserva-en-linea", label: "Reserva en línea" },

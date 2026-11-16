@@ -4416,6 +4416,40 @@ th.col--actions {
   gap: 12px;
 }
 
+/* Login is for existing providers: a quiet text button, so the contact button leads. */
+.landing-nav__login {
+  background: none;
+  border: none;
+  padding: 10px 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-gray-700);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.landing-nav__login:hover {
+  color: var(--c-brand);
+}
+
+.landing-nav__login:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.landing-nav__contact {
+  text-decoration: none;
+}
+
+/* Phones: the hero button is on the first screen, and both would not fit beside the brand. */
+@media (max-width: 559px) {
+  .landing-nav__contact {
+    display: none;
+  }
+}
+
 .landing-lang-toggle {
   background: var(--c-gray-100);
   border: 1px solid var(--c-gray-200);
@@ -4456,7 +4490,7 @@ th.col--actions {
 
 @media (min-width: 768px) {
   .landing-hero {
-    padding: 108px 0 120px;
+    padding: 72px 0 88px;
   }
 }
 
@@ -4471,7 +4505,7 @@ th.col--actions {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 /* responsive: landing hero — smaller text on mobile */
@@ -4481,8 +4515,10 @@ th.col--actions {
   color: var(--c-white);
   line-height: 1.12;
   letter-spacing: -0.025em;
-  max-width: 740px;
+  /* Wide enough for two lines at 54px, so the button stays above the fold on a laptop. */
+  max-width: 900px;
   margin: 0 auto 20px;
+  text-wrap: balance;
 }
 
 @media (min-width: 768px) {
@@ -4495,15 +4531,62 @@ th.col--actions {
   font-size: 18px;
   color: var(--c-brand-sub);
   max-width: 540px;
-  margin: 0 auto 44px;
+  margin: 0 auto 32px;
   line-height: 1.65;
   font-weight: 400;
 }
 
-.landing-hero__cta {
+.landing-hero__note {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--c-brand-sub);
+}
+
+/* The call to action on the purple gradient (hero and closing banner): white, so it reads as the
+   one thing to click there, where a purple button would blend in. */
+.landing-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.landing-btn-on-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 16px;
+  font-weight: 700;
   padding: 14px 36px;
+  border-radius: var(--r-md);
+  background: var(--c-white);
+  color: var(--c-brand);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.landing-btn-on-dark:hover {
+  background: var(--c-gray-100);
+  transform: translateY(-1px);
+}
+
+.landing-btn-on-dark:focus-visible {
+  outline: 2px solid var(--c-white);
+  outline-offset: 3px;
+}
+
+/* The second channel: same size, outlined, so the white button stays the first choice. */
+.landing-btn-on-dark--outline {
+  background: transparent;
+  color: var(--c-white);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
+
+.landing-btn-on-dark--outline:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* responsive: landing section padding */
@@ -4687,17 +4770,14 @@ th.col--actions {
   line-height: 1.6;
 }
 
-.landing-cta-banner__btn {
-  font-size: 16px;
-  padding: 14px 36px;
-  background: var(--c-white) !important;
-  color: var(--c-brand) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
-  letter-spacing: -0.01em;
+.landing-cta-banner__subtitle + .landing-cta-actions {
+  margin-top: -12px;
 }
 
-.landing-cta-banner__btn:hover {
-  background: var(--c-gray-100) !important;
+.landing-cta-banner__note {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--c-brand-sub);
 }
 
 /* Footer */
@@ -5205,8 +5285,16 @@ th.col--actions {
   color: var(--c-brand);
 }
 
+/* Marketing pages are light only (MarketingFrame); <body> resolved its color before the reset. */
+.marketing-frame {
+  color-scheme: light;
+  color: var(--c-gray-900);
+  background: var(--c-page-bg);
+  min-height: 100vh;
+}
+
 .landing-cta-link {
-  color: white;
+  color: var(--c-white);
   transition: opacity 0.15s;
 }
 

@@ -24,13 +24,6 @@ export class LandingPage extends BasePage {
     return modal;
   }
 
-  async openLoginModalViaCta() {
-    await this.ctaButton.click();
-    const modal = new LoginModal(this.page);
-    await modal.waitForOpen();
-    return modal;
-  }
-
   async expectVisible() {
     await expect(this.loginButton).toBeVisible();
     await expect(this.ctaButton).toBeVisible();

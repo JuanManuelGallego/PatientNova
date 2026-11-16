@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Bell, CalendarDays, FileText, Link2, ShieldCheck, Video } from "lucide-react";
 import { LandingLoginButton, LandingSessionRedirect } from "@/src/components/Landing/LandingAuth";
-import { MarketingCta, MarketingFooter, MarketingNav } from "@/src/components/Landing/MarketingChrome";
-import { SITE_URL, SUPPORT_EMAIL } from "@/src/config/site";
+import {
+  MarketingContactButtons, MarketingCta, MarketingFooter, MarketingFrame, MarketingNav, MarketingNavActions,
+} from "@/src/components/Landing/MarketingChrome";
+import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "@/src/config/site";
 import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 // A server component on purpose: search engines index the HTML, so the content must not wait on
@@ -37,6 +39,7 @@ const STRUCTURED_DATA = {
         "@type": "ContactPoint",
         contactType: "customer support",
         email: SUPPORT_EMAIL,
+        telephone: SUPPORT_WHATSAPP,
         availableLanguage: "Spanish",
       },
     },
@@ -114,7 +117,7 @@ const QUICK_FAQS = [
 
 export default function LandingPage() {
   return (
-    <>
+    <MarketingFrame>
       <script
         type="application/ld+json"
         // Escaped `<` keeps the JSON from closing the script element.
@@ -123,9 +126,13 @@ export default function LandingPage() {
       <LandingSessionRedirect />
       <MarketingNav
         action={
-          <LandingLoginButton className="btn-primary" testId="landing-login-button">
-            Iniciar sesión
-          </LandingLoginButton>
+          <MarketingNavActions
+            login={
+              <LandingLoginButton className="landing-nav__login" testId="landing-login-button">
+                Iniciar sesión
+              </LandingLoginButton>
+            }
+          />
         }
       />
       <main>
@@ -141,9 +148,12 @@ export default function LandingPage() {
               Tus pacientes reservan desde un enlace y reciben recordatorios por WhatsApp, SMS o correo. Tú llevas
               la agenda y la historia clínica en el mismo lugar.
             </p>
-            <LandingLoginButton className="btn-primary landing-hero__cta" testId="landing-cta-button">
-              Comenzar ahora
-            </LandingLoginButton>
+            <MarketingContactButtons
+              label="Quiero probarlo"
+              testId="landing-cta-button"
+              whatsappTestId="landing-cta-whatsapp"
+            />
+            <p className="landing-hero__note">Te ayudamos a configurar tu cuenta y tu enlace de reservas.</p>
           </div>
         </section>
         <section className="landing-section">
@@ -215,6 +225,6 @@ export default function LandingPage() {
         <MarketingCta />
       </main>
       <MarketingFooter />
-    </>
+    </MarketingFrame>
   );
 }

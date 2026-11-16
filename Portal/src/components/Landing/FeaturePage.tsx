@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MARKETING_PAGES } from "@/src/config/site";
-import { MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav } from "./MarketingChrome";
+import { MarketingCta, MarketingFooter, MarketingLoginLink, MarketingNav, MarketingNavActions } from "./MarketingChrome";
 
 export interface FeatureSection {
     title: string;
@@ -22,7 +22,7 @@ export function FeaturePage({ path, badge, title, intro, sections }: {
     const others = MARKETING_PAGES.filter((p) => p.path !== path);
     return (
         <>
-            <MarketingNav action={<MarketingLoginLink />} />
+            <MarketingNav action={<MarketingNavActions login={<MarketingLoginLink />} />} />
             <main>
                 <section className="landing-hero">
                     <div className="landing-container">

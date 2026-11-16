@@ -35,10 +35,34 @@ describe("landing page", () => {
     }
   });
 
-  it("opens the login modal from either button", () => {
+  it("opens the login modal from the nav", () => {
     render(<LandingPage />);
-    fireEvent.click(screen.getByTestId("landing-cta-button"));
+    fireEvent.click(screen.getByTestId("landing-login-button"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("sends visitors to support from the hero, the nav and the closing banner (accounts are created by support)", () => {
+    render(<LandingPage />);
+    for (const id of [ "landing-cta-button", "marketing-nav-contact", "marketing-cta-contact" ]) {
+      const href = screen.getByTestId(id).getAttribute("href")!;
+      expect(href).toMatch(/^mailto:support@patientnova\.net\?subject=Quiero%20probar%20Patient%20Nova&body=/);
+    }
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("offers WhatsApp beside email in the hero and the closing banner, in a new tab", () => {
+    render(<LandingPage />);
+    for (const id of [ "landing-cta-whatsapp", "marketing-cta-whatsapp" ]) {
+      const link = screen.getByTestId(id);
+      expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\/573044873415\?text=Hola%2C%20quiero%20probar/);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
+
+  it("stays light even when the provider saved the dark theme", () => {
+    const { container } = render(<LandingPage />);
+    expect(container.querySelector(".marketing-frame")).toHaveAttribute("data-theme", "light");
   });
 
   it("sends a signed-in provider to the dashboard once the probe settles", () => {
@@ -64,6 +88,7 @@ describe("landing page", () => {
     const types = json["@graph"].map((n: { "@type": string }) => n["@type"]);
     expect(types).toEqual([ "WebSite", "Organization" ]);
     expect(json["@graph"][1].logo).toBe("https://www.patientnova.net/icon.png");
+    expect(json["@graph"][1].contactPoint.telephone).toBe("+573044873415");
   });
 });
 
