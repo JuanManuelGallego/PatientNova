@@ -76,6 +76,12 @@ describe("landing page", () => {
     expect(container.querySelectorAll(".landing-feature-card--link")).toHaveLength(3);
   });
 
+  it("shows the patient's side in the hero as one described picture", () => {
+    render(<LandingPage />);
+    const picture = screen.getByRole("img", { name: /elige día y hora.*recordatorio de la cita por WhatsApp/ });
+    expect(picture).toHaveTextContent("¿Cuándo te queda bien?");
+  });
+
   it("shows no testimonials section while there are none", () => {
     render(<LandingPage />);
     expect(screen.queryByRole("heading", { name: "Lo que dicen quienes ya lo usan" })).not.toBeInTheDocument();

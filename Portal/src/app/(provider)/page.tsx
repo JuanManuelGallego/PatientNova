@@ -4,6 +4,7 @@ import { LandingLoginButton, LandingSessionRedirect } from "@/src/components/Lan
 import {
   MarketingContactButtons, MarketingCta, MarketingFooter, MarketingFrame, MarketingNav, MarketingNavActions,
 } from "@/src/components/Landing/MarketingChrome";
+import { HeroPhone } from "@/src/components/Landing/HeroPhone";
 import { Testimonials } from "@/src/components/Landing/Testimonials";
 import { SITE_URL, SUPPORT_EMAIL, SUPPORT_WHATSAPP, WHATSAPP_CONTACT_HREF } from "@/src/config/site";
 import { TESTIMONIALS } from "@/src/config/testimonials";
@@ -154,24 +155,27 @@ export default function LandingPage() {
         }
       />
       <main>
-        <section className="landing-hero">
-          <div className="landing-container">
-            <div className="landing-hero__badge">
-              Para profesionales de la salud
+        <section className="landing-hero landing-hero--split">
+          <div className="landing-container landing-hero__grid">
+            <div className="landing-hero__copy">
+              <div className="landing-hero__badge">
+                Para profesionales de la salud
+              </div>
+              <h1 className="landing-hero__title">
+                Agenda, reservas en línea e historia clínica para tu consulta
+              </h1>
+              <p className="landing-hero__subtitle">
+                Tus pacientes reservan desde un enlace y reciben recordatorios por WhatsApp, SMS o correo. Tú
+                llevas la agenda y la historia clínica en el mismo lugar.
+              </p>
+              <MarketingContactButtons
+                label="Quiero probarlo"
+                testId="landing-cta-button"
+                whatsappTestId="landing-cta-whatsapp"
+              />
+              <p className="landing-hero__note">Te ayudamos a configurar tu cuenta y tu enlace de reservas.</p>
             </div>
-            <h1 className="landing-hero__title">
-              Agenda, reservas en línea e historia clínica para tu consulta
-            </h1>
-            <p className="landing-hero__subtitle">
-              Tus pacientes reservan desde un enlace y reciben recordatorios por WhatsApp, SMS o correo. Tú llevas
-              la agenda y la historia clínica en el mismo lugar.
-            </p>
-            <MarketingContactButtons
-              label="Quiero probarlo"
-              testId="landing-cta-button"
-              whatsappTestId="landing-cta-whatsapp"
-            />
-            <p className="landing-hero__note">Te ayudamos a configurar tu cuenta y tu enlace de reservas.</p>
+            <HeroPhone />
           </div>
         </section>
         <section className="landing-trust" aria-label="Seguridad y soporte">
