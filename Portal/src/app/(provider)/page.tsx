@@ -14,9 +14,9 @@ import { pageMetadata } from "@/src/utils/seo/pageMetadata";
 
 export const metadata = pageMetadata({
   path: "/",
-  title: "Patient Nova | Agenda, reservas en línea e historia clínica para tu consulta",
+  title: "Agenda y reservas en línea para tu consulta | Patient Nova",
   description:
-    "Software para profesionales de la salud: reservas en línea, recordatorios por WhatsApp, SMS y correo, calendario e historia clínica en un solo lugar.",
+    "Tus pacientes reservan desde tu enlace, sin crear cuenta, y reciben recordatorios por WhatsApp. Agenda, calendario e historia clínica en un solo lugar.",
 });
 
 const STRUCTURED_DATA = {
@@ -27,6 +27,7 @@ const STRUCTURED_DATA = {
       "@id": `${SITE_URL}/#website`,
       url: `${SITE_URL}/`,
       name: "Patient Nova",
+      alternateName: "PatientNova",
       inLanguage: "es-CO",
       publisher: { "@id": `${SITE_URL}/#organization` },
     },
