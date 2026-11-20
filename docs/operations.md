@@ -5,8 +5,9 @@ step is not actually in place, say so (the privacy policy must never promise mor
 
 ## Deploying the API
 
-`pnpm start` runs `prisma migrate deploy`, the PII backfill (`pii:backfill`), seeds the admin and
-starts the server. That is fine for a
+`pnpm start` runs `prisma migrate deploy`, the PII backfill (`pii:backfill`) and starts the server. It
+no longer seeds the admin: on a new database run `pnpm run db:seed-admin` once, with `ADMIN_EMAIL` and
+`ADMIN_PASSWORD` set for that command only. That is fine for a
 single instance, but a failing migration then crash-loops the service. Preferred setup:
 
 1. Release step (runs once per deploy, before new instances start):
@@ -18,6 +19,11 @@ unique index) fail loudly if the assumption is false. Before deploying those, ru
 restored copy of production.
 
 Raw-SQL-only database objects (not visible to Prisma) are listed in `AGENTS.md`.
+
+The server no longer reads `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BCRYPT_ROUNDS`, `MAX_FAILED_ATTEMPTS`,
+`LOCKOUT_DURATION_MS`, `DEFAULT_TIMEZONE`, `DAILY_REMINDER_HOUR`, `BREVO_TIMEOUT_MS` or
+`CAPTCHA_TIMEOUT_MS`: remove them from Railway. Hashing rounds, lockout, default timezone, the daily
+summary hour and timeouts are constants in `Server/src/utils/config/config.ts`.
 `CREATE EXTENSION btree_gist` needs a role allowed to create extensions (typically the database
 owner on managed Postgres); verify on the production database before the first deploy.
 

@@ -63,13 +63,8 @@ jobs:
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "30"
-      BCRYPT_ROUNDS: "12"
       COOKIE_DOMAIN: localhost
-      MAX_FAILED_ATTEMPTS: "5"
-      LOCKOUT_DURATION_MS: "900000"
-      DEFAULT_TIMEZONE: America/Bogota
       ENABLE_SCHEDULER: "false"
-      DAILY_REMINDER_HOUR: "18"
       TWILIO_ACCOUNT_SID: dummySID
       TWILIO_AUTH_TOKEN: dummyToken
       TWILIO_WHATSAPP_FROM: dummyNumber
@@ -81,8 +76,6 @@ jobs:
       AUTH_SECRET: dummy-auth-secret
       PORTAL_AUTH_SECRET: dummy-portal-auth-secret
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
-      ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: dummy-admin-password
       GOOGLE_CLIENT_ID: dummy-google-client-id
       GOOGLE_CLIENT_SECRET: dummy-google-client-secret
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback

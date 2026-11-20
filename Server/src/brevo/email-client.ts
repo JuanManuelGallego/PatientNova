@@ -78,7 +78,7 @@ export async function sendEmail(req: SendEmailRequest): Promise<NotificationResu
       accept: 'application/json',
     },
     body: payload,
-    signal: AbortSignal.timeout(config.brevo.timeoutMs || DEFAULT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
   });
 
   let response = await post();

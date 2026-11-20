@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
 import { prisma } from './prisma-client.js';
-import { config } from '../config/config.js';
+import { config, requireEnv } from '../config/config.js';
 import { AdminRole, AdminStatus, Channel } from '../../../generated/prisma/client.ts';
 
 async function seedAdmin() {
-  const email = config.admin.email;
-  const password = config.admin.password;
+  // Seed-only credentials: the server never reads them, so production need not keep them in env.
+  const email = requireEnv('ADMIN_EMAIL');
+  const password = requireEnv('ADMIN_PASSWORD');
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

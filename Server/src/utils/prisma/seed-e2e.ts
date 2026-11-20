@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { prisma } from './prisma-client.js';
 import { maskEmail } from '../api/logger.js';
-import { config } from '../config/config.js';
+import { config, requireEnv } from '../config/config.js';
 import { AdminRole, AdminStatus, BookingApprovalMode, Channel } from '../../../generated/prisma/client.ts';
 
 /**
@@ -48,8 +48,8 @@ async function seedE2e() {
     throw new Error('Refusing to seed e2e data: the DATABASE_URL database name must contain "test" or "e2e".');
   }
 
-  const email = config.admin.email;
-  const passwordHash = await bcrypt.hash(config.admin.password, config.auth.bcryptRounds);
+  const email = requireEnv('ADMIN_EMAIL');
+  const passwordHash = await bcrypt.hash(requireEnv('ADMIN_PASSWORD'), config.auth.bcryptRounds);
   const user = await prisma.user.upsert({
     where: { email },
     update: { passwordHash, status: AdminStatus.ACTIVE, failedLoginAttempts: 0, lockedUntil: null, ...profile },
