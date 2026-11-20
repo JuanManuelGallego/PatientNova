@@ -348,33 +348,34 @@ to email, WhatsApp and SMS; the confirmation link goes only to the contact the p
 | `PORTAL_WHATSAPP_DAILY_CAP` | Distinct WhatsApp numbers that may receive a link in 24 hours, across providers. Default 60, also the production value. A non-numeric or non-positive value stops the API at boot, so the cap can never silently vanish. |
 | `ENABLE_SELF_SERVE` | `true` mounts the patient session routes ("Mis citas": list, cancel, reschedule). Off by default and in e2e: every `/v1/portal` path then answers 404 and the Portal hides the link. Nothing issues a patient session at the moment, so leave it off. |
 
-The old `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID`, `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID`
-and `PORTAL_OTP_PAID_DAILY_CAP` are no longer read: remove them from Railway.
+`PORTAL_OTP_PAID_DAILY_CAP` and every `TWILIO_WHATSAPP_*_SID` variable are no longer read: remove them
+from Railway. WhatsApp template SIDs live in code (`Server/src/twilio/whatsapp-templates.ts`).
 
 ### Templates
 
-In Spanish, category `utility`. All are required at start, including the two of the confirmation link
-(`..._CONFIRM_LINK_SID` and `..._BOOKING_UNCONFIRMED_SID`): the Server does not boot without them, so Meta
-must approve both before the link flow is deployed.
+In Spanish, category `utility`. Their SIDs are the `WHATSAPP_TEMPLATES` constants in
+`Server/src/twilio/whatsapp-templates.ts`; a new or re-approved template is a code change there. Meta must
+approve the two of the confirmation link (`confirmLinkSid` and `unconfirmedExpiredSid`) before the link
+flow is deployed.
 
-| Env var | Used for | Variables |
+| Constant | Used for | Variables |
 |---|---|---|
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID` | Confirmation link, valid 15 minutes | `{{1}}` provider, `{{2}}` date, `{{3}}` time; URL button `https://<portal>/book/confirmar/{{4}}` (`{{4}}` is the bare token) |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID` | Link not used in time, the time is free again | `{{1}}` provider, `{{2}}` date, `{{3}}` time |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID` | Booked, approved, meeting ready | provider, date, time, place |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID` | Cancelled | provider, date, time |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID` | Rescheduled | provider, previous date and time, new date, new time, place |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID` | Request rejected | provider, date, time |
-| `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID` | Request expired | provider, date, time |
-| `TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID` | Meeting link (existing template) | provider, link |
+| `patientPortal.confirmLinkSid` | Confirmation link, valid 15 minutes | `{{1}}` provider, `{{2}}` date, `{{3}}` time; URL button `https://<portal>/book/confirmar/{{4}}` (`{{4}}` is the bare token) |
+| `patientPortal.unconfirmedExpiredSid` | Link not used in time, the time is free again | `{{1}}` provider, `{{2}}` date, `{{3}}` time |
+| `patientPortal.confirmationSid` | Booked, approved, meeting ready | provider, date, time, place |
+| `patientPortal.cancelSid` | Cancelled | provider, date, time |
+| `patientPortal.rescheduleSid` | Rescheduled | provider, previous date and time, new date, new time, place |
+| `patientPortal.requestRejectedSid` | Request rejected | provider, date, time |
+| `patientPortal.requestExpiredSid` | Request expired | provider, date, time |
+| `appointmentMeetingLinkSid` | Meeting link (existing template) | provider, link |
 
 A formatted time ends in "a. m."/"p. m.", so a template must not put a full stop right after a time
 variable. Submit the two link templates with exactly this text:
 
 | Template | Body |
 |---|---|
-| Confirm link (`..._CONFIRM_LINK_SID`) | `Tienes una cita pendiente con {{1}} el {{2}} a las {{3}}: confírmala con el botón en los próximos 15 minutos o el horario quedará libre.` URL button "Confirmar mi cita": `https://<portal>/book/confirmar/{{4}}` |
-| Not confirmed (`..._BOOKING_UNCONFIRMED_SID`) | `No confirmaste tu reserva con {{1}} del {{2}} a las {{3}}, así que el horario quedó libre.` |
+| Confirm link (`confirmLinkSid`) | `Tienes una cita pendiente con {{1}} el {{2}} a las {{3}}: confírmala con el botón en los próximos 15 minutos o el horario quedará libre.` URL button "Confirmar mi cita": `https://<portal>/book/confirmar/{{4}}` |
+| Not confirmed (`unconfirmedExpiredSid`) | `No confirmaste tu reserva con {{1}} del {{2}} a las {{3}}, así que el horario quedó libre.` |
 
  The place is the location and address, the meeting link, or "Te enviaremos el enlace pronto".
 There is no receipt message for an approval-mode request: the page the patient sees after the click is the
@@ -382,12 +383,10 @@ answer, and the provider answers later.
 
 ### Deploy checklist (booking confirmation by link)
 
-1. Submit the two Utility templates (wording above) to Meta through Twilio and wait for approval. The
-   Server does not boot without their SIDs, so this blocks the deploy.
-2. Railway: set `TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID` and
-   `TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID`. Leave `PORTAL_WHATSAPP_DAILY_CAP` unset (60).
-   After the deploy, remove `TWILIO_WHATSAPP_PATIENT_PORTAL_OTP_SID`,
-   `TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_RECEIVED_SID` and `PORTAL_OTP_PAID_DAILY_CAP`.
+1. Submit the two Utility templates (wording above) to Meta through Twilio and wait for approval, and
+   put their SIDs in `Server/src/twilio/whatsapp-templates.ts`. This blocks the deploy.
+2. Railway: leave `PORTAL_WHATSAPP_DAILY_CAP` unset (60). After the deploy, remove every
+   `TWILIO_WHATSAPP_*_SID` variable and `PORTAL_OTP_PAID_DAILY_CAP`.
 3. Deploy the Server first, then the Portal right away. Booking is broken between the two deploys: the old
    Portal calls endpoints the new API removed (OTP login, `POST /v1/portal/bookings`). Consider pausing
    online booking for that window.

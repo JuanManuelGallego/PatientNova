@@ -5,6 +5,7 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.di
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { deliverBookingNotification } from '../../../src/portal/portal-booking-notifications.js';
 import { portalBookingNotifyWorker } from '../../../src/scheduler/workers/portal-booking-notify.js';
 import { AppointmentStatus, Channel, RecordSource } from '../../../generated/prisma/enums.js';
@@ -78,7 +79,7 @@ describe('provider notice', () => {
 
     expect(mocks.dispatch).toHaveBeenCalledWith(Channel.WHATSAPP, {
       to: '+573001112233',
-      contentSid: config.twilio.portalBookingSid,
+      contentSid: WHATSAPP_TEMPLATES.portalBookingSid,
       contentVariables: { '1': 'Dra. Ana Pública', '2': 'miércoles, 20 de enero de 2027', '3': '10:00 a. m.' },
     });
   });
@@ -148,7 +149,7 @@ describe('cancellation notices', () => {
 
     expect(mocks.dispatch).toHaveBeenCalledWith(Channel.WHATSAPP, {
       to: '+573001112233',
-      contentSid: config.twilio.portalCancelSid,
+      contentSid: WHATSAPP_TEMPLATES.portalCancelSid,
       contentVariables: { '1': 'Dra. Ana Pública', '2': 'miércoles, 20 de enero de 2027', '3': '10:00 a. m.' },
     });
   });
@@ -199,7 +200,7 @@ describe('reschedule notices', () => {
 
     expect(mocks.dispatch).toHaveBeenCalledWith(Channel.WHATSAPP, {
       to: '+573001112233',
-      contentSid: config.twilio.portalRescheduleSid,
+      contentSid: WHATSAPP_TEMPLATES.portalRescheduleSid,
       contentVariables: {
         '1': 'Dra. Ana Pública',
         '2': 'miércoles, 20 de enero de 2027, 10:00 a. m.',

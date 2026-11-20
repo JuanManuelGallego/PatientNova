@@ -20,12 +20,10 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({ prisma: mocks.pri
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatchMessage }));
 vi.mock('../../../src/audit-log/audit-log.utils.js', () => ({ logAudit: mocks.logAudit }));
 vi.mock('../../../src/audit-log/audit-log-context.js', () => ({ runInAuditContext: mocks.runInAuditContext }));
-vi.mock('../../../src/utils/config/config.ts', () => ({
-  config: { twilio: { reminderFailedSid: 'HXfailed' } },
-}));
 vi.mock('../../../src/utils/api/logger.js', () => ({ logger: mocks.logger }));
 
 import { sendReminderFailureAlert } from '../../../src/reminders/reminder-failure-alert.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 
 const reminderWithUser = {
   user: {
@@ -58,7 +56,7 @@ describe('sendReminderFailureAlert', () => {
 
     expect(mocks.dispatchMessage).toHaveBeenCalledWith(Channel.WHATSAPP, {
       to: '+57300123456',
-      contentSid: 'HXfailed',
+      contentSid: WHATSAPP_TEMPLATES.reminderFailedSid,
       contentVariables: { '1': 'Dr. Test User', '2': 'Maria Garcia' },
     });
     expect(mocks.logAudit).toHaveBeenCalledWith(expect.objectContaining({

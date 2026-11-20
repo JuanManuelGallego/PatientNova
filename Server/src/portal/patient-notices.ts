@@ -1,5 +1,6 @@
 import { Channel } from '../../generated/prisma/enums.js';
 import { config } from '../utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
 import { formatDate, formatTime, formatWhen, MEETING_LINK_PENDING_TEXT } from '../appointments/appointment-reminder.renderer.js';
 import {
   renderBookingConfirmationEmail,
@@ -85,20 +86,20 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   confirmation: {
     email: (p) => renderBookingConfirmationEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: config.twilio.patientPortal.confirmationSid,
+      contentSid: WHATSAPP_TEMPLATES.patientPortal.confirmationSid,
       contentVariables: { ...slotVariables(p), '4': placeText(p) },
     }),
     sms: (p) => `Tu cita con ${p.providerName} quedó confirmada: ${formatWhen(p.at, p.timezone)} - Lugar: ${placeText(p)}`,
   },
   cancellation: {
     email: (p) => renderPortalCancellationEmail({ ...p, ...emailTimes(p) }),
-    whatsapp: (p) => ({ contentSid: config.twilio.patientPortal.cancelSid, contentVariables: slotVariables(p) }),
+    whatsapp: (p) => ({ contentSid: WHATSAPP_TEMPLATES.patientPortal.cancelSid, contentVariables: slotVariables(p) }),
     sms: (p) => `Tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)} quedó cancelada.`,
   },
   reschedule: {
     email: (p) => renderPortalRescheduleEmail({ ...p, ...emailTimes(p), previousLocal: formatWhen(p.previousAt, p.timezone) }),
     whatsapp: (p) => ({
-      contentSid: config.twilio.patientPortal.rescheduleSid,
+      contentSid: WHATSAPP_TEMPLATES.patientPortal.rescheduleSid,
       contentVariables: {
         '1': oneLine(p.providerName),
         '2': formatWhen(p.previousAt, p.timezone),
@@ -112,25 +113,25 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   'meeting-link': {
     email: (p) => renderPortalMeetingLinkEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: config.twilio.appointmentMeetingLinkSid,
+      contentSid: WHATSAPP_TEMPLATES.appointmentMeetingLinkSid,
       contentVariables: { '1': oneLine(p.providerName), '2': p.meetingUrl },
     }),
     sms: (p) => `Enlace de tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)}: ${p.meetingUrl}`,
   },
   'request-rejected': {
     email: (p) => renderBookingRequestRejectedEmail({ ...p, ...emailTimes(p) }),
-    whatsapp: (p) => ({ contentSid: config.twilio.patientPortal.requestRejectedSid, contentVariables: slotVariables(p) }),
+    whatsapp: (p) => ({ contentSid: WHATSAPP_TEMPLATES.patientPortal.requestRejectedSid, contentVariables: slotVariables(p) }),
     sms: (p) => `Tu solicitud de cita con ${p.providerName} para el ${formatWhen(p.at, p.timezone)} no fue confirmada.`,
   },
   'request-expired': {
     email: (p) => renderBookingRequestExpiredEmail({ ...p, ...emailTimes(p) }),
-    whatsapp: (p) => ({ contentSid: config.twilio.patientPortal.requestExpiredSid, contentVariables: slotVariables(p) }),
+    whatsapp: (p) => ({ contentSid: WHATSAPP_TEMPLATES.patientPortal.requestExpiredSid, contentVariables: slotVariables(p) }),
     sms: (p) => `Tu solicitud de cita con ${p.providerName} para el ${formatWhen(p.at, p.timezone)} venció sin ser confirmada.`,
   },
   'confirm-link': {
     email: (p) => renderConfirmLinkEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: config.twilio.patientPortal.confirmLinkSid,
+      contentSid: WHATSAPP_TEMPLATES.patientPortal.confirmLinkSid,
       contentVariables: { ...slotVariables(p), '4': p.token },
     }),
     sms: (p) => p.approvalRequired
@@ -140,7 +141,7 @@ const NOTICES: { [K in PatientNoticeKind]: NoticeTemplate<PatientNoticeParams[K]
   'unconfirmed-expired': {
     email: (p) => renderUnconfirmedExpiredEmail({ ...p, ...emailTimes(p) }),
     whatsapp: (p) => ({
-      contentSid: config.twilio.patientPortal.unconfirmedExpiredSid,
+      contentSid: WHATSAPP_TEMPLATES.patientPortal.unconfirmedExpiredSid,
       contentVariables: slotVariables(p),
     }),
     sms: (p) => `No confirmaste tu cita con ${p.providerName} del ${formatWhen(p.at, p.timezone)}, así que el horario quedó libre. Puedes reservar de nuevo: ${p.bookingUrl}`,

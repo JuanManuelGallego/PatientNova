@@ -2,6 +2,7 @@ import { fromPrisma } from 'pg-boss';
 import { AppointmentStatus, Channel, MeetingStatus } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
 import { logger } from '../utils/api/logger.js';
 import { getBoss } from '../scheduler/pg-boss.js';
 import { dispatchMessage, type DispatchOpts } from '../scheduler/dispatch.js';
@@ -151,7 +152,7 @@ function providerText(appt: BookedAppointment, job: BookingNotificationJob, name
       return {
         subject: 'Cita cancelada en línea',
         lines: [ `Un paciente canceló en línea su cita del ${when}; ese horario quedó libre en tu agenda.` ],
-        contentSid: config.twilio.portalCancelSid,
+        contentSid: WHATSAPP_TEMPLATES.portalCancelSid,
         contentVariables: { '1': name, '2': date, '3': time },
       };
     case 'provider-reschedule-notice': {
@@ -160,7 +161,7 @@ function providerText(appt: BookedAppointment, job: BookingNotificationJob, name
       return {
         subject: 'Cita reprogramada en línea',
         lines: [ 'Un paciente reprogramó en línea una cita.', `Antes: ${previous}`, `Ahora: ${when}` ],
-        contentSid: config.twilio.portalRescheduleSid,
+        contentSid: WHATSAPP_TEMPLATES.portalRescheduleSid,
         contentVariables: { '1': name, '2': previous, '3': date, '4': time },
       };
     }
@@ -168,7 +169,7 @@ function providerText(appt: BookedAppointment, job: BookingNotificationJob, name
       return {
         subject: 'Nueva cita reservada en línea',
         lines: [ `Tienes una nueva cita reservada en línea: ${when}` ],
-        contentSid: config.twilio.portalBookingSid,
+        contentSid: WHATSAPP_TEMPLATES.portalBookingSid,
         contentVariables: { '1': name, '2': date, '3': time },
       };
   }

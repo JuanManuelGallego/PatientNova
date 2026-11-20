@@ -74,29 +74,6 @@ export const config = {
     whatsappFrom: requireEnv('TWILIO_WHATSAPP_FROM'),
     smsFrom: requireEnv('TWILIO_SMS_FROM'),
     webhookBaseUrl: requireEnv('TWILIO_WEBHOOK_BASE_URL'),
-    tomorrowAppointmentsReminderSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_SID'),
-    tomorrowAppointmentsReminder2Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_2_APPT_SID'),
-    tomorrowAppointmentsReminder3Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_3_APPT_SID'),
-    tomorrowAppointmentsReminder4Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID'),
-    tomorrowAppointmentsReminder5Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID'),
-    tomorrowAppointmentsReminder6Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID'),
-    reminderFailedSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_FAILED_SID'),
-    appointmentStatusUpdateSid: requireEnv('TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID'),
-    appointmentMeetingLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID'),
-    portalBookingSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID'),
-    portalCancelSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID'),
-    portalRescheduleSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID'),
-    portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
-    portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
-    patientPortal: {
-      confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
-      cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
-      rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
-      requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
-      requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
-      confirmLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID'),
-      unconfirmedExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID'),
-    },
   },
 
   brevo: {
@@ -175,11 +152,3 @@ export const config = {
   encryption: encryptionConfig(),
 
 } as const;
-
-export const APPT_SID_MAP: Record<number, string> = {
-  2: config.twilio.tomorrowAppointmentsReminder2Sid,
-  3: config.twilio.tomorrowAppointmentsReminder3Sid,
-  4: config.twilio.tomorrowAppointmentsReminder4Sid,
-  5: config.twilio.tomorrowAppointmentsReminder5Sid,
-  6: config.twilio.tomorrowAppointmentsReminder6Sid,
-};

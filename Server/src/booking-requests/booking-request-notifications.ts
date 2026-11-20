@@ -2,6 +2,7 @@ import { fromPrisma } from 'pg-boss';
 import { BookingRequestStatus, Channel } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
 import { logger } from '../utils/api/logger.js';
 import type { PatientRoute } from '../portal/patient-route.js';
 import { getBoss } from '../scheduler/pg-boss.js';
@@ -103,8 +104,8 @@ function providerMessage(request: LoadedRequest, event: BookingRequestEvent): Me
     const slot = { '1': name, '2': formatDate(request.startAt, tz, true), '3': formatTime(request.startAt, tz) };
     // The nudge has its own template so it reads as a reminder, not as a second new request.
     const opts = event === 'nudge'
-      ? { contentSid: config.twilio.portalRequestNudgeSid, contentVariables: { ...slot, '4': formatWhen(request.holdExpiresAt, tz) } }
-      : { contentSid: config.twilio.portalRequestSid, contentVariables: slot };
+      ? { contentSid: WHATSAPP_TEMPLATES.portalRequestNudgeSid, contentVariables: { ...slot, '4': formatWhen(request.holdExpiresAt, tz) } }
+      : { contentSid: WHATSAPP_TEMPLATES.portalRequestSid, contentVariables: slot };
     return { channel, opts: { to, ...opts } };
   }
   const when = formatWhen(request.startAt, tz);

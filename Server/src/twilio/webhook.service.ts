@@ -5,7 +5,7 @@ import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { logger, maskPhone } from '../utils/api/logger.js';
 import type { SendWhatsAppRequest } from './types';
-import { config } from '../utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from './whatsapp-templates.js';
 import type { SendSmsRequest } from './types';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
@@ -178,7 +178,7 @@ export class TwilioWebhookService {
         try {
             await sendWhatsAppFreeForm(
                 phoneNumber,
-                '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate tu profesional de la salud.',
+                '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate con tu profesional de la salud.',
             );
         } catch (err) {
             logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to send cancellation reply to patient');
@@ -234,7 +234,7 @@ export class TwilioWebhookService {
                 // Send notification
                 const sendWhatsAppRequest: SendWhatsAppRequest = {
                     to: user.whatsappNumber,
-                    contentSid: config.twilio.appointmentStatusUpdateSid,
+                    contentSid: WHATSAPP_TEMPLATES.appointmentStatusUpdateSid,
                     contentVariables: {
                         "1": notificationVars.userDisplayName,
                         "2": notificationVars.patientName,

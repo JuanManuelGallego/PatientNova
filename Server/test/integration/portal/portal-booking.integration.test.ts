@@ -22,6 +22,7 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { emailHash } from '../../../src/utils/encryption/blind-index.js';
 import { publicBookingService } from '../../../src/public-booking/public-booking.service.js';
 import {
@@ -320,7 +321,7 @@ describe('booking confirmation, reminder and provider notice', () => {
     expect(channel).toBe(Channel.WHATSAPP);
     expect(opts).toEqual({
       to: '+573009998877',
-      contentSid: config.twilio.portalBookingSid,
+      contentSid: WHATSAPP_TEMPLATES.portalBookingSid,
       contentVariables: { '1': expect.any(String), '2': expect.any(String), '3': timeIn(start!, ZONE) },
     });
     expect(JSON.stringify(opts)).not.toMatch(/Lucia|Rojas/);
