@@ -217,10 +217,8 @@ PatientNova/
 | `TWILIO_WHATSAPP_FROM` | WhatsApp sender (e.g. `whatsapp:+14155238886`) |
 | `TWILIO_SMS_FROM` | SMS sender phone number |
 | `TWILIO_WEBHOOK_BASE_URL` | Public URL for Twilio webhooks |
-| `TWILIO_WHATSAPP_*_SID` | Content Template SIDs for various appointment scenarios |
 | `ALLOWED_ORIGINS` | JSON array of allowed CORS origins |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account credentials |
-| `BCRYPT_ROUNDS` | Password hashing rounds (default: `12`) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account, read only by `db:seed-admin` (not by the server; leave them out of production) |
 | `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID for Meet link generation |
 | `GOOGLE_CLIENT_SECRET` | Optional Google OAuth web client secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | Exact backend callback registered with Google, for example `http://localhost:3001/v1/google/oauth/callback` |

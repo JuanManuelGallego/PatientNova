@@ -63,47 +63,19 @@ jobs:
       LOG_LEVEL: info
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "30"
-      BCRYPT_ROUNDS: "12"
       COOKIE_DOMAIN: localhost
-      MAX_FAILED_ATTEMPTS: "5"
-      LOCKOUT_DURATION_MS: "900000"
-      DEFAULT_TIMEZONE: America/Bogota
       ENABLE_SCHEDULER: "false"
-      DAILY_REMINDER_HOUR: "18"
       TWILIO_ACCOUNT_SID: dummySID
       TWILIO_AUTH_TOKEN: dummyToken
       TWILIO_WHATSAPP_FROM: dummyNumber
       TWILIO_SMS_FROM: dummySMSNumber
       TWILIO_WEBHOOK_BASE_URL: https://example.com/twilio
-      TWILIO_WHATSAPP_USER_REMINDER_SID: dummyReminderSid
-      TWILIO_WHATSAPP_USER_REMINDER_2_APPT_SID: dummyReminder2Sid
-      TWILIO_WHATSAPP_USER_REMINDER_3_APPT_SID: dummyReminder3Sid
-      TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID: dummyReminder4Sid
-      TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID: dummyReminder5Sid
-      TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID: dummyReminder6Sid
-      TWILIO_WHATSAPP_USER_REMINDER_FAILED_SID: dummyReminderFailedSid
-      TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID: dummyStatusSid
-      TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID: dummyPortalBookingSid
-      TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID: dummyPortalCancelSid
-      TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID: dummyPortalRescheduleSid
-      TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID: dummyPortalRequestSid
-      TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID: dummyPortalRequestNudgeSid
-      TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID: dummyMeetingLinkSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID: dummyPatientPortalConfirmationSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID: dummyPatientPortalCancelSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID: dummyPatientPortalRescheduleSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID: dummyPatientPortalRequestRejectedSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID: dummyPatientPortalRequestExpiredSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID: dummyPatientPortalConfirmLinkSid
-      TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID: dummyPatientPortalUnconfirmedSid
       BREVO_API_KEY: xkeysib-dummy
       BREVO_FROM_EMAIL: no-reply@example.com
       BREVO_WEBHOOK_SECRET: dummy-brevo-webhook-secret
       AUTH_SECRET: dummy-auth-secret
       PORTAL_AUTH_SECRET: dummy-portal-auth-secret
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
-      ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: dummy-admin-password
       GOOGLE_CLIENT_ID: dummy-google-client-id
       GOOGLE_CLIENT_SECRET: dummy-google-client-secret
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback

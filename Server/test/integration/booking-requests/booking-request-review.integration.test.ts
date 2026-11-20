@@ -14,6 +14,7 @@ import { bookingRequestRouter } from '../../../src/booking-requests/booking-requ
 import { appointmentRouter } from '../../../src/appointments/appointment.routes.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import {
   ActionSource,
   AdminRole,
@@ -409,11 +410,11 @@ describe('booking-request-notify', () => {
     const [ receivedChannel, received ] = mocks.dispatch.mock.calls[ 0 ]!;
     const [ nudgeChannel, nudge ] = mocks.dispatch.mock.calls[ 1 ]!;
     expect(receivedChannel).toBe(Channel.WHATSAPP);
-    expect(received.contentSid).toBe(config.twilio.portalRequestSid);
+    expect(received.contentSid).toBe(WHATSAPP_TEMPLATES.portalRequestSid);
     expect(Object.keys(received.contentVariables)).toEqual([ '1', '2', '3' ]);
     expect(nudgeChannel).toBe(Channel.WHATSAPP);
-    expect(nudge.contentSid).toBe(config.twilio.portalRequestNudgeSid);
-    expect(nudge.contentSid).not.toBe(config.twilio.portalRequestSid);
+    expect(nudge.contentSid).toBe(WHATSAPP_TEMPLATES.portalRequestNudgeSid);
+    expect(nudge.contentSid).not.toBe(WHATSAPP_TEMPLATES.portalRequestSid);
     expect(Object.keys(nudge.contentVariables)).toEqual([ '1', '2', '3', '4' ]);
   });
 

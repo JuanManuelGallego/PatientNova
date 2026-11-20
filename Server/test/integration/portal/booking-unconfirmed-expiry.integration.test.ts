@@ -6,6 +6,7 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { bookingRequestService } from '../../../src/booking-requests/booking-request.service.js';
 import { deliverBookingRequestNotification, type BookingRequestEvent } from '../../../src/booking-requests/booking-request-notifications.js';
 import { ActionType, BookingRequestKind, BookingRequestStatus, Channel, EntityType } from '../../../generated/prisma/enums.js';
@@ -119,8 +120,8 @@ describe('unconfirmed hold expiry', () => {
     expect(mocks.dispatch).toHaveBeenCalledTimes(1);
     const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
     expect(channel).toBe(Channel.WHATSAPP);
-    expect(opts.contentSid).toBe(config.twilio.patientPortal.unconfirmedExpiredSid);
-    expect(opts.contentSid).not.toBe(config.twilio.patientPortal.requestExpiredSid);
+    expect(opts.contentSid).toBe(WHATSAPP_TEMPLATES.patientPortal.unconfirmedExpiredSid);
+    expect(opts.contentSid).not.toBe(WHATSAPP_TEMPLATES.patientPortal.requestExpiredSid);
   });
 
   it('skips the expiry message when the confirmation link was never sent', async () => {

@@ -13,6 +13,7 @@ import { bookingRequestRouter } from '../../../src/booking-requests/booking-requ
 import { auditLogRouter } from '../../../src/audit-log/audit-log.routes.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { phoneHash } from '../../../src/utils/encryption/blind-index.js';
 import { resolvePortalPatient } from '../../../src/portal/patient-resolution.js';
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
@@ -319,8 +320,8 @@ describe('requests from a phone session', () => {
   });
 
   it.each([
-    [ 'REJECTED', 'rejected', config.twilio.patientPortal.requestRejectedSid ],
-    [ 'EXPIRED', 'expired', config.twilio.patientPortal.requestExpiredSid ],
+    [ 'REJECTED', 'rejected', WHATSAPP_TEMPLATES.patientPortal.requestRejectedSid ],
+    [ 'EXPIRED', 'expired', WHATSAPP_TEMPLATES.patientPortal.requestExpiredSid ],
   ] as const)('a %s request goes to the proven number on its channel', async (status, event, contentSid) => {
     const provider = await approvalProvider();
     const phone = newPhone();

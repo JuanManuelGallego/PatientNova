@@ -3,7 +3,7 @@ dotenv.config({ quiet: true });
 
 import { resolveNodeEnv } from './node-env.js';
 
-function requireEnv(key: string): string {
+export function requireEnv(key: string): string {
   const value = process.env[ key ];
   if (!value) throw new Error(`Missing required environment variable: ${key}`);
   return value;
@@ -17,7 +17,7 @@ function captchaConfig() {
     secret: requireEnv('CAPTCHA_SECRET'),
     expectedHostnames: (process.env.CAPTCHA_EXPECTED_HOSTNAMES?.trim() || portalHostname)
       .split(',').map((h) => h.trim()).filter(Boolean),
-    timeoutMs: parseInt(process.env.CAPTCHA_TIMEOUT_MS ?? '3000', 10),
+    timeoutMs: 3000,
   };
 }
 
@@ -57,15 +57,15 @@ function encryptionConfig() {
 }
 
 export const config = {
-  port: parseInt(process.env.PORT ?? '3001', 10),
+  port: positiveIntEnv('PORT', 3001),
 
   databaseUrl: requireEnv('DATABASE_URL'),
 
   database: {
-    poolSize: parseInt(process.env.DATABASE_POOL_SIZE ?? '20', 10),
-    poolMin: parseInt(process.env.DATABASE_POOL_MIN ?? '5', 10),
-    connectionTimeout: parseInt(process.env.DATABASE_CONNECTION_TIMEOUT ?? '10000', 10),
-    idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT ?? '30000', 10),
+    poolSize: positiveIntEnv('DATABASE_POOL_SIZE', 20),
+    poolMin: positiveIntEnv('DATABASE_POOL_MIN', 5),
+    connectionTimeout: positiveIntEnv('DATABASE_CONNECTION_TIMEOUT', 10000),
+    idleTimeout: positiveIntEnv('DATABASE_IDLE_TIMEOUT', 30000),
   },
 
   twilio: {
@@ -74,29 +74,6 @@ export const config = {
     whatsappFrom: requireEnv('TWILIO_WHATSAPP_FROM'),
     smsFrom: requireEnv('TWILIO_SMS_FROM'),
     webhookBaseUrl: requireEnv('TWILIO_WEBHOOK_BASE_URL'),
-    tomorrowAppointmentsReminderSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_SID'),
-    tomorrowAppointmentsReminder2Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_2_APPT_SID'),
-    tomorrowAppointmentsReminder3Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_3_APPT_SID'),
-    tomorrowAppointmentsReminder4Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_4_APPT_SID'),
-    tomorrowAppointmentsReminder5Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_5_APPT_SID'),
-    tomorrowAppointmentsReminder6Sid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_6_APPT_SID'),
-    reminderFailedSid: requireEnv('TWILIO_WHATSAPP_USER_REMINDER_FAILED_SID'),
-    appointmentStatusUpdateSid: requireEnv('TWILIO_WHATSAPP_USER_APPOINTMENT_STATUS_UPDATE_SID'),
-    appointmentMeetingLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_APPOINTMENT_MEETING_LINK_SID'),
-    portalBookingSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_BOOKING_SID'),
-    portalCancelSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_CANCEL_SID'),
-    portalRescheduleSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_RESCHEDULE_SID'),
-    portalRequestSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_SID'),
-    portalRequestNudgeSid: requireEnv('TWILIO_WHATSAPP_USER_PORTAL_REQUEST_NUDGE_SID'),
-    patientPortal: {
-      confirmationSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRMATION_SID'),
-      cancelSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CANCEL_SID'),
-      rescheduleSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_RESCHEDULE_SID'),
-      requestRejectedSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_REJECTED_SID'),
-      requestExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_REQUEST_EXPIRED_SID'),
-      confirmLinkSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_CONFIRM_LINK_SID'),
-      unconfirmedExpiredSid: requireEnv('TWILIO_WHATSAPP_PATIENT_PORTAL_BOOKING_UNCONFIRMED_SID'),
-    },
   },
 
   brevo: {
@@ -105,7 +82,6 @@ export const config = {
     fromEmail: requireEnv('BREVO_FROM_EMAIL'),
     fromName: process.env.BREVO_FROM_NAME ?? undefined,
     webhookSecret: requireEnv('BREVO_WEBHOOK_SECRET'),
-    timeoutMs: parseInt(process.env.BREVO_TIMEOUT_MS ?? '10000', 10),
   },
 
   sentry: {
@@ -117,19 +93,21 @@ export const config = {
   },
 
   publicRateLimit: {
-    windowMs: parseInt(process.env.PUBLIC_RATE_LIMIT_WINDOW_MS ?? '60000', 10),
-    maxRequests: parseInt(process.env.PUBLIC_RATE_LIMIT_MAX ?? '60', 10),
+    windowMs: positiveIntEnv('PUBLIC_RATE_LIMIT_WINDOW_MS', 60000),
+    maxRequests: positiveIntEnv('PUBLIC_RATE_LIMIT_MAX', 60),
   },
 
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),  // 1 min
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),
+    windowMs: positiveIntEnv('RATE_LIMIT_WINDOW_MS', 60000),  // 1 min
+    maxRequests: positiveIntEnv('RATE_LIMIT_MAX', 30),
   },
 
   auth: {
     jwtSecret: requireEnv('AUTH_SECRET'),
     portalJwtSecret: portalAuthSecret(),
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10),
+    // Security policy, not configuration: a typo in env must not weaken hashing. Tests hash with 4
+    // rounds for speed.
+    bcryptRounds: nodeEnv === 'test' ? 4 : 12,
   },
 
   env: nodeEnv,
@@ -138,23 +116,19 @@ export const config = {
 
   allowedOrigins: JSON.parse(requireEnv('ALLOWED_ORIGINS')),
 
-  admin: {
-    email: requireEnv('ADMIN_EMAIL'),
-    password: requireEnv('ADMIN_PASSWORD'),
-  },
-
+  // Fixed policy and product defaults below are constants, not env (tests override config directly).
   lockout: {
-    maxFailedAttempts: parseInt(process.env.MAX_FAILED_ATTEMPTS ?? '5', 10),
-    lockoutDurationMs: parseInt(process.env.LOCKOUT_DURATION_MS ?? '900000', 10),  // 15 min
+    maxFailedAttempts: 5,
+    lockoutDurationMs: 15 * 60_000,
   },
 
   defaults: {
-    timezone: process.env.DEFAULT_TIMEZONE ?? 'America/Bogota',
+    timezone: 'America/Bogota',
   },
 
   scheduler: {
     enabled: process.env.ENABLE_SCHEDULER === 'true',
-    dailyReminderHour: parseInt(process.env.DAILY_REMINDER_HOUR ?? '18', 10),  // local hour (0–23)
+    dailyReminderHour: 18,  // local hour (0–23) of the "tomorrow's appointments" summary
   },
 
   google: {
@@ -175,11 +149,3 @@ export const config = {
   encryption: encryptionConfig(),
 
 } as const;
-
-export const APPT_SID_MAP: Record<number, string> = {
-  2: config.twilio.tomorrowAppointmentsReminder2Sid,
-  3: config.twilio.tomorrowAppointmentsReminder3Sid,
-  4: config.twilio.tomorrowAppointmentsReminder4Sid,
-  5: config.twilio.tomorrowAppointmentsReminder5Sid,
-  6: config.twilio.tomorrowAppointmentsReminder6Sid,
-};

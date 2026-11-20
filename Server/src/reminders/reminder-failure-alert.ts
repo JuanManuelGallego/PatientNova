@@ -1,7 +1,7 @@
 import { Channel } from '../../generated/prisma/client.ts';
 import { dispatchMessage } from '../scheduler/dispatch.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { config } from '../utils/config/config.ts';
+import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
 import { logger } from '../utils/api/logger.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { runInAuditContext } from '../audit-log/audit-log-context.js';
@@ -139,7 +139,7 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
       result = await dispatchMessage(user.reminderChannel, isWhatsApp
         ? {
             to,
-            contentSid: config.twilio.reminderFailedSid,
+            contentSid: WHATSAPP_TEMPLATES.reminderFailedSid,
             contentVariables: { '1': userName, '2': patientName },
           }
         : {

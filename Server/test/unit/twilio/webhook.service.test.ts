@@ -16,7 +16,6 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
 
 vi.mock('../../../src/utils/config/config.js', () => ({
   config: {
-    twilio: { appointmentStatusUpdateSid: 'status-update-sid' },
     defaults: { timezone: 'America/Bogota' },
     encryption: { blindIndexKey: '00'.repeat(31) + '02' },
   },
@@ -49,6 +48,7 @@ const mockSendEmail = vi.mocked(sendEmail);
 
 // Import after mocks
 import { TwilioWebhookService } from '../../../src/twilio/webhook.service.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 
 const service = new TwilioWebhookService();
 
@@ -236,7 +236,7 @@ describe('TwilioWebhookService.notifyUserOfStatusUpdate', () => {
 
     expect(mockSendWhatsApp).toHaveBeenCalledWith(expect.objectContaining({
       to: '+15559876543',
-      contentSid: 'status-update-sid',
+      contentSid: WHATSAPP_TEMPLATES.appointmentStatusUpdateSid,
     }));
   });
 

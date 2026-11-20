@@ -8,6 +8,7 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { logger } from '../../../src/utils/api/logger.js';
 import { hashRequestToken } from '../../../src/booking-requests/request-token.js';
 import { PORTAL_ANONYMOUS_ACTOR_ID } from '../../../src/audit-log/audit-actors.js';
@@ -157,7 +158,7 @@ describe('POST /v1/public/providers/:slug/bookings', () => {
     const [ channel, opts ] = mocks.dispatch.mock.calls[0]!;
     expect(channel).toBe(Channel.WHATSAPP);
     expect(opts.to).toBe('+573009998877');
-    expect(opts.contentSid).toBe(config.twilio.patientPortal.confirmLinkSid);
+    expect(opts.contentSid).toBe(WHATSAPP_TEMPLATES.patientPortal.confirmLinkSid);
     expect(opts.contentVariables['4']).toMatch(/^[A-Za-z0-9_-]{43}$/);
     const row = await prisma.bookingRequest.findFirstOrThrow({ where: { userId: provider.id } });
     expect(row).toMatchObject({ contactChannel: Channel.WHATSAPP, verifiedPhone: '+573009998877', email: null });

@@ -1,6 +1,7 @@
 import { Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
 import { prisma } from "../../utils/prisma/prisma-client.js";
-import { APPT_SID_MAP, config } from "../../utils/config/config.ts";
+import { config } from "../../utils/config/config.ts";
+import { APPT_SID_MAP, WHATSAPP_TEMPLATES } from "../../twilio/whatsapp-templates.js";
 import { DEFAULT_LOCALE } from "../../utils/config/constants.ts";
 import { logger } from "../../utils/api/logger.ts";
 import { getLocalDateString, getLocalTimeParts, getTomorrowUTCRange } from "../../utils/time/time-utils.ts";
@@ -50,7 +51,7 @@ function buildDispatchOpts(
   switch (channel) {
     case Channel.WHATSAPP: {
       if (!user.whatsappNumber) return null;
-      const contentSid = APPT_SID_MAP[ payload.length ] ?? config.twilio.tomorrowAppointmentsReminderSid;
+      const contentSid = APPT_SID_MAP[ payload.length ] ?? WHATSAPP_TEMPLATES.tomorrowAppointmentsReminderSid;
       const base = { "1": userName, "2": tomorrowDate };
       const contentVariables = APPT_SID_MAP[ payload.length ]
         ? payload.reduce((acc, item, i) => ({ ...acc, [ String(i + 3) ]: item || "N/A" }), base)

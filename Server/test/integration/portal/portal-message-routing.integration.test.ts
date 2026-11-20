@@ -7,6 +7,7 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { Channel, PatientStatus, PortalReminderTiming, RecordSource, ReminderStatus } from '../../../generated/prisma/enums.js';
 import { deliverBookingNotification, type BookingNotificationKind } from '../../../src/portal/portal-booking-notifications.js';
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
@@ -61,17 +62,17 @@ async function appointmentFor(provider: LiveProvider, patientId: string, daysAhe
 }
 
 const PATIENT_KINDS: { kind: BookingNotificationKind; prepare?: (id: string) => Promise<unknown>; job?: object; sid: string }[] = [
-  { kind: 'patient-confirmation', sid: config.twilio.patientPortal.confirmationSid },
+  { kind: 'patient-confirmation', sid: WHATSAPP_TEMPLATES.patientPortal.confirmationSid },
   {
     kind: 'patient-cancellation',
     prepare: (id) => prisma.appointment.update({ where: { id }, data: { status: 'CANCELLED' } }),
-    sid: config.twilio.patientPortal.cancelSid,
+    sid: WHATSAPP_TEMPLATES.patientPortal.cancelSid,
   },
-  { kind: 'patient-reschedule', job: { previousStartAt: new Date(Date.now() + 86_400_000).toISOString() }, sid: config.twilio.patientPortal.rescheduleSid },
+  { kind: 'patient-reschedule', job: { previousStartAt: new Date(Date.now() + 86_400_000).toISOString() }, sid: WHATSAPP_TEMPLATES.patientPortal.rescheduleSid },
   {
     kind: 'patient-meeting-link',
     prepare: (id) => prisma.appointment.update({ where: { id }, data: { meetingUrl: 'https://meet.google.com/abc', meetingStatus: 'READY' } }),
-    sid: config.twilio.appointmentMeetingLinkSid,
+    sid: WHATSAPP_TEMPLATES.appointmentMeetingLinkSid,
   },
 ];
 

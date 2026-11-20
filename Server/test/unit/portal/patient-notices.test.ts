@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Channel } from '../../../generated/prisma/enums.js';
 import { config } from '../../../src/utils/config/config.js';
+import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import {
   confirmationUrl,
   renderPatientNotice,
@@ -70,14 +71,14 @@ describe('renderPatientNotice', () => {
   });
 
   it.each([
-    [ 'confirmation', config.twilio.patientPortal.confirmationSid ],
-    [ 'cancellation', config.twilio.patientPortal.cancelSid ],
-    [ 'reschedule', config.twilio.patientPortal.rescheduleSid ],
-    [ 'meeting-link', config.twilio.appointmentMeetingLinkSid ],
-    [ 'request-rejected', config.twilio.patientPortal.requestRejectedSid ],
-    [ 'request-expired', config.twilio.patientPortal.requestExpiredSid ],
-    [ 'confirm-link', config.twilio.patientPortal.confirmLinkSid ],
-    [ 'unconfirmed-expired', config.twilio.patientPortal.unconfirmedExpiredSid ],
+    [ 'confirmation', WHATSAPP_TEMPLATES.patientPortal.confirmationSid ],
+    [ 'cancellation', WHATSAPP_TEMPLATES.patientPortal.cancelSid ],
+    [ 'reschedule', WHATSAPP_TEMPLATES.patientPortal.rescheduleSid ],
+    [ 'meeting-link', WHATSAPP_TEMPLATES.appointmentMeetingLinkSid ],
+    [ 'request-rejected', WHATSAPP_TEMPLATES.patientPortal.requestRejectedSid ],
+    [ 'request-expired', WHATSAPP_TEMPLATES.patientPortal.requestExpiredSid ],
+    [ 'confirm-link', WHATSAPP_TEMPLATES.patientPortal.confirmLinkSid ],
+    [ 'unconfirmed-expired', WHATSAPP_TEMPLATES.patientPortal.unconfirmedExpiredSid ],
   ] as const)('%s uses its own template', (kind, sid) => {
     expect(render(kind, WHATSAPP).contentSid).toBe(sid);
   });
@@ -159,7 +160,7 @@ describe('renderPatientNotice', () => {
     it('confirm-link by WhatsApp uses the confirm-link template with the token as the URL-button variable', () => {
       const opts = render('confirm-link', WHATSAPP);
       expect(opts).toMatchObject({
-        contentSid: config.twilio.patientPortal.confirmLinkSid,
+        contentSid: WHATSAPP_TEMPLATES.patientPortal.confirmLinkSid,
         contentVariables: { '1': 'Dra. Ana Pública', '2': expect.any(String), '3': expect.stringMatching(/m\.$/), '4': token },
       });
       expect(Object.keys(opts.contentVariables ?? {})).toEqual([ '1', '2', '3', '4' ]);
@@ -213,8 +214,8 @@ describe('renderPatientNotice', () => {
 
     it('unconfirmed-expired by WhatsApp uses its own template, never request-expired', () => {
       const opts = render('unconfirmed-expired', WHATSAPP);
-      expect(opts.contentSid).toBe(config.twilio.patientPortal.unconfirmedExpiredSid);
-      expect(opts.contentSid).not.toBe(config.twilio.patientPortal.requestExpiredSid);
+      expect(opts.contentSid).toBe(WHATSAPP_TEMPLATES.patientPortal.unconfirmedExpiredSid);
+      expect(opts.contentSid).not.toBe(WHATSAPP_TEMPLATES.patientPortal.requestExpiredSid);
       expect(Object.keys(opts.contentVariables ?? {})).toEqual([ '1', '2', '3' ]);
     });
 
