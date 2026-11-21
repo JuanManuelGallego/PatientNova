@@ -264,16 +264,18 @@ async function handleReminderUpdate(
     });
 
     const diff = computeDiff(reminderAuditView(existing.reminder) ?? {}, reminderAuditView(updatedReminder) ?? {}, [ ...REMINDER_AUDIT_FIELDS ]);
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: existing.reminder.id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      ...diff,
-      tx,
-      required: true,
-    });
+    if (diff.affectedFields.length > 0) {
+      await logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: existing.reminder.id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
+        ...diff,
+        tx,
+        required: true,
+      });
+    }
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
 

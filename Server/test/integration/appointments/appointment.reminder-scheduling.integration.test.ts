@@ -75,7 +75,7 @@ describe('linked reminder scheduling', () => {
     });
   });
 
-  it('audits only the reminder fields that changed, never its ids or template', async () => {
+  it('audits only the reminder fields that changed, never its ids, template or address, and nothing for no change', async () => {
     const ctx = await setup();
     const before = inHours(48);
     const appt = await appointmentService.create(createDto(ctx, { sendMode: ReminderMode.SCHEDULED, sendAt: before }), ctx.user.id);
@@ -100,7 +100,7 @@ describe('linked reminder scheduling', () => {
       where: { entityType: EntityType.REMINDER, entityId: appt.reminder!.id, actionType: ActionType.UPDATE },
       orderBy: { eventTimeUtc: 'asc' },
     });
-    expect(reminderAudits.map((row) => row.affectedFields)).toEqual([ [ 'appointmentId' ], [], [ 'sendAt' ] ]);
+    expect(reminderAudits.map((row) => row.affectedFields)).toEqual([ [ 'appointmentId' ], [ 'sendAt' ] ]);
     expect(JSON.stringify(reminderAudits)).not.toContain(ctx.patient.email!);
   });
 
