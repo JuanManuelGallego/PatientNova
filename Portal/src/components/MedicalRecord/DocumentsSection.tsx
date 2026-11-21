@@ -255,8 +255,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
                 {editingId === doc.id ? (
                   <input
                     autoFocus
-                    className="form-input"
-                    style={{ padding: "2px 8px", height: 30, fontSize: 13 }}
+                    className="form-input form-input--compact"
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={() => commitRename(doc.id)}

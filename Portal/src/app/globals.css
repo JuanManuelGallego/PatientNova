@@ -338,7 +338,7 @@ body {
 
 .page-main {
   flex: 1;
-  padding: 20px 16px;
+  padding: 20px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 @media (min-width: 1024px) {
@@ -1000,6 +1000,13 @@ body {
 .form-input:focus {
   border-color: var(--c-brand);
   box-shadow: 0 0 0 3px var(--c-brand-glow);
+}
+
+/* inline edits inside dense rows (e.g. renaming a document); the coarse-pointer block still lifts it to 16px */
+.form-input--compact {
+  padding: 2px 8px;
+  height: 30px;
+  font-size: 13px;
 }
 
 .form-input--auto {
@@ -2848,7 +2855,7 @@ th.col--actions {
   margin-bottom: 16px;
 }
 
-/* responsive: phone stat cards — tighter padding/type, sub-text hidden so the four cards fit one short block */
+/* responsive: phone stat cards — tighter padding/type so the four cards fit one short block; the sub line carries data (amounts, counts), so it stays */
 @media (max-width: 639px) {
   .stats-grid .stat-card {
     border-radius: var(--r-xl);
@@ -2874,10 +2881,12 @@ th.col--actions {
   }
 
   .stats-grid .stat-card__sub {
-    display: none;
+    font-size: 11px;
   }
+}
 
-  /* an odd card count would leave an empty cell: the last card spans the row */
+/* responsive: an odd card count would leave an empty cell in the 2-column grid: the last card spans the row */
+@media (max-width: 1023px) {
   .stats-grid > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
@@ -6160,6 +6169,7 @@ button.cal-day-panel__blocked-item {
   .phone-input-number,
   .phone-input-code-display,
   .custom-select .custom-select__trigger,
+  .custom-select.form-input--auto .custom-select__trigger,
   .patient-autocomplete .patient-autocomplete__trigger,
   .patient-autocomplete .patient-autocomplete__input,
   .ant-picker.form-picker,
@@ -6169,10 +6179,11 @@ button.cal-day-panel__blocked-item {
     font-size: 16px;
   }
 
+  /* 44px hit area on a 24px footprint; only 4px reach on the left so it never covers the sort button */
   .th-filter-btn {
     width: 44px;
     height: 44px;
-    margin: -10px;
+    margin: -10px -10px -10px -4px;
   }
 
   .btn-table-action,
@@ -6210,7 +6221,6 @@ button.cal-day-panel__blocked-item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-left: -8px;
   }
 
   .search-clear-btn,
@@ -6229,6 +6239,12 @@ button.cal-day-panel__blocked-item {
 
   .password-toggle {
     right: 0;
+  }
+
+  /* the 44px buttons sit over the field's end: keep typed text out from under them */
+  .search-wrapper .form-input--search,
+  .password-wrapper .form-input {
+    padding-right: 44px;
   }
 
   .sidebar-user-menu__item {
@@ -6252,6 +6268,6 @@ button.cal-day-panel__blocked-item {
   .patient-autocomplete__clear::after {
     content: "";
     position: absolute;
-    inset: -12px;
+    inset: -12px -12px -12px -4px;
   }
 }

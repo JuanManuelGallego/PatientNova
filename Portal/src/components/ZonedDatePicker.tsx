@@ -101,6 +101,12 @@ function ZonedTimePicker(props: AnyProps) {
  * devices the input is read-only (no keyboard over the popup); callers can override `inputReadOnly`.
  */
 export const ZonedDatePicker = Object.assign(ZonedDatePickerBase, {
+    // The other statics are the generated ones (without the touch default), so the cast below stays true at runtime.
+    WeekPicker: BasePicker.WeekPicker,
+    MonthPicker: BasePicker.MonthPicker,
+    YearPicker: BasePicker.YearPicker,
+    QuarterPicker: BasePicker.QuarterPicker,
+    RangePicker: BasePicker.RangePicker,
     TimePicker: ZonedTimePicker,
 }) as unknown as typeof BasePicker;
 

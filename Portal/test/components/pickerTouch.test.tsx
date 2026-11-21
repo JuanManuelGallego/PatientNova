@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
 import { DateRangePicker } from "@/src/components/DateRangePicker";
@@ -23,16 +23,15 @@ function setPointer(coarse: boolean) {
 afterEach(() => { window.matchMedia = original; });
 
 describe.each([
-    ["date picker", () => <ZonedDatePicker data-testid="p" />, () => screen.getByTestId("p")],
-    ["time picker", () => <ZonedDatePicker.TimePicker data-testid="p" />, () => screen.getByTestId("p")],
-    ["range picker", () => <DateRangePicker value={null} onChange={() => {}} testId="p" />, () => screen.getByTestId("p").querySelector("input")!],
-])("%s", (_name, ui, getInput) => {
+    ["date picker", () => <ZonedDatePicker data-testid="p" />],
+    ["time picker", () => <ZonedDatePicker.TimePicker data-testid="p" />],
+    ["range picker", () => <DateRangePicker value={null} onChange={() => {}} testId="p" />],
+])("%s", (_name, ui) => {
     it("is read-only on a coarse pointer", () => {
         setPointer(true);
         const { container } = render(ui());
         const input = container.querySelector("input")!;
         expect(input.readOnly).toBe(true);
-        void getInput;
     });
     it("is editable otherwise", () => {
         setPointer(false);
