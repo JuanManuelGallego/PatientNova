@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { activityHref } from "@/src/config/navigation";
-import Link from "next/link";
+import { OverlayLink } from "@/src/components/OverlayLink";
 import { Appointment } from "@/src/types/Appointment";
 import { Patient, PatientStatus } from "@/src/types/Patient";
 import { CHANNEL_CFG } from "@/src/types/Reminder";
@@ -184,9 +184,9 @@ export function PatientDrawer({
           </div>
         )}
         {!patient.dateOfBirth && !patient.notes && <div className="drawer-empty">Sin información adicional</div>}
-        <Link href={`/medical-records?patientId=${patient.id}`} className="drawer-link">
+        <OverlayLink href={`/medical-records?patientId=${patient.id}`} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver historia clínica
-        </Link>
+        </OverlayLink>
       </Section>
 
       {appointments && appointments.length > 0 && (
@@ -230,9 +230,9 @@ export function PatientDrawer({
           ) : (
             <div className="drawer-empty" role="status">{getEmptyRelationMessage("citas", appointmentView)}</div>
           )}
-          <Link href={`/appointments?patientId=${patient.id}`} className="drawer-link">
+          <OverlayLink href={`/appointments?patientId=${patient.id}`} className="drawer-link">
             <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver todas las citas
-          </Link>
+          </OverlayLink>
         </Section>
       )}
 
@@ -276,9 +276,9 @@ export function PatientDrawer({
           ) : (
             <div className="drawer-empty" role="status">{getEmptyRelationMessage("recordatorios", reminderView)}</div>
           )}
-          <Link href={`/reminders?patientId=${patient.id}`} className="drawer-link">
+          <OverlayLink href={`/reminders?patientId=${patient.id}`} className="drawer-link">
             <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver todos los recordatorios
-          </Link>
+          </OverlayLink>
         </Section>
       )}
 
@@ -286,17 +286,17 @@ export function PatientDrawer({
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{patient.id}</span>} />
         <Row icon={DETAIL_ICONS.calendar} label="Creado" value={new Date(patient.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
         <Row icon={DETAIL_ICONS.refresh} label="Actualizado" value={new Date(patient.updatedAt).toLocaleString("es-ES", { timeZone: timezone })} />
-        <Link href={activityHref({ entityId: patient.id })} className="drawer-link">
+        <OverlayLink href={activityHref({ entityId: patient.id })} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
-        </Link>
+        </OverlayLink>
         {user?.portalEnabled && (
-          <Link
+          <OverlayLink
             href={activityHref({ portalPatientId: patient.id })}
             className="drawer-link"
             data-testid="patient-drawer-portal-activity-link"
           >
             <DETAIL_ICONS.history size={15} aria-hidden="true" /> Actividad en el portal
-          </Link>
+          </OverlayLink>
         )}
       </Section>
     </DrawerShell>

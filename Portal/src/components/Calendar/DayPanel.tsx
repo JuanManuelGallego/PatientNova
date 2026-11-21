@@ -2,6 +2,7 @@ import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { DayPanelProps } from "./types";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { useBackDismiss } from "@/src/hooks/useFocusTrap";
 import { HOLD_LABEL } from "./PendingHold";
 
 export function DayPanel({
@@ -18,6 +19,8 @@ export function DayPanel({
   onSelectHold,
 }: DayPanelProps) {
   const timezone = useDisplayTimezone();
+  // Mounted only while open, so Back closes it like any other overlay.
+  useBackDismiss(true, onClose);
   return (
     <div className="cal-day-panel-overlay" onClick={onClose}>
       <div className="cal-day-panel" onClick={(e) => e.stopPropagation()}>

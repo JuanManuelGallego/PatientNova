@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OverlayLink } from "@/src/components/OverlayLink";
 import { activityHref } from "@/src/config/navigation";
 import {
   Appointment,
@@ -222,9 +222,9 @@ export function AppointmentDrawer({
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{appointment.id}</span>} />
         <Row icon={DETAIL_ICONS.calendar} label="Creada" value={new Date(appointment.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
-        <Link href={activityHref({ entityId: appointment.id })} className="drawer-link" data-testid="appointment-drawer-audit-link">
+        <OverlayLink href={activityHref({ entityId: appointment.id })} className="drawer-link" data-testid="appointment-drawer-audit-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
-        </Link>
+        </OverlayLink>
       </Section>
     </DrawerShell>
   );

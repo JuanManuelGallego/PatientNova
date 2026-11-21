@@ -15,7 +15,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <NuqsAdapter>
       <ErrorBoundary>
         <ThemeProvider>
-          <FocusTrapProvider>{children}</FocusTrapProvider>
+          {/* Back closes the top drawer, modal or sheet. Public pages wrap their overlays in their own provider without it. */}
+          <FocusTrapProvider dismissOnBack>{children}</FocusTrapProvider>
         </ThemeProvider>
       </ErrorBoundary>
     </NuqsAdapter>

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import Image from "next/image";
 import Sidebar from "@/src/components/Sidebar";
 import { useMediaQuery } from "@/src/hooks/useMediaQuery";
+import { useBackDismiss, useBackScope } from "@/src/hooks/useFocusTrap";
+import { isPlainClick } from "@/src/components/OverlayLink";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
 
@@ -21,6 +23,15 @@ export default function PageLayout({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isDesktop) setSidebarOpen(false);
   }, [isDesktop]);
+
+  // Overlays of this page never go back once it unmounts (logout, leaving through a link).
+  useBackScope();
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  // Below 1024px the open menu is an overlay: Back closes it instead of leaving the page. Declared before the
+  // scroll lock so its entry is pushed first, while the page's scroll can still be saved into the entry it leaves.
+  const menuOverlay = sidebarOpen && !isDesktop;
+  const { release } = useBackDismiss(menuOverlay, closeSidebar);
 
   useEffect(() => {
     if (sidebarOpen && !isDesktop) {
@@ -50,7 +61,15 @@ export default function PageLayout({
     return () => window.removeEventListener("keydown", handleKey);
   }, [sidebarOpen]);
 
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  // While the menu holds a history entry its links replace that entry, so Back from the next page returns here.
+  const navigateFromSidebar = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
+    const link = event?.currentTarget;
+    if (menuOverlay && link && isPlainClick(event)) {
+      if (link.href === window.location.href) event.preventDefault(); // Already here: just close.
+      else release(); // The navigation takes over the entry; going back would race it.
+    }
+    setSidebarOpen(false);
+  }, [ menuOverlay, release ]);
 
   return (
     <div className="page-shell">
@@ -62,7 +81,12 @@ export default function PageLayout({
           data-testid="sidebar-backdrop"
         />
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+        onNavigate={navigateFromSidebar}
+        replaceOnNavigate={menuOverlay}
+      />
       <div className="page-content-wrapper">
         <header className="top-navbar">
           <button
@@ -95,3 +119,4 @@ export default function PageLayout({
     </div>
   );
 }
+

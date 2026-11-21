@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -14,9 +15,13 @@ import { NavGroupList } from "@/src/components/NavGroupList";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Runs on a link click; defaults to `onClose`. */
+  onNavigate?: (event?: MouseEvent<HTMLAnchorElement>) => void;
+  /** Links replace the current history entry (the open mobile menu's own entry). */
+  replaceOnNavigate?: boolean;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, onNavigate = onClose, replaceOnNavigate = false }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuthContext();
   const inbox = usePendingRequests();
@@ -63,7 +68,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <NavGroupList
         groups={visibleGroups(NAV_GROUPS, navContext)}
         pathname={pathname}
-        onNavigate={onClose}
+        onNavigate={onNavigate}
+        replace={replaceOnNavigate}
         testIdPrefix="sidebar-link"
         ariaLabel="Secciones"
         className="sidebar-nav"
@@ -74,7 +80,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* User section */}
       <div className="sidebar-user" data-testid="sidebar-user">
-        <UserMenu onNavigate={onClose} drawerOpen={isOpen} />
+        <UserMenu onNavigate={onNavigate} replace={replaceOnNavigate} drawerOpen={isOpen} />
       </div>
     </aside>
   );
