@@ -45,10 +45,6 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   sendMode: { IMMEDIATE: "Inmediato", SCHEDULED: "Programado" },
 };
 
-/**
- * Keys of a nested record (an appointment's `reminder`) that mean nothing to a reader:
- * ids and the WhatsApp template plumbing. Older rows snapshot the whole relation.
- */
 const HIDDEN_NESTED_KEYS = new Set(["id", "contentSid", "contentVariables"]);
 
 const isHiddenNestedKey = (key: string) => HIDDEN_NESTED_KEYS.has(key) || key.endsWith("Id");
@@ -94,7 +90,6 @@ type FieldChange = { key: string; field: string; label: string; before: unknown;
 
 const sameValue = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-/** A nested record becomes one change per readable key that differs, labelled "Recordatorio · Estado". */
 function expandChange(field: string, before: unknown, after: unknown): FieldChange[] {
   if (!isRecord(before) && !isRecord(after)) {
     return [ { key: field, field, label: fieldLabel(field), before, after } ];

@@ -600,10 +600,6 @@ export async function updateWithin(
   return withCancelledReminder(rendered, cancelledReminderId);
 }
 
-/**
- * What an audit records of a reminder edited through its appointment: never ids, template SID or
- * variables, nor `to`, which is encrypted at rest while audit rows are plain JSON.
- */
 const REMINDER_AUDIT_FIELDS = [ 'channel', 'status', 'sendMode', 'sendAt' ] as const;
 
 type LinkedReminder = Pick<Reminder, typeof REMINDER_AUDIT_FIELDS[number]> | null;
@@ -614,7 +610,6 @@ function reminderAuditView(reminder: LinkedReminder): Record<string, unknown> | 
   return Object.fromEntries(REMINDER_AUDIT_FIELDS.map((field) => [ field, reminder[field] ]));
 }
 
-/** The reminder's readable fields that changed, or the whole view when one was linked or unlinked. */
 function linkedReminderDiff(before: LinkedReminder, after: LinkedReminder): { before: unknown; after: unknown } | null {
   const beforeView = reminderAuditView(before);
   const afterView = reminderAuditView(after);
