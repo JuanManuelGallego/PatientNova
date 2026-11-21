@@ -8,6 +8,11 @@ import { DrawerShell, Section, Row } from "./DrawerUtils";
 import { DETAIL_ICONS } from "@/src/config/icons";
 import { EntityTypePill } from "../Info/EntityTypePill";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { CHANNEL_CFG } from "@/src/types/Reminder";
+
+const CHANNEL_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(CHANNEL_CFG).map(([channel, config]) => [ channel, config.label ]),
+);
 
 const VALUE_LABELS: Record<string, Record<string, string>> = {
   status: {
@@ -35,7 +40,22 @@ const VALUE_LABELS: Record<string, Record<string, string>> = {
   },
   kind: { DATA_PROCESSING: "Tratamiento de datos", NEW: "Nueva", REVIEW: "Para revisar" },
   source: { PROVIDER: "Profesional", PORTAL: "Portal de pacientes" },
+  channel: CHANNEL_LABELS,
+  reminderChannel: CHANNEL_LABELS,
+  sendMode: { IMMEDIATE: "Inmediato", SCHEDULED: "Programado" },
 };
+
+/**
+ * Keys of a nested record (an appointment's `reminder`) that mean nothing to a reader:
+ * ids and the WhatsApp template plumbing. Older rows snapshot the whole relation.
+ */
+const HIDDEN_NESTED_KEYS = new Set(["id", "contentSid", "contentVariables"]);
+
+const isHiddenNestedKey = (key: string) => HIDDEN_NESTED_KEYS.has(key) || key.endsWith("Id");
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 const TEXT_FIELDS = new Set(["policyVersion"]);
 
@@ -61,13 +81,36 @@ function formatValue(value: unknown, timezone: string, field?: string): string {
   if (typeof value === "number") return String(value);
   if (typeof value === "string") return formatString(value, timezone, field);
   if (Array.isArray(value)) return `${value.length} elemento${value.length !== 1 ? "s" : ""}`;
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
+  if (isRecord(value)) {
+    const entries = Object.entries(value).filter(([key, entry]) => !isHiddenNestedKey(key) && entry !== null && entry !== undefined);
     return entries.length > 0
-      ? entries.map(([key, entry]) => `${key}: ${entry}`).join(", ")
-      : "Objeto vacío";
+      ? entries.map(([key, entry]) => `${fieldLabel(key)}: ${formatValue(entry, timezone, key)}`).join(" · ")
+      : "—";
   }
   return String(value);
+}
+
+type FieldChange = { key: string; field: string; label: string; before: unknown; after: unknown };
+
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/** A nested record becomes one change per readable key that differs, labelled "Recordatorio · Estado". */
+function expandChange(field: string, before: unknown, after: unknown): FieldChange[] {
+  if (!isRecord(before) && !isRecord(after)) {
+    return [ { key: field, field, label: fieldLabel(field), before, after } ];
+  }
+  const beforeRecord = isRecord(before) ? before : {};
+  const afterRecord = isRecord(after) ? after : {};
+  const keys = [ ...new Set([ ...Object.keys(beforeRecord), ...Object.keys(afterRecord) ]) ];
+  return keys
+    .filter((key) => !isHiddenNestedKey(key) && !sameValue(beforeRecord[key], afterRecord[key]))
+    .map((key) => ({
+      key: `${field}.${key}`,
+      field: key,
+      label: `${fieldLabel(field)} · ${fieldLabel(key)}`,
+      before: beforeRecord[key],
+      after: afterRecord[key],
+    }));
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -124,6 +167,10 @@ const FIELD_LABELS: Record<string, string> = {
   requestId: "Solicitud",
   portalAccessEnabled: "Acceso al portal",
   messagesStoppedAt: "Mensajes detenidos el",
+  reminder: "Recordatorio",
+  sendMode: "Modo de envío",
+  to: "Destinatario",
+  body: "Mensaje",
 };
 
 function fieldLabel(key: string): string {
@@ -145,6 +192,9 @@ export function AuditDrawer({
 }) {
   const timezone = useDisplayTimezone();
   const action = ACTION_TYPE_CONFIG[log.actionType];
+  const changes = log.fieldsBefore && log.fieldsAfter
+    ? log.affectedFields.flatMap((field) => expandChange(field, log.fieldsBefore?.[field], log.fieldsAfter?.[field]))
+    : [];
 
   return (
     <DrawerShell
@@ -173,21 +223,21 @@ export function AuditDrawer({
         <div className="drawer-prose">{log.description}</div>
       </Section>
 
-      {log.fieldsBefore && log.fieldsAfter && (
+      {changes.length > 0 && (
         <Section title="Cambios">
           <div className="audit-changes">
-            {log.affectedFields.map((field) => (
-              <div className="audit-change" key={field}>
-                <div className="audit-change__field">{fieldLabel(field)}</div>
+            {changes.map((change) => (
+              <div className="audit-change" key={change.key}>
+                <div className="audit-change__field">{change.label}</div>
                 <div className="audit-change__comparison">
                   <div className="audit-change__value audit-change__value--before">
                     <span className="audit-change__label">Antes</span>
-                    <span>{formatValue(log.fieldsBefore?.[field], timezone, field)}</span>
+                    <span>{formatValue(change.before, timezone, change.field)}</span>
                   </div>
                   <span className="audit-change__arrow" aria-hidden="true">→</span>
                   <div className="audit-change__value audit-change__value--after">
                     <span className="audit-change__label">Después</span>
-                    <span>{formatValue(log.fieldsAfter?.[field], timezone, field)}</span>
+                    <span>{formatValue(change.after, timezone, change.field)}</span>
                   </div>
                 </div>
               </div>
