@@ -8,7 +8,7 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { config } from '../../../src/utils/config/config.js';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { sendReminderWorker } from '../../../src/scheduler/workers/send-reminder.js';
-import { ActionSource, AppointmentStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/enums.js';
+import { ActionSource, ActionType, AppointmentStatus, Channel, EntityType, ReminderMode, ReminderStatus } from '../../../generated/prisma/enums.js';
 import { appointmentTimeRange, createTestAppointmentType, createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
 
 const scheduler = config.scheduler as { enabled: boolean };
@@ -73,6 +73,35 @@ describe('linked reminder scheduling', () => {
       db: expect.anything(),
       startAfter: new Date(later),
     });
+  });
+
+  it('audits only the reminder fields that changed, never its ids or template', async () => {
+    const ctx = await setup();
+    const before = inHours(48);
+    const appt = await appointmentService.create(createDto(ctx, { sendMode: ReminderMode.SCHEDULED, sendAt: before }), ctx.user.id);
+    const reminder = { channel: Channel.EMAIL, to: ctx.patient.email!, sendMode: ReminderMode.SCHEDULED, status: ReminderStatus.PENDING };
+
+    await appointmentService.update(appt.id, { reminder: { ...reminder, sendAt: before } }, ctx.user.id);
+    const later = inHours(60);
+    await appointmentService.update(appt.id, { reminder: { ...reminder, sendAt: later } }, ctx.user.id);
+
+    const audits = await prisma.auditLog.findMany({
+      where: { entityType: EntityType.APPOINTMENT, entityId: appt.id, actionType: ActionType.UPDATE },
+      orderBy: { eventTimeUtc: 'asc' },
+    });
+    expect(audits).toHaveLength(2);
+    const [ unchanged, moved ] = audits;
+    expect(unchanged?.affectedFields).not.toContain('reminder');
+    expect(moved?.affectedFields).toEqual([ 'reminder' ]);
+    expect(moved?.fieldsBefore).toEqual({ reminder: { sendAt: new Date(before).toISOString() } });
+    expect(moved?.fieldsAfter).toEqual({ reminder: { sendAt: new Date(later).toISOString() } });
+
+    const reminderAudits = await prisma.auditLog.findMany({
+      where: { entityType: EntityType.REMINDER, entityId: appt.reminder!.id, actionType: ActionType.UPDATE },
+      orderBy: { eventTimeUtc: 'asc' },
+    });
+    expect(reminderAudits.map((row) => row.affectedFields)).toEqual([ [ 'appointmentId' ], [], [ 'sendAt' ] ]);
+    expect(JSON.stringify(reminderAudits)).not.toContain(ctx.patient.email!);
   });
 
   it('does not enqueue without the scheduler', async () => {
