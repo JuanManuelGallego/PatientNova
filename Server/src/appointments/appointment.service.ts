@@ -263,17 +263,19 @@ async function handleReminderUpdate(
       },
     });
 
-    const diff = computeDiff(existing.reminder as unknown as Record<string, unknown>, { ...existing.reminder, ...dto.reminder } as unknown as Record<string, unknown>, Object.keys(dto.reminder));
-    await logAudit({
-      entityType: EntityType.REMINDER,
-      entityId: existing.reminder.id,
-      userId,
-      actionType: ActionType.UPDATE,
-      description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
-      ...diff,
-      tx,
-      required: true,
-    });
+    const diff = computeDiff(reminderAuditView(existing.reminder) ?? {}, reminderAuditView(updatedReminder) ?? {}, [ ...REMINDER_AUDIT_FIELDS ]);
+    if (diff.affectedFields.length > 0) {
+      await logAudit({
+        entityType: EntityType.REMINDER,
+        entityId: existing.reminder.id,
+        userId,
+        actionType: ActionType.UPDATE,
+        description: `Recordatorio actualizado para el paciente ${existing.patient.name} ${existing.patient.lastName} via actualización de cita`,
+        ...diff,
+        tx,
+        required: true,
+      });
+    }
 
     logger.info({ reminderId: existing.reminder.id }, 'Reminder updated');
 
@@ -554,7 +556,10 @@ export async function updateWithin(
   });
 
   const diffFields = [ ...Object.keys(dto), ...(meetingStatusChanged ? [ 'meetingStatus' ] : []) ];
-  const diff = computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, diffFields);
+  const diff = withReminderDiff(
+    computeDiff(existing as unknown as Record<string, unknown>, updated as unknown as Record<string, unknown>, diffFields.filter((field) => field !== 'reminder')),
+    diffFields.includes('reminder') ? linkedReminderDiff(existing.reminder, updated.reminder) : null,
+  );
   await logAudit({
     entityType: EntityType.APPOINTMENT,
     entityId: id,
@@ -593,6 +598,33 @@ export async function updateWithin(
   await onMeetingLinkSet(tx, existing, updated, opts.afterCommit);
   const rendered = await renderLinkedReminder(updated, reminderContext, tx);
   return withCancelledReminder(rendered, cancelledReminderId);
+}
+
+const REMINDER_AUDIT_FIELDS = [ 'channel', 'status', 'sendMode', 'sendAt' ] as const;
+
+type LinkedReminder = Pick<Reminder, typeof REMINDER_AUDIT_FIELDS[number]> | null;
+type AuditDiff = ReturnType<typeof computeDiff>;
+
+function reminderAuditView(reminder: LinkedReminder): Record<string, unknown> | null {
+  if (!reminder) return null;
+  return Object.fromEntries(REMINDER_AUDIT_FIELDS.map((field) => [ field, reminder[field] ]));
+}
+
+function linkedReminderDiff(before: LinkedReminder, after: LinkedReminder): { before: unknown; after: unknown } | null {
+  const beforeView = reminderAuditView(before);
+  const afterView = reminderAuditView(after);
+  if (!beforeView || !afterView) return beforeView === afterView ? null : { before: beforeView, after: afterView };
+  const changed = computeDiff(beforeView, afterView, [ ...REMINDER_AUDIT_FIELDS ]);
+  return changed.affectedFields.length > 0 ? { before: changed.fieldsBefore, after: changed.fieldsAfter } : null;
+}
+
+function withReminderDiff(diff: AuditDiff, reminder: { before: unknown; after: unknown } | null): AuditDiff {
+  if (!reminder) return diff;
+  return {
+    affectedFields: [ ...diff.affectedFields, 'reminder' ],
+    fieldsBefore: { ...diff.fieldsBefore, reminder: reminder.before },
+    fieldsAfter: { ...diff.fieldsAfter, reminder: reminder.after },
+  };
 }
 
 type MeetingState = Pick<AppointmentWithRelations, 'meetingUrl' | 'meetingStatus'>;
