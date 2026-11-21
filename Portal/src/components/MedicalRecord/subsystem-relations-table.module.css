@@ -67,10 +67,12 @@
     border-bottom: none;
 }
 
-.row:hover .cell,
-.row:hover .rowHeader {
-    background-color: var(--c-gray-50);
-    transition: background-color 0.15s ease;
+@media (hover: hover) {
+  .row:hover .cell,
+  .row:hover .rowHeader {
+      background-color: var(--c-gray-50);
+      transition: background-color 0.15s ease;
+  }
 }
 
 .rowHeader {
@@ -93,16 +95,20 @@
     transition: background-color 0.15s;
 }
 
-.cellFunc:hover {
-    background-color: var(--c-success-bg) !important;
+@media (hover: hover) {
+  .cellFunc:hover {
+      background-color: var(--c-success-bg) !important;
+  }
 }
 
 .cellDysfunc {
     border-left: 1px solid var(--c-gray-100);
 }
 
-.cellDysfunc:hover {
-    background-color: var(--c-warning-bg) !important;
+@media (hover: hover) {
+  .cellDysfunc:hover {
+      background-color: var(--c-warning-bg) !important;
+  }
 }
 
 /* ── Check marks ── */

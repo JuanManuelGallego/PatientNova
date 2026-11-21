@@ -2,6 +2,7 @@ import { ConfigProvider, DatePicker } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
+import { useMediaQuery } from "@/src/hooks/useMediaQuery";
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
 
@@ -24,6 +25,7 @@ export function DateRangePicker({
   testId?: string;
 }) {
   const { isDark } = useTheme();
+  const coarse = useMediaQuery("(pointer: coarse)");
   const handleChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     if (!dates || !dates[0] || !dates[1]) {
       onChange(null);
@@ -38,6 +40,7 @@ export function DateRangePicker({
         value={value ? [dayjs(value[0]), dayjs(value[1])] : null}
         onChange={handleChange}
         format="DD/MM/YYYY"
+        inputReadOnly={coarse}
         placeholder={["Desde", "Hasta"]}
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}

@@ -53,8 +53,10 @@
   text-decoration: none;
 }
 
-.back:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .back:hover {
+    text-decoration: underline;
+  }
 }
 
 .card {
@@ -169,8 +171,10 @@
   cursor: pointer;
 }
 
-.channel:hover {
-  border-color: var(--c-gray-300);
+@media (hover: hover) {
+  .channel:hover {
+    border-color: var(--c-gray-300);
+  }
 }
 
 .channel[aria-pressed="true"] {

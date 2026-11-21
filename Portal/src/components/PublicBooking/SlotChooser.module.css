@@ -61,8 +61,10 @@
   cursor: pointer;
 }
 
-.first:hover {
-  background: var(--c-brand-hover);
+@media (hover: hover) {
+  .first:hover {
+    background: var(--c-brand-hover);
+  }
 }
 
 .first:focus-visible,

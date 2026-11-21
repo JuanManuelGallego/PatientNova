@@ -9,6 +9,7 @@ import weekday from "dayjs/plugin/weekday";
 import localeData from "dayjs/plugin/localeData";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import weekYear from "dayjs/plugin/weekYear";
+import { useMediaQuery } from "@/src/hooks/useMediaQuery";
 import { fromWallClock, getDisplayTimezone, toWallClock } from "@/src/utils/TimeUtils";
 
 dayjs.extend(utc);
@@ -73,8 +74,35 @@ const zonedConfig: PickerConfig = {
     },
 };
 
-/** antd DatePicker whose values are the provider's wall-clock time as UTC-mode dayjs objects. */
-export const ZonedDatePicker = DatePicker.generatePicker<Dayjs>(zonedConfig);
+const BasePicker = DatePicker.generatePicker<Dayjs>(zonedConfig);
+
+/** True on touch devices, where focusing the text input would open the on-screen keyboard over the popup. */
+export function useCoarsePointer(): boolean {
+    return useMediaQuery("(pointer: coarse)");
+}
+
+// Props are typed by the generated picker (generics survive only on the cast result below).
+type AnyProps = Record<string, unknown>;
+const Base = BasePicker as unknown as React.ComponentType<AnyProps>;
+const BaseTime = BasePicker.TimePicker as unknown as React.ComponentType<AnyProps>;
+
+function ZonedDatePickerBase(props: AnyProps) {
+    const coarse = useCoarsePointer();
+    return <Base inputReadOnly={coarse} {...props} />;
+}
+
+function ZonedTimePicker(props: AnyProps) {
+    const coarse = useCoarsePointer();
+    return <BaseTime inputReadOnly={coarse} {...props} />;
+}
+
+/**
+ * antd DatePicker whose values are the provider's wall-clock time as UTC-mode dayjs objects. On touch
+ * devices the input is read-only (no keyboard over the popup); callers can override `inputReadOnly`.
+ */
+export const ZonedDatePicker = Object.assign(ZonedDatePickerBase, {
+    TimePicker: ZonedTimePicker,
+}) as unknown as typeof BasePicker;
 
 /** The current wall-clock time in `timezone` (display zone if omitted), as a picker value. */
 export function nowInZone(timezone: string = getDisplayTimezone()): Dayjs {
