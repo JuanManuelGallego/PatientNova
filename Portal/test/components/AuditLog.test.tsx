@@ -110,6 +110,45 @@ describe("AuditDrawer", () => {
     expect(screen.getByText(fmtCalendarDay("1990-05-11"))).toBeInTheDocument();
     expect(screen.getByText(fmtCalendarDay("1990-05-10"))).toHaveTextContent("10 de mayo de 1990");
   });
+
+  it("breaks a nested reminder into the readable keys that changed", () => {
+    const reminder = {
+      id: "9deb9b05-2a09-4b4b-a859-ae617f8e125a",
+      channel: "WHATSAPP",
+      status: "PENDING",
+      sendMode: "SCHEDULED",
+      sendAt: "2027-11-21T14:00:00.000Z",
+      contentSid: "HX4a988ec65d4afaec679c99b3ac218517",
+      contentVariables: { 1: "Ana" },
+      body: null,
+      subject: null,
+      patientId: "p1",
+      userId: "u1",
+      appointmentId: "a1",
+    };
+    const movedTo = "2027-11-09T14:00:00.000Z";
+    renderDrawer(makeLog({
+      affectedFields: [ "startAt", "reminder" ],
+      fieldsBefore: { startAt: "2027-11-22T14:00:00.000Z", reminder },
+      fieldsAfter: { startAt: "2027-11-10T14:00:00.000Z", reminder: { ...reminder, sendAt: movedTo, contentVariables: { 1: "Ana", 2: "x" } } },
+    }));
+    expect(screen.getByText("Recordatorio · Programado para")).toBeInTheDocument();
+    expect(screen.getByText(fmtDateTime(movedTo, "America/New_York"))).toBeInTheDocument();
+    expect(screen.queryByText(/Recordatorio · Content/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/HX4a988ec65d4afaec679c99b3ac218517|9deb9b05/)).not.toBeInTheDocument();
+  });
+
+  it("labels the fields of a nested record that was added", () => {
+    renderDrawer(makeLog({
+      affectedFields: [ "reminder" ],
+      fieldsBefore: { reminder: null },
+      fieldsAfter: { reminder: { id: "r1", channel: "WHATSAPP", status: "PENDING", userId: "u1" } },
+    }));
+    expect(screen.getByText("Recordatorio · Canal")).toBeInTheDocument();
+    expect(screen.getByText("WhatsApp")).toBeInTheDocument();
+    expect(screen.getByText("Pendiente")).toBeInTheDocument();
+    expect(screen.queryByText(/Recordatorio · User/)).not.toBeInTheDocument();
+  });
 });
 
 describe("buildAuditLogQueryString", () => {
