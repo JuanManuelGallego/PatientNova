@@ -160,6 +160,20 @@ describe("calendar page", () => {
     expect(props.AppointmentModal!.prefillDate).toBe("2026-11-27T14:00:00.000Z");
   });
 
+  it("a past day (or an hour already gone today) is not prefilled: the modal keeps its usual default", async () => {
+    stubPhone();
+    nav.viewMode = "day";
+    nav.dayDate = "2026-11-04";
+    await renderPage();
+    fireEvent.click(screen.getByTestId("calendar-fab-new-appointment"));
+    expect(props.AppointmentModal!.prefillDate).toBeNull();
+
+    const { act } = await import("@testing-library/react");
+    // 9:00 a. m. today in Bogotá is before the faked now (10:00 a. m.).
+    act(() => (props.Agenda!.onCreateAppointment as (iso: string) => void)("2026-11-25T14:00:00.000Z"));
+    expect(props.AppointmentModal!.prefillDate).toBeNull();
+  });
+
   it("the floating button keeps the usual default on today", async () => {
     stubPhone();
     nav.viewMode = "day";

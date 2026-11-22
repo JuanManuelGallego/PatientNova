@@ -131,8 +131,9 @@ function CalendarContent() {
     }
   }
 
+  /** A past instant is not bookable (the picker disables it), so the modal then opens with its own default. */
   const openCreateAt = (startIso: string) => {
-    setPrefillDate(startIso);
+    setPrefillDate(new Date(startIso).getTime() > Date.now() ? startIso : null);
     setShowCreate(true);
   };
   /** Nueva cita on a calendar day: 9:00 that day in the provider's timezone. */
