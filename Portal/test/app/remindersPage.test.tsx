@@ -43,6 +43,27 @@ describe("reminders page", () => {
     expect(screen.getByTestId("stat-card-activos")).toHaveTextContent("—");
   });
 
+  it("Activos: Creado el is a secondary column showing when the reminder was created, not its send time", () => {
+    fetchState = {
+      reminders: [ {
+        id: "r9", status: "PENDING", channel: "WHATSAPP", to: "+573001112233",
+        sendAt: "2026-12-01T15:00:00.000Z", createdAt: "2026-11-20T15:00:00.000Z", updatedAt: "2026-11-20T15:00:00.000Z",
+        error: null, messageId: null, retryCount: 0, patient: { id: "p1", name: "Ana", lastName: "Beltrán" },
+      } ],
+      error: null, loading: false,
+    };
+    statsState = { byStatus: {}, total: 0 };
+    render(<RemindersPage />);
+    const header = screen.getByRole("columnheader", { name: "Creado el" });
+    expect(header).toHaveClass("col--secondary");
+    const row = screen.getByText("Ana Beltrán").closest("tr")!;
+    const cells = within(row).getAllByRole("cell");
+    const createdCell = cells[[ ...header.parentElement!.children ].indexOf(header)];
+    expect(createdCell).toHaveClass("col--secondary");
+    expect(createdCell).toHaveTextContent(/20 nov 2026/);
+    expect(createdCell).not.toHaveTextContent(/1 dic 2026/);
+  });
+
   it("shows the empty state when the fetch succeeds with no rows", () => {
     fetchState = { reminders: [], error: null, loading: false };
     statsState = { byStatus: {}, total: 0 };

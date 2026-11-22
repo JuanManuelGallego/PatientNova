@@ -470,7 +470,8 @@ function ActiveRemindersTab({
         },
       },
       { label: "Dentro de" },
-      { label: "Creado el" },
+      // Secondary like every table's least important column: under 1100px it hides instead of scrolling sideways.
+      { label: "Creado el", priority: "secondary" },
       { label: "", priority: "actions" },
     ],
     [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
@@ -506,7 +507,7 @@ function ActiveRemindersTab({
           </td>
           <td className="td td--date">{fmtDateTime(reminder.sendAt, timezone)}</td>
           <td className="td td--date">{fmtRelative(reminder.sendAt)}</td>
-          <td className="td td--subtle">{fmtDateTime(reminder.sendAt, timezone)}</td>
+          <td className="td td--subtle col--secondary">{fmtDateTime(reminder.createdAt, timezone)}</td>
           <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
             <div className="td-actions">
               <button

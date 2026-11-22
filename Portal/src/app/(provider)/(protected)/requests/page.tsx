@@ -54,7 +54,11 @@ function RequestsPageContent() {
     { label: "Cita solicitada" },
     { label: "Tipo y lugar" },
     ...(tab === "resolved" ? [ { label: "Estado" } ] : []),
-    { label: tab === "pending" ? "Vence en" : tab === "resolved" ? "Resuelta" : "Venció" },
+    // "Vence en" is the urgency of a pending request, so it always shows; a settled request's time is secondary
+    // like every table's least important column (under 1100px it hides instead of scrolling sideways).
+    tab === "pending"
+      ? { label: "Vence en" }
+      : { label: tab === "resolved" ? "Resuelta" : "Venció", priority: "secondary" as const },
   ], [ tab ]);
 
   return (
@@ -105,7 +109,7 @@ function RequestsPageContent() {
               {tab === "pending" ? (
                 <td className="td td--date" title={fmtDateTime(r.holdExpiresAt, timezone)}>{fmtRelative(r.holdExpiresAt)}</td>
               ) : (
-                <td className="td td--subtle">{fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</td>
+                <td className="td td--subtle col--secondary">{fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</td>
               )}
             </tr>
           )}

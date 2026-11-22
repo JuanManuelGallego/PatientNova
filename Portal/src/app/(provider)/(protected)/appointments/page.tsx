@@ -250,6 +250,7 @@ function AppointmentsPageContent() {
       {
         label: "Pago",
         sortKey: "price",
+        priority: "secondary",
         filter: {
           kind: "enum",
           options: PAID_OPTIONS,
