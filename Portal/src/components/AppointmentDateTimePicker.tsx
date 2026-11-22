@@ -7,7 +7,9 @@ import esEs from "antd/locale/es_ES";
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
+import { fromPickerValue, nowInZone, toPickerValue, useCoarsePointer, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
+import { TouchPickerField } from "@/src/components/Pickers/TouchPickerField";
+import { todayFormattedString } from "@/src/utils/TimeUtils";
 
 dayjs.locale("es");
 
@@ -21,6 +23,12 @@ const OUT_OF_HOURS: number[] = [
     (_, i) => BUSINESS_LAST_HOUR + 1 + i
   ),
 ];
+
+/** The hours a touch picker offers at all; OUT_OF_HOURS stays the rule for both pickers. */
+const BUSINESS_HOURS: number[] = Array.from(
+  { length: BUSINESS_LAST_HOUR - BUSINESS_OPEN_HOUR + 1 },
+  (_, i) => BUSINESS_OPEN_HOUR + i
+);
 
 interface BlockedSlot {
   start: string;
@@ -44,6 +52,8 @@ export function AppointmentDateTimePicker({
 }: AppointmentDateTimePickerProps) {
   const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
+  // Touch screens get a bottom sheet: antd's side-by-side calendar and time columns overflow a phone.
+  const coarse = useCoarsePointer();
   const bookedSet = useMemo(
     () =>
       new Set(
@@ -86,6 +96,62 @@ export function AppointmentDateTimePicker({
     onChange(iso);
   };
 
+  const disabledDate = (current: Dayjs) => !!current && current.isBefore(now(), "day");
+  const disabledTime = (currentDate: Dayjs | null) => {
+    const nowInZone = now();
+    const selected =
+      currentDate && currentDate.isValid()
+        ? currentDate
+        : date
+          ? toPickerValue(date, timezone)
+          : null;
+    const isToday = !!selected && selected.isSame(nowInZone, "day");
+
+    return {
+      disabledHours: () => {
+        const hours = [...OUT_OF_HOURS];
+        if (isToday) {
+          for (let i = 0; i < nowInZone.hour(); i++) hours.push(i);
+        }
+        return hours;
+      },
+      disabledMinutes: (hour: number) => {
+        const minutes: number[] = [];
+
+        if (hour === BUSINESS_LAST_HOUR) {
+          for (let i = 5; i < 60; i += 5) minutes.push(i);
+        }
+
+        if (isToday && hour === nowInZone.hour()) {
+          for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
+        }
+
+        return minutes;
+      },
+      disabledSeconds: () => [],
+    };
+  };
+
+  if (coarse) {
+    const today = todayFormattedString(timezone);
+    return (
+      <TouchPickerField
+        kind="dateTime"
+        value={date ? toPickerValue(date, timezone) : null}
+        onChange={handleChange}
+        today={today}
+        format="DD/MM/YYYY HH:mm"
+        placeholder="Selecciona fecha y hora"
+        title="Fecha y hora"
+        disabledDate={disabledDate}
+        disabledTime={disabledTime}
+        minuteStep={5}
+        hours={BUSINESS_HOURS}
+        minMonth={today.slice(0, 7)}
+      />
+    );
+  }
+
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
       <ZonedDatePicker
@@ -100,41 +166,8 @@ export function AppointmentDateTimePicker({
         showNow={false}
         format="DD/MM/YYYY HH:mm"
         placeholder="Selecciona fecha y hora"
-        disabledDate={(current) => !!current && current.isBefore(now(), "day")}
-        disabledTime={(currentDate) => {
-          const nowInZone = now();
-          const selected =
-            currentDate && currentDate.isValid()
-              ? currentDate
-              : date
-                ? toPickerValue(date, timezone)
-                : null;
-          const isToday = !!selected && selected.isSame(nowInZone, "day");
-
-          return {
-            disabledHours: () => {
-              const hours = [...OUT_OF_HOURS];
-              if (isToday) {
-                for (let i = 0; i < nowInZone.hour(); i++) hours.push(i);
-              }
-              return hours;
-            },
-            disabledMinutes: (hour) => {
-              const minutes: number[] = [];
-
-              if (hour === BUSINESS_LAST_HOUR) {
-                for (let i = 5; i < 60; i += 5) minutes.push(i);
-              }
-
-              if (isToday && hour === nowInZone.hour()) {
-                for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
-              }
-
-              return minutes;
-            },
-            disabledSeconds: () => [],
-          };
-        }}
+        disabledDate={disabledDate}
+        disabledTime={disabledTime}
         style={{ width: "100%" }}
       />
     </ConfigProvider>

@@ -6,9 +6,10 @@ import esEs from "antd/locale/es_ES";
 dayjs.locale("es");
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
-import { calendarDayOf, calendarDayToIso } from "@/src/utils/TimeUtils";
+import { calendarDayOf, calendarDayToIso, todayFormattedString } from "@/src/utils/TimeUtils";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { fromPickerValue, nowInZone, toPickerValue, ZonedDatePicker } from "./ZonedDatePicker";
+import { fromPickerValue, nowInZone, toPickerValue, useCoarsePointer, ZonedDatePicker } from "./ZonedDatePicker";
+import { TouchPickerField } from "./Pickers/TouchPickerField";
 
 // responsive: popup uses full viewport width on mobile to prevent clipping
 const mobilePopupStyle: React.CSSProperties = {
@@ -39,6 +40,8 @@ export function DateTimePicker({
 }) {
   const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
+  // Touch screens get a bottom sheet: antd's side-by-side calendar and time columns overflow a phone.
+  const coarse = useCoarsePointer();
   const now = () => nowInZone(timezone);
   const toValue = (value: string): Dayjs | null => {
     if (mode === "instant") return toPickerValue(value, timezone);
@@ -54,6 +57,58 @@ export function DateTimePicker({
           : fromPickerValue(selectedDate, timezone),
     );
   };
+
+  const disabledDate = (current: Dayjs) =>
+    isFuture
+      ? current && current.isBefore(now(), "day")
+      : current && current.isAfter(now(), "day");
+  const disabledTime = isFuture
+    ? (current: Dayjs | null) => {
+        const nowInZone = now();
+        if (!current || !current.isSame(nowInZone, "day")) return {};
+        return {
+          disabledHours: () =>
+            Array.from({ length: nowInZone.hour() }, (_, i) => i),
+          disabledMinutes: (hour: number) => {
+            if (hour !== nowInZone.hour()) return [];
+            const minutes = [];
+            for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
+            return minutes;
+          },
+          disabledSeconds: () => [],
+        };
+      }
+    : undefined;
+
+  if (coarse) {
+    const today = todayFormattedString(timezone);
+    const year = Number(today.slice(0, 4));
+    // A stored day outside the default window (a record older than 120 years) must still be selectable.
+    const storedYear = date ? toValue(date)?.year() ?? year : year;
+    const years = isFuture
+      ? { from: Math.min(year, storedYear), to: Math.max(year + 10, storedYear) }
+      : { from: Math.min(year - 120, storedYear), to: year };
+    return (
+      <TouchPickerField
+        kind={showTime ? "dateTime" : "date"}
+        value={date ? toValue(date) : null}
+        onChange={handleChange}
+        today={today}
+        format={showTime ? "DD/MM/YYYY HH:mm" : "DD/MM/YYYY"}
+        placeholder={showTime ? "Selecciona fecha y hora" : "Selecciona fecha"}
+        title={showTime ? "Fecha y hora" : "Fecha"}
+        disabledDate={disabledDate}
+        disabledTime={disabledTime}
+        minuteStep={5}
+        minMonth={isFuture ? today.slice(0, 7) : undefined}
+        maxMonth={isFuture ? undefined : today.slice(0, 7)}
+        // Birth dates sit decades back: month-by-month arrows would take hundreds of taps.
+        years={mode === "calendarDay" ? years : undefined}
+        popupContainer={popupContainer}
+        testId={testId}
+      />
+    );
+  }
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
@@ -72,30 +127,8 @@ export function DateTimePicker({
         needConfirm
         format={showTime ? "DD/MM/YYYY HH:mm" : "DD/MM/YYYY"}
         placeholder={showTime ? "Selecciona fecha y hora" : "Selecciona fecha"}
-        disabledDate={(current) =>
-          isFuture
-            ? current && current.isBefore(now(), "day")
-            : current && current.isAfter(now(), "day")
-        }
-        disabledTime={
-          isFuture
-            ? (current) => {
-                const nowInZone = now();
-                if (!current || !current.isSame(nowInZone, "day")) return {};
-                return {
-                  disabledHours: () =>
-                    Array.from({ length: nowInZone.hour() }, (_, i) => i),
-                  disabledMinutes: (hour: number) => {
-                    if (hour !== nowInZone.hour()) return [];
-                    const minutes = [];
-                    for (let i = 0; i < nowInZone.minute(); i += 5) minutes.push(i);
-                    return minutes;
-                  },
-                  disabledSeconds: () => [],
-                };
-              }
-            : undefined
-        }
+        disabledDate={disabledDate}
+        disabledTime={disabledTime}
         style={{ width: "100%" }}
         styles={{ popup: { root: mobilePopupStyle } }}
         getPopupContainer={

@@ -3,7 +3,7 @@ import { test, expect } from '../../fixtures';
 import { createTestPatient, createTestAppointment, createTestReminder, createTestMedicalRecord } from '../../utils/helpers';
 
 // Phase 0 of issue #123 (provider portal mobile layout): locks in 16px fields, >=44px touch targets,
-// no sideways page scroll and read-only pickers on a coarse-pointer phone (Pixel 7 emulation).
+// no sideways page scroll and the touch pickers (phase 3) on a coarse-pointer phone (Pixel 7 emulation).
 
 const MIN_FONT_PX = 16;
 const MIN_TARGET_PX = 44;
@@ -122,23 +122,41 @@ test.describe('Provider pages on a phone', () => {
     });
   }
 
-  test('block-time modal pickers are read-only on touch devices', async ({ page }) => {
+  test('block-time pickers open a touch sheet and pick a date and time without a keyboard', async ({ page }) => {
     await page.goto('/calendar');
     await settle(page);
     await page.getByTestId('calendar-block-time-button').click();
     const dialog = page.getByTestId('blocked-time-modal-dialog');
     await expect(dialog).toBeVisible();
+    // Phase 3: touch screens get the sheet pickers, not antd's text inputs.
+    await expect(dialog.locator('.ant-picker')).toHaveCount(0);
 
-    const inputs = dialog.locator('.ant-picker input');
-    await expect(inputs.first()).toBeVisible();
-    const state = await inputs.evaluateAll((els) => els.map((el, i) => ({
-      i,
-      placeholder: (el as HTMLInputElement).placeholder,
-      readOnly: (el as HTMLInputElement).readOnly,
-    })));
-    expect(state.length, 'modal has antd picker inputs').toBeGreaterThan(0);
-    const editable = state.filter((s) => !s.readOnly).map((s) => `input #${s.i} "${s.placeholder}"`);
-    expect(editable, `picker inputs not readOnly:\n${editable.join('\n')}`).toEqual([]);
+    const trigger = dialog.getByTestId('blocked-time-start-input');
+    await trigger.click();
+    const sheet = page.getByTestId('blocked-time-start-input-sheet');
+    await expect(sheet).toBeVisible();
+    const focusedTag = await page.evaluate(() => document.activeElement?.tagName ?? '');
+    expect(['INPUT', 'TEXTAREA'], 'nothing that opens the keyboard has focus').not.toContain(focusedTag);
+
+    // Next month: every day there is in the future, whatever the time of day.
+    await sheet.getByRole('button', { name: 'Mes siguiente' }).click();
+    await sheet.locator('[role="grid"] button:not([disabled])').first().click();
+    await expect(sheet.getByRole('tab', { name: /Hora/ })).toHaveAttribute('aria-selected', 'true');
+    await sheet.getByRole('group', { name: 'Hora' }).locator('button:not([disabled])').first().click();
+    await sheet.getByRole('group', { name: 'Minutos' }).locator('button:not([disabled])').first().click();
+
+    // The confirm button the antd popup pushed off-screen must sit inside the viewport.
+    const done = sheet.getByRole('button', { name: 'Listo' });
+    await expect(done).toBeEnabled();
+    const box = await done.boundingBox();
+    const viewport = page.viewportSize()!;
+    expect(box, 'Listo has a box').not.toBeNull();
+    expect(box!.y + box!.height, 'Listo is above the bottom of the screen').toBeLessThanOrEqual(viewport.height);
+    await done.click();
+
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toHaveText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/);
+    await expect(dialog).toBeVisible();
 
     // Close without saving.
     await page.getByTestId('blocked-time-modal-close-button').click();

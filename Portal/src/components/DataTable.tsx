@@ -225,6 +225,9 @@ export function HeaderFilterPopover({
     return () => document.removeEventListener("mousedown", handler);
   }, [getAnchor, onClose]);
 
+  // Touch date pickers render their sheet inside this popover (`popupContainer`), so `.th-filter-popover` must
+  // never get a lasting transform, filter or contain: any of them would make it the containing block of the
+  // sheet's fixed scrim and trap the sheet inside the popover.
   return createPortal(
     <div
       ref={popoverRef}

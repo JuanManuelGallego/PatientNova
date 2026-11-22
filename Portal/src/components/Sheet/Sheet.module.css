@@ -9,6 +9,11 @@
   background: rgba(26, 21, 35, 0.5);
 }
 
+/* Above modals, nested modals and the sheet it was opened from. */
+.stacked {
+  z-index: calc(var(--z-modal-nested, 60) + 10);
+}
+
 .sheet {
   position: relative;
   display: flex;
@@ -129,6 +134,10 @@
     max-width: 720px;
     max-height: calc(100dvh - 48px);
     border-radius: var(--r-4xl);
+  }
+
+  .compact {
+    max-width: 420px;
   }
 
   .handle {

@@ -16,6 +16,10 @@ export interface SheetProps {
     children: ReactNode;
     /** Actions pinned below the scrolling content, side by side. */
     footer?: ReactNode;
+    /** Opened from inside another overlay (a picker in a modal or in another sheet): sits above nested modals. */
+    stacked?: boolean;
+    /** `compact` keeps the centered dialog narrow from 960px (pickers); phones are full width either way. */
+    size?: "default" | "compact";
     testId?: string;
 }
 
@@ -23,7 +27,7 @@ export interface SheetProps {
  * A bottom sheet on phones and a centered dialog from 960px. It traps focus through the nearest
  * FocusTrapProvider, which the provider app already supplies; public pages use `PublicSheet`.
  */
-export function Sheet({ title, hideTitle = false, onClose, children, footer, testId }: SheetProps) {
+export function Sheet({ title, hideTitle = false, onClose, children, footer, stacked = false, size = "default", testId }: SheetProps) {
     const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(onClose);
     const titleId = useId();
     const dragStart = useRef<number | null>(null);
@@ -53,10 +57,10 @@ export function Sheet({ title, hideTitle = false, onClose, children, footer, tes
     );
 
     return (
-        <div className={styles.scrim} data-testid="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className={stacked ? `${styles.scrim} ${styles.stacked}` : styles.scrim} data-testid="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div
                 ref={ref}
-                className={styles.sheet}
+                className={size === "compact" ? `${styles.sheet} ${styles.compact}` : styles.sheet}
                 role="dialog"
                 aria-modal="true"
                 aria-label={hideTitle ? title : undefined}

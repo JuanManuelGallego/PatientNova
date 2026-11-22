@@ -16,6 +16,8 @@ interface BackEntries {
   closeTop: (viaNavigation: boolean) => boolean;
   enterScope: (key: string) => void;
   leaveScope: (key: string) => void;
+  /** Runs `fn` once no overlay entry is closing and our own back() traversals have landed. */
+  whenSettled: (fn: () => void) => void;
 }
 
 interface FocusTrapContextValue {
@@ -52,8 +54,13 @@ function useBackEntries(enabled: boolean): BackEntries | null {
   const deferred = useRef<string[]>([]);
   const swallowPops = useRef(0);
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settledQueue = useRef<(() => void)[]>([]);
 
   const currentEntry = () => window.history.state?.overlay as string | undefined;
+
+  const runSettled = useCallback(() => {
+    for (const fn of settledQueue.current.splice(0)) fn();
+  }, []);
 
   const pushEntry = useCallback((key: string) => {
     window.history.pushState({ ...window.history.state, overlay: entryValue(key) }, "");
@@ -89,8 +96,10 @@ function useBackEntries(enabled: boolean): BackEntries | null {
       swallowPops.current += 1;
       if (steps === 1) window.history.back();
       else window.history.go(-steps);
+    } else {
+      runSettled();
     }
-  }, []);
+  }, [ runSettled ]);
 
   const afterOwnTraversal = useCallback(() => {
     if (closing.current.size > 0) flush();
@@ -98,7 +107,8 @@ function useBackEntries(enabled: boolean): BackEntries | null {
     for (const key of deferred.current.splice(0)) {
       if (open.current.some((entry) => entry.key === key) && !pushed.current.includes(key)) pushEntry(key);
     }
-  }, [ flush, pushEntry ]);
+    runSettled();
+  }, [ flush, pushEntry, runSettled ]);
 
   const add = useCallback((key: string, dismiss: Dismiss) => {
     open.current = [ ...open.current.filter((entry) => entry.key !== key), { key, dismiss } ];
@@ -151,6 +161,24 @@ function useBackEntries(enabled: boolean): BackEntries | null {
     scopes.current = scopes.current.filter((scope) => scope !== key);
   }, []);
 
+  const whenSettled = useCallback((fn: () => void) => {
+    if (flushTimer.current === null && swallowPops.current === 0 && closing.current.size === 0) {
+      fn();
+      return;
+    }
+    // A traversal that never lands (the page left meanwhile) must not swallow the callback.
+    let done = false;
+    const once = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(fallback);
+      settledQueue.current = settledQueue.current.filter((queued) => queued !== once);
+      fn();
+    };
+    const fallback = setTimeout(once, 1000);
+    settledQueue.current.push(once);
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
     const onPopState = () => {
@@ -184,8 +212,8 @@ function useBackEntries(enabled: boolean): BackEntries | null {
   }, [ enabled, afterOwnTraversal, pushEntry ]);
 
   return useMemo(
-    () => (enabled ? { add, remove, release, closeTop, enterScope, leaveScope } : null),
-    [ enabled, add, remove, release, closeTop, enterScope, leaveScope ],
+    () => (enabled ? { add, remove, release, closeTop, enterScope, leaveScope, whenSettled } : null),
+    [ enabled, add, remove, release, closeTop, enterScope, leaveScope, whenSettled ],
   );
 }
 
@@ -254,6 +282,19 @@ export function useBackDismiss(active: boolean, onDismiss: () => void) {
 
   const release = useCallback(() => back?.release(key), [ back, key ]);
   return { release };
+}
+
+/**
+ * Defers work until the overlays have finished closing: an overlay that closes goes back() over its own history
+ * entry on a later task, and a URL write made before that traversal lands (nuqs's replaceState) would be written
+ * onto the overlay's entry and popped away with it. Without `dismissOnBack` it runs `fn` at once.
+ */
+export function useAfterOverlaysSettle() {
+  const back = useContext(FocusTrapContext)?.back ?? null;
+  return useCallback((fn: () => void) => {
+    if (back) back.whenSettled(fn);
+    else fn();
+  }, [ back ]);
 }
 
 /**

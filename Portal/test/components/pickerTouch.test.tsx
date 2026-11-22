@@ -22,18 +22,33 @@ function setPointer(coarse: boolean) {
 }
 afterEach(() => { window.matchMedia = original; });
 
+describe("date picker", () => {
+    it("is read-only on a coarse pointer", () => {
+        setPointer(true);
+        const { container } = render(<ZonedDatePicker data-testid="p" />);
+        expect(container.querySelector("input")!.readOnly).toBe(true);
+    });
+});
+
+// On touch, the time and range pickers are the sheet-based touch pickers (test/components/Pickers): no text input at all.
+describe.each([
+    ["time picker", () => <ZonedDatePicker.TimePicker data-testid="p" />],
+    ["range picker", () => <DateRangePicker value={null} onChange={() => {}} testId="p" />],
+])("%s", (_name, ui) => {
+    it("has no text input on a coarse pointer", () => {
+        setPointer(true);
+        const { container } = render(ui());
+        expect(container.querySelector("input")).toBeNull();
+        expect(container.querySelector(".ant-picker")).toBeNull();
+    });
+});
+
 describe.each([
     ["date picker", () => <ZonedDatePicker data-testid="p" />],
     ["time picker", () => <ZonedDatePicker.TimePicker data-testid="p" />],
     ["range picker", () => <DateRangePicker value={null} onChange={() => {}} testId="p" />],
 ])("%s", (_name, ui) => {
-    it("is read-only on a coarse pointer", () => {
-        setPointer(true);
-        const { container } = render(ui());
-        const input = container.querySelector("input")!;
-        expect(input.readOnly).toBe(true);
-    });
-    it("is editable otherwise", () => {
+    it("is antd's editable input otherwise", () => {
         setPointer(false);
         const { container } = render(ui());
         expect(container.querySelector("input")!.readOnly).toBe(false);
