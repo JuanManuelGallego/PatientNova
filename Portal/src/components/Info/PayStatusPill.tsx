@@ -1,6 +1,7 @@
 import { STATUS_ICONS } from "@/src/config/icons";
 
-export function PayStatusPill({ paid }: { paid: boolean }) {
+/** `standalone`: shown away from a "Pago" heading (a list card), so an unpaid one reads "Sin pagar", not "Pendiente". */
+export function PayStatusPill({ paid, standalone = false }: { paid: boolean; standalone?: boolean }) {
     const Icon = paid ? STATUS_ICONS.success : STATUS_ICONS.pending;
     return (
         <span className="pill status-icon-pill">
@@ -9,7 +10,7 @@ export function PayStatusPill({ paid }: { paid: boolean }) {
                 style={{ color: paid ? "var(--c-success)" : "var(--c-warning)" }}
                 aria-hidden="true"
             />
-            {paid ? "Pagado" : "Pendiente"}
+            {paid ? "Pagado" : standalone ? "Sin pagar" : "Pendiente"}
         </span>
     );
 }

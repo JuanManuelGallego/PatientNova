@@ -32,6 +32,8 @@ const TARGET_SELECTORS = [
   '.tab-nav button',
   '.navbar-hamburger',
   '.table-compact-control',
+  '.table-card-toolbar__button',
+  '.data-card',
 ];
 
 async function settle(page: Page) {

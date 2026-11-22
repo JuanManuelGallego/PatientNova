@@ -20,8 +20,8 @@ test.describe('Back button on provider pages (phone)', () => {
   type Seed = { api: ApiClient; trackedPatients: Tracker; trackedAppointments: Tracker };
 
   /**
-   * Citas filtered to a fresh patient's appointments (at most one page of 10), so every row is on the first
-   * page. Returns the last created appointment's row.
+   * Citas filtered to a fresh patient's appointments (at most one page of 10), so every card is on the first
+   * page. Returns the last created appointment's card (a phone shows the list as cards, not table rows).
    */
   async function openAppointments(page: Page, { api, trackedPatients, trackedAppointments }: Seed, count = 1) {
     const patient = await createTestPatient(api);
@@ -34,14 +34,14 @@ test.describe('Back button on provider pages (phone)', () => {
     }
 
     await page.goto(`/appointments?patientId=${patient.id}`);
-    const row = page.getByTestId(`appointment-row-${lastId}`);
-    await expect(row).toBeVisible();
-    return row;
+    const card = page.getByTestId(`appointment-card-${lastId}`);
+    await expect(card).toBeVisible();
+    return card;
   }
 
-  async function openDrawer(row: Locator, page: Page) {
-    // The patient cell: status, payment and action cells stop propagation.
-    await row.locator('td').first().click();
+  async function openDrawer(card: Locator, page: Page) {
+    // The whole card is the tap target.
+    await card.click();
     const drawer = new AppointmentDrawer(page);
     await drawer.waitForOpen();
     return drawer;
@@ -121,7 +121,7 @@ test.describe('Back button on provider pages (phone)', () => {
     page, api, trackedPatients, trackedAppointments,
   }) => {
     await openAppointments(page, { api, trackedPatients, trackedAppointments }, 10);
-    const rows = page.locator('[data-testid^="appointment-row-"]');
+    const rows = page.locator('[data-testid^="appointment-card-"]');
     await expect(rows).toHaveCount(10);
     const lastRow = rows.last();
     await lastRow.scrollIntoViewIfNeeded();

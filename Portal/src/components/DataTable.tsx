@@ -3,75 +3,18 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 import { createPortal } from "react-dom";
 import { SkeletonRow } from "./Info/Skeleton";
 import { PAGINATION_ICONS, ACTION_ICONS } from "@/src/config/icons";
-import { SelectOption } from "./CustomSelect";
-import { DateTimePicker } from "./DateTimePicker";
-import { DateRangePicker, type DateRangeValue } from "./DateRangePicker";
-import { EnumFilter } from "./EnumFilter";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { FilterBody, isFilterActive, type ColumnDef, type ColumnFilterConfig } from "./tableColumns";
+import { SkeletonCard } from "./DataCard";
+import { TableCardToolbar, TableFilterSheet } from "./TableFilterSheet";
+import { useContainerNarrow } from "@/src/hooks/useContainerNarrow";
 
-export type ColumnFilterConfig =
-  | {
-      kind: "enum";
-      options: SelectOption[];
-      value: string[];
-      onChange: (value: string[]) => void;
-      testId?: string;
-      triggerTestId?: string;
-    }
-  | {
-      kind: "date";
-      value: string;
-      onChange: (value: string) => void;
-      testId?: string;
-      triggerTestId?: string;
-    }
-  | {
-      kind: "date-range";
-      value: DateRangeValue;
-      onChange: (value: DateRangeValue) => void;
-      testId?: string;
-      triggerTestId?: string;
-    }
-  | {
-      kind: "single-enum";
-      options: SelectOption[];
-      value: string;
-      onChange: (value: string) => void;
-      testId?: string;
-      triggerTestId?: string;
-    }
-  | {
-      kind: "custom";
-      /** Renders the filter body; receives a callback to close the popover. */
-      render: (onClose: () => void) => React.ReactNode;
-      /** Whether the filter is considered active (controls the trigger highlight). */
-      active?: boolean;
-      testId?: string;
-      triggerTestId?: string;
-    };
+export type { ColumnDef, ColumnFilterConfig } from "./tableColumns";
+export { DataCard, type DataCardProps } from "./DataCard";
 
-function isFilterActive(filter: ColumnFilterConfig | undefined): boolean {
-  if (!filter) return false;
-  switch (filter.kind) {
-    case "custom":
-      return Boolean(filter.active);
-    case "enum":
-      return filter.value.length > 0;
-    case "date-range":
-      return (
-        filter.value !== null && filter.value[0] !== "" && filter.value[1] !== ""
-      );
-    default:
-      return filter.value !== "";
-  }
-}
+/** Below this width of the table's container, a `DataTable` with `renderCard` shows cards instead of the table. */
+export const CARD_LAYOUT_MAX_WIDTH = 640;
 
-export interface ColumnDef {
-  label: string;
-  sortKey?: string;
-  filter?: ColumnFilterConfig;
-  priority?: "secondary" | "actions";
-}
 
 interface TableFooterProps {
   page: number;
@@ -211,6 +154,12 @@ interface DataTableProps<T> {
   onSort?: (sortKey: string) => void;
   /** Total row count. When provided, the footer stays visible on out-of-range (empty) pages so users can navigate back. */
   total?: number;
+  /**
+   * Opt-in phone layout. While the table's container is narrower than {@link CARD_LAYOUT_MAX_WIDTH}, the rows
+   * render as a list of cards and the header filters move into one "Filtros" sheet. Must return a
+   * `<DataCard key={...}>`. The table renders instead of the cards wherever the width cannot be measured.
+   */
+  renderCard?: (item: T, index: number) => React.ReactNode;
 }
 
 export function HeaderFilterPopover({
@@ -284,49 +233,12 @@ export function HeaderFilterPopover({
       role="dialog"
       aria-label="Filtro"
     >
-      {config.kind === "enum" ? (
-        <EnumFilter
-          options={config.options}
-          value={config.value}
-          onChange={config.onChange}
-          testId={config.testId}
-        />
-      ) : config.kind === "single-enum" ? (
-        <EnumFilter
-          single
-          options={config.options}
-          value={config.value ? [config.value] : []}
-          onChange={(next) => config.onChange(next[0] ?? "")}
-          testId={config.testId}
-        />
-      ) : config.kind === "custom" ? (
-        config.render(onClose)
-      ) : config.kind === "date-range" ? (
-        <>
-          <DateRangePicker
-            value={config.value}
-            popupContainer={() => popoverRef.current}
-            onChange={(range) => {
-              config.onChange(range);
-              onClose();
-            }}
-            testId={config.testId}
-          />
-        </>
-      ) : (
-        <>
-          <DateTimePicker
-            date={config.value}
-            mode="localDate"
-            popupContainer={() => popoverRef.current}
-            onChange={(iso) => {
-              config.onChange(iso);
-              onClose();
-            }}
-            testId={config.testId}
-          />
-        </>
-      )}
+      <FilterBody
+        config={config}
+        onClose={onClose}
+        onPicked={onClose}
+        popupContainer={() => popoverRef.current}
+      />
     </div>,
     document.body,
   );
@@ -345,9 +257,22 @@ export function DataTable<T>({
   order,
   onSort,
   total,
+  renderCard,
 }: DataTableProps<T>) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardMode = useContainerNarrow(containerRef, CARD_LAYOUT_MAX_WIDTH, Boolean(renderCard));
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
   const [openFrom, setOpenFrom] = useState<"header" | "compact">("header");
+  // Switching layout (a phone rotating) drops the other layout's open filter UI, so it can't reopen by itself
+  // later. Adjusted during render (React's "storing information from previous renders"), not in an effect.
+  const [layoutWasCards, setLayoutWasCards] = useState(cardMode);
+  if (layoutWasCards !== cardMode) {
+    setLayoutWasCards(cardMode);
+    if (cardMode) setOpenColumnIndex(null);
+    else setSheetOpen(false);
+  }
   const headerRefs = useRef<Array<HTMLElement | null>>([]);
   const compactRefs = useRef<Array<HTMLElement | null>>([]);
 
@@ -388,7 +313,29 @@ export function DataTable<T>({
   );
 
   return (
-    <div className="table-card">
+    <div className="table-card" ref={containerRef}>
+      {cardMode && renderCard ? (
+        <>
+          <TableCardToolbar
+            columns={columns}
+            orderBy={orderBy}
+            order={order}
+            onSort={onSort}
+            onOpen={() => setSheetOpen(true)}
+            testId={testId}
+          />
+          {!loading && rows.length === 0 ? (
+            emptyState && <div className="data-cards__empty">{emptyState}</div>
+          ) : (
+            <ul className="data-cards" data-testid={testId} aria-busy={loading || undefined}>
+              {loading
+                ? Array.from({ length: skeletonCount }).map((_, i) => <SkeletonCard key={i} />)
+                : rows.map((row, i) => renderCard(row, i))}
+            </ul>
+          )}
+        </>
+      ) : (
+      <>
       {compactColumns.length > 0 && (
         <div
           className="table-compact-controls"
@@ -540,10 +487,28 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+      </>
+      )}
       {!loading && footer && (rows.length > 0 || (total ?? 0) > 0) && (
         <div className="table-footer">{footer}</div>
       )}
-      {openColumnIndex !== null &&
+      {cardMode &&
+        sheetOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          // On <body>: the card's container query would otherwise contain the sheet's fixed scrim.
+          <TableFilterSheet
+            columns={columns}
+            orderBy={orderBy}
+            order={order}
+            onSort={onSort}
+            onClose={closeSheet}
+            testId={testId}
+          />,
+          document.body,
+        )}
+      {!cardMode &&
+        openColumnIndex !== null &&
         typeof document !== "undefined" &&
         columns[openColumnIndex]?.filter &&
         createPortal(

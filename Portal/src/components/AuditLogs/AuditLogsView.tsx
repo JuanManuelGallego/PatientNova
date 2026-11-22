@@ -7,6 +7,7 @@ import {
   DataTableFooter,
   ColumnDef,
 } from "@/src/components/DataTable";
+import { DataCard } from "@/src/components/DataCard";
 import { EmptyState } from "@/src/components/EmptyState";
 import { AuditDrawer } from "@/src/components/Drawers/AuditDrawer";
 import { FilterBar } from "@/src/components/FilterBar";
@@ -235,6 +236,20 @@ export function AuditLogsView() {
             <td className="td td--date col--secondary">{ACTION_SOURCE_CONFIG[log.source]?.label ?? log.source}</td>
             <td className="td td--date">{fmtTimestamp(log.eventTimeUtc, timezone)}</td>
           </tr>
+        )}
+        renderCard={(log) => (
+          <DataCard
+            key={log.id}
+            testId={`audit-card-${log.id}`}
+            onOpen={() => setViewLog(log)}
+            title={<ActionLabel action={log.actionType} />}
+            aside={<EntityTypeLabel entityType={log.entityType} />}
+            lines={[
+              <span key="actor">{log.actorDisplayName}</span>,
+              <span key="when" className="data-card__emph">{fmtTimestamp(log.eventTimeUtc, timezone)}</span>,
+              <span key="desc">{log.description}</span>,
+            ]}
+          />
         )}
         emptyState={error ? undefined : (
           <EmptyState

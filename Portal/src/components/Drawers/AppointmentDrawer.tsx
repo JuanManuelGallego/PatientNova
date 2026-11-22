@@ -19,7 +19,7 @@ import {
   Section,
   Row,
 } from "./DrawerUtils";
-import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { OnlineBadge } from "../OnlineBadge";
@@ -31,6 +31,7 @@ export function AppointmentDrawer({
   appt,
   onClose,
   onEdit,
+  onConfirm,
   onPay,
   onDelete,
   onViewPatient,
@@ -39,6 +40,8 @@ export function AppointmentDrawer({
   appt: Appointment;
   onClose: () => void;
   onEdit?: () => void;
+  /** Marks a SCHEDULED appointment CONFIRMED (phone cards have no inline button). */
+  onConfirm?: () => void;
   onPay?: () => void;
   onDelete?: () => void;
   onViewPatient?: (patient: Appointment["patient"]) => void;
@@ -69,8 +72,19 @@ export function AppointmentDrawer({
     );
   }
 
-  const footer = (onEdit || onDelete) ? (
+  const canConfirm = Boolean(onConfirm) && appointment.status === AppointmentStatus.SCHEDULED;
+  const footer = (onEdit || onDelete || canConfirm) ? (
     <>
+      {canConfirm && (
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="btn-primary btn-primary--block btn-primary--success"
+          data-testid="appointment-drawer-confirm-button"
+        >
+          <STATUS_ICONS.confirmed size={16} aria-hidden="true" /> Confirmar
+        </button>
+      )}
       {onEdit && (
         <button
           type="button"

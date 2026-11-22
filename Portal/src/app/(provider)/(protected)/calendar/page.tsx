@@ -113,6 +113,17 @@ function CalendarContent() {
     }
   }
 
+  async function handleConfirm(id: string) {
+    setActionError(null);
+    try {
+      await updateAppointment(id, { status: AppointmentStatus.CONFIRMED });
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Error al confirmar la cita");
+    } finally {
+      fetchAppointments();
+    }
+  }
+
   const selectedDayAppts = selectedDay ? (apptByDate[ selectedDay ] ?? []) : [];
   const selectedDayBlocked = selectedDay ? (blockedByDate[ selectedDay ] ?? []) : [];
   const selectedDayHolds = selectedDay ? (holdByDate[ selectedDay ] ?? []) : [];
@@ -243,6 +254,10 @@ function CalendarContent() {
         appointmentActions={{
           onEdit: (appointment) => {
             setEditAppt(appointment);
+            closeDrawer();
+          },
+          onConfirm: (appointment) => {
+            handleConfirm(appointment.id);
             closeDrawer();
           },
           onPay: (appointment) => {
