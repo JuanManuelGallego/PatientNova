@@ -7,6 +7,7 @@ import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { TabNav } from "@/src/components/TabNav";
 import { DataTable, DataTableFooter, type ColumnDef } from "@/src/components/DataTable";
+import { DataCard } from "@/src/components/DataCard";
 import { EmptyState } from "@/src/components/EmptyState";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { RequestStatusPill } from "@/src/components/Info/RequestStatusPill";
@@ -53,7 +54,9 @@ function RequestsPageContent() {
     { label: "Cita solicitada" },
     { label: "Tipo y lugar" },
     ...(tab === "resolved" ? [ { label: "Estado" } ] : []),
-    { label: tab === "pending" ? "Vence en" : tab === "resolved" ? "Resuelta" : "Venció" },
+    tab === "pending"
+      ? { label: "Vence en" }
+      : { label: tab === "resolved" ? "Resuelta" : "Venció", priority: "secondary" as const },
   ], [ tab ]);
 
   return (
@@ -104,9 +107,27 @@ function RequestsPageContent() {
               {tab === "pending" ? (
                 <td className="td td--date" title={fmtDateTime(r.holdExpiresAt, timezone)}>{fmtRelative(r.holdExpiresAt)}</td>
               ) : (
-                <td className="td td--subtle">{fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</td>
+                <td className="td td--subtle col--secondary">{fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</td>
               )}
             </tr>
+          )}
+          renderCard={(r) => (
+            <DataCard
+              key={r.id}
+              testId={`request-card-${r.id}`}
+              onOpen={() => setOpenId(r.id)}
+              title={`${r.name} ${r.lastName}`}
+              aside={<RequestStatusPill status={r.status} />}
+              lines={[
+                <span key="when" className="data-card__emph">{fmtDateTime(r.startAt, timezone)}</span>,
+                <span key="type">{r.type.name} · {r.location.name}</span>,
+                <span key="received">Recibida {fmtDateTime(r.createdAt, timezone)}</span>,
+                tab === "pending"
+                  ? <span key="end">Vence: {fmtRelative(r.holdExpiresAt)}</span>
+                  : <span key="end">{tab === "resolved" ? "Resuelta" : "Venció"} {fmtDateTime(r.resolvedAt ?? r.holdExpiresAt, timezone)}</span>,
+              ]}
+              badges={r.kind === "REVIEW" ? <span className="pill">Paciente inactivo o eliminado</span> : undefined}
+            />
           )}
           footer={
             <DataTableFooter

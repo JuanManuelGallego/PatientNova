@@ -14,6 +14,7 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ChannelPill } from "@/src/components/Info/ChannelPill";
 import {
+  DataCard,
   DataTable,
   DataTableFooter,
   ColumnDef,
@@ -24,7 +25,7 @@ import { TogglePatientModal } from "@/src/components/Modals/TogglePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
-import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
@@ -44,6 +45,34 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 enum PatientTab {
   Active = "active",
   Inactive = "inactive",
+}
+
+function PatientContactLine({ patient }: { patient: Patient }) {
+  if (patient.email) {
+    return (
+      <>
+        <CHANNEL_ICONS.EMAIL size={14} aria-hidden="true" />
+        {patient.email}
+      </>
+    );
+  }
+  if (patient.whatsappNumber) {
+    return (
+      <>
+        <CHANNEL_ICONS.WHATSAPP size={14} aria-hidden="true" />
+        {patient.whatsappNumber}
+      </>
+    );
+  }
+  if (patient.smsNumber) {
+    return (
+      <>
+        <CHANNEL_ICONS.SMS size={14} aria-hidden="true" />
+        {patient.smsNumber}
+      </>
+    );
+  }
+  return <>Sin datos de contacto</>;
 }
 
 function PatientsPageContent() {
@@ -288,6 +317,24 @@ function PatientsPageContent() {
             </tr>
           );
           }}
+          renderCard={(p) => (
+            <DataCard
+              key={p.id}
+              testId={`patient-card-${p.id}`}
+              onOpen={() => openPatient(p)}
+              leading={
+                <span
+                  className="avatar avatar--md"
+                  style={{ background: getAvatarColor(p.id) }}
+                  aria-hidden="true"
+                >
+                  {getInitials(p.name, p.lastName)}
+                </span>
+              }
+              title={`${p.name} ${p.lastName}`}
+              lines={[<PatientContactLine key="contact" patient={p} />]}
+            />
+          )}
           emptyState={error ? undefined : (
             <EmptyState
               icon={STATUS_ICONS.search}

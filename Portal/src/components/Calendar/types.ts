@@ -3,7 +3,10 @@ import { BlockedTime } from "@/src/types/BlockedTime";
 export enum ViewMode {
   Month = "month",
   Week = "week",
+  Day = "day",
 }
+
+export const DESKTOP_VIEWS = [ ViewMode.Month, ViewMode.Week ] as const;
 
 export interface ApptChipProps {
   a: import("@/src/types/Appointment").Appointment;
@@ -91,7 +94,7 @@ export interface DayPanelProps {
   onClose: () => void;
   onViewAppt: (a: import("@/src/types/Appointment").Appointment) => void;
   onDrillToDay: (date: string) => void;
-  onCreateAt: (date: string) => void;
+  onCreateOnDay: (day: string) => void;
   onSelectBlockedTime: (bt: BlockedTime) => void;
   onCreateBlockedTime: (date: string) => void;
 }

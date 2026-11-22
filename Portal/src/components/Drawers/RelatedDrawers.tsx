@@ -11,6 +11,7 @@ import { ReminderDrawer } from "./ReminderDrawer";
 
 type AppointmentActions = {
   onEdit?: (appointment: Appointment) => void;
+  onConfirm?: (appointment: Appointment) => void;
   onPay?: (appointment: Appointment) => void;
   onDelete?: (appointment: Appointment) => void;
 };
@@ -57,6 +58,11 @@ export function RelatedDrawers({
           onEdit={
             appointmentActions?.onEdit
               ? () => appointmentActions.onEdit?.(target.value)
+              : undefined
+          }
+          onConfirm={
+            appointmentActions?.onConfirm
+              ? () => appointmentActions.onConfirm?.(target.value)
               : undefined
           }
           onPay={

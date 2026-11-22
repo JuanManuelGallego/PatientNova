@@ -18,6 +18,10 @@ vi.mock("@/src/api/booking-requests/useResolveBookingRequest", () => ({
   useResolveBookingRequest: () => ({ approve, reject, loading: false, error: resolveError }),
 }));
 vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
+vi.mock("next/navigation", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("next/navigation")>()),
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+}));
 
 function candidate(overrides: Partial<RequestCandidate> = {}): RequestCandidate {
   return {

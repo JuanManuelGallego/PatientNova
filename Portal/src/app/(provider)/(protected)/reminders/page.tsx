@@ -16,6 +16,7 @@ import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import {
+  DataCard,
   DataTable,
   DataTableFooter,
   ColumnDef,
@@ -34,6 +35,7 @@ import { FilterBar } from "@/src/components/FilterBar";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Megaphone, Send, AlertTriangle, RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
 import { useDateRangeFilter } from "@/src/hooks/useDateRangeFilter";
 import { DateRangeValue } from "@/src/components/DateRangePicker";
@@ -361,6 +363,39 @@ function RemindersPageContent() {
   );
 }
 
+function relativeSendLabel(sendAt: string | undefined): string {
+  const rel = fmtRelative(sendAt);
+  if (!sendAt || rel === "Ahora mismo") return rel;
+  return new Date(sendAt).getTime() > Date.now() ? `Dentro de ${rel}` : `Hace ${rel}`;
+}
+
+const reminderTitle = (r: Reminder) =>
+  r.patient ? `${r.patient.name} ${r.patient.lastName}`.trim() : r.to;
+
+function reminderCard(
+  reminder: Reminder,
+  timezone: string,
+  onOpen: (r: Reminder) => void,
+  extraLines: ReactNode[],
+) {
+  return (
+    <DataCard
+      key={reminder.id}
+      testId={`reminder-card-${reminder.id}`}
+      onOpen={() => onOpen(reminder)}
+      title={reminderTitle(reminder)}
+      aside={<ReminderStatusPill status={reminder.status} />}
+      lines={[
+        <span key="when" className="data-card__emph">
+          {fmtDateTime(reminder.sendAt, timezone)}
+        </span>,
+        ...extraLines,
+        <span key="channel">{CHANNEL_CFG[ reminder.channel ].label}</span>,
+      ]}
+    />
+  );
+}
+
 function ActiveRemindersTab({
   reminders,
   loading,
@@ -433,7 +468,7 @@ function ActiveRemindersTab({
         },
       },
       { label: "Dentro de" },
-      { label: "Creado el" },
+      { label: "Creado el", priority: "secondary" },
       { label: "", priority: "actions" },
     ],
     [statusFilter, dateFilter, setStatusFilter, setDateFilter, setPage],
@@ -469,7 +504,7 @@ function ActiveRemindersTab({
           </td>
           <td className="td td--date">{fmtDateTime(reminder.sendAt, timezone)}</td>
           <td className="td td--date">{fmtRelative(reminder.sendAt)}</td>
-          <td className="td td--subtle">{fmtDateTime(reminder.sendAt, timezone)}</td>
+          <td className="td td--subtle col--secondary">{fmtDateTime(reminder.createdAt, timezone)}</td>
           <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
             <div className="td-actions">
               <button
@@ -491,6 +526,11 @@ function ActiveRemindersTab({
           </td>
         </tr>
       )}
+      renderCard={(reminder) =>
+        reminderCard(reminder, timezone, setViewReminder, [
+          <span key="rel">{relativeSendLabel(reminder.sendAt)}</span>,
+        ])
+      }
       emptyState={hasError ? undefined : (
         <EmptyState
           icon={STATUS_ICONS.bell}
@@ -654,6 +694,16 @@ function HistoryRemindersTab({
           </td>
         </tr>
       )}
+      renderCard={(reminder) =>
+        reminderCard(
+          reminder,
+          timezone,
+          setViewReminder,
+          reminder.status === ReminderStatus.FAILED && reminder.error
+            ? [<span key="error" style={{ color: "var(--c-error)" }}>{reminder.error}</span>]
+            : [],
+        )
+      }
       emptyState={hasError ? undefined : (
         <EmptyState
           icon={STATUS_ICONS.clipboard}

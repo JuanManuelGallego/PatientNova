@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type MouseEvent } from "react";
 import Image from "next/image";
 import Sidebar from "@/src/components/Sidebar";
 import { useMediaQuery } from "@/src/hooks/useMediaQuery";
+import { useBackDismiss, useBackScope } from "@/src/hooks/useFocusTrap";
+import { isPlainClick } from "@/src/components/OverlayLink";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
+import { BottomTabBar } from "@/src/components/BottomTabBar";
+import { DESKTOP_NAV_QUERY } from "@/src/config/navigation";
+import { theme } from "@/src/config/theme";
+import { useTheme } from "@/src/providers/ThemeContext";
 
 /** Wraps the standard page-shell (sidebar + navbar + main content area). */
 export default function PageLayout({
@@ -14,13 +20,20 @@ export default function PageLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery(DESKTOP_NAV_QUERY);
   const MenuIcon = ACTION_ICONS.menu;
+  const { isDark } = useTheme();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isDesktop) setSidebarOpen(false);
   }, [isDesktop]);
+
+  useBackScope();
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  const menuOverlay = sidebarOpen && !isDesktop;
+  const { release } = useBackDismiss(menuOverlay, closeSidebar);
 
   useEffect(() => {
     if (sidebarOpen && !isDesktop) {
@@ -50,10 +63,18 @@ export default function PageLayout({
     return () => window.removeEventListener("keydown", handleKey);
   }, [sidebarOpen]);
 
-  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const navigateFromSidebar = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
+    const link = event?.currentTarget;
+    if (menuOverlay && link && isPlainClick(event)) {
+      if (link.href === window.location.href) event.preventDefault();
+      else release();
+    }
+    setSidebarOpen(false);
+  }, [ menuOverlay, release ]);
 
   return (
     <div className="page-shell">
+      <meta name="theme-color" content={isDark ? theme.themeColor.dark : theme.themeColor.light} />
       {sidebarOpen && !isDesktop && (
         <div
           className="sidebar-backdrop"
@@ -62,7 +83,12 @@ export default function PageLayout({
           data-testid="sidebar-backdrop"
         />
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+        onNavigate={navigateFromSidebar}
+        replaceOnNavigate={menuOverlay}
+      />
       <div className="page-content-wrapper">
         <header className="top-navbar">
           <button
@@ -92,6 +118,8 @@ export default function PageLayout({
           {children}
         </main>
       </div>
+      <BottomTabBar inert={menuOverlay} />
     </div>
   );
 }
+

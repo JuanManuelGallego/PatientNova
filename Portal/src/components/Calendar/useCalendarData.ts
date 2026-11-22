@@ -83,12 +83,15 @@ export function useCalendarData({
     return map;
   }, [ holds, timezone ]);
 
+  const weekFirstYear = weekStart.getFullYear();
+  const weekLastYear = addDays(weekStart, 6).getFullYear();
   const holidayMap = useMemo(() => {
-    const holidays = getColombianHolidays(calYear);
     const map: Record<string, string> = {};
-    for (const h of holidays) map[ h.date ] = h.name;
+    for (const year of new Set([ calYear, weekFirstYear, weekLastYear ])) {
+      for (const h of getColombianHolidays(year)) map[ h.date ] = h.name;
+    }
     return map;
-  }, [ calYear ]);
+  }, [ calYear, weekFirstYear, weekLastYear ]);
 
   const cellDate = (cell: number): string | null => {
     const day = cell - startOffset + 1;

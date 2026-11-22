@@ -2,6 +2,7 @@ import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import { DayPanelProps } from "./types";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { useBackDismiss } from "@/src/hooks/useFocusTrap";
 import { HOLD_LABEL } from "./PendingHold";
 
 export function DayPanel({
@@ -11,13 +12,14 @@ export function DayPanel({
   onClose,
   onViewAppt,
   onDrillToDay,
-  onCreateAt,
+  onCreateOnDay,
   onSelectBlockedTime,
   onCreateBlockedTime,
   holds = [],
   onSelectHold,
 }: DayPanelProps) {
   const timezone = useDisplayTimezone();
+  useBackDismiss(true, onClose);
   return (
     <div className="cal-day-panel-overlay" onClick={onClose}>
       <div className="cal-day-panel" onClick={(e) => e.stopPropagation()}>
@@ -129,7 +131,7 @@ export function DayPanel({
             className="btn-primary btn-hero"
             style={{ flex: 1, justifyContent: "center" }}
             onClick={() => {
-              onCreateAt(selectedDay);
+              onCreateOnDay(selectedDay);
               onClose();
             }}
           >

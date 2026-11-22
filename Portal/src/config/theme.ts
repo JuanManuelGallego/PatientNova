@@ -19,6 +19,8 @@ export const theme = {
   /** ── Font ─────────────────────────────────────────────────────────────── */
   fontFamily: "'DM Sans', sans-serif",
 
+  themeColor: { light: "#FFFFFF", dark: "#1A1825" },
+
   /** ── Colors ──────────────────────────────────────────────────────────── */
   colors: {
     /* Brand */

@@ -35,7 +35,7 @@ export function WeekView({
     <div style={{ overflowX: "auto", position: "relative" }}>
       <div
         style={{
-          minWidth: 640,
+          minWidth: 560,
           opacity: loading ? 0.5 : 1,
           transition: "opacity 0.15s",
           pointerEvents: loading ? "none" : "auto",

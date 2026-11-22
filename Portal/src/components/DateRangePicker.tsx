@@ -2,8 +2,12 @@ import { ConfigProvider, DatePicker } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
 import esEs from "antd/locale/es_ES";
+import { useMediaQuery } from "@/src/hooks/useMediaQuery";
 import { getAntThemeConfig } from "@/src/config/antTheme";
 import { useTheme } from "@/src/providers/ThemeContext";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { todayFormattedString } from "@/src/utils/TimeUtils";
+import { TouchDateRange } from "./Pickers/TouchDateRange";
 
 dayjs.locale("es");
 const mobilePopupStyle: React.CSSProperties = {
@@ -24,6 +28,7 @@ export function DateRangePicker({
   testId?: string;
 }) {
   const { isDark } = useTheme();
+  const coarse = useMediaQuery("(pointer: coarse)");
   const handleChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     if (!dates || !dates[0] || !dates[1]) {
       onChange(null);
@@ -31,6 +36,19 @@ export function DateRangePicker({
     }
     onChange([dates[0].format("YYYY-MM-DD"), dates[1].format("YYYY-MM-DD")]);
   };
+  const timezone = useDisplayTimezone();
+
+  if (coarse) {
+    return (
+      <TouchDateRange
+        value={value}
+        onChange={onChange}
+        today={todayFormattedString(timezone)}
+        popupContainer={popupContainer}
+        testId={testId}
+      />
+    );
+  }
 
   return (
     <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>

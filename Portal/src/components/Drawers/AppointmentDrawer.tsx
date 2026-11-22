@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OverlayLink } from "@/src/components/OverlayLink";
 import { activityHref } from "@/src/config/navigation";
 import {
   Appointment,
@@ -19,7 +19,7 @@ import {
   Section,
   Row,
 } from "./DrawerUtils";
-import { ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { ACTION_ICONS, DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { PayStatusPill } from "../Info/PayStatusPill";
 import { AppointmentStatusPill, ReminderStatusPill } from "../Info/StatusPill";
 import { OnlineBadge } from "../OnlineBadge";
@@ -31,6 +31,7 @@ export function AppointmentDrawer({
   appt,
   onClose,
   onEdit,
+  onConfirm,
   onPay,
   onDelete,
   onViewPatient,
@@ -39,6 +40,7 @@ export function AppointmentDrawer({
   appt: Appointment;
   onClose: () => void;
   onEdit?: () => void;
+  onConfirm?: () => void;
   onPay?: () => void;
   onDelete?: () => void;
   onViewPatient?: (patient: Appointment["patient"]) => void;
@@ -69,8 +71,19 @@ export function AppointmentDrawer({
     );
   }
 
-  const footer = (onEdit || onDelete) ? (
+  const canConfirm = Boolean(onConfirm) && appointment.status === AppointmentStatus.SCHEDULED;
+  const footer = (onEdit || onDelete || canConfirm) ? (
     <>
+      {canConfirm && (
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="btn-primary btn-primary--block btn-primary--success"
+          data-testid="appointment-drawer-confirm-button"
+        >
+          <STATUS_ICONS.confirmed size={16} aria-hidden="true" /> Confirmar
+        </button>
+      )}
       {onEdit && (
         <button
           type="button"
@@ -222,9 +235,9 @@ export function AppointmentDrawer({
       <Section title="Información del sistema" quiet>
         <Row icon={DETAIL_ICONS.id} label="ID" value={<span className="mono-sm">{appointment.id}</span>} />
         <Row icon={DETAIL_ICONS.calendar} label="Creada" value={new Date(appointment.createdAt).toLocaleString("es-ES", { timeZone: timezone })} />
-        <Link href={activityHref({ entityId: appointment.id })} className="drawer-link" data-testid="appointment-drawer-audit-link">
+        <OverlayLink href={activityHref({ entityId: appointment.id })} className="drawer-link" data-testid="appointment-drawer-audit-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
-        </Link>
+        </OverlayLink>
       </Section>
     </DrawerShell>
   );

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "@/src/config/icons";
 import { isNavItemActive, type NavGroup, type NavItem } from "@/src/config/navigation";
@@ -6,7 +6,8 @@ import { isNavItemActive, type NavGroup, type NavItem } from "@/src/config/navig
 interface NavGroupListProps<Id extends string> {
     groups: NavGroup<Id>[];
     pathname: string;
-    onNavigate?: () => void;
+    onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
+    replace?: boolean;
     testIdPrefix: string;
     ariaLabel: string;
     className?: string;
@@ -16,7 +17,7 @@ interface NavGroupListProps<Id extends string> {
 }
 
 export function NavGroupList<Id extends string>({
-    groups, pathname, onNavigate, testIdPrefix, ariaLabel, className, testId, icon, badge,
+    groups, pathname, onNavigate, replace = false, testIdPrefix, ariaLabel, className, testId, icon, badge,
 }: NavGroupListProps<Id>) {
     return (
         <nav className={className} aria-label={ariaLabel} data-testid={testId}>
@@ -33,6 +34,7 @@ export function NavGroupList<Id extends string>({
                                     key={item.id}
                                     href={item.href ?? item.path}
                                     onClick={onNavigate}
+                                    replace={replace}
                                     aria-current={isActive ? "page" : undefined}
                                     data-testid={`${testIdPrefix}-${item.id}`}
                                 >

@@ -1,0 +1,63 @@
+.fab {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom));
+  z-index: calc(var(--z-sidebar) - 3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: var(--c-brand);
+  color: var(--c-white);
+  box-shadow: var(--shadow-btn), 0 2px 6px rgba(17, 24, 39, 0.18);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.fab:active {
+  transform: scale(0.94);
+  background: var(--c-brand-hover);
+}
+
+.fab:focus-visible {
+  outline: 3px solid var(--c-brand);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .fab:hover {
+    background: var(--c-brand-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
+
+  .fab:active {
+    transform: none;
+  }
+}
+
+@media (pointer: coarse) {
+  :global(:root:has(.page-main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [readonly]), textarea:not([readonly]), [contenteditable="true"]):focus)) .fab {
+    display: none;
+  }
+}
+
+.spacer {
+  height: 80px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639.98px) {
+  .replaced {
+    display: none !important;
+  }
+}

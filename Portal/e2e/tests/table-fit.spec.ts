@@ -2,16 +2,17 @@ import { test, expect } from '../fixtures';
 import { createTestPatient, createTestAppointment, createTestReminder } from '../utils/helpers';
 
 const PAGES = [
-  { name: 'Citas', path: '/appointments', hasActions: true },
-  { name: 'Pacientes', path: '/patients', hasActions: true },
-  { name: 'Recordatorios (historial)', path: '/reminders?activeTab=History', hasActions: true },
-  { name: 'Actividad', path: '/activity', hasActions: false },
+  { name: 'Citas', path: '/appointments', hasActions: true, settleReminder: true },
+  { name: 'Pacientes', path: '/patients', hasActions: true, settleReminder: true },
+  { name: 'Recordatorios (activos)', path: '/reminders', hasActions: true, settleReminder: false },
+  { name: 'Recordatorios (historial)', path: '/reminders?activeTab=History', hasActions: true, settleReminder: true },
+  { name: 'Actividad', path: '/activity', hasActions: false, settleReminder: true },
 ];
 
 test.describe('List tables fit at 1280px', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  for (const { name, path, hasActions } of PAGES) {
+  for (const { name, path, hasActions, settleReminder } of PAGES) {
     test(`${name} table fits without sideways scrolling`, async ({ page, api, trackedPatients, trackedAppointments, trackedReminders }) => {
       const longName = 'Patient With A Remarkably Long Full Name For Table Fit';
       const patient = await createTestPatient(api, {
@@ -24,7 +25,7 @@ test.describe('List tables fit at 1280px', () => {
       trackedAppointments.track(appt.data.id);
       const reminder = await createTestReminder(api, patient.id);
       trackedReminders.track(reminder.data.id);
-      await api.cancelReminder(reminder.data.id);
+      if (settleReminder) await api.cancelReminder(reminder.data.id);
 
       await page.goto(path);
       const table = page.locator('table').first();
@@ -61,6 +62,13 @@ test.describe('List tables fit at 1280px', () => {
         expect(labels.join('|')).toContain('Estado');
         expect(labels.join('|')).toContain('Pago');
       }
+      const misaligned = await table.evaluate((el) => {
+        const headers = Array.from(el.querySelectorAll('thead th')).filter((th) => getComputedStyle(th).display !== 'none').length;
+        return Array.from(el.querySelectorAll('tbody tr.table-row'))
+          .map((tr) => Array.from(tr.children).filter((td) => getComputedStyle(td).display !== 'none').length)
+          .filter((cells) => cells !== headers);
+      });
+      expect(misaligned, 'rows whose visible cells do not match the visible headers').toEqual([]);
     });
   }
 });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { activityHref } from "@/src/config/navigation";
-import Link from "next/link";
+import { OverlayLink } from "@/src/components/OverlayLink";
 import { Inbox } from "lucide-react";
 import { DrawerShell, DrawerState, Row, Section } from "@/src/components/Drawers/DrawerUtils";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
@@ -259,13 +259,13 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
               <p className="form-input-hint" data-testid="request-outcome">{approvalOutcome(request, choice)}</p>
             )}
             <Section title="Información del sistema" quiet>
-              <Link
+              <OverlayLink
                 href={activityHref({ entityId: request.id })}
                 className="drawer-link"
                 data-testid="request-drawer-audit-link"
               >
                 <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
-              </Link>
+              </OverlayLink>
             </Section>
           </>
         )}

@@ -2,11 +2,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const PUBLIC_CSS_DIR = join(process.cwd(), "src/components/PublicBooking");
+const PUBLIC_CSS_DIRS = [ "src/components/PublicBooking", "src/components/Sheet" ].map((dir) => join(process.cwd(), dir));
 const globals = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
-const publicCss = readdirSync(PUBLIC_CSS_DIR)
+const publicCss = PUBLIC_CSS_DIRS.flatMap((dir) => readdirSync(dir)
     .filter((file) => file.endsWith(".css"))
-    .map((file) => ({ file, css: readFileSync(join(PUBLIC_CSS_DIR, file), "utf8") }));
+    .map((file) => ({ file, css: readFileSync(join(dir, file), "utf8") })));
 
 /** The declarations of the first block that opens with `selector`. */
 function block(selector: string) {

@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -8,15 +9,18 @@ import { UserMenu } from "@/src/components/UserMenu";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 import { useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 import { AttentionDot } from "@/src/components/Info/AttentionDot";
+import { PendingCountBadge } from "@/src/components/Info/PendingCountBadge";
 import { NAV_GROUPS, visibleGroups, type NavContext, type NavItem } from "@/src/config/navigation";
 import { NavGroupList } from "@/src/components/NavGroupList";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onNavigate?: (event?: MouseEvent<HTMLAnchorElement>) => void;
+  replaceOnNavigate?: boolean;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, onNavigate = onClose, replaceOnNavigate = false }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuthContext();
   const inbox = usePendingRequests();
@@ -25,13 +29,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   function badge(item: NavItem) {
     if (item.id === "settings") return attention.sections.size > 0 ? <AttentionDot testId="sidebar-settings-attention" /> : null;
-    if (item.id !== "requests" || inbox.pending === 0) return null;
-    return (
-      <span className="nav-badge" data-testid="sidebar-requests-badge">
-        <span aria-hidden="true">{inbox.pending > 99 ? "99+" : inbox.pending}</span>
-        <span className="sr-only">, {inbox.pending} pendientes</span>
-      </span>
-    );
+    if (item.id !== "requests") return null;
+    return <PendingCountBadge count={inbox.pending} testId="sidebar-requests-badge" />;
   }
 
   return (
@@ -63,7 +62,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <NavGroupList
         groups={visibleGroups(NAV_GROUPS, navContext)}
         pathname={pathname}
-        onNavigate={onClose}
+        onNavigate={onNavigate}
+        replace={replaceOnNavigate}
         testIdPrefix="sidebar-link"
         ariaLabel="Secciones"
         className="sidebar-nav"
@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* User section */}
       <div className="sidebar-user" data-testid="sidebar-user">
-        <UserMenu onNavigate={onClose} drawerOpen={isOpen} />
+        <UserMenu onNavigate={onNavigate} replace={replaceOnNavigate} drawerOpen={isOpen} />
       </div>
     </aside>
   );

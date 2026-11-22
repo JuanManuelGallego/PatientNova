@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,11 @@ import { ACCOUNT_PATH } from "@/src/config/navigation";
  * The sidebar's account block: a disclosure button (avatar, name, title)
  * that opens Mi cuenta, the theme switch and Cerrar sesión above it.
  */
-export function UserMenu({ onNavigate, drawerOpen = false }: { onNavigate: () => void; drawerOpen?: boolean }) {
+export function UserMenu({ onNavigate, replace = false, drawerOpen = false }: {
+    onNavigate: (event?: MouseEvent<HTMLAnchorElement>) => void;
+    replace?: boolean;
+    drawerOpen?: boolean;
+}) {
     const { user, logout } = useAuthContext();
     const { isDark, toggleTheme } = useTheme();
     const router = useRouter();
@@ -105,7 +109,8 @@ export function UserMenu({ onNavigate, drawerOpen = false }: { onNavigate: () =>
                     <Link
                         href={ACCOUNT_PATH}
                         className="sidebar-user-menu__item"
-                        onClick={() => { setOpen(false); onNavigate(); }}
+                        replace={replace}
+                        onClick={(e) => { setOpen(false); onNavigate(e); }}
                         data-testid="sidebar-account-link"
                     >
                         <UserRound size={16} aria-hidden="true" /> Mi cuenta

@@ -34,7 +34,7 @@ export
     weekGrid: {
       display: "grid",
       gridTemplateColumns: "56px repeat(7, 1fr)",
-      minWidth: 640,
+      minWidth: 560,
     } as React.CSSProperties,
 
     weekGutter: {

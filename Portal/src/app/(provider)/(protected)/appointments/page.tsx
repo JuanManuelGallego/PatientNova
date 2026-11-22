@@ -5,6 +5,7 @@ import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmen
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
+import { Fab, FAB_REPLACED_CLASS } from "@/src/components/Fab";
 import { FilterBar } from "@/src/components/FilterBar";
 import { ACTION_ICONS, DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import {
@@ -14,7 +15,7 @@ CalendarCheck,
   DollarSign,
   RefreshCw,
 } from "lucide-react";
-import { DataTable, DataTableFooter, ColumnDef } from "@/src/components/DataTable";
+import { DataCard, DataTable, DataTableFooter, ColumnDef } from "@/src/components/DataTable";
 import { TabNav } from "@/src/components/TabNav";
 import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
@@ -316,7 +317,7 @@ function AppointmentsPageContent() {
                 onClick={() => {
                   setShowCreate(true);
                 }}
-                className="btn-primary btn-hero"
+                className={`btn-primary btn-hero ${FAB_REPLACED_CLASS}`}
                 data-testid="appointments-new-button"
               >
                 Nueva cita
@@ -532,6 +533,43 @@ function AppointmentsPageContent() {
               </td>
             </tr>
           )}
+          renderCard={(a) => (
+            <DataCard
+              key={a.id}
+              testId={`appointment-card-${a.id}`}
+              onOpen={() => openAppointment(a)}
+              leading={
+                <span
+                  className="avatar avatar--sm"
+                  style={{ background: getAvatarColor(a.patient.id) }}
+                  aria-hidden="true"
+                >
+                  {getInitials(a.patient.name, a.patient.lastName)}
+                </span>
+              }
+              title={`${a.patient.name} ${a.patient.lastName}`}
+              lines={[
+                <span key="when" className="data-card__emph">
+                  <DETAIL_ICONS.clock size={14} aria-hidden="true" />
+                  {fmtDateTime(a.startAt, timezone)}
+                </span>,
+                <span key="type">
+                  <DETAIL_ICONS.calendar
+                    size={14}
+                    style={{ color: a.appointmentType.color || "var(--c-gray-400)" }}
+                    aria-hidden="true"
+                  />
+                  {a.appointmentType.name}
+                </span>,
+              ]}
+              badges={
+                <>
+                  <AppointmentStatusPill status={a.status} />
+                  {a.status !== AppointmentStatus.CANCELLED && <PayStatusPill paid={a.paid} standalone />}
+                </>
+              }
+            />
+          )}
           emptyState={error ? undefined : (
             <EmptyState
               icon={STATUS_ICONS.search}
@@ -551,6 +589,7 @@ function AppointmentsPageContent() {
             />
           }
         />
+        <Fab label="Nueva cita" onClick={() => setShowCreate(true)} testId="appointments-fab-new-appointment" />
       </PageLayout>
       {showCreate && (
         <AppointmentModal
@@ -585,6 +624,10 @@ function AppointmentsPageContent() {
         appointmentActions={{
           onEdit: (appointment) => {
             setEditAppt(appointment);
+            closeDrawer();
+          },
+          onConfirm: (appointment) => {
+            handleConfirm(appointment.id);
             closeDrawer();
           },
           onPay: (appointment) => {

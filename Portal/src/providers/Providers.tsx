@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <NuqsAdapter>
       <ErrorBoundary>
         <ThemeProvider>
-          <FocusTrapProvider>{children}</FocusTrapProvider>
+          <FocusTrapProvider dismissOnBack>{children}</FocusTrapProvider>
         </ThemeProvider>
       </ErrorBoundary>
     </NuqsAdapter>

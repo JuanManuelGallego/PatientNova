@@ -1,18 +1,45 @@
 import { useState, useCallback, useEffect } from "react";
-import { useQueryState, parseAsStringEnum } from "nuqs";
-import { addDays, getWeekStart, toDateStr, toStartOfDayISO, toEndOfDayISO, todayDate } from "./constants";
+import { useQueryState, parseAsStringEnum, parseAsString } from "nuqs";
+import {
+  addDays, dateFromStr, getWeekStart, isCalendarDay, toDateStr, toStartOfDayISO, toEndOfDayISO, todayDate,
+} from "./constants";
 import { ViewMode } from "./types";
+import { addCalendarDays } from "@/src/utils/TimeUtils";
 
-export function useCalendarNavigation(timezone?: string) {
-  const [ viewMode, setViewMode ] = useQueryState<ViewMode>(
+interface NavigationOptions {
+  phone?: boolean;
+}
+
+function effectiveView(requested: ViewMode, phone: boolean): ViewMode {
+  if (phone) return requested === ViewMode.Month ? ViewMode.Month : ViewMode.Day;
+  return requested === ViewMode.Day ? ViewMode.Week : requested;
+}
+
+export function useCalendarNavigation(timezone?: string, { phone = false }: NavigationOptions = {}) {
+  const [ requestedView, setViewMode ] = useQueryState<ViewMode>(
     "view",
     parseAsStringEnum<ViewMode>(Object.values(ViewMode)).withDefault(ViewMode.Week),
   );
-  const [ calYear, setCalYear ] = useState(() => todayDate(timezone).getFullYear());
-  const [ calMonth, setCalMonth ] = useState(() => todayDate(timezone).getMonth());
-  const [ weekStart, setWeekStart ] = useState<Date>(() => getWeekStart(todayDate(timezone)));
-  const [ dayDate, setDayDate ] = useState<string>(() => toDateStr(todayDate(timezone)));
+  const viewMode = effectiveView(requestedView, phone);
+  const [ dayParam, setDayParam ] = useQueryState("day", parseAsString);
+  const linkedDay = isCalendarDay(dayParam) ? dayParam : null;
+
+  const [ start ] = useState(() => (linkedDay ? dateFromStr(linkedDay) : todayDate(timezone)));
+  const [ calYear, setCalYear ] = useState(() => start.getFullYear());
+  const [ calMonth, setCalMonth ] = useState(() => start.getMonth());
+  const [ pagedWeekStart, setWeekStart ] = useState<Date>(() => getWeekStart(start));
   const [ selectedDay, setSelectedDay ] = useState<string | null>(null);
+  const dayDate = linkedDay ?? toDateStr(todayDate(timezone));
+
+  const [ followedDay, setFollowedDay ] = useState(dayDate);
+  if (followedDay !== dayDate) {
+    const date = dateFromStr(dayDate);
+    setFollowedDay(dayDate);
+    setWeekStart(getWeekStart(date));
+    setCalYear(date.getFullYear());
+    setCalMonth(date.getMonth());
+  }
+  const weekStart = viewMode === ViewMode.Day ? getWeekStart(dateFromStr(dayDate)) : pagedWeekStart;
 
   const calendarFilters = (() => {
     if (viewMode === ViewMode.Month) {
@@ -20,12 +47,20 @@ export function useCalendarNavigation(timezone?: string) {
         dateFrom: toStartOfDayISO(new Date(calYear, calMonth, 1), timezone),
         dateTo: toEndOfDayISO(new Date(calYear, calMonth + 1, 0), timezone),
       };
-    } 
-      return {
-        dateFrom: toStartOfDayISO(weekStart, timezone),
-        dateTo: toEndOfDayISO(addDays(weekStart, 6), timezone),
-      };
+    }
+    return {
+      dateFrom: toStartOfDayISO(weekStart, timezone),
+      dateTo: toEndOfDayISO(addDays(weekStart, 6), timezone),
+    };
   })();
+
+  const focusDay = useCallback((day: string) => {
+    const date = dateFromStr(day);
+    void setDayParam(day === toDateStr(todayDate(timezone)) ? null : day);
+    setWeekStart(getWeekStart(date));
+    setCalYear(date.getFullYear());
+    setCalMonth(date.getMonth());
+  }, [ setDayParam, timezone ]);
 
   const prevMonth = useCallback(() => {
     if (calMonth === 0) {
@@ -50,24 +85,32 @@ export function useCalendarNavigation(timezone?: string) {
     setCalYear(now.getFullYear());
     setCalMonth(now.getMonth());
     setWeekStart(getWeekStart(now));
-    setDayDate(toDateStr(now));
-  }, [ timezone ]);
+    void setDayParam(null);
+  }, [ timezone, setDayParam ]);
 
   const navPrev = useCallback(() => {
     if (viewMode === ViewMode.Month) prevMonth();
+    else if (viewMode === ViewMode.Day) focusDay(addCalendarDays(dayDate, -7));
     else prevWeek();
-  }, [viewMode, prevMonth, prevWeek]);
+  }, [ viewMode, prevMonth, prevWeek, focusDay, dayDate ]);
 
   const navNext = useCallback(() => {
     if (viewMode === ViewMode.Month) nextMonth();
+    else if (viewMode === ViewMode.Day) focusDay(addCalendarDays(dayDate, 7));
     else nextWeek();
-  }, [ viewMode, nextMonth, nextWeek ]);
+  }, [ viewMode, nextMonth, nextWeek, focusDay, dayDate ]);
+
+  const selectDay = useCallback((day: string) => {
+    focusDay(day);
+    void setViewMode(ViewMode.Day);
+  }, [ focusDay, setViewMode ]);
 
   const drillToDay = useCallback(
     (dateStr: string) => {
-      setDayDate(dateStr);
+      focusDay(dateStr);
+      void setViewMode(phone ? ViewMode.Day : ViewMode.Week);
     },
-    [],
+    [ phone, focusDay, setViewMode ],
   );
 
   useEffect(() => {
@@ -96,6 +139,7 @@ export function useCalendarNavigation(timezone?: string) {
     dayDate,
     selectedDay,
     setSelectedDay,
+    selectDay,
     calendarFilters,
     navPrev,
     navNext,

@@ -45,6 +45,7 @@ export function buildCsp(options: CspOptions): string {
         "style-src": [ "'self'", "'unsafe-inline'" ],
         "img-src": img,
         "font-src": [ "'self'", "data:" ],
+        "manifest-src": [ "'self'" ],
         "connect-src": [ ...connect, TURNSTILE_ORIGIN ],
         "object-src": [ "'none'" ],
         "base-uri": [ "'self'" ],

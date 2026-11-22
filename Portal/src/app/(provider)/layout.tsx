@@ -1,4 +1,9 @@
+import type { Viewport } from "next";
 import { AuthProvider } from "@/src/providers/AuthContext";
+
+export const viewport: Viewport = {
+  interactiveWidget: "resizes-content",
+};
 
 /**
  * Provider (clinician) area: the dashboard, login and landing page. Only these routes mount the

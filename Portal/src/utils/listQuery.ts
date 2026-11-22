@@ -77,7 +77,7 @@ export type ApptOrderBy = (typeof APPT_SORT.orderBy)[number];
 
 export const REMINDER_SORT = {
   orderBy: ["sendAt", "createdAt", "status", "updatedAt"] as const,
-  sortable: ["sendAt", "status"] as const,
+  sortable: ["sendAt", "status", "updatedAt"] as const,
 } as const;
 export type ReminderOrderBy = (typeof REMINDER_SORT.orderBy)[number];
 

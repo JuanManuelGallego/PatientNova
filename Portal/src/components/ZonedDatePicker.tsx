@@ -9,7 +9,10 @@ import weekday from "dayjs/plugin/weekday";
 import localeData from "dayjs/plugin/localeData";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import weekYear from "dayjs/plugin/weekYear";
-import { fromWallClock, getDisplayTimezone, toWallClock } from "@/src/utils/TimeUtils";
+import { useMediaQuery } from "@/src/hooks/useMediaQuery";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { fromWallClock, getDisplayTimezone, todayFormattedString, toWallClock } from "@/src/utils/TimeUtils";
+import { TouchPickerField } from "@/src/components/Pickers/TouchPickerField";
 
 dayjs.extend(utc);
 dayjs.extend(customParseFormat);
@@ -73,8 +76,85 @@ const zonedConfig: PickerConfig = {
     },
 };
 
-/** antd DatePicker whose values are the provider's wall-clock time as UTC-mode dayjs objects. */
-export const ZonedDatePicker = DatePicker.generatePicker<Dayjs>(zonedConfig);
+const BasePicker = DatePicker.generatePicker<Dayjs>(zonedConfig);
+
+export function useCoarsePointer(): boolean {
+    return useMediaQuery("(pointer: coarse)");
+}
+
+type AnyProps = Record<string, unknown>;
+const Base = BasePicker as unknown as React.ComponentType<AnyProps>;
+const BaseTime = BasePicker.TimePicker as unknown as React.ComponentType<AnyProps>;
+
+function ZonedDatePickerBase(props: AnyProps) {
+    const coarse = useCoarsePointer();
+    return <Base inputReadOnly={coarse} {...props} />;
+}
+
+interface TimePickerTouchProps {
+    value?: Dayjs | null;
+    onChange?: (value: Dayjs | null, text: string) => void;
+    format?: string;
+    minuteStep?: number;
+    allowClear?: boolean;
+    disabled?: boolean;
+    placeholder?: string;
+    status?: string;
+    disabledTime?: (now: Dayjs) => { disabledHours?: () => number[]; disabledMinutes?: (hour: number) => number[] };
+    getPopupContainer?: (trigger: HTMLElement) => HTMLElement;
+    className?: string;
+    style?: React.CSSProperties;
+    "aria-label"?: string;
+    "aria-invalid"?: boolean;
+    "data-testid"?: string;
+}
+
+function TouchTimePicker(props: TimePickerTouchProps) {
+    const timezone = useDisplayTimezone();
+    const format = props.format ?? "HH:mm";
+    const value = props.value ?? null;
+    return (
+        <TouchPickerField
+            kind="time"
+            value={value}
+            onChange={(next) => props.onChange?.(next, next ? next.format(format) : "")}
+            today={todayFormattedString(timezone)}
+            format={format}
+            placeholder={props.placeholder ?? "Selecciona hora"}
+            title={props["aria-label"] ?? "Hora"}
+            disabledTime={props.disabledTime ? (day) => props.disabledTime!(day ?? nowInZone(timezone)) : undefined}
+            minuteStep={props.minuteStep ?? 1}
+            allowClear={props.allowClear ?? true}
+            disabled={props.disabled}
+            invalid={props.status === "error" || props["aria-invalid"] === true}
+            ariaLabel={props["aria-label"]}
+            testId={props["data-testid"]}
+            className={props.className}
+            style={props.style}
+        />
+    );
+}
+
+function ZonedTimePicker(props: AnyProps) {
+    const coarse = useCoarsePointer();
+    if (coarse) return <TouchTimePicker {...(props as TimePickerTouchProps)} />;
+    return <BaseTime {...props} />;
+}
+
+/**
+ * antd DatePicker whose values are the provider's wall-clock time as UTC-mode dayjs objects. The base picker's
+ * input is read-only on touch devices (no keyboard over the popup); callers can override `inputReadOnly`, and the
+ * date wrappers (DateTimePicker, AppointmentDateTimePicker) render the touch sheet there instead. `TimePicker` is
+ * itself the chip sheet (`TouchPickerField`) on touch devices and antd's picker otherwise.
+ */
+export const ZonedDatePicker = Object.assign(ZonedDatePickerBase, {
+    WeekPicker: BasePicker.WeekPicker,
+    MonthPicker: BasePicker.MonthPicker,
+    YearPicker: BasePicker.YearPicker,
+    QuarterPicker: BasePicker.QuarterPicker,
+    RangePicker: BasePicker.RangePicker,
+    TimePicker: ZonedTimePicker,
+}) as unknown as typeof BasePicker;
 
 /** The current wall-clock time in `timezone` (display zone if omitted), as a picker value. */
 export function nowInZone(timezone: string = getDisplayTimezone()): Dayjs {

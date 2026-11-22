@@ -13,7 +13,7 @@ import { PageHeader } from "@/src/components/PageHeader";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
-import { todayString } from "@/src/utils/TimeUtils";
+import { localDateTimeToUtc, todayFormattedString, todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "@/src/components/Calendar/types";
 import { useCalendarNavigation } from "@/src/components/Calendar/useCalendarNavigation";
 import { useCalendarData } from "@/src/components/Calendar/useCalendarData";
@@ -27,6 +27,9 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useFetchBookingRequests } from "@/src/api/booking-requests/useFetchBookingRequests";
 import { usePendingRequests } from "@/src/providers/PendingRequestsContext";
 import { RequestDrawer } from "@/src/components/Drawers/RequestDrawer";
+import { Agenda, AgendaToolbar, CompactMonth, agendaPeriodLabel } from "@/src/components/Calendar/Agenda";
+import { Fab, FAB_REPLACED_CLASS } from "@/src/components/Fab";
+import { usePhoneLayout } from "@/src/hooks/usePhoneLayout";
 
 /** The provider cap on live requests is 50, so one page covers any visible range. */
 const HOLDS_PAGE_SIZE = 100;
@@ -35,6 +38,7 @@ function CalendarContent() {
   // One timezone for the whole calendar: fetch window, day buckets, "today" and click-to-create.
   const timezone = useDisplayTimezone();
   const { updateAppointment } = useUpdateAppointment();
+  const phone = usePhoneLayout();
 
   const {
     viewMode,
@@ -42,14 +46,16 @@ function CalendarContent() {
     calYear,
     calMonth,
     weekStart,
+    dayDate,
     selectedDay,
     setSelectedDay,
+    selectDay,
     calendarFilters,
     navPrev,
     navNext,
     goToday,
     drillToDay,
-  } = useCalendarNavigation(timezone);
+  } = useCalendarNavigation(timezone, { phone });
 
   const apptFilter: FetchAppointmentsFilters = {
     ...calendarFilters,
@@ -113,6 +119,28 @@ function CalendarContent() {
     }
   }
 
+  async function handleConfirm(id: string) {
+    setActionError(null);
+    try {
+      await updateAppointment(id, { status: AppointmentStatus.CONFIRMED });
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Error al confirmar la cita");
+    } finally {
+      fetchAppointments();
+    }
+  }
+
+  const openCreateAt = (startIso: string) => {
+    setPrefillDate(new Date(startIso).getTime() > Date.now() ? startIso : null);
+    setShowCreate(true);
+  };
+  const openCreateOnDay = (day: string) => openCreateAt(localDateTimeToUtc(day, "09:00:00", timezone));
+  const openBlockTimeOn = (day: string) => {
+    setPrefillBlockedDate(day);
+    setShowCreateBlockedTime(true);
+  };
+  const loadingEvents = loading || loadingBlocked;
+
   const selectedDayAppts = selectedDay ? (apptByDate[ selectedDay ] ?? []) : [];
   const selectedDayBlocked = selectedDay ? (blockedByDate[ selectedDay ] ?? []) : [];
   const selectedDayHolds = selectedDay ? (holdByDate[ selectedDay ] ?? []) : [];
@@ -134,7 +162,7 @@ function CalendarContent() {
               </button>
               <button
                 onClick={() => setShowCreate(true)}
-                className="btn-primary btn-hero"
+                className={`btn-primary btn-hero ${FAB_REPLACED_CLASS}`}
                 data-testid="calendar-new-appointment-button"
               >
                 Nueva cita
@@ -146,56 +174,108 @@ function CalendarContent() {
           <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
         )}
         <div className="table-card">
-          <CalendarToolbar
-            navLabel={navLabel}
-            viewMode={viewMode}
-            onPrev={navPrev}
-            onNext={navNext}
-            onToday={goToday}
-            onChangeView={setViewMode}
-          />
-          {viewMode === ViewMode.Month && (
-            <MonthView
-              timezone={timezone}
-              rows={rows}
-              cellDate={cellDate}
-              apptByDate={apptByDate}
-              blockedByDate={blockedByDate}
-              holidayMap={holidayMap}
-              loading={loading || loadingBlocked}
-              onSelectDay={setSelectedDay}
-              onDrillToDay={drillToDay}
-              onViewAppt={openAppointment}
-              onSelectBlockedTime={setEditBlockedTime}
-              holdByDate={holdByDate}
-              onSelectHold={onSelectHold}
-            />
+          {phone ? (
+            <>
+              <AgendaToolbar
+                label={viewMode === ViewMode.Month ? navLabel : agendaPeriodLabel(dayDate)}
+                view={viewMode === ViewMode.Month ? ViewMode.Month : ViewMode.Day}
+                onPrev={navPrev}
+                onNext={navNext}
+                onToday={goToday}
+                onChangeView={setViewMode}
+              />
+              {viewMode === ViewMode.Month ? (
+                <CompactMonth
+                  timezone={timezone}
+                  year={calYear}
+                  month={calMonth}
+                  selectedDay={dayDate}
+                  apptByDate={apptByDate}
+                  blockedByDate={blockedByDate}
+                  holdByDate={onSelectHold ? holdByDate : undefined}
+                  holidayMap={holidayMap}
+                  loading={loadingEvents}
+                  onSelectDay={selectDay}
+                />
+              ) : (
+                <Agenda
+                  timezone={timezone}
+                  day={dayDate}
+                  apptByDate={apptByDate}
+                  blockedByDate={blockedByDate}
+                  holdByDate={holdByDate}
+                  holidayMap={holidayMap}
+                  loading={loadingEvents}
+                  onSelectDay={selectDay}
+                  onPrevWeek={navPrev}
+                  onNextWeek={navNext}
+                  onViewAppt={openAppointment}
+                  onSelectBlockedTime={setEditBlockedTime}
+                  onSelectHold={onSelectHold}
+                  onCreateAppointment={openCreateAt}
+                  onCreateBlockedTime={openBlockTimeOn}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <CalendarToolbar
+                navLabel={navLabel}
+                viewMode={viewMode}
+                onPrev={navPrev}
+                onNext={navNext}
+                onToday={goToday}
+                onChangeView={setViewMode}
+              />
+              {viewMode === ViewMode.Month && (
+                <MonthView
+                  timezone={timezone}
+                  rows={rows}
+                  cellDate={cellDate}
+                  apptByDate={apptByDate}
+                  blockedByDate={blockedByDate}
+                  holidayMap={holidayMap}
+                  loading={loading || loadingBlocked}
+                  onSelectDay={setSelectedDay}
+                  onDrillToDay={drillToDay}
+                  onViewAppt={openAppointment}
+                  onSelectBlockedTime={setEditBlockedTime}
+                  holdByDate={holdByDate}
+                  onSelectHold={onSelectHold}
+                />
+              )}
+              {viewMode === ViewMode.Week && (
+                <WeekView
+                  timezone={timezone}
+                  weekDays={weekDays}
+                  apptByDate={apptByDate}
+                  blockedByDate={blockedByDate}
+                  holidayMap={holidayMap}
+                  loading={loading || loadingBlocked}
+                  hourRange={hourRange}
+                  onDrillToDay={drillToDay}
+                  onViewAppt={openAppointment}
+                  onCreateAt={(date) => {
+                    setPrefillDate(date);
+                    setShowCreate(true);
+                  }}
+                  onSelectBlockedTime={setEditBlockedTime}
+                  holdByDate={holdByDate}
+                  onSelectHold={onSelectHold}
+                />
+              )}
+              <CalendarLegend showHolds={inbox.enabled} />
+            </>
           )}
-          {viewMode === ViewMode.Week && (
-            <WeekView
-              timezone={timezone}
-              weekDays={weekDays}
-              apptByDate={apptByDate}
-              blockedByDate={blockedByDate}
-              holidayMap={holidayMap}
-              loading={loading || loadingBlocked}
-              hourRange={hourRange}
-              onDrillToDay={drillToDay}
-              onViewAppt={openAppointment}
-              onCreateAt={(date) => {
-                setPrefillDate(date);
-                setShowCreate(true);
-              }}
-              onSelectBlockedTime={setEditBlockedTime}
-              holdByDate={holdByDate}
-              onSelectHold={onSelectHold}
-            />
-          )}
-          <CalendarLegend showHolds={inbox.enabled} />
         </div>
+        <Fab
+          label="Nueva cita"
+          onClick={() => (dayDate === todayFormattedString(timezone) ? setShowCreate(true) : openCreateOnDay(dayDate))}
+          testId="calendar-fab-new-appointment"
+        />
       </PageLayout>
 
-      {selectedDay && viewMode === ViewMode.Month && (
+      {selectedDay && viewMode === ViewMode.Month && !phone && (
         <DayPanel
           selectedDay={selectedDay}
           appts={selectedDayAppts}
@@ -205,10 +285,7 @@ function CalendarContent() {
           onClose={() => setSelectedDay(null)}
           onViewAppt={openAppointment}
           onDrillToDay={drillToDay}
-          onCreateAt={(date) => {
-            setPrefillDate(date);
-            setShowCreate(true);
-          }}
+          onCreateOnDay={openCreateOnDay}
           onSelectBlockedTime={setEditBlockedTime}
           onCreateBlockedTime={(date) => {
             setPrefillBlockedDate(date);
@@ -243,6 +320,10 @@ function CalendarContent() {
         appointmentActions={{
           onEdit: (appointment) => {
             setEditAppt(appointment);
+            closeDrawer();
+          },
+          onConfirm: (appointment) => {
+            handleConfirm(appointment.id);
             closeDrawer();
           },
           onPay: (appointment) => {

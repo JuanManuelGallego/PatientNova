@@ -69,8 +69,10 @@
   text-underline-offset: 2px;
 }
 
-.footerLinks a:hover {
-  color: var(--c-brand);
+@media (hover: hover) {
+  .footerLinks a:hover {
+    color: var(--c-brand);
+  }
 }
 
 .footerLinks a:focus-visible {

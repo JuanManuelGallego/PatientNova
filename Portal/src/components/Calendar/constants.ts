@@ -1,4 +1,4 @@
-import { addDays, todayFormattedString, localDateTimeToUtc, zonedDateTimeParts, getDisplayTimezone, nextCalendarDay, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
+import { addDays, addCalendarDays, todayFormattedString, localDateTimeToUtc, zonedDateTimeParts, getDisplayTimezone, nextCalendarDay, DAY_NAMES_ES } from "@/src/utils/TimeUtils";
 import { BlockedTime } from "@/src/types/BlockedTime";
 
 export { DAY_NAMES_ES };
@@ -50,6 +50,29 @@ export function getWeekStart(date: Date): Date {
   d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+const CALENDAR_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isCalendarDay(value: string | null | undefined): value is string {
+  if (!value || !CALENDAR_DAY_RE.test(value)) return false;
+  const [ y, m, d ] = value.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d!)).toISOString().slice(0, 10) === value;
+}
+
+function isoWeekday(day: string): number {
+  const [ y, m, d ] = day.split("-").map(Number);
+  return ((new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay() + 6) % 7) + 1;
+}
+
+export function weekOf(day: string): string[] {
+  const monday = addCalendarDays(day, 1 - isoWeekday(day));
+  return Array.from({ length: 7 }, (_, i) => addCalendarDays(monday, i));
+}
+
+export function dateFromStr(day: string): Date {
+  const [ y, m, d ] = day.split("-").map(Number);
+  return new Date(y!, m! - 1, d!);
 }
 
 export function toDateStr(date: Date): string {
