@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppointmentsPage from "@/src/app/(provider)/(protected)/appointments/page";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { fmtDateTime } from "@/src/utils/TimeUtils";
+import { PHONE_MEDIA_QUERY } from "@/src/hooks/usePhoneLayout";
 
 const TZ = "America/Bogota";
 let appointmentsState: unknown[] = [];
@@ -29,7 +30,7 @@ vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: fals
 // Closing a sheet restores the scroll position, which jsdom does not implement (also after a test's own cleanup).
 window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
-vi.mock("@/src/components/Modals/AppointmentModal", () => ({ AppointmentModal: () => null }));
+vi.mock("@/src/components/Modals/AppointmentModal", () => ({ AppointmentModal: () => <div data-testid="appointment-modal-mock" /> }));
 vi.mock("@/src/components/Modals/CancelAppointmentModal", () => ({ CancelAppointmentModal: () => null }));
 vi.mock("@/src/components/Drawers/RelatedDrawers", () => ({ RelatedDrawers: () => null }));
 vi.mock("nuqs", async () => {
@@ -107,5 +108,35 @@ describe("appointments page on a narrow screen", () => {
     }
     expect(within(sheet).getByRole("radio", { name: "Fecha y hora" })).toBeChecked();
     expect(within(sheet).getByTestId("appointment-status-filter")).toBeInTheDocument();
+  });
+});
+
+describe("appointments page Nueva cita", () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    appointmentsState = [];
+  });
+
+  it("keeps the header button and shows no floating button on a wider screen", () => {
+    renderPage();
+    expect(screen.getByTestId("appointments-new-button")).toBeInTheDocument();
+    expect(screen.queryByTestId("appointments-fab-new-appointment")).toBeNull();
+  });
+
+  it("on a phone opens the new-appointment modal from the floating button", () => {
+    window.matchMedia = ((query: string) => ({
+      matches: query === PHONE_MEDIA_QUERY,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    renderPage();
+
+    const fab = screen.getByTestId("appointments-fab-new-appointment");
+    expect(fab).toHaveAccessibleName("Nueva cita");
+    expect(screen.queryByTestId("appointment-modal-mock")).toBeNull();
+    fireEvent.click(fab);
+    expect(screen.getByTestId("appointment-modal-mock")).toBeInTheDocument();
   });
 });

@@ -263,20 +263,33 @@ function calendarDayOf(value: string | null | undefined): string | null {
     return DATE_ONLY.test(day) && !Number.isNaN(Date.parse(`${day}T00:00:00Z`)) ? day : null;
 }
 
-/** Formats a calendar day, e.g. "1 de mayo de 1990", independent of any timezone. */
-function fmtCalendarDay(value: string | null | undefined): string {
+/**
+ * Formats a calendar day, e.g. "1 de mayo de 1990" (or "viernes, 1 de mayo" with `weekday` and no `year`),
+ * independent of any timezone.
+ */
+function fmtCalendarDay(
+    value: string | null | undefined,
+    { weekday = false, year = true }: { weekday?: boolean; year?: boolean } = {},
+): string {
     const day = calendarDayOf(value);
     if (!day) return "Invalid Date";
     return new Date(`${day}T00:00:00Z`).toLocaleDateString("es-ES", {
         timeZone: "UTC",
-        day: "numeric", month: "long", year: "numeric",
+        ...(weekday ? { weekday: "long" } : {}),
+        day: "numeric", month: "long",
+        ...(year ? { year: "numeric" } : {}),
     });
+}
+
+/** The "YYYY-MM-DD" calendar day `days` later (negative: earlier). Pure calendar math, no timezone. */
+function addCalendarDays(day: string, days: number): string {
+    const [ y, m, d ] = day.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 /** The calendar day after a "YYYY-MM-DD" day. */
 function nextCalendarDay(day: string): string {
-    const [ y, m, d ] = day.split("-").map(Number);
-    return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    return addCalendarDays(day, 1);
 }
 
 const MONTH_NAMES_ES = [
@@ -529,6 +542,7 @@ export {
     calendarDayOf,
     fmtCalendarDay,
     nextCalendarDay,
+    addCalendarDays,
     getDisplayTimezone,
     browserTimezone,
     fmtTimezoneLabel,

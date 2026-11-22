@@ -12,7 +12,7 @@ export function DayPanel({
   onClose,
   onViewAppt,
   onDrillToDay,
-  onCreateAt,
+  onCreateOnDay,
   onSelectBlockedTime,
   onCreateBlockedTime,
   holds = [],
@@ -132,7 +132,7 @@ export function DayPanel({
             className="btn-primary btn-hero"
             style={{ flex: 1, justifyContent: "center" }}
             onClick={() => {
-              onCreateAt(selectedDay);
+              onCreateOnDay(selectedDay);
               onClose();
             }}
           >

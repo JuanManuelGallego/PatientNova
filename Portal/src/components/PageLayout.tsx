@@ -8,6 +8,10 @@ import { useBackDismiss, useBackScope } from "@/src/hooks/useFocusTrap";
 import { isPlainClick } from "@/src/components/OverlayLink";
 import { ACTION_ICONS } from "@/src/config/icons";
 import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
+import { BottomTabBar } from "@/src/components/BottomTabBar";
+import { DESKTOP_NAV_QUERY } from "@/src/config/navigation";
+import { theme } from "@/src/config/theme";
+import { useTheme } from "@/src/providers/ThemeContext";
 
 /** Wraps the standard page-shell (sidebar + navbar + main content area). */
 export default function PageLayout({
@@ -16,8 +20,9 @@ export default function PageLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery(DESKTOP_NAV_QUERY);
   const MenuIcon = ACTION_ICONS.menu;
+  const { isDark } = useTheme();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -73,6 +78,8 @@ export default function PageLayout({
 
   return (
     <div className="page-shell">
+      {/* The browser and status bar take the top bar's colour in the provider's theme (React hoists it to <head>). */}
+      <meta name="theme-color" content={isDark ? theme.themeColor.dark : theme.themeColor.light} />
       {sidebarOpen && !isDesktop && (
         <div
           className="sidebar-backdrop"
@@ -116,6 +123,8 @@ export default function PageLayout({
           {children}
         </main>
       </div>
+      {/* Below 1024px; stacked under the menu's backdrop and every modal, drawer and sheet. */}
+      <BottomTabBar inert={menuOverlay} />
     </div>
   );
 }

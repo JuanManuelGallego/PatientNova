@@ -5,6 +5,7 @@ import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmen
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
+import { Fab, FAB_REPLACED_CLASS } from "@/src/components/Fab";
 import { FilterBar } from "@/src/components/FilterBar";
 import { ACTION_ICONS, DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import {
@@ -316,7 +317,7 @@ function AppointmentsPageContent() {
                 onClick={() => {
                   setShowCreate(true);
                 }}
-                className="btn-primary btn-hero"
+                className={`btn-primary btn-hero ${FAB_REPLACED_CLASS}`}
                 data-testid="appointments-new-button"
               >
                 Nueva cita
@@ -588,6 +589,7 @@ function AppointmentsPageContent() {
             />
           }
         />
+        <Fab label="Nueva cita" onClick={() => setShowCreate(true)} testId="appointments-fab-new-appointment" />
       </PageLayout>
       {showCreate && (
         <AppointmentModal

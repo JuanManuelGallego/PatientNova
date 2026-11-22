@@ -3,7 +3,12 @@ import { BlockedTime } from "@/src/types/BlockedTime";
 export enum ViewMode {
   Month = "month",
   Week = "week",
+  /** Phones only: the agenda (week strip and the selected day's list). Wider screens read it as Week. */
+  Day = "day",
 }
+
+/** The views the desktop toolbar offers, in order. */
+export const DESKTOP_VIEWS = [ ViewMode.Month, ViewMode.Week ] as const;
 
 export interface ApptChipProps {
   a: import("@/src/types/Appointment").Appointment;
@@ -91,7 +96,8 @@ export interface DayPanelProps {
   onClose: () => void;
   onViewAppt: (a: import("@/src/types/Appointment").Appointment) => void;
   onDrillToDay: (date: string) => void;
-  onCreateAt: (date: string) => void;
+  /** "Nueva cita" for the panel's calendar day; the page picks the time (an instant, never a bare date). */
+  onCreateOnDay: (day: string) => void;
   onSelectBlockedTime: (bt: BlockedTime) => void;
   onCreateBlockedTime: (date: string) => void;
 }

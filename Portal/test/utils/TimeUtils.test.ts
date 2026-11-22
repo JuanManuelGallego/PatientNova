@@ -28,6 +28,7 @@ import {
     calendarDayToIso,
     fmtCalendarDay,
     nextCalendarDay,
+    addCalendarDays,
     localDateTimeToUtc,
 } from "@/src/utils/TimeUtils";
 import { AppointmentDuration } from "@/src/types/Appointment";
@@ -259,6 +260,13 @@ describe("calendar days", () => {
         expect(calendarDayOf(undefined)).toBeNull();
         expect(fmtCalendarDay("1990-05-01T00:00:00.000Z")).toBe(fmtDate("1990-05-01T12:00:00.000Z", "UTC"));
         expect(nextCalendarDay("2026-12-31")).toBe("2027-01-01");
+    });
+
+    it("moves calendar days in either direction and names the weekday when asked", () => {
+        expect(addCalendarDays("2026-03-01", -1)).toBe("2026-02-28");
+        expect(addCalendarDays("2026-12-28", 7)).toBe("2027-01-04");
+        expect(fmtCalendarDay("2026-11-01", { weekday: true, year: false })).toBe("domingo, 1 de noviembre");
+        expect(fmtCalendarDay("2026-11-01", { weekday: true })).toBe("domingo, 1 de noviembre de 2026");
     });
 
     it("computes age on the provider's today, independent of the browser zone", () => {

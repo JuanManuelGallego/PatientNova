@@ -338,7 +338,8 @@ body {
 
 .page-main {
   flex: 1;
-  padding: 20px max(16px, env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  /* --bottom-nav-h: the phone tab bar, so the last card scrolls clear of it (see "Bottom tab bar") */
+  padding: 20px max(16px, env(safe-area-inset-right)) calc(20px + var(--bottom-nav-h) + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 @media (min-width: 1024px) {
@@ -482,6 +483,188 @@ body {
   background: var(--c-backdrop);
   z-index: calc(var(--z-sidebar) - 1);
   animation: fadeIn 0.2s ease;
+}
+
+/* ================================================================
+   Bottom tab bar: phones and tablets (below 1024px, where the
+   sidebar is the hamburger menu). Daily screens one tap away.
+   --bottom-nav-h is its height without the safe area, 0 when there
+   is no bar; anything pinned to the bottom (a floating button, the
+   page padding) adds it: calc(16px + var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom)).
+   ================================================================ */
+:root {
+  --tabbar-h: 60px;
+  --bottom-nav-h: 0px;
+}
+
+@media (max-width: 1023.98px) {
+  :root:has(.bottom-tabbar) {
+    --bottom-nav-h: var(--tabbar-h);
+  }
+}
+
+/* Landscape phones: a shorter bar, icon beside the label. */
+@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --tabbar-h: 48px;
+  }
+}
+
+.bottom-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Level with the top bar: under the open menu's backdrop and every modal, drawer and sheet. */
+  z-index: calc(var(--z-sidebar) - 2);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-gray-200);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+@media (min-width: 1024px) {
+  .bottom-tabbar {
+    display: none;
+  }
+}
+
+.bottom-tabbar__list {
+  list-style: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  height: var(--tabbar-h);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.bottom-tabbar__cell {
+  display: flex;
+  min-width: 0;
+}
+
+.bottom-tabbar__tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 2px;
+  color: var(--c-gray-500);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.bottom-tabbar__tab:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: -4px;
+  border-radius: var(--r-lg);
+}
+
+/* The active pill sits behind the icon only, so the label stays readable at any width. */
+.bottom-tabbar__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 30px;
+  border-radius: var(--r-full);
+  transition: background-color 0.2s ease, transform 0.12s ease;
+}
+
+.bottom-tabbar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.bottom-tabbar__tab--active {
+  color: var(--c-brand);
+}
+
+.bottom-tabbar__tab--active .bottom-tabbar__icon {
+  background: var(--c-brand-light);
+}
+
+.bottom-tabbar__tab--active .bottom-tabbar__label {
+  font-weight: 700;
+}
+
+.bottom-tabbar__tab:active .bottom-tabbar__icon {
+  transform: scale(0.92);
+}
+
+@media (hover: hover) {
+  .bottom-tabbar__tab:not(.bottom-tabbar__tab--active):hover {
+    color: var(--c-gray-700);
+  }
+  .bottom-tabbar__tab:not(.bottom-tabbar__tab--active):hover .bottom-tabbar__icon {
+    background: var(--c-gray-100);
+  }
+}
+
+/* The pending count rides on the icon's top corner, ringed in the bar's colour to cut it from the pill. */
+.nav-badge.bottom-tabbar__badge {
+  position: absolute;
+  top: -5px;
+  left: calc(50% + 4px);
+  margin-left: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10.5px;
+  line-height: 18px;
+  box-shadow: 0 0 0 2px var(--c-surface);
+}
+
+@media (max-width: 359.98px) {
+  .bottom-tabbar__label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
+  .bottom-tabbar__tab {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .bottom-tabbar__icon {
+    width: 40px;
+    height: 28px;
+  }
+}
+
+/*
+ * While the keyboard is up for a field on the page, the bar would sit on top of it: step aside, and give its
+ * height back (--bottom-nav-h 0) so the page reserve and anything floating over the bar drop with it.
+ * One condition for both, at :root so the variable reaches everything; it outranks :root:has(.bottom-tabbar).
+ */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  :root:has(.page-main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [readonly]), textarea:not([readonly]), [contenteditable="true"]):focus) {
+    --bottom-nav-h: 0px;
+  }
+  :root:has(.page-main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [readonly]), textarea:not([readonly]), [contenteditable="true"]):focus) .bottom-tabbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-tabbar__icon {
+    transition: none;
+  }
+  .bottom-tabbar__tab:active .bottom-tabbar__icon {
+    transform: none;
+  }
 }
 
 .nav-item {
@@ -3649,13 +3832,14 @@ th.col--actions {
   color: var(--c-gray-900);
 }
 
-/* responsive: calendar headers match grid min-width */
+/* Seven equal columns that shrink with the page: phones (under 640px) get the agenda instead, so the month
+   grid fits from 640px without sideways scroll; cells clip and chips ellipsize. */
 .cal-day-headers {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   background: var(--c-gray-50);
   border-bottom: 1px solid var(--c-gray-100);
-  min-width: 700px;
+  min-width: 0;
 }
 
 .cal-day-header {
@@ -3667,11 +3851,10 @@ th.col--actions {
   letter-spacing: 0.05em;
 }
 
-/* responsive: calendar grid scrolls horizontally on mobile */
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  min-width: 700px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 0;
 }
 
 /* responsive: calendar cells smaller on mobile */

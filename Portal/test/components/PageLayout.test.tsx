@@ -36,7 +36,8 @@ vi.mock("@/src/providers/AuthContext", () => ({
         logout: vi.fn(),
     }),
 }));
-vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false, toggleTheme: vi.fn() }) }));
+let isDark = false;
+vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark, toggleTheme: vi.fn() }) }));
 vi.mock("@/src/providers/SettingsAttentionContext", () => ({
     useSettingsAttention: () => ({ sections: new Set(), report: vi.fn() }),
 }));
@@ -69,6 +70,7 @@ async function openSidebar() {
 const isOpen = () => screen.getByTestId("sidebar").classList.contains("sidebar--open");
 
 beforeEach(() => {
+    isDark = false;
     window.history.pushState(BASE, "", "/dashboard");
 });
 
@@ -175,5 +177,40 @@ describe("PageLayout mobile sidebar and Back", () => {
         } finally {
             scroll.restore();
         }
+    });
+
+    it("shows the phone tab bar beside the page content, its links pushing as usual", () => {
+        renderLayout();
+
+        const bar = screen.getByTestId("bottom-tabbar");
+        expect(screen.getByTestId("sidebar")).not.toContainElement(bar);
+        expect(bar.closest(".page-shell")).not.toBeNull();
+        expect(screen.getByTestId("tabbar-link-patients")).toHaveAttribute("data-replace", "false");
+    });
+
+    it("makes the tab bar inert while the menu is open, and live again once it closes", async () => {
+        renderLayout();
+        expect(screen.getByTestId("bottom-tabbar")).not.toHaveAttribute("inert");
+
+        await openSidebar();
+        expect(screen.getByTestId("bottom-tabbar")).toHaveAttribute("inert");
+
+        act(() => screen.getByTestId("sidebar-backdrop").click());
+        await settle();
+        expect(screen.getByTestId("bottom-tabbar")).not.toHaveAttribute("inert");
+    });
+
+    it.each([
+        [ false, "#FFFFFF" ],
+        [ true, "#1A1825" ],
+    ])("colours the browser bar like the top bar (dark theme %s)", (dark, color) => {
+        isDark = dark;
+        const view = renderLayout();
+
+        const metas = document.head.querySelectorAll('meta[name="theme-color"]');
+        expect(metas).toHaveLength(1);
+        expect(metas[ 0 ]).toHaveAttribute("content", color);
+        view.unmount();
+        expect(document.head.querySelector('meta[name="theme-color"]')).toBeNull();
     });
 });

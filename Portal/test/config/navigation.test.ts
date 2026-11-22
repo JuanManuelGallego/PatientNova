@@ -7,6 +7,7 @@ import {
     activityHref,
     isNavItemActive,
     visibleGroups,
+    tabBarItems,
     type NavContext,
 } from "@/src/config/navigation";
 import { AdminRole, isAdminRole, type User } from "@/src/types/User";
@@ -105,5 +106,34 @@ describe("settings navigation", () => {
         [ "/settingsx", null ],
     ])("finds the section of %s", (pathname, id) => {
         expect(settingsSectionOf(pathname)).toBe(id);
+    });
+});
+
+describe("tabBarItems", () => {
+    const sidebarIds = (c: NavContext) => visibleGroups(NAV_GROUPS, c).flatMap((g) => g.items).map((i) => i.id);
+
+    it("gives an admin with the inbox the five tabs in order, with one-word labels", () => {
+        const items = tabBarItems(ctx(AdminRole.ADMIN, true));
+        expect(items.map((i) => i.id)).toEqual([ "dashboard", "calendar", "appointments", "patients", "requests" ]);
+        expect(items.map((i) => i.label)).toEqual([ "Hoy", "Calendario", "Citas", "Pacientes", "Solicitudes" ]);
+        expect(items.map((i) => i.path)).toEqual([ "/dashboard", "/calendar", "/appointments", "/patients", "/requests" ]);
+    });
+
+    it("drops Solicitudes exactly when the sidebar does", () => {
+        expect(tabBarItems(ctx(AdminRole.VIEWER, false)).map((i) => i.id)).toEqual([ "dashboard", "calendar", "appointments", "patients" ]);
+        expect(tabBarItems(ctx(AdminRole.ADMIN, false)).map((i) => i.id)).not.toContain("requests");
+    });
+
+    it.each([
+        [ AdminRole.VIEWER, false ], [ AdminRole.VIEWER, true ], [ AdminRole.ADMIN, false ], [ AdminRole.ADMIN, true ],
+        [ AdminRole.SUPER_ADMIN, true ], [ null, false ],
+    ] as const)("shows only items the sidebar shows (%s, inbox %s)", (role, inbox) => {
+        const c = ctx(role, inbox);
+        const visible = sidebarIds(c);
+        for (const item of tabBarItems(c)) expect(visible).toContain(item.id);
+    });
+
+    it("keeps every label to a single word", () => {
+        for (const item of tabBarItems(ctx(AdminRole.SUPER_ADMIN, true))) expect(item.label).toMatch(/^\S+$/);
     });
 });

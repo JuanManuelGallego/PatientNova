@@ -26,6 +26,12 @@ describe("security headers", () => {
     expect(get("frame-ancestors")).toBe("frame-ancestors 'none'");
   });
 
+  it("allows the same-origin web app manifest and its icons", () => {
+    const directives = buildCsp(prod).split("; ");
+    expect(directives).toContain("manifest-src 'self'");
+    expect(directives.find((d) => d.startsWith("img-src "))!.split(" ")).toContain("'self'");
+  });
+
   it("allows WebAssembly in production, which the medical record PDF needs", () => {
     const scriptSrc = buildCsp(prod).split("; ").find((d) => d.startsWith("script-src "))!;
     expect(scriptSrc.split(" ")).toContain("'wasm-unsafe-eval'");

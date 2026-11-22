@@ -25,7 +25,7 @@ function Calendar() {
                     onClose={() => setDay(null)}
                     onViewAppt={vi.fn()}
                     onDrillToDay={vi.fn()}
-                    onCreateAt={vi.fn()}
+                    onCreateOnDay={vi.fn()}
                     onSelectBlockedTime={vi.fn()}
                     onCreateBlockedTime={vi.fn()}
                 />
@@ -67,5 +67,31 @@ describe("DayPanel and Back", () => {
 
         expect(panel()).toBeNull();
         expect(window.history.state).toEqual(BASE);
+    });
+});
+
+describe("DayPanel actions", () => {
+    it("asks for a new appointment on its calendar day, leaving the time to the page", async () => {
+        const onCreateOnDay = vi.fn();
+        const onClose = vi.fn();
+        render(
+            <FocusTrapProvider dismissOnBack>
+                <DayPanel
+                    selectedDay="2026-11-27"
+                    appts={[]}
+                    blockedTimes={[]}
+                    onClose={onClose}
+                    onViewAppt={vi.fn()}
+                    onDrillToDay={vi.fn()}
+                    onCreateOnDay={onCreateOnDay}
+                    onSelectBlockedTime={vi.fn()}
+                    onCreateBlockedTime={vi.fn()}
+                />
+            </FocusTrapProvider>,
+        );
+        await settle();
+        act(() => screen.getByRole("button", { name: "Nueva cita" }).click());
+        expect(onCreateOnDay).toHaveBeenCalledWith("2026-11-27");
+        expect(onClose).toHaveBeenCalled();
     });
 });

@@ -37,6 +37,9 @@ export interface NavGroup<Id extends string = NavItemId> {
     items: NavItem<Id>[];
 }
 
+/** From this width the sidebar is always shown; below it the sidebar is a menu and the tab bar appears. */
+export const DESKTOP_NAV_QUERY = "(min-width: 1024px)";
+
 export const ACTIVITY_PATH = "/activity";
 export const ADMIN_USERS_PATH = "/admin/users";
 /** Where "Mi cuenta" leads. */
@@ -78,6 +81,26 @@ export function visibleGroups<Id extends string>(groups: NavGroup<Id>[], ctx: Na
     return groups
         .map((group) => ({ ...group, items: group.items.filter((item) => isVisible(item, ctx)) }))
         .filter((group) => group.items.length > 0);
+}
+
+/**
+ * The phone tab bar, left to right: the screens used all day, with one-word labels. Each entry names a
+ * sidebar item, so the bar shows a tab only when the sidebar shows that item (role, inbox, portal).
+ */
+const TAB_BAR: { id: NavItemId; label: string }[] = [
+    { id: "dashboard", label: "Hoy" },
+    { id: "calendar", label: "Calendario" },
+    { id: "appointments", label: "Citas" },
+    { id: "patients", label: "Pacientes" },
+    { id: "requests", label: "Solicitudes" },
+];
+
+export function tabBarItems(ctx: NavContext): NavItem[] {
+    const visible = visibleGroups(NAV_GROUPS, ctx).flatMap((group) => group.items);
+    return TAB_BAR.flatMap(({ id, label }) => {
+        const item = visible.find((candidate) => candidate.id === id);
+        return item ? [ { ...item, label } ] : [];
+    });
 }
 
 /** Active on the page itself and on any sub-route, never on a sibling sharing a prefix. */

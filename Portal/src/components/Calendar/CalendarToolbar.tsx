@@ -1,5 +1,5 @@
 import { calendarStyles } from "./styles";
-import { CalendarToolbarProps, ViewMode } from "./types";
+import { CalendarToolbarProps, DESKTOP_VIEWS, ViewMode } from "./types";
 
 export function CalendarToolbar({
   navLabel,
@@ -32,7 +32,7 @@ export function CalendarToolbar({
           Hoy
         </button>
         <div style={calendarStyles.viewToggle}>
-          {Object.values(ViewMode).map((v) => (
+          {DESKTOP_VIEWS.map((v) => (
             <button
               key={v}
               onClick={() => onChangeView(v)}

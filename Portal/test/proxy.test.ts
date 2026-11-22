@@ -58,3 +58,18 @@ describe("provider navigation", () => {
   });
 });
 
+
+describe("installing the app", () => {
+  it.each([
+    "/app.webmanifest",
+    "/icons/icon-192.png",
+    "/icons/icon-512.png",
+    "/icons/icon-maskable-512.png",
+    "/apple-icon.png",
+  ])("%s is served to anonymous requests (the browser fetches it without the session cookie)", (path) => {
+    expect(config.matcher.some((m) => path.startsWith(m.replace("/:path*", "")))).toBe(false);
+    const response = proxy(new NextRequest(`https://patientnova.net${path}`));
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(200);
+  });
+});
