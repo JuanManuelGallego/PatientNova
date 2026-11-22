@@ -75,6 +75,8 @@ test.describe('Back button on provider pages (phone)', () => {
     const row = await openAppointments(page, { api, trackedPatients, trackedAppointments });
     const drawer = await openDrawer(row, page);
     await drawer.close();
+    // Closing goes back over the drawer's entry on a later task: wait for it, or our Back races it.
+    await expect.poll(() => page.evaluate(() => window.history.state?.overlay)).toBeUndefined();
 
     await page.goBack();
     await expect(page).toHaveURL(/\/dashboard/);

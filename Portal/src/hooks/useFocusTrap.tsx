@@ -91,7 +91,7 @@ function useBackEntries(enabled: boolean): BackEntries | null {
     for (const key of deferred.current.splice(0)) {
       if (open.current.some((entry) => entry.key === key) && !pushed.current.includes(key)) pushEntry(key);
     }
-    runSettled();
+    setTimeout(runSettled, 0);
   }, [ flush, pushEntry, runSettled ]);
 
   const add = useCallback((key: string, dismiss: Dismiss) => {

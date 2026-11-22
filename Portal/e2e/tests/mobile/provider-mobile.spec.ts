@@ -130,7 +130,7 @@ test.describe('Provider pages on a phone', () => {
     expect(['INPUT', 'TEXTAREA'], 'nothing that opens the keyboard has focus').not.toContain(focusedTag);
 
     await sheet.getByRole('button', { name: 'Mes siguiente' }).click();
-    await sheet.locator('[role="grid"] button:not([disabled])').first().click();
+    await sheet.getByRole('table').locator('button:not([disabled])').first().click();
     await expect(sheet.getByRole('tab', { name: /Hora/ })).toHaveAttribute('aria-selected', 'true');
     await sheet.getByRole('group', { name: 'Hora' }).locator('button:not([disabled])').first().click();
     await sheet.getByRole('group', { name: 'Minutos' }).locator('button:not([disabled])').first().click();

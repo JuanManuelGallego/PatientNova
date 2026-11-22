@@ -60,6 +60,7 @@ test.describe('List tables fit at 1280px', () => {
       if (name === 'Citas') {
         const labels = m.rects.map((r) => r.label);
         expect(labels.join('|')).toContain('Estado');
+        expect(labels.join('|')).toContain('Pago');
       }
       const misaligned = await table.evaluate((el) => {
         const headers = Array.from(el.querySelectorAll('thead th')).filter((th) => getComputedStyle(th).display !== 'none').length;

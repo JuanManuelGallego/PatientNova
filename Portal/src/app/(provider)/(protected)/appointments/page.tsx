@@ -250,7 +250,6 @@ function AppointmentsPageContent() {
       {
         label: "Pago",
         sortKey: "price",
-        priority: "secondary",
         filter: {
           kind: "enum",
           options: PAID_OPTIONS,
@@ -490,7 +489,7 @@ function AppointmentsPageContent() {
                   )}
                 </div>
               </td>
-              <td className="td col--secondary" onClick={(e) => e.stopPropagation()}>
+              <td className="td" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
                   {a.status !== AppointmentStatus.CANCELLED && (
                     <>

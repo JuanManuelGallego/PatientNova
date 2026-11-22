@@ -80,6 +80,29 @@ describe("picker sheets and URL writes", () => {
         expect(window.location.search).toBe("?apptDate=2026-03-01");
     });
 
+    it("emits after every popstate listener has run, so a router that drops queued writes on popstate keeps it", async () => {
+        window.history.replaceState(null, "", "/appointments");
+        // nuqs queues URL writes and drops the queue on popstate. Its listener can be added after the provider's
+        // (its NavigationSpy hydrates in its own Suspense boundary), so it runs after ours on the same event.
+        let queued: ReturnType<typeof setTimeout> | null = null;
+        const dropQueued = () => {
+            if (queued) clearTimeout(queued);
+            queued = null;
+        };
+        renderWithTrap(
+            <DateTimePicker date={undefined} mode="localDate" testId="date-filter"
+                onChange={(day) => { queued = setTimeout(() => { queued = null; writeUrl("apptDate", day); }, 0); }} />,
+        );
+        window.addEventListener("popstate", dropQueued);
+        try {
+            fireEvent.click(screen.getByTestId("date-filter"));
+            fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: / 1 de marzo de 2026/ }));
+            await waitFor(() => expect(window.location.search).toBe("?apptDate=2026-03-01"));
+        } finally {
+            window.removeEventListener("popstate", dropQueued);
+        }
+    });
+
     it("inside the filter sheet, Personalizado writes onto the filter sheet's entry, not the picker's", async () => {
         window.history.replaceState(null, "", "/appointments");
         const seen: (string | undefined)[] = [];
