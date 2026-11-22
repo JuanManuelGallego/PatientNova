@@ -78,49 +78,14 @@ export class ReminderModal {
     await ReminderModal.pickDateTime(this.page, this.sendAtPicker, dateString);
   }
 
+  /** Types a local date and time ("DD/MM/YYYY HH:mm") into a picker field, as a desktop user would. */
   static async pickDateTime(page: Page, picker: Locator, dateString: string) {
     const iso = new Date(dateString);
-    const dayNumber = String(iso.getDate());
-    const hourRaw = iso.getHours();
-    const minuteRaw = iso.getMinutes();
-    const hourRe = new RegExp(`^0?${hourRaw}$`);
-    const minuteRe = new RegExp(`^0?${minuteRaw}$`);
-
-    const [currentDay, currentMonth, currentYear] = (await picker.inputValue())
-      .split(' ')[0]
-      .split('/')
-      .map(Number);
-    await picker.click();
-    // antd keeps closed popups in the DOM; scope to the open one so forms with several pickers work.
-    const dropdown = page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)');
-
-    const current = currentYear
-      ? new Date(currentYear, currentMonth - 1, currentDay)
-      : new Date();
-    const monthDiff =
-      (iso.getFullYear() - current.getFullYear()) * 12 + (iso.getMonth() - current.getMonth());
-    if (monthDiff !== 0) {
-      const nextBtn = dropdown.locator('.ant-picker-header-next-btn');
-      const prevBtn = dropdown.locator('.ant-picker-header-prev-btn');
-      const btn = monthDiff > 0 ? nextBtn : prevBtn;
-      for (let i = 0; i < Math.abs(monthDiff); i++) {
-        await btn.click();
-      }
-    }
-
-    const dayCell = dropdown
-      .locator('.ant-picker-cell-in-view')
-      .filter({ hasText: new RegExp(`^${dayNumber}$`) })
-      .first();
-    await dayCell.click();
-
-    await dropdown.locator('.ant-picker-time-panel-column').first()
-      .getByText(hourRe).first().click();
-    await dropdown.locator('.ant-picker-time-panel-column').nth(1)
-      .getByText(minuteRe).first().click();
-
-    await dropdown.getByRole('button', { name: 'Aceptar' }).click();
-    await expect(dropdown).toBeHidden();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const text = `${pad(iso.getDate())}/${pad(iso.getMonth() + 1)}/${iso.getFullYear()} ${pad(iso.getHours())}:${pad(iso.getMinutes())}`;
+    await picker.fill(text);
+    await picker.press('Enter');
+    await expect(picker).toHaveValue(text);
   }
 
   async fillAllVariablesWithRandomString() {

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DateRangePicker, type DateRangeValue } from "@/src/components/DateRangePicker";
-import { renderWithTrap, setPointer, useTouchEnv } from "./touchEnv";
+import { renderWithTrap, useTouchEnv } from "./touchEnv";
 
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
 vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -18,9 +18,9 @@ const dialog = () => screen.getByRole("dialog");
 describe("DateRangePicker on a touch screen", () => {
     useTouchEnv({ now: "2026-03-31T15:00:00Z", providerZone: "Pacific/Kiritimati" });
 
-    it("offers presets instead of antd's two-month range picker", () => {
+    it("offers presets instead of a two-month range picker", () => {
         const { container } = renderWithTrap(<Controlled onChange={() => {}} />);
-        expect(container.querySelector(".ant-picker")).toBeNull();
+        expect(container.querySelector("input")).toBeNull();
         for (const name of [ "Hoy", "Esta semana", "Este mes", "Personalizado" ]) {
             expect(preset(name)).toHaveAttribute("aria-pressed", "false");
         }
@@ -107,13 +107,5 @@ describe("DateRangePicker on a touch screen", () => {
         fireEvent.click(preset("Hoy"));
         expect(onChange).toHaveBeenCalledWith([ "2026-04-01", "2026-04-01" ]);
         expect(screen.queryByTestId("range-from")).toBeNull();
-    });
-});
-
-describe("DateRangePicker with a mouse", () => {
-    it("keeps antd's range picker", () => {
-        setPointer(false);
-        const { container } = renderWithTrap(<DateRangePicker value={null} onChange={() => {}} testId="range" />);
-        expect(container.querySelector(".ant-picker-range")).not.toBeNull();
     });
 });

@@ -4,7 +4,7 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { addCalendarDays, lastDayOfMonth } from "@/src/utils/publicBooking";
-import { TouchPickerField } from "./TouchPickerField";
+import { PickerField } from "./PickerField";
 import styles from "./Pickers.module.css";
 
 dayjs.extend(utc);
@@ -36,7 +36,7 @@ interface Draft {
     to: string | null;
 }
 
-export function TouchDateRange({ value, onChange, today, popupContainer, testId }: {
+export function DateRangeField({ value, onChange, today, popupContainer, testId }: {
     value: DayRange | null;
     onChange: (range: DayRange | null) => void;
     today: string;
@@ -104,7 +104,7 @@ export function TouchDateRange({ value, onChange, today, popupContainer, testId 
                 <div className={styles.rangeFields}>
                     <label className={styles.rangeField}>
                         Desde
-                        <TouchPickerField
+                        <PickerField
                             kind="date"
                             value={draft.from ? dayValue(draft.from) : null}
                             onChange={(d) => {
@@ -122,7 +122,7 @@ export function TouchDateRange({ value, onChange, today, popupContainer, testId 
                     </label>
                     <label className={styles.rangeField}>
                         Hasta
-                        <TouchPickerField
+                        <PickerField
                             kind="date"
                             value={draft.to ? dayValue(draft.to) : null}
                             onChange={(d) => {

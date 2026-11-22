@@ -4,25 +4,28 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEv
 import { createPortal } from "react-dom";
 import dayjs, { type Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import "dayjs/locale/es";
 import { CalendarDays, Clock, X } from "lucide-react";
 import { Sheet } from "@/src/components/Sheet/Sheet";
 import { useAfterOverlaysSettle } from "@/src/hooks/useFocusTrap";
+import { useCoarsePointer } from "@/src/hooks/useCoarsePointer";
 import { MonthGrid } from "./MonthGrid";
 import { TimeChips } from "./TimeChips";
 import styles from "./Pickers.module.css";
 
 dayjs.extend(utc);
+dayjs.extend(customParseFormat);
 
-export type TouchPickerKind = "date" | "dateTime" | "time";
+export type PickerKind = "date" | "dateTime" | "time";
 
 export interface DisabledTimeConfig {
     disabledHours?: () => number[];
     disabledMinutes?: (hour: number) => number[];
 }
 
-export interface TouchPickerFieldProps {
-    kind: TouchPickerKind;
+export interface PickerFieldProps {
+    kind: PickerKind;
     value: Dayjs | null;
     onChange: (value: Dayjs | null) => void;
     today: string;
@@ -58,9 +61,11 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const dayValue = (day: string) => dayjs.utc(`${day}T00:00:00`);
 const TAB_KEYS: Record<string, "date" | "time"> = { ArrowLeft: "date", ArrowRight: "time", Home: "date", End: "time" };
 const EMPTY: Draft = { day: null, hour: null, minute: null };
+/** Accepts the field format and its single-digit form (5/3/2026 9:05). */
+const lenientFormats = (format: string) => [ format, format.replace("DD", "D").replace("MM", "M").replace("HH", "H") ];
 const fmtTabDay = (day: string) => dayValue(day).locale("es").format("ddd D MMM YYYY").replace(/\./g, "");
 
-export function TouchPickerField(props: TouchPickerFieldProps) {
+export function PickerField(props: PickerFieldProps) {
     const {
         kind, value, onChange, today, format, placeholder, title, disabledDate, disabledTime, minuteStep = 1,
         hours = ALL_HOURS, minMonth, maxMonth, initialMonth, years, allowClear = false, disabled, invalid, ariaLabel,
@@ -78,6 +83,9 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
     const dateTab = useRef<HTMLButtonElement>(null);
     const timeTab = useRef<HTMLButtonElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
+    const coarse = useCoarsePointer();
+    const hintId = useId();
+    const [ typed, setTyped ] = useState<string | null>(null);
     const [ labelled, setLabelled ] = useState(false);
     useEffect(() => {
         setLabelled((trigger.current?.labels?.length ?? 0) > 0);
@@ -146,10 +154,39 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
         pending.current = { value: build(d) };
     };
 
-    const complete =
-        (kind === "time" || (draft.day !== null && !dayOff(draft.day))) &&
-        (kind === "date" || (draft.hour !== null && draft.minute !== null && !hourOff(draft.day, draft.hour)
-            && !timeRules(draft.day).minutes(draft.hour).includes(draft.minute)));
+    const isComplete = (d: Draft) =>
+        (kind === "time" || (d.day !== null && !dayOff(d.day))) &&
+        (kind === "date" || (d.hour !== null && d.minute !== null && !hourOff(d.day, d.hour)
+            && !timeRules(d.day).minutes(d.hour).includes(d.minute)));
+    const complete = isComplete(draft);
+
+    // Typed text -> a draft that passes the same rules as the sheet, or null.
+    const parseTyped = (text: string): Draft | null => {
+        const parsed = lenientFormats(format).map((f) => dayjs.utc(text.trim(), f, true)).find((d) => d.isValid());
+        if (!parsed) return null;
+        const d: Draft = {
+            day: kind === "time" ? (value ?? dayValue(today)).format("YYYY-MM-DD") : parsed.format("YYYY-MM-DD"),
+            hour: kind === "date" ? null : parsed.hour(),
+            minute: kind === "date" ? null : parsed.minute(),
+        };
+        if (kind !== "date" && d.minute! % step !== 0) return null;
+        return isComplete(d) ? d : null;
+    };
+    const commitTyped = () => {
+        if (typed === null) return;
+        const text = typed.trim();
+        setTyped(null);
+        if (text === "") {
+            if (allowClear && value) onChange(null);
+            return;
+        }
+        const d = parseTyped(text);
+        if (!d) return;
+        const same = !!value && (kind === "time" || d.day === value.format("YYYY-MM-DD"))
+            && (kind === "date" || (d.hour === value.hour() && d.minute === value.minute()));
+        if (!same) onChange(build(d));
+    };
+    const typedInvalid = typed !== null && typed.trim() !== "" && parseTyped(typed) === null;
 
     const showView = (next: "date" | "time") => {
         setView(next);
@@ -189,6 +226,7 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
             years={years}
             onSelect={selectDay}
             onMonth={setMonth}
+            autoFocus={!coarse}
         />
     );
     const chips = (
@@ -245,6 +283,53 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
             </div>
         </Sheet>
     );
+
+    if (!coarse) {
+        const shown = typed ?? (value ? value.format(format) : "");
+        const hint = format.replace("DD", "dd").replace("MM", "mm").replace("YYYY", "aaaa").replace("HH", "hh");
+        return (
+            <div className={`${styles.field}${className ? ` ${className}` : ""}`} style={style}>
+                <input
+                    type="text"
+                    className={`${styles.input}${invalid || typedInvalid ? ` ${styles.triggerInvalid}` : ""}`}
+                    value={shown}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    autoComplete="off"
+                    aria-label={ariaLabel}
+                    aria-invalid={invalid || typedInvalid || undefined}
+                    aria-describedby={hintId}
+                    data-testid={testId}
+                    onChange={(e) => setTyped(e.target.value)}
+                    onBlur={commitTyped}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitTyped();
+                        } else if (e.key === "Escape" && typed !== null) {
+                            e.stopPropagation();
+                            setTyped(null);
+                        }
+                    }}
+                />
+                <span id={hintId} hidden>Formato {hint}</span>
+                {allowClear && value && !disabled && (
+                    <button type="button" className={`${styles.clear} ${styles.clearBeside}`} aria-label="Borrar"
+                        onClick={() => onChange(null)}>
+                        <X size={16} aria-hidden="true" />
+                    </button>
+                )}
+                <button type="button" className={styles.openButton} disabled={disabled}
+                    aria-haspopup="dialog" aria-expanded={open}
+                    aria-label={kind === "time" ? "Abrir selector de hora" : "Abrir calendario"}
+                    data-testid={testId ? `${testId}-open` : undefined}
+                    onClick={openSheet}>
+                    <Icon size={16} aria-hidden="true" />
+                </button>
+                {sheet && typeof document !== "undefined" && createPortal(sheet, popupContainer?.() ?? document.body)}
+            </div>
+        );
+    }
 
     return (
         <div className={`${styles.field}${className ? ` ${className}` : ""}`} style={style}>

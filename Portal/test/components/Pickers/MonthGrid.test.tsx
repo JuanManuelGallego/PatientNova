@@ -91,3 +91,85 @@ describe("MonthGrid", () => {
         expect(december).toBeDisabled();
     });
 });
+
+describe("MonthGrid keyboard", () => {
+    const press = (el: HTMLElement, key: string) => fireEvent.keyDown(el, { key });
+    const focused = () => document.activeElement as HTMLElement;
+
+    it("has one tab stop: the selected day, else today, else the first enabled day", () => {
+        const { unmount } = render(<Harness selected="2026-11-10" />);
+        const stops = () => screen.getAllByRole("button", { name: /de 2026$/ }).filter((b) => b.tabIndex === 0);
+        expect(stops().map((b) => b.textContent)).toEqual([ "10" ]);
+        unmount();
+
+        const second = render(<Harness />);
+        expect(stops().map((b) => b.textContent)).toEqual([ "22" ]);
+        second.unmount();
+
+        render(<Harness isDisabled={(d) => d < "2026-11-05"} initial="2026-11" today="2026-10-01" />);
+        expect(stops().map((b) => b.textContent)).toEqual([ "5" ]);
+    });
+
+    it("moves by day and week with the arrow keys", () => {
+        render(<Harness selected="2026-11-10" />);
+        const start = day(/martes, 10 de noviembre/);
+        start.focus();
+        press(start, "ArrowRight");
+        expect(focused()).toHaveAccessibleName(/miércoles, 11 de noviembre/);
+        press(focused(), "ArrowDown");
+        expect(focused()).toHaveAccessibleName(/miércoles, 18 de noviembre/);
+        press(focused(), "ArrowLeft");
+        expect(focused()).toHaveAccessibleName(/martes, 17 de noviembre/);
+        press(focused(), "ArrowUp");
+        expect(focused()).toHaveAccessibleName(/martes, 10 de noviembre/);
+    });
+
+    it("Home and End go to the Monday and Sunday of the week", () => {
+        render(<Harness selected="2026-11-11" />);
+        const start = day(/miércoles, 11 de noviembre/);
+        start.focus();
+        press(start, "End");
+        expect(focused()).toHaveAccessibleName(/domingo, 15 de noviembre/);
+        press(focused(), "Home");
+        expect(focused()).toHaveAccessibleName(/lunes, 9 de noviembre/);
+    });
+
+    it("crosses into the next and previous month, keeping focus on the day", () => {
+        const onMonth = vi.fn();
+        render(<Harness selected="2026-11-30" onMonth={onMonth} />);
+        const last = day(/lunes, 30 de noviembre/);
+        last.focus();
+        press(last, "ArrowRight");
+        expect(onMonth).toHaveBeenLastCalledWith("2026-12");
+        expect(focused()).toHaveAccessibleName(/martes, 1 de diciembre/);
+        press(focused(), "ArrowLeft");
+        expect(onMonth).toHaveBeenLastCalledWith("2026-11");
+        expect(focused()).toHaveAccessibleName(/lunes, 30 de noviembre/);
+    });
+
+    it("PageUp and PageDown change month and clamp the day", () => {
+        render(<Harness initial="2026-01" today="2026-01-31" selected="2026-01-31" />);
+        const start = day(/sábado, 31 de enero/);
+        start.focus();
+        press(start, "PageDown");
+        expect(focused()).toHaveAccessibleName(/sábado, 28 de febrero/);
+        press(focused(), "PageUp");
+        expect(focused()).toHaveAccessibleName(/enero de 2026/);
+    });
+
+    it("skips disabled days and stops at the month bounds", () => {
+        render(<Harness selected="2026-11-10" isDisabled={(d) => d === "2026-11-11"} maxMonth="2026-11" />);
+        const start = day(/martes, 10 de noviembre/);
+        start.focus();
+        press(start, "ArrowRight");
+        expect(focused()).toHaveAccessibleName(/jueves, 12 de noviembre/);
+
+        const onMonth = vi.fn();
+        const bounded = render(<Harness selected="2026-11-30" maxMonth="2026-11" onMonth={onMonth} />);
+        const last = within(bounded.container).getByRole("button", { name: /lunes, 30 de noviembre/ });
+        last.focus();
+        press(last, "ArrowRight");
+        expect(onMonth).not.toHaveBeenCalled();
+        expect(focused()).toBe(last);
+    });
+});

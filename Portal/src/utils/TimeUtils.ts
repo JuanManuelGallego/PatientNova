@@ -225,7 +225,7 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Wall-clock "YYYY-MM-DDTHH:mm:ss" of a value in the display timezone. A date-only "YYYY-MM-DD" is already a
- * wall date and is returned at midnight. Used to feed antd/dayjs pickers, which only work in the browser zone.
+ * wall date and is returned at midnight. Feeds the pickers, which hold wall time as UTC-mode dayjs.
  */
 function toWallClock(value: string | Date, timezone?: string): string {
     if (typeof value === "string" && DATE_ONLY.test(value)) return `${value}T00:00:00`;

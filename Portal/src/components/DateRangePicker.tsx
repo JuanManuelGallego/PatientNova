@@ -1,18 +1,10 @@
-import { ConfigProvider, DatePicker } from "antd";
-import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
-import esEs from "antd/locale/es_ES";
-import { useMediaQuery } from "@/src/hooks/useMediaQuery";
-import { getAntThemeConfig } from "@/src/config/antTheme";
-import { useTheme } from "@/src/providers/ThemeContext";
+import dayjs from "dayjs";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { todayFormattedString } from "@/src/utils/TimeUtils";
-import { TouchDateRange } from "./Pickers/TouchDateRange";
+import { DateRangeField } from "./Pickers/DateRangeField";
 
 dayjs.locale("es");
-const mobilePopupStyle: React.CSSProperties = {
-  maxWidth: "100vw",
-};
 
 export type DateRangeValue = [string, string] | null;
 
@@ -27,43 +19,14 @@ export function DateRangePicker({
   popupContainer?: () => HTMLElement | null;
   testId?: string;
 }) {
-  const { isDark } = useTheme();
-  const coarse = useMediaQuery("(pointer: coarse)");
-  const handleChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
-    if (!dates || !dates[0] || !dates[1]) {
-      onChange(null);
-      return;
-    }
-    onChange([dates[0].format("YYYY-MM-DD"), dates[1].format("YYYY-MM-DD")]);
-  };
   const timezone = useDisplayTimezone();
-
-  if (coarse) {
-    return (
-      <TouchDateRange
-        value={value}
-        onChange={onChange}
-        today={todayFormattedString(timezone)}
-        popupContainer={popupContainer}
-        testId={testId}
-      />
-    );
-  }
-
   return (
-    <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-      <DatePicker.RangePicker
-        value={value ? [dayjs(value[0]), dayjs(value[1])] : null}
-        onChange={handleChange}
-        format="DD/MM/YYYY"
-        placeholder={["Desde", "Hasta"]}
-        style={{ width: "100%" }}
-        styles={{ popup: { root: mobilePopupStyle } }}
-        getPopupContainer={
-          popupContainer ? () => popupContainer() ?? document.body : undefined
-        }
-        data-testid={testId}
-      />
-    </ConfigProvider>
+    <DateRangeField
+      value={value}
+      onChange={onChange}
+      today={todayFormattedString(timezone)}
+      popupContainer={popupContainer}
+      testId={testId}
+    />
   );
 }

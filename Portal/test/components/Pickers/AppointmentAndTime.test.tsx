@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { describe, expect, it, vi } from "vitest";
 import { AppointmentDateTimePicker } from "@/src/components/AppointmentDateTimePicker";
-import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
+import { PickerField } from "@/src/components/Pickers/PickerField";
 import { renderWithTrap, useTouchEnv } from "./touchEnv";
 
 dayjs.extend(utc);
@@ -77,20 +77,22 @@ describe("AppointmentDateTimePicker on a touch screen", () => {
     });
 });
 
-describe("ZonedDatePicker.TimePicker on a touch screen", () => {
+describe("time PickerField on a touch screen", () => {
     useTouchEnv({ now: "2026-03-01T15:32:00Z", providerZone: "America/Bogota", deviceZone: "Europe/Madrid" });
+    const base = { kind: "time", today: "2026-03-01", format: "HH:mm", title: "Hora" } as const;
 
     it("picks a wall time of day at the minute step and keeps the base day", async () => {
         const onChange = vi.fn();
         renderWithTrap(
-            <ZonedDatePicker.TimePicker
+            <PickerField
+                {...base}
                 value={dayjs.utc("2000-01-01T09:00:00")}
                 onChange={onChange}
-                format="HH:mm"
                 minuteStep={5}
                 allowClear={false}
-                aria-label="Lunes: desde"
-                data-testid="availability-start"
+                ariaLabel="Lunes: desde"
+                title="Lunes: desde"
+                testId="availability-start"
             />,
         );
         const trigger = screen.getByTestId("availability-start");
@@ -103,19 +105,19 @@ describe("ZonedDatePicker.TimePicker on a touch screen", () => {
         fireEvent.click(button("Listo"));
         await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
         expect(onChange.mock.calls[0][0].format("YYYY-MM-DD HH:mm")).toBe("2000-01-01 17:00");
-        expect(onChange.mock.calls[0][1]).toBe("17:00");
     });
 
     it("honours disabledTime and clears when allowed", () => {
         const onChange = vi.fn();
         renderWithTrap(
-            <ZonedDatePicker.TimePicker
+            <PickerField
+                {...base}
                 value={dayjs.utc("2000-01-01T09:00:00")}
                 onChange={onChange}
-                format="HH:mm"
+                allowClear
                 minuteStep={15}
                 disabledTime={() => ({ disabledHours: () => [ 8 ], disabledMinutes: (h: number) => (h === 9 ? [ 45 ] : []) })}
-                data-testid="t"
+                testId="t"
             />,
         );
         fireEvent.click(screen.getByTestId("t"));
@@ -128,10 +130,9 @@ describe("ZonedDatePicker.TimePicker on a touch screen", () => {
         expect(onChange.mock.calls[0][0]).toBeNull();
     });
 
-    it("passes aria-invalid on to the trigger", () => {
+    it("passes invalid on to the trigger as aria-invalid", () => {
         renderWithTrap(
-            <ZonedDatePicker.TimePicker value={dayjs.utc("2000-01-01T09:00:00")} onChange={() => {}} format="HH:mm"
-                aria-invalid status="error" data-testid="t" />,
+            <PickerField {...base} value={dayjs.utc("2000-01-01T09:00:00")} onChange={() => {}} invalid testId="t" />,
         );
         expect(screen.getByTestId("t")).toHaveAttribute("aria-invalid", "true");
     });

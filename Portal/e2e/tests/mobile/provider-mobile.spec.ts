@@ -120,7 +120,6 @@ test.describe('Provider pages on a phone', () => {
     await page.getByTestId('calendar-block-time-button').click();
     const dialog = page.getByTestId('blocked-time-modal-dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator('.ant-picker')).toHaveCount(0);
 
     const trigger = dialog.getByTestId('blocked-time-start-input');
     await trigger.click();

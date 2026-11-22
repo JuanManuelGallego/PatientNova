@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ConfigProvider } from "antd";
-import esEs from "antd/locale/es_ES";
 import dayjs from "dayjs";
-import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
-import { getAntThemeConfig } from "@/src/config/antTheme";
-import { useTheme } from "@/src/providers/ThemeContext";
+import { PickerField } from "@/src/components/Pickers/PickerField";
+import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
+import { todayFormattedString } from "@/src/utils/TimeUtils";
 import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
 import { AvailabilityRule } from "@/src/types/Booking";
@@ -39,24 +37,22 @@ function TimeField({ value, onChange, label, invalid, testId }: {
     invalid: boolean;
     testId: string;
 }) {
-    const { isDark } = useTheme();
+    const timezone = useDisplayTimezone();
     return (
-        <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-            <ZonedDatePicker.TimePicker
-                value={timeOfDay(value)}
-                onChange={(d) => d && onChange(d.format("HH:mm"))}
-                format="HH:mm"
-                minuteStep={5}
-                allowClear={false}
-                needConfirm={false}
-                showNow={false}
-                status={invalid ? "error" : undefined}
-                aria-label={label}
-                aria-invalid={invalid}
-                style={{ width: 110 }}
-                data-testid={testId}
-            />
-        </ConfigProvider>
+        <PickerField
+            kind="time"
+            value={timeOfDay(value)}
+            onChange={(d) => d && onChange(d.format("HH:mm"))}
+            today={todayFormattedString(timezone)}
+            format="HH:mm"
+            title={label}
+            minuteStep={5}
+            allowClear={false}
+            invalid={invalid}
+            ariaLabel={label}
+            style={{ width: 110 }}
+            testId={testId}
+        />
     );
 }
 

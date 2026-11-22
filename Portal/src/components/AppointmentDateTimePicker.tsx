@@ -1,14 +1,10 @@
 import { useMemo } from "react";
-import { ConfigProvider } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/es";
-import esEs from "antd/locale/es_ES";
 
-import { getAntThemeConfig } from "@/src/config/antTheme";
-import { useTheme } from "@/src/providers/ThemeContext";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { fromPickerValue, nowInZone, toPickerValue, useCoarsePointer, ZonedDatePicker } from "@/src/components/ZonedDatePicker";
-import { TouchPickerField } from "@/src/components/Pickers/TouchPickerField";
+import { fromPickerValue, nowInZone, toPickerValue } from "@/src/utils/pickerValue";
+import { PickerField } from "@/src/components/Pickers/PickerField";
 import { todayFormattedString } from "@/src/utils/TimeUtils";
 
 dayjs.locale("es");
@@ -50,8 +46,6 @@ export function AppointmentDateTimePicker({
   blockedSlots = [],
 }: AppointmentDateTimePickerProps) {
   const timezone = useDisplayTimezone();
-  const { isDark } = useTheme();
-  const coarse = useCoarsePointer();
   const bookedSet = useMemo(
     () =>
       new Set(
@@ -69,7 +63,7 @@ export function AppointmentDateTimePicker({
     [blockedSlots]
   );
 
-  // Business hours are wall-clock hours in the provider's timezone (see ZonedDatePicker).
+  // Business hours are wall-clock hours in the provider's timezone (see utils/pickerValue).
   const now = () => nowInZone(timezone);
 
   const handleChange = (selectedDate: Dayjs | null) => {
@@ -126,48 +120,24 @@ export function AppointmentDateTimePicker({
 
         return minutes;
       },
-      disabledSeconds: () => [],
     };
   };
 
-  if (coarse) {
-    const today = todayFormattedString(timezone);
-    return (
-      <TouchPickerField
-        kind="dateTime"
-        value={date ? toPickerValue(date, timezone) : null}
-        onChange={handleChange}
-        today={today}
-        format="DD/MM/YYYY HH:mm"
-        placeholder="Selecciona fecha y hora"
-        title="Fecha y hora"
-        disabledDate={disabledDate}
-        disabledTime={disabledTime}
-        minuteStep={5}
-        hours={BUSINESS_HOURS}
-        minMonth={today.slice(0, 7)}
-      />
-    );
-  }
-
+  const today = todayFormattedString(timezone);
   return (
-    <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-      <ZonedDatePicker
-        className="form-picker"
-        value={date ? toPickerValue(date, timezone) : null}
-        onChange={handleChange}
-        showTime={{
-          format: "HH:mm",
-          minuteStep: 5,
-        }}
-        needConfirm
-        showNow={false}
-        format="DD/MM/YYYY HH:mm"
-        placeholder="Selecciona fecha y hora"
-        disabledDate={disabledDate}
-        disabledTime={disabledTime}
-        style={{ width: "100%" }}
-      />
-    </ConfigProvider>
+    <PickerField
+      kind="dateTime"
+      value={date ? toPickerValue(date, timezone) : null}
+      onChange={handleChange}
+      today={today}
+      format="DD/MM/YYYY HH:mm"
+      placeholder="Selecciona fecha y hora"
+      title="Fecha y hora"
+      disabledDate={disabledDate}
+      disabledTime={disabledTime}
+      minuteStep={5}
+      hours={BUSINESS_HOURS}
+      minMonth={today.slice(0, 7)}
+    />
   );
 }

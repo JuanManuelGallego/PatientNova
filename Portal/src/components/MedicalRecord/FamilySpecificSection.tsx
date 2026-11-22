@@ -1,5 +1,5 @@
 import { FormValues, SubsystemRelation } from "@/src/types/MedicalRecord";
-import { sectionGridStyle } from "@/src/config/antTheme";
+import { sectionGridStyle } from "@/src/config/layout";
 import { SubsystemRelationsTable } from "./SubsystemRelationsTable";
 
 type FamilySpecificSectionProps = {

@@ -3,6 +3,7 @@ import { expect, Locator, Page } from '@playwright/test';
 import { AppointmentModal } from './Modals/AppointmentModal';
 import { CancelAppointmentModal } from './Modals/CancelAppointmentModal';
 import { AppointmentDrawer } from './Drawers/AppointmentDrawer';
+import { pickCustomRange } from './dateRange';
 
 const PAID_FILTER_LABELS: Record<'true' | 'false' | 'All', string> = {
   true: 'Pagadas',
@@ -28,7 +29,6 @@ export class AppointmentsPage extends BasePage {
   readonly paidFilterTrigger: Locator;
   readonly paidFilterPopover: Locator;
   readonly dateFilterTrigger: Locator;
-  readonly dateFilterAcceptButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -40,7 +40,6 @@ export class AppointmentsPage extends BasePage {
     this.paidFilterTrigger = this.page.getByTestId('appointment-paid-filter-trigger');
     this.paidFilterPopover = this.page.getByTestId('appointment-paid-filter');
     this.dateFilterTrigger = this.page.getByTestId('appointment-date-range-filter-trigger');
-    this.dateFilterAcceptButton = this.page.getByRole('button', { name: 'Aceptar' });
   }
 
   appointmentRow(id: string): Locator {
@@ -122,16 +121,7 @@ export class AppointmentsPage extends BasePage {
 
   async setDateRange(from: string, to: string) {
     await this.dateFilterTrigger.click();
-    await this.page.getByPlaceholder('Desde').click();
-    const clickDay = async (value: string) => {
-      const date = value.split('T')[0];
-      await this.page
-        .locator(`.ant-picker-cell-in-view[title="${date}"]`)
-        .first()
-        .click();
-    };
-    await clickDay(from);
-    await clickDay(to);
+    await pickCustomRange(this.page, 'appointment-date-range-filter', from, to);
   }
 
   async goToNextPage() {

@@ -84,7 +84,7 @@ The system supports both **immediate dispatch** (send now) and **scheduled deliv
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 6 |
 | UI Library | React 19 |
-| Component Libraries | Ant Design 6 |
+| Component Libraries | In-house picker components (`src/components/Pickers`) |
 | Styling | Tailwind CSS v4, CSS Modules |
 | Date Handling | dayjs |
 | State | nuqs (URL query state) |
@@ -161,7 +161,7 @@ PatientNova/
 │       │   └── MedicalRecord/    # Medical record PDF and document components
 │       ├── config/               # Theme, icons, and app configuration
 │       ├── hooks/                # Custom React hooks
-│       ├── styles/               # Global CSS, Ant Design theme, PDF styles
+│       ├── styles/               # Global CSS, PDF styles
 │       ├── types/                # TypeScript interfaces and enums
 │       ├── utils/                # Helpers (formatting, time, avatar, debounce)
 │       └── test/                 # Vitest test suites

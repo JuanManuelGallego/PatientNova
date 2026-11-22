@@ -1,5 +1,5 @@
 import { FormValues } from "@/src/types/MedicalRecord";
-import { sectionGridStyle } from "@/src/config/antTheme";
+import { sectionGridStyle } from "@/src/config/layout";
 
 type AntecedentsSectionProps = {
     form: FormValues;

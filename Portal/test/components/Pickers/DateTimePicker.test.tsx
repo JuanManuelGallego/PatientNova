@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DateTimePicker } from "@/src/components/DateTimePicker";
-import { renderWithTrap, setPointer, useTouchEnv } from "./touchEnv";
+import { renderWithTrap, useTouchEnv } from "./touchEnv";
 
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
 vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -23,9 +23,9 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 describe("DateTimePicker on a touch screen, instant mode", () => {
     useTouchEnv({ now: "2026-03-01T15:32:00Z", providerZone: "America/Bogota", deviceZone: "Europe/Madrid" });
 
-    it("renders a trigger with the field's test id instead of antd's input", () => {
+    it("renders a trigger with the field's test id instead of a typed input", () => {
         const { container } = renderWithTrap(<Controlled showTime isFuture onChange={() => {}} />);
-        expect(container.querySelector(".ant-picker")).toBeNull();
+        expect(container.querySelector("input")).toBeNull();
         expect(screen.getByTestId("picker")).toHaveTextContent("Selecciona fecha y hora");
     });
 
@@ -239,14 +239,5 @@ describe("DateTimePicker on a touch screen, day modes", () => {
         open();
         expect(host).toContainElement(dialog());
         host.remove();
-    });
-});
-
-describe("DateTimePicker with a mouse", () => {
-    it("keeps antd's picker", () => {
-        setPointer(false);
-        const { container } = renderWithTrap(<DateTimePicker date={undefined} onChange={() => {}} showTime testId="picker" />);
-        expect(container.querySelector(".ant-picker")).not.toBeNull();
-        expect(screen.queryByRole("button", { name: /Selecciona fecha/ })).toBeNull();
     });
 });
