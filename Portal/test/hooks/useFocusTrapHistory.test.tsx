@@ -4,7 +4,6 @@ import { StrictMode, useState, type ReactNode } from "react";
 import { FocusTrapProvider, useBackScope, useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { installScrollRestorationModel } from "@/test/utils/scrollRestorationModel";
 
-/** Lets jsdom run its queued history traversal tasks and the provider's deferred cleanup. */
 async function settle() {
     for (let i = 0; i < 4; i++) {
         await act(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
@@ -25,7 +24,6 @@ function Overlay({ name, onClose }: { name: string; onClose?: () => void }) {
     );
 }
 
-/** A page with a drawer that can open a modal on top of it, like Citas with its edit modal. */
 function Page({ withEscape = true }: { withEscape?: boolean }) {
     const [ drawer, setDrawer ] = useState(false);
     const [ modal, setModal ] = useState(false);
@@ -54,8 +52,6 @@ function click(name: string) {
 let baseLength = 0;
 
 beforeEach(async () => {
-    // A fresh page entry, which also drops forward entries an earlier test left (they count in history.length).
-    // The app router keeps its own data in history.state; overlay entries must carry it along.
     window.history.pushState({ __NA: true, tree: "page" }, "");
     baseLength = window.history.length;
 });
@@ -258,7 +254,6 @@ describe("FocusTrapProvider dismissOnBack", () => {
         expect(screen.getByTestId("drawer")).toBeInTheDocument();
     });
     it("never goes back for an overlay whose page unmounted before its navigation committed", async () => {
-        // Logout or an expired session: the guard stops rendering the page, then the router replaces the entry.
         function ScopedPage() {
             useBackScope();
             return <Page />;
@@ -309,14 +304,12 @@ describe("FocusTrapProvider dismissOnBack", () => {
         click("abrir modal");
         await settle();
 
-        // A browser takes a few milliseconds to traverse; jsdom does it within a couple of tasks.
         const traverse = window.history.back.bind(window.history);
         const back = vi.spyOn(window.history, "back").mockImplementation(() => { setTimeout(traverse, 30); });
 
         click("cerrar modal");
         await act(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
         expect(back).toHaveBeenCalledTimes(1);
-        // The first back() has not traversed yet when the second overlay closes.
         click("cerrar drawer");
         await act(() => new Promise<void>((resolve) => setTimeout(resolve, 100)));
         await settle();

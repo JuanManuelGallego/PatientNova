@@ -54,26 +54,22 @@ export function getWeekStart(date: Date): Date {
 
 const CALENDAR_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Whether `value` is a real "YYYY-MM-DD" calendar day (rejects "2026-02-30"). */
 export function isCalendarDay(value: string | null | undefined): value is string {
   if (!value || !CALENDAR_DAY_RE.test(value)) return false;
   const [ y, m, d ] = value.split("-").map(Number);
   return new Date(Date.UTC(y!, m! - 1, d!)).toISOString().slice(0, 10) === value;
 }
 
-/** ISO weekday of a calendar day: 1 = Monday ... 7 = Sunday. */
 function isoWeekday(day: string): number {
   const [ y, m, d ] = day.split("-").map(Number);
   return ((new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay() + 6) % 7) + 1;
 }
 
-/** Monday to Sunday of the week holding `day`, as calendar days. */
 export function weekOf(day: string): string[] {
   const monday = addCalendarDays(day, 1 - isoWeekday(day));
   return Array.from({ length: 7 }, (_, i) => addCalendarDays(monday, i));
 }
 
-/** A calendar day as the local-midnight Date the navigation state uses (the counterpart of `toDateStr`). */
 export function dateFromStr(day: string): Date {
   const [ y, m, d ] = day.split("-").map(Number);
   return new Date(y!, m! - 1, d!);

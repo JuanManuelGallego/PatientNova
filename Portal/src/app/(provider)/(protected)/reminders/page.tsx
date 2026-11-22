@@ -363,7 +363,6 @@ function RemindersPageContent() {
   );
 }
 
-/** "Dentro de 3 h", "Ahora mismo" or "Hace 5 min" for an overdue one (`fmtRelative` itself has no direction). */
 function relativeSendLabel(sendAt: string | undefined): string {
   const rel = fmtRelative(sendAt);
   if (!sendAt || rel === "Ahora mismo") return rel;
@@ -373,7 +372,6 @@ function relativeSendLabel(sendAt: string | undefined): string {
 const reminderTitle = (r: Reminder) =>
   r.patient ? `${r.patient.name} ${r.patient.lastName}`.trim() : r.to;
 
-/** Phone card shared by both tabs: the when first (emphasised), then tab-specific lines, then the channel. */
 function reminderCard(
   reminder: Reminder,
   timezone: string,
@@ -470,7 +468,6 @@ function ActiveRemindersTab({
         },
       },
       { label: "Dentro de" },
-      // Secondary like every table's least important column: under 1100px it hides instead of scrolling sideways.
       { label: "Creado el", priority: "secondary" },
       { label: "", priority: "actions" },
     ],

@@ -78,12 +78,10 @@ const zonedConfig: PickerConfig = {
 
 const BasePicker = DatePicker.generatePicker<Dayjs>(zonedConfig);
 
-/** True on touch devices, where focusing the text input would open the on-screen keyboard over the popup. */
 export function useCoarsePointer(): boolean {
     return useMediaQuery("(pointer: coarse)");
 }
 
-// Props are typed by the generated picker (generics survive only on the cast result below).
 type AnyProps = Record<string, unknown>;
 const Base = BasePicker as unknown as React.ComponentType<AnyProps>;
 const BaseTime = BasePicker.TimePicker as unknown as React.ComponentType<AnyProps>;
@@ -111,7 +109,6 @@ interface TimePickerTouchProps {
     "data-testid"?: string;
 }
 
-/** On touch screens: hour then minute chips in a bottom sheet, instead of antd's scrolling columns. */
 function TouchTimePicker(props: TimePickerTouchProps) {
     const timezone = useDisplayTimezone();
     const format = props.format ?? "HH:mm";
@@ -151,7 +148,6 @@ function ZonedTimePicker(props: AnyProps) {
  * itself the chip sheet (`TouchPickerField`) on touch devices and antd's picker otherwise.
  */
 export const ZonedDatePicker = Object.assign(ZonedDatePickerBase, {
-    // The other statics are the generated ones (without the touch default), so the cast below stays true at runtime.
     WeekPicker: BasePicker.WeekPicker,
     MonthPicker: BasePicker.MonthPicker,
     YearPicker: BasePicker.YearPicker,

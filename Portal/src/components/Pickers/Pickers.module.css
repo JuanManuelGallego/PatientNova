@@ -1,7 +1,3 @@
-/* Touch pickers (issue #123, phase 3). Colors come only from the --c-* tokens, which the provider theme swaps for
-   dark mode; on a fine pointer the antd pickers render instead and none of this applies. */
-
-/* ---------- Trigger: looks like .ant-picker.form-picker ---------- */
 .field {
   position: relative;
   width: 100%;
@@ -89,7 +85,6 @@
   outline-offset: -2px;
 }
 
-/* ---------- Sheet content ---------- */
 .sheetBody {
   display: flex;
   flex-direction: column;
@@ -97,7 +92,6 @@
   padding: 4px max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left));
 }
 
-/* Date and time of a date-time field: the step tabs double as the preview of what "Listo" will save. */
 .tabs {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
@@ -153,7 +147,6 @@
   min-width: 0;
 }
 
-/* ---------- Month grid ---------- */
 .calendar {
   min-width: 0;
 }
@@ -277,7 +270,6 @@
   cursor: default;
 }
 
-/* ---------- Time chips ---------- */
 .time {
   display: flex;
   flex-direction: column;
@@ -332,7 +324,6 @@
   cursor: not-allowed;
 }
 
-/* ---------- Range presets ---------- */
 .range {
   display: flex;
   flex-direction: column;
@@ -391,7 +382,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Shared states ---------- */
 .tab:focus-visible,
 .iconButton:focus-visible,
 .day:focus-visible,

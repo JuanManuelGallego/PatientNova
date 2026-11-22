@@ -8,7 +8,6 @@ import type { Appointment } from "@/src/types/Appointment";
 import type { BlockedTime } from "@/src/types/BlockedTime";
 import { fmtTime, localDateTimeToUtc } from "@/src/utils/TimeUtils";
 
-// The provider works in New York; the device (process TZ) is in Tokyo, so any use of the device zone shows up.
 const TZ = "America/New_York";
 const DEVICE_TZ = "Asia/Tokyo";
 
@@ -33,7 +32,6 @@ const originalTz = process.env.TZ;
 beforeEach(() => {
   process.env.TZ = DEVICE_TZ;
   vi.useFakeTimers({ toFake: [ "Date" ] });
-  // 2026-11-25 10:00 in New York.
   vi.setSystemTime(new Date("2026-11-25T15:00:00Z"));
 });
 
@@ -53,7 +51,6 @@ const handlers = () => ({
   onCreateBlockedTime: vi.fn(),
 });
 
-/** Buckets the events the way the calendar page does (provider timezone), then renders the agenda. */
 function renderAgenda(
   day: string,
   { appointments = [], blockedTimes = [], holds = [] }: { appointments?: Appointment[]; blockedTimes?: BlockedTime[]; holds?: HeldSlot[] },
@@ -92,7 +89,6 @@ describe("Agenda: the selected day's list", () => {
         appt({ id: "late", startAt: "2026-11-25T20:00:00Z", endAt: "2026-11-25T21:00:00Z",
           patient: { id: "p2", name: "Marta", lastName: "Ríos" } as Appointment["patient"], status: "CONFIRMED" as Appointment["status"] }),
         appt({ id: "early", startAt: "2026-11-25T14:00:00Z", endAt: "2026-11-25T14:30:00Z" }),
-        // Another day: never listed.
         appt({ id: "other", startAt: "2026-11-26T14:00:00Z", endAt: "2026-11-26T15:00:00Z" }),
       ],
       blockedTimes: [ blocked("lunch", "2026-11-25T17:00:00Z", "2026-11-25T18:00:00Z") ],
@@ -107,7 +103,6 @@ describe("Agenda: the selected day's list", () => {
     ]);
 
     const early = screen.getByTestId("calendar-agenda-event-early");
-    // 14:00Z is 9:00 a. m. in New York (5:00 p. m. on the Tokyo device clock would be wrong).
     expect(early).toHaveTextContent(fmtTime("2026-11-25T14:00:00Z", TZ));
     expect(early).toHaveTextContent(fmtTime("2026-11-25T14:30:00Z", TZ));
     expect(early).toHaveTextContent(/09:00/);
@@ -121,8 +116,6 @@ describe("Agenda: the selected day's list", () => {
   });
 
   it("puts a late-evening appointment on its provider-zone day across the fall-back night", () => {
-    // 2026-11-01 is the DST change in New York: 05:30Z and 06:30Z are both 1:30 a. m. that day, and 04:30Z
-    // on Nov 2 is still 11:30 p. m. on Nov 1. In Tokyo all three fall on Nov 1-2 afternoons.
     const appointments = [
       appt({ id: "late-night", startAt: "2026-11-02T04:30:00Z", endAt: "2026-11-02T04:55:00Z" }),
       appt({ id: "second-130", startAt: "2026-11-01T06:30:00Z", endAt: "2026-11-01T07:00:00Z" }),
@@ -185,7 +178,6 @@ describe("Agenda: the selected day's list", () => {
   });
 
   it("shows a block over two days as starting on the first and ending on the second", () => {
-    // 6:00 p. m. on Nov 25 to 10:00 a. m. on Nov 26 in New York.
     const overnight = blocked("night", "2026-11-25T23:00:00Z", "2026-11-26T15:00:00Z", "Viaje");
     renderAgenda("2026-11-25", { blockedTimes: [ overnight ] });
     const first = screen.getByTestId("calendar-agenda-blocked-night");
@@ -209,7 +201,6 @@ describe("Agenda: the selected day's list", () => {
   });
 
   it("names the holiday of the day", () => {
-    // Colombian holidays: 2026-12-08 is Inmaculada Concepción.
     renderAgenda("2026-12-08", {});
     expect(screen.getByTestId("calendar-agenda-holiday")).toHaveTextContent(/Inmaculada/i);
   });
@@ -299,7 +290,6 @@ describe("CompactMonth", () => {
     expect(within(screen.getByTestId("calendar-month-day-2026-11-11")).queryByTestId("calendar-month-dot")).toBeNull();
     expect(screen.getByTestId("calendar-month-day-2026-11-25")).toHaveAttribute("aria-current", "date");
     expect(screen.getByTestId("calendar-month-day-2026-11-27")).toHaveAttribute("aria-pressed", "true");
-    // November 2026 starts on a Sunday: six blank cells before it in a Monday-first week.
     expect(grid.querySelectorAll("[data-blank]")).toHaveLength(6);
 
     fireEvent.click(busy);

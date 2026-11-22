@@ -1,8 +1,6 @@
 import type { Viewport } from "next";
 import { AuthProvider } from "@/src/providers/AuthContext";
 
-// Android Chrome: the keyboard shrinks the layout, so pinned modal and sheet footers stay above it. Merged
-// over the root viewport; public booking pages keep the default (their sticky dock would cover the field).
 export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };

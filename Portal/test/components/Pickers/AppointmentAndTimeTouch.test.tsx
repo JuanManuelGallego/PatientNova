@@ -15,7 +15,6 @@ const dialog = () => screen.getByRole("dialog");
 const button = (name: string | RegExp) => within(dialog()).getByRole("button", { name });
 
 describe("AppointmentDateTimePicker on a touch screen", () => {
-    // 10:32 in Bogotá (UTC−5) on Sunday 1 March 2026; 16:32 on the device in Madrid (UTC+1).
     useTouchEnv({ now: "2026-03-01T15:32:00Z", providerZone: "America/Bogota", deviceZone: "Europe/Madrid" });
 
     function renderPicker(props: Partial<React.ComponentProps<typeof AppointmentDateTimePicker>> = {}) {
@@ -44,7 +43,6 @@ describe("AppointmentDateTimePicker on a touch screen", () => {
         fireEvent.click(button(/ 1 de marzo de 2026/));
         expect(button("10 h")).toBeEnabled();
         expect(button("09 h")).toBeDisabled();
-        // The device's 16:32 must not count.
         expect(button("15 h")).toBeEnabled();
         fireEvent.click(button("10 h"));
         expect(button("10:30")).toBeDisabled();
@@ -71,7 +69,6 @@ describe("AppointmentDateTimePicker on a touch screen", () => {
     });
 
     it("confirming its own booked slot unchanged re-runs no check", async () => {
-        // Editing an appointment: its own start is among the booked slots.
         const { onChange, onError } = renderPicker({ date: "2026-03-02T19:45:00.000Z", bookedSlots: [ "2026-03-02T19:45:00.000Z" ] });
         fireEvent.click(button("Listo"));
         await new Promise((resolve) => setTimeout(resolve, 30));

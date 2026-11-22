@@ -5,7 +5,6 @@ import { PHONE_MEDIA_QUERY } from "@/src/hooks/usePhoneLayout";
 
 const originalMatchMedia = window.matchMedia;
 
-/** Only the phone query matches, as on a screen narrower than 640px. */
 function stubPhone(phone: boolean) {
   window.matchMedia = ((query: string) => ({
     matches: phone && query === PHONE_MEDIA_QUERY,
@@ -39,7 +38,6 @@ describe("Fab", () => {
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
 
-    // The spacer stays in the page flow, so the last card can scroll clear of the button.
     expect(container.querySelector("[data-fab-spacer]")).not.toBeNull();
   });
 });

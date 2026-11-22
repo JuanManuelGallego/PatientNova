@@ -2,7 +2,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// PublicSheet renders the shared Sheet, so its styles are on the public pages too.
 const PUBLIC_CSS_DIRS = [ "src/components/PublicBooking", "src/components/Sheet" ].map((dir) => join(process.cwd(), dir));
 const globals = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
 const publicCss = PUBLIC_CSS_DIRS.flatMap((dir) => readdirSync(dir)

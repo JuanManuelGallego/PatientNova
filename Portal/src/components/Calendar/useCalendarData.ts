@@ -83,7 +83,6 @@ export function useCalendarData({
     return map;
   }, [ holds, timezone ]);
 
-  // Every year the visible range touches: a week from Dec 28 to Jan 3 needs both years' holidays.
   const weekFirstYear = weekStart.getFullYear();
   const weekLastYear = addDays(weekStart, 6).getFullYear();
   const holidayMap = useMemo(() => {

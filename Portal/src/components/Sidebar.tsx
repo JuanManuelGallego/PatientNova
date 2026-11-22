@@ -16,9 +16,7 @@ import { NavGroupList } from "@/src/components/NavGroupList";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Runs on a link click; defaults to `onClose`. */
   onNavigate?: (event?: MouseEvent<HTMLAnchorElement>) => void;
-  /** Links replace the current history entry (the open mobile menu's own entry). */
   replaceOnNavigate?: boolean;
 }
 

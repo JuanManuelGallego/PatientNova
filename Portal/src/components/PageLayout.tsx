@@ -29,12 +29,9 @@ export default function PageLayout({
     if (isDesktop) setSidebarOpen(false);
   }, [isDesktop]);
 
-  // Overlays of this page never go back once it unmounts (logout, leaving through a link).
   useBackScope();
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
-  // Below 1024px the open menu is an overlay: Back closes it instead of leaving the page. Declared before the
-  // scroll lock so its entry is pushed first, while the page's scroll can still be saved into the entry it leaves.
   const menuOverlay = sidebarOpen && !isDesktop;
   const { release } = useBackDismiss(menuOverlay, closeSidebar);
 
@@ -66,19 +63,17 @@ export default function PageLayout({
     return () => window.removeEventListener("keydown", handleKey);
   }, [sidebarOpen]);
 
-  // While the menu holds a history entry its links replace that entry, so Back from the next page returns here.
   const navigateFromSidebar = useCallback((event?: MouseEvent<HTMLAnchorElement>) => {
     const link = event?.currentTarget;
     if (menuOverlay && link && isPlainClick(event)) {
-      if (link.href === window.location.href) event.preventDefault(); // Already here: just close.
-      else release(); // The navigation takes over the entry; going back would race it.
+      if (link.href === window.location.href) event.preventDefault();
+      else release();
     }
     setSidebarOpen(false);
   }, [ menuOverlay, release ]);
 
   return (
     <div className="page-shell">
-      {/* The browser and status bar take the top bar's colour in the provider's theme (React hoists it to <head>). */}
       <meta name="theme-color" content={isDark ? theme.themeColor.dark : theme.themeColor.light} />
       {sidebarOpen && !isDesktop && (
         <div
@@ -123,7 +118,6 @@ export default function PageLayout({
           {children}
         </main>
       </div>
-      {/* Below 1024px; stacked under the menu's backdrop and every modal, drawer and sheet. */}
       <BottomTabBar inert={menuOverlay} />
     </div>
   );

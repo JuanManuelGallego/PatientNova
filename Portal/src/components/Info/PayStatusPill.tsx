@@ -1,6 +1,5 @@
 import { STATUS_ICONS } from "@/src/config/icons";
 
-/** `standalone`: shown away from a "Pago" heading (a list card), so an unpaid one reads "Sin pagar", not "Pendiente". */
 export function PayStatusPill({ paid, standalone = false }: { paid: boolean; standalone?: boolean }) {
     const Icon = paid ? STATUS_ICONS.success : STATUS_ICONS.pending;
     return (

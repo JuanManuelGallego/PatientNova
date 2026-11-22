@@ -11,7 +11,6 @@ import { DESKTOP_NAV_QUERY, isNavItemActive, tabBarItems } from "@/src/config/na
 import { isPlainClick } from "@/src/components/OverlayLink";
 import { PendingCountBadge, pendingCountText } from "@/src/components/Info/PendingCountBadge";
 
-/** Tapping the tab of the page already shown goes back to its top, as in native apps, instead of reloading it. */
 function scrollToTopIfHere(event: MouseEvent<HTMLAnchorElement>) {
     if (!isPlainClick(event) || event.currentTarget.href !== window.location.href) return;
     event.preventDefault();
@@ -19,12 +18,6 @@ function scrollToTopIfHere(event: MouseEvent<HTMLAnchorElement>) {
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
 }
 
-/**
- * Phone and tablet navigation (below 1024px, where the sidebar becomes the hamburger menu): the screens
- * used all day, one tap away. Everything else stays in the menu. Its links push history entries as usual:
- * while the menu is open (and holds a history entry) its backdrop covers the bar and `inert` keeps the
- * keyboard out, so no tab can push over that entry.
- */
 export function BottomTabBar({ inert = false }: { inert?: boolean }) {
     const pathname = usePathname();
     const { user } = useAuthContext();

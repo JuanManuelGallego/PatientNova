@@ -10,40 +10,27 @@ type Dismiss = RefObject<(() => void) | undefined>;
 interface BackEntries {
   add: (key: string, dismiss: Dismiss) => void;
   remove: (key: string) => void;
-  /** The overlay is closing because a navigation replaces its entry: drop it without going back. */
   release: (key: string) => void;
-  /** Dismisses the top overlay if we stand on its entry; `viaNavigation` as for `release`. */
   closeTop: (viaNavigation: boolean) => boolean;
   enterScope: (key: string) => void;
   leaveScope: (key: string) => void;
-  /** Runs `fn` once no overlay entry is closing and our own back() traversals have landed. */
   whenSettled: (fn: () => void) => void;
 }
 
 interface FocusTrapContextValue {
   register: () => number;
   unregister: () => void;
-  /** Present only with `dismissOnBack`. */
   back: BackEntries | null;
 }
 
 const FocusTrapContext = createContext<FocusTrapContextValue | null>(null);
 
-// Unique per document load, so an entry left by an earlier load never matches a live overlay.
 let documentPrefix: string | null = null;
 function entryValue(key: string) {
   documentPrefix ??= Math.random().toString(36).slice(2, 8);
   return `${documentPrefix}${key}`;
 }
 
-/**
- * Back-button support: each open overlay owns one history entry (`history.state.overlay`), so Back closes the
- * top overlay instead of leaving the page. `pushed` mirrors those entries, bottom to top.
- *
- * A programmatic back() makes the app router restore that entry, which discards any navigation in flight. So it
- * only goes back for an overlay the UI closed on a page that stays: never for one released to a navigation, nor
- * for one whose page (`useBackScope`) unmounted with it, as when logging out or leaving through a link.
- */
 function useBackEntries(enabled: boolean): BackEntries | null {
   const open = useRef<{ key: string; dismiss: Dismiss }[]>([]);
   const pushed = useRef<string[]>([]);
@@ -68,10 +55,8 @@ function useBackEntries(enabled: boolean): BackEntries | null {
     if (!owners.current.has(key)) owners.current.set(key, scopes.current.at(-1));
   }, []);
 
-  // Deferred to a task: StrictMode's remount and an overlay replacing another in the same render arrive first.
   const flush = useCallback(() => {
     flushTimer.current = null;
-    // Our own back() has not traversed yet, so the current entry is stale; its pop runs this again.
     if (swallowPops.current > 0) return;
     for (const key of closing.current) {
       const owner = owners.current.get(key);
@@ -79,7 +64,6 @@ function useBackEntries(enabled: boolean): BackEntries | null {
     }
     let steps = 0;
     if (pushed.current.length > 0 && currentEntry() === entryValue(pushed.current.at(-1)!)) {
-      // Only while we stand on our own top entry: a navigation that pushed a route entry is never undone.
       while (pushed.current.length > steps) {
         const key = pushed.current[pushed.current.length - 1 - steps];
         if (!closing.current.has(key) || navigating.current.has(key)) break;
@@ -112,16 +96,14 @@ function useBackEntries(enabled: boolean): BackEntries | null {
 
   const add = useCallback((key: string, dismiss: Dismiss) => {
     open.current = [ ...open.current.filter((entry) => entry.key !== key), { key, dismiss } ];
-    if (closing.current.delete(key)) return; // StrictMode remount: the entry is still there.
+    if (closing.current.delete(key)) return;
     if (pushed.current.includes(key) || deferred.current.includes(key)) return;
     if (swallowPops.current > 0) {
-      // The traversal still pending would undo a push made now.
       deferred.current.push(key);
       return;
     }
     const top = pushed.current.at(-1);
     if (top !== undefined && closing.current.has(top) && currentEntry() === entryValue(top)) {
-      // One overlay replaced another (a drawer swapping its target): take over its entry.
       closing.current.delete(top);
       pushed.current[pushed.current.length - 1] = key;
       owners.current.set(key, owners.current.get(top));
@@ -166,7 +148,6 @@ function useBackEntries(enabled: boolean): BackEntries | null {
       fn();
       return;
     }
-    // A traversal that never lands (the page left meanwhile) must not swallow the callback.
     let done = false;
     const once = () => {
       if (done) return;
@@ -191,7 +172,6 @@ function useBackEntries(enabled: boolean): BackEntries | null {
       const index = current === undefined
         ? -1
         : pushed.current.findIndex((key) => entryValue(key) === current);
-      // An entry we do not own (another page's, or a stale one): leave it to the router.
       if (current !== undefined && index === -1) return;
       const left = pushed.current.slice(index + 1);
       if (left.length === 0) return;
@@ -199,9 +179,6 @@ function useBackEntries(enabled: boolean): BackEntries | null {
       for (const key of [ ...left ].reverse()) {
         open.current.find((entry) => entry.key === key)?.dismiss.current?.();
       }
-      // An overlay that refused to close (busy saving) gets its entry back, so the next Back still closes it.
-      // This push has no user activation, so Chrome may mark the entry skippable and let a later Back pass over
-      // it; that only loses this safety net, it never closes the wrong overlay.
       setTimeout(() => {
         const top = open.current.at(-1);
         if (top && left.includes(top.key) && !pushed.current.includes(top.key)) pushEntry(top.key);
@@ -219,7 +196,6 @@ function useBackEntries(enabled: boolean): BackEntries | null {
 
 export function FocusTrapProvider({ children, dismissOnBack = false }: {
   children: ReactNode;
-  /** Back closes the top overlay (provider portal). Off for public pages, which manage their own history. */
   dismissOnBack?: boolean;
 }) {
   // A ref, not state: the provider can unmount together with its dialog, and an update queued then never runs.
@@ -262,10 +238,6 @@ export function FocusTrapProvider({ children, dismissOnBack = false }: {
   );
 }
 
-/**
- * While `active`, the browser's Back button calls `onDismiss` (only under `<FocusTrapProvider dismissOnBack>`;
- * otherwise a no-op). Call `release()` just before closing because of a navigation that replaces the entry.
- */
 export function useBackDismiss(active: boolean, onDismiss: () => void) {
   const back = useContext(FocusTrapContext)?.back ?? null;
   const key = useId();
@@ -284,11 +256,6 @@ export function useBackDismiss(active: boolean, onDismiss: () => void) {
   return { release };
 }
 
-/**
- * Defers work until the overlays have finished closing: an overlay that closes goes back() over its own history
- * entry on a later task, and a URL write made before that traversal lands (nuqs's replaceState) would be written
- * onto the overlay's entry and popped away with it. Without `dismissOnBack` it runs `fn` at once.
- */
 export function useAfterOverlaysSettle() {
   const back = useContext(FocusTrapContext)?.back ?? null;
   return useCallback((fn: () => void) => {
@@ -297,10 +264,6 @@ export function useAfterOverlaysSettle() {
   }, [ back ]);
 }
 
-/**
- * Marks a page (PageLayout). An overlay opened while it is mounted that closes because the page unmounted never
- * goes back: the app is leaving the page, and going back would cancel that navigation (logout, expired session).
- */
 export function useBackScope() {
   const back = useContext(FocusTrapContext)?.back ?? null;
   const key = useId();
@@ -311,10 +274,6 @@ export function useBackScope() {
   }, [ back, key ]);
 }
 
-/**
- * For links inside an overlay: dismisses the top overlay when we stand on its history entry and reports whether
- * it did. With `viaNavigation` its entry is left for the navigation to replace.
- */
 export function useCloseTopOverlay() {
   const back = useContext(FocusTrapContext)?.back ?? null;
   return useCallback((viaNavigation: boolean) => back?.closeTop(viaNavigation) ?? false, [ back ]);
@@ -347,8 +306,6 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const first = el.querySelector<HTMLElement>(FOCUSABLE);
     first?.focus();
 
-    // The entry before the lock: pushState saves the page's scroll into the entry it leaves, and a locked body
-    // reads 0, which the browser would then restore when the overlay's entry is popped.
     const withBack = back !== null && escape.current !== undefined;
     if (withBack) back.add(key, escape);
     registrationId.current = register();

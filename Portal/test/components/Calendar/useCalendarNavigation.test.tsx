@@ -8,7 +8,6 @@ import { toDateStr } from "@/src/components/Calendar/constants";
 
 const TZ = "America/New_York";
 
-/** The hook under a URL that tests can change while it is mounted (`setUrl` + `rerender`), as a link or Back would. */
 function setup(searchParams: string, phone: boolean) {
   const env = { url: searchParams, phone };
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -26,7 +25,6 @@ const fetchedWeek = (filters: { dateFrom: string; dateTo: string }) => [ filters
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: [ "Date" ] });
-  // Wednesday 2026-11-25, 10:00 in New York.
   vi.setSystemTime(new Date("2026-11-25T15:00:00Z"));
 });
 afterEach(() => vi.useRealTimers());
@@ -87,7 +85,6 @@ describe("useCalendarNavigation", () => {
     const { result, setUrl } = setup("?view=day&day=2026-12-10", true);
     expect(fetchedWeek(result.current.calendarFilters)).toEqual([ "2026-12-07", "2026-12-14" ]);
 
-    // The Calendario tab links to /calendar: back to today, and to today's week.
     setUrl("");
     expect(result.current.dayDate).toBe("2026-11-25");
     expect(toDateStr(result.current.weekStart)).toBe("2026-11-23");

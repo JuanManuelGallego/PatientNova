@@ -1,8 +1,3 @@
-// Builds the web app manifest icons in public/icons from the app icon (src/app/icon.png).
-// Run from Portal/: `node scripts/generate-app-icons.mjs`. Uses the sharp that Next already installs.
-//
-// The source mark is only 128px, so the 512px icons are upscaled: replace src/app/icon.png with a larger
-// (or vector-exported) mark and rerun to sharpen them.
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -14,13 +9,8 @@ const sharp = requireFromNext("sharp");
 
 const SOURCE = join(root, "src/app/icon.png");
 const OUT = join(root, "public/icons");
-// theme.colors.surface: the mark sits on the same white as the app's top bar.
 const BACKGROUND = "#ffffff";
 
-/**
- * `any` icons keep the mark on a transparent canvas with a little air around it; maskable ones fill the canvas
- * with the background and keep the mark inside the central 80% safe zone that launchers never crop.
- */
 const VARIANTS = [
     { file: "icon-192.png", size: 192, mark: 0.84, background: null },
     { file: "icon-512.png", size: 512, mark: 0.84, background: null },

@@ -6,23 +6,15 @@ import { AppointmentDrawer } from '../../pages/Drawers/AppointmentDrawer';
 import { AppointmentModal } from '../../pages/Modals/AppointmentModal';
 import { SidebarPage } from '../../pages/SidebarPage';
 
-// Phase 1 of issue #123: on a phone the browser's Back button closes the top overlay (drawer, modal, menu)
-// instead of leaving the page, and closing one from the UI leaves no extra Back step behind.
-
 type Tracker = { track: (id: string) => void };
 
 test.describe('Back button on provider pages (phone)', () => {
   test.beforeEach(async ({ page }) => {
-    // A previous page in the tab's history, so a Back that leaves Citas would land here.
     await page.goto('/dashboard');
   });
 
   type Seed = { api: ApiClient; trackedPatients: Tracker; trackedAppointments: Tracker };
 
-  /**
-   * Citas filtered to a fresh patient's appointments (at most one page of 10), so every card is on the first
-   * page. Returns the last created appointment's card (a phone shows the list as cards, not table rows).
-   */
   async function openAppointments(page: Page, { api, trackedPatients, trackedAppointments }: Seed, count = 1) {
     const patient = await createTestPatient(api);
     trackedPatients.track(patient.id);
@@ -40,7 +32,6 @@ test.describe('Back button on provider pages (phone)', () => {
   }
 
   async function openDrawer(card: Locator, page: Page) {
-    // The whole card is the tap target.
     await card.click();
     const drawer = new AppointmentDrawer(page);
     await drawer.waitForOpen();
@@ -65,7 +56,6 @@ test.describe('Back button on provider pages (phone)', () => {
   }) => {
     const row = await openAppointments(page, { api, trackedPatients, trackedAppointments });
     const drawer = await openDrawer(row, page);
-    // Citas closes the drawer as it opens the edit modal; the modal takes over the drawer's history entry.
     await drawer.editButton.click();
     const modal = new AppointmentModal(page);
     await expect(modal.dialog).toBeVisible();
@@ -75,7 +65,6 @@ test.describe('Back button on provider pages (phone)', () => {
     await expect(page).toHaveURL(/\/appointments/);
     await expect(row).toBeVisible();
 
-    // No entry left behind by the drawer: the next Back leaves Citas.
     await page.goBack();
     await expect(page).toHaveURL(/\/dashboard/);
   });
@@ -158,7 +147,6 @@ test.describe('Back button on provider pages (phone)', () => {
   });
 
   test('logging out from the open menu lands on the login page', async ({ page }) => {
-    // Answer the logout locally: the shared signed-in session must stay valid for the other specs.
     await page.route('**/auth/logout', (route) => route.fulfill({ status: 204 }));
     await page.goto('/appointments');
     const sidebar = new SidebarPage(page);

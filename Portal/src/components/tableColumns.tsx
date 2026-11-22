@@ -38,14 +38,8 @@ export type ColumnFilterConfig =
     }
   | {
       kind: "custom";
-      /**
-       * Renders the filter body; receives a callback to close the popover. In the phone filter sheet the
-       * callback does nothing: filters apply as they change and the sheet has its own close button.
-       */
       render: (onClose: () => void) => React.ReactNode;
-      /** Whether the filter is considered active (controls the trigger highlight and the sheet's count). */
       active?: boolean;
-      /** Resets the filter; the phone filter sheet's "Limpiar" calls it. */
       onClear?: () => void;
       testId?: string;
       triggerTestId?: string;
@@ -74,7 +68,6 @@ export function isFilterActive(filter: ColumnFilterConfig | undefined): boolean 
   }
 }
 
-/** Resets a filter to "no filter" through its own onChange. */
 export function clearFilter(filter: ColumnFilterConfig): void {
   switch (filter.kind) {
     case "enum":
@@ -91,10 +84,6 @@ export function clearFilter(filter: ColumnFilterConfig): void {
   }
 }
 
-/**
- * The body of a column filter, shared by the header popover and the phone filter sheet.
- * `onPicked` runs after a date or range is chosen (the popover closes then; the sheet stays open).
- */
 export function FilterBody({
   config,
   onClose,
@@ -104,7 +93,6 @@ export function FilterBody({
   config: ColumnFilterConfig;
   onClose: () => void;
   onPicked?: () => void;
-  /** Where antd renders the picker popup; omitted, it goes to `document.body` above every overlay. */
   popupContainer?: () => HTMLElement | null;
 }) {
   switch (config.kind) {

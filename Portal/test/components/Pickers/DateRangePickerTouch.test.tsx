@@ -16,7 +16,6 @@ const preset = (name: string) => within(screen.getByTestId("range")).getByRole("
 const dialog = () => screen.getByRole("dialog");
 
 describe("DateRangePicker on a touch screen", () => {
-    // Wednesday 1 April 2026, 05:00 in Kiritimati (UTC+14); still Tuesday 31 March on the New York device.
     useTouchEnv({ now: "2026-03-31T15:00:00Z", providerZone: "Pacific/Kiritimati" });
 
     it("offers presets instead of antd's two-month range picker", () => {
@@ -71,7 +70,6 @@ describe("DateRangePicker on a touch screen", () => {
         fireEvent.click(within(dialog()).getByRole("button", { name: / 12 de abril de 2026/ }));
         await waitFor(() => expect(onChange).toHaveBeenCalledWith([ "2026-04-10", "2026-04-12" ]));
         expect(onChange).toHaveBeenCalledTimes(1);
-        // Its own echo keeps the fields: still Personalizado, both days shown.
         expect(preset("Personalizado")).toHaveAttribute("aria-pressed", "true");
         expect(screen.getByTestId("range-to")).toHaveTextContent("12/04/2026");
     });
@@ -82,7 +80,6 @@ describe("DateRangePicker on a touch screen", () => {
         fireEvent.click(screen.getByTestId("range-from"));
         fireEvent.click(within(dialog()).getByRole("button", { name: "Mes siguiente" }));
         fireEvent.click(within(dialog()).getByRole("button", { name: / 20 de marzo de 2026/ }));
-        // The list must not stay filtered by a range the fields no longer show.
         await waitFor(() => expect(onChange).toHaveBeenCalledWith(null));
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(preset("Personalizado")).toHaveAttribute("aria-pressed", "true");

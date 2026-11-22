@@ -45,7 +45,6 @@ export function buildCsp(options: CspOptions): string {
         "style-src": [ "'self'", "'unsafe-inline'" ],
         "img-src": img,
         "font-src": [ "'self'", "data:" ],
-        // The web app manifest (/manifest.webmanifest), spelled out rather than left to default-src.
         "manifest-src": [ "'self'" ],
         "connect-src": [ ...connect, TURNSTILE_ORIGIN ],
         "object-src": [ "'none'" ],

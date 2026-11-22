@@ -40,7 +40,6 @@ export function DateTimePicker({
 }) {
   const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
-  // Touch screens get a bottom sheet: antd's side-by-side calendar and time columns overflow a phone.
   const coarse = useCoarsePointer();
   const now = () => nowInZone(timezone);
   const toValue = (value: string): Dayjs | null => {
@@ -83,7 +82,6 @@ export function DateTimePicker({
   if (coarse) {
     const today = todayFormattedString(timezone);
     const year = Number(today.slice(0, 4));
-    // A stored day outside the default window (a record older than 120 years) must still be selectable.
     const storedYear = date ? toValue(date)?.year() ?? year : year;
     const years = isFuture
       ? { from: Math.min(year, storedYear), to: Math.max(year + 10, storedYear) }
@@ -102,7 +100,6 @@ export function DateTimePicker({
         minuteStep={5}
         minMonth={isFuture ? today.slice(0, 7) : undefined}
         maxMonth={isFuture ? undefined : today.slice(0, 7)}
-        // Birth dates sit decades back: month-by-month arrows would take hundreds of taps.
         years={mode === "calendarDay" ? years : undefined}
         popupContainer={popupContainer}
         testId={testId}

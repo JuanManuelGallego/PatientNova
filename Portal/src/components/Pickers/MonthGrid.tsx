@@ -10,7 +10,6 @@ const WEEKDAYS = [
     [ "D", "domingo" ],
 ] as const;
 
-/** "domingo, 22 de noviembre de 2026": a calendar day read in UTC, so no zone can move it. */
 export function fmtDayLabel(day: string): string {
     return new Date(`${day}T12:00:00Z`).toLocaleDateString("es-ES", {
         timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -20,26 +19,17 @@ export function fmtDayLabel(day: string): string {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export interface MonthGridProps {
-    /** Visible month, "YYYY-MM". */
     month: string;
-    /** Selected day, "YYYY-MM-DD". */
     selected?: string | null;
-    /** The provider's today, "YYYY-MM-DD". */
     today: string;
     isDisabled?: (day: string) => boolean;
-    /** First and last months the arrows and selects can reach, "YYYY-MM". */
     minMonth?: string;
     maxMonth?: string;
-    /** Shows month and year selects in the header, for ranges that span years (birth dates). */
     years?: { from: number; to: number };
     onSelect: (day: string) => void;
     onMonth: (month: string) => void;
 }
 
-/**
- * A Monday-first month of calendar days ("YYYY-MM-DD" strings, no instants), for the touch pickers.
- * The caller decides which days are disabled and keeps the visible month.
- */
 export function MonthGrid({ month, selected, today, isDisabled, minMonth, maxMonth, years, onSelect, onMonth }: MonthGridProps) {
     const clamp = (next: string) =>
         minMonth && next < minMonth ? minMonth : maxMonth && next > maxMonth ? maxMonth : next;
@@ -83,7 +73,6 @@ export function MonthGrid({ month, selected, today, isDisabled, minMonth, maxMon
                     <ChevronRight size={20} aria-hidden="true" />
                 </button>
             </div>
-            {/* A table, not a grid: the days are plain buttons reached with Tab, with no arrow-key navigation. */}
             <table aria-label={fmtMonth(month)} className={styles.grid}>
                 <thead>
                     <tr>

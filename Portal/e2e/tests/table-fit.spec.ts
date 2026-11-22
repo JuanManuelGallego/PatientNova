@@ -1,7 +1,6 @@
 import { test, expect } from '../fixtures';
 import { createTestPatient, createTestAppointment, createTestReminder } from '../utils/helpers';
 
-// Every list table behaves the same: under 1100px its secondary columns hide instead of scrolling sideways.
 const PAGES = [
   { name: 'Citas', path: '/appointments', hasActions: true, settleReminder: true },
   { name: 'Pacientes', path: '/patients', hasActions: true, settleReminder: true },
@@ -26,7 +25,6 @@ test.describe('List tables fit at 1280px', () => {
       trackedAppointments.track(appt.data.id);
       const reminder = await createTestReminder(api, patient.id);
       trackedReminders.track(reminder.data.id);
-      // A settled reminder fills the History tab; the Activos tab needs it still pending.
       if (settleReminder) await api.cancelReminder(reminder.data.id);
 
       await page.goto(path);
@@ -62,8 +60,14 @@ test.describe('List tables fit at 1280px', () => {
       if (name === 'Citas') {
         const labels = m.rects.map((r) => r.label);
         expect(labels.join('|')).toContain('Estado');
-        expect(labels.join('|')).toContain('Pago');
       }
+      const misaligned = await table.evaluate((el) => {
+        const headers = Array.from(el.querySelectorAll('thead th')).filter((th) => getComputedStyle(th).display !== 'none').length;
+        return Array.from(el.querySelectorAll('tbody tr.table-row'))
+          .map((tr) => Array.from(tr.children).filter((td) => getComputedStyle(td).display !== 'none').length)
+          .filter((cells) => cells !== headers);
+      });
+      expect(misaligned, 'rows whose visible cells do not match the visible headers').toEqual([]);
     });
   }
 });

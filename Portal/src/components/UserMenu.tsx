@@ -16,7 +16,6 @@ import { ACCOUNT_PATH } from "@/src/config/navigation";
  */
 export function UserMenu({ onNavigate, replace = false, drawerOpen = false }: {
     onNavigate: (event?: MouseEvent<HTMLAnchorElement>) => void;
-    /** Mi cuenta replaces the current history entry (the open mobile menu's own). */
     replace?: boolean;
     drawerOpen?: boolean;
 }) {

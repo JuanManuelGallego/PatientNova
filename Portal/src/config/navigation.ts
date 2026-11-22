@@ -37,7 +37,6 @@ export interface NavGroup<Id extends string = NavItemId> {
     items: NavItem<Id>[];
 }
 
-/** From this width the sidebar is always shown; below it the sidebar is a menu and the tab bar appears. */
 export const DESKTOP_NAV_QUERY = "(min-width: 1024px)";
 
 export const ACTIVITY_PATH = "/activity";
@@ -83,10 +82,6 @@ export function visibleGroups<Id extends string>(groups: NavGroup<Id>[], ctx: Na
         .filter((group) => group.items.length > 0);
 }
 
-/**
- * The phone tab bar, left to right: the screens used all day, with one-word labels. Each entry names a
- * sidebar item, so the bar shows a tab only when the sidebar shows that item (role, inbox, portal).
- */
 const TAB_BAR: { id: NavItemId; label: string }[] = [
     { id: "dashboard", label: "Hoy" },
     { id: "calendar", label: "Calendario" },

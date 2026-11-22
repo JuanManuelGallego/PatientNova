@@ -35,7 +35,6 @@ export function WeekView({
     <div style={{ overflowX: "auto", position: "relative" }}>
       <div
         style={{
-          // Fits the 7 columns at 640px (where the phone agenda stops) inside the page padding and card border.
           minWidth: 560,
           opacity: loading ? 0.5 : 1,
           transition: "opacity 0.15s",

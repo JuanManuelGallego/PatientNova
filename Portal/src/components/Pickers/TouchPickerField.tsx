@@ -16,7 +16,6 @@ dayjs.extend(utc);
 
 export type TouchPickerKind = "date" | "dateTime" | "time";
 
-/** The shape antd's `disabledTime` returns, so the wrappers share one rule between desktop and touch. */
 export interface DisabledTimeConfig {
     disabledHours?: () => number[];
     disabledMinutes?: (hour: number) => number[];
@@ -24,35 +23,24 @@ export interface DisabledTimeConfig {
 
 export interface TouchPickerFieldProps {
     kind: TouchPickerKind;
-    /** Wall-clock value as a UTC-mode dayjs (see ZonedDatePicker), or null when empty. */
     value: Dayjs | null;
     onChange: (value: Dayjs | null) => void;
-    /** The provider's today, "YYYY-MM-DD". */
     today: string;
-    /** dayjs format of the trigger text, e.g. "DD/MM/YYYY HH:mm". */
     format: string;
     placeholder?: string;
-    /** The sheet's heading. */
     title: string;
-    /** Called with a day at wall-clock midnight (UTC mode). */
     disabledDate?: (day: Dayjs) => boolean;
-    /** Called with the drafted day at wall-clock midnight (UTC mode), or the value's day for `time`. */
     disabledTime?: (day: Dayjs | null) => DisabledTimeConfig | undefined;
     minuteStep?: number;
-    /** Hours offered at all, e.g. business hours; all 24 by default. */
     hours?: number[];
-    /** Months the calendar can reach, "YYYY-MM". */
     minMonth?: string;
     maxMonth?: string;
-    /** Month shown when the field is empty; today's by default. */
     initialMonth?: string;
-    /** Adds month and year selects to the calendar header (birth dates). */
     years?: { from: number; to: number };
     allowClear?: boolean;
     disabled?: boolean;
     invalid?: boolean;
     ariaLabel?: string;
-    /** Where the sheet renders; `document.body` by default. A header popover passes itself so taps stay "inside". */
     popupContainer?: () => HTMLElement | null;
     testId?: string;
     className?: string;
@@ -68,16 +56,10 @@ interface Draft {
 const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i);
 const pad = (n: number) => String(n).padStart(2, "0");
 const dayValue = (day: string) => dayjs.utc(`${day}T00:00:00`);
-/** Fecha and Hora are two tabs: arrows and Home/End move between them, Tab enters the panel. */
 const TAB_KEYS: Record<string, "date" | "time"> = { ArrowLeft: "date", ArrowRight: "time", Home: "date", End: "time" };
 const EMPTY: Draft = { day: null, hour: null, minute: null };
 const fmtTabDay = (day: string) => dayValue(day).locale("es").format("ddd D MMM YYYY").replace(/\./g, "");
 
-/**
- * A touch replacement for antd's pickers: a field that opens the shared bottom sheet with a month calendar
- * and/or hour-then-minute chips. It works only on wall-clock values, so the wrappers convert at the edges
- * exactly as they do for antd (`toPickerValue` / `fromPickerValue`, calendar days).
- */
 export function TouchPickerField(props: TouchPickerFieldProps) {
     const {
         kind, value, onChange, today, format, placeholder, title, disabledDate, disabledTime, minuteStep = 1,
@@ -86,7 +68,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
     } = props;
     const [ open, setOpen ] = useState(false);
     const [ draft, setDraft ] = useState<Draft>(EMPTY);
-    // The draft as it was when the sheet opened: confirming it unchanged saves nothing.
     const [ initial, setInitial ] = useState<Draft>(EMPTY);
     const [ view, setView ] = useState<"date" | "time">("date");
     const [ month, setMonth ] = useState(today.slice(0, 7));
@@ -94,22 +75,14 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
     const valueId = useId();
     const dateTabId = useId();
     const timeTabId = useId();
-    // The tapped day unmounts when the view turns to the time: focus moves to the tab so it stays in the sheet.
     const dateTab = useRef<HTMLButtonElement>(null);
     const timeTab = useRef<HTMLButtonElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
-    // Inside a <label> the label names the trigger, so the value becomes its description; outside, the value
-    // already is its name and describing it again would read it twice.
     const [ labelled, setLabelled ] = useState(false);
     useEffect(() => {
         setLabelled((trigger.current?.labels?.length ?? 0) > 0);
     }, []);
 
-    /*
-     * The value is emitted only once the sheet's history entry is gone. Closing the sheet goes back() over that
-     * entry on a later task; a URL write made first (a nuqs filter's replaceState) would land on the sheet's entry
-     * and be popped away with it. So: close, let the overlays settle, then call onChange.
-     */
     const pending = useRef<{ value: Dayjs } | null>(null);
     const onChangeRef = useRef(onChange);
     useEffect(() => {
@@ -141,7 +114,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
     };
     const dayOff = (day: string) => disabledDate?.(dayValue(day)) ?? false;
 
-    /** Keeps a drafted time only while the drafted day still allows it. */
     const fitTime = (day: string | null, hour: number | null, minute: number | null): Draft => {
         if (hour === null) return { day, hour: null, minute: null };
         if (hourOff(day, hour)) return { day, hour: null, minute: null };
@@ -170,8 +142,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
         (kind === "date" || (d.hour === initial.hour && d.minute === initial.minute));
     const commit = (d: Draft) => {
         setOpen(false);
-        // Re-saving the value it opened with would not be a no-op: on a fall-back night the second 01:30 would come
-        // back as the first, an hour earlier, and the appointment picker would re-run its booked/blocked checks.
         if (value && unchanged(d)) return;
         pending.current = { value: build(d) };
     };
@@ -234,7 +204,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
         />
     );
 
-    // A date-only sheet confirms on the tap, so it has nothing for "Listo" to do.
     const footer = (
         <>
             <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Cancelar</button>
@@ -279,7 +248,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
 
     return (
         <div className={`${styles.field}${className ? ` ${className}` : ""}`} style={style}>
-            {/* aria-invalid is no longer global in ARIA 1.2, but screen readers still announce it on a button. */}
             {/* eslint-disable-next-line jsx-a11y/role-supports-aria-props */}
             <button
                 ref={trigger}
@@ -302,9 +270,6 @@ export function TouchPickerField(props: TouchPickerFieldProps) {
                     <X size={16} aria-hidden="true" />
                 </button>
             )}
-            {/* In a header filter pop-up the sheet renders inside it, so its taps count as inside. The pop-up
-                (.th-filter-popover) must then never get transform, filter or contain: any of them would make it the
-                containing block of the sheet's fixed scrim and shrink the scrim to the pop-up. */}
             {sheet && typeof document !== "undefined" && createPortal(sheet, popupContainer?.() ?? document.body)}
         </div>
     );

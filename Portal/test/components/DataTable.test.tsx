@@ -4,7 +4,6 @@ import { DataCard, DataTable, type ColumnDef } from "@/src/components/DataTable"
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
-// Closing a sheet restores the scroll position, which jsdom does not implement (also after a test's own cleanup).
 window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 
 function table(columns: ColumnDef[], orderBy?: string) {
@@ -98,7 +97,6 @@ describe("DataTable compact controls", () => {
   });
 });
 
-/** Makes every observed element report `width` px, as a ResizeObserver would after layout. */
 function stubContainerWidth(width: number) {
   class FakeResizeObserver {
     constructor(private readonly cb: ResizeObserverCallback) {}
@@ -279,7 +277,6 @@ describe("DataTable filter sheet (card layout)", () => {
     expect(within(sort).getByRole("radio", { name: "Fecha y hora" })).toBeInTheDocument();
     expect(within(sort).getByRole("radio", { name: "Estado" })).toBeInTheDocument();
 
-    // Filters apply as they change, like the header popovers.
     const typeSection = within(sheet).getByRole("heading", { name: "Tipo" }).closest("section")!;
     fireEvent.click(within(typeSection).getByRole("radio", { name: "Todos" }));
     expect(onType).toHaveBeenCalledWith("");

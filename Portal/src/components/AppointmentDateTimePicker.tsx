@@ -24,7 +24,6 @@ const OUT_OF_HOURS: number[] = [
   ),
 ];
 
-/** The hours a touch picker offers at all; OUT_OF_HOURS stays the rule for both pickers. */
 const BUSINESS_HOURS: number[] = Array.from(
   { length: BUSINESS_LAST_HOUR - BUSINESS_OPEN_HOUR + 1 },
   (_, i) => BUSINESS_OPEN_HOUR + i
@@ -52,7 +51,6 @@ export function AppointmentDateTimePicker({
 }: AppointmentDateTimePickerProps) {
   const timezone = useDisplayTimezone();
   const { isDark } = useTheme();
-  // Touch screens get a bottom sheet: antd's side-by-side calendar and time columns overflow a phone.
   const coarse = useCoarsePointer();
   const bookedSet = useMemo(
     () =>

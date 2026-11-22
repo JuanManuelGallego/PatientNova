@@ -30,7 +30,6 @@ describe("date picker", () => {
     });
 });
 
-// On touch, the time and range pickers are the sheet-based touch pickers (test/components/Pickers): no text input at all.
 describe.each([
     ["time picker", () => <ZonedDatePicker.TimePicker data-testid="p" />],
     ["range picker", () => <DateRangePicker value={null} onChange={() => {}} testId="p" />],

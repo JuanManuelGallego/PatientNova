@@ -18,7 +18,6 @@ vi.mock("@/src/api/booking-requests/useResolveBookingRequest", () => ({
   useResolveBookingRequest: () => ({ approve, reject, loading: false, error: resolveError }),
 }));
 vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
-// The drawer's links (OverlayLink) use the app router, which is not mounted here.
 vi.mock("next/navigation", async (importOriginal) => ({
     ...(await importOriginal<typeof import("next/navigation")>()),
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),

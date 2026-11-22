@@ -4,9 +4,6 @@ import { test, expect } from '../../fixtures';
 import { createTestPatient, createTestAppointment } from '../../utils/helpers';
 import { Env } from '../../utils/env';
 
-// Phase 4 of issue #123: on a phone the daily screens sit in a bottom tab bar (the rest stays in the
-// hamburger menu), and the portal can be installed from its web app manifest.
-
 const tabBar = (page: Page) => page.getByTestId('bottom-tabbar');
 const tab = (page: Page, id: string) => page.getByTestId(`tabbar-link-${id}`);
 
@@ -24,10 +21,8 @@ test.describe('Bottom tab bar (phone)', () => {
       await expect(tab(page, id)).toHaveText(label);
     }
     await expectActive(page, 'dashboard');
-    // Everything else stays behind the hamburger.
     await expect(page.getByTestId('hamburger-button')).toBeVisible();
 
-    // 44px targets, inside the viewport, no sideways page scroll.
     const box = await tab(page, 'patients').boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -45,7 +40,6 @@ test.describe('Bottom tab bar (phone)', () => {
     await expect(page).toHaveURL(/\/patients(\?|$)/);
     await expectActive(page, 'patients');
 
-    // Tab links push entries: Back returns to the previous tab.
     await page.goBack();
     await expect(page).toHaveURL(/\/appointments(\?|$)/);
     await expectActive(page, 'appointments');
@@ -59,7 +53,6 @@ test.describe('Bottom tab bar (phone)', () => {
     await page.getByTestId('hamburger-button').click();
     await expect(page.getByTestId('sidebar-backdrop')).toBeVisible();
 
-    // The backdrop takes a tap on the bar (right of the menu panel): the menu closes and the page stays.
     const bar = await tabBar(page).boundingBox();
     await page.mouse.click(bar!.x + bar!.width - 20, bar!.y + bar!.height / 2);
     await expect(page.getByTestId('sidebar-backdrop')).toBeHidden();
@@ -88,7 +81,6 @@ test.describe('Bottom tab bar (phone)', () => {
 });
 
 test('serves the web app manifest and its icons without a session', async () => {
-  // A fresh context: no session cookie, as the browser fetches the manifest.
   const anonymous = await playwrightRequest.newContext({
     baseURL: Env.baseUrl,
     ...(Env.vercelAutomationBypassSecret && {
@@ -118,7 +110,6 @@ test('links the manifest from provider pages only, never from public ones', asyn
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/app.webmanifest');
   await expect(page.locator('meta[name="theme-color"]')).toHaveCount(1);
 
-  // Patients must not be offered to install the provider app.
   await page.goto('/privacy-policy');
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(0);
 });

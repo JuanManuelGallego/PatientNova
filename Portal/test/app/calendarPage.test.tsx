@@ -22,7 +22,6 @@ vi.mock("@/src/hooks/useDrawerNavigation", () => ({
 }));
 vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 
-/** Each mocked component renders a marker and records the props it was last given. */
 const props: Record<string, Record<string, unknown>> = {};
 const marker = (name: string) => {
   function Mock(p: Record<string, unknown>) {
@@ -60,7 +59,6 @@ async function renderPage() {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: [ "Date" ] });
-  // Wednesday 2026-11-25, 10:00 in Bogotá.
   vi.setSystemTime(new Date("2026-11-25T15:00:00Z"));
 });
 
@@ -109,7 +107,6 @@ describe("calendar page", () => {
     for (const desktop of [ "MonthView", "WeekView", "CalendarToolbar", "CalendarLegend" ]) {
       expect(screen.queryByTestId(`mock-${desktop}`)).toBeNull();
     }
-    // Bloquear horario stays in the header on a phone.
     expect(screen.getByTestId("calendar-block-time-button")).toBeInTheDocument();
 
     expect(screen.queryByTestId("mock-AppointmentModal")).toBeNull();
@@ -156,7 +153,6 @@ describe("calendar page", () => {
     nav.dayDate = "2026-11-27";
     await renderPage();
     fireEvent.click(screen.getByTestId("calendar-fab-new-appointment"));
-    // 9:00 a. m. in Bogotá.
     expect(props.AppointmentModal!.prefillDate).toBe("2026-11-27T14:00:00.000Z");
   });
 
@@ -169,7 +165,6 @@ describe("calendar page", () => {
     expect(props.AppointmentModal!.prefillDate).toBeNull();
 
     const { act } = await import("@testing-library/react");
-    // 9:00 a. m. today in Bogotá is before the faked now (10:00 a. m.).
     act(() => (props.Agenda!.onCreateAppointment as (iso: string) => void)("2026-11-25T14:00:00.000Z"));
     expect(props.AppointmentModal!.prefillDate).toBeNull();
   });

@@ -4,7 +4,6 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 import { setDisplayTimezone } from "@/src/utils/TimeUtils";
 
-/** Stubs `matchMedia` so only `(pointer: coarse)` matches (touch) or nothing does (mouse). */
 export function setPointer(coarse: boolean) {
     window.matchMedia = ((query: string) => ({
         matches: coarse && query === "(pointer: coarse)",
@@ -18,10 +17,6 @@ export function setPointer(coarse: boolean) {
     })) as unknown as typeof window.matchMedia;
 }
 
-/**
- * A device in New York with the provider in `providerZone`, the clock fixed at `now`, and a touch screen.
- * Only `Date` is faked, so React's timers keep running.
- */
 export function useTouchEnv({ now, providerZone, deviceZone = "America/New_York" }: {
     now: string;
     providerZone: string;

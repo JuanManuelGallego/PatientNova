@@ -21,16 +21,13 @@ const day = (name: RegExp) => screen.getByRole("button", { name });
 describe("MonthGrid", () => {
     it("lays the month out Monday first, with blanks before the 1st", () => {
         render(<Harness />);
-        // A table, not a grid: there is no arrow-key navigation to promise.
         expect(screen.queryByRole("grid")).toBeNull();
         const table = screen.getByRole("table", { name: "noviembre de 2026" });
-        // 1 Nov 2026 is a Sunday: six blanks, then the 1st in the seventh column.
         const cells = within(table).getAllByRole("cell");
         expect(cells.slice(0, 6).every((cell) => cell.textContent === "")).toBe(true);
         expect(cells[6]).toHaveTextContent("1");
         const headers = screen.getAllByRole("columnheader");
         expect(headers.map((h) => h.textContent)).toEqual([ "L", "M", "X", "J", "V", "S", "D" ]);
-        // The letters are read out as the full weekday.
         expect(headers.map((h) => h.getAttribute("aria-label"))).toEqual(
             [ "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo" ],
         );

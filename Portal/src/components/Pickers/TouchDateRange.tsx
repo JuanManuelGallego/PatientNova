@@ -16,7 +16,6 @@ export interface RangePreset {
     range: DayRange;
 }
 
-/** Hoy, Esta semana (Monday to Sunday) and Este mes around `today`, a "YYYY-MM-DD" in the provider's zone. */
 export function rangePresets(today: string): RangePreset[] {
     const weekday = (new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7;
     const monday = addCalendarDays(today, -weekday);
@@ -37,10 +36,6 @@ interface Draft {
     to: string | null;
 }
 
-/**
- * The range filter on touch screens: presets first, and two single-day fields under "Personalizado". It only
- * emits complete ranges (or null), like antd's RangePicker; a half-filled Personalizado applies no range.
- */
 export function TouchDateRange({ value, onChange, today, popupContainer, testId }: {
     value: DayRange | null;
     onChange: (range: DayRange | null) => void;
@@ -53,10 +48,8 @@ export function TouchDateRange({ value, onChange, today, popupContainer, testId 
     const [ synced, setSynced ] = useState(value);
     const [ draft, setDraft ] = useState<Draft>({ from: value?.[0] ?? null, to: value?.[1] ?? null });
     const [ custom, setCustom ] = useState(!!value && !matchesPreset(value));
-    // What the Desde/Hasta fields last emitted: its echo through `value` must not reset them.
     const [ own, setOwn ] = useState<{ range: DayRange | null } | null>(null);
 
-    // A new value from outside (a preset, "Limpiar", the URL) replaces the draft.
     if (!sameRange(value, synced)) {
         setSynced(value);
         if (own && sameRange(own.range, value)) {
@@ -91,7 +84,6 @@ export function TouchDateRange({ value, onChange, today, popupContainer, testId 
     const update = (next: Draft) => {
         setDraft(next);
         if (next.from && next.to) emitOwn([ next.from, next.to ]);
-        // An applied range the fields no longer show in full is withdrawn, so the list matches what they show.
         else if (value) emitOwn(null);
     };
 

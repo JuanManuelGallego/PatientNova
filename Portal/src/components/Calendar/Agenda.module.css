@@ -1,7 +1,3 @@
-/* Phone calendar: toolbar, week strip, day agenda and the compact month day picker. */
-
-/* ---------------------------------------------------------------- toolbar */
-
 .toolbar {
   display: flex;
   flex-direction: column;
@@ -95,8 +91,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* The segmented control is 44px tall overall (3px padding around 38px segments). */
-
 .iconButton:focus-visible,
 .todayButton:focus-visible,
 .segment:focus-visible,
@@ -118,8 +112,6 @@
   }
 }
 
-/* ---------------------------------------------------------------- week strip */
-
 .agenda {
   display: flex;
   flex-direction: column;
@@ -128,11 +120,9 @@
 .strip {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  /* Tight gutters keep each day about 44px wide on a 360px screen. */
   gap: 2px;
   padding: 10px 4px 12px;
   border-bottom: 1px solid var(--c-gray-100);
-  /* Sideways swipes change the week; vertical ones still scroll the page. */
   touch-action: pan-y;
 }
 
@@ -182,13 +172,11 @@
   color: var(--c-error-text);
 }
 
-/* Today: a ring around the number. */
 .pill[aria-current="date"] .pillNumber {
   box-shadow: inset 0 0 0 2px var(--c-brand);
   color: var(--c-brand);
 }
 
-/* Selected: the whole pill fills with the brand colour. */
 .pill[aria-pressed="true"] {
   background: var(--c-brand);
   color: var(--c-white);
@@ -232,8 +220,6 @@
 .monthDay[aria-pressed="true"] .dot {
   background: var(--c-white);
 }
-
-/* ---------------------------------------------------------------- day list */
 
 .dayHeader {
   display: flex;
@@ -312,7 +298,6 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The location's colour as a rail down the left edge, as the desktop chips use it. */
 .item::before {
   content: "";
   position: absolute;
@@ -339,7 +324,6 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  /* "12:00 p. m." in 14px bold needs ~88px; a time never wraps between its digits and its meridiem */
   min-width: 88px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -396,7 +380,6 @@
   );
 }
 
-/* Holds keep the dashed amber look of `.cal-hold`; the rail picks up its colour. */
 .hold {
   --rail: var(--c-warning-border);
   border-style: dashed;
@@ -441,8 +424,6 @@
   flex: 1 1 140px;
   min-height: 44px;
 }
-
-/* ---------------------------------------------------------------- compact month */
 
 .month {
   padding: 8px 4px 14px;

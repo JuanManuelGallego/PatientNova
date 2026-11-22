@@ -490,7 +490,7 @@ function AppointmentsPageContent() {
                   )}
                 </div>
               </td>
-              <td className="td" onClick={(e) => e.stopPropagation()}>
+              <td className="td col--secondary" onClick={(e) => e.stopPropagation()}>
                 <div className="td-actions">
                   {a.status !== AppointmentStatus.CANCELLED && (
                     <>

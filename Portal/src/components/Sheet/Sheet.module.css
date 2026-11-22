@@ -1,5 +1,3 @@
-/* Shared sheet: a bottom sheet on phones, a centered dialog from 960px. Colors come only from the --c-* tokens, so
-   it follows the provider theme and stays light inside the public pages' light frame. */
 .scrim {
   position: fixed;
   inset: 0;
@@ -9,7 +7,6 @@
   background: rgba(26, 21, 35, 0.5);
 }
 
-/* Above modals, nested modals and the sheet it was opened from. */
 .stacked {
   z-index: calc(var(--z-modal-nested, 60) + 10);
 }
@@ -96,7 +93,6 @@
   overscroll-behavior: contain;
 }
 
-/* Without a footer the content reaches the bottom edge, so it clears the home indicator itself. */
 .body:last-child {
   padding-bottom: env(safe-area-inset-bottom);
 }

@@ -15,17 +15,10 @@ import { HOLD_LABEL } from "./PendingHold";
 import { ViewMode } from "./types";
 import styles from "./Agenda.module.css";
 
-/* ---------------------------------------------------------------- helpers */
-
-/** "domingo, 1 de noviembre": a calendar day carries no timezone. */
 const fmtWeekday = (day: string) => fmtCalendarDay(day, { weekday: true, year: false });
 
 const shortMonth = (day: string) => MONTH_NAMES_ES[ Number(day.slice(5, 7)) - 1 ]!.slice(0, 3).toLowerCase();
 
-/**
- * The phone toolbar's period for the agenda: the month of the day's week ("Noviembre de 2026"), or both
- * months when the week spans two ("nov – dic 2026", "dic 2026 – ene 2027").
- */
 export function agendaPeriodLabel(day: string): string {
   const week = weekOf(day);
   const first = week[ 0 ]!;
@@ -39,10 +32,6 @@ export function agendaPeriodLabel(day: string): string {
 
 type DayPart = "allDay" | "range" | "startsHere" | "endsHere";
 
-/**
- * How an event sits on `day` (provider's timezone): all of it, a range inside it, starting here and running
- * past midnight, or ending here after starting earlier. An end at exactly midnight belongs to the day before.
- */
 function dayPart(startIso: string, endIso: string, day: string, timezone: string): DayPart {
   const start = zonedDateTimeParts(startIso, timezone);
   const end = zonedDateTimeParts(endIso, timezone);
@@ -65,11 +54,9 @@ type Entry =
 interface DayEvents {
   apptByDate: Record<string, Appointment[]>;
   blockedByDate: Record<string, BlockedTime[]>;
-  /** Pass only when holds are shown (admins with the inbox on). */
   holdByDate?: Record<string, HeldSlot[]>;
 }
 
-/** Everything on `day`, in start order (ties keep appointments first). */
 function dayEntries(day: string, { apptByDate, blockedByDate, holdByDate }: DayEvents): Entry[] {
   const entries: Entry[] = [
     ...(apptByDate[ day ] ?? []).map((a): Entry => ({ kind: "appt", id: a.id, start: a.startAt, end: a.endAt, appt: a })),
@@ -91,8 +78,6 @@ function HolidayFlag() {
   return <Image className="phone-input-flag" src={flagUrl("co")} alt="Colombia" width={20} height={15} />;
 }
 
-/* ---------------------------------------------------------------- toolbar */
-
 interface AgendaToolbarProps {
   label: string;
   view: ViewMode.Day | ViewMode.Month;
@@ -107,7 +92,6 @@ const PHONE_VIEWS = [
   { view: ViewMode.Month, label: "Mes", testId: "calendar-view-month-button" },
 ] as const;
 
-/** Phone toolbar: previous/next (a week in Día, a month in Mes), the period, Hoy and the Día/Mes switch. */
 export function AgendaToolbar({ label, view, onPrev, onNext, onToday, onChangeView }: AgendaToolbarProps) {
   const unit = view === ViewMode.Month ? "Mes" : "Semana";
   return (
@@ -144,11 +128,8 @@ export function AgendaToolbar({ label, view, onPrev, onNext, onToday, onChangeVi
   );
 }
 
-/* ---------------------------------------------------------------- agenda */
-
 interface AgendaProps extends DayEvents {
   timezone: string;
-  /** The selected calendar day, in the provider's timezone. */
   day: string;
   holidayMap: Record<string, string>;
   loading: boolean;
@@ -157,22 +138,13 @@ interface AgendaProps extends DayEvents {
   onNextWeek: () => void;
   onViewAppt: (a: Appointment) => void;
   onSelectBlockedTime: (bt: BlockedTime) => void;
-  /** Set only when holds are shown; without it the agenda lists none. */
   onSelectHold?: (id: string) => void;
-  /** Opens "Nueva cita" at the given instant (9:00 that day, provider's timezone). */
   onCreateAppointment: (startIso: string) => void;
-  /** Opens "Bloquear horario" for the given calendar day. */
   onCreateBlockedTime: (day: string) => void;
 }
 
 const SWIPE_MIN_PX = 48;
 
-/**
- * Phone calendar: a Monday-to-Sunday strip for the selected day's week, and that day's appointments, holds and
- * blocked time below it in time order. A list rather than the hour grid of `DayView`: on a 360px screen a
- * 30-minute block in a grid is 24px tall, too short for the patient's name or a reliable tap, and an empty
- * day is a column of empty hours instead of an invitation to book.
- */
 export function Agenda(props: AgendaProps) {
   const { timezone, day, holidayMap, loading, onSelectDay, onPrevWeek, onNextWeek, onSelectHold } = props;
   const events: DayEvents = {
@@ -357,12 +329,9 @@ function AgendaItem({ entry, day, timezone, onViewAppt, onSelectBlockedTime, onS
   );
 }
 
-/* ---------------------------------------------------------------- month */
-
 interface CompactMonthProps extends DayEvents {
   timezone: string;
   year: number;
-  /** 0-based month. */
   month: number;
   selectedDay: string;
   holidayMap: Record<string, string>;
@@ -370,12 +339,10 @@ interface CompactMonthProps extends DayEvents {
   onSelectDay: (day: string) => void;
 }
 
-/** Phone month: a day picker with a dot on busy days. Tapping a day opens it in the agenda. */
 export function CompactMonth({ timezone, year, month, selectedDay, holidayMap, loading, onSelectDay, ...events }: CompactMonthProps) {
   const today = todayFormattedString(timezone);
   const first = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  // Monday-first: blank cells before the 1st.
   const offset = (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7;
   const days = Array.from({ length: daysInMonth }, (_, i) => `${first.slice(0, 8)}${String(i + 1).padStart(2, "0")}`);
   const monthLabel = fmtMonthLabel(month, year);

@@ -46,7 +46,6 @@ describe("patients page stats", () => {
   });
 });
 
-/** Every observed element reports `width` px, as a ResizeObserver would after layout. */
 function stubContainerWidth(width: number) {
   class FakeResizeObserver {
     constructor(private readonly cb: ResizeObserverCallback) {}
@@ -82,9 +81,7 @@ describe("patients page on a narrow screen", () => {
     expect(card).toHaveTextContent("María José Hernández Villalobos");
     expect(card).toHaveTextContent("maria@example.com");
     expect(card).not.toHaveTextContent("+573001112233");
-    // Without an email the card shows the WhatsApp number instead.
     expect(screen.getByTestId("patient-card-p2")).toHaveTextContent("+573001112233");
-    // Actions live in the drawer, not on the card.
     expect(within(card).queryByRole("button", { name: /Editar|Desactivar/ })).toBeNull();
 
     fireEvent.click(card);

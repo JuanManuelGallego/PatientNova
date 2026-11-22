@@ -4,14 +4,9 @@ import { createTestPatient, createTestAppointment } from '../../utils/helpers';
 import { AppointmentDrawer } from '../../pages/Drawers/AppointmentDrawer';
 import { AppointmentModal } from '../../pages/Modals/AppointmentModal';
 
-// Phase 4 of issue #123: on a phone the calendar is an agenda (week strip + the day's list), the month is a
-// day picker, and "Nueva cita" is a floating button. Nothing may scroll sideways, down to a 360px screen.
-
-/** The seeded provider's timezone (the server's default). */
 const PROVIDER_TZ = 'America/Bogota';
 const SCROLL_TOLERANCE_PX = 1;
 
-/** The provider-zone calendar day ("YYYY-MM-DD") of an instant. */
 function providerDay(iso: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: PROVIDER_TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
     .format(new Date(iso));
@@ -22,7 +17,6 @@ function shiftDay(day: string, days: number): string {
   return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
 }
 
-/** Monday to Sunday of the week holding `day`. */
 function weekOf(day: string): string[] {
   const [ y, m, d ] = day.split('-').map(Number);
   const isoWeekday = ((new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay() + 6) % 7) + 1;
@@ -50,12 +44,10 @@ test.describe('Calendar on a phone', () => {
     expect(created.startAt, "the API returns the start").toBeTruthy();
     const day = providerDay(created.startAt!);
     const week = weekOf(day);
-    // Open another day of the same week, so the strip is what brings the appointment's day up.
     const otherDay = day === week[ 0 ] ? week[ 1 ]! : week[ 0 ]!;
 
     await page.goto(`/calendar?view=day&day=${otherDay}`);
 
-    // The whole week fits: Monday and Sunday are both on screen.
     await expect(page.getByTestId(`calendar-strip-day-${week[ 0 ]}`)).toBeInViewport();
     await expect(page.getByTestId(`calendar-strip-day-${week[ 6 ]}`)).toBeInViewport();
     const pill = page.getByTestId(`calendar-strip-day-${day}`);
@@ -74,7 +66,6 @@ test.describe('Calendar on a phone', () => {
     await expect(drawer.patientName).toContainText(patient.name);
     await drawer.close();
 
-    // The header's Nueva cita gives way to the floating button; Bloquear horario stays in the header.
     await expect(page.getByTestId('calendar-new-appointment-button')).toBeHidden();
     await expect(page.getByTestId('calendar-block-time-button')).toBeVisible();
     await page.getByTestId('calendar-fab-new-appointment').click();
@@ -89,7 +80,6 @@ test.describe('Calendar on a phone', () => {
     await page.getByTestId('calendar-today-button').click();
     const current = page.locator('[data-testid^="calendar-month-day-"][aria-current="date"]');
     await expect(current).toBeVisible();
-    // No desktop chips in the phone month.
     await expect(page.locator('.cal-grid')).toHaveCount(0);
     const testId = await current.getAttribute('data-testid');
     const day = testId!.replace('calendar-month-day-', '');
@@ -128,7 +118,6 @@ test.describe('Citas on a phone', () => {
     await expect(cards).toHaveCount(3);
     await expect(page.getByTestId('appointments-new-button')).toBeHidden();
 
-    // Scrolled to the bottom, the last card ends above the button.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const fab = page.getByTestId('appointments-fab-new-appointment');
     const last = await cards.last().boundingBox();
@@ -142,7 +131,6 @@ test.describe('Citas on a phone', () => {
     await modal.closeButton.click();
     await modal.waitForClose();
 
-    // While the keyboard is up for the search field, the button steps aside.
     await page.getByTestId('appointments-search-input').focus();
     await expect(fab).toBeHidden();
     await page.getByTestId('appointments-search-input').blur();

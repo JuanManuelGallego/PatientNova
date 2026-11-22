@@ -38,7 +38,6 @@ export function DateRangePicker({
   };
   const timezone = useDisplayTimezone();
 
-  // Touch screens: presets and two single-day sheets, since antd's two side-by-side months overflow a phone.
   if (coarse) {
     return (
       <TouchDateRange

@@ -7,7 +7,6 @@ interface NavGroupListProps<Id extends string> {
     groups: NavGroup<Id>[];
     pathname: string;
     onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
-    /** Links replace the current history entry instead of pushing one. */
     replace?: boolean;
     testIdPrefix: string;
     ariaLabel: string;

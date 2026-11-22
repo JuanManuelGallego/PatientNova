@@ -19,10 +19,6 @@ export const theme = {
   /** ── Font ─────────────────────────────────────────────────────────────── */
   fontFamily: "'DM Sans', sans-serif",
 
-  /**
-   * Browser/status bar colour of the provider app (meta theme-color, manifest theme_color): the top bar's
-   * --c-surface in each theme of globals.css (kept equal by test/app/installMetadata.test.ts).
-   */
   themeColor: { light: "#FFFFFF", dark: "#1A1825" },
 
   /** ── Colors ──────────────────────────────────────────────────────────── */

@@ -12,7 +12,6 @@ vi.mock("next/navigation", () => ({
     usePathname: () => pathname,
     useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-// A plain anchor that shows whether the link would replace the entry or skip navigating, and never navigates jsdom.
 vi.mock("next/link", () => ({
     default: ({ href, replace, onClick, children, ...rest }: {
         href: string; replace?: boolean; onClick?: (e: MouseEvent<HTMLAnchorElement>) => void; children: ReactNode;

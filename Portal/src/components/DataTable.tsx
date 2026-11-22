@@ -12,7 +12,6 @@ import { useContainerNarrow } from "@/src/hooks/useContainerNarrow";
 export type { ColumnDef, ColumnFilterConfig } from "./tableColumns";
 export { DataCard, type DataCardProps } from "./DataCard";
 
-/** Below this width of the table's container, a `DataTable` with `renderCard` shows cards instead of the table. */
 export const CARD_LAYOUT_MAX_WIDTH = 640;
 
 
@@ -154,11 +153,6 @@ interface DataTableProps<T> {
   onSort?: (sortKey: string) => void;
   /** Total row count. When provided, the footer stays visible on out-of-range (empty) pages so users can navigate back. */
   total?: number;
-  /**
-   * Opt-in phone layout. While the table's container is narrower than {@link CARD_LAYOUT_MAX_WIDTH}, the rows
-   * render as a list of cards and the header filters move into one "Filtros" sheet. Must return a
-   * `<DataCard key={...}>`. The table renders instead of the cards wherever the width cannot be measured.
-   */
   renderCard?: (item: T, index: number) => React.ReactNode;
 }
 
@@ -225,9 +219,6 @@ export function HeaderFilterPopover({
     return () => document.removeEventListener("mousedown", handler);
   }, [getAnchor, onClose]);
 
-  // Touch date pickers render their sheet inside this popover (`popupContainer`), so `.th-filter-popover` must
-  // never get a lasting transform, filter or contain: any of them would make it the containing block of the
-  // sheet's fixed scrim and trap the sheet inside the popover.
   return createPortal(
     <div
       ref={popoverRef}
@@ -268,8 +259,6 @@ export function DataTable<T>({
   const closeSheet = useCallback(() => setSheetOpen(false), []);
   const [openColumnIndex, setOpenColumnIndex] = useState<number | null>(null);
   const [openFrom, setOpenFrom] = useState<"header" | "compact">("header");
-  // Switching layout (a phone rotating) drops the other layout's open filter UI, so it can't reopen by itself
-  // later. Adjusted during render (React's "storing information from previous renders"), not in an effect.
   const [layoutWasCards, setLayoutWasCards] = useState(cardMode);
   if (layoutWasCards !== cardMode) {
     setLayoutWasCards(cardMode);
@@ -499,7 +488,6 @@ export function DataTable<T>({
         sheetOpen &&
         typeof document !== "undefined" &&
         createPortal(
-          // On <body>: the card's container query would otherwise contain the sheet's fixed scrim.
           <TableFilterSheet
             columns={columns}
             orderBy={orderBy}

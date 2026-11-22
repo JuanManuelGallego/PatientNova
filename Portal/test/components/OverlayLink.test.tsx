@@ -6,7 +6,6 @@ import { OverlayLink } from "@/src/components/OverlayLink";
 
 const replace = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace }) }));
-// Next's Link navigates unless the click handler prevented it; record which one happened.
 vi.mock("next/link", () => ({
     default: ({ href, onClick, children, ...rest }: {
         href: string; onClick?: (e: MouseEvent<HTMLAnchorElement>) => void; children: ReactNode;

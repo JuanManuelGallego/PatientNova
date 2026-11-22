@@ -9,8 +9,6 @@ vi.mock("next/navigation", () => ({
     usePathname: () => "/dashboard",
     useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-// A plain anchor that shows whether the link would replace the current entry or skip navigating, and never
-// navigates jsdom.
 vi.mock("next/link", () => ({
     default: ({ href, replace, onClick, children, ...rest }: {
         href: string; replace?: boolean; onClick?: (e: MouseEvent<HTMLAnchorElement>) => void; children: ReactNode;
@@ -20,7 +18,6 @@ vi.mock("next/link", () => ({
             data-replace={replace ? "true" : "false"}
             onClick={(e) => {
                 onClick?.(e);
-                // Next's Link skips its navigation when the handler prevented the click.
                 if (e.defaultPrevented) e.currentTarget.dataset.skipped = "true";
                 e.preventDefault();
             }}
@@ -154,7 +151,6 @@ describe("PageLayout mobile sidebar and Back", () => {
         const back = vi.spyOn(window.history, "back");
         const go = vi.spyOn(window.history, "go");
 
-        // AuthGuard stops rendering the page before the router's replace to /login commits.
         view.rerender(<FocusTrapProvider dismissOnBack>{null}</FocusTrapProvider>);
         await settle();
 

@@ -72,7 +72,6 @@ describe("reminders page", () => {
   });
 });
 
-/** Every observed element reports `width` px, as a ResizeObserver would after layout. */
 function stubContainerWidth(width: number) {
   class FakeResizeObserver {
     constructor(private readonly cb: ResizeObserverCallback) {}

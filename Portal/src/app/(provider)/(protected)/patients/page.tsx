@@ -47,7 +47,6 @@ enum PatientTab {
   Inactive = "inactive",
 }
 
-/** The card's one contact line: the email, else the WhatsApp number, else the SMS number. */
 function PatientContactLine({ patient }: { patient: Patient }) {
   if (patient.email) {
     return (

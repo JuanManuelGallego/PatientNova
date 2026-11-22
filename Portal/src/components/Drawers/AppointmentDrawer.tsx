@@ -40,7 +40,6 @@ export function AppointmentDrawer({
   appt: Appointment;
   onClose: () => void;
   onEdit?: () => void;
-  /** Marks a SCHEDULED appointment CONFIRMED (phone cards have no inline button). */
   onConfirm?: () => void;
   onPay?: () => void;
   onDelete?: () => void;

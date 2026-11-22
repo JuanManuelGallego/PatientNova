@@ -281,7 +281,6 @@ function fmtCalendarDay(
     });
 }
 
-/** The "YYYY-MM-DD" calendar day `days` later (negative: earlier). Pure calendar math, no timezone. */
 function addCalendarDays(day: string, days: number): string {
     const [ y, m, d ] = day.split("-").map(Number);
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);

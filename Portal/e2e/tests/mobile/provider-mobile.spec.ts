@@ -2,9 +2,6 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
 import { createTestPatient, createTestAppointment, createTestReminder, createTestMedicalRecord } from '../../utils/helpers';
 
-// Phase 0 of issue #123 (provider portal mobile layout): locks in 16px fields, >=44px touch targets,
-// no sideways page scroll and the touch pickers (phase 3) on a coarse-pointer phone (Pixel 7 emulation).
-
 const MIN_FONT_PX = 16;
 const MIN_TARGET_PX = 44;
 const SCROLL_TOLERANCE_PX = 1;
@@ -38,7 +35,6 @@ const TARGET_SELECTORS = [
 
 async function settle(page: Page) {
   await page.waitForLoadState('load');
-  // Polling/websocket pages may never go idle; a bounded wait is enough for data to render.
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined);
 }
 
@@ -63,7 +59,6 @@ test.describe('Provider pages on a phone', () => {
         if (seed.includes('reminder')) {
           const reminder = await createTestReminder(api, patient.id);
           trackedReminders.track(reminder.data.id);
-          // Settled reminders populate the History tab.
           await api.cancelReminder(reminder.data.id);
         }
         if (seed.includes('record')) {
@@ -75,7 +70,6 @@ test.describe('Provider pages on a phone', () => {
       await page.goto(path);
       await settle(page);
 
-      // 1. No sideways page scroll (scroll containers inside tables are allowed for now).
       const overflow = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
         innerWidth: window.innerWidth,
@@ -85,7 +79,6 @@ test.describe('Provider pages on a phone', () => {
         `page scrolls sideways: scrollWidth ${overflow.scrollWidth} vs viewport ${overflow.innerWidth}`,
       ).toBeLessThanOrEqual(SCROLL_TOLERANCE_PX);
 
-      // 2. Text-like fields are >= 16px (below that iOS Safari zooms on focus).
       const smallFields = await page.evaluate((min) => {
         const skip = new Set(['checkbox', 'radio', 'hidden', 'button', 'submit', 'reset', 'file', 'range', 'color', 'image']);
         const out: string[] = [];
@@ -105,7 +98,6 @@ test.describe('Provider pages on a phone', () => {
       }, MIN_FONT_PX);
       expect(smallFields, `fields under ${MIN_FONT_PX}px font-size:\n${smallFields.join('\n')}`).toEqual([]);
 
-      // 3. Listed controls, where visible, are >= 44x44.
       const small: string[] = [];
       for (const selector of TARGET_SELECTORS) {
         const found = await page.locator(selector).evaluateAll((els, min) => els.flatMap((el, i) => {
@@ -128,7 +120,6 @@ test.describe('Provider pages on a phone', () => {
     await page.getByTestId('calendar-block-time-button').click();
     const dialog = page.getByTestId('blocked-time-modal-dialog');
     await expect(dialog).toBeVisible();
-    // Phase 3: touch screens get the sheet pickers, not antd's text inputs.
     await expect(dialog.locator('.ant-picker')).toHaveCount(0);
 
     const trigger = dialog.getByTestId('blocked-time-start-input');
@@ -138,14 +129,12 @@ test.describe('Provider pages on a phone', () => {
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName ?? '');
     expect(['INPUT', 'TEXTAREA'], 'nothing that opens the keyboard has focus').not.toContain(focusedTag);
 
-    // Next month: every day there is in the future, whatever the time of day.
     await sheet.getByRole('button', { name: 'Mes siguiente' }).click();
     await sheet.locator('[role="grid"] button:not([disabled])').first().click();
     await expect(sheet.getByRole('tab', { name: /Hora/ })).toHaveAttribute('aria-selected', 'true');
     await sheet.getByRole('group', { name: 'Hora' }).locator('button:not([disabled])').first().click();
     await sheet.getByRole('group', { name: 'Minutos' }).locator('button:not([disabled])').first().click();
 
-    // The confirm button the antd popup pushed off-screen must sit inside the viewport.
     const done = sheet.getByRole('button', { name: 'Listo' });
     await expect(done).toBeEnabled();
     const box = await done.boundingBox();
@@ -158,7 +147,6 @@ test.describe('Provider pages on a phone', () => {
     await expect(trigger).toHaveText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/);
     await expect(dialog).toBeVisible();
 
-    // Close without saving.
     await page.getByTestId('blocked-time-modal-close-button').click();
     await expect(dialog).toBeHidden();
   });

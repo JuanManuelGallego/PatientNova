@@ -8,7 +8,6 @@ import { renderWithTrap, useTouchEnv } from "./touchEnv";
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
 vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
 
-// The phone filter sheet (Phase 2) holds date filters, whose picker opens a second sheet on top of it.
 describe("a picker sheet opened from inside another sheet", () => {
     useTouchEnv({ now: "2026-03-01T15:00:00Z", providerZone: "America/Bogota" });
 
@@ -27,7 +26,6 @@ describe("a picker sheet opened from inside another sheet", () => {
     it("renders above the sheet it came from", () => {
         renderFilters();
         expect(screen.getAllByRole("dialog")).toHaveLength(2);
-        // Later in the document, at a higher layer: the picker's scrim is the last one.
         const scrims = screen.getAllByTestId("sheet-scrim");
         expect(scrims.at(-1)).toContainElement(screen.getByRole("dialog", { name: "Fecha" }));
     });
@@ -58,11 +56,6 @@ describe("a picker sheet opened from inside another sheet", () => {
     });
 });
 
-/*
- * A list filter writes the URL (nuqs: replaceState onto the current entry) as soon as it changes. A picker sheet
- * closes by going back() over its own history entry a task later; a write made while that entry is still on top
- * lands on it and is popped away with it. So the picker emits only once its entry is gone.
- */
 describe("picker sheets and URL writes", () => {
     useTouchEnv({ now: "2026-03-01T15:00:00Z", providerZone: "America/Bogota" });
 

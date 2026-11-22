@@ -7,7 +7,6 @@ import { FilterBody, clearFilter, isFilterActive, type ColumnDef } from "./table
 export interface TableSortState {
   orderBy?: string;
   order?: "asc" | "desc";
-  /** The table's toggle handler: a new column sorts ascending, the active one flips direction. */
   onSort?: (sortKey: string) => void;
 }
 
@@ -24,10 +23,6 @@ function sheetTitle(columns: ColumnDef[], onSort: TableSortState["onSort"]) {
   return hasFilters ? "Filtros" : "Ordenar";
 }
 
-/**
- * The card layout's one control row: a button that opens the filter and sort sheet, with the number of active
- * filters, and the current sort. Renders nothing when no column filters or sorts.
- */
 export function TableCardToolbar({
   columns,
   orderBy,
@@ -69,10 +64,6 @@ export function TableCardToolbar({
   );
 }
 
-/**
- * Every column's filter and the sort choice, in one sheet (the card layout's stand-in for the header popovers).
- * Filters apply as they change, as in the popovers, so "Ver resultados" only closes the sheet.
- */
 export function TableFilterSheet({
   columns,
   orderBy,

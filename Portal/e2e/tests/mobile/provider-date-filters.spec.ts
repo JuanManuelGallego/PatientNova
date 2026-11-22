@@ -2,14 +2,9 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
 import { createTestPatient, createTestAppointment } from '../../utils/helpers';
 
-// Phase 3 of issue #123: on a phone the date-range filter is presets plus two single-day picker sheets, inside the
-// Phase 2 filter sheet. A picker closes by going back over its own history entry while the filter writes the URL
-// (nuqs replaceState); the filter must stay in the URL and the list must stay filtered after the sheets close.
-
 const RANGE = 'appointment-date-range-filter';
 const PARAM = /[?&]dateFilter=(\d{4}-\d{2}-\d{2})(?:,|%2C)(\d{4}-\d{2}-\d{2})/;
 
-/** 15:00–16:00 UTC (same calendar day from UTC−12 to UTC+8) on `day` of the month `monthsAhead` from now. */
 function slot(monthsAhead: number, day: number, hour = 15) {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthsAhead, day, hour));
@@ -17,7 +12,6 @@ function slot(monthsAhead: number, day: number, hour = 15) {
 }
 
 async function openFilters(page: Page): Promise<Locator> {
-  // A real tap (user activation), so the sheet's history entry is one Back can close.
   await page.locator('.table-card-toolbar__button').first().click();
   const sheet = page.getByRole('dialog', { name: /Filtros/ });
   await expect(sheet).toBeVisible();
@@ -29,7 +23,6 @@ async function closeFilters(page: Page, sheet: Locator) {
   await expect(sheet).toBeHidden();
 }
 
-/** The URL keeps the range after every sheet has closed and the history traversals have landed. */
 async function expectRangeKept(page: Page): Promise<[ string, string ]> {
   await expect(page).toHaveURL(PARAM);
   await page.waitForTimeout(500);
@@ -44,7 +37,6 @@ test.describe('Citas date filter on a phone', () => {
   }) => {
     const patient = await createTestPatient(api);
     trackedPatients.track(patient.id);
-    // Two months ahead: outside Hoy, Esta semana and Este mes whatever today is.
     const far = await createTestAppointment(api, patient.id, slot(2, 12, 13 + Math.floor(Math.random() * 4)));
     trackedAppointments.track(far.data.id);
 
@@ -81,7 +73,6 @@ test.describe('Citas date filter on a phone', () => {
     const range = sheet.getByTestId(RANGE);
     await range.getByRole('button', { name: 'Personalizado' }).click();
 
-    // Desde: the 10th of next month. The date-only sheet confirms on the tap.
     await page.getByTestId(`${RANGE}-from`).click();
     const fromSheet = page.getByTestId(`${RANGE}-from-sheet`);
     await expect(fromSheet).toBeVisible();
@@ -91,7 +82,6 @@ test.describe('Citas date filter on a phone', () => {
     await expect(page.getByTestId(`${RANGE}-from`)).toHaveText(/^10\//);
     await expect(page, 'a lone Desde applies nothing').not.toHaveURL(PARAM);
 
-    // Hasta opens on Desde's month.
     await page.getByTestId(`${RANGE}-to`).click();
     const toSheet = page.getByTestId(`${RANGE}-to-sheet`);
     await expect(toSheet).toBeVisible();
@@ -99,7 +89,6 @@ test.describe('Citas date filter on a phone', () => {
     await toSheet.getByRole('table').getByRole('button', { name: / 12 de / }).click();
     await expect(toSheet).toBeHidden();
 
-    // The filter sheet is still open and the range is already in the URL.
     await expect(sheet).toBeVisible();
     const [ from, to ] = await expectRangeKept(page);
     expect(from.slice(8)).toBe('10');

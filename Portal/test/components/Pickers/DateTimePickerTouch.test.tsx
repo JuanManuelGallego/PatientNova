@@ -18,11 +18,9 @@ const open = () => fireEvent.click(screen.getByTestId("picker"));
 const dialog = () => screen.getByRole("dialog");
 const pickDay = (name: RegExp) => fireEvent.click(within(dialog()).getByRole("button", { name }));
 const tap = (name: string) => fireEvent.click(within(dialog()).getByRole("button", { name }));
-/** The value is emitted once the sheet's history entry is gone, a traversal later. */
 const settled = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 describe("DateTimePicker on a touch screen, instant mode", () => {
-    // 10:32 in Bogotá (UTC−5) on Sunday 1 March 2026; 16:32 on the device in Madrid (UTC+1).
     useTouchEnv({ now: "2026-03-01T15:32:00Z", providerZone: "America/Bogota", deviceZone: "Europe/Madrid" });
 
     it("renders a trigger with the field's test id instead of antd's input", () => {
@@ -45,7 +43,6 @@ describe("DateTimePicker on a touch screen, instant mode", () => {
 
         pickDay(/ 8 de marzo de 2026/);
         expect(within(dialog()).getByRole("tab", { name: /Hora/ })).toHaveAttribute("aria-selected", "true");
-        // The tapped day is gone; focus stays in the sheet so Escape and Tab still work.
         expect(within(dialog()).getByRole("tab", { name: /Hora/ })).toHaveFocus();
         tap("02 h");
         tap("02:30");
@@ -60,10 +57,8 @@ describe("DateTimePicker on a touch screen, instant mode", () => {
     it("disables past days, and earlier hours and minutes today, in the provider zone", () => {
         renderWithTrap(<Controlled showTime isFuture onChange={() => {}} />);
         open();
-        // 28 February is in the previous month, so the grid starts at today's month.
         expect(within(dialog()).getByRole("button", { name: "Mes anterior" })).toBeDisabled();
         pickDay(/ 1 de marzo de 2026/);
-        // 10:32 in Bogotá, not 16:32 as on the device.
         expect(within(dialog()).getByRole("button", { name: "09 h" })).toBeDisabled();
         expect(within(dialog()).getByRole("button", { name: "11 h" })).toBeEnabled();
         tap("10 h");
@@ -78,7 +73,6 @@ describe("DateTimePicker on a touch screen, instant mode", () => {
         expect(within(dialog()).getByRole("tab", { name: /Fecha/ })).toHaveAttribute("aria-selected", "true");
         pickDay(/ 9 de marzo de 2026/);
         tap("Listo");
-        // The time stays 10:00 in Bogotá.
         await waitFor(() => expect(onChange).toHaveBeenCalledWith("2026-03-09T15:00:00.000Z"));
     });
 
@@ -101,7 +95,6 @@ describe("DateTimePicker on a touch screen, instant mode", () => {
     it("drops a time that the new day disables", () => {
         renderWithTrap(<Controlled initial="2026-03-02T14:00:00.000Z" showTime isFuture onChange={() => {}} />);
         open();
-        // 09:00 on the 2nd; today (the 1st) 09:00 is already past.
         pickDay(/ 1 de marzo de 2026/);
         expect(within(dialog()).getByRole("button", { name: "Listo" })).toBeDisabled();
         expect(within(dialog()).getByRole("button", { name: "09 h" })).toHaveAttribute("aria-pressed", "false");
@@ -128,7 +121,6 @@ describe("DateTimePicker on a touch screen, instant mode", () => {
 });
 
 describe("DateTimePicker on a touch screen, near midnight", () => {
-    // 23:30 on 1 March in Bogotá; already 05:30 on 2 March on the device in Madrid.
     useTouchEnv({ now: "2026-03-02T04:30:00Z", providerZone: "America/Bogota", deviceZone: "Europe/Madrid" });
 
     it("keeps the provider's date as today and saves the late slot on it", async () => {
@@ -164,7 +156,6 @@ describe("DateTimePicker on a touch screen, in a DST-gap provider zone", () => {
 });
 
 describe("DateTimePicker on a touch screen, on a fall-back night", () => {
-    // New York repeats 01:00–02:00 on 1 November 2026: 01:30 is 05:30Z (EDT) and again 06:30Z (EST).
     useTouchEnv({ now: "2026-10-30T12:00:00Z", providerZone: "America/New_York", deviceZone: "Europe/Madrid" });
 
     it("confirming the second 01:30 unchanged saves nothing, so it never becomes the first", async () => {
@@ -186,7 +177,6 @@ describe("DateTimePicker on a touch screen, on a fall-back night", () => {
 });
 
 describe("DateTimePicker on a touch screen, day modes", () => {
-    // 05:00 on 2 March in Kiritimati (UTC+14) while it is still 1 March in New York.
     useTouchEnv({ now: "2026-03-01T15:00:00Z", providerZone: "Pacific/Kiritimati" });
 
     it("calendarDay: jumps to a birth year and saves UTC midnight on the first tap", async () => {
@@ -195,7 +185,6 @@ describe("DateTimePicker on a touch screen, day modes", () => {
         expect(screen.getByTestId("picker")).toHaveTextContent("01/05/1990");
         open();
         expect(dialog()).toHaveAccessibleName("Fecha");
-        // The tap confirms, so there is only Cancelar.
         expect(within(dialog()).queryByRole("button", { name: "Listo" })).toBeNull();
         expect(within(dialog()).getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
         fireEvent.change(within(dialog()).getByRole("combobox", { name: "Año" }), { target: { value: "1985" } });

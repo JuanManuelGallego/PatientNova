@@ -38,7 +38,6 @@ function CalendarContent() {
   // One timezone for the whole calendar: fetch window, day buckets, "today" and click-to-create.
   const timezone = useDisplayTimezone();
   const { updateAppointment } = useUpdateAppointment();
-  // Phones get the agenda (Día) and a day-picker month (Mes); wider screens keep Month and Week.
   const phone = usePhoneLayout();
 
   const {
@@ -131,12 +130,10 @@ function CalendarContent() {
     }
   }
 
-  /** A past instant is not bookable (the picker disables it), so the modal then opens with its own default. */
   const openCreateAt = (startIso: string) => {
     setPrefillDate(new Date(startIso).getTime() > Date.now() ? startIso : null);
     setShowCreate(true);
   };
-  /** Nueva cita on a calendar day: 9:00 that day in the provider's timezone. */
   const openCreateOnDay = (day: string) => openCreateAt(localDateTimeToUtc(day, "09:00:00", timezone));
   const openBlockTimeOn = (day: string) => {
     setPrefillBlockedDate(day);
@@ -273,7 +270,6 @@ function CalendarContent() {
         </div>
         <Fab
           label="Nueva cita"
-          // On the agenda's day, unless that is today (the modal's own default fits today better).
           onClick={() => (dayDate === todayFormattedString(timezone) ? setShowCreate(true) : openCreateOnDay(dayDate))}
           testId="calendar-fab-new-appointment"
         />

@@ -14,7 +14,6 @@ describe("installed app metadata", () => {
     it("links the manifest from provider pages and the login page only", () => {
         expect(protectedLayout.metadata.manifest).toBe(WEB_MANIFEST_PATH);
         expect(loginLayout.metadata.manifest).toBe(WEB_MANIFEST_PATH);
-        // The landing page lives in (provider) too: no install offer there, nor on marketing and booking pages.
         expect(root.metadata.manifest).toBeUndefined();
         expect((providerLayout as { metadata?: unknown }).metadata).toBeUndefined();
     });

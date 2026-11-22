@@ -19,7 +19,6 @@ export function DayPanel({
   onSelectHold,
 }: DayPanelProps) {
   const timezone = useDisplayTimezone();
-  // Mounted only while open, so Back closes it like any other overlay.
   useBackDismiss(true, onClose);
   return (
     <div className="cal-day-panel-overlay" onClick={onClose}>

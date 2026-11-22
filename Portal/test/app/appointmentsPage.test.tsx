@@ -27,7 +27,6 @@ vi.mock("@/src/hooks/useDrawerNavigation", () => ({
   useDrawerNavigation: () => ({ target: null, close: vi.fn(), openAppointment, openPatient: vi.fn(), openReminder: vi.fn() }),
 }));
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
-// Closing a sheet restores the scroll position, which jsdom does not implement (also after a test's own cleanup).
 window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/src/components/Modals/AppointmentModal", () => ({ AppointmentModal: () => <div data-testid="appointment-modal-mock" /> }));
@@ -38,7 +37,6 @@ vi.mock("nuqs", async () => {
   return { ...actual, useQueryState: (_k: string, parser: { defaultValue?: unknown }) => [parser?.defaultValue ?? null, vi.fn()] };
 });
 
-/** Every observed element reports `width` px, as a ResizeObserver would after layout. */
 function stubContainerWidth(width: number) {
   class FakeResizeObserver {
     constructor(private readonly cb: ResizeObserverCallback) {}
@@ -88,7 +86,6 @@ describe("appointments page on a narrow screen", () => {
     expect(card).toHaveTextContent("Consulta inicial");
     expect(card).toHaveTextContent("Programada");
     expect(card).toHaveTextContent("Sin pagar");
-    // A cancelled appointment shows no payment, as in the table.
     expect(screen.getByTestId("appointment-card-a2")).not.toHaveTextContent(/Sin pagar|Pagado/);
     expect(within(card).queryByRole("button")).toBeNull();
 

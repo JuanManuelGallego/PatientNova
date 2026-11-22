@@ -1,11 +1,7 @@
-/* Floating action button: phones only (the component renders nothing from 640px up). */
-
 .fab {
   position: fixed;
   right: calc(16px + env(safe-area-inset-right));
-  /* Above the bottom tab bar when it is shown (it sets --bottom-nav-h), and above the home indicator. */
   bottom: calc(16px + var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom));
-  /* Under the top bar, the open menu and every modal or drawer. */
   z-index: calc(var(--z-sidebar) - 3);
   display: inline-flex;
   align-items: center;
@@ -49,23 +45,17 @@
   }
 }
 
-/*
- * While the on-screen keyboard is up for a field on the page, the button would ride on top of it: step aside,
- * with the same field list as the bottom tab bar's rule. The button lives in <body>, so the test is on :root.
- */
 @media (pointer: coarse) {
   :global(:root:has(.page-main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [readonly]), textarea:not([readonly]), [contenteditable="true"]):focus)) .fab {
     display: none;
   }
 }
 
-/* Room under the page content so the last card can scroll clear of the button. */
 .spacer {
   height: 80px;
   flex-shrink: 0;
 }
 
-/* A control the button replaces on phones (the header's "Nueva cita"). */
 @media (max-width: 639.98px) {
   .replaced {
     display: none !important;

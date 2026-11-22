@@ -6,7 +6,6 @@ import { GET, dynamic } from "@/src/app/app.webmanifest/route";
 import { WEB_MANIFEST_PATH } from "@/src/config/webManifest";
 import { theme } from "@/src/config/theme";
 
-/** Width and height from a PNG's IHDR chunk. */
 function pngSize(path: string) {
     const bytes = readFileSync(path);
     expect(bytes.subarray(1, 4).toString("ascii"), path).toBe("PNG");

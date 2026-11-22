@@ -338,7 +338,6 @@ body {
 
 .page-main {
   flex: 1;
-  /* --bottom-nav-h: the phone tab bar, so the last card scrolls clear of it (see "Bottom tab bar") */
   padding: 20px max(16px, env(safe-area-inset-right)) calc(20px + var(--bottom-nav-h) + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
@@ -485,13 +484,6 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
-/* ================================================================
-   Bottom tab bar: phones and tablets (below 1024px, where the
-   sidebar is the hamburger menu). Daily screens one tap away.
-   --bottom-nav-h is its height without the safe area, 0 when there
-   is no bar; anything pinned to the bottom (a floating button, the
-   page padding) adds it: calc(16px + var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom)).
-   ================================================================ */
 :root {
   --tabbar-h: 60px;
   --bottom-nav-h: 0px;
@@ -503,7 +495,6 @@ body {
   }
 }
 
-/* Landscape phones: a shorter bar, icon beside the label. */
 @media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
   :root {
     --tabbar-h: 48px;
@@ -515,7 +506,6 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  /* Level with the top bar: under the open menu's backdrop and every modal, drawer and sheet. */
   z-index: calc(var(--z-sidebar) - 2);
   background: var(--c-surface);
   border-top: 1px solid var(--c-gray-200);
@@ -565,7 +555,6 @@ body {
   border-radius: var(--r-lg);
 }
 
-/* The active pill sits behind the icon only, so the label stays readable at any width. */
 .bottom-tabbar__icon {
   position: relative;
   display: flex;
@@ -613,7 +602,6 @@ body {
   }
 }
 
-/* The pending count rides on the icon's top corner, ringed in the bar's colour to cut it from the pill. */
 .nav-badge.bottom-tabbar__badge {
   position: absolute;
   top: -5px;
@@ -644,11 +632,6 @@ body {
   }
 }
 
-/*
- * While the keyboard is up for a field on the page, the bar would sit on top of it: step aside, and give its
- * height back (--bottom-nav-h 0) so the page reserve and anything floating over the bar drop with it.
- * One condition for both, at :root so the variable reaches everything; it outranks :root:has(.bottom-tabbar).
- */
 @media (max-width: 1023.98px) and (pointer: coarse) {
   :root:has(.page-main :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [readonly]), textarea:not([readonly]), [contenteditable="true"]):focus) {
     --bottom-nav-h: 0px;
@@ -1090,7 +1073,6 @@ body {
   background: var(--c-success);
 }
 
-/* in a drawer footer it sits beside full-size actions (Editar), so it takes their size */
 .drawer-footer > .btn-primary--success {
   padding: 10px 16px;
   font-size: 14px;
@@ -1191,7 +1173,6 @@ body {
   box-shadow: 0 0 0 3px var(--c-brand-glow);
 }
 
-/* inline edits inside dense rows (e.g. renaming a document); the coarse-pointer block still lifts it to 16px */
 .form-input--compact {
   padding: 2px 8px;
   height: 30px;
@@ -2139,10 +2120,6 @@ body {
   margin-top: 24px;
 }
 
-/* responsive: below 640px a modal is a sheet, so the keyboard cannot push a centred card around and hide its
-   actions. The panel stays the scroller: its header sticks to the top and its .modal-footer (a child of the panel,
-   or of a form that is) sticks to the bottom. Standard modals fill the screen; small ones (.modal-panel--sm,
-   ConfirmDialog) rise from the bottom with their height. From 640px nothing here applies. */
 @keyframes modalSheetIn {
   from {
     opacity: 0;
@@ -2169,7 +2146,6 @@ body {
     border-radius: 0;
     box-shadow: none;
     overscroll-behavior: contain;
-    /* backwards, not both: a transform left on the panel would trap position: fixed descendants */
     animation: modalSheetIn 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
@@ -2192,7 +2168,6 @@ body {
     background: var(--c-surface);
   }
 
-  /* A form holding the footer grows, so a short form still keeps its actions at the bottom edge. */
   .modal-panel > form:has(> .modal-footer) {
     flex: 1 0 auto;
   }
@@ -2216,12 +2191,10 @@ body {
     min-height: 44px;
   }
 
-  /* The auto margin above the footer is zero once the content overflows: this keeps the content off its border. */
   .modal-panel > :has(+ .modal-footer) {
     margin-bottom: 20px;
   }
 
-  /* Small dialogs: a bottom sheet as tall as its content, actions stacked. */
   .modal-panel--sm {
     align-self: flex-end;
     height: auto;
@@ -3067,9 +3040,6 @@ th.col--actions {
   margin-top: 4px;
 }
 
-/* ── Card layout: a DataTable with renderCard in a container under 640px ───
-   The cards stay inside the table card's surface as one list with hairline dividers; the header filters move
-   into one sheet opened from the toolbar. */
 .table-card-toolbar {
   display: flex;
   align-items: center;
@@ -3169,7 +3139,6 @@ th.col--actions {
   transition: background 0.12s;
 }
 
-/* Pressed feedback on touch; hover only where a pointer hovers. */
 .data-card:active {
   background: var(--c-gray-50);
 }
@@ -3205,7 +3174,6 @@ th.col--actions {
   gap: 8px;
 }
 
-/* Names wrap between words; only a single word wider than the card breaks. */
 .data-card__title {
   min-width: 0;
   font-size: 15px;
@@ -3277,7 +3245,6 @@ th.col--actions {
   text-align: center;
 }
 
-/* ── Filter and sort sheet (card layout) ─── */
 .table-filter-sheet {
   display: flex;
   flex-direction: column;
@@ -3298,7 +3265,6 @@ th.col--actions {
   color: var(--c-gray-500);
 }
 
-/* The sheet scrolls as a whole: no nested scroll box for long option lists. */
 .table-filter-sheet .enum-filter {
   max-height: none;
   overflow: visible;
@@ -3458,7 +3424,6 @@ th.col--actions {
   margin-bottom: 16px;
 }
 
-/* responsive: phone stat cards — tighter padding/type so the four cards fit one short block; the sub line carries data (amounts, counts), so it stays */
 @media (max-width: 639px) {
   .stats-grid .stat-card {
     border-radius: var(--r-xl);
@@ -3488,7 +3453,6 @@ th.col--actions {
   }
 }
 
-/* responsive: an odd card count would leave an empty cell in the 2-column grid: the last card spans the row */
 @media (max-width: 1023px) {
   .stats-grid > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
@@ -3832,8 +3796,6 @@ th.col--actions {
   color: var(--c-gray-900);
 }
 
-/* Seven equal columns that shrink with the page: phones (under 640px) get the agenda instead, so the month
-   grid fits from 640px without sideways scroll; cells clip and chips ellipsize. */
 .cal-day-headers {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -6755,11 +6717,6 @@ button.cal-day-panel__blocked-item {
   text-align: left;
 }
 
-/* ================================================================
-   Touch devices (coarse pointer): 16px fields (no iOS focus zoom) and
-   44px hit areas. Kept last so it wins over the class rules above;
-   fine pointers are unaffected.
-   ================================================================ */
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
   textarea,
@@ -6782,7 +6739,6 @@ button.cal-day-panel__blocked-item {
     font-size: 16px;
   }
 
-  /* 44px hit area on a 24px footprint; only 4px reach on the left so it never covers the sort button */
   .th-filter-btn {
     width: 44px;
     height: 44px;
@@ -6844,7 +6800,6 @@ button.cal-day-panel__blocked-item {
     right: 0;
   }
 
-  /* the 44px buttons sit over the field's end: keep typed text out from under them */
   .search-wrapper .form-input--search,
   .password-wrapper .form-input {
     padding-right: 44px;

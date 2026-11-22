@@ -5,28 +5,19 @@ import { X } from "lucide-react";
 import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import styles from "./Sheet.module.css";
 
-/** How far the handle must travel down before letting go closes the sheet. */
 export const DRAG_CLOSE_DISTANCE = 80;
 
 export interface SheetProps {
-    /** Shown as the sheet's heading; with `hideTitle` it only names the dialog for screen readers. */
     title: string;
     hideTitle?: boolean;
     onClose: () => void;
     children: ReactNode;
-    /** Actions pinned below the scrolling content, side by side. */
     footer?: ReactNode;
-    /** Opened from inside another overlay (a picker in a modal or in another sheet): sits above nested modals. */
     stacked?: boolean;
-    /** `compact` keeps the centered dialog narrow from 960px (pickers); phones are full width either way. */
     size?: "default" | "compact";
     testId?: string;
 }
 
-/**
- * A bottom sheet on phones and a centered dialog from 960px. It traps focus through the nearest
- * FocusTrapProvider, which the provider app already supplies; public pages use `PublicSheet`.
- */
 export function Sheet({ title, hideTitle = false, onClose, children, footer, stacked = false, size = "default", testId }: SheetProps) {
     const { ref, handleKeyDown } = useFocusTrap<HTMLDivElement>(onClose);
     const titleId = useId();
