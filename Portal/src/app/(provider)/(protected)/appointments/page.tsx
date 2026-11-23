@@ -1,7 +1,6 @@
 "use client";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost, EntityActions } from "@/src/components/Drawers/DrawerHost";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
-import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
@@ -21,7 +20,6 @@ import { EmptyState } from "@/src/components/EmptyState";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import {
-  Appointment,
   AppointmentStatus,
   APPT_STATUS_CFG,
   DEFAULT_APPT_STATUS,
@@ -31,7 +29,7 @@ import {
 import { ReminderStatus } from "@/src/types/Reminder";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
 import { fmtDateTime, todayString } from "@/src/utils/TimeUtils";
-import { useState, useMemo, Suspense } from "react";
+import { useRef, useState, useMemo, Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
 import {
@@ -40,7 +38,6 @@ import {
   AppointmentStatusPill,
 } from "@/src/components/Info/StatusPill";
 import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppointmentsStats";
-import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
 import { useFetchLocations } from "@/src/api/locations/useFetchLocations";
 import { useListQueryState } from "@/src/hooks/useListQueryState";
@@ -90,7 +87,6 @@ const LOCATION_OPTIONS = (locations: { id: string; name: string }[]) =>
 function AppointmentsPageContent() {
   const timezone = useDisplayTimezone();
   const { stats, fetchStats } = useFetchAppointmentsStats();
-  const { updateAppointment } = useUpdateAppointment();
   const { appointmentTypes } = useFetchAppointmentTypes();
   const { locations } = useFetchLocations();
 
@@ -151,8 +147,7 @@ function AppointmentsPageContent() {
   };
 
   const [ showCreate, setShowCreate ] = useState(false);
-  const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
-  const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
+  const actions = useRef<EntityActions>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
   const {
     target: drawerTarget,
@@ -270,32 +265,6 @@ function AppointmentsPageContent() {
   const { appointments, loading, error, fetchAppointments, total, totalPages } =
     useFetchAppointments(filters);
 
-  const [ actionError, setActionError ] = useState<string | null>(null);
-
-  async function handlePay(id: string) {
-    setActionError(null);
-    try {
-      await updateAppointment(id, { paid: true });
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Error al registrar el pago");
-    } finally {
-      fetchStats();
-      fetchAppointments();
-    }
-  }
-
-  async function handleConfirm(id: string) {
-    setActionError(null);
-    try {
-      await updateAppointment(id, { status: AppointmentStatus.CONFIRMED });
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Error al confirmar la cita");
-    } finally {
-      fetchStats();
-      fetchAppointments();
-    }
-  }
-
   return (
     <>
       <PageLayout>
@@ -365,9 +334,6 @@ function AppointmentsPageContent() {
           testIdPrefix="appointments-tab"
         />
         {error && <ErrorBanner msg={error} onRetry={fetchAppointments} />}
-        {actionError && (
-          <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
-        )}
         {patientId && (
           <div className="text-muted" style={{ marginBottom: 12 }}>
             Filtrando por paciente: {filterPatient?.name} {filterPatient?.lastName}{" "}
@@ -478,7 +444,7 @@ function AppointmentsPageContent() {
                   {a.status === AppointmentStatus.SCHEDULED && (
                     <button
                       type="button"
-                      onClick={() => handleConfirm(a.id)}
+                      onClick={() => actions.current?.confirmAppointment(a)}
                       className="btn-table-action"
                       title="Confirmar cita"
                       aria-label="Confirmar cita"
@@ -497,7 +463,7 @@ function AppointmentsPageContent() {
                       {!a.paid && (
                         <button
                           type="button"
-                          onClick={() => handlePay(a.id)}
+                          onClick={() => actions.current?.payAppointment(a)}
                           className="btn-table-action"
                           title="Marcar como pagada"
                           aria-label="Marcar como pagada"
@@ -513,7 +479,7 @@ function AppointmentsPageContent() {
               <td className="td col--actions" onClick={(e) => e.stopPropagation()}>
                   <div className="td-actions">
                     <button
-                      onClick={() => setEditAppt(a)}
+                      onClick={() => actions.current?.editAppointment(a)}
                       className="btn-action-edit"
                       data-testid={`appointment-edit-button-${a.id}`}
                       >
@@ -521,7 +487,7 @@ function AppointmentsPageContent() {
                     </button>
                     {(a.status == AppointmentStatus.CONFIRMED || a.status == AppointmentStatus.SCHEDULED) &&
                     (<button
-                        onClick={() => setDeleteAppt(a)}
+                        onClick={() => actions.current?.cancelAppointment(a)}
                         className="btn-action-delete"
                         aria-label="Cancelar cita"
                         data-testid={`appointment-delete-button-${a.id}`}
@@ -605,51 +571,18 @@ function AppointmentsPageContent() {
           }}
         />
       )}
-      {editAppt && (
-        <AppointmentModal
-          appt={editAppt}
-          onClose={() => setEditAppt(null)}
-          onSaved={() => {
-            fetchAppointments();
-            fetchStats();
-          }}
-        />
-      )}
-      <RelatedDrawers
+      <DrawerHost
+        actionsRef={actions}
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        appointmentActions={{
-          onEdit: (appointment) => {
-            setEditAppt(appointment);
-            closeDrawer();
-          },
-          onConfirm: (appointment) => {
-            handleConfirm(appointment.id);
-            closeDrawer();
-          },
-          onPay: (appointment) => {
-            handlePay(appointment.id);
-            closeDrawer();
-          },
-          onDelete: (appointment) => {
-            setDeleteAppt(appointment);
-            closeDrawer();
-          },
+        onChanged={() => {
+          fetchAppointments();
+          fetchStats();
         }}
       />
-      {deleteAppt && (
-        <CancelAppointmentModal
-          appt={deleteAppt}
-          onClose={() => setDeleteAppt(null)}
-          onCanceled={() => {
-            fetchAppointments();
-            fetchStats();
-          }}
-        />
-      )}
     </>
   );
 }

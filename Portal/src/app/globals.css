@@ -1102,6 +1102,10 @@ body {
   cursor: pointer;
   transition: background 0.15s;
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 @media (hover: hover) {
@@ -2419,6 +2423,20 @@ body {
 .error-banner__text {
   font-size: 14px;
   color: var(--c-error);
+}
+
+.drawer-host-error {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9995;
+  width: min(560px, calc(100vw - 32px));
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
+}
+
+.drawer-host-error .error-banner {
+  margin-bottom: 0;
 }
 
 .error-inline {

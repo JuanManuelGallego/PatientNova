@@ -2,16 +2,13 @@
 import { useState } from "react";
 import { Suspense } from "react";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
-import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useFetchBlockedTimes } from "@/src/api/blocked-time/useFetchBlockedTimes";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost } from "@/src/components/Drawers/DrawerHost";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
-import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { BlockedTimeModal } from "@/src/components/Modals/BlockedTimeModal";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
-import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
-import { Appointment, AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
+import { AppointmentStatus, FetchAppointmentsFilters } from "@/src/types/Appointment";
 import { BlockedTime } from "@/src/types/BlockedTime";
 import { localDateTimeToUtc, todayFormattedString, todayString } from "@/src/utils/TimeUtils";
 import { ViewMode } from "@/src/components/Calendar/types";
@@ -37,7 +34,6 @@ const HOLDS_PAGE_SIZE = 100;
 function CalendarContent() {
   // One timezone for the whole calendar: fetch window, day buckets, "today" and click-to-create.
   const timezone = useDisplayTimezone();
-  const { updateAppointment } = useUpdateAppointment();
   const phone = usePhoneLayout();
 
   const {
@@ -91,8 +87,6 @@ function CalendarContent() {
     });
 
   const [ showCreate, setShowCreate ] = useState(false);
-  const [ editAppt, setEditAppt ] = useState<Appointment | null>(null);
-  const [ deleteAppt, setDeleteAppt ] = useState<Appointment | null>(null);
   const [ prefillDate, setPrefillDate ] = useState<string | null>(null);
   const {
     target: drawerTarget,
@@ -105,30 +99,6 @@ function CalendarContent() {
   const [ showCreateBlockedTime, setShowCreateBlockedTime ] = useState(false);
   const [ editBlockedTime, setEditBlockedTime ] = useState<BlockedTime | null>(null);
   const [ prefillBlockedDate, setPrefillBlockedDate ] = useState<string | null>(null);
-
-  const [ actionError, setActionError ] = useState<string | null>(null);
-
-  async function handlePay(id: string) {
-    setActionError(null);
-    try {
-      await updateAppointment(id, { paid: true });
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Error al registrar el pago");
-    } finally {
-      fetchAppointments();
-    }
-  }
-
-  async function handleConfirm(id: string) {
-    setActionError(null);
-    try {
-      await updateAppointment(id, { status: AppointmentStatus.CONFIRMED });
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Error al confirmar la cita");
-    } finally {
-      fetchAppointments();
-    }
-  }
 
   const openCreateAt = (startIso: string) => {
     setPrefillDate(new Date(startIso).getTime() > Date.now() ? startIso : null);
@@ -170,9 +140,6 @@ function CalendarContent() {
             </div>
           }
         />
-        {actionError && (
-          <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
-        )}
         <div className="table-card">
           {phone ? (
             <>
@@ -304,37 +271,13 @@ function CalendarContent() {
           onSaved={fetchAppointments}
         />
       )}
-      {editAppt && (
-        <AppointmentModal
-          appt={editAppt}
-          onClose={() => setEditAppt(null)}
-          onSaved={fetchAppointments}
-        />
-      )}
-      <RelatedDrawers
+      <DrawerHost
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        appointmentActions={{
-          onEdit: (appointment) => {
-            setEditAppt(appointment);
-            closeDrawer();
-          },
-          onConfirm: (appointment) => {
-            handleConfirm(appointment.id);
-            closeDrawer();
-          },
-          onPay: (appointment) => {
-            handlePay(appointment.id);
-            closeDrawer();
-          },
-          onDelete: (appointment) => {
-            setDeleteAppt(appointment);
-            closeDrawer();
-          },
-        }}
+        onChanged={fetchAppointments}
       />
       {openRequestId && (
         <RequestDrawer
@@ -346,13 +289,6 @@ function CalendarContent() {
             void fetchAppointments();
             void inbox.refetch();
           }}
-        />
-      )}
-      {deleteAppt && (
-        <CancelAppointmentModal
-          appt={deleteAppt}
-          onClose={() => setDeleteAppt(null)}
-          onCanceled={fetchAppointments}
         />
       )}
       {showCreateBlockedTime && (

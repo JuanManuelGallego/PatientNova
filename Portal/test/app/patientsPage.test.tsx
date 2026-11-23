@@ -23,7 +23,7 @@ vi.mock("@/src/hooks/useDrawerNavigation", () => ({
 vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/src/components/Modals/PatientModal", () => ({ PatientModal: () => null }));
 vi.mock("@/src/components/Modals/TogglePatientModal", () => ({ TogglePatientModal: () => null }));
-vi.mock("@/src/components/Drawers/RelatedDrawers", () => ({ RelatedDrawers: () => null }));
+vi.mock("@/src/components/Drawers/DrawerHost", () => ({ DrawerHost: () => null }));
 vi.mock("nuqs", async () => {
   const actual = await vi.importActual<typeof import("nuqs")>("nuqs");
   return { ...actual, useQueryState: (_k: string, parser: { defaultValue?: unknown }) => [parser?.defaultValue ?? null, vi.fn()] };

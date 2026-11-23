@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, Suspense } from "react";
+import { useRef, useState, useMemo, Suspense } from "react";
 import { useQueryState, parseAsStringEnum } from "nuqs";
 
 import PageLayout from "@/src/components/PageLayout";
@@ -21,10 +21,9 @@ import {
 } from "@/src/components/DataTable";
 import { TabNav } from "@/src/components/TabNav";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
-import { TogglePatientModal } from "@/src/components/Modals/TogglePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost, EntityActions } from "@/src/components/Drawers/DrawerHost";
 import { ACTION_ICONS, CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
@@ -113,8 +112,7 @@ function PatientsPageContent() {
   };
 
   const [showCreate, setShowCreate] = useState(false);
-  const [editPatient, setEditPatient] = useState<Patient | null>(null);
-  const [togglePatient, setTogglePatient] = useState<Patient | null>(null);
+  const actions = useRef<EntityActions>(null);
   const {
     target: drawerTarget,
     close: closeDrawer,
@@ -289,7 +287,7 @@ function PatientsPageContent() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditPatient(p);
+                      actions.current?.editPatient(p);
                     }}
                     className="btn-action-edit"
                     data-testid={`patient-edit-button-${p.id}`}
@@ -299,7 +297,7 @@ function PatientsPageContent() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setTogglePatient(p);
+                      actions.current?.togglePatient(p);
                     }}
                     className={isActive ? "btn-action-delete" : "btn-action-activate"}
                     data-testid={`patient-delete-button-${p.id}`}
@@ -371,41 +369,16 @@ function PatientsPageContent() {
           }}
         />
       )}
-      {editPatient && (
-        <PatientModal
-          patient={editPatient}
-          onClose={() => setEditPatient(null)}
-          onSaved={() => {
-            fetchPatients();
-            fetchStats();
-          }}
-        />
-      )}
-      {togglePatient && (
-        <TogglePatientModal
-          patient={togglePatient}
-          onClose={() => setTogglePatient(null)}
-          onDone={() => {
-            fetchPatients();
-            fetchStats();
-          }}
-        />
-      )}
-      <RelatedDrawers
+      <DrawerHost
+        actionsRef={actions}
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        patientActions={{
-          onDelete: (patient) => {
-            setTogglePatient(patient);
-            closeDrawer();
-          },
-          onEdit: (patient) => {
-            setEditPatient(patient);
-            closeDrawer();
-          },
+        onChanged={() => {
+          fetchPatients();
+          fetchStats();
         }}
       />
     </>
