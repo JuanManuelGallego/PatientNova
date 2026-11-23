@@ -10,8 +10,16 @@ vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
       update: vi.fn(),
       findUnique: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
+}));
+
+vi.mock('../../../src/booking-settings/booking-settings.service.js', () => ({
+  bookingSettingsService: { isBookingLive: vi.fn() },
+  bookingUrl: vi.fn(),
 }));
 
 vi.mock('../../../src/utils/config/config.js', () => ({
@@ -39,8 +47,11 @@ vi.mock('../../../src/brevo/email-client.js', () => ({
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { sendWhatsAppFreeForm, sendWhatsApp, sendSms } from '../../../src/twilio/client.js';
 import { sendEmail } from '../../../src/brevo/email-client.js';
+import { bookingSettingsService, bookingUrl } from '../../../src/booking-settings/booking-settings.service.js';
 
 const mockPrisma = vi.mocked(prisma) as any;
+const mockIsBookingLive = vi.mocked(bookingSettingsService.isBookingLive);
+const mockBookingUrl = vi.mocked(bookingUrl);
 const mockSendWhatsAppFreeForm = vi.mocked(sendWhatsAppFreeForm);
 const mockSendWhatsApp = vi.mocked(sendWhatsApp);
 const mockSendSms = vi.mocked(sendSms);
@@ -206,6 +217,81 @@ describe('TwilioWebhookService.cancelAppointment', () => {
 
     const reminder = { id: 'rem-1', appointmentId: 'appt-1' } as Parameters<typeof service.cancelAppointment>[0];
     await expect(service.cancelAppointment(reminder, '+15551234567')).resolves.not.toThrow();
+  });
+
+  describe('rebooking reply', () => {
+    const reminder = { id: 'rem-1', appointmentId: 'appt-1', userId: 'user-1' } as Parameters<typeof service.cancelAppointment>[0];
+    const provider = { displayName: 'Dra. Ana', firstName: 'Ana', lastName: 'Pérez', bookingSlug: 'ana', publicWhatsapp: null, publicPhone: null };
+    const GENERIC = '❌ Tu cita ha sido cancelada. Para agendar una nueva, por favor comunícate con tu profesional de la salud.';
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockResolvedValue(true);
+      mockSendWhatsAppFreeForm.mockResolvedValue({} as never);
+      mockBookingUrl.mockImplementation((slug: string | null) => (slug ? `https://portal.test/book/${slug}` : null));
+    });
+
+    it('links the booking page when booking is live', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...provider, publicWhatsapp: '+57 300 111 2233' });
+      mockIsBookingLive.mockResolvedValue(true);
+
+      await service.cancelAppointment(reminder, '+15551234567');
+
+      expect(mockIsBookingLive).toHaveBeenCalledWith('user-1');
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith(
+        '+15551234567',
+        '❌ Tu cita con Dra. Ana quedó cancelada. Si quieres, puedes agendar una nueva aquí: https://portal.test/book/ana',
+      );
+    });
+
+    it('prefers the public WhatsApp as a wa.me link when booking is not live', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...provider, publicWhatsapp: '+57 300 111 2233', publicPhone: '+576015550000' });
+      mockIsBookingLive.mockResolvedValue(false);
+
+      await service.cancelAppointment(reminder, '+15551234567');
+
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith(
+        '+15551234567',
+        '❌ Tu cita con Dra. Ana quedó cancelada. Para agendar una nueva, comunícate con Dra. Ana: https://wa.me/573001112233',
+      );
+    });
+
+    it('falls back to the public phone when there is no WhatsApp', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ ...provider, publicPhone: '+576015550000' });
+      mockIsBookingLive.mockResolvedValue(false);
+
+      await service.cancelAppointment(reminder, '+15551234567');
+
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith(
+        '+15551234567',
+        '❌ Tu cita con Dra. Ana quedó cancelada. Para agendar una nueva, comunícate con Dra. Ana: +576015550000',
+      );
+    });
+
+    it('sends the generic reply when booking is not live and there is no public contact', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(provider);
+      mockIsBookingLive.mockResolvedValue(false);
+
+      await service.cancelAppointment(reminder, '+15551234567');
+
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith('+15551234567', GENERIC);
+    });
+
+    it('sends the generic reply when the booking-state lookup throws', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(provider);
+      mockIsBookingLive.mockRejectedValue(new Error('db down'));
+
+      await expect(service.cancelAppointment(reminder, '+15551234567')).resolves.toBe(true);
+
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith('+15551234567', GENERIC);
+    });
+
+    it('sends the generic reply when loading the user throws', async () => {
+      mockPrisma.user.findUnique.mockRejectedValue(new Error('db down'));
+
+      await service.cancelAppointment(reminder, '+15551234567');
+
+      expect(mockSendWhatsAppFreeForm).toHaveBeenCalledWith('+15551234567', GENERIC);
+    });
   });
 });
 
