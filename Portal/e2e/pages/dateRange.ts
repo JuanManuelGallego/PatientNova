@@ -7,11 +7,9 @@ const toField = (value: string) => {
 
 /**
  * Picks a custom range in a `DateRangePicker` already visible on the page (open its filter popover first):
- * chooses Personalizado, then types Desde and Hasta ("YYYY-MM-DD" or an ISO instant).
+ * types Desde and Hasta ("YYYY-MM-DD" or an ISO instant).
  */
 export async function pickCustomRange(page: Page, rangeTestId: string, from: string, to: string) {
-  const range = page.getByTestId(rangeTestId);
-  await range.getByRole('button', { name: 'Personalizado' }).click();
   const desde = page.getByTestId(`${rangeTestId}-from`);
   await desde.fill(toField(from));
   await desde.press('Enter');

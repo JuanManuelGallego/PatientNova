@@ -17,3 +17,9 @@ export class BlockedTimeInvalidRangeError extends ApiError {
     super('endTimeUtc must be after startTimeUtc', 400)
   }
 }
+
+export class BlockedTimeSpansDaysError extends ApiError {
+  constructor() {
+    super('A blocked time must start and end on the same day in the provider timezone', 400)
+  }
+}

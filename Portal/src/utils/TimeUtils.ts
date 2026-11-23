@@ -48,7 +48,6 @@ function getDisplayTimezone(): string {
     return displayTimezone ?? browserTimezone();
 }
 
-/** Short label for a timezone, e.g. "Bogotá (GMT-5)". */
 function fmtTimezoneLabel(timezone: string = getDisplayTimezone()): string {
     const listed = COMMON_TIMEZONES.find((tz) => tz.value === timezone)?.label.split("— ")[1];
     const city = listed ?? timezone.split("/").pop()?.replace(/_/g, " ") ?? timezone;
@@ -365,10 +364,13 @@ function getDuration(startAt: string | undefined, endAt: string | undefined): Ap
     return AppointmentDuration.MIN_60; //default
 }
 
+function appointmentDurationMinutes(duration: AppointmentDuration): number {
+    return duration === AppointmentDuration.MIN_45 ? 45 : duration === AppointmentDuration.MIN_50 ? 50 : duration === AppointmentDuration.MIN_60 ? 60 : 90;
+}
+
 function getAppointmentEndTime(startAt: string, duration: AppointmentDuration): string {
     const start = new Date(startAt);
-    const dur = duration === AppointmentDuration.MIN_45 ? 45 : duration === AppointmentDuration.MIN_50 ? 50 : duration === AppointmentDuration.MIN_60 ? 60 : 90;
-    return new Date(start.getTime() + dur * 60000).toISOString();
+    return new Date(start.getTime() + appointmentDurationMinutes(duration) * 60000).toISOString();
 }
 
 /** Tomorrow at `time` ("HH:mm:ss") in the display timezone. */
@@ -519,6 +521,7 @@ export {
     fmtSendTime,
     localDateTimeToUtc,
     getDate,
+    appointmentDurationMinutes,
     getAppointmentEndTime,
     getDuration,
     getReminderSendAt,

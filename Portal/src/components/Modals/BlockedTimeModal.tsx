@@ -13,8 +13,8 @@ import {
   ERR_SAVE,
 } from "@/src/constants/ui";
 import { RequiredField } from "../Info/Required";
-import { DateTimePicker } from "../DateTimePicker";
-import { localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { DateTimeRangeField } from "../Pickers/DateTimeRangeField";
+import { fmtDateTime, localDateTimeToUtc, zonedDateTimeParts } from "@/src/utils/TimeUtils";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useDeleteBlockedTime } from "@/src/api/blocked-time/useDeleteBlockedTime";
 
@@ -32,6 +32,18 @@ function getDefaultTime(prefillDate: string | null | undefined, prefillHour: num
   }
   const { dateStr, hour } = zonedDateTimeParts(new Date(), timezone);
   return shiftHours(localDateTimeToUtc(dateStr, `${String(hour).padStart(2, "0")}:00:00`, timezone), hoursFromNow);
+}
+
+const dayOf = (iso: string, timezone: string) => zonedDateTimeParts(iso, timezone).dateStr;
+
+function getDefaultRange(prefillDate: string | null | undefined, timezone: string) {
+  const startTimeUtc = getDefaultTime(prefillDate, 9, 1, timezone);
+  const day = dayOf(startTimeUtc, timezone);
+  const endTimeUtc = shiftHours(startTimeUtc, 1);
+  return {
+    startTimeUtc,
+    endTimeUtc: dayOf(endTimeUtc, timezone) === day ? endTimeUtc : localDateTimeToUtc(day, "23:55:00", timezone),
+  };
 }
 
 export function BlockedTimeModal({
@@ -57,11 +69,13 @@ export function BlockedTimeModal({
   const [ saving, setSaving ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
 
-  const [ form, setForm ] = useState<BlockedTimeForm>({
+  const [ form, setForm ] = useState<BlockedTimeForm>(() => ({
     description: blockedTime?.description || "",
-    startTimeUtc: blockedTime?.startTimeUtc ?? getDefaultTime(prefillDate, 9, 1, timezone),
-    endTimeUtc: blockedTime?.endTimeUtc ?? getDefaultTime(prefillDate, 10, 2, timezone),
-  });
+    ...(blockedTime
+      ? { startTimeUtc: blockedTime.startTimeUtc, endTimeUtc: blockedTime.endTimeUtc }
+      : getDefaultRange(prefillDate, timezone)),
+  }));
+  const spansDays = !!blockedTime && dayOf(blockedTime.startTimeUtc, timezone) !== dayOf(blockedTime.endTimeUtc, timezone);
 
   useEffect(() => {
     setTimeout(() => firstInputRef.current?.focus(), 50);
@@ -99,11 +113,10 @@ export function BlockedTimeModal({
     }
 
     try {
-      const payload = {
-        description: form.description.trim() || null,
-        startTimeUtc: start.toISOString(),
-        endTimeUtc: end.toISOString(),
-      };
+      const description = form.description.trim() || null;
+      const payload = spansDays
+        ? { description }
+        : { description, startTimeUtc: start.toISOString(), endTimeUtc: end.toISOString() };
 
       if (isEdit && blockedTime) {
         await updateBlockedTime(blockedTime.id, payload);
@@ -170,40 +183,23 @@ export function BlockedTimeModal({
         )}
 
         <form className="form-stack" onSubmit={handleSubmit}>
-          <label className="form-label">
-            <RequiredField label={"Fecha y hora de inicio"} />
-            <DateTimePicker
-              isFuture
-              showTime
-              date={form.startTimeUtc}
-              testId="blocked-time-start-input"
-              onChange={(v) =>
-                setForm((f) => {
-                  if (new Date(v) >= new Date(f.endTimeUtc)) {
-                    return { ...f, startTimeUtc: v, endTimeUtc: shiftHours(v, 1) };
-                  }
-                  return { ...f, startTimeUtc: v };
-                })
-              }
+          {spansDays ? (
+            <div className="form-label" data-testid="blocked-time-spans-days">
+              Horario
+              <span style={{ fontWeight: 400 }}>{fmtDateTime(form.startTimeUtc, timezone)} – {fmtDateTime(form.endTimeUtc, timezone)}</span>
+              <span className="form-input-hint">
+                Este bloqueo dura más de un día. Para cambiar sus horas, elimínalo y bloquea cada día por separado.
+              </span>
+            </div>
+          ) : (
+            <DateTimeRangeField
+              label={<RequiredField label="Horario" />}
+              when="future"
+              value={{ start: form.startTimeUtc, end: form.endTimeUtc }}
+              onChange={({ start, end }) => setForm((f) => ({ ...f, startTimeUtc: start, endTimeUtc: end }))}
+              testId="blocked-time"
             />
-          </label>
-          <label className="form-label">
-            <RequiredField label={"Fecha y hora de fin"} />
-            <DateTimePicker
-              isFuture
-              showTime
-              date={form.endTimeUtc}
-              testId="blocked-time-end-input"
-              onChange={(v) =>
-                setForm((f) => {
-                  if (new Date(v) <= new Date(f.startTimeUtc)) {
-                    return { ...f, endTimeUtc: v, startTimeUtc: shiftHours(v, -1) };
-                  }
-                  return { ...f, endTimeUtc: v };
-                })
-              }
-            />
-          </label>
+          )}
           <label className="form-label">
             Descripción
             <input

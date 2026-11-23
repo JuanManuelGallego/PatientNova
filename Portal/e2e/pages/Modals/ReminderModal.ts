@@ -10,7 +10,7 @@ export class ReminderModal {
   readonly backButton: Locator;
   readonly submitButton: Locator;
   readonly closeButton: Locator;
-  readonly sendAtPicker: Locator;
+  readonly sendAtPicker = 'reminder-send-at-picker';
 
   constructor(page: Page) {
     this.page = page;
@@ -19,7 +19,6 @@ export class ReminderModal {
     this.backButton = this.page.getByTestId('reminder-modal-back-button');
     this.submitButton = this.page.getByTestId('reminder-modal-submit-button');
     this.closeButton = this.page.getByTestId('reminder-modal-close-button');
-    this.sendAtPicker = this.page.getByTestId('reminder-send-at-picker');
   }
 
   async waitForOpen() {
@@ -78,14 +77,22 @@ export class ReminderModal {
     await ReminderModal.pickDateTime(this.page, this.sendAtPicker, dateString);
   }
 
-  /** Types a local date and time ("DD/MM/YYYY HH:mm") into a picker field, as a desktop user would. */
-  static async pickDateTime(page: Page, picker: Locator, dateString: string) {
-    const iso = new Date(dateString);
+  static localParts(dateString: string) {
+    const d = new Date(dateString);
     const pad = (n: number) => String(n).padStart(2, '0');
-    const text = `${pad(iso.getDate())}/${pad(iso.getMonth() + 1)}/${iso.getFullYear()} ${pad(iso.getHours())}:${pad(iso.getMinutes())}`;
-    await picker.fill(text);
-    await picker.press('Enter');
-    await expect(picker).toHaveValue(text);
+    return { date: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+  }
+
+  static async typeInto(box: Locator, text: string) {
+    await box.fill(text);
+    await box.press('Enter');
+    await expect(box).toHaveValue(text);
+  }
+
+  static async pickDateTime(scope: Page | Locator, testId: string, dateString: string) {
+    const { date, time } = ReminderModal.localParts(dateString);
+    await ReminderModal.typeInto(scope.getByTestId(`${testId}-date`), date);
+    await ReminderModal.typeInto(scope.getByTestId(`${testId}-time`), time);
   }
 
   async fillAllVariablesWithRandomString() {

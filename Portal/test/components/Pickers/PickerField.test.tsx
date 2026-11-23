@@ -15,7 +15,6 @@ function Harness({ initial = null, onChange, ...props }: Partial<PickerFieldProp
     return (
         <FocusTrapProvider dismissOnBack>
             <PickerField
-                kind="date"
                 today={TODAY}
                 format="DD/MM/YYYY"
                 title="Fecha"
@@ -124,51 +123,5 @@ describe("PickerField with a mouse: typed date", () => {
         fireEvent.click(within(dialog).getByRole("button", { name: /jueves, 12 de noviembre/ }));
         await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
         expect(wall(onChange.mock.calls[0][0])).toBe("2026-11-12 00:00");
-    });
-});
-
-describe("PickerField with a mouse: typed time", () => {
-    const dateTime = { kind: "dateTime", format: "DD/MM/YYYY HH:mm", minuteStep: 5, title: "Fecha y hora" } as const;
-
-    it("commits a date and time on the minute step", () => {
-        const onChange = vi.fn();
-        render(<Harness {...dateTime} onChange={onChange} />);
-        type("15/12/2026 9:30");
-        expect(wall(onChange.mock.calls[0][0])).toBe("2026-12-15 09:30");
-    });
-
-    it("rejects a minute off the step", () => {
-        const onChange = vi.fn();
-        render(<Harness {...dateTime} onChange={onChange} />);
-        type("15/12/2026 09:32");
-        expect(onChange).not.toHaveBeenCalled();
-    });
-
-    it("rejects hours outside the allowed list and disabled minutes", () => {
-        const onChange = vi.fn();
-        render(
-            <Harness
-                {...dateTime}
-                hours={[ 8, 9, 10 ]}
-                disabledTime={() => ({ disabledMinutes: (h) => (h === 9 ? [ 45 ] : []) })}
-                onChange={onChange}
-            />,
-        );
-        type("15/12/2026 14:00");
-        type("15/12/2026 09:45");
-        expect(onChange).not.toHaveBeenCalled();
-        type("15/12/2026 09:40");
-        expect(wall(onChange.mock.calls[0][0])).toBe("2026-12-15 09:40");
-    });
-
-    it("types a time of day for kind time and keeps the base day", () => {
-        const onChange = vi.fn();
-        render(
-            <Harness kind="time" format="HH:mm" minuteStep={5} initial={dayjs.utc("2000-01-01T09:00:00")} onChange={onChange} title="Hora" />,
-        );
-        expect(input().value).toBe("09:00");
-        type("17:05");
-        expect(wall(onChange.mock.calls[0][0])).toBe("2000-01-01 17:05");
-        expect(screen.getByRole("button", { name: "Abrir selector de hora" })).toBeInTheDocument();
     });
 });

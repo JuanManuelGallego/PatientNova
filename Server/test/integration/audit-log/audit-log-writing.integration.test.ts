@@ -152,8 +152,7 @@ describe('Audit writing: appointment types (integration)', () => {
 
 describe('Audit writing: blocked time (integration)', () => {
   it('creates an audit log on blocked time create', async () => {
-    const start = new Date(Date.now() + 240 * 60_000);
-    start.setMinutes(0, 0, 0);
+    const start = new Date('2031-04-07T14:00:00.000Z');
     const end = new Date(start.getTime() + 60 * 60_000);
 
     const bt = await withAuditContext(() => blockedTimeService.create({

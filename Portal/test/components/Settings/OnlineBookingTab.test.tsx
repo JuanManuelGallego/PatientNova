@@ -392,7 +392,7 @@ describe("OnlineBookingTab: availability", () => {
         renderTab();
         await user.click(screen.getByTestId("availability-add-3"));
         expect(screen.getByTestId("availability-start-3-1")).toHaveValue("23:30");
-        expect(screen.getByTestId("availability-end-3-1")).toHaveValue("00:00");
+        expect(screen.getByTestId("availability-end-3-1")).toHaveValue("24:00");
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
         expect(screen.getByTestId("availability-add-3")).toBeDisabled();
     });

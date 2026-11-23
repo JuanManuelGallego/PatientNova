@@ -5,7 +5,7 @@ import { ACTION_ICONS } from "@/src/config/icons";
 import { fmtDate } from "@/src/utils/TimeUtils";
 import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { CustomSelect } from "@/src/components/CustomSelect";
-import { DateTimePicker } from "@/src/components/DateTimePicker";
+import { DateTimeField } from "@/src/components/Pickers/DateTimeField";
 import { RequiredField } from "@/src/components/Info/Required";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
@@ -74,16 +74,13 @@ export function SendModeAndPatientStep({
         </div>
       </div>
       {sendMode === ReminderMode.SCHEDULED && (
-        <label className="form-label">
-          <RequiredField label="Fecha y hora de envío" />
-          <DateTimePicker
-            date={form.sendAt}
-            onChange={(d) => setForm((f) => ({ ...f, sendAt: d }))}
-            showTime
-            isFuture
-            testId="reminder-send-at-picker"
-          />
-        </label>
+        <DateTimeField
+          label={<RequiredField label="Fecha y hora de envío" />}
+          when="future"
+          value={form.sendAt}
+          onChange={(d) => setForm((f) => ({ ...f, sendAt: d }))}
+          testId="reminder-send-at-picker"
+        />
       )}
       <label className="form-label">
         <RequiredField label="Paciente" />

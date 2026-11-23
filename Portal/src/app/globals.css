@@ -3912,6 +3912,14 @@ th.col--actions {
   margin-bottom: 2px;
 }
 
+.cal-holiday-flag {
+  display: block;
+  margin: 0 auto 2px;
+  border-radius: 2px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 .cal-chips {
   display: flex;
   flex-direction: column;

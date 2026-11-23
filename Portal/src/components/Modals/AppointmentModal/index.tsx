@@ -282,7 +282,7 @@ export function AppointmentModal({
 
   const bookedSlots = appointments
     .filter((a) => a.id !== appt?.id)
-    .map((a) => a.startAt);
+    .map((a) => ({ start: a.startAt, end: a.endAt }));
   const blockedSlots = blockedTimes.map((bt) => ({ start: bt.startTimeUtc, end: bt.endTimeUtc }));
   const steps = [ "Paciente y tipo", "Lugar y hora", "Pago y estado" ];
 
@@ -336,7 +336,6 @@ export function AppointmentModal({
             appointmentTypes={appointmentTypes}
             bookedSlots={bookedSlots}
             blockedSlots={blockedSlots}
-            onError={(error) => setError(error)}
             clearError={() => setError(null)}
             onPatientSelect={(patient) => setUserSelectedPatient(patient)}
           />

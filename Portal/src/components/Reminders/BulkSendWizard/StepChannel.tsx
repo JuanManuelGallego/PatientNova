@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { ReminderMode } from "@/src/types/Reminder";
-import { DateTimePicker } from "@/src/components/DateTimePicker";
+import { DateTimeField } from "@/src/components/Pickers/DateTimeField";
 import { StepChannelProps } from "./types";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { ChannelBox } from "@/src/components/Info/ChannelBanner";
@@ -58,15 +58,13 @@ export const StepChannel = memo(function StepChannel({
         </div>
       </div>
       {sendMode === ReminderMode.SCHEDULED && (
-        <label className="form-label">
-          Fecha y hora de envío
-          <DateTimePicker
-            date={sentAt}
-            onChange={setSentAt}
-            showTime
-            isFuture
-          />
-        </label>
+        <DateTimeField
+          label="Fecha y hora de envío"
+          when="future"
+          value={sentAt}
+          onChange={setSentAt}
+          testId="bulk-send-at-picker"
+        />
       )}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button

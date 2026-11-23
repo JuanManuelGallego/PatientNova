@@ -17,10 +17,11 @@ export function setPointer(coarse: boolean) {
     })) as unknown as typeof window.matchMedia;
 }
 
-export function useTouchEnv({ now, providerZone, deviceZone = "America/New_York" }: {
+export function useTouchEnv({ now, providerZone, deviceZone = "America/New_York", coarse = true }: {
     now: string;
     providerZone: string;
     deviceZone?: string;
+    coarse?: boolean;
 }) {
     const originalMatchMedia = window.matchMedia;
     const originalTz = process.env.TZ;
@@ -29,7 +30,7 @@ export function useTouchEnv({ now, providerZone, deviceZone = "America/New_York"
         vi.useFakeTimers({ toFake: [ "Date" ] });
         vi.setSystemTime(new Date(now));
         setDisplayTimezone(providerZone);
-        setPointer(true);
+        setPointer(coarse);
         vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
     });
     afterEach(() => {
