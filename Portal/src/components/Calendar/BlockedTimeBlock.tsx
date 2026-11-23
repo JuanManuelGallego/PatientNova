@@ -1,9 +1,6 @@
-import { fmtTime } from "@/src/utils/TimeUtils";
 import { BlockedTimeBlockProps } from "./types";
-import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTimeBlockProps) {
-  const timezone = useDisplayTimezone();
   return (
     <div
       data-testid={`calendar-blocked-${bt.id}`}

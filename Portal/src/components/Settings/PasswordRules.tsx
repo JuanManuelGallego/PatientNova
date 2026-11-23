@@ -50,8 +50,10 @@ export function PasswordRules({ password, id }: { password: string; id?: string 
                             <span style={{ fontWeight: 700 }} aria-hidden="true">
                                 {ok ? <ACTION_ICONS.confirm size={12} /> : "○"}
                             </span>
-                            {r.label}
-                            <span className="sr-only">{ok ? ": cumplido" : ": pendiente"}</span>
+                            <span>
+                                {r.label}
+                                <span className="sr-only">{ok ? ": cumplido" : ": pendiente"}</span>
+                            </span>
                         </li>
                     );
                 })}

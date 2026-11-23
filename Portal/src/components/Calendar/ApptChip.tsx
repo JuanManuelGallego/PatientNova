@@ -1,10 +1,7 @@
 import { AppointmentStatus, APPT_STATUS_CFG } from "@/src/types/Appointment";
-import { fmtTime } from "@/src/utils/TimeUtils";
 import { ApptChipProps } from "./types";
-import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProps) {
-  const timezone = useDisplayTimezone();
   const isCancelled = a.status === AppointmentStatus.CANCELLED;
   const isNoShow = a.status === AppointmentStatus.NO_SHOW;
   const isCompleted = a.status === AppointmentStatus.COMPLETED;
