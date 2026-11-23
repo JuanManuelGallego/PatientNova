@@ -104,6 +104,49 @@ describe('linked reminder scheduling', () => {
     expect(JSON.stringify(reminderAudits)).not.toContain(ctx.patient.email!);
   });
 
+  describe('a reminder that was already sent', () => {
+    async function sentAppointment() {
+      const ctx = await setup();
+      const sendAt = inHours(48);
+      const appt = await appointmentService.create(createDto(ctx, { sendMode: ReminderMode.SCHEDULED, sendAt }), ctx.user.id);
+      const sentAt = new Date(Date.now() - 3600_000);
+      await prisma.reminder.update({ where: { id: appt.reminder!.id }, data: { status: ReminderStatus.SENT, sentAt, messageId: 'msg-old' } });
+      mocks.send.mockClear();
+      const reminder = { channel: Channel.EMAIL, to: ctx.patient.email!, sendMode: ReminderMode.SCHEDULED, status: ReminderStatus.PENDING };
+      return { ctx, appt, sendAt, reminder };
+    }
+
+    it('is left untouched when the edit resends it unchanged', async () => {
+      const { ctx, appt, sendAt, reminder } = await sentAppointment();
+      await appointmentService.update(appt.id, { notes: 'x', reminder: { ...reminder, sendAt } }, ctx.user.id);
+
+      const row = await prisma.reminder.findUniqueOrThrow({ where: { id: appt.reminder!.id } });
+      expect(row.status).toBe(ReminderStatus.SENT);
+      expect(row.appointmentId).toBe(appt.id);
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it('is kept as history and replaced by a fresh, enqueued reminder when its time changes', async () => {
+      const { ctx, appt, reminder } = await sentAppointment();
+      const later = inHours(60);
+      const updated = await appointmentService.update(appt.id, { reminder: { ...reminder, sendAt: later } }, ctx.user.id);
+
+      const old = await prisma.reminder.findUniqueOrThrow({ where: { id: appt.reminder!.id } });
+      expect(old.status).toBe(ReminderStatus.SENT);
+      expect(old.appointmentId).toBeNull();
+      expect(old.messageId).toBe('msg-old');
+
+      expect(updated.reminder!.id).not.toBe(appt.reminder!.id);
+      expect(updated.reminder!.status).toBe(ReminderStatus.PENDING);
+      expect(updated.reminder!.sendAt).toEqual(new Date(later));
+      expect((await prisma.reminder.findUniqueOrThrow({ where: { id: updated.reminder!.id } })).sentAt).toBeNull();
+      expect(mocks.send).toHaveBeenCalledWith('send-reminder', { reminderId: updated.reminder!.id }, {
+        db: expect.anything(),
+        startAfter: new Date(later),
+      });
+    });
+  });
+
   it('does not enqueue without the scheduler', async () => {
     scheduler.enabled = false;
     const ctx = await setup();
