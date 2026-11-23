@@ -1,6 +1,7 @@
 import { prisma } from '../utils/prisma/prisma-client.js';
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import crypto from 'crypto';
+import { AdminStatus } from '../../generated/prisma/enums.js';
 
 const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/meetings.space.created';
 
@@ -100,7 +101,7 @@ export const googleConnectionRepository = {
 
   async findActiveUserIds(client: TransactionClient = prisma): Promise<string[]> {
     const rows = await client.googleConnection.findMany({
-      where: ACTIVE_CONNECTION_WHERE,
+      where: { ...ACTIVE_CONNECTION_WHERE, user: { status: AdminStatus.ACTIVE, isDeleted: false } },
       select: { userId: true },
       orderBy: { userId: 'asc' },
     });

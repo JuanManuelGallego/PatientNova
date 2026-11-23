@@ -8,7 +8,7 @@ import { config } from '../../../src/utils/config/config.js';
 import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import { deliverBookingNotification } from '../../../src/portal/portal-booking-notifications.js';
 import { portalBookingNotifyWorker } from '../../../src/scheduler/workers/portal-booking-notify.js';
-import { AppointmentStatus, Channel, RecordSource } from '../../../generated/prisma/enums.js';
+import { AdminStatus, AppointmentStatus, Channel, MeetingStatus, RecordSource } from '../../../generated/prisma/enums.js';
 import { createTestLocation, createTestPatient, createTestUser } from '../helpers.js';
 
 const MADRID = 'Europe/Madrid';
@@ -281,6 +281,24 @@ describe('the Mis citas link in patient emails', () => {
 });
 
 describe('delivery rules', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('suppresses patient and provider notices for a disabled provider: %j', async (disabled) => {
+    const { user, appt } = await bookedAppointment({
+      startAt: '2027-01-20T15:00:00Z', provider: { reminderActive: true, reminderChannel: Channel.EMAIL },
+    });
+    await prisma.user.update({ where: { id: user.id }, data: disabled });
+    await prisma.appointment.update({ where: { id: appt.id }, data: { meetingStatus: MeetingStatus.READY, meetingUrl: 'https://meet.google.com/abc-defg-hij' } });
+
+    for (const kind of [ 'patient-confirmation', 'provider-notice', 'patient-reschedule', 'provider-reschedule-notice', 'patient-meeting-link' ] as const) {
+      await deliverBookingNotification({ appointmentId: appt.id, kind, previousStartAt: '2027-01-19T15:00:00Z' });
+    }
+    await prisma.appointment.update({ where: { id: appt.id }, data: { status: AppointmentStatus.CANCELLED } });
+    for (const kind of [ 'patient-cancellation', 'provider-cancel-notice' ] as const) {
+      await deliverBookingNotification({ appointmentId: appt.id, kind });
+    }
+
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+
   it('skips cancelled and deleted appointments', async () => {
     const cancelled = await bookedAppointment({ startAt: '2027-01-20T15:00:00Z' });
     await prisma.appointment.update({ where: { id: cancelled.appt.id }, data: { status: AppointmentStatus.CANCELLED } });

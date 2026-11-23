@@ -1,4 +1,4 @@
-import { Channel } from '../../generated/prisma/client.ts';
+import { AdminStatus, Channel } from '../../generated/prisma/client.ts';
 import { dispatchMessage } from '../scheduler/dispatch.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
@@ -72,7 +72,7 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
 
   try {
     const reminder = await prisma.reminder.findUnique({
-      where: { id: reminderId },
+      where: { id: reminderId, user: { status: AdminStatus.ACTIVE, isDeleted: false } },
       select: {
         user: {
           select: {
@@ -94,7 +94,7 @@ export async function sendReminderFailureAlert(reminderId: string): Promise<void
     });
 
     if (!reminder) {
-      logger.warn({ reminderId }, 'Reminder failure alert skipped — reminder not found');
+      logger.warn({ reminderId }, 'Reminder failure alert skipped — reminder or active provider not found');
       return;
     }
 

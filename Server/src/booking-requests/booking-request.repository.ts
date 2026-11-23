@@ -1,4 +1,4 @@
-import { BookingRequestStatus, type BookingRequestKind, type Channel, type Prisma } from '../../generated/prisma/client.ts';
+import { AdminStatus, BookingRequestStatus, type BookingRequestKind, type Channel, type Prisma } from '../../generated/prisma/client.ts';
 import type { BookingRequestTab } from './booking-request.schemas.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import type { Interval } from '../public-booking/slot-engine.js';
@@ -355,6 +355,7 @@ export const bookingRequestRepository = {
   async findNudgeCandidates(now: Date, windowMs: number) {
     return prisma.bookingRequest.findMany({
       where: {
+        user: { status: AdminStatus.ACTIVE, isDeleted: false },
         status: BookingRequestStatus.PENDING,
         confirmedAt: { not: null },
         nudgedAt: null,

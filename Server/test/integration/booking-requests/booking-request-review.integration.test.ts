@@ -18,6 +18,7 @@ import { WHATSAPP_TEMPLATES } from '../../../src/twilio/whatsapp-templates.js';
 import {
   ActionSource,
   AdminRole,
+  AdminStatus,
   AppointmentStatus,
   BookingRequestKind,
   BookingRequestStatus,
@@ -382,6 +383,25 @@ describe('POST /v1/booking-requests/:id/reject', () => {
 });
 
 describe('booking-request-notify', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('suppresses every notice for a disabled provider: %j', async (disabled) => {
+    const p = await provider();
+    const req = await seedRequest(p);
+    await prisma.user.update({ where: { id: p.id }, data: { reminderActive: true, reminderChannel: Channel.EMAIL, ...disabled } });
+    mocks.dispatch.mockClear();
+
+    for (const event of [ 'received', 'nudge' ] as const) {
+      await deliverBookingRequestNotification({ requestId: req.id, event });
+    }
+    await prisma.bookingRequest.update({ where: { id: req.id }, data: { status: BookingRequestStatus.REJECTED } });
+    await deliverBookingRequestNotification({ requestId: req.id, event: 'rejected' });
+    await prisma.bookingRequest.update({ where: { id: req.id }, data: { status: BookingRequestStatus.EXPIRED } });
+    await deliverBookingRequestNotification({ requestId: req.id, event: 'expired' });
+    await prisma.bookingRequest.update({ where: { id: req.id }, data: { confirmedAt: null, confirmationSentAt: new Date() } });
+    await deliverBookingRequestNotification({ requestId: req.id, event: 'unconfirmed-expired' });
+
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+
   it('sends the provider a notice without patient details on their reminder channel', async () => {
     const p = await provider();
     await prisma.user.update({ where: { id: p.id }, data: { reminderActive: true, reminderChannel: Channel.EMAIL } });
@@ -454,6 +474,24 @@ describe('booking-request-notify', () => {
 });
 
 describe('sweep-booking-requests', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('expires disabled providers’ holds without nudging them: %j', async (disabled) => {
+    scheduler.enabled = true;
+    const p = await provider();
+    const starts = await slotStarts(p, 3);
+    const created = new Date(Date.now() - 30 * HOUR);
+    const due = await seedRequest(p, { start: starts[0], now: created });
+    const stale = await seedRequest(p, { start: starts[1] });
+    await prisma.bookingRequest.update({ where: { id: due.id }, data: { createdAt: created } });
+    await prisma.bookingRequest.update({ where: { id: stale.id }, data: { holdExpiresAt: new Date(Date.now() - 1000) } });
+    await prisma.user.update({ where: { id: p.id }, data: disabled });
+
+    expect(await bookingRequestService.sweep()).toEqual({ expired: 1, nudged: 0 });
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: stale.id } })).status).toBe(BookingRequestStatus.EXPIRED);
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: due.id } })).nudgedAt).toBeNull();
+    await deliverBookingRequestNotification({ requestId: stale.id, event: 'expired' });
+    expect(mocks.dispatch).not.toHaveBeenCalled();
+  });
+
   it('expires stale holds with audit and a patient email job, and nudges once past half the hold', async () => {
     scheduler.enabled = true;
     const p = await provider();

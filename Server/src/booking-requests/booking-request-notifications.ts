@@ -1,5 +1,5 @@
 import { fromPrisma } from 'pg-boss';
-import { BookingRequestStatus, Channel } from '../../generated/prisma/enums.js';
+import { AdminStatus, BookingRequestStatus, Channel } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
 import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
@@ -32,7 +32,7 @@ const PROVIDER_EVENTS = new Set<BookingRequestEvent>([ 'received', 'nudge' ]);
 
 async function loadRequest(requestId: string) {
   return prisma.bookingRequest.findUnique({
-    where: { id: requestId },
+    where: { id: requestId, user: { status: AdminStatus.ACTIVE, isDeleted: false } },
     select: {
       status: true,
       confirmedAt: true,

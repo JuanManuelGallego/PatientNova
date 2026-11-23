@@ -8,8 +8,9 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { bulkSendWorker } from '../../../src/scheduler/workers/bulk-send-message.js';
+import { sendReminderWorker } from '../../../src/scheduler/workers/send-reminder.js';
 import { createTestUser, createTestPatient, futureDate } from '../helpers.js';
-import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
+import { ActionSource, AdminStatus, Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { REMINDER_SEND_RETRY_LIMIT } from '../../../src/utils/config/constants.js';
 
 let userId: string;
@@ -43,6 +44,28 @@ async function createReminder(overrides: Record<string, unknown> = {}) {
     },
   });
 }
+
+describe.each([ [ 'send-reminder', sendReminderWorker ], [ 'bulk-send-message', bulkSendWorker ] ] as const)('%s provider lifecycle', (_queue, worker) => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('cancels pending reminders with audit for a disabled provider: %j', async (disabled) => {
+    const reminder = await createReminder();
+    await prisma.user.update({ where: { id: userId }, data: disabled });
+
+    await worker([ { data: { reminderId: reminder.id } } ]);
+    expect(await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).toMatchObject({ status: ReminderStatus.CANCELLED });
+
+    await prisma.user.update({ where: { id: userId }, data: { isDeleted: false, status: AdminStatus.ACTIVE } });
+    await worker([ { data: { reminderId: reminder.id } } ]);
+
+    expect(dispatchMock).not.toHaveBeenCalled();
+    const audits = await prisma.auditLog.findMany({ where: { entityId: reminder.id } });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      userId, source: ActionSource.JOB,
+      fieldsBefore: { status: ReminderStatus.PENDING },
+      fieldsAfter: { status: ReminderStatus.CANCELLED },
+    });
+  });
+});
 
 describe('bulkSendWorker (integration, mocked dispatch)', () => {
   it('dispatches a valid PENDING reminder and marks it QUEUED', async () => {

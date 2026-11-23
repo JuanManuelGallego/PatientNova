@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { googleConnectionRepository, googleOAuthStateRepository, hashState, REQUIRED_SCOPE } from '../../../src/google/google-connection.repository.js';
 import { createTestUser } from '../helpers.js';
+import { AdminStatus } from '../../../generated/prisma/enums.js';
 
 let userId: string;
 
@@ -11,6 +12,14 @@ beforeEach(async () => {
 });
 
 describe('googleConnectionRepository (integration)', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('omits disabled providers from background connection checks: %j', async (disabled) => {
+    await googleConnectionRepository.upsertConnection(userId, { refreshToken: 'test-token', grantedScopes: [REQUIRED_SCOPE] });
+    await prisma.user.update({ where: { id: userId }, data: disabled });
+
+    expect(await googleConnectionRepository.findActiveUserIds()).toEqual([]);
+    expect((await googleConnectionRepository.findByUserId(userId))!.refreshToken).toBe('test-token');
+  });
+
   it('findByUserId returns null for non-existent user', async () => {
     const conn = await googleConnectionRepository.findByUserId(userId);
     expect(conn).toBeNull();
