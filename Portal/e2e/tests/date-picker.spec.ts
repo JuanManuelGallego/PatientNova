@@ -1,14 +1,21 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { Routes } from '../utils/const';
+
+async function openBlockTime(page: Page) {
+  await page.goto(Routes.CALENDAR);
+  await page.getByTestId('calendar-block-time-button').click();
+  const dialog = page.getByTestId('blocked-time-modal-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('blocked-time-description-input')).toBeFocused();
+  return dialog;
+}
 
 const TIME = /^\d{2}:\d{2}$/;
 
 test.describe('Date and time picker (desktop)', () => {
   test('types a date and times into the block-time range', async ({ page }) => {
-    await page.goto(Routes.CALENDAR);
-    await page.getByTestId('calendar-block-time-button').click();
-    const dialog = page.getByTestId('blocked-time-modal-dialog');
-    await expect(dialog).toBeVisible();
+    const dialog = await openBlockTime(page);
 
     const date = dialog.getByTestId('blocked-time-date');
     const start = dialog.getByTestId('blocked-time-start');
@@ -38,10 +45,7 @@ test.describe('Date and time picker (desktop)', () => {
   });
 
   test('picks times from the list with the mouse and the keyboard', async ({ page }) => {
-    await page.goto(Routes.CALENDAR);
-    await page.getByTestId('calendar-block-time-button').click();
-    const dialog = page.getByTestId('blocked-time-modal-dialog');
-    await expect(dialog).toBeVisible();
+    const dialog = await openBlockTime(page);
 
     const start = dialog.getByTestId('blocked-time-start');
     await start.click();
@@ -63,9 +67,7 @@ test.describe('Date and time picker (desktop)', () => {
   });
 
   test('Escape closes the list without closing the dialog', async ({ page }) => {
-    await page.goto(Routes.CALENDAR);
-    await page.getByTestId('calendar-block-time-button').click();
-    const dialog = page.getByTestId('blocked-time-modal-dialog');
+    const dialog = await openBlockTime(page);
     await dialog.getByTestId('blocked-time-start').click();
     await expect(page.getByTestId('blocked-time-start-list')).toBeVisible();
     await page.keyboard.press('Escape');

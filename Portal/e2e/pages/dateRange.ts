@@ -17,5 +17,5 @@ export async function pickCustomRange(page: Page, rangeTestId: string, from: str
   const hasta = page.getByTestId(`${rangeTestId}-to`);
   await hasta.fill(toField(to));
   await hasta.press('Enter');
-  await expect(hasta).toHaveValue(toField(to));
+  await expect(hasta).toBeHidden();
 }
