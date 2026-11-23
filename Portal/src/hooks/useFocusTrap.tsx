@@ -303,7 +303,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const el = ref.current;
     if (!el) return;
 
-    const first = el.querySelector<HTMLElement>(FOCUSABLE);
+    const first = el.querySelector<HTMLElement>("[data-autofocus]") ?? el.querySelector<HTMLElement>(FOCUSABLE);
     first?.focus();
 
     const withBack = back !== null && escape.current !== undefined;

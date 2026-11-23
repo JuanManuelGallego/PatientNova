@@ -1,5 +1,5 @@
 import { blockedTimeRepository } from './blocked-time.repository.js';
-import { BlockedTimeInvalidRangeError, BlockedTimeOverlapError } from './blocked-time.errors.js';
+import { BlockedTimeInvalidRangeError, BlockedTimeOverlapError, BlockedTimeSpansDaysError } from './blocked-time.errors.js';
 import { logger } from '../utils/api/logger.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import type { CreateBlockedTimeDto, UpdateBlockedTimeDto, ListBlockedTimeQuery } from './blocked-time.schemas.js';
@@ -10,6 +10,7 @@ import { EntityType, ActionType } from '../../generated/prisma/enums.ts';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { schemaKeys } from '../utils/validation/schema-keys.js';
+import { getLocalDateString } from '../utils/time/time-utils.js';
 
 const BLOCKED_TIME_DIFF_FIELDS = schemaKeys(updateBlockedTimeSchema);
 
@@ -17,6 +18,13 @@ async function checkOverlap(tx: TransactionClient, userId: string, startAt: stri
   const overlap = await blockedTimeRepository.hasBlockedTimeOverlap(userId, new Date(startAt), new Date(endAt), excludeId, tx);
   if (overlap) {
     throw new BlockedTimeOverlapError(overlap.startTimeUtc, overlap.endTimeUtc);
+  }
+}
+
+async function checkSameDay(tx: TransactionClient, userId: string, startAt: string, endAt: string): Promise<void> {
+  const { timezone } = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { timezone: true } });
+  if (getLocalDateString(timezone, new Date(startAt)) !== getLocalDateString(timezone, new Date(endAt))) {
+    throw new BlockedTimeSpansDaysError();
   }
 }
 
@@ -30,6 +38,7 @@ export const blockedTimeService = {
   async create(dto: CreateBlockedTimeDto, userId: string) {
     return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
+      await checkSameDay(tx, userId, dto.startTimeUtc, dto.endTimeUtc);
       await checkOverlap(tx, userId, dto.startTimeUtc, dto.endTimeUtc);
       const createdBlockedTime = await blockedTimeRepository.create(dto, userId, tx);
       await logAudit({
@@ -55,6 +64,7 @@ export const blockedTimeService = {
         const startAt = dto.startTimeUtc ?? existing.startTimeUtc.toISOString();
         const endAt = dto.endTimeUtc ?? existing.endTimeUtc.toISOString();
         if (new Date(endAt).getTime() <= new Date(startAt).getTime()) throw new BlockedTimeInvalidRangeError();
+        await checkSameDay(tx, userId, startAt, endAt);
         await checkOverlap(tx, userId, startAt, endAt, id);
       }
       const updated = await blockedTimeRepository.update(id, dto, userId, tx);

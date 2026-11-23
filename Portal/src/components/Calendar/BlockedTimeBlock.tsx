@@ -22,7 +22,6 @@ export function BlockedTimeBlock({ bt, onSelectBlockedTime, style }: BlockedTime
       title={bt.description || "Horario bloqueado"}
     >
       <span style={{ fontSize: 12, color: "var(--c-gray-600)", padding: "2px 4px", fontWeight: 500 }}>
-        {fmtTime(bt.startTimeUtc, timezone)}
         {bt.description ? ` ${bt.description}` : " Bloqueado"}
       </span>
     </div>

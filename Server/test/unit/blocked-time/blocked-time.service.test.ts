@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { blockedTimeService } from '../../../src/blocked-time/blocked-time.service.js';
+import { BlockedTimeSpansDaysError } from '../../../src/blocked-time/blocked-time.errors.js';
 
 vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
   blockedTimeRepository: {
@@ -14,7 +15,10 @@ vi.mock('../../../src/blocked-time/blocked-time.repository.js', () => ({
 }));
 
 vi.mock('../../../src/utils/prisma/prisma-client.js', () => ({
-  prisma: { $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({ tx: true })) },
+  prisma: {
+    $transaction: vi.fn(async (fn: (tx: unknown) => unknown) =>
+      fn({ tx: true, user: { findUniqueOrThrow: vi.fn(async () => ({ timezone: 'America/Bogota' })) } })),
+  },
 }));
 
 vi.mock('../../../src/utils/prisma/provider-lock.js', () => ({ withProviderLock: vi.fn() }));
@@ -132,6 +136,14 @@ describe('blockedTimeService.update', () => {
     mockRepo.update.mockResolvedValue({ ...fakeBlockedTime, ...dto } as any);
     await blockedTimeService.update('bt-1', dto, 'user-1');
     expect(mockRepo.hasBlockedTimeOverlap).not.toHaveBeenCalled();
+  });
+
+  it('refuses a create that ends on another day in the provider zone, before checking overlap', async () => {
+    await expect(blockedTimeService.create(
+      { description: 'Late', startTimeUtc: '2026-07-28T03:00:00.000Z', endTimeUtc: '2026-07-28T06:00:00.000Z' }, 'user-1',
+    )).rejects.toBeInstanceOf(BlockedTimeSpansDaysError);
+    expect(mockRepo.hasBlockedTimeOverlap).not.toHaveBeenCalled();
+    expect(mockRepo.create).not.toHaveBeenCalled();
   });
 
   it('checks overlap when startTimeUtc is updated', async () => {

@@ -27,26 +27,6 @@ vi.mock("@/src/providers/AuthContext", () => ({
 vi.mock("@/src/providers/ThemeContext", () => ({
     useTheme: () => ({ isDark: false }),
 }));
-// The antd popup needs browser APIs jsdom lacks; a plain input feeds the same UTC-mode dayjs values.
-vi.mock("@/src/components/ZonedDatePicker", async () => {
-    const { default: dayjs } = await import("dayjs");
-    const { default: utc } = await import("dayjs/plugin/utc");
-    dayjs.extend(utc);
-    type Props = { value: import("dayjs").Dayjs; onChange: (d: import("dayjs").Dayjs) => void; "aria-label": string; "aria-invalid": boolean; "data-testid": string };
-    return {
-        ZonedDatePicker: {
-            TimePicker: ({ value, onChange, ...rest }: Props) => (
-                <input
-                    value={value.format("HH:mm")}
-                    onChange={(e) => onChange(dayjs.utc(`2000-01-01T${e.target.value}:00`))}
-                    aria-label={rest[ "aria-label" ]}
-                    aria-invalid={rest[ "aria-invalid" ]}
-                    data-testid={rest[ "data-testid" ]}
-                />
-            ),
-        },
-    };
-});
 vi.mock("@/src/api/booking/useFetchBookingSettings", () => ({
     useFetchBookingSettings: () => ({ settings, loading: false, error: null, fetchSettings }),
 }));
@@ -65,6 +45,13 @@ vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({
 vi.mock("@/src/api/booking/useSaveAvailability", () => ({
     useSaveAvailability: () => ({ saveAvailability, loading: false, error: null }),
 }));
+
+/** Types into a time field and commits it, as a person would (Tab out). */
+function setTime(testId: string, value: string) {
+    const input = screen.getByTestId(testId);
+    fireEvent.change(input, { target: { value } });
+    fireEvent.blur(input);
+}
 
 function makeSettings(overrides: Partial<BookingSettings> = {}): BookingSettings {
     return {
@@ -382,7 +369,7 @@ describe("OnlineBookingTab: availability", () => {
         rules = [ { weekday: 2, startMinute: 540, endMinute: 720 } ];
         renderTab();
         await user.click(screen.getByTestId("availability-add-2"));
-        fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
+        setTime("availability-start-2-1", "10:00");
         await settle();
         expect(screen.getByRole("alert")).toHaveTextContent(/superponen el martes/);
         expect(screen.getByTestId("availability-unsaved")).toBeInTheDocument();
@@ -393,8 +380,8 @@ describe("OnlineBookingTab: availability", () => {
         rules = [ { weekday: 2, startMinute: 540, endMinute: 720 } ];
         renderTab();
         await user.click(screen.getByTestId("availability-add-2"));
-        fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
-        fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "13:00" } });
+        setTime("availability-start-2-1", "10:00");
+        setTime("availability-start-2-1", "13:00");
         await settle();
         expect(saveAvailability).toHaveBeenCalledTimes(1);
         expect(screen.queryByTestId("availability-unsaved")).not.toBeInTheDocument();
@@ -405,7 +392,7 @@ describe("OnlineBookingTab: availability", () => {
         renderTab();
         await user.click(screen.getByTestId("availability-add-3"));
         expect(screen.getByTestId("availability-start-3-1")).toHaveValue("23:30");
-        expect(screen.getByTestId("availability-end-3-1")).toHaveValue("00:00");
+        expect(screen.getByTestId("availability-end-3-1")).toHaveValue("24:00");
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
         expect(screen.getByTestId("availability-add-3")).toBeDisabled();
     });
@@ -414,7 +401,7 @@ describe("OnlineBookingTab: availability", () => {
         rules = [ { weekday: 2, startMinute: 540, endMinute: 720 } ];
         renderTab();
         await user.click(screen.getByTestId("availability-add-2"));
-        fireEvent.change(screen.getByTestId("availability-start-2-1"), { target: { value: "10:00" } });
+        setTime("availability-start-2-1", "10:00");
         expect(within(screen.getByTestId("availability-day-2")).getByRole("alert")).toHaveTextContent(/superponen/);
         expect(screen.getByTestId("availability-start-2-1")).toHaveAttribute("aria-invalid", "true");
     });

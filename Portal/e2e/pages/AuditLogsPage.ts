@@ -1,6 +1,7 @@
 import { BasePage } from './BasePage';
 import { expect, Locator, Page } from '@playwright/test';
 import { AuditDrawer } from './Drawers/AuditDrawer';
+import { pickCustomRange } from './dateRange';
 
 export class AuditLogsPage extends BasePage {
   readonly searchInput: Locator;
@@ -44,17 +45,7 @@ export class AuditLogsPage extends BasePage {
 
   async setDateRange(from: string, to: string) {
     await this.page.getByTestId('audit-date-range-filter-trigger').click();
-    await this.page.getByPlaceholder('Desde').click();
-    const clickDay = async (value: string) => {
-      const date = value.split('T')[0];
-      await this.page
-        .locator(`.ant-picker-cell-in-view[title="${date}"]`)
-        .first()
-        .click();
-    };
-    await clickDay(from);
-    await clickDay(to);
-    await this.page.getByRole('button', { name: 'Aceptar' }).click();
+    await pickCustomRange(this.page, 'audit-date-range-filter', from, to);
   }
 
   async refresh() {

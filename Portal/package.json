@@ -19,7 +19,6 @@
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/browser": "^11.8.0",
-    "antd": "^6.6.6",
     "dayjs": "^1.11.23",
     "dotenv-safe": "^9.1.0",
     "lucide-react": "^1.59.0",

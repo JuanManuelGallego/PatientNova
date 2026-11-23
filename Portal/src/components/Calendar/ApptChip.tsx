@@ -44,7 +44,7 @@ export function ApptChip({ a, compact = false, onViewAppt, style }: ApptChipProp
       )}
 
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
-        {fmtTime(a.startAt, timezone)} {a.patient.name} {a.patient.lastName}
+        {a.patient.name} {a.patient.lastName}
         {!compact && ` — ${a.appointmentLocation.name}`}
       </span>
     </div>

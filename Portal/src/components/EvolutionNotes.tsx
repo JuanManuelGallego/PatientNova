@@ -1,4 +1,4 @@
-import { sectionGridStyle } from "@/src/config/antTheme";
+import { sectionGridStyle } from "@/src/config/layout";
 import { createEmptyNote, EvolutionNote } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "./DateTimePicker";
 import { fmtCalendarDay } from "@/src/utils/TimeUtils";

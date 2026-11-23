@@ -1,4 +1,4 @@
-import { sectionGridStyle } from "@/src/config/antTheme";
+import { sectionGridStyle } from "@/src/config/layout";
 import { createEmptyMember, FamilyMember, RELATIONSHIP_CFG, SEX_CFG } from "@/src/types/MedicalRecord";
 import { CustomSelect } from "./CustomSelect";
 

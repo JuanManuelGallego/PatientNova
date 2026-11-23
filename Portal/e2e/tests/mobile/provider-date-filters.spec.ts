@@ -32,29 +32,7 @@ async function expectRangeKept(page: Page): Promise<[ string, string ]> {
 }
 
 test.describe('Citas date filter on a phone', () => {
-  test('a preset applies, survives the sheets closing and filters the list', async ({
-    page, api, trackedPatients, trackedAppointments,
-  }) => {
-    const patient = await createTestPatient(api);
-    trackedPatients.track(patient.id);
-    const far = await createTestAppointment(api, patient.id, slot(2, 12, 13 + Math.floor(Math.random() * 4)));
-    trackedAppointments.track(far.data.id);
-
-    await page.goto(`/appointments?patientId=${patient.id}`);
-    await expect(page.getByTestId(`appointment-card-${far.data.id}`)).toBeVisible();
-
-    const sheet = await openFilters(page);
-    await sheet.getByTestId(RANGE).getByRole('button', { name: 'Este mes' }).click();
-    await expect(sheet.getByTestId(RANGE).getByRole('button', { name: 'Este mes' })).toHaveAttribute('aria-pressed', 'true');
-    await closeFilters(page, sheet);
-
-    const [ from, to ] = await expectRangeKept(page);
-    expect(from.slice(8), 'Este mes starts on the 1st').toBe('01');
-    expect(from.slice(0, 7)).toBe(to.slice(0, 7));
-    await expect(page.getByTestId(`appointment-card-${far.data.id}`)).toBeHidden();
-  });
-
-  test('Personalizado picks Desde and Hasta in sheets, and the range survives them closing', async ({
+  test('Desde and Hasta are picked in sheets, and the range survives them closing', async ({
     page, api, trackedPatients, trackedAppointments,
   }) => {
     const patient = await createTestPatient(api);
@@ -70,9 +48,6 @@ test.describe('Citas date filter on a phone', () => {
     await expect(page.getByTestId(`appointment-card-${outside.data.id}`)).toBeVisible();
 
     const sheet = await openFilters(page);
-    const range = sheet.getByTestId(RANGE);
-    await range.getByRole('button', { name: 'Personalizado' }).click();
-
     await page.getByTestId(`${RANGE}-from`).click();
     const fromSheet = page.getByTestId(`${RANGE}-from-sheet`);
     await expect(fromSheet).toBeVisible();

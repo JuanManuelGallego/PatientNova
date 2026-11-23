@@ -12,7 +12,7 @@ import {
   RELATIVE_REMINDER_TYPES,
   CLOCK_REMINDER_TYPES,
 } from "@/src/types/Reminder";
-import { DateTimePicker } from "@/src/components/DateTimePicker";
+import { DateTimeField } from "@/src/components/Pickers/DateTimeField";
 import { Patient, getPatientContact } from "@/src/types/Patient";
 import { STATUS_ICONS, ACTION_ICONS, DETAIL_ICONS } from "@/src/config/icons";
 import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
@@ -268,16 +268,15 @@ export function LocationAndTimeStep({
           </label>
 
           {form.reminderType === ReminderType.MANUAL && (
-            <label className="form-label" style={{ marginTop: 10 }}>
-              <RequiredField label="Fecha y hora del recordatorio" />
-              <DateTimePicker
-                isFuture
-                showTime
-                date={form.reminderSendAt}
+            <div style={{ marginTop: 10 }}>
+              <DateTimeField
+                label={<RequiredField label="Fecha y hora del recordatorio" />}
+                when="future"
+                value={form.reminderSendAt}
                 testId="appointment-reminder-sendat-input"
                 onChange={(v) => setForm((f) => ({ ...f, reminderSendAt: v }))}
               />
-            </label>
+            </div>
           )}
 
           {form.reminderType !== ReminderType.NONE && (

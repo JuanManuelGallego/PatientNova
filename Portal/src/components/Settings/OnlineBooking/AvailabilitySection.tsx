@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ConfigProvider } from "antd";
-import esEs from "antd/locale/es_ES";
-import dayjs from "dayjs";
-import { ZonedDatePicker } from "@/src/components/ZonedDatePicker";
-import { getAntThemeConfig } from "@/src/config/antTheme";
-import { useTheme } from "@/src/providers/ThemeContext";
+import { TimeRangeField, type TimeRange } from "@/src/components/Pickers/TimeRangeField";
 import { useFetchAvailability } from "@/src/api/booking/useFetchAvailability";
 import { useSaveAvailability } from "@/src/api/booking/useSaveAvailability";
 import { AvailabilityRule } from "@/src/types/Booking";
@@ -28,37 +23,6 @@ import { SettingsSection } from "../SettingsSection";
 
 const DEFAULT_WINDOW = { startMinute: 9 * 60, endMinute: 12 * 60 };
 const WORKWEEK = [ 1, 2, 3, 4, 5 ];
-
-// A wall-clock time of day ("HH:mm") with no date or zone; the fixed UTC day keeps device DST out of it.
-const timeOfDay = (value: string) => dayjs.utc(`2000-01-01T${value}:00`);
-
-function TimeField({ value, onChange, label, invalid, testId }: {
-    value: string;
-    onChange: (value: string) => void;
-    label: string;
-    invalid: boolean;
-    testId: string;
-}) {
-    const { isDark } = useTheme();
-    return (
-        <ConfigProvider locale={esEs} theme={getAntThemeConfig(isDark)}>
-            <ZonedDatePicker.TimePicker
-                value={timeOfDay(value)}
-                onChange={(d) => d && onChange(d.format("HH:mm"))}
-                format="HH:mm"
-                minuteStep={5}
-                allowClear={false}
-                needConfirm={false}
-                showNow={false}
-                status={invalid ? "error" : undefined}
-                aria-label={label}
-                aria-invalid={invalid}
-                style={{ width: 110 }}
-                data-testid={testId}
-            />
-        </ConfigProvider>
-    );
-}
 
 export function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> }) {
     const { availability, loading, error: loadError } = useFetchAvailability();
@@ -103,10 +67,11 @@ export function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> 
         ]);
     }
 
-    function setTime(target: AvailabilityRule, field: "startMinute" | "endMinute", value: string) {
-        const minutes = timeToMinutes(value, field === "endMinute");
-        if (minutes === null || !rules) return;
-        update(rules.map((r) => (r === target ? { ...r, [ field ]: minutes } : r)));
+    function setRange(target: AvailabilityRule, range: TimeRange) {
+        const startMinute = timeToMinutes(range.start);
+        const endMinute = timeToMinutes(range.end);
+        if (startMinute === null || endMinute === null || !rules) return;
+        update(rules.map((r) => (r === target ? { ...r, startMinute, endMinute } : r)));
     }
 
     return (
@@ -132,20 +97,15 @@ export function AvailabilitySection({ onSaved }: { onSaved: () => Promise<void> 
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {dayRules.map((r, i) => (
                                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                        <TimeField
-                                            value={minutesToTime(r.startMinute)}
-                                            onChange={(v) => setTime(r, "startMinute", v)}
-                                            label={`${label}: hora de inicio`}
+                                        <TimeRangeField
+                                            value={{ start: minutesToTime(r.startMinute), end: minutesToTime(r.endMinute) }}
+                                            onChange={(range) => setRange(r, range)}
+                                            startLabel={`${label}: hora de inicio`}
+                                            endLabel={`${label}: hora de fin`}
+                                            endOfDay
                                             invalid={!!dayError}
-                                            testId={`availability-start-${weekday}-${i}`}
-                                        />
-                                        <span aria-hidden="true">–</span>
-                                        <TimeField
-                                            value={r.endMinute === MINUTES_PER_DAY ? "00:00" : minutesToTime(r.endMinute)}
-                                            onChange={(v) => setTime(r, "endMinute", v)}
-                                            label={`${label}: hora de fin`}
-                                            invalid={!!dayError}
-                                            testId={`availability-end-${weekday}-${i}`}
+                                            startTestId={`availability-start-${weekday}-${i}`}
+                                            endTestId={`availability-end-${weekday}-${i}`}
                                         />
                                         {r.endMinute === MINUTES_PER_DAY && (
                                             <span style={{ fontSize: 12, color: "var(--c-gray-500)" }}>fin del día</span>

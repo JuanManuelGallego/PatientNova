@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import dayjs from "dayjs";
-import { fromPickerValue, nowInZone, toPickerValue } from "@/src/components/ZonedDatePicker";
+import { fromPickerValue, nowInZone, toPickerValue } from "@/src/utils/pickerValue";
 
 // The device is in New York, the provider in Bogotá. 2026-03-08 02:30 does not exist in New York
 // (spring-forward), but it is an ordinary time in Bogotá and must be saved as 07:30Z.
-describe("ZonedDatePicker values", () => {
+describe("picker values", () => {
     const originalTz = process.env.TZ;
     beforeEach(() => { process.env.TZ = "America/New_York"; });
     afterEach(() => { process.env.TZ = originalTz; });

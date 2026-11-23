@@ -1,4 +1,4 @@
-import { DateTimePicker } from "../DateTimePicker";
+import { DateTimeField } from "@/src/components/Pickers/DateTimeField";
 import { Reminder, ReminderStatus, CHANNEL_CFG } from "@/src/types/Reminder";
 import { useState } from "react";
 import { RequiredField } from "../Info/Required";
@@ -74,16 +74,13 @@ export function EditScheduledReminderModal({
             <STATUS_ICONS.warning size={14} /> {error}
           </div>
         )}
-        <label className="form-label">
-          <RequiredField label="Nueva fecha y hora de envío" />
-          <DateTimePicker
-            date={sendAt}
-            onChange={setsendAt}
-            showTime
-            isFuture
-            testId="edit-reminder-send-at-picker"
-          />
-        </label>
+        <DateTimeField
+          label={<RequiredField label="Nueva fecha y hora de envío" />}
+          when="future"
+          value={sendAt}
+          onChange={setsendAt}
+          testId="edit-reminder-send-at-picker"
+        />
         <div className="modal-footer modal-footer--stretch">
           <button
             onClick={onClose}

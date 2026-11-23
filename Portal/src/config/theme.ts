@@ -9,7 +9,6 @@
  *
  * Consumed by:
  *   • src/app/globals.css          — via manually-synced CSS custom properties
- *   • src/styles/theme.ts          — Ant Design ConfigProvider theme tokens
  *   • src/styles/medicalRecordsPDFStyle.ts — @react-pdf/renderer palette
  *   • Components that need programmatic color access (e.g. avatars, charts)
  * ─────────────────────────────────────────────────────────────────────────────

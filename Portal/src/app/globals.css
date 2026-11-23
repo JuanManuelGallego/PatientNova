@@ -1290,21 +1290,6 @@ body {
   cursor: pointer;
 }
 
-.ant-picker.form-picker {
-  box-sizing: border-box;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 14px;
-  background: var(--c-input-bg);
-  border-width: 1.5px;
-  font-size: 14px;
-}
-
-.ant-picker.form-picker .ant-picker-input > input {
-  font-size: 14px;
-  font-family: inherit;
-}
-
 .template-btn {
   background: var(--c-page-bg);
   border: 1.5px solid var(--c-gray-200);
@@ -3925,6 +3910,14 @@ th.col--actions {
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-bottom: 2px;
+}
+
+.cal-holiday-flag {
+  display: block;
+  margin: 0 auto 2px;
+  border-radius: 2px;
+  object-fit: cover;
+  pointer-events: none;
 }
 
 .cal-chips {
@@ -6731,11 +6724,7 @@ button.cal-day-panel__blocked-item {
   .custom-select .custom-select__trigger,
   .custom-select.form-input--auto .custom-select__trigger,
   .patient-autocomplete .patient-autocomplete__trigger,
-  .patient-autocomplete .patient-autocomplete__input,
-  .ant-picker.form-picker,
-  .ant-picker .ant-picker-input > input,
-  .ant-picker.form-picker .ant-picker-input > input,
-  .ant-select .ant-select-selection-search-input {
+  .patient-autocomplete .patient-autocomplete__input {
     font-size: 16px;
   }
 

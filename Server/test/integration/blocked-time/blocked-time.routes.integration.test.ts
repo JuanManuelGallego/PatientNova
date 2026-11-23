@@ -3,9 +3,14 @@ import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { blockedTimeRouter } from '../../../src/blocked-time/blocked-time.routes.js';
 import {
   createTestUser,
-  appointmentTimeRange,
   invokeRoute,
 } from '../helpers.js';
+
+const BASE = new Date('2031-04-07T14:00:00.000Z').getTime();
+function appointmentTimeRange(offsetMinutes = 60, durationMinutes = 30) {
+  const start = new Date(BASE + offsetMinutes * 60_000);
+  return { start, end: new Date(start.getTime() + durationMinutes * 60_000) };
+}
 
 let userId: string;
 
@@ -70,6 +75,47 @@ describe('blocked-time routes (integration)', () => {
       baseReq({ body: { description: 'Bad', startTimeUtc: end.toISOString(), endTimeUtc: start.toISOString() } }),
     );
     expect(res.statusCode).toBe(400);
+  });
+
+  it('POST / returns 400 when the block ends on another day in the provider zone', async () => {
+    const res = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({
+      body: { startTimeUtc: '2031-04-08T04:00:00.000Z', endTimeUtc: '2031-04-08T06:00:00.000Z' },
+    }));
+    expect(res.statusCode).toBe(400);
+    expect(await prisma.blockedTime.count({ where: { userId } })).toBe(0);
+  });
+
+  it('POST / returns 400 for a block that ends at the next midnight', async () => {
+    const res = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({
+      body: { startTimeUtc: '2031-04-08T03:00:00.000Z', endTimeUtc: '2031-04-08T05:00:00.000Z' },
+    }));
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST / reads the day in the provider zone, not UTC', async () => {
+    const res = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({
+      body: { startTimeUtc: '2031-04-07T23:00:00.000Z', endTimeUtc: '2031-04-08T04:55:00.000Z' },
+    }));
+    expect(res.statusCode).toBe(201);
+  });
+
+  it('PATCH /:id returns 400 when the new end falls on another day', async () => {
+    const created = await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body: createBody() }));
+    const id = (created.body as any).data.id;
+    const res = await invokeRoute(blockedTimeRouter, 'patch', `/${id}`, baseReq({
+      params: { id }, body: { endTimeUtc: '2031-04-08T06:00:00.000Z' },
+    }));
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH /:id still edits the description of a block saved across days before the rule', async () => {
+    const legacy = await prisma.blockedTime.create({
+      data: { userId, description: 'Vacaciones', startTimeUtc: new Date('2031-04-07T14:00:00.000Z'), endTimeUtc: new Date('2031-04-10T23:00:00.000Z') },
+    });
+    const res = await invokeRoute(blockedTimeRouter, 'patch', `/${legacy.id}`, baseReq({
+      params: { id: legacy.id }, body: { description: 'Viaje' },
+    }));
+    expect(res.statusCode).toBe(200);
   });
 
   it('POST / returns 400 when description is empty string', async () => {

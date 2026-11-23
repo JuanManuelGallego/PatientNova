@@ -1,6 +1,4 @@
 import React from "react";
-import { browserTimezone, fmtTimezoneLabel } from "@/src/utils/TimeUtils";
-import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
 interface PageHeaderProps {
     title: string;
@@ -10,15 +8,13 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, actions, style }: PageHeaderProps) {
-  const timezone = useDisplayTimezone();
-    const zoneNote = timezone !== browserTimezone() ? `Hora de ${fmtTimezoneLabel(timezone)}` : null;
     return (
         <div className="page-header" style={style}>
             <div>
                 <h1 className="page-title">{title}</h1>
-                {(subtitle || zoneNote) && (
+                {(subtitle) && (
                     <p className="page-subtitle">
-                        {[ subtitle, zoneNote ].filter(Boolean).join(" · ")}
+                        {subtitle}
                     </p>
                 )}
             </div>

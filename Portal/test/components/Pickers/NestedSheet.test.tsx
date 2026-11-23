@@ -103,7 +103,7 @@ describe("picker sheets and URL writes", () => {
         }
     });
 
-    it("inside the filter sheet, Personalizado writes onto the filter sheet's entry, not the picker's", async () => {
+    it("inside the filter sheet, the range writes onto the filter sheet's entry, not the picker's", async () => {
         window.history.replaceState(null, "", "/appointments");
         const seen: (string | undefined)[] = [];
         renderWithTrap(
@@ -114,7 +114,6 @@ describe("picker sheets and URL writes", () => {
         );
         const filtersEntry = window.history.state?.overlay;
         expect(filtersEntry).toBeDefined();
-        fireEvent.click(within(screen.getByTestId("range")).getByRole("button", { name: "Personalizado" }));
         fireEvent.click(screen.getByTestId("range-from"));
         fireEvent.click(within(screen.getByRole("dialog", { name: "Desde" })).getByRole("button", { name: / 2 de marzo de 2026/ }));
         await waitFor(() => expect(screen.getByTestId("range-from")).toHaveTextContent("02/03/2026"));

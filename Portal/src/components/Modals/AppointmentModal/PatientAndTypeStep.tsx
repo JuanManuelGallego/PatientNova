@@ -3,7 +3,8 @@
 import { AppointmentForm, AppointmentDuration, AppointmentType } from "@/src/types/Appointment";
 import { Patient } from "@/src/types/Patient";
 import { getAvatarColor, getInitials } from "@/src/utils/AvatarHelper";
-import { AppointmentDateTimePicker } from "@/src/components/AppointmentDateTimePicker";
+import { AppointmentDateTimePicker, type BusyInterval } from "@/src/components/AppointmentDateTimePicker";
+import { appointmentDurationMinutes } from "@/src/utils/TimeUtils";
 import { PatientAutocomplete } from "@/src/components/PatientAutocomplete";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
@@ -16,14 +17,13 @@ interface Props {
     isEdit: boolean;
     selectedPatient: Patient | undefined;
     appointmentTypes: AppointmentType[];
-    bookedSlots: string[];
-    blockedSlots: { start: string; end: string }[];
-    onError: (error: string) => void;
+    bookedSlots: BusyInterval[];
+    blockedSlots: BusyInterval[];
     clearError: () => void;
     onPatientSelect: (patient: Patient | undefined) => void;
 }
 
-export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, appointmentTypes, bookedSlots, blockedSlots, onError, clearError, onPatientSelect }: Props) {
+export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, appointmentTypes, bookedSlots, blockedSlots, clearError, onPatientSelect }: Props) {
     return (
         <div className="form-stack">
             {!isEdit && (
@@ -54,16 +54,14 @@ export function PatientAndTypeStep({ form, setForm, isEdit, selectedPatient, app
                 </div>
             )}
 
-            <label className="form-label">
-                <RequiredField label="Fecha y hora" />
-                <AppointmentDateTimePicker
-                    date={form.startAt}
-                    onChange={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
-                    onError={onError}
-                    bookedSlots={bookedSlots}
-                    blockedSlots={blockedSlots}
-                />
-            </label>
+            <AppointmentDateTimePicker
+                label={<RequiredField label="Fecha y hora" />}
+                date={form.startAt}
+                onChange={(date) => { setForm(f => ({ ...f, startAt: date })); clearError() }}
+                bookedSlots={bookedSlots}
+                blockedSlots={blockedSlots}
+                duration={appointmentDurationMinutes(form.duration as AppointmentDuration)}
+            />
 
             <label className="form-label">
                 <RequiredField label="Tipo de cita" />

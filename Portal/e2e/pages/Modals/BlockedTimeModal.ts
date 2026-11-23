@@ -9,6 +9,7 @@ export class BlockedTimeModal {
   readonly cancelButton: Locator;
   readonly deleteButton: Locator;
   readonly descriptionInput: Locator;
+  readonly dateInput: Locator;
   readonly startTimeInput: Locator;
   readonly endTimeInput: Locator;
 
@@ -19,8 +20,9 @@ export class BlockedTimeModal {
     this.cancelButton = this.dialog.getByTestId('blocked-time-modal-cancel-button');
     this.deleteButton = this.dialog.getByTestId('blocked-time-modal-delete-button');
     this.descriptionInput = this.dialog.getByTestId('blocked-time-description-input');
-    this.startTimeInput = this.dialog.getByTestId('blocked-time-start-input');
-    this.endTimeInput = this.dialog.getByTestId('blocked-time-end-input');
+    this.dateInput = this.dialog.getByTestId('blocked-time-date');
+    this.startTimeInput = this.dialog.getByTestId('blocked-time-start');
+    this.endTimeInput = this.dialog.getByTestId('blocked-time-end');
   }
 
   async waitForOpen() {
@@ -52,10 +54,12 @@ export class BlockedTimeModal {
   }): Promise<string> {
     await this.descriptionInput.fill(data.description);
     if (data.startTimeUtc) {
-      await ReminderModal.pickDateTime(this.page, this.startTimeInput, data.startTimeUtc);
+      const start = ReminderModal.localParts(data.startTimeUtc);
+      await ReminderModal.typeInto(this.dateInput, start.date);
+      await ReminderModal.typeInto(this.startTimeInput, start.time);
     }
     if (data.endTimeUtc) {
-      await ReminderModal.pickDateTime(this.page, this.endTimeInput, data.endTimeUtc);
+      await ReminderModal.typeInto(this.endTimeInput, ReminderModal.localParts(data.endTimeUtc).time);
     }
 
     const responsePromise = this.page.waitForResponse(

@@ -114,37 +114,49 @@ test.describe('Provider pages on a phone', () => {
     });
   }
 
-  test('block-time pickers open a touch sheet and pick a date and time without a keyboard', async ({ page }) => {
+  test('block-time pickers open touch sheets and pick a day and times without a keyboard', async ({ page }) => {
     await page.goto('/calendar');
     await settle(page);
     await page.getByTestId('calendar-block-time-button').click();
     const dialog = page.getByTestId('blocked-time-modal-dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator('.ant-picker')).toHaveCount(0);
 
-    const trigger = dialog.getByTestId('blocked-time-start-input');
-    await trigger.click();
-    const sheet = page.getByTestId('blocked-time-start-input-sheet');
+    const date = dialog.getByTestId('blocked-time-date');
+    await date.click();
+    const dateSheet = page.getByTestId('blocked-time-date-sheet');
+    await expect(dateSheet).toBeVisible();
+    await dateSheet.getByRole('button', { name: 'Mes siguiente' }).click();
+    await dateSheet.getByRole('table').locator('button:not([disabled])').first().click();
+    await expect(dateSheet).toBeHidden();
+    await expect(date).toHaveText(/\d{2}\/\d{2}\/\d{4}/);
+
+    const start = dialog.getByTestId('blocked-time-start');
+    const chosen = (await start.textContent())!.trim();
+    await start.click();
+    const sheet = page.getByTestId('blocked-time-start-sheet');
     await expect(sheet).toBeVisible();
+
+    const list = sheet.getByRole('listbox');
+    expect(await list.evaluate((el) => el.scrollHeight > el.clientHeight), 'the list scrolls by itself').toBe(true);
+    const selected = sheet.getByRole('option', { name: chosen, exact: true });
+    await expect(selected).toHaveAttribute('aria-selected', 'true');
+    const [ listBox, selectedBox ] = [ (await list.boundingBox())!, (await selected.boundingBox())! ];
+    expect(selectedBox.y, 'the chosen time is in view when the sheet opens').toBeGreaterThanOrEqual(listBox.y);
+    expect(selectedBox.y + selectedBox.height, 'the chosen time is in view when the sheet opens').toBeLessThanOrEqual(listBox.y + listBox.height);
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName ?? '');
     expect(['INPUT', 'TEXTAREA'], 'nothing that opens the keyboard has focus').not.toContain(focusedTag);
 
-    await sheet.getByRole('button', { name: 'Mes siguiente' }).click();
-    await sheet.getByRole('table').locator('button:not([disabled])').first().click();
-    await expect(sheet.getByRole('tab', { name: /Hora/ })).toHaveAttribute('aria-selected', 'true');
-    await sheet.getByRole('group', { name: 'Hora' }).locator('button:not([disabled])').first().click();
-    await sheet.getByRole('group', { name: 'Minutos' }).locator('button:not([disabled])').first().click();
-
-    const done = sheet.getByRole('button', { name: 'Listo' });
-    await expect(done).toBeEnabled();
-    const box = await done.boundingBox();
+    const option = sheet.getByRole('option', { name: '10:00' });
+    await option.scrollIntoViewIfNeeded();
+    const box = await option.boundingBox();
     const viewport = page.viewportSize()!;
-    expect(box, 'Listo has a box').not.toBeNull();
-    expect(box!.y + box!.height, 'Listo is above the bottom of the screen').toBeLessThanOrEqual(viewport.height);
-    await done.click();
+    expect(box, 'the row has a box').not.toBeNull();
+    expect(box!.y + box!.height, 'the row is above the bottom of the screen').toBeLessThanOrEqual(viewport.height);
+    await option.click();
 
     await expect(sheet).toBeHidden();
-    await expect(trigger).toHaveText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/);
+    await expect(start).toHaveText('10:00');
+    await expect(dialog.getByTestId('blocked-time-end')).toHaveText(/^1\d:\d{2}$/);
     await expect(dialog).toBeVisible();
 
     await page.getByTestId('blocked-time-modal-close-button').click();

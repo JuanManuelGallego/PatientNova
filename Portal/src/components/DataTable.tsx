@@ -22,7 +22,6 @@ interface TableFooterProps {
   totalPages: number;
   label: string;
   onPageChange: (page: number) => void;
-  /** Optional prefix that scopes the pagination control test IDs (e.g. "appointments-pagination"). */
   testIdPrefix?: string;
 }
 
@@ -33,7 +32,6 @@ export interface DataTableFooterProps {
   pageSize: number;
   label: string;
   onPageChange: (page: number) => void;
-  /** Optional prefix that scopes the pagination control test IDs (e.g. "appointments-pagination"). */
   testIdPrefix?: string;
 }
 

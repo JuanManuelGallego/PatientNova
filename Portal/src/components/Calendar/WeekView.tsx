@@ -77,12 +77,13 @@ export function WeekView({
                 {holiday && (
                   <div className="cal-holiday-label">
                     <Image
-                      className="phone-input-flag"
+                      className="cal-holiday-flag"
                       src={flagUrl("co")}
                       alt="Colombia"
                       width={20}
                       height={15}
-                    /> {holiday}
+                    />
+                    {holiday}
                   </div>
                 )}
                 {dayAppts.length > 0 && (
