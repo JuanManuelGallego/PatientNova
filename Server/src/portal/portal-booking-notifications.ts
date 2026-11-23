@@ -1,5 +1,5 @@
 import { fromPrisma } from 'pg-boss';
-import { AppointmentStatus, Channel, MeetingStatus } from '../../generated/prisma/enums.js';
+import { AdminStatus, AppointmentStatus, Channel, MeetingStatus } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { config } from '../utils/config/config.js';
 import { WHATSAPP_TEMPLATES } from '../twilio/whatsapp-templates.js';
@@ -59,7 +59,7 @@ const CANCELLATION_KINDS = new Set<BookingNotificationKind>(EVENT_KINDS.cancelle
 
 async function loadAppointment(appointmentId: string) {
   return prisma.appointment.findUnique({
-    where: { id: appointmentId },
+    where: { id: appointmentId, user: { status: AdminStatus.ACTIVE, isDeleted: false } },
     select: {
       startAt: true,
       status: true,

@@ -308,6 +308,19 @@ Open it once with the clinic to confirm it is readable and complete before anyth
   masked, and Prisma invocation errors are cut to the operation name (they render argument values). Do not add integrations that re-enable request capture.
 - Sentry is a third-party processor: list it in the privacy policy before enabling it in production.
 
+## Disabled provider accounts and background jobs
+
+Jobs check that the provider is `ACTIVE` and not deleted when they run. A pending reminder for a
+disabled provider becomes `CANCELLED`, with an audit entry, when its worker processes it, including
+bulk messages. Deleting or deactivating an account does not drain its queues immediately. Restoring
+the account never revives cancelled reminders or replays skipped notices; work not yet processed
+can run if the account is active again by then.
+
+Daily agendas, failure alerts, patient and provider booking notices (including cancellations),
+request nudges, Meet provisioning and Google connection checks are skipped for disabled providers.
+Hold expiry, retention cleanup, appointment completion and delivery tracking continue. Messages
+already handed to a messaging service cannot be recalled by disabling the account.
+
 ## Google Meet connection
 
 Each provider connects their own Google account (`google_connections`, refresh token encrypted at

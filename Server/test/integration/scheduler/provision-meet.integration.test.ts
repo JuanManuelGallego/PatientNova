@@ -15,7 +15,7 @@ import { provisionMeetWorker } from '../../../src/scheduler/workers/provision-me
 import { sweepPendingMeetingsWorker } from '../../../src/scheduler/workers/sweep-pending-meetings.js';
 import { deliverBookingNotification } from '../../../src/portal/portal-booking-notifications.js';
 import { MEETING_LINK_PENDING_LINE } from '../../../src/brevo/email-templates.js';
-import { ActionSource, AppointmentStatus, Channel, MeetingStatus } from '../../../generated/prisma/enums.js';
+import { ActionSource, AdminStatus, AppointmentStatus, Channel, MeetingStatus } from '../../../generated/prisma/enums.js';
 import { createTestLocation, unique } from '../helpers.js';
 import { bookViaConfirmation, createLiveProvider, sessionFor, slotStarts } from '../portal/portal-helpers.js';
 
@@ -55,6 +55,32 @@ const appointment = (id: string) => prisma.appointment.findUniqueOrThrow({ where
 const notices = () => mocks.send.mock.calls.filter(([ q ]) => q === 'portal-booking-notify').map(([ , job ]) => job);
 
 describe('provision-meet worker', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('skips Meet jobs and stale-link fallback for a disabled provider: %j', async (disabled) => {
+    const { id, provider } = await pendingBooking();
+    await prisma.appointment.update({ where: { id }, data: { createdAt: new Date(Date.now() - 31 * 60_000) } });
+    await prisma.user.update({ where: { id: provider.id }, data: disabled });
+
+    await run(id);
+    await sweepPendingMeetingsWorker();
+
+    expect(mocks.createMeetingSpace).not.toHaveBeenCalled();
+    expect((await appointment(id)).meetingStatus).toBe(MeetingStatus.PENDING);
+    expect(notices()).toEqual([]);
+  });
+
+  it('discards a Meet link when the provider is deactivated during the Google call', async () => {
+    const { id, provider } = await pendingBooking();
+    mocks.createMeetingSpace.mockImplementation(async () => {
+      await prisma.user.update({ where: { id: provider.id }, data: { status: AdminStatus.INACTIVE } });
+      return { meetingUrl: MEET, spaceName: 'spaces/abc' };
+    });
+
+    await run(id);
+
+    expect((await appointment(id)).meetingUrl).toBeNull();
+    expect(notices()).toEqual([]);
+  });
+
   it('sets the Meet link: READY, the reminder re-rendered, the held confirmation queued, audited as JOB', async () => {
     const { id } = await pendingBooking();
     const since = new Date();

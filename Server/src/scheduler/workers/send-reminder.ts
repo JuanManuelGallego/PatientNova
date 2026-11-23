@@ -1,4 +1,4 @@
-import { Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
+import { AdminStatus, Channel, ReminderMode, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { validateReminder } from '../validation.js';
 import { dispatchMessage } from '../dispatch.js';
@@ -25,6 +25,7 @@ export async function sendReminderWorker([ job ]: Array<{
   const reminder = await prisma.reminder.findUnique({
     where: { id: reminderId },
     include: {
+      user: { select: { status: true, isDeleted: true } },
       appointment: { select: { status: true, isDeleted: true } },
       patient: { select: { messagesStoppedAt: true } },
     },
@@ -36,6 +37,11 @@ export async function sendReminderWorker([ job ]: Array<{
 
   if (reminder.status !== ReminderStatus.PENDING || reminder.isDeleted) {
     logger.debug({ reminderId, status: reminder.status }, 'Reminder no longer pending — skipping');
+    return;
+  }
+
+  if (reminder.user.isDeleted || reminder.user.status !== AdminStatus.ACTIVE) {
+    await cancelQueuedReminder(reminder, 'Recordatorio cancelado porque el profesional ya no está activo', JOB_CTX);
     return;
   }
 

@@ -5,7 +5,7 @@ import { googleConnectionRepository, REQUIRED_SCOPE } from '../../../src/google/
 import { verifyConnection } from '../../../src/google/google-connection.service.js';
 import { checkGoogleConnectionsWorker } from '../../../src/scheduler/workers/check-google-connections.js';
 import { createTestUser } from '../helpers.js';
-import { ActionSource, EntityType } from '../../../generated/prisma/enums.ts';
+import { ActionSource, AdminStatus, EntityType } from '../../../generated/prisma/enums.ts';
 
 // The refresh request is the only network call; it is replaced on the real client's prototype,
 // the same way the other Google tests patch the SDKs.
@@ -105,6 +105,28 @@ describe('verifyConnection', () => {
 });
 
 describe('checkGoogleConnectionsWorker', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('skips a provider disabled during the previous Google check: %j', async (disabled) => {
+    const otherId = (await createTestUser()).id;
+    await connect(userId, 'first-token');
+    await connect(otherId, 'second-token');
+    let disabledId = '';
+    const spy = refreshSpy().mockImplementation(async function (this: OAuth2Client, refreshToken: string) {
+      if (!disabledId) {
+        disabledId = refreshToken === 'first-token' ? otherId : userId;
+        await prisma.user.update({ where: { id: disabledId }, data: disabled });
+      }
+      return { tokens: { access_token: 'access', expiry_date: Date.now() + 3_600_000 }, res: null };
+    });
+
+    await checkGoogleConnectionsWorker();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const skipped = await googleConnectionRepository.findByUserId(disabledId);
+    expect(skipped!.lastCheckedAt).toBeNull();
+    expect(skipped!.disconnectedAt).toBeNull();
+    expect(await expiryAudits(disabledId)).toHaveLength(0);
+  });
+
   it('expires only the rejected connection and audits it as JOB', async () => {
     const otherId = (await createTestUser()).id;
     const disconnectedId = (await createTestUser()).id;

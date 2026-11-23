@@ -1,6 +1,7 @@
 import { logger } from '../../utils/api/logger.js';
 import { runInAuditContext } from '../../audit-log/audit-log-context.js';
-import { ActionSource } from '../../../generated/prisma/enums.ts';
+import { ActionSource, AdminStatus } from '../../../generated/prisma/enums.ts';
+import { prisma } from '../../utils/prisma/prisma-client.js';
 import { googleConnectionRepository } from '../../google/google-connection.repository.js';
 import { isGoogleConfigured, verifyConnection, type ConnectionCheckResult } from '../../google/google-connection.service.js';
 
@@ -16,6 +17,12 @@ export async function checkGoogleConnectionsWorker(): Promise<void> {
   await runInAuditContext(JOB_CTX, async () => {
     for (const userId of userIds) {
       try {
+        const active = await prisma.user.findUnique({
+          where: { id: userId, status: AdminStatus.ACTIVE, isDeleted: false },
+          select: { id: true },
+        });
+        if (!active) continue;
+
         counts[await verifyConnection(userId)] += 1;
       } catch {
         counts.error += 1;
@@ -24,5 +31,5 @@ export async function checkGoogleConnectionsWorker(): Promise<void> {
     }
   });
 
-  logger.info({ checked: userIds.length, ...counts }, 'Google connections checked');
+  logger.info({ checked: Object.values(counts).reduce((sum, count) => sum + count, 0), ...counts }, 'Google connections checked');
 }

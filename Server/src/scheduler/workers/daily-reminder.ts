@@ -1,4 +1,4 @@
-import { Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
+import { AdminStatus, Channel, AppointmentStatus } from "../../../generated/prisma/client.ts";
 import { prisma } from "../../utils/prisma/prisma-client.js";
 import { config } from "../../utils/config/config.ts";
 import { APPT_SID_MAP, WHATSAPP_TEMPLATES } from "../../twilio/whatsapp-templates.js";
@@ -81,7 +81,7 @@ function buildDispatchOpts(
 export async function dailyReminderWorker(): Promise<void> {
 
   const users = await prisma.user.findMany({
-    where: { reminderActive: true },
+    where: { reminderActive: true, status: AdminStatus.ACTIVE, isDeleted: false },
     select: {
       id: true,
       timezone: true,
@@ -147,6 +147,12 @@ export async function dailyReminderWorker(): Promise<void> {
         logger.warn({ userId: user.id, channel }, "Missing contact info for daily reminder channel");
         continue;
       }
+
+      const active = await prisma.user.findUnique({
+        where: { id: user.id, reminderActive: true, status: AdminStatus.ACTIVE, isDeleted: false },
+        select: { id: true },
+      });
+      if (!active) continue;
 
       logger.info({ userId: user.id, count: appointments.length }, "Sending daily reminder");
       const result = await dispatchMessage(channel, opts);

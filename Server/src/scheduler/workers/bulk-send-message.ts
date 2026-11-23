@@ -1,4 +1,4 @@
-import { Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
+import { AdminStatus, Channel, ReminderStatus } from '../../../generated/prisma/client.ts';
 import { prisma } from '../../utils/prisma/prisma-client.js';
 import { validateReminder } from '../validation.js';
 import { dispatchMessage } from '../dispatch.js';
@@ -22,7 +22,10 @@ export async function bulkSendWorker([job]: Array<{
 
   const reminder = await prisma.reminder.findUnique({
     where: { id: reminderId },
-    include: { patient: { select: { messagesStoppedAt: true } } },
+    include: {
+      user: { select: { status: true, isDeleted: true } },
+      patient: { select: { messagesStoppedAt: true } },
+    },
   });
   if (!reminder) {
     logger.warn({ reminderId }, 'Bulk send reminder not found — skipping');
@@ -31,6 +34,11 @@ export async function bulkSendWorker([job]: Array<{
 
   if (reminder.status !== ReminderStatus.PENDING || reminder.isDeleted) {
     logger.debug({ reminderId, status: reminder.status }, 'Bulk send reminder no longer pending — skipping');
+    return;
+  }
+
+  if (reminder.user.isDeleted || reminder.user.status !== AdminStatus.ACTIVE) {
+    await cancelQueuedReminder(reminder, 'Recordatorio cancelado porque el profesional ya no está activo', JOB_CTX);
     return;
   }
 

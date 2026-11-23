@@ -1,5 +1,5 @@
 import { fromPrisma } from 'pg-boss';
-import { ActionType, EntityType, MeetingStatus, type AppointmentStatus } from '../../generated/prisma/enums.js';
+import { ActionType, AdminStatus, EntityType, MeetingStatus, type AppointmentStatus } from '../../generated/prisma/enums.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
 import { config } from '../utils/config/config.js';
@@ -24,10 +24,17 @@ export interface ProvisionMeetJob {
 
 const NO_RETRY_CODES = new Set([ 'GOOGLE_CONNECTION_NOT_FOUND', 'GOOGLE_SCOPE_MISSING', 'GOOGLE_TOKEN_REVOKED', 'GOOGLE_CONFIG_MISSING' ]);
 
-const isWaitingForMeet = (a: { meetingStatus: MeetingStatus; status: AppointmentStatus; isDeleted: boolean } | null) =>
-  !!a && a.meetingStatus === MeetingStatus.PENDING && ACTIVE_STATUSES.has(a.status) && !a.isDeleted;
+const isWaitingForMeet = (a: {
+  meetingStatus: MeetingStatus; status: AppointmentStatus; isDeleted: boolean;
+  user: { status: AdminStatus; isDeleted: boolean };
+} | null) =>
+  !!a && a.meetingStatus === MeetingStatus.PENDING && ACTIVE_STATUSES.has(a.status) && !a.isDeleted &&
+  a.user.status === AdminStatus.ACTIVE && !a.user.isDeleted;
 
-const waitingSelect = { userId: true, meetingStatus: true, status: true, isDeleted: true } as const;
+const waitingSelect = {
+  userId: true, meetingStatus: true, status: true, isDeleted: true,
+  user: { select: { status: true, isDeleted: true } },
+} as const;
 
 export async function meetingPendingMode(userId: string, tx: TransactionClient): Promise<MeetingPending> {
   if (!config.scheduler.enabled) return 'manual';
@@ -109,6 +116,7 @@ export async function sweepPendingMeetings(now = new Date()): Promise<number> {
   const stale = await prisma.appointment.findMany({
     where: {
       meetingStatus: MeetingStatus.PENDING,
+      user: { status: AdminStatus.ACTIVE, isDeleted: false },
       isDeleted: false,
       status: { in: [ ...ACTIVE_STATUSES ] },
       createdAt: { lt: new Date(now.getTime() - PENDING_MEETING_TIMEOUT_MS) },

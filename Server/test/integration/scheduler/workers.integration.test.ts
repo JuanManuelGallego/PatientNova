@@ -21,6 +21,7 @@ import { config } from '../../../src/utils/config/config.js';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType } from '../helpers.js';
 import {
   AppointmentStatus,
+  AdminStatus,
   ReminderStatus,
   Channel,
 } from '../../../generated/prisma/client.ts';
@@ -100,6 +101,25 @@ describe('completeAppointmentsWorker (integration)', () => {
 });
 
 describe('trackDeliveryWorker (integration)', () => {
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('settles delivery failures without alerting a disabled provider: %j', async (disabled) => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reminderActive: true, whatsappNumber: '+57300123456', ...disabled },
+    });
+    const reminder = await prisma.reminder.create({
+      data: {
+        userId, patientId, channel: Channel.WHATSAPP, to: '+10000000000',
+        sendMode: 'IMMEDIATE', sendAt: new Date(), status: ReminderStatus.QUEUED,
+        updatedAt: new Date(Date.now() - 40 * 60_000),
+      },
+    });
+
+    await trackDeliveryWorker();
+
+    expect((await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } })).status).toBe(ReminderStatus.FAILED);
+    expect(dispatchMock).not.toHaveBeenCalled();
+  });
+
   it('fails stale QUEUED reminders whose tracking timed out', async () => {
     await prisma.user.update({
       where: { id: userId },
@@ -220,6 +240,51 @@ describe('dailyReminderWorker (integration)', () => {
 
   afterEach(() => {
     (config as any).scheduler.dailyReminderHour = savedHour;
+  });
+
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('skips a disabled provider with tomorrow appointments: %j', async (disabled) => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reminderActive: true, reminderChannel: Channel.EMAIL, timezone: tz, ...disabled },
+    });
+    const { start, end } = tomorrowRange(tz);
+    await prisma.appointment.create({
+      data: { userId, patientId, startAt: start, endAt: end, price: 0, status: AppointmentStatus.CONFIRMED },
+    });
+
+    await dailyReminderWorker();
+
+    expect(dispatchMock).not.toHaveBeenCalled();
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).lastDailyReminderDate).toBeNull();
+  });
+
+  it.each([ { isDeleted: true }, { status: AdminStatus.INACTIVE } ])('skips a provider disabled during the previous agenda send: %j', async (disabled) => {
+    const other = await createTestUser();
+    const otherPatient = await createTestPatient(other.id);
+    const users = [ { id: userId, patientId }, { id: other.id, patientId: otherPatient.id } ];
+    const { start, end } = tomorrowRange(tz);
+    for (const user of users) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { reminderActive: true, reminderChannel: Channel.EMAIL, timezone: tz },
+      });
+      await prisma.appointment.create({
+        data: { userId: user.id, patientId: user.patientId, startAt: start, endAt: end, price: 0, status: AppointmentStatus.CONFIRMED },
+      });
+    }
+
+    let disabledId = '';
+    dispatchMock.mockImplementationOnce(async (_channel, opts) => {
+      const sentUser = await prisma.user.findUniqueOrThrow({ where: { email: opts.to } });
+      disabledId = users.find(user => user.id !== sentUser.id)!.id;
+      await prisma.user.update({ where: { id: disabledId }, data: disabled });
+      return { success: true, messageSid: 'SMdaily', channel: Channel.EMAIL };
+    });
+
+    await dailyReminderWorker();
+
+    expect(dispatchMock).toHaveBeenCalledTimes(1);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: disabledId } })).lastDailyReminderDate).toBeNull();
   });
 
   it('sends a daily reminder for tomorrow appointments and records the send date', async () => {
