@@ -80,7 +80,6 @@ export function loadServiceWorker(): SwHarness {
     activate: () => lifecycle("activate"),
     async dispatchFetch({ url, mode = "cors", method = "GET" }) {
       const real = new Request(url, { method });
-      // `Request.mode` is "cors" for constructed requests; present the mode the browser would.
       const request = { url: real.url, method, mode, clone: () => real.clone() } as unknown as Request;
       let pending: Promise<Response> | undefined;
       listeners.fetch!({ request, respondWith: (p: Promise<Response>) => { pending = Promise.resolve(p); } });

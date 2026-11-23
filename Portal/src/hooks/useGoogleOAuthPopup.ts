@@ -5,7 +5,6 @@ import { OAuthCompletionResult } from "@/src/types/Google";
 import { assignLocation } from "@/src/utils/browserNavigation";
 import { isStandaloneDisplay } from "@/src/utils/standalone";
 
-/** Set (sessionStorage) before a full-page OAuth redirect so the completion page knows no popup opened it. */
 export const OAUTH_REDIRECT_KEY = "patientnova-google-oauth-redirect";
 
 const POPUP_FEATURES = "width=600,height=700";
@@ -18,7 +17,6 @@ export function useGoogleOAuthPopup(
   const onCompleteRef = useRef(onComplete);
   const [ waiting, setWaiting ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
-  // Read after mount so server and first client render agree.
   const [ mode, setMode ] = useState<"popup" | "redirect">("popup");
 
   useEffect(() => {
@@ -41,16 +39,15 @@ export function useGoogleOAuthPopup(
     setError(null);
     processedRef.current = false;
 
-    // The installed app has no popups (and window.close does nothing): redirect the whole app.
     if (isStandaloneDisplay()) {
       setWaiting(true);
       try {
         const { authUrl } = await getAuthUrl();
-        try { sessionStorage.setItem(OAUTH_REDIRECT_KEY, "1"); } catch { /* the completion page then behaves as a popup */ }
+        try { sessionStorage.setItem(OAUTH_REDIRECT_KEY, "1"); } catch {}
         assignLocation(authUrl);
         return true;
       } catch (cause) {
-        try { sessionStorage.removeItem(OAUTH_REDIRECT_KEY); } catch { /* ignore */ }
+        try { sessionStorage.removeItem(OAUTH_REDIRECT_KEY); } catch {}
         setWaiting(false);
         setError(cause instanceof Error ? cause.message : "No se pudo iniciar la conexión con Google.");
         return false;

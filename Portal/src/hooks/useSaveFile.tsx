@@ -7,10 +7,6 @@ import { saveFile } from "@/src/utils/saveFile";
 
 interface Pending { blob: Blob; filename: string }
 
-/**
- * `saveFile` plus the dialog for when iOS refuses the share because the tap's activation expired
- * (slow PDF render): the second tap, on "Compartir", shares synchronously.
- */
 export function useSaveFile(): { save: (blob: Blob, filename: string) => Promise<void>; retryDialog: ReactNode } {
   const [ pending, setPending ] = useState<Pending | null>(null);
 

@@ -22,13 +22,12 @@ function GoogleOAuthCompleteContent() {
     if (notifiedRef.current) return;
 
     const isResult = success === "true" || success === "false" || !!error;
-    // Set by the hook before a full-page redirect (installed app): no popup, no opener to message.
     let wasRedirect = false;
     if (isResult) {
       try {
         wasRedirect = sessionStorage.getItem(OAUTH_REDIRECT_KEY) === "1";
         sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
-      } catch { /* sessionStorage unavailable */ }
+      } catch {}
     }
     const redirected = wasRedirect && !window.opener;
     // eslint-disable-next-line react-hooks/set-state-in-effect

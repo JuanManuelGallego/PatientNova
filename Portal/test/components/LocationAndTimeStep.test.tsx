@@ -191,8 +191,10 @@ describe("LocationAndTimeStep Google Meet", () => {
     }));
     try {
       render(<Harness />);
-      const link = await screen.findByRole("link", { name: "Conecta Google en Configuración" });
+      const link = await screen.findByRole("link", { name: "conecta Google en Configuración" });
       expect(link).toHaveAttribute("href", "/settings/integrations");
+      expect(screen.getByTestId("generate-meet-link-button")).toBeDisabled();
+      expect(screen.queryByTestId("google-expired-hint")).toBeNull();
       await userEvent.click(screen.getByTestId("generate-meet-link-button"));
       expect(startOAuth).not.toHaveBeenCalled();
     } finally {

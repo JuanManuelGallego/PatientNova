@@ -2,7 +2,6 @@ import { isIosHomeScreenApp } from "@/src/utils/standalone";
 
 export type SaveFileResult = "shared" | "downloaded" | "cancelled" | "needs-tap";
 
-/** The classic anchor download. Works in browsers and the Android installed app; not in the iOS home-screen app. */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -14,10 +13,6 @@ export function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/**
- * Saves a file. Inside the iOS home-screen app it opens the share sheet; everywhere else it keeps the
- * anchor download. A refused gesture is reported as "needs-tap" so the caller can ask for a second tap.
- */
 export async function saveFile(blob: Blob, filename: string): Promise<SaveFileResult> {
   if (!isIosHomeScreenApp()) {
     downloadBlob(blob, filename);
@@ -40,7 +35,6 @@ export async function saveFile(blob: Blob, filename: string): Promise<SaveFileRe
   }
 }
 
-/** Synchronous (a `fetch` of a data URL would lose the tap's gesture and the CSP blocks `data:` in connect-src). */
 export function dataUrlToBlob(dataUrl: string): Blob {
   const comma = dataUrl.indexOf(",");
   const meta = dataUrl.slice(5, comma);

@@ -1,21 +1,9 @@
-/*
- * Patient Nova service worker (installable provider app).
- *
- * Deliberately minimal. It caches only `/_next/static/*` (immutable, hashed build assets) and
- * `/offline.html`. It never caches API responses, HTML or anything under `/book/` (the
- * confirmation link carries a token), so no patient data lands in Cache Storage.
- * Navigations to provider paths go to the network; the offline page appears only when it fails.
- * Everything else is left to the browser (no respondWith).
- *
- * Bump VERSION when offline.html changes.
- */
 const VERSION = "v1";
 const STATIC_CACHE = "pn-static-" + VERSION;
 const OFFLINE_CACHE = "pn-offline-" + VERSION;
 const OFFLINE_URL = "/offline.html";
 const MAX_STATIC_ENTRIES = 200;
 
-// Keep PROVIDER_PATHS equal to PROTECTED_PATHS in src/proxy.ts plus /login.
 const PROVIDER_PATHS = [
   "/dashboard",
   "/patients",

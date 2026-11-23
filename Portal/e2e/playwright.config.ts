@@ -27,7 +27,6 @@ export default defineConfig({
 
   use: {
     baseURL: Env.baseUrl,
-    // A worker would cache chunks and answer navigations behind Playwright's back; only the `pwa` project opts in.
     serviceWorkers: 'block',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -64,7 +63,6 @@ export default defineConfig({
       dependencies: [ 'setup' ],
     },
 
-    // Installability: manifest, worker scope, caches and the offline page. Needs a production build (the worker registers only there).
     {
       name: 'pwa',
       testMatch: pwaSpecs,

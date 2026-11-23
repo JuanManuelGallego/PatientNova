@@ -2,7 +2,6 @@ import { test, expect, type Page } from '@playwright/test';
 
 const SLUG = 'e2e-publica';
 
-/** Waits until the page is controlled by the worker (registration, activation and a reload). */
 async function controlled(page: Page) {
   await page.goto('/dashboard');
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -53,14 +52,13 @@ test.describe('installable provider app', () => {
 
   test('shows Sin conexión when a provider page cannot reach the network', async ({ page, context }) => {
     await controlled(page);
-    // Chromium applies route aborts to the worker's own fetches, which setOffline may not reach.
     await context.route('**/patients**', (route) => route.abort('internetdisconnected'));
     await page.goto('/patients').catch(() => undefined);
     await expect(page.getByRole('heading', { name: 'Sin conexión' })).toBeVisible();
   });
 
   test('registers nothing on the booking page or the landing page', async ({ browser }) => {
-    const context = await browser.newContext({ serviceWorkers: 'allow' });
+    const context = await browser.newContext({ serviceWorkers: 'allow', storageState: { cookies: [], origins: [] } });
     try {
       const page = await context.newPage();
       for (const path of [ `/book/${SLUG}`, '/' ]) {
