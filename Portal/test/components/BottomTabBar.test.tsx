@@ -75,8 +75,8 @@ describe("BottomTabBar", () => {
 
         const nav = screen.getByRole("navigation", { name: "Accesos directos" });
         const links = within(nav).getAllByRole("link");
-        expect(links.map((a) => a.textContent)).toEqual([ "Hoy", "Calendario", "Citas", "Pacientes", "Solicitudes" ]);
-        expect(links.map((a) => a.getAttribute("href"))).toEqual([ "/dashboard", "/calendar", "/appointments", "/patients", "/requests" ]);
+        expect(links.map((a) => a.textContent)).toEqual([ "Calendario", "Citas", "Pacientes", "Solicitudes", "Recordatorios" ]);
+        expect(links.map((a) => a.getAttribute("href"))).toEqual([ "/calendar", "/appointments", "/patients", "/requests", "/reminders" ]);
     });
 
     it("marks the tab of the current route, sub-routes included", () => {
@@ -84,13 +84,13 @@ describe("BottomTabBar", () => {
         render(<BottomTabBar />);
 
         expect(screen.getByTestId("tabbar-link-patients")).toHaveAttribute("aria-current", "page");
-        for (const id of [ "dashboard", "calendar", "appointments", "requests" ]) {
+        for (const id of [ "calendar", "appointments", "requests", "reminders" ]) {
             expect(screen.getByTestId(`tabbar-link-${id}`)).not.toHaveAttribute("aria-current");
         }
     });
 
     it("marks no tab on a page outside the bar", () => {
-        pathname = "/reminders";
+        pathname = "/medical-records";
         render(<BottomTabBar />);
 
         expect(screen.queryAllByRole("link").filter((a) => a.hasAttribute("aria-current"))).toEqual([]);
@@ -147,11 +147,11 @@ describe("BottomTabBar", () => {
     });
 
     it("scrolls back to the top instead of reloading the page it is on", () => {
-        window.history.replaceState(null, "", "/dashboard");
+        window.history.replaceState(null, "", "/calendar");
         const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
         render(<BottomTabBar />);
 
-        const link = screen.getByTestId("tabbar-link-dashboard");
+        const link = screen.getByTestId("tabbar-link-calendar");
         link.click();
 
         expect(link).toHaveAttribute("data-skipped", "true");

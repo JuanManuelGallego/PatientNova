@@ -13,18 +13,22 @@ async function expectActive(page: Page, id: string) {
 }
 
 test.describe('Bottom tab bar (phone)', () => {
-  test('shows the daily screens, with Hoy active on the dashboard', async ({ page }) => {
+  test('shows the daily screens, Recordatorios last and none active on the dashboard', async ({ page }) => {
     await page.goto('/dashboard');
 
     await expect(tabBar(page)).toBeVisible();
-    for (const [ id, label ] of [ [ 'dashboard', 'Hoy' ], [ 'calendar', 'Calendario' ], [ 'appointments', 'Citas' ], [ 'patients', 'Pacientes' ] ]) {
+    for (const [ id, label ] of [ [ 'calendar', 'Calendario' ], [ 'appointments', 'Citas' ], [ 'patients', 'Pacientes' ], [ 'reminders', 'Recordatorios' ] ]) {
       await expect(tab(page, id)).toHaveText(label);
     }
-    await expectActive(page, 'dashboard');
+    await expect(tabBar(page).getByRole('link').last()).toHaveAttribute('data-testid', 'tabbar-link-reminders');
+    await expect(tab(page, 'dashboard')).toHaveCount(0);
+    await expect(tabBar(page).locator('[aria-current="page"]')).toHaveCount(0);
     await expect(page.getByTestId('hamburger-button')).toBeVisible();
 
     const box = await tab(page, 'patients').boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
+    const label = tab(page, 'reminders').locator('.bottom-tabbar__label');
+    expect(await label.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
   });
@@ -46,6 +50,10 @@ test.describe('Bottom tab bar (phone)', () => {
 
     await page.goto('/calendar');
     await expectActive(page, 'calendar');
+
+    await tab(page, 'reminders').click();
+    await expect(page).toHaveURL(/\/reminders(\?|$)/);
+    await expectActive(page, 'reminders');
   });
 
   test('sits under the open menu', async ({ page }) => {

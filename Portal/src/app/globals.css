@@ -531,6 +531,7 @@ body {
 .bottom-tabbar__cell {
   display: flex;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .bottom-tabbar__tab {
@@ -571,7 +572,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  /* Fits the longest label (Recordatorios, bold when active) in its cell:
+     five tabs on a 360px phone still show it whole. */
+  font-size: clamp(10px, calc(14.5cqi - 0.7px), 12px);
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -615,12 +618,6 @@ body {
   box-shadow: 0 0 0 2px var(--c-surface);
 }
 
-@media (max-width: 359.98px) {
-  .bottom-tabbar__label {
-    font-size: 11px;
-  }
-}
-
 @media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
   .bottom-tabbar__tab {
     flex-direction: row;
@@ -629,6 +626,9 @@ body {
   .bottom-tabbar__icon {
     width: 40px;
     height: 28px;
+  }
+  .bottom-tabbar__label {
+    font-size: clamp(10px, calc(14.5cqi - 7.5px), 12px);
   }
 }
 
@@ -3536,6 +3536,18 @@ th.col--actions {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.pagination--compact {
+  gap: 4px;
+}
+
+.pagination--compact .pagination-btn {
+  justify-content: center;
+}
+
+.pagination--compact .pagination-ellipsis {
+  padding: 0 2px;
 }
 
 .pagination-btn {

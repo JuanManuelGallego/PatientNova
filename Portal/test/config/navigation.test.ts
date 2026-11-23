@@ -114,13 +114,13 @@ describe("tabBarItems", () => {
 
     it("gives an admin with the inbox the five tabs in order, with one-word labels", () => {
         const items = tabBarItems(ctx(AdminRole.ADMIN, true));
-        expect(items.map((i) => i.id)).toEqual([ "dashboard", "calendar", "appointments", "patients", "requests" ]);
-        expect(items.map((i) => i.label)).toEqual([ "Hoy", "Calendario", "Citas", "Pacientes", "Solicitudes" ]);
-        expect(items.map((i) => i.path)).toEqual([ "/dashboard", "/calendar", "/appointments", "/patients", "/requests" ]);
+        expect(items.map((i) => i.id)).toEqual([ "calendar", "appointments", "patients", "requests", "reminders" ]);
+        expect(items.map((i) => i.label)).toEqual([ "Calendario", "Citas", "Pacientes", "Solicitudes", "Recordatorios" ]);
+        expect(items.map((i) => i.path)).toEqual([ "/calendar", "/appointments", "/patients", "/requests", "/reminders" ]);
     });
 
     it("drops Solicitudes exactly when the sidebar does", () => {
-        expect(tabBarItems(ctx(AdminRole.VIEWER, false)).map((i) => i.id)).toEqual([ "dashboard", "calendar", "appointments", "patients" ]);
+        expect(tabBarItems(ctx(AdminRole.VIEWER, false)).map((i) => i.id)).toEqual([ "calendar", "appointments", "patients", "reminders" ]);
         expect(tabBarItems(ctx(AdminRole.ADMIN, false)).map((i) => i.id)).not.toContain("requests");
     });
 
