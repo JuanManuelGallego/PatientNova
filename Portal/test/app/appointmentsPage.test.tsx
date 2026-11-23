@@ -31,7 +31,7 @@ window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock("@/src/components/Modals/AppointmentModal", () => ({ AppointmentModal: () => <div data-testid="appointment-modal-mock" /> }));
 vi.mock("@/src/components/Modals/CancelAppointmentModal", () => ({ CancelAppointmentModal: () => null }));
-vi.mock("@/src/components/Drawers/RelatedDrawers", () => ({ RelatedDrawers: () => null }));
+vi.mock("@/src/components/Drawers/DrawerHost", () => ({ DrawerHost: () => null }));
 vi.mock("nuqs", async () => {
   const actual = await vi.importActual<typeof import("nuqs")>("nuqs");
   return { ...actual, useQueryState: (_k: string, parser: { defaultValue?: unknown }) => [parser?.defaultValue ?? null, vi.fn()] };

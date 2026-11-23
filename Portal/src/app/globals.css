@@ -1102,6 +1102,10 @@ body {
   cursor: pointer;
   transition: background 0.15s;
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 @media (hover: hover) {

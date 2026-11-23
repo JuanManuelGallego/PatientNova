@@ -24,7 +24,7 @@ import { PatientModal } from "@/src/components/Modals/PatientModal";
 import { TogglePatientModal } from "@/src/components/Modals/TogglePatientModal";
 import { Channel } from "@/src/types/Reminder";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost } from "@/src/components/Drawers/DrawerHost";
 import { ACTION_ICONS, CHANNEL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { EmptyState } from "@/src/components/EmptyState";
@@ -391,21 +391,15 @@ function PatientsPageContent() {
           }}
         />
       )}
-      <RelatedDrawers
+      <DrawerHost
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        patientActions={{
-          onDelete: (patient) => {
-            setTogglePatient(patient);
-            closeDrawer();
-          },
-          onEdit: (patient) => {
-            setEditPatient(patient);
-            closeDrawer();
-          },
+        onChanged={() => {
+          fetchPatients();
+          fetchStats();
         }}
       />
     </>

@@ -26,7 +26,7 @@ vi.mock("@/src/components/PageLayout", () => ({ default: ({ children }: { childr
 vi.mock("@/src/components/Modals/ReminderModal", () => ({ ReminderModal: () => null }));
 vi.mock("@/src/components/Modals/EditScheduledReminderModal", () => ({ EditScheduledReminderModal: () => null }));
 vi.mock("@/src/components/Modals/CancelReminderModal", () => ({ CancelReminderModal: () => null }));
-vi.mock("@/src/components/Drawers/RelatedDrawers", () => ({ RelatedDrawers: () => null }));
+vi.mock("@/src/components/Drawers/DrawerHost", () => ({ DrawerHost: () => null }));
 vi.mock("@/src/components/Reminders/BulkSendWizard", () => ({ BulkSendWizard: () => null }));
 vi.mock("nuqs", async () => {
   const actual = await vi.importActual<typeof import("nuqs")>("nuqs");

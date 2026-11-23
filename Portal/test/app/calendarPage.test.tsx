@@ -31,7 +31,7 @@ const marker = (name: string) => {
   Mock.displayName = name;
   return Mock;
 };
-for (const m of [ "Drawers/RelatedDrawers:RelatedDrawers", "Modals/AppointmentModal:AppointmentModal", "Modals/CancelAppointmentModal:CancelAppointmentModal",
+for (const m of [ "Drawers/DrawerHost:DrawerHost", "Modals/AppointmentModal:AppointmentModal", "Modals/CancelAppointmentModal:CancelAppointmentModal",
   "Modals/BlockedTimeModal:BlockedTimeModal", "Drawers/RequestDrawer:RequestDrawer", "Calendar/CalendarToolbar:CalendarToolbar",
   "Calendar/CalendarLegend:CalendarLegend", "Calendar/MonthView:MonthView", "Calendar/WeekView:WeekView", "Calendar/DayPanel:DayPanel" ]) {
   const [ path, name ] = m.split(":");

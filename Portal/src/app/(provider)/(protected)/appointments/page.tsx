@@ -1,5 +1,5 @@
 "use client";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost } from "@/src/components/Drawers/DrawerHost";
 import { AppointmentModal } from "@/src/components/Modals/AppointmentModal";
 import { CancelAppointmentModal } from "@/src/components/Modals/CancelAppointmentModal";
 import { PayStatusPill } from "@/src/components/Info/PayStatusPill";
@@ -615,29 +615,15 @@ function AppointmentsPageContent() {
           }}
         />
       )}
-      <RelatedDrawers
+      <DrawerHost
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        appointmentActions={{
-          onEdit: (appointment) => {
-            setEditAppt(appointment);
-            closeDrawer();
-          },
-          onConfirm: (appointment) => {
-            handleConfirm(appointment.id);
-            closeDrawer();
-          },
-          onPay: (appointment) => {
-            handlePay(appointment.id);
-            closeDrawer();
-          },
-          onDelete: (appointment) => {
-            setDeleteAppt(appointment);
-            closeDrawer();
-          },
+        onChanged={() => {
+          fetchAppointments();
+          fetchStats();
         }}
       />
       {deleteAppt && (

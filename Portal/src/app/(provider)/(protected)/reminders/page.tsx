@@ -12,7 +12,7 @@ import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
 import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";
-import { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
+import { DrawerHost } from "@/src/components/Drawers/DrawerHost";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import {
@@ -164,7 +164,7 @@ function RemindersPageContent() {
   const { reminders, loading, error, fetchReminders, total, totalPages } =
     useFetchReminders(filters);
 
-  const { retryReminder, loading: retryLoading } = useRetryReminder();
+  const { retryReminder } = useRetryReminder();
 
   return (
     <>
@@ -324,28 +324,15 @@ function RemindersPageContent() {
           }}
         />
       )}
-      <RelatedDrawers
+      <DrawerHost
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
         onViewPatient={openPatient}
         onViewReminder={openReminder}
-        reminderActions={{
-          onEdit: (reminder) => {
-            setEditReminder(reminder);
-            closeDrawer();
-          },
-          onCancel: (reminder) => {
-            setCancelReminder(reminder);
-            closeDrawer();
-          },
-          onRetry: async (reminder) => {
-            await retryReminder(reminder.id);
-            closeDrawer();
-            fetchReminders();
-            fetchStats();
-          },
-          retryLoading,
+        onChanged={() => {
+          fetchReminders();
+          fetchStats();
         }}
       />
       {cancelReminder && (
