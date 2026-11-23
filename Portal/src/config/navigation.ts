@@ -83,11 +83,11 @@ export function visibleGroups<Id extends string>(groups: NavGroup<Id>[], ctx: Na
 }
 
 const TAB_BAR: { id: NavItemId; label: string }[] = [
-    { id: "dashboard", label: "Hoy" },
     { id: "calendar", label: "Calendario" },
     { id: "appointments", label: "Citas" },
     { id: "patients", label: "Pacientes" },
     { id: "requests", label: "Solicitudes" },
+    { id: "reminders", label: "Recordatorios" },
 ];
 
 export function tabBarItems(ctx: NavContext): NavItem[] {

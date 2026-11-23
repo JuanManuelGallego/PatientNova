@@ -8,11 +8,13 @@ import { FilterBody, isFilterActive, type ColumnDef, type ColumnFilterConfig } f
 import { SkeletonCard } from "./DataCard";
 import { TableCardToolbar, TableFilterSheet } from "./TableFilterSheet";
 import { useContainerNarrow } from "@/src/hooks/useContainerNarrow";
+import { useMediaQuery } from "@/src/hooks/useMediaQuery";
 
 export type { ColumnDef, ColumnFilterConfig } from "./tableColumns";
 export { DataCard, type DataCardProps } from "./DataCard";
 
 export const CARD_LAYOUT_MAX_WIDTH = 640;
+export const PAGINATION_COMPACT_QUERY = "(max-width: 479.98px)";
 
 
 interface TableFooterProps {
@@ -72,8 +74,12 @@ export function TableFooter({
   const countTestId = testIdPrefix ? `${testIdPrefix}-count` : undefined;
   const pageTestId = (n: number) =>
     testIdPrefix ? `${testIdPrefix}-page-${n}` : undefined;
+  // On a phone the 44px touch targets only fit one row with icon-only
+  // Anterior/Siguiente and no neighbours around the current page.
+  const compact = useMediaQuery(PAGINATION_COMPACT_QUERY);
+  const siblings = compact ? 0 : 1;
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
-    .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+    .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= siblings)
     .reduce<(number | "...")[]>((acc, n, idx, arr) => {
       if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push("...");
       acc.push(n);
@@ -90,17 +96,16 @@ export function TableFooter({
         de <strong style={{ color: "var(--c-gray-700)" }}>{total}</strong>{" "}
         {label}
       </span>
-      <div className="pagination">
-        {
-          <button
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="pagination-btn"
-            data-testid={prevTestId}
-          >
-            <PAGINATION_ICONS.prev size={14} /> Anterior
-          </button>
-        }
+      <div className={`pagination${compact ? " pagination--compact" : ""}`}>
+        <button
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className="pagination-btn"
+          data-testid={prevTestId}
+        >
+          <PAGINATION_ICONS.prev size={14} aria-hidden="true" />
+          <span className={compact ? "sr-only" : undefined}>Anterior</span>
+        </button>
         {pages.map((item, idx) =>
           item === "..." ? (
             <span key={`ellipsis-${idx}`} className="pagination-ellipsis">
@@ -123,7 +128,8 @@ export function TableFooter({
           className="pagination-btn"
           data-testid={nextTestId}
         >
-          Siguiente <PAGINATION_ICONS.next size={14} />
+          <span className={compact ? "sr-only" : undefined}>Siguiente</span>
+          <PAGINATION_ICONS.next size={14} aria-hidden="true" />
         </button>
       </div>
     </>

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DataCard, DataTable, type ColumnDef } from "@/src/components/DataTable";
+import { DataCard, DataTable, PAGINATION_COMPACT_QUERY, TableFooter, type ColumnDef } from "@/src/components/DataTable";
 import { FocusTrapProvider } from "@/src/hooks/useFocusTrap";
 
 vi.mock("@/src/providers/ThemeContext", () => ({ useTheme: () => ({ isDark: false }) }));
@@ -313,5 +313,48 @@ describe("DataTable filter sheet (card layout)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ver resultados" }));
     expect(screen.queryByRole("dialog", { name: "Filtros y orden" })).toBeNull();
+  });
+});
+
+describe("TableFooter pagination", () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  function stubPhone(phone: boolean) {
+    window.matchMedia = ((query: string) => ({
+      matches: phone && query === PAGINATION_COMPACT_QUERY,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  const footer = (page: number) =>
+    render(
+      <TableFooter page={page} pageSize={10} total={100} totalPages={10} label="pacientes" onPageChange={noop} testIdPrefix="p" />,
+    );
+  const items = (container: HTMLElement) =>
+    [...container.querySelectorAll(".pagination > :not(.pagination-btn)")].map((el) => el.textContent);
+
+  it("shows the neighbours of the current page and labelled Anterior/Siguiente on wider screens", () => {
+    stubPhone(false);
+    const { container } = footer(5);
+
+    expect(items(container)).toEqual([ "1", "…", "4", "5", "6", "…", "10" ]);
+    expect(screen.getByText("Anterior")).not.toHaveClass("sr-only");
+    expect(screen.getByText("Siguiente")).not.toHaveClass("sr-only");
+  });
+
+  it("drops the neighbours and keeps Anterior/Siguiente as icons on a phone, so the row fits", () => {
+    stubPhone(true);
+    const { container } = footer(5);
+
+    expect(container.querySelector(".pagination")).toHaveClass("pagination--compact");
+    expect(items(container)).toEqual([ "1", "…", "5", "…", "10" ]);
+    expect(screen.getByRole("button", { name: "Anterior" })).toBe(screen.getByTestId("p-previous"));
+    expect(screen.getByRole("button", { name: "Siguiente" })).toBe(screen.getByTestId("p-next"));
+    expect(screen.getByText("Anterior")).toHaveClass("sr-only");
   });
 });
