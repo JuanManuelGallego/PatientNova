@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, Suspense } from "react";
+import { useMemo, useRef, useState, Suspense } from "react";
 import {
   CHANNEL_CFG,
   FetchRemindersFilters,
@@ -11,8 +11,7 @@ import {
 import { fmtDateTime, fmtRelative, todayString } from "@/src/utils/TimeUtils";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { ReminderModal } from "@/src/components/Modals/ReminderModal";
-import { EditScheduledReminderModal } from "@/src/components/Modals/EditScheduledReminderModal";
-import { DrawerHost } from "@/src/components/Drawers/DrawerHost";
+import { DrawerHost, EntityActions } from "@/src/components/Drawers/DrawerHost";
 import { BulkSendWizard } from "@/src/components/Reminders/BulkSendWizard";
 import { EmptyState } from "@/src/components/EmptyState";
 import {
@@ -22,11 +21,9 @@ import {
   ColumnDef,
 } from "@/src/components/DataTable";
 import { TabNav } from "@/src/components/TabNav";
-import { CancelReminderModal } from "@/src/components/Modals/CancelReminderModal";
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import { useFetchAllPatients } from "@/src/api/patients/useFetchAllPatients";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
-import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
 import { ReminderStatusPill } from "@/src/components/Info/StatusPill";
 import PageLayout from "@/src/components/PageLayout";
@@ -123,9 +120,7 @@ function RemindersPageContent() {
   };
 
   const [ showCreate, setShowCreate ] = useState(false);
-  const [ editReminder, setEditReminder ] = useState<Reminder | null>(null);
-
-  const [ cancelReminder, setCancelReminder ] = useState<Reminder | null>(null);
+  const actions = useRef<EntityActions>(null);
   const {
     target: drawerTarget,
     close: closeDrawer,
@@ -163,8 +158,6 @@ function RemindersPageContent() {
 
   const { reminders, loading, error, fetchReminders, total, totalPages } =
     useFetchReminders(filters);
-
-  const { retryReminder } = useRetryReminder();
 
   return (
     <>
@@ -264,8 +257,8 @@ function RemindersPageContent() {
             totalPages={totalPages}
             setPage={setPage}
             setViewReminder={openReminder}
-            setEditReminder={setEditReminder}
-            setCancelReminder={setCancelReminder}
+            setEditReminder={(r) => actions.current?.editReminder(r)}
+            setCancelReminder={(r) => actions.current?.cancelReminder(r)}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             dateFilter={dateFilter}
@@ -286,9 +279,8 @@ function RemindersPageContent() {
             setPage={setPage}
             setViewReminder={openReminder}
             onRetry={async (id) => {
-              await retryReminder(id);
-              fetchReminders();
-              fetchStats();
+              const reminder = reminders.find((r) => r.id === id);
+              if (reminder) await actions.current?.retryReminder(reminder);
             }}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
@@ -314,17 +306,8 @@ function RemindersPageContent() {
           }}
         />
       )}
-      {editReminder && (
-        <EditScheduledReminderModal
-          reminder={editReminder}
-          onClose={() => setEditReminder(null)}
-          onSaved={() => {
-            fetchReminders();
-            fetchStats();
-          }}
-        />
-      )}
       <DrawerHost
+        actionsRef={actions}
         target={drawerTarget}
         onClose={closeDrawer}
         onViewAppointment={openAppointment}
@@ -335,17 +318,6 @@ function RemindersPageContent() {
           fetchStats();
         }}
       />
-      {cancelReminder && (
-        <CancelReminderModal
-          reminder={cancelReminder}
-          onClose={() => setCancelReminder(null)}
-          onCanceled={() => {
-            setCancelReminder(null);
-            fetchReminders();
-            fetchStats();
-          }}
-        />
-      )}
     </>
   );
 }

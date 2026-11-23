@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Ref, useImperativeHandle, useState } from "react";
 import { useUpdateAppointment } from "@/src/api/appointments/useUpdateAppointment";
 import { useRetryReminder } from "@/src/api/reminders/useRetryReminder";
 import { ErrorBanner } from "@/src/components/Info/ErrorBanner";
@@ -16,12 +16,25 @@ import { Patient } from "@/src/types/Patient";
 import { Reminder } from "@/src/types/Reminder";
 import { RelatedDrawers } from "./RelatedDrawers";
 
+/** The same actions the drawers offer, for a page's own row buttons. */
+export type EntityActions = {
+  editAppointment: (appointment: Appointment) => void;
+  cancelAppointment: (appointment: Appointment) => void;
+  confirmAppointment: (appointment: Appointment) => Promise<void>;
+  payAppointment: (appointment: Appointment) => Promise<void>;
+  editPatient: (patient: Patient) => void;
+  togglePatient: (patient: Patient) => void;
+  editReminder: (reminder: Reminder) => void;
+  cancelReminder: (reminder: Reminder) => void;
+  retryReminder: (reminder: Reminder) => Promise<void>;
+};
+
 /**
  * The drawers with every action wired, whichever page opened them. Pages pass
  * only navigation and `onChanged` (refetch their own list and stats): the
- * handlers and modals live here so a drawer reached from a related entity
+ * handlers and modals live here, so a drawer reached from a related entity
  * (a patient from an appointment) has the same buttons as one opened from its
- * own table.
+ * own table. A page's row buttons call the same handlers through `actionsRef`.
  */
 export function DrawerHost({
   target,
@@ -30,6 +43,7 @@ export function DrawerHost({
   onViewPatient,
   onViewReminder,
   onChanged,
+  actionsRef,
 }: {
   target: DrawerTarget | null;
   onClose: () => void;
@@ -37,6 +51,7 @@ export function DrawerHost({
   onViewPatient: (patient: Patient) => void;
   onViewReminder: (reminder: Reminder) => void;
   onChanged?: () => void;
+  actionsRef?: Ref<EntityActions>;
 }) {
   const { updateAppointment } = useUpdateAppointment();
   const { retryReminder, loading: retryLoading } = useRetryReminder();
@@ -47,33 +62,55 @@ export function DrawerHost({
   const [editReminder, setEditReminder] = useState<Reminder | null>(null);
   const [cancelReminder, setCancelReminder] = useState<Reminder | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // The drawer closes as soon as a request starts, so a second click on the
+  // same action would send it twice: one request per action and entity.
+  const [inFlight] = useState(() => new Set<string>());
 
   const changed = () => onChanged?.();
 
-  async function updateAppt(
-    id: string,
-    data: { paid: true } | { status: AppointmentStatus.CONFIRMED },
-    fallback: string,
-  ) {
+  async function run(key: string, request: () => Promise<unknown>, fallback: string) {
+    if (inFlight.has(key)) return;
+    inFlight.add(key);
     setActionError(null);
     try {
-      await updateAppointment(id, data);
+      await request();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : fallback);
     } finally {
+      inFlight.delete(key);
       changed();
     }
   }
 
-  // Each action opens its modal and closes the drawer, as the pages did.
-  const open = <T,>(set: (value: T) => void) => (value: T) => {
-    set(value);
+  const actions: EntityActions = {
+    editAppointment: setEditAppt,
+    cancelAppointment: setDeleteAppt,
+    confirmAppointment: (a) =>
+      run(`confirm:${a.id}`, () => updateAppointment(a.id, { status: AppointmentStatus.CONFIRMED }), "Error al confirmar la cita"),
+    payAppointment: (a) =>
+      run(`pay:${a.id}`, () => updateAppointment(a.id, { paid: true }), "Error al registrar el pago"),
+    editPatient: setEditPatient,
+    togglePatient: setTogglePatient,
+    editReminder: setEditReminder,
+    cancelReminder: setCancelReminder,
+    retryReminder: (r) => run(`retry:${r.id}`, () => retryReminder(r.id), "Error al reintentar el recordatorio"),
+  };
+
+  useImperativeHandle(actionsRef, () => actions);
+
+  // A drawer action hands off to a modal or request and closes the drawer.
+  const thenClose = <T,>(action: (value: T) => unknown) => (value: T) => {
+    void action(value);
     onClose();
   };
 
   return (
     <>
-      {actionError && <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />}
+      {actionError && (
+        <div className="drawer-host-error" role="alert">
+          <ErrorBanner msg={actionError} onRetry={() => setActionError(null)} />
+        </div>
+      )}
       <RelatedDrawers
         target={target}
         onClose={onClose}
@@ -81,29 +118,19 @@ export function DrawerHost({
         onViewPatient={onViewPatient}
         onViewReminder={onViewReminder}
         appointmentActions={{
-          onEdit: open(setEditAppt),
-          onDelete: open(setDeleteAppt),
-          onConfirm: (appointment) => {
-            void updateAppt(appointment.id, { status: AppointmentStatus.CONFIRMED }, "Error al confirmar la cita");
-            onClose();
-          },
-          onPay: (appointment) => {
-            void updateAppt(appointment.id, { paid: true }, "Error al registrar el pago");
-            onClose();
-          },
+          onEdit: thenClose(actions.editAppointment),
+          onDelete: thenClose(actions.cancelAppointment),
+          onConfirm: thenClose(actions.confirmAppointment),
+          onPay: thenClose(actions.payAppointment),
         }}
         patientActions={{
-          onEdit: open(setEditPatient),
-          onDelete: open(setTogglePatient),
+          onEdit: thenClose(actions.editPatient),
+          onDelete: thenClose(actions.togglePatient),
         }}
         reminderActions={{
-          onEdit: open(setEditReminder),
-          onCancel: open(setCancelReminder),
-          onRetry: async (reminder) => {
-            await retryReminder(reminder.id);
-            onClose();
-            changed();
-          },
+          onEdit: thenClose(actions.editReminder),
+          onCancel: thenClose(actions.cancelReminder),
+          onRetry: thenClose(actions.retryReminder),
           retryLoading,
         }}
       />

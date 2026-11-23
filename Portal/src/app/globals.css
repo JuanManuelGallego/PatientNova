@@ -2425,6 +2425,22 @@ body {
   color: var(--c-error);
 }
 
+/* A failed action from a drawer: the drawer is already closed, so the
+   message floats where it is seen instead of at the end of the page. */
+.drawer-host-error {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9995;
+  width: min(560px, calc(100vw - 32px));
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
+}
+
+.drawer-host-error .error-banner {
+  margin-bottom: 0;
+}
+
 .error-inline {
   background: var(--c-error-bg);
   border: 1px solid var(--c-error-border);
