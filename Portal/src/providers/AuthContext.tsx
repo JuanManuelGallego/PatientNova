@@ -8,6 +8,7 @@ import { clearCsrfToken, fetchWithAuth } from "@/src/api/base/fetchWithAuth";
 import { toSpanishMessage } from "@/src/api/base/errorMessages";
 import { ApiClientError, parseEnvelope } from "@/src/api/base/apiClients";
 import { setDisplayTimezone } from "@/src/utils/TimeUtils";
+import { clearAppCaches } from "@/src/utils/appCaches";
 import { reportClientError } from "@/src/utils/observability/sentry";
 
 interface AuthContextValue {
@@ -94,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
         } finally {
             clearCsrfToken();
+            void clearAppCaches();
             setUser(null);
             setLoading(false);
         }

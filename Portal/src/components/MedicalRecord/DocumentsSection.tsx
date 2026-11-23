@@ -9,6 +9,7 @@ import {
   STATUS_ICONS,
 } from "@/src/config/icons";
 import { Download, RefreshCw, FolderOpen } from "lucide-react";
+import { dataUrlToBlob, saveFile } from "@/src/utils/saveFile";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB per file
 
@@ -123,10 +124,7 @@ export function DocumentsSection({ documents, onChange }: Props) {
   // ── Download ──────────────────────────────────────────────────────────────
 
   function handleDownload(doc: MedicalDocument) {
-    const a = document.createElement("a");
-    a.href = doc.data;
-    a.download = doc.name;
-    a.click();
+    void saveFile(dataUrlToBlob(doc.data), doc.name);
   }
 
   // ── Rename ────────────────────────────────────────────────────────────────

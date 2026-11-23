@@ -19,6 +19,8 @@ import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
+import Link from "next/link";
+import { settingsHref } from "@/src/config/navigation";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React, { useState, useCallback } from "react";
@@ -91,7 +93,7 @@ export function LocationAndTimeStep({
     }
   }, [ createMeet, setForm ]);
 
-  const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
+  const { openOAuth, mode: oauthMode, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
     useCallback(async (result) => {
       if (!result.success) {
         setActionError(result.error ?? "Error al conectar con Google.");
@@ -110,8 +112,10 @@ export function LocationAndTimeStep({
       return;
     }
 
+    if (oauthMode === "redirect") return;
+
     await openOAuth(() => startOAuth("/appointments", mustReconnect));
-  }, [ generateMeet, isConnected, isVirtual, mustReconnect, openOAuth, startOAuth ]);
+  }, [ generateMeet, isConnected, isVirtual, mustReconnect, oauthMode, openOAuth, startOAuth ]);
 
   const handleGenerateMeet = useCallback(async () => {
     if (!isVirtual) return;
@@ -128,6 +132,7 @@ export function LocationAndTimeStep({
   }, [ runGenerateMeet ]);
 
   const meetingUrlInvalid = Boolean(form.meetingUrl && !validateHttpUrl(form.meetingUrl));
+  const installedNeedsConnect = oauthMode === "redirect" && !isConnected;
   const googleError = actionError || popupError || oauthStartError || createMeetError || connectionError;
   const isGoogleBusy = creatingMeet || startingOAuth || waitingForOAuth;
   const googleMeetActionLabel = isGoogleBusy
@@ -195,16 +200,22 @@ export function LocationAndTimeStep({
                 type="button"
                 className="btn-secondary"
                 onClick={handleGenerateMeet}
-                disabled={isGoogleBusy || loadingConnection || !isVirtual}
+                disabled={isGoogleBusy || loadingConnection || !isVirtual || installedNeedsConnect}
                 data-testid="generate-meet-link-button"
                 aria-label={googleMeetActionLabel}
-                aria-describedby={mustReconnect && !googleError ? "google-expired-hint" : undefined}
+                aria-describedby={mustReconnect && !googleError && !installedNeedsConnect ? "google-expired-hint" : undefined}
                 title={googleMeetActionLabel}
                 style={{ alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 {isGoogleBusy ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <ACTION_ICONS.link size={16} />}
               </button>
             </div>
+            {installedNeedsConnect && !loadingConnection && (
+              <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-installed-hint">
+                Para generar enlaces de Meet desde la app instalada,{" "}
+                <Link href={settingsHref("integrations")}>conecta Google en Configuración</Link>.
+              </p>
+            )}
             {linkMayWait && !form.meetingUrl && (
               <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="meeting-link-may-wait-hint">
                 Esta cita en línea aún no tiene enlace. Agrégalo cuando lo tengas: le enviaremos un correo al paciente.
@@ -215,7 +226,7 @@ export function LocationAndTimeStep({
                 Ingresa una URL completa que comience con http:// o https://.
               </div>
             )}
-            {mustReconnect && !googleError && (
+            {mustReconnect && !googleError && !installedNeedsConnect && (
               <p id="google-expired-hint" className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-expired-hint">
                 Tu conexión con Google expiró. Reconéctala con el botón junto al campo o pega el enlace de tu propia sala.
               </p>

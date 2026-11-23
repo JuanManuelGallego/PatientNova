@@ -46,6 +46,7 @@ export function buildCsp(options: CspOptions): string {
         "img-src": img,
         "font-src": [ "'self'", "data:" ],
         "manifest-src": [ "'self'" ],
+        "worker-src": [ "'self'" ],
         "connect-src": [ ...connect, TURNSTILE_ORIGIN ],
         "object-src": [ "'none'" ],
         "base-uri": [ "'self'" ],

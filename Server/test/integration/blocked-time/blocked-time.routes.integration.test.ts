@@ -187,10 +187,13 @@ describe('blocked-time routes (integration)', () => {
   });
 
   it('GET / supports pagination', async () => {
+    // Blocks must stay inside one local day (checkSameDay), so anchor them at
+    // 17:00Z tomorrow (noon in America/Bogota) rather than relative to now.
+    const tomorrowNoon = new Date();
+    tomorrowNoon.setUTCDate(tomorrowNoon.getUTCDate() + 1);
+    tomorrowNoon.setUTCHours(17, 0, 0, 0);
     for (let i = 0; i < 3; i++) {
-      const base = new Date(Date.now() + (i + 1) * 240 * 60_000);
-      const start = new Date(base);
-      start.setMinutes(0, 0, 0);
+      const start = new Date(tomorrowNoon.getTime() + i * 120 * 60_000);
       const end = new Date(start.getTime() + 60 * 60_000);
       await invokeRoute(blockedTimeRouter, 'post', '/', baseReq({ body: createBody({ description: `Slot ${i}`, startTimeUtc: start.toISOString(), endTimeUtc: end.toISOString() }) }));
     }

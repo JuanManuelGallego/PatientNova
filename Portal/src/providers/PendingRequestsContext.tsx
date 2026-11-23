@@ -32,6 +32,13 @@ export function PendingRequestsProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [ enabled, refetch ]);
 
+  useEffect(() => {
+    if (!enabled) return;
+    const onVisible = () => { if (document.visibilityState === "visible") void refetch(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [ enabled, refetch ]);
+
   return (
     <PendingRequestsContext.Provider value={{ enabled, pending: enabled ? pending : 0, refetch }}>
       {children}

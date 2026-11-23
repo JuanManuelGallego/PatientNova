@@ -10,6 +10,7 @@ const E2E_TIMEZONE = 'America/Bogota';
 process.env.TZ = E2E_TIMEZONE;
 const publicSpecs = /tests\/public\/.*\.spec\.ts/;
 const mobileSpecs = /tests\/mobile\/.*\.spec\.ts/;
+const pwaSpecs = /tests\/pwa\/.*\.spec\.ts/;
 
 export default defineConfig({
   testDir: './tests',
@@ -26,6 +27,7 @@ export default defineConfig({
 
   use: {
     baseURL: Env.baseUrl,
+    serviceWorkers: 'block',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -48,7 +50,7 @@ export default defineConfig({
     // Authenticated provider dashboard, desktop.
     {
       name: 'chromium',
-      testIgnore: [ publicSpecs, mobileSpecs ],
+      testIgnore: [ publicSpecs, mobileSpecs, pwaSpecs ],
       use: { ...devices[ 'Desktop Chrome' ], storageState: authState },
       dependencies: [ 'setup' ],
     },
@@ -58,6 +60,13 @@ export default defineConfig({
       name: 'mobile',
       testMatch: mobileSpecs,
       use: { ...devices[ 'Pixel 7' ], storageState: authState },
+      dependencies: [ 'setup' ],
+    },
+
+    {
+      name: 'pwa',
+      testMatch: pwaSpecs,
+      use: { ...devices[ 'Desktop Chrome' ], storageState: authState, serviceWorkers: 'allow' },
       dependencies: [ 'setup' ],
     },
 

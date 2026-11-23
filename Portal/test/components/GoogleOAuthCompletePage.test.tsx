@@ -4,9 +4,10 @@ import GoogleOAuthCompletePage from "@/src/app/google/oauth-complete/page";
 
 let params = new URLSearchParams();
 const push = vi.fn();
+const replace = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => params,
 }));
 
@@ -14,6 +15,8 @@ describe("GoogleOAuthCompletePage", () => {
   beforeEach(() => {
     params = new URLSearchParams();
     push.mockReset();
+    replace.mockReset();
+    sessionStorage.clear();
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -43,5 +46,27 @@ describe("GoogleOAuthCompletePage", () => {
 
     expect(await screen.findByText("No se pudo conectar Google")).toBeInTheDocument();
     expect(screen.getByText(/No se concedió el permiso de Google Meet/)).toBeInTheDocument();
+  });
+
+  it("returns to the starting page after a redirect-flow success", async () => {
+    params = new URLSearchParams("success=true&returnPath=%2Fsettings%2Fintegrations");
+    Object.defineProperty(window, "opener", { configurable: true, value: null });
+    sessionStorage.setItem("patientnova-google-oauth-redirect", "1");
+    await act(async () => { render(<GoogleOAuthCompletePage />); });
+
+    expect(replace).toHaveBeenCalledWith("/settings/integrations");
+    expect(sessionStorage.getItem("patientnova-google-oauth-redirect")).toBeNull();
+  });
+
+  it("offers only 'Volver a Patient Nova' after a redirect-flow error", async () => {
+    params = new URLSearchParams("success=false&error=callback_failed");
+    Object.defineProperty(window, "opener", { configurable: true, value: null });
+    sessionStorage.setItem("patientnova-google-oauth-redirect", "1");
+    render(<GoogleOAuthCompletePage />);
+
+    const back = await screen.findByRole("button", { name: "Volver a Patient Nova" });
+    expect(screen.queryByRole("button", { name: "Cerrar ventana" })).toBeNull();
+    act(() => back.click());
+    expect(replace).toHaveBeenCalledWith("/settings/integrations");
   });
 });

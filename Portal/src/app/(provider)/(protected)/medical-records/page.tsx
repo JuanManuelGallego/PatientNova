@@ -24,7 +24,8 @@ import { useUpdateMedicalRecord } from "@/src/api/medical-records/useUpdateMedic
 import { LBL_LOADING } from "@/src/constants/ui";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { SaveStatusIndicator } from "@/src/components/Info/SaveStatusIndicator";
-import { downloadMedicalRecordPDF } from "@/src/components/MedicalRecord/MedicalRecordPDF";
+import { renderMedicalRecordPdf } from "@/src/components/MedicalRecord/MedicalRecordPDF";
+import { useSaveFile } from "@/src/hooks/useSaveFile";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { DocumentsSection } from "@/src/components/MedicalRecord/DocumentsSection";
 import { useFetchMedicalRecords } from "@/src/api/medical-records/useFetchMedicalRecords";
@@ -39,6 +40,7 @@ type RecordSection = "general" | "family" | "details" | "evolution" | "documents
 function MedicalRecordsPageContent() {
   const timezone = useDisplayTimezone();
   const { user } = useAuthContext();
+  const { save, retryDialog } = useSaveFile();
   const { loading: loadingPatients, error, fetchPatients } = useFetchPatients();
   const [ selectedPatientId, setSelectedPatientId ] = useQueryState(QUERY_PARAMS.recordPatientId, parseAsString.withDefault(""));
   const [ form, setForm ] = useState<FormValues>(createEmptyForm());
@@ -147,7 +149,7 @@ function MedicalRecordsPageContent() {
         subtitle={todayString(timezone)}
         actions={
           showRecord && (
-            <button type="button" className="btn-primary" onClick={() => downloadMedicalRecordPDF(user, form)} data-testid="medical-records-download-pdf-button">
+            <button type="button" className="btn-primary" onClick={async () => { const { blob, filename } = await renderMedicalRecordPdf(user, form); await save(blob, filename); }} data-testid="medical-records-download-pdf-button">
               Descargar PDF
             </button>
           )
@@ -242,6 +244,7 @@ function MedicalRecordsPageContent() {
           </>
         )}
       </div>
+      {retryDialog}
     </PageLayout>
   );
 }

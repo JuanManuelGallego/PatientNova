@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCsp, buildSecurityHeaders } from "@/src/config/securityHeaders";
+import { SERVICE_WORKER_HEADERS } from "@/src/config/serviceWorker";
 
 describe("security headers", () => {
   const prod = { apiUrl: "https://api.patientnova.net/v1", isDev: false };
@@ -56,5 +57,13 @@ describe("security headers", () => {
 
   it("ignores a malformed API URL instead of throwing", () => {
     expect(buildCsp({ apiUrl: "not a url", isDev: false })).toContain("connect-src 'self'");
+  });
+
+  it("allows same-origin workers and serves the worker script uncached", () => {
+    expect(buildCsp(prod)).toContain("worker-src 'self'");
+    expect(SERVICE_WORKER_HEADERS).toEqual([
+      { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+      { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+    ]);
   });
 });

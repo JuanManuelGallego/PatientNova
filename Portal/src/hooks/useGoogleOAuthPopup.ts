@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OAuthCompletionResult } from "@/src/types/Google";
+import { assignLocation } from "@/src/utils/browserNavigation";
+import { isStandaloneDisplay } from "@/src/utils/standalone";
+
+export const OAUTH_REDIRECT_KEY = "patientnova-google-oauth-redirect";
 
 const POPUP_FEATURES = "width=600,height=700";
 
@@ -13,6 +17,12 @@ export function useGoogleOAuthPopup(
   const onCompleteRef = useRef(onComplete);
   const [ waiting, setWaiting ] = useState(false);
   const [ error, setError ] = useState<string | null>(null);
+  const [ mode, setMode ] = useState<"popup" | "redirect">("popup");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMode(isStandaloneDisplay() ? "redirect" : "popup");
+  }, []);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -28,6 +38,21 @@ export function useGoogleOAuthPopup(
   const openOAuth = useCallback(async (getAuthUrl: () => Promise<{ authUrl: string }>) => {
     setError(null);
     processedRef.current = false;
+
+    if (isStandaloneDisplay()) {
+      setWaiting(true);
+      try {
+        const { authUrl } = await getAuthUrl();
+        try { sessionStorage.setItem(OAUTH_REDIRECT_KEY, "1"); } catch {}
+        assignLocation(authUrl);
+        return true;
+      } catch (cause) {
+        try { sessionStorage.removeItem(OAUTH_REDIRECT_KEY); } catch {}
+        setWaiting(false);
+        setError(cause instanceof Error ? cause.message : "No se pudo iniciar la conexión con Google.");
+        return false;
+      }
+    }
 
     // Open synchronously from the click so browser popup blockers do not reject it.
     const popup = window.open("", "google_oauth", POPUP_FEATURES);
@@ -91,5 +116,5 @@ export function useGoogleOAuthPopup(
     };
   }, [ closePopup ]);
 
-  return { openOAuth, waiting, error, clearError: () => setError(null) };
+  return { openOAuth, mode, waiting, error, clearError: () => setError(null) };
 }

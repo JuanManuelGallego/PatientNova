@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_PATHS = [
+export const PROTECTED_PATHS = [
   "/dashboard",
   "/patients",
   "/appointments",

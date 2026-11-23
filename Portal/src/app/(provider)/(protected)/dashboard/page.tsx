@@ -10,6 +10,7 @@ import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats"
 import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
+import { InstallHint } from "@/src/components/Info/InstallHint";
 import { StatCard } from "@/src/components/Info/StatCard";
 import { PendingRequestsCard } from "@/src/components/Dashboard/PendingRequestsCard";
 import { PatientStatus } from "@/src/types/Patient";
@@ -90,6 +91,7 @@ export default function DashboardPage() {
   return (
     <PageLayout>
       <PageHeader title="Vista general" subtitle={todayString(timezone)} />
+      <InstallHint />
       <div className="dash-welcome fade-in">
         <div className="dash-welcome__text">
           <span className="dash-welcome__greeting">

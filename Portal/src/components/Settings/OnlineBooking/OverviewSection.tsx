@@ -8,6 +8,7 @@ import { BookingSettings } from "@/src/types/Booking";
 import { Switch } from "@/src/components/Form/Switch";
 import { SaveStatusIndicator, type SaveStatus } from "@/src/components/Info/SaveStatusIndicator";
 import { InlineError } from "@/src/components/Info/InlineError";
+import { saveFile } from "@/src/utils/saveFile";
 import { settingsHref } from "@/src/config/navigation";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { LINK_SECTION_ID, PROFILE_SECTION_ID, AVAILABILITY_SECTION_ID, type SaveFn } from "./shared";
@@ -90,12 +91,7 @@ export function OverviewSection({ settings, save, onSaved, onToggle, error: togg
         const svg = qrRef.current?.querySelector("svg");
         if (!svg || !settings.bookingSlug) return;
         const blob = new Blob([ new XMLSerializer().serializeToString(svg) ], { type: "image/svg+xml" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `reserva-${settings.bookingSlug}.svg`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
+        void saveFile(blob, `reserva-${settings.bookingSlug}.svg`);
     }
 
     return (
