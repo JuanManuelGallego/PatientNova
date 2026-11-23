@@ -19,6 +19,8 @@ import { fmtSendTime, isReminderTypeFeasible } from "@/src/utils/TimeUtils";
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { ConfirmDialog } from "@/src/components/Modals/ConfirmDialog";
+import Link from "next/link";
+import { settingsHref } from "@/src/config/navigation";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
 import { LBL_NO_REMINDER } from "@/src/constants/ui";
 import React, { useState, useCallback } from "react";
@@ -91,7 +93,7 @@ export function LocationAndTimeStep({
     }
   }, [ createMeet, setForm ]);
 
-  const { openOAuth, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
+  const { openOAuth, mode: oauthMode, waiting: waitingForOAuth, error: popupError } = useGoogleOAuthPopup(
     useCallback(async (result) => {
       if (!result.success) {
         setActionError(result.error ?? "Error al conectar con Google.");
@@ -110,8 +112,11 @@ export function LocationAndTimeStep({
       return;
     }
 
+    // A redirect would discard the half-filled form: the note below sends them to Integraciones instead.
+    if (oauthMode === "redirect") return;
+
     await openOAuth(() => startOAuth("/appointments", mustReconnect));
-  }, [ generateMeet, isConnected, isVirtual, mustReconnect, openOAuth, startOAuth ]);
+  }, [ generateMeet, isConnected, isVirtual, mustReconnect, oauthMode, openOAuth, startOAuth ]);
 
   const handleGenerateMeet = useCallback(async () => {
     if (!isVirtual) return;
@@ -205,6 +210,12 @@ export function LocationAndTimeStep({
                 {isGoogleBusy ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <ACTION_ICONS.link size={16} />}
               </button>
             </div>
+            {oauthMode === "redirect" && !isConnected && (
+              <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="google-installed-hint">
+                Para generar enlaces de Meet desde la app instalada,{" "}
+                <Link href={settingsHref("integrations")}>Conecta Google en Configuración</Link>.
+              </p>
+            )}
             {linkMayWait && !form.meetingUrl && (
               <p className="form-input-hint" style={{ marginTop: 4 }} data-testid="meeting-link-may-wait-hint">
                 Esta cita en línea aún no tiene enlace. Agrégalo cuando lo tengas: le enviaremos un correo al paciente.

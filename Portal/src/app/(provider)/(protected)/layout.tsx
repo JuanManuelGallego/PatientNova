@@ -3,6 +3,7 @@ import AuthGuard from "@/src/components/AuthGuard";
 import { PendingRequestsProvider } from "@/src/providers/PendingRequestsContext";
 import { SettingsAttentionProvider } from "@/src/providers/SettingsAttentionContext";
 import { WEB_MANIFEST_PATH } from "@/src/config/webManifest";
+import ServiceWorkerRegistrar from "@/src/components/ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
     manifest: WEB_MANIFEST_PATH,
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
     return (
         <AuthGuard>
+            <ServiceWorkerRegistrar />
             <PendingRequestsProvider>
                 <SettingsAttentionProvider>{children}</SettingsAttentionProvider>
             </PendingRequestsProvider>

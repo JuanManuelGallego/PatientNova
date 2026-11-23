@@ -1,5 +1,6 @@
 import type { PortalAppointment } from "@/src/types/PortalBooking";
 import { localDayOf, PENDING_MEETING_LINK_NOTE } from "@/src/utils/publicBooking";
+import { saveFile } from "@/src/utils/saveFile";
 
 const CRLF = "\r\n";
 const MAX_LINE_OCTETS = 75;
@@ -69,12 +70,5 @@ export function buildAppointmentIcs(appointment: PortalAppointment, providerName
 
 export function downloadAppointmentIcs(appointment: PortalAppointment, providerName: string, timezone: string): void {
     const blob = new Blob([ buildAppointmentIcs(appointment, providerName) ], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `cita-${localDayOf(appointment.startUtc, timezone)}.ics`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    void saveFile(blob, `cita-${localDayOf(appointment.startUtc, timezone)}.ics`);
 }

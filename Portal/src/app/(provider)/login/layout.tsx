@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WEB_MANIFEST_PATH } from "@/src/config/webManifest";
+import ServiceWorkerRegistrar from "@/src/components/ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
   title: "Iniciar sesión | Patient Nova",
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <ServiceWorkerRegistrar />
+      {children}
+    </>
+  );
 }

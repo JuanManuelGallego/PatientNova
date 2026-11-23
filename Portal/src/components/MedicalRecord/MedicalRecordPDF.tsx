@@ -396,13 +396,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
   );
 }
 
-export async function downloadMedicalRecordPDF(user: User | null, form: FormValues) {
+export async function renderMedicalRecordPdf(user: User | null, form: FormValues): Promise<{ blob: Blob; filename: string }> {
   const blob = await pdf(<MedicalRecordPDF form={form} user={user} />).toBlob();
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement("a"), {
-    href: url,
-    download: `Historia Clínica — ${form.nationalId || "paciente"}.pdf`,
-  });
-  a.click();
-  URL.revokeObjectURL(url);
+  return { blob, filename: `Historia Clínica — ${form.nationalId || "paciente"}.pdf` };
 }

@@ -179,4 +179,24 @@ describe("LocationAndTimeStep Google Meet", () => {
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(/URL completa/);
   });
+
+  it("links to Integraciones instead of starting OAuth from the modal when installed", async () => {
+    connected = false;
+    status = "not_connected";
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(display-mode: standalone)",
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    try {
+      render(<Harness />);
+      const link = await screen.findByRole("link", { name: "Conecta Google en Configuración" });
+      expect(link).toHaveAttribute("href", "/settings/integrations");
+      await userEvent.click(screen.getByTestId("generate-meet-link-button"));
+      expect(startOAuth).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(window, "matchMedia");
+    }
+  });
 });

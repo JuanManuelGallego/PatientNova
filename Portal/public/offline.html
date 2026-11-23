@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Sin conexión | Patient Nova</title>
+<script>
+  try {
+    var t = localStorage.getItem("patientnova-theme");
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+</script>
+<style>
+  :root { --bg: #F8F7FF; --surface: #FFFFFF; --text: #1A1523; --muted: #6B6580; --border: #E5E2F0; --brand: #7C3AED; --brand-hover: #6D28D9; }
+  [data-theme="dark"] { --bg: #1A1825; --surface: #232033; --text: #F3F0FA; --muted: #A9A1BD; --border: #3A3552; --brand: #A78BFA; --brand-hover: #8B5CF6; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    padding: calc(24px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+    background: var(--bg); color: var(--text); font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 420px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px 24px; }
+  h1 { margin: 0 0 12px; font-size: 1.5rem; }
+  p { margin: 0 0 24px; color: var(--muted); line-height: 1.5; }
+  button { font: inherit; font-weight: 600; color: #fff; background: var(--brand); border: 0; border-radius: 8px; padding: 12px 24px; cursor: pointer; }
+  button:hover { background: var(--brand-hover); }
+  button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sin conexión</h1>
+  <p>Revisa tu conexión a internet. Tus datos siguen guardados en Patient Nova; vuelve a intentarlo cuando tengas señal.</p>
+  <button type="button" id="retry">Reintentar</button>
+</main>
+<script>
+  document.getElementById("retry").addEventListener("click", function () { location.reload(); });
+</script>
+</body>
+</html>

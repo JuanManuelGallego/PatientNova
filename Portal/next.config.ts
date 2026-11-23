@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { buildSecurityHeaders } from "./src/config/securityHeaders";
+import { SERVICE_WORKER_HEADERS, SERVICE_WORKER_PATH } from "./src/config/serviceWorker";
 import { assertApiUrlForBuild } from "./src/config/api";
 import { uploadSourceMaps } from "./scripts/sentry-sourcemaps.mjs";
 
@@ -32,6 +33,7 @@ const nextConfig: NextConfig = {
           enforceCsp: process.env.CSP_ENFORCE === "true",
         }),
       },
+      { source: SERVICE_WORKER_PATH, headers: SERVICE_WORKER_HEADERS },
     ];
   },
 };

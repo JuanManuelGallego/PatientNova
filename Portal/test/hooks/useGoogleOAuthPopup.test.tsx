@@ -1,8 +1,23 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
+import { OAUTH_REDIRECT_KEY, useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
+
+const assignLocation = vi.fn();
+vi.mock("@/src/utils/browserNavigation", () => ({ assignLocation: (u: string) => assignLocation(u) }));
+
+function stubStandalone() {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(display-mode: standalone)",
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+}
 
 afterEach(() => {
+  assignLocation.mockReset();
+  sessionStorage.clear();
+  Reflect.deleteProperty(window, "matchMedia");
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -56,5 +71,30 @@ describe("useGoogleOAuthPopup", () => {
     await act(() => result.current.openOAuth(async () => ({ authUrl: "https://accounts.google.test" })));
 
     expect(result.current.error).toMatch(/Configuración/);
+  });
+
+  it("redirects the whole app instead of opening a popup when installed", async () => {
+    stubStandalone();
+    const open = vi.spyOn(window, "open");
+    const { result } = renderHook(() => useGoogleOAuthPopup(vi.fn()));
+    expect(result.current.mode).toBe("redirect");
+
+    let started = false;
+    await act(async () => { started = await result.current.openOAuth(async () => ({ authUrl: "https://accounts.google.test/auth" })); });
+
+    expect(started).toBe(true);
+    expect(open).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(OAUTH_REDIRECT_KEY)).toBe("1");
+    expect(assignLocation).toHaveBeenCalledWith("https://accounts.google.test/auth");
+  });
+
+  it("reports a failed start in redirect mode without navigating", async () => {
+    stubStandalone();
+    const { result } = renderHook(() => useGoogleOAuthPopup(vi.fn()));
+    await act(async () => { await result.current.openOAuth(async () => { throw new Error("sin conexión"); }); });
+
+    expect(result.current.error).toBe("sin conexión");
+    expect(assignLocation).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(OAUTH_REDIRECT_KEY)).toBeNull();
   });
 });

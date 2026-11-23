@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { STATUS_ICONS } from "@/src/config/icons";
+import { settingsHref } from "@/src/config/navigation";
+import { OAUTH_REDIRECT_KEY } from "@/src/hooks/useGoogleOAuthPopup";
 
 function GoogleOAuthCompleteContent() {
   const router = useRouter();
@@ -10,6 +12,7 @@ function GoogleOAuthCompleteContent() {
   const [ status, setStatus ] = useState<"loading" | "success" | "error">("loading");
   const [ errorMessage, setErrorMessage ] = useState<string | null>(null);
   const notifiedRef = useRef(false);
+  const [ redirectFlow, setRedirectFlow ] = useState(false);
 
   const success = searchParams.get("success");
   const error = searchParams.get("error");
@@ -17,6 +20,19 @@ function GoogleOAuthCompleteContent() {
 
   useEffect(() => {
     if (notifiedRef.current) return;
+
+    const isResult = success === "true" || success === "false" || !!error;
+    // Set by the hook before a full-page redirect (installed app): no popup, no opener to message.
+    let wasRedirect = false;
+    if (isResult) {
+      try {
+        wasRedirect = sessionStorage.getItem(OAUTH_REDIRECT_KEY) === "1";
+        sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
+      } catch { /* sessionStorage unavailable */ }
+    }
+    const redirected = wasRedirect && !window.opener;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (redirected) setRedirectFlow(true);
 
     if (success === "true") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -27,7 +43,9 @@ function GoogleOAuthCompleteContent() {
         success: true,
         returnPath: rp,
       };
-      if (window.opener) {
+      if (redirected) {
+        router.replace(rp ?? settingsHref("integrations"));
+      } else if (window.opener) {
         window.opener.postMessage(message, window.location.origin);
         // Defer close so the parent can process the message first.
         setTimeout(() => window.close(), 150);
@@ -56,7 +74,7 @@ function GoogleOAuthCompleteContent() {
         setTimeout(() => window.close(), 150);
       }
     }
-  }, [ success, error, rp ]);
+  }, [ success, error, rp, router ]);
 
   if (status === "loading") {
     return (
@@ -75,17 +93,23 @@ function GoogleOAuthCompleteContent() {
         <div className="card" style={{ textAlign: "center", padding: 40, maxWidth: 400 }}>
           <STATUS_ICONS.success size={48} style={{ color: "var(--c-success)", marginBottom: 16 }} />
           <h2 style={{ marginBottom: 8 }}>Cuenta de Google conectada</h2>
-          <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
-            Ya puedes cerrar esta ventana y continuar.
-          </p>
-          <button
-            onClick={() => window.close()}
-            className="btn-primary"
-            style={{ width: "100%" }}
-          >
-            Cerrar ventana
-          </button>
-          {rp && (
+          {redirectFlow ? (
+            <p style={{ color: "var(--c-gray-500)" }}>Volviendo a Patient Nova…</p>
+          ) : (
+            <>
+              <p style={{ color: "var(--c-gray-500)", marginBottom: 24 }}>
+                Ya puedes cerrar esta ventana y continuar.
+              </p>
+              <button
+                onClick={() => window.close()}
+                className="btn-primary"
+                style={{ width: "100%" }}
+              >
+                Cerrar ventana
+              </button>
+            </>
+          )}
+          {rp && !redirectFlow && (
             <p style={{ marginTop: 16, fontSize: 14, color: "var(--c-gray-400)" }}>
               Volviendo a <strong>{rp}</strong>…
             </p>
@@ -105,7 +129,9 @@ function GoogleOAuthCompleteContent() {
         </p>
         <button
           onClick={() => {
-            if (rp) {
+            if (redirectFlow) {
+              router.replace(rp ?? settingsHref("integrations"));
+            } else if (rp) {
               router.push(rp);
             } else {
               window.close();
@@ -114,15 +140,17 @@ function GoogleOAuthCompleteContent() {
           className="btn-primary"
           style={{ width: "100%", marginBottom: 12 }}
         >
-          {rp ? "Volver a Patient Nova" : "Cerrar ventana"}
+          {rp || redirectFlow ? "Volver a Patient Nova" : "Cerrar ventana"}
         </button>
-        <button
-          onClick={() => window.close()}
-          className="btn-secondary"
-          style={{ width: "100%" }}
-        >
-          Cerrar ventana
-        </button>
+        {!redirectFlow && (
+          <button
+            onClick={() => window.close()}
+            className="btn-secondary"
+            style={{ width: "100%" }}
+          >
+            Cerrar ventana
+          </button>
+        )}
       </div>
     </div>
   );

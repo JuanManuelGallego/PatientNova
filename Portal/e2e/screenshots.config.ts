@@ -32,6 +32,7 @@ export default defineConfig({
     colorScheme: 'light',
     locale: 'es-CO',
     timezoneId: timezone,
+    serviceWorkers: 'block',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import * as protectedLayout from "@/src/app/(provider)/(protected)/layout";
@@ -36,5 +36,16 @@ describe("installed app metadata", () => {
         };
         expect(surface('[data-theme="light"]')).toBe(theme.themeColor.light.toLowerCase());
         expect(surface('[data-theme="dark"]')).toBe(theme.themeColor.dark.toLowerCase());
+    });
+
+    it("registers the worker only from the login and protected layouts", () => {
+        const appDir = join(__dirname, "../../src/app");
+        const walk = (dir: string): string[] =>
+            readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+                e.isDirectory() ? walk(join(dir, e.name)) : [ join(dir, e.name) ]);
+        const files = walk(appDir)
+            .filter((f) => readFileSync(f, "utf8").includes("ServiceWorkerRegistrar"))
+            .map((f) => f.slice(appDir.length + 1).replaceAll("\\", "/"));
+        expect(files.sort()).toEqual([ "(provider)/(protected)/layout.tsx", "(provider)/login/layout.tsx" ]);
     });
 });
