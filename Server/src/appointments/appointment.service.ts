@@ -191,12 +191,9 @@ async function handleReminderUpdate(
 ): Promise<{ reminderId?: string | null | undefined; reminder?: Reminder | null; rescheduled?: Reminder }> {
   const settled = !!existing.reminder && existing.reminder.status !== ReminderStatus.PENDING;
   if (settled && dto.reminder && !replaceSettledReminder && !reminderTimingChanged(dto.reminder, existing.reminder!)) {
-    // The form resends the reminder on every edit. Unchanged, a settled one is left alone: rewriting it
-    // would flip it back to PENDING with no job queued.
     return {};
   }
   if (settled && dto.reminder && existing.reminder) {
-    // A sent (or failed/cancelled) reminder keeps its record: unlink it and link a fresh one. Never rewrite its sendAt.
     await tx.reminder.update({ where: { id: existing.reminder.id }, data: { appointmentId: null } });
     await logAudit({
       entityType: EntityType.REMINDER,
