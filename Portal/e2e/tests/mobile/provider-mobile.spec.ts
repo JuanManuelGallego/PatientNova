@@ -131,9 +131,18 @@ test.describe('Provider pages on a phone', () => {
     await expect(date).toHaveText(/\d{2}\/\d{2}\/\d{4}/);
 
     const start = dialog.getByTestId('blocked-time-start');
+    const chosen = (await start.textContent())!.trim();
     await start.click();
     const sheet = page.getByTestId('blocked-time-start-sheet');
     await expect(sheet).toBeVisible();
+
+    const list = sheet.getByRole('listbox');
+    expect(await list.evaluate((el) => el.scrollHeight > el.clientHeight), 'the list scrolls by itself').toBe(true);
+    const selected = sheet.getByRole('option', { name: chosen, exact: true });
+    await expect(selected).toHaveAttribute('aria-selected', 'true');
+    const [ listBox, selectedBox ] = [ (await list.boundingBox())!, (await selected.boundingBox())! ];
+    expect(selectedBox.y, 'the chosen time is in view when the sheet opens').toBeGreaterThanOrEqual(listBox.y);
+    expect(selectedBox.y + selectedBox.height, 'the chosen time is in view when the sheet opens').toBeLessThanOrEqual(listBox.y + listBox.height);
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName ?? '');
     expect(['INPUT', 'TEXTAREA'], 'nothing that opens the keyboard has focus').not.toContain(focusedTag);
 

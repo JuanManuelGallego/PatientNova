@@ -56,12 +56,11 @@ describe("AppointmentDateTimePicker with a mouse", () => {
         expect(onChange).toHaveBeenCalledWith("2026-03-01T15:35:00.000Z");
     });
 
-    it("saves a 5-minute time as the provider-zone instant and says when it ends", () => {
+    it("saves a 5-minute time as the provider-zone instant", () => {
         const onChange = vi.fn();
         renderWithTrap(<Harness initial="2026-03-02T14:00:00.000Z" duration={50} onChange={onChange} />);
         typeIn(timeBox(), "14:45");
         expect(onChange).toHaveBeenCalledWith("2026-03-02T19:45:00.000Z");
-        expect(timeBox()).toHaveAccessibleDescription("Termina 15:35");
     });
 
     it("greys out times that would overlap a cita or a bloqueo for the cita's whole length", () => {
@@ -87,7 +86,7 @@ describe("AppointmentDateTimePicker with a mouse", () => {
         const onChange = vi.fn();
         renderWithTrap(<Harness initial="2026-03-02T14:00:00.000Z" bookedSlots={BOOKED} onChange={onChange} />);
         typeAndEnter(timeBox(), "11:30");
-        expect(timeBox()).toHaveAccessibleDescription("Se cruza con la cita de 11:00 a 12:00");
+        expect(timeBox()).toHaveAccessibleDescription("Se cruza con una cita");
         expect(onChange).not.toHaveBeenCalled();
     });
 

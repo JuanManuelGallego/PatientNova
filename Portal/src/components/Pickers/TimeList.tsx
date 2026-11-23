@@ -54,7 +54,7 @@ export function TimeList({ id, label, options, selected, active, format, onPick,
         const li = active >= 0 ? ul?.querySelector<HTMLElement>(`[data-index="${active}"]`) : null;
         if (!ul || !li) return;
         if (!centred.current) {
-            ul.scrollTop = li.offsetTop - ul.clientHeight / 2 + li.offsetHeight / 2;
+            ul.scrollTop += li.getBoundingClientRect().top - ul.getBoundingClientRect().top - (ul.clientHeight - li.offsetHeight) / 2;
             centred.current = true;
         } else {
             li.scrollIntoView?.({ block: "nearest" });

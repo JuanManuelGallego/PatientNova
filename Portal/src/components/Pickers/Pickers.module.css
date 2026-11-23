@@ -442,9 +442,7 @@
 }
 
 .timeListSheet {
-  max-height: none;
-  min-height: 0;
-  flex: 1;
+  max-height: min(60dvh, 520px);
   padding: 4px 0 8px;
 }
 

@@ -1,8 +1,7 @@
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { toPickerValue } from "@/src/utils/pickerValue";
 import { DateTimeField } from "@/src/components/Pickers/DateTimeField";
-import { useTimeFormat } from "@/src/components/Pickers/TimeFormat";
-import { END_OF_DAY, formatTime, toTimeValue, type TimeSpan } from "@/src/components/Pickers/timeRules";
+import { END_OF_DAY, toTimeValue, type TimeSpan } from "@/src/components/Pickers/timeRules";
 
 const BUSINESS_OPEN = "06:00";
 const BUSINESS_CLOSE = "20:00";
