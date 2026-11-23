@@ -10,6 +10,8 @@ import type { SendSmsRequest } from './types';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { EntityType, ActionType, ActionSource } from '../../generated/prisma/enums.ts';
 import { contactHash } from '../utils/encryption/blind-index.js';
+import { bookingSettingsService, bookingUrl } from '../booking-settings/booking-settings.service.js';
+import { providerDisplayName } from '../public-booking/public-booking.service.js';
 
 interface WebhookPayload {
     from?: string;
@@ -23,6 +25,8 @@ const PATIENT_MODIFIABLE_STATUSES: ReadonlySet<AppointmentStatus> = new Set([
 ]);
 
 const NOT_MODIFIABLE_REPLY = 'Esta cita ya no se puede modificar desde aquí. Por favor, comunícate con tu profesional de la salud.';
+
+const CANCELLED_GENERIC_REPLY = '❌ Tu cita ha sido cancelada. Para agendar una nueva, por favor comunícate con tu profesional de la salud.';
 
 interface ProcessResult {
     success: boolean;
@@ -164,6 +168,36 @@ export class TwilioWebhookService {
         return true;
     }
 
+    private async buildCancellationReply(userId: string): Promise<string> {
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    displayName: true, firstName: true, lastName: true,
+                    bookingSlug: true, publicWhatsapp: true, publicPhone: true,
+                },
+            });
+            if (!user) return CANCELLED_GENERIC_REPLY;
+
+            const provider = providerDisplayName(user);
+            if (!provider) return CANCELLED_GENERIC_REPLY;
+
+            const url = bookingUrl(user.bookingSlug);
+            if (url && await bookingSettingsService.isBookingLive(userId)) {
+                return `❌ Tu cita con ${provider} quedó cancelada. Si quieres, puedes agendar una nueva aquí: ${url}`;
+            }
+
+            const whatsappDigits = user.publicWhatsapp?.replace(/\D/g, '');
+            const contact = whatsappDigits ? `https://wa.me/${whatsappDigits}` : user.publicPhone?.trim();
+            if (contact) {
+                return `❌ Tu cita con ${provider} quedó cancelada. Para agendar una nueva, comunícate con ${provider}: ${contact}`;
+            }
+        } catch (err) {
+            logger.error({ err, userId }, 'Failed to build rebooking reply after WhatsApp cancellation');
+        }
+        return CANCELLED_GENERIC_REPLY;
+    }
+
     /**
      * Cancel an upcoming appointment. Returns false when it can no longer be modified.
      */
@@ -176,10 +210,7 @@ export class TwilioWebhookService {
         );
 
         try {
-            await sendWhatsAppFreeForm(
-                phoneNumber,
-                '❌ Tu cita ha sido cancelada. Para reagendar, por favor comunícate con tu profesional de la salud.',
-            );
+            await sendWhatsAppFreeForm(phoneNumber, await this.buildCancellationReply(reminder.userId));
         } catch (err) {
             logger.error({ err, appointmentId: reminder.appointmentId }, 'Failed to send cancellation reply to patient');
         }
