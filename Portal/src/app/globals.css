@@ -2425,8 +2425,6 @@ body {
   color: var(--c-error);
 }
 
-/* A failed action from a drawer: the drawer is already closed, so the
-   message floats where it is seen instead of at the end of the page. */
 .drawer-host-error {
   position: fixed;
   top: calc(16px + env(safe-area-inset-top));

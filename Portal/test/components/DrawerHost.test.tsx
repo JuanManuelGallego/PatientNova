@@ -1,17 +1,20 @@
-import { act, createRef } from "react";
+import { act, ComponentProps, createRef } from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrawerHost, EntityActions } from "@/src/components/Drawers/DrawerHost";
+import type { RelatedDrawers } from "@/src/components/Drawers/RelatedDrawers";
 import { DrawerType } from "@/src/hooks/useDrawerNavigation";
 
+type DrawerProps = ComponentProps<typeof RelatedDrawers>;
+
 const mocks = vi.hoisted(() => ({
-  props: null as Record<string, any> | null,
+  props: null as DrawerProps | null,
   updateAppointment: vi.fn(),
   retryReminder: vi.fn(),
 }));
 
 vi.mock("@/src/components/Drawers/RelatedDrawers", () => ({
-  RelatedDrawers: (props: Record<string, any>) => {
+  RelatedDrawers: (props: DrawerProps) => {
     mocks.props = props;
     return null;
   },
@@ -25,6 +28,14 @@ vi.mock("@/src/components/Modals/TogglePatientModal", () => ({ TogglePatientModa
 vi.mock("@/src/components/Modals/EditScheduledReminderModal", () => ({ EditScheduledReminderModal: () => <div data-testid="edit-reminder-modal" /> }));
 vi.mock("@/src/components/Modals/CancelReminderModal", () => ({ CancelReminderModal: () => <div data-testid="cancel-reminder-modal" /> }));
 
+type Wired = {
+  appointmentActions: Required<NonNullable<DrawerProps["appointmentActions"]>>;
+  patientActions: Required<NonNullable<DrawerProps["patientActions"]>>;
+  reminderActions: Required<NonNullable<DrawerProps["reminderActions"]>>;
+};
+const wired = () => mocks.props as unknown as Wired;
+
+const patient = { id: "p1" } as never;
 const appt = { id: "a1" } as never;
 const reminder = { id: "r1" } as never;
 
@@ -54,7 +65,7 @@ beforeEach(() => {
 describe("DrawerHost", () => {
   it("wires every entity's actions, whichever page opened the drawer", () => {
     renderHost();
-    const p = mocks.props!;
+    const p = wired();
     expect(Object.keys(p.appointmentActions)).toEqual(expect.arrayContaining(["onEdit", "onConfirm", "onPay", "onDelete"]));
     expect(Object.keys(p.patientActions)).toEqual(expect.arrayContaining(["onEdit", "onDelete"]));
     expect(Object.keys(p.reminderActions)).toEqual(expect.arrayContaining(["onEdit", "onCancel", "onRetry"]));
@@ -62,22 +73,22 @@ describe("DrawerHost", () => {
 
   it("opens the patient modal and closes the drawer", () => {
     const { onClose } = renderHost();
-    act(() => mocks.props!.patientActions.onEdit({ id: "p1" }));
+    act(() => wired().patientActions.onEdit(patient));
     expect(screen.getByTestId("edit-patient-modal")).toBeInTheDocument();
     expect(onClose).toHaveBeenCalled();
   });
 
   it("opens the toggle modal for a patient and the cancel modal for a reminder", () => {
     renderHost();
-    act(() => mocks.props!.patientActions.onDelete({ id: "p1" }));
-    act(() => mocks.props!.reminderActions.onCancel(reminder));
+    act(() => wired().patientActions.onDelete(patient));
+    act(() => wired().reminderActions.onCancel(reminder));
     expect(screen.getByTestId("toggle-patient-modal")).toBeInTheDocument();
     expect(screen.getByTestId("cancel-reminder-modal")).toBeInTheDocument();
   });
 
   it("confirms an appointment, closes the drawer and refreshes the page", async () => {
     const { onClose, onChanged } = renderHost();
-    await act(async () => mocks.props!.appointmentActions.onConfirm(appt));
+    await act(async () => wired().appointmentActions.onConfirm(appt));
     expect(mocks.updateAppointment).toHaveBeenCalledWith("a1", { status: "CONFIRMED" });
     expect(onClose).toHaveBeenCalled();
     expect(onChanged).toHaveBeenCalledTimes(1);
@@ -85,7 +96,7 @@ describe("DrawerHost", () => {
 
   it("marks an appointment paid", async () => {
     const { onChanged } = renderHost();
-    await act(async () => mocks.props!.appointmentActions.onPay(appt));
+    await act(async () => wired().appointmentActions.onPay(appt));
     expect(mocks.updateAppointment).toHaveBeenCalledWith("a1", { paid: true });
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
@@ -93,7 +104,7 @@ describe("DrawerHost", () => {
   it("shows the server message in an alert when a confirm fails, and still refreshes", async () => {
     mocks.updateAppointment.mockRejectedValue(new Error("Conflicto de horario"));
     const { onChanged } = renderHost();
-    await act(async () => mocks.props!.appointmentActions.onConfirm(appt));
+    await act(async () => wired().appointmentActions.onConfirm(appt));
     expect(screen.getByRole("alert")).toHaveTextContent("Conflicto de horario");
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
@@ -101,16 +112,16 @@ describe("DrawerHost", () => {
   it("clears the previous error when a new action starts", async () => {
     mocks.updateAppointment.mockRejectedValueOnce(new Error("Falló"));
     renderHost();
-    await act(async () => mocks.props!.appointmentActions.onPay(appt));
+    await act(async () => wired().appointmentActions.onPay(appt));
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    await act(async () => mocks.props!.appointmentActions.onPay(appt));
+    await act(async () => wired().appointmentActions.onPay(appt));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("shows a message and refreshes when a reminder retry fails", async () => {
     mocks.retryReminder.mockRejectedValue(new Error("Canal no disponible"));
     const { onChanged } = renderHost();
-    await act(async () => mocks.props!.reminderActions.onRetry(reminder));
+    await act(async () => wired().reminderActions.onRetry(reminder));
     expect(screen.getByRole("alert")).toHaveTextContent("Canal no disponible");
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
@@ -119,12 +130,11 @@ describe("DrawerHost", () => {
     let finish!: () => void;
     mocks.updateAppointment.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
     const { onChanged } = renderHost();
-    let first!: Promise<unknown>;
     act(() => {
-      first = mocks.props!.appointmentActions.onPay(appt);
-      mocks.props!.appointmentActions.onPay(appt);
+      wired().appointmentActions.onPay(appt);
+      wired().appointmentActions.onPay(appt);
     });
-    await act(async () => { finish(); await first; });
+    await act(async () => finish());
     expect(mocks.updateAppointment).toHaveBeenCalledTimes(1);
     expect(onChanged).toHaveBeenCalledTimes(1);
   });

@@ -16,7 +16,6 @@ import { Patient } from "@/src/types/Patient";
 import { Reminder } from "@/src/types/Reminder";
 import { RelatedDrawers } from "./RelatedDrawers";
 
-/** The same actions the drawers offer, for a page's own row buttons. */
 export type EntityActions = {
   editAppointment: (appointment: Appointment) => void;
   cancelAppointment: (appointment: Appointment) => void;
@@ -29,13 +28,6 @@ export type EntityActions = {
   retryReminder: (reminder: Reminder) => Promise<void>;
 };
 
-/**
- * The drawers with every action wired, whichever page opened them. Pages pass
- * only navigation and `onChanged` (refetch their own list and stats): the
- * handlers and modals live here, so a drawer reached from a related entity
- * (a patient from an appointment) has the same buttons as one opened from its
- * own table. A page's row buttons call the same handlers through `actionsRef`.
- */
 export function DrawerHost({
   target,
   onClose,
@@ -62,8 +54,6 @@ export function DrawerHost({
   const [editReminder, setEditReminder] = useState<Reminder | null>(null);
   const [cancelReminder, setCancelReminder] = useState<Reminder | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  // The drawer closes as soon as a request starts, so a second click on the
-  // same action would send it twice: one request per action and entity.
   const [inFlight] = useState(() => new Set<string>());
 
   const changed = () => onChanged?.();
@@ -98,7 +88,6 @@ export function DrawerHost({
 
   useImperativeHandle(actionsRef, () => actions);
 
-  // A drawer action hands off to a modal or request and closes the drawer.
   const thenClose = <T,>(action: (value: T) => unknown) => (value: T) => {
     void action(value);
     onClose();
