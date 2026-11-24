@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PendingRequestsProvider } from "@/src/providers/PendingRequestsContext";
 
 const refetch = vi.fn().mockResolvedValue(undefined);
-let user: { portalEnabled: boolean; role: string } | null;
+let user: { role: string } | null;
 
 vi.mock("@/src/api/booking-requests/useFetchPendingRequestsCount", () => ({
   useFetchPendingRequestsCount: () => ({ pending: 0, refetch }),
@@ -17,7 +17,7 @@ function setVisibility(state: "visible" | "hidden") {
 
 beforeEach(() => {
   refetch.mockClear();
-  user = { portalEnabled: true, role: "ADMIN" };
+  user = { role: "ADMIN" };
 });
 afterEach(() => Reflect.deleteProperty(document, "visibilityState"));
 
@@ -35,7 +35,7 @@ describe("PendingRequestsProvider foreground refresh", () => {
   });
 
   it("does not listen when the inbox is disabled", () => {
-    user = { portalEnabled: true, role: "VIEWER" };
+    user = { role: "VIEWER" };
     render(<PendingRequestsProvider><p>x</p></PendingRequestsProvider>);
     setVisibility("visible");
     expect(refetch).not.toHaveBeenCalled();

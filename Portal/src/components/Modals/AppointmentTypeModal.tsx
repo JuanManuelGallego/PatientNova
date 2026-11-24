@@ -14,7 +14,6 @@ import {
   ERR_SAVE,
 } from "@/src/constants/ui";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { BookableOnlineCheckbox } from "@/src/components/Form/BookableOnlineCheckbox";
 
 type AppointmentTypeForm = {
@@ -36,8 +35,6 @@ export function AppointmentTypeModal({
   appointmentType?: AppointmentType | null;
 }) {
   const isEdit = !!appointmentType;
-  const { user } = useAuthContext();
-  const portalEnabled = !!user?.portalEnabled;
   const { createAppointmentType } = useCreateAppointmentType();
   const { updateAppointmentType } = useUpdateAppointmentType();
   const [saving, setSaving] = useState(false);
@@ -69,7 +66,7 @@ export function AppointmentTypeModal({
         defaultDuration: form.defaultDuration,
         defaultPrice: form.defaultPrice || null,
         color: form.color,
-        ...(portalEnabled && { bookableOnline: form.bookableOnline }),
+        bookableOnline: form.bookableOnline,
       };
       if (isEdit) {
         await updateAppointmentType(appointmentType!.id, data);
@@ -196,14 +193,12 @@ export function AppointmentTypeModal({
             </label>
           </div>
 
-          {portalEnabled && (
-            <BookableOnlineCheckbox
-              checked={form.bookableOnline}
-              onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
-              hint="Los pacientes podrán reservar este tipo de cita desde tu enlace."
-              testId="appointment-type-bookable-online-checkbox"
-            />
-          )}
+          <BookableOnlineCheckbox
+            checked={form.bookableOnline}
+            onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
+            hint="Los pacientes podrán reservar este tipo de cita desde tu enlace."
+            testId="appointment-type-bookable-online-checkbox"
+          />
 
           <div className="modal-footer">
             <button

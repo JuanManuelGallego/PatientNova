@@ -17,7 +17,6 @@ import {
   ERR_SAVE,
 } from "@/src/constants/ui";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
-import { useAuthContext } from "@/src/providers/AuthContext";
 import { BookableOnlineCheckbox } from "@/src/components/Form/BookableOnlineCheckbox";
 
 export function LocationModal({
@@ -30,8 +29,6 @@ export function LocationModal({
   location?: AppointmentLocation | null;
 }) {
   const isEdit = !!location;
-  const { user } = useAuthContext();
-  const portalEnabled = !!user?.portalEnabled;
   const { createLocation } = useCreateLocation();
   const { updateLocation } = useUpdateLocation();
   const [saving, setSaving] = useState(false);
@@ -63,7 +60,7 @@ export function LocationModal({
         color: form.color,
         isVirtual: form.isVirtual,
         instructions: form.isVirtual ? null : form.instructions.trim() || null,
-        ...(portalEnabled && { bookableOnline: form.bookableOnline }),
+        bookableOnline: form.bookableOnline,
       };
       if (isEdit) {
         await updateLocation(location!.id, data);
@@ -212,16 +209,14 @@ export function LocationModal({
             </>
           )}
 
-          {portalEnabled && (
-            <BookableOnlineCheckbox
-              checked={form.bookableOnline}
-              onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
-              hint={form.isVirtual
-                ? "Los pacientes podrán reservar videollamadas. Si tu cuenta de Google está conectada, crearemos el enlace de Meet; si no, deberás agregarlo tú en la cita."
-                : "Los pacientes podrán elegir esta ubicación al reservar desde tu enlace."}
-              testId="location-bookable-online-checkbox"
-            />
-          )}
+          <BookableOnlineCheckbox
+            checked={form.bookableOnline}
+            onChange={(checked) => setForm((f) => ({ ...f, bookableOnline: checked }))}
+            hint={form.isVirtual
+              ? "Los pacientes podrán reservar videollamadas. Si tu cuenta de Google está conectada, crearemos el enlace de Meet; si no, deberás agregarlo tú en la cita."
+              : "Los pacientes podrán elegir esta ubicación al reservar desde tu enlace."}
+            testId="location-bookable-online-checkbox"
+          />
 
           <div className="modal-footer">
             <button

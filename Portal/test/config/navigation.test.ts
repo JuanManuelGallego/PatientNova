@@ -92,13 +92,6 @@ describe("settings navigation", () => {
         ]);
     });
 
-    it("hides Reserva en línea without the portal", () => {
-        const visible = (portalEnabled: boolean) =>
-            visibleGroups(SETTINGS_NAV, { user: { portalEnabled } as User, inboxEnabled: false }).flatMap((g) => g.items).map((i) => i.id);
-        expect(visible(false)).not.toContain("booking");
-        expect(visible(true)).toContain("booking");
-    });
-
     it.each([
         [ "/settings/services", "services" ],
         [ "/settings/account", "account" ],

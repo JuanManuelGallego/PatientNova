@@ -31,7 +31,6 @@ import { requestId } from './middlewares/request-id.js';
 import { providerCors } from './middlewares/cors.js';
 import { createPortalSessionRouter, createPublicApiRouter, portalNotFound } from './portal/portal-routers.js';
 import { errorHandler } from './middlewares/error-handler.js';
-import { requirePortalEnabled } from './middlewares/require-portal-enabled.js';
 import { bookingSettingsRouter } from './booking-settings/booking-settings.routes.js';
 import { bookingRequestRouter } from './booking-requests/booking-request.routes.js';
 
@@ -46,10 +45,8 @@ app.set('trust proxy', 1);
 app.use(requestId);
 app.use(helmet());
 app.use(httpLogger);
-if (config.portal.patientEnabled) {
-    app.use('/v1/public', createPublicApiRouter(), portalNotFound);
-    app.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
-}
+app.use('/v1/public', createPublicApiRouter(), portalNotFound);
+app.use('/v1/portal', createPortalSessionRouter(), portalNotFound);
 
 // Provider (admin) API CORS: credentialed, exact allow-list.
 app.use(providerCors);
@@ -107,8 +104,8 @@ v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
 v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
-v1.use('/booking', authenticate, requirePortalEnabled, requireAdminForWrites, bookingSettingsRouter);
-v1.use('/booking-requests', authenticate, requirePortalEnabled, requireAdmin, bookingRequestRouter);
+v1.use('/booking', authenticate, requireAdminForWrites, bookingSettingsRouter);
+v1.use('/booking-requests', authenticate, requireAdmin, bookingRequestRouter);
 
 v1.use('/audit-logs', authenticate, requireAdminForWrites, auditLogRouter);
 

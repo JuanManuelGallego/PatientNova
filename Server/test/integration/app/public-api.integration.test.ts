@@ -215,10 +215,4 @@ describe('real app wiring', () => {
     expect(res.headers['access-control-allow-origin']).toBe(ALLOWED);
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
-
-  it('keeps public portal paths dark (plain 404) while ENABLE_PORTAL is off', async () => {
-    const res = await request(app).get('/v1/public/providers/any');
-    expect(res.status).toBe(404);
-    expect(res.body).toMatchObject({ success: false, error: 'Route not found' });
-  });
 });

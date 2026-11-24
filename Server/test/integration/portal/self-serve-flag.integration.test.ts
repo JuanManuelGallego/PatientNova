@@ -1,7 +1,7 @@
 import type express from 'express';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { config } from '../../../src/utils/config/config.js';
 import { userRouter } from '../../../src/users/user.routes.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';
@@ -9,11 +9,10 @@ import { createTestToken, createTestUser } from '../helpers.js';
 import { ALLOWED_ORIGIN, buildPortalApp, createLiveProvider, sessionFor } from './portal-helpers.js';
 import expressLib from 'express';
 
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const was = { ...portal };
-beforeAll(() => { portal.patientEnabled = true; });
 afterEach(() => { portal.selfServe = was.selfServe; });
-afterAll(() => { portal.patientEnabled = was.patientEnabled; portal.selfServe = was.selfServe; });
+afterAll(() => { portal.selfServe = was.selfServe; });
 
 const id = randomUUID();
 

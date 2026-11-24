@@ -30,7 +30,6 @@ function GoogleOAuthCompleteContent() {
       } catch {}
     }
     const redirected = wasRedirect && !window.opener;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (redirected) setRedirectFlow(true);
 
     if (success === "true") {

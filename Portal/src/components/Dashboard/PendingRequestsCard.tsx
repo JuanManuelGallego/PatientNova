@@ -9,7 +9,7 @@ import { fmtDateTime, fmtRelative } from "@/src/utils/TimeUtils";
 
 const FILTERS = { status: "pending" as const, page: 1, pageSize: 5 };
 
-/** Dashboard card for admins with the portal on: the next pending booking requests. */
+/** Dashboard card for admins: the next pending booking requests. */
 export function PendingRequestsCard() {
   const { enabled, pending } = usePendingRequests();
   const timezone = useDisplayTimezone();

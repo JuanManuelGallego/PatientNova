@@ -22,7 +22,7 @@ function captchaConfig() {
 }
 
 function portalAuthSecret(): string {
-  const secret = process.env.ENABLE_PORTAL === 'true' ? requireEnv('PORTAL_AUTH_SECRET') : (process.env.PORTAL_AUTH_SECRET ?? '');
+  const secret = requireEnv('PORTAL_AUTH_SECRET');
   if (secret && secret === process.env.AUTH_SECRET) throw new Error('PORTAL_AUTH_SECRET must differ from AUTH_SECRET');
   return secret;
 }
@@ -139,7 +139,6 @@ export const config = {
 
   portal: {
     url: process.env.PORTAL_URL ?? 'http://localhost:3000',
-    patientEnabled: process.env.ENABLE_PORTAL === 'true',
     selfServe: process.env.ENABLE_SELF_SERVE === 'true',
     whatsappDailyCap: positiveIntEnv('PORTAL_WHATSAPP_DAILY_CAP', 60),
   },

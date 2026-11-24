@@ -5,7 +5,6 @@ import { ProviderAlerts } from "@/src/components/Info/ProviderAlerts";
 import type { GoogleConnectionStatus } from "@/src/types/Google";
 
 let role: string | undefined = "ADMIN";
-let portalEnabled = false;
 let connection: Partial<GoogleConnectionStatus> | undefined;
 let needsLink: { count: number; appointments: { id: string; startAt: string }[] } | undefined;
 const useFetchNeedsMeetingLink = vi.fn();
@@ -19,7 +18,7 @@ vi.mock("@/src/providers/SettingsAttentionContext", () => ({
   useSettingsAttention: () => ({ sections: new Set(), report: vi.fn(), refresh: refreshAttention }),
 }));
 vi.mock("@/src/providers/AuthContext", () => ({
-  useAuthContext: () => ({ user: role ? { role, portalEnabled } : null }),
+  useAuthContext: () => ({ user: role ? { role } : null }),
 }));
 vi.mock("@/src/api/appointments/useFetchNeedsMeetingLink", () => ({
   useFetchNeedsMeetingLink: (...args: unknown[]) => useFetchNeedsMeetingLink(...args),
@@ -38,7 +37,6 @@ vi.mock("@/src/api/google/useStartGoogleOAuth", () => ({
 beforeEach(() => {
   vi.restoreAllMocks();
   role = "ADMIN";
-  portalEnabled = false;
   connection = undefined;
   needsLink = undefined;
   pendingRequests = 0;
@@ -52,7 +50,6 @@ beforeEach(() => {
 
 describe("ProviderAlerts: online bookings without a video-call link", () => {
   it("tells admins how many online bookings need a link, and when the next one is", () => {
-    portalEnabled = true;
     needsLink = { count: 2, appointments: [ { id: "a1", startAt: "2099-01-20T15:00:00.000Z" }, { id: "a2", startAt: "2099-01-21T15:00:00.000Z" } ] };
     render(<ProviderAlerts />);
     const banner = screen.getByTestId("needs-meeting-link-banner");
@@ -62,7 +59,6 @@ describe("ProviderAlerts: online bookings without a video-call link", () => {
   });
 
   it("uses the singular for one and hides when none", () => {
-    portalEnabled = true;
     needsLink = { count: 1, appointments: [ { id: "a1", startAt: "2099-01-20T15:00:00.000Z" } ] };
     const { unmount } = render(<ProviderAlerts />);
     expect(screen.getByTestId("needs-meeting-link-banner")).toHaveTextContent("1 cita reservada en línea necesita un enlace");
@@ -72,10 +68,7 @@ describe("ProviderAlerts: online bookings without a video-call link", () => {
     expect(screen.queryByTestId("needs-meeting-link-banner")).not.toBeInTheDocument();
   });
 
-  it("never asks for it with the portal off or for viewers", () => {
-    render(<ProviderAlerts />);
-    expect(useFetchNeedsMeetingLink).not.toHaveBeenCalled();
-    portalEnabled = true;
+  it("never asks for it for viewers", () => {
     role = "VIEWER";
     render(<ProviderAlerts />);
     expect(useFetchNeedsMeetingLink).not.toHaveBeenCalled();
@@ -164,24 +157,17 @@ describe("ProviderAlerts", () => {
 
 describe("ProviderAlerts: pending booking requests", () => {
   it("tells admins how many requests wait for an answer and links to the inbox", () => {
-    portalEnabled = true;
     pendingRequests = 2;
     render(<ProviderAlerts />);
     expect(screen.getByTestId("pending-requests-banner")).toHaveTextContent("2 solicitudes de cita en línea esperan tu respuesta.");
     expect(screen.getByTestId("pending-requests-link")).toHaveAttribute("href", "/requests");
   });
 
-  it("hides with none, with the portal off and for viewers", () => {
-    portalEnabled = true;
+  it("hides with none and for viewers", () => {
     const { unmount } = render(<ProviderAlerts />);
     expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();
     unmount();
     pendingRequests = 1;
-    portalEnabled = false;
-    const second = render(<ProviderAlerts />);
-    expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();
-    second.unmount();
-    portalEnabled = true;
     role = "VIEWER";
     render(<ProviderAlerts />);
     expect(screen.queryByTestId("pending-requests-banner")).not.toBeInTheDocument();

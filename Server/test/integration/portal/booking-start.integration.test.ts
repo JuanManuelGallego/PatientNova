@@ -1,6 +1,6 @@
 import type express from 'express';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn() }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
@@ -35,13 +35,11 @@ function stubSiteverify() {
 }
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean; whatsappDailyCap: number };
-const portalWas = portal.patientEnabled;
+const portal = config.portal as { whatsappDailyCap: number };
 const capWas = portal.whatsappDailyCap;
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; scheduler.enabled = schedulerWas; });
+afterAll(() => { scheduler.enabled = schedulerWas; });
 beforeEach(() => {
   app = buildPortalApp();
   scheduler.enabled = false;

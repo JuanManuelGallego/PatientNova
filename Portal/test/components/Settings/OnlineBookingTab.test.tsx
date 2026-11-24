@@ -22,7 +22,7 @@ vi.mock("@/src/providers/SettingsAttentionContext", () => ({
     useSettingsAttention: () => ({ sections: new Set(), report: reportAttention }),
 }));
 vi.mock("@/src/providers/AuthContext", () => ({
-    useAuthContext: () => ({ user: { portalEnabled: true, selfServeEnabled } }),
+    useAuthContext: () => ({ user: { selfServeEnabled } }),
 }));
 vi.mock("@/src/providers/ThemeContext", () => ({
     useTheme: () => ({ isDark: false }),

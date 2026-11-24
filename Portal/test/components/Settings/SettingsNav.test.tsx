@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsNav } from "@/src/components/Settings/SettingsNav";
 
 let pathname = "/settings/services";
-let portalEnabled = true;
 const push = vi.fn();
 let attention = new Set<string>();
 
@@ -12,11 +11,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => pathname, useRouter: () =
 vi.mock("@/src/providers/SettingsAttentionContext", () => ({
     useSettingsAttention: () => ({ sections: attention, report: vi.fn() }),
 }));
-vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => ({ user: { role: "ADMIN", portalEnabled } }) }));
+vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => ({ user: { role: "ADMIN" } }) }));
 
 beforeEach(() => {
     pathname = "/settings/services";
-    portalEnabled = true;
     push.mockReset();
     attention = new Set();
 });
@@ -32,13 +30,6 @@ describe("SettingsNav", () => {
         expect(screen.getByTestId("settings-nav-select")).toHaveValue("services");
     });
 
-    it("hides Reserva en línea from menu and dropdown without the portal", () => {
-        portalEnabled = false;
-        render(<SettingsNav />);
-        expect(screen.queryByTestId("settings-nav-booking")).toBeNull();
-        expect(within(screen.getByTestId("settings-nav-select")).queryByRole("option", { name: "Reserva en línea" })).toBeNull();
-    });
-
     it("marks the section that needs attention in menu and dropdown", () => {
         attention = new Set([ "integrations" ]);
         render(<SettingsNav />);
@@ -48,8 +39,7 @@ describe("SettingsNav", () => {
     });
 
     it("lets the dropdown reach Cuenta from a section that is not in the menu", async () => {
-        portalEnabled = false;
-        pathname = "/settings/booking";
+        pathname = "/settings/elsewhere";
         render(<SettingsNav />);
         const select = screen.getByTestId("settings-nav-select");
         expect(select).toHaveValue("");

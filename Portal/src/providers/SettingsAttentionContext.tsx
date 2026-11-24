@@ -36,7 +36,7 @@ export function SettingsAttentionProvider({ children }: { children: ReactNode })
     const { user } = useAuthContext();
     const isAdmin = isAdminRole(user?.role);
     const { data: connection, fetchConnection } = useFetchGoogleConnection(isAdmin);
-    const { settings, fetchSettings } = useFetchBookingSettings(isAdmin && !!user?.portalEnabled);
+    const { settings, fetchSettings } = useFetchBookingSettings(isAdmin);
     const [ reported, setReported ] = useState<Partial<Record<Reportable, boolean>>>({});
 
     const report = useCallback((patch: Partial<Record<Reportable, boolean>>) => {

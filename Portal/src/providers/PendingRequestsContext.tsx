@@ -8,7 +8,7 @@ import { useFetchPendingRequestsCount } from "@/src/api/booking-requests/useFetc
 const REFRESH_MS = 2 * 60_000;
 
 interface PendingRequestsValue {
-  /** Whether this user sees the inbox at all: an admin with the portal on (VIEWER would get 403). */
+  /** Whether this user sees the inbox at all: an admin (VIEWER would get 403). */
   enabled: boolean;
   pending: number;
   refetch: () => Promise<unknown>;
@@ -23,7 +23,7 @@ const PendingRequestsContext = createContext<PendingRequestsValue>({
 /** One shared count for the sidebar badge, the alert and the dashboard card, refreshed every two minutes. */
 export function PendingRequestsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
-  const enabled = !!user?.portalEnabled && isAdminRole(user.role);
+  const enabled = isAdminRole(user?.role);
   const { pending, refetch } = useFetchPendingRequestsCount(enabled);
 
   useEffect(() => {

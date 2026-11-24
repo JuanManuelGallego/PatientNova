@@ -38,7 +38,7 @@ export interface CalendarToolbarProps {
 
 type HeldSlot = import("./constants").HeldSlot;
 
-/** Optional on every view: only admins with the portal on see pending holds. */
+/** Optional on every view: only admins see pending holds. */
 interface HoldProps {
   holdByDate?: Record<string, HeldSlot[]>;
   onSelectHold?: (id: string) => void;

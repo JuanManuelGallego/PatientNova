@@ -23,11 +23,10 @@ export interface User {
     nationalId?: string | null
     bankingKey?: string | null
     consentDocument?: Document | null
-    portalEnabled?: boolean
     selfServeEnabled?: boolean
 }
 
-export type ManagedUser = Omit<User, "avatar" | "logo" | "altLogo" | "consentDocument" | "bankName" | "accountNumber" | "nationalId" | "bankingKey" | "portalEnabled" | "selfServeEnabled"> & {
+export type ManagedUser = Omit<User, "avatar" | "logo" | "altLogo" | "consentDocument" | "bankName" | "accountNumber" | "nationalId" | "bankingKey" | "selfServeEnabled"> & {
     isDeleted: boolean
     lastLoginAt: string | null
     createdAt: string

@@ -1,5 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { config } from '../../../src/utils/config/config.js';
+import { describe, expect, it } from 'vitest';
 import { ActionSource, BookingApprovalMode, BookingRequestStatus, EntityType } from '../../../generated/prisma/enums.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';
@@ -20,10 +19,6 @@ import { createTestPatient } from '../helpers.js';
 import { createLiveProvider, createPendingRequestWithin, slotStarts, PORTAL_ZONE, type LiveProvider } from '../portal/portal-helpers.js';
 import { DateTime } from 'luxon';
 
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
 
 const HOUR_MS = 3_600_000;
 const DURATION_MIN = 60;

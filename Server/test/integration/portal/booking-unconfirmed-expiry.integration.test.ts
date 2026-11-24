@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn() }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
@@ -15,12 +15,9 @@ import { bookingStartService } from '../../../src/portal/booking-start.service.j
 import { createLiveProvider, createPendingRequestWithin, slotStarts, type LiveProvider } from './portal-helpers.js';
 import { withProviderLock } from '../../../src/utils/prisma/provider-lock.js';
 
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; scheduler.enabled = schedulerWas; });
+afterAll(() => { scheduler.enabled = schedulerWas; });
 beforeEach(() => {
   scheduler.enabled = true;
   mocks.dispatch.mockReset().mockResolvedValue({ success: true, messageSid: 'msg-1' });

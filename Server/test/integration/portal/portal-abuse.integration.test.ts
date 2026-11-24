@@ -11,11 +11,11 @@ import { ALLOWED_ORIGIN, buildPortalApp } from './portal-helpers.js';
 const FIFTEEN_MIN_LIMITS = { booking: 10, confirm: 20, change: 10 } as const;
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const portalWas = { ...portal };
 
-beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
-afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
+beforeAll(() => { portal.selfServe = true; });
+afterAll(() => { portal.selfServe = portalWas.selfServe; });
 beforeEach(() => { app = buildPortalApp(); });
 
 function expectJson429(res: request.Response) {

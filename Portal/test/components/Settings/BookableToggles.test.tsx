@@ -7,10 +7,9 @@ import { AppointmentTypeModal } from "@/src/components/Modals/AppointmentTypeMod
 const createLocation = vi.fn();
 const updateLocation = vi.fn();
 const createAppointmentType = vi.fn();
-let portalEnabled = true;
 
 vi.mock("@/src/providers/AuthContext", () => ({
-    useAuthContext: () => ({ user: { role: "ADMIN", portalEnabled } }),
+    useAuthContext: () => ({ user: { role: "ADMIN" } }),
 }));
 vi.mock("@/src/hooks/useFocusTrap", () => ({
     useFocusTrap: () => ({ ref: { current: null }, handleKeyDown: vi.fn() }),
@@ -22,27 +21,9 @@ vi.mock("@/src/api/appointment-types/useUpdateAppointmentType", () => ({ useUpda
 
 beforeEach(() => {
     vi.clearAllMocks();
-    portalEnabled = true;
 });
 
 describe("LocationModal bookable toggle", () => {
-    it("is hidden and never sent when the portal is off", async () => {
-        portalEnabled = false;
-        render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Centro", isVirtual: false, address: "x", instructions: "y" }} />);
-        expect(screen.queryByTestId("location-bookable-online-checkbox")).not.toBeInTheDocument();
-        await userEvent.click(screen.getByTestId("location-modal-submit-button"));
-        expect(updateLocation.mock.calls[ 0 ][ 1 ]).not.toHaveProperty("bookableOnline");
-    });
-
-    it("never sends the flag when made virtual with the portal off", async () => {
-        portalEnabled = false;
-        render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} location={{ id: "l1", name: "Sala", isVirtual: false, address: "x", instructions: "y", bookableOnline: true }} />);
-        await userEvent.click(screen.getByTestId("location-virtual-checkbox"));
-        await userEvent.click(screen.getByTestId("location-modal-submit-button"));
-        expect(updateLocation).toHaveBeenCalledWith("l1", expect.objectContaining({ isVirtual: true }));
-        expect(updateLocation.mock.calls[ 0 ][ 1 ]).not.toHaveProperty("bookableOnline");
-    });
-
     it("sends bookableOnline for an in-person location", async () => {
         render(<LocationModal onClose={vi.fn()} onSaved={vi.fn()} />);
         await userEvent.type(screen.getByTestId("location-name-input"), "Centro");
@@ -72,11 +53,5 @@ describe("AppointmentTypeModal bookable toggle", () => {
         await userEvent.click(screen.getByTestId("appointment-type-bookable-online-checkbox"));
         await userEvent.click(screen.getByTestId("appointment-type-submit-button"));
         expect(createAppointmentType).toHaveBeenCalledWith(expect.objectContaining({ bookableOnline: true }));
-    });
-
-    it("is hidden when the portal is off", () => {
-        portalEnabled = false;
-        render(<AppointmentTypeModal onClose={vi.fn()} onSaved={vi.fn()} />);
-        expect(screen.queryByTestId("appointment-type-bookable-online-checkbox")).not.toBeInTheDocument();
     });
 });

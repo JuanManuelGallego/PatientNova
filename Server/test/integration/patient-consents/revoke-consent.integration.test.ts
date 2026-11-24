@@ -1,9 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: vi.fn().mockResolvedValue({ success: true, messageSid: 'msg-1' }) }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { config } from '../../../src/utils/config/config.js';
 import { auditLogService } from '../../../src/audit-log/audit-log.service.js';
 import { ensureCurrentConsent, hasCurrentConsent } from '../../../src/patient-consents/patient-consent.service.js';
 import { restorePatientAccess, revokePatientConsents } from '../../../src/patient-consents/consent-revocation.service.js';
@@ -203,11 +202,6 @@ describe('revokePatientConsents', () => {
   });
 
   describe('live booking requests', () => {
-    const portal = config.portal as { patientEnabled: boolean };
-    const wasEnabled = portal.patientEnabled;
-    beforeAll(() => { portal.patientEnabled = true; });
-    afterAll(() => { portal.patientEnabled = wasEnabled; });
-
     it('cancels the live requests sent from the patient\'s contact, and leaves others alone', async () => {
       const provider = await createLiveProvider();
       const patient = await createTestPatient(provider.id);

@@ -152,7 +152,7 @@ export default function RequestsPage() {
   const { enabled } = usePendingRequests();
   const router = useRouter();
 
-  // VIEWERs and providers with the portal off have no inbox (the API answers 403/404): send them home instead.
+  // VIEWERs have no inbox (the API answers 403): send them home instead.
   useEffect(() => {
     if (!enabled) router.replace("/dashboard");
   }, [ enabled, router ]);

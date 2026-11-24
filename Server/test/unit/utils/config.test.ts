@@ -15,13 +15,11 @@ describe('config.auth.portalJwtSecret', () => {
   });
 
   it('requires PORTAL_AUTH_SECRET when the portal is enabled', async () => {
-    vi.stubEnv('ENABLE_PORTAL', 'true');
     vi.stubEnv('PORTAL_AUTH_SECRET', '');
     await expect(loadConfig()).rejects.toThrow('PORTAL_AUTH_SECRET');
   });
 
   it('accepts a distinct portal secret', async () => {
-    vi.stubEnv('ENABLE_PORTAL', 'true');
     vi.stubEnv('PORTAL_AUTH_SECRET', 'distinct-portal-secret');
     expect((await loadConfig()).auth.portalJwtSecret).toBe('distinct-portal-secret');
   });

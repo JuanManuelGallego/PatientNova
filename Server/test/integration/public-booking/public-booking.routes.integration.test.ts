@@ -21,7 +21,6 @@ const ALLOWED = 'http://localhost:3000';
 const TZ = 'America/Bogota';
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
 
-// Wired like app.ts with ENABLE_PORTAL on (the real app reads the flag at import, and it is off in tests).
 function buildApp() {
   const a = express();
   a.set('trust proxy', 1);
@@ -33,10 +32,10 @@ function buildApp() {
 }
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const portalWas = { ...portal };
-beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
-afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
+beforeAll(() => { portal.selfServe = true; });
+afterAll(() => { portal.selfServe = portalWas.selfServe; });
 // A fresh app per test: the public limiter is in-memory per router instance (60/min).
 beforeEach(() => { app = buildApp(); });
 
@@ -268,16 +267,6 @@ describe('GET /v1/public/providers', () => {
     expect(JSON.stringify(res.body)).not.toContain(notOptedIn.slug);
   });
 
-  it('lists nothing while the portal is off', async () => {
-    const p = await createLiveProvider();
-    await prisma.user.update({ where: { id: p.id }, data: { searchIndexable: true } });
-    portal.patientEnabled = false;
-    try {
-      expect((await get('')).body.data).toEqual({ providers: [] });
-    } finally {
-      portal.patientEnabled = true;
-    }
-  });
 });
 
 describe('GET /v1/public/providers/:slug/avatar and /logo', () => {

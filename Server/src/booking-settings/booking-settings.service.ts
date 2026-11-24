@@ -54,7 +54,6 @@ function toResponse(settings: Settings, readiness: BookingReadiness) {
 }
 
 async function reachableState(userId: string, tx?: TransactionClient) {
-  if (!config.portal.patientEnabled) return null;
   const state = await bookingSettingsRepository.getBookingState(userId, tx);
   if (!state || state.status !== AdminStatus.ACTIVE || state.deletedAt !== null || state.bookingSlug === null) return null;
   return state;

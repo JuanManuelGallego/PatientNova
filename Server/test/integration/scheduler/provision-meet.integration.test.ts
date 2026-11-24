@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn(), createMeetingSpace: vi.fn() }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
@@ -19,10 +19,6 @@ import { ActionSource, AdminStatus, AppointmentStatus, Channel, MeetingStatus } 
 import { createTestLocation, unique } from '../helpers.js';
 import { bookViaConfirmation, createLiveProvider, sessionFor, slotStarts } from '../portal/portal-helpers.js';
 
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });

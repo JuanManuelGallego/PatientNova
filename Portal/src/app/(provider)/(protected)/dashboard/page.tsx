@@ -7,7 +7,6 @@ import { useFetchAppointmentsStats } from "@/src/api/appointments/useFetchAppoin
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { useFetchRemindersStats } from "@/src/api/reminders/useFetchRemindersStats";
 import { useFetchPatientsStats } from "@/src/api/patients/useFetchPatientsStats";
-import { useFetchReminders } from "@/src/api/reminders/useFetchReminders";
 import PageLayout from "@/src/components/PageLayout";
 import { PageHeader } from "@/src/components/PageHeader";
 import { InstallHint } from "@/src/components/Info/InstallHint";
@@ -15,11 +14,8 @@ import { StatCard } from "@/src/components/Info/StatCard";
 import { PendingRequestsCard } from "@/src/components/Dashboard/PendingRequestsCard";
 import { PatientStatus } from "@/src/types/Patient";
 import { getInitials, getAvatarColor } from "@/src/utils/AvatarHelper";
-import { fmtDateTime, fmtRelative, todayFormattedString, todayString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
-import {
-  AppointmentStatusPill,
-  ReminderStatusPill,
-} from "@/src/components/Info/StatusPill";
+import { fmtDateTime, todayFormattedString, todayString, zonedDateTimeParts } from "@/src/utils/TimeUtils";
+import { AppointmentStatusPill } from "@/src/components/Info/StatusPill";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import {
   Users,
@@ -29,13 +25,12 @@ import {
   ClipboardList,
   Settings,
   CalendarCheck,
-  CheckCircle,
   DollarSign,
   AlertCircle,
 } from "lucide-react";
-import { CHANNEL_ICONS, DETAIL_ICONS } from "@/src/config/icons";
+import { DETAIL_ICONS } from "@/src/config/icons";
 import { PatientModal } from "@/src/components/Modals/PatientModal";
-import { CHANNEL_CFG, ReminderStatus } from "@/src/types/Reminder";
+import { ReminderStatus } from "@/src/types/Reminder";
 import { toUtcRangeFromLocalDay } from "@/src/components/Calendar/constants";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { settingsHref } from "@/src/config/navigation";
@@ -67,19 +62,6 @@ export default function DashboardPage() {
   }, [ timezone ]);
   const { appointments: todayAppts, loading: loadingAppts } =
     useFetchAppointments(todayFilters);
-
-  const reminderFilters = useMemo(
-    () => ({
-      status: [ ReminderStatus.PENDING, ReminderStatus.QUEUED ],
-      page: 1,
-      pageSize: 5,
-      orderBy: "sendAt" as const,
-      order: "asc" as const,
-    }),
-    [],
-  );
-  const { reminders: activeReminders, loading: loadingReminders } =
-    useFetchReminders(reminderFilters);
 
   const statsLoading =
     loadingPatientStats || loadingApptStats || loadingReminderStats;
@@ -169,8 +151,8 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Ingresos"
-              value={apptStats ? fmtMoney(apptStats.paidRevenue) : undefined}
-              sub="total histórico cobrado"
+              value={apptStats ? fmtMoney(apptStats.paidRevenueThisMonth) : undefined}
+              sub="total cobrado este mes"
               accent="var(--c-success)"
               icon={DollarSign}
             />
@@ -246,75 +228,6 @@ export default function DashboardPage() {
                         {a.appointmentLocation.name}
                       </div>
                       <AppointmentStatusPill status={a.status} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="dash-card">
-          <div className="dash-card__header">
-            <div>
-              <h2 className="dash-card__title">Recordatorios activos</h2>
-              <p className="dash-card__sub">{pendingReminders ?? "—"} pendientes este mes</p>
-            </div>
-            <Link href="/reminders" className="dash-card__link">
-              Ver todos →
-            </Link>
-          </div>
-          <div className="dash-card__body">
-            {loadingReminders ? (
-              <div className="dash-skeleton-list">
-                {[ 1, 2, 3 ].map((i) => (
-                  <div key={i} className="dash-skeleton-row">
-                    <div className="skeleton-bar" style={{ width: "100%" }} />
-                  </div>
-                ))}
-              </div>
-            ) : activeReminders.length === 0 ? (
-              <div className="dash-empty">
-                <span
-                  className="dash-empty__icon"
-                  role="img"
-                  aria-label="completado"
-                >
-                  <CheckCircle size={24} />
-                </span>
-                <span className="dash-empty__text">
-                  No hay recordatorios pendientes
-                </span>
-              </div>
-            ) : (
-              <div className="dash-list">
-                {activeReminders.map((r) => (
-                  <Link
-                    key={r.id}
-                    href="/reminders"
-                    className="dash-list-item dash-list-item-link"
-                  >
-                    <div className="dash-list-item__left">
-                      <span
-                        className="dash-channel-icon"
-                        role="img"
-                        aria-label={CHANNEL_CFG[ r.channel ].label}
-                      >
-                        {(() => {
-                          const CI = CHANNEL_ICONS[ r.channel ];
-                          return <CI size={16} />;
-                        })()}
-                      </span>
-                      <div>
-                        <div className="dash-list-item__name">
-                          {r.patient?.name ?? "—"} {r.patient?.lastName ?? ""}
-                        </div>
-                        <div className="dash-list-item__meta">
-                          {r.to} · {fmtRelative(r.sendAt)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dash-list-item__right">
-                      <ReminderStatusPill status={r.status} />
                     </div>
                   </Link>
                 ))}

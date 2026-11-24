@@ -23,8 +23,8 @@ export function ProviderAlerts() {
   return (
     <>
       <GoogleExpiredAlert />
-      {user?.portalEnabled && <PendingRequestsAlert />}
-      {user?.portalEnabled && <NeedsMeetingLinkAlert />}
+      <PendingRequestsAlert />
+      <NeedsMeetingLinkAlert />
     </>
   );
 }
