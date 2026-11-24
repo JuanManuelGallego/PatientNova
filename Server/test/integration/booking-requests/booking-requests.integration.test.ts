@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ActionSource, BookingApprovalMode, BookingRequestStatus, EntityType } from '../../../generated/prisma/enums.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 import { portalPatientAuditContext } from '../../../src/audit-log/audit-actors.js';

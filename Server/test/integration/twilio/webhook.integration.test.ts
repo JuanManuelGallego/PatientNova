@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the Twilio SDK boundary so no real network calls are made.
 vi.mock('../../../src/twilio/client.js', () => ({

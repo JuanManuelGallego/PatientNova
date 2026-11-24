@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: vi.fn().mockResolvedValue({ success: true, messageSid: 'msg-1' }) }));
 

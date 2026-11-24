@@ -1,7 +1,7 @@
 import type express from 'express';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { config } from '../../../src/utils/config/config.js';
 import { userRouter } from '../../../src/users/user.routes.js';
 import { errorHandler } from '../../../src/middlewares/error-handler.js';

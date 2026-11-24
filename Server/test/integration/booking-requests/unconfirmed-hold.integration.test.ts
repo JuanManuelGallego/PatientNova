@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { AppointmentStatus, BookingRequestStatus } from '../../../generated/prisma/enums.js';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { AppointmentHoldConflictError } from '../../../src/appointments/appointment.errors.js';
