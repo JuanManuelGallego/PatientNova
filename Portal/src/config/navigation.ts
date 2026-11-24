@@ -132,7 +132,7 @@ export const SETTINGS_NAV: NavGroup<SettingsSectionId>[] = [
         items: [
             { id: "practice", path: settingsHref("practice"), label: "Consultorio" },
             { id: "services", path: settingsHref("services"), label: "Servicios" },
-            { id: "booking", path: settingsHref("booking"), label: "Reserva en línea", visible: (ctx) => !!ctx.user?.portalEnabled },
+            { id: "booking", path: settingsHref("booking"), label: "Reserva en línea" },
         ],
     },
     {

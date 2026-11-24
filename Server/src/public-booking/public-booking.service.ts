@@ -81,7 +81,6 @@ export const publicBookingService = {
   },
 
   async listIndexable(): Promise<{ providers: Array<{ slug: string }> }> {
-    if (!config.portal.patientEnabled) return { providers: [] };
     const candidates = await publicBookingRepository.listSearchIndexable();
     const live = await Promise.all(candidates.map((c) => bookingSettingsService.isBookingLive(c.id)));
     return { providers: candidates.filter((_, i) => live[i]).map((c) => ({ slug: c.bookingSlug! })) };

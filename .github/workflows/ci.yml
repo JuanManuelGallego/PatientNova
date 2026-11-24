@@ -80,7 +80,6 @@ jobs:
       GOOGLE_CLIENT_SECRET: dummy-google-client-secret
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:3001/v1/google/oauth/callback
       PORTAL_URL: http://localhost:3000
-      ENABLE_PORTAL: "false"
       ENABLE_SELF_SERVE: "false"
       CAPTCHA_SECRET: 1x0000000000000000000000000000000AA
     steps:
@@ -144,7 +143,6 @@ jobs:
       RATE_LIMIT_MAX: "100000"
       PUBLIC_RATE_LIMIT_MAX: "100000"
       ENABLE_SCHEDULER: "false"
-      ENABLE_PORTAL: "true"
       ENABLE_SELF_SERVE: "false"
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       ADMIN_EMAIL: e2e-admin@example.com

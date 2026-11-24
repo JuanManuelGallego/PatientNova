@@ -27,10 +27,10 @@ const ALLOWED = ALLOWED_ORIGIN;
 const DEFAULT_POLICY = '2026-10-19';
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const portalWas = { ...portal };
-beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
-afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
+beforeAll(() => { portal.selfServe = true; });
+afterAll(() => { portal.selfServe = portalWas.selfServe; });
 beforeEach(() => {
   app = buildPortalApp();
   policy.version = DEFAULT_POLICY;
@@ -132,7 +132,7 @@ describe('requirePortalSession', () => {
     }
   });
 
-  it('answers 401 once the provider is no longer reachable (deleted, inactive, no slug, portal off)', async () => {
+  it('answers 401 once the provider is no longer reachable (deleted, inactive, no slug)', async () => {
     const deleted = await createLiveProvider();
     const inactive = await createLiveProvider();
     const slugless = await createLiveProvider();
@@ -146,14 +146,6 @@ describe('requirePortalSession', () => {
     expect((await getSession(sInactive)).status).toBe(401);
     expect((await getSession(sSlugless)).status).toBe(401);
 
-    const live = await createLiveProvider();
-    const sLive = sessionFor(live.id, unique('p@test.local'));
-    portal.patientEnabled = false;
-    try {
-      expect((await getSession(sLive)).status).toBe(401);
-    } finally {
-      portal.patientEnabled = true;
-    }
   });
 });
 

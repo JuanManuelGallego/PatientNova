@@ -9,7 +9,6 @@ vi.mock('../../../src/twilio/client.js', () => ({
 }));
 
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
-import { config } from '../../../src/utils/config/config.js';
 import { sendWhatsAppFreeForm } from '../../../src/twilio/client.js';
 import { twilioWebhookService } from '../../../src/twilio/webhook.service.js';
 import { appointmentRepository } from '../../../src/appointments/appointment.repository.js';
@@ -156,17 +155,8 @@ describe('twilioWebhookService (integration)', () => {
   });
 
   describe('rebooking reply after a cancellation', () => {
-    const portal = config.portal as { patientEnabled: boolean };
-    let portalWas: boolean;
-
     beforeEach(() => {
-      portalWas = portal.patientEnabled;
-      // .env.test runs with ENABLE_PORTAL=false, which alone would make isBookingLive false.
-      portal.patientEnabled = true;
       vi.mocked(sendWhatsAppFreeForm).mockClear();
-    });
-    afterEach(() => {
-      portal.patientEnabled = portalWas;
     });
 
     async function makeBookable(slug: string, extra: Record<string, unknown> = {}) {

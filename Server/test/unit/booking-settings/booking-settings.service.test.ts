@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { bookingSettingsService } from '../../../src/booking-settings/booking-settings.service.js';
 import { BookingAvailabilityRequiredError, BookingLeadExceedsHorizonError, BookingNotReadyError, BookingSlugTakenError } from '../../../src/booking-settings/booking-settings.errors.js';
 
-const portal = vi.hoisted(() => ({ url: 'https://portal.test', patientEnabled: true }));
+const portal = vi.hoisted(() => ({ url: 'https://portal.test' }));
 vi.mock('../../../src/utils/config/config.js', () => ({ config: { portal } }));
 
 vi.mock('../../../src/booking-settings/booking-settings.repository.js', () => ({
@@ -65,7 +65,6 @@ const ready = { hasSlug: true, hasLegalIdentity: true, hasAvailability: true, ha
 
 beforeEach(() => {
   vi.clearAllMocks();
-  portal.patientEnabled = true;
   repo.getSettings.mockResolvedValue({ ...settings });
   repo.getReadiness.mockResolvedValue({ ...ready });
   repo.updateSettings.mockImplementation(async (_u, dto) => ({ ...settings, ...dto }) as any);
@@ -183,14 +182,6 @@ describe('bookingSettingsService.isBookingLive', () => {
     repo.getBookingState.mockResolvedValue({ ...state, ...override } as any);
     await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
   });
-
-  it('is not live for an unknown provider or with ENABLE_PORTAL off', async () => {
-    repo.getBookingState.mockResolvedValue(null);
-    await expect(bookingSettingsService.isBookingLive('nope')).resolves.toBe(false);
-    repo.getBookingState.mockResolvedValue({ ...state });
-    portal.patientEnabled = false;
-    await expect(bookingSettingsService.isBookingLive('user-1')).resolves.toBe(false);
-  });
 });
 
 describe('bookingSettingsService.isPortalReachable', () => {
@@ -214,14 +205,6 @@ describe('bookingSettingsService.isPortalReachable', () => {
     [ 'slug-less', { bookingSlug: null } ],
   ])('is not reachable for a %s provider', async (_label, override) => {
     repo.getBookingState.mockResolvedValue({ ...state, ...override } as any);
-    await expect(bookingSettingsService.isPortalReachable('user-1')).resolves.toBe(false);
-  });
-
-  it('is not reachable for an unknown provider or with ENABLE_PORTAL off', async () => {
-    repo.getBookingState.mockResolvedValue(null);
-    await expect(bookingSettingsService.isPortalReachable('nope')).resolves.toBe(false);
-    repo.getBookingState.mockResolvedValue({ ...state });
-    portal.patientEnabled = false;
     await expect(bookingSettingsService.isPortalReachable('user-1')).resolves.toBe(false);
   });
 });

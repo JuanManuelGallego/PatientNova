@@ -38,12 +38,9 @@ function stubSiteverify() {
 }
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; scheduler.enabled = schedulerWas; });
+afterAll(() => { scheduler.enabled = schedulerWas; });
 beforeEach(() => {
   app = buildPortalApp();
   scheduler.enabled = false;

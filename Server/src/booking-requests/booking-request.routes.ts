@@ -12,7 +12,7 @@ import {
   type ListBookingRequestsQuery,
 } from './booking-request.schemas.js';
 
-/** Mounted with `authenticate`, `requirePortalEnabled` and `requireAdmin` (VIEWER gets 403); cookie writes need CSRF. */
+/** Mounted with `authenticate` and `requireAdmin` (VIEWER gets 403); cookie writes need CSRF. */
 export const bookingRequestRouter = Router();
 
 /** GET /booking-requests/count — live PENDING requests, for the sidebar badge and the alert. */

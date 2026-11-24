@@ -28,7 +28,6 @@ import {
   NAV_ICONS,
 } from "@/src/config/icons";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
-import { useAuthContext } from "@/src/providers/AuthContext";
 
 const DRAWER_PREVIEW_TAKE = 10;
 
@@ -63,7 +62,6 @@ export function PatientDrawer({
   onViewReminder?: (reminder: NonNullable<Patient["reminders"]>[number]) => void;
 }) {
   const timezone = useDisplayTimezone();
-  const { user } = useAuthContext();
   const { patient: patientWithRelations, error } = useFetchPatient(initialPatient.id, {
     take: DRAWER_PREVIEW_TAKE,
   });
@@ -289,15 +287,13 @@ export function PatientDrawer({
         <OverlayLink href={activityHref({ entityId: patient.id })} className="drawer-link">
           <DETAIL_ICONS.history size={15} aria-hidden="true" /> Ver registros de actividad
         </OverlayLink>
-        {user?.portalEnabled && (
-          <OverlayLink
-            href={activityHref({ portalPatientId: patient.id })}
-            className="drawer-link"
-            data-testid="patient-drawer-portal-activity-link"
-          >
-            <DETAIL_ICONS.history size={15} aria-hidden="true" /> Actividad en el portal
-          </OverlayLink>
-        )}
+        <OverlayLink
+          href={activityHref({ portalPatientId: patient.id })}
+          className="drawer-link"
+          data-testid="patient-drawer-portal-activity-link"
+        >
+          <DETAIL_ICONS.history size={15} aria-hidden="true" /> Actividad en el portal
+        </OverlayLink>
       </Section>
     </DrawerShell>
   );

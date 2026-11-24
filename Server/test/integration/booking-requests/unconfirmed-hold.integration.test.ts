@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { config } from '../../../src/utils/config/config.js';
 import { AppointmentStatus, BookingRequestStatus } from '../../../generated/prisma/enums.js';
 import { appointmentService } from '../../../src/appointments/appointment.service.js';
 import { AppointmentHoldConflictError } from '../../../src/appointments/appointment.errors.js';
@@ -14,10 +13,6 @@ import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createLiveProvider, slotStarts, PORTAL_ZONE, type LiveProvider } from '../portal/portal-helpers.js';
 import { DateTime } from 'luxon';
 
-const portal = config.portal as { patientEnabled: boolean };
-const portalWas = portal.patientEnabled;
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = portalWas; });
 
 const HOUR = 3_600_000;
 

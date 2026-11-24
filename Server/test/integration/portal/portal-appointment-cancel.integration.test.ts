@@ -40,10 +40,10 @@ import {
 } from './portal-helpers.js';
 
 let app: express.Express;
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const portalWas = { ...portal };
-beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
-afterAll(() => { portal.patientEnabled = portalWas.patientEnabled; portal.selfServe = portalWas.selfServe; });
+beforeAll(() => { portal.selfServe = true; });
+afterAll(() => { portal.selfServe = portalWas.selfServe; });
 const scheduler = config.scheduler as { enabled: boolean };
 const schedulerWas = scheduler.enabled;
 afterAll(() => { scheduler.enabled = schedulerWas; });

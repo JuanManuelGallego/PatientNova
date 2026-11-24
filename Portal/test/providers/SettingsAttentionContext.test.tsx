@@ -3,14 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsAttentionProvider, attentionSections, useSettingsAttention } from "@/src/providers/SettingsAttentionContext";
 
 let role = "ADMIN";
-let portalEnabled = true;
 let googleStatus: string | undefined = "expired";
 const googleHook = vi.fn();
 const bookingHook = vi.fn();
 const fetchConnection = vi.fn();
 const fetchSettings = vi.fn();
 
-vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => ({ user: { role, portalEnabled } }) }));
+vi.mock("@/src/providers/AuthContext", () => ({ useAuthContext: () => ({ user: { role } }) }));
 vi.mock("@/src/api/google/useFetchGoogleConnection", () => ({
     useFetchGoogleConnection: (enabled: boolean) => {
         googleHook(enabled);
@@ -26,7 +25,6 @@ vi.mock("@/src/api/booking/useFetchBookingSettings", () => ({
 
 beforeEach(() => {
     role = "ADMIN";
-    portalEnabled = true;
     googleStatus = "expired";
     googleHook.mockReset();
     bookingHook.mockReset();
@@ -72,12 +70,6 @@ describe("SettingsAttentionProvider", () => {
         expect(googleHook).toHaveBeenCalledWith(false);
         expect(bookingHook).toHaveBeenCalledWith(false);
         expect(screen.getByTestId("sections")).toBeEmptyDOMElement();
-    });
-
-    it("skips booking settings when the portal is off", () => {
-        portalEnabled = false;
-        renderProvider();
-        expect(bookingHook).toHaveBeenCalledWith(false);
     });
 
     it("lets a page clear or raise a section without a reload", () => {

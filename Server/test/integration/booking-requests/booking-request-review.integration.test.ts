@@ -1,7 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), send: vi.fn(), email: vi.fn() }));
 vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.dispatch }));
@@ -9,7 +9,6 @@ vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mo
 vi.mock('../../../src/brevo/transactional.js', () => ({ sendTransactionalEmail: mocks.email }));
 
 import { authenticate, requireAdmin, requireAdminForWrites } from '../../../src/middlewares/authenticate.js';
-import { requirePortalEnabled } from '../../../src/middlewares/require-portal-enabled.js';
 import { bookingRequestRouter } from '../../../src/booking-requests/booking-request.routes.js';
 import { appointmentRouter } from '../../../src/appointments/appointment.routes.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
@@ -35,11 +34,9 @@ import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createTestPatient, createTestToken, createTestUser, csrfHeaders, unique } from '../helpers.js';
 import { createLiveProvider, createPendingRequestWithin, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
 
-const portal = config.portal as { patientEnabled: boolean };
 const scheduler = config.scheduler as { enabled: boolean };
-const was = { portal: portal.patientEnabled, scheduler: scheduler.enabled };
-beforeAll(() => { portal.patientEnabled = true; });
-afterAll(() => { portal.patientEnabled = was.portal; scheduler.enabled = was.scheduler; });
+const was = { scheduler: scheduler.enabled };
+afterAll(() => { scheduler.enabled = was.scheduler; });
 
 beforeEach(() => {
   scheduler.enabled = false;
@@ -54,7 +51,7 @@ const HOUR = 3_600_000;
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-app.use('/v1/booking-requests', authenticate, requirePortalEnabled, requireAdmin, bookingRequestRouter);
+app.use('/v1/booking-requests', authenticate, requireAdmin, bookingRequestRouter);
 app.use('/v1/appointments', authenticate, requireAdminForWrites, appointmentRouter);
 
 interface Provider extends LiveProvider { email: string; role: string }
@@ -122,7 +119,7 @@ describe('GET /v1/booking-requests', () => {
     expect(res.body.data.data.map((r: { id: string }) => r.id)).toEqual([ first.id ]);
   });
 
-  it('is admin-only, tenant-scoped and hidden while the portal is off', async () => {
+  it('is admin-only and tenant-scoped', async () => {
     const p = await provider();
     const req = await seedRequest(p);
     const viewer = await createTestUser({ role: AdminRole.VIEWER });
@@ -133,12 +130,6 @@ describe('GET /v1/booking-requests', () => {
     expect((await approve(other as unknown as Provider, req.id)).status).toBe(404);
     expect((await request(app).get(api).set(bearer(other))).body.data.data).toEqual([]);
 
-    portal.patientEnabled = false;
-    try {
-      expect((await request(app).get(api).set(bearer(p))).status).toBe(404);
-    } finally {
-      portal.patientEnabled = true;
-    }
   });
 
   it('requires CSRF on cookie-authenticated writes', async () => {

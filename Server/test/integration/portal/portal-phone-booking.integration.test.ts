@@ -8,7 +8,6 @@ vi.mock('../../../src/scheduler/dispatch.js', () => ({ dispatchMessage: mocks.di
 vi.mock('../../../src/scheduler/pg-boss.js', () => ({ getBoss: () => ({ send: mocks.send }) }));
 
 import { authenticate, requireAdmin } from '../../../src/middlewares/authenticate.js';
-import { requirePortalEnabled } from '../../../src/middlewares/require-portal-enabled.js';
 import { bookingRequestRouter } from '../../../src/booking-requests/booking-request.routes.js';
 import { auditLogRouter } from '../../../src/audit-log/audit-log.routes.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
@@ -34,10 +33,10 @@ import {
   type LiveProvider, type TestSession,
 } from './portal-helpers.js';
 
-const portal = config.portal as { patientEnabled: boolean; selfServe: boolean };
+const portal = config.portal as { selfServe: boolean };
 const scheduler = config.scheduler as { enabled: boolean };
 const was = { portal: { ...portal }, scheduler: scheduler.enabled };
-beforeAll(() => { portal.patientEnabled = true; portal.selfServe = true; });
+beforeAll(() => { portal.selfServe = true; });
 afterAll(() => { Object.assign(portal, was.portal); scheduler.enabled = was.scheduler; });
 
 let app: express.Express;
@@ -342,7 +341,7 @@ describe('provider inbox with a phone request', () => {
   const inbox = express();
   inbox.use(express.json());
   inbox.use(cookieParser());
-  inbox.use('/v1/booking-requests', authenticate, requirePortalEnabled, requireAdmin, bookingRequestRouter);
+  inbox.use('/v1/booking-requests', authenticate, requireAdmin, bookingRequestRouter);
 
   async function setup() {
     const provider = await createLiveProvider();

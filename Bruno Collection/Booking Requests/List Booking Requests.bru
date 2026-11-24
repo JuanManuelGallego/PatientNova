@@ -24,7 +24,7 @@ script:post-response {
 }
 
 docs {
-  The inbox, one tab at a time (ADMIN/SUPER_ADMIN only; VIEWER gets 403; 404 with the portal off).
+  The inbox, one tab at a time (ADMIN/SUPER_ADMIN only; VIEWER gets 403).
   `status`: `pending` (live holds, soonest first), `resolved` (approved, rejected or cancelled by the
   patient) or `expired`. `status` on each row is effective: a PENDING request past `holdExpiresAt`
   reads EXPIRED even before the sweep flips it. Optional `from`/`to` limit the requested start

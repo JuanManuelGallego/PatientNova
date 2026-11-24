@@ -3,19 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RemindersTab } from "@/src/components/Settings/RemindersTab";
 
-let portalEnabled = false;
 let userOverrides: Record<string, unknown> = {};
 const autosave = { saving: false, status: "idle" as const, error: null as string | null, schedule: vi.fn(), flush: vi.fn() };
 
 vi.mock("@/src/api/users/useUpdateProfile", () => ({ useAutoSaveProfile: () => autosave }));
 vi.mock("@/src/providers/AuthContext", () => ({
     useAuthContext: () => ({
-        user: { email: "ana@example.com", reminderActive: true, reminderChannel: "WHATSAPP", whatsappNumber: "", phoneNumber: "", portalEnabled, ...userOverrides },
+        user: { email: "ana@example.com", reminderActive: true, reminderChannel: "WHATSAPP", whatsappNumber: "", phoneNumber: "", ...userOverrides },
     }),
 }));
 
 beforeEach(() => {
-    portalEnabled = false;
     userOverrides = {};
     autosave.error = null;
     autosave.schedule.mockReset();
@@ -62,15 +60,9 @@ describe("RemindersTab", () => {
         expect(screen.queryByText(/No recibirás avisos/)).toBeNull();
     });
 
-    it("links the portal reminder hint to Reserva en línea when the portal is on", () => {
-        portalEnabled = true;
+    it("links the portal reminder hint to Reserva en línea", () => {
         render(<RemindersTab />);
         expect(screen.getByRole("link", { name: "Reserva en línea" })).toHaveAttribute("href", "/settings/booking");
-    });
-
-    it("has no Reserva en línea link when the portal is off", () => {
-        render(<RemindersTab />);
-        expect(screen.queryByRole("link", { name: "Reserva en línea" })).toBeNull();
     });
 
     it("frames the settings as the Tus avisos section", () => {

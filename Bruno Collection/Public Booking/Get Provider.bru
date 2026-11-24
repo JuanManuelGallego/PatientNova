@@ -11,7 +11,7 @@ get {
 }
 
 docs {
-  Answers for any provider patients can reach (portal on, active, has a slug). `bookingOpen` is false
+  Answers for any provider patients can reach (active, has a slug). `bookingOpen` is false
   while booking is paused or not ready: `types` and `locations` are then empty and `/slots` answers 404,
   but the page itself still answers. `approvalRequired` is true when the provider reviews each
   booking (`REQUIRE_APPROVAL`): the form then asks the patient to confirm a request instead of a booking. Unknown, deleted or inactive providers get the same 404.

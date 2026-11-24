@@ -123,12 +123,8 @@ export function RemindersTab() {
             />
             <span className="form-input-hint" style={{ display: "block", marginTop: 8 }}>
               No detiene los recordatorios a tus pacientes.
-              {user?.portalEnabled && (
-                <>
-                  {" "}El de las reservas en línea está en{" "}
-                  <Link href={settingsHref("booking")}>Reserva en línea</Link>.
-                </>
-              )}
+              {" "}El de las reservas en línea está en{" "}
+              <Link href={settingsHref("booking")}>Reserva en línea</Link>.
             </span>
           </div>
 
