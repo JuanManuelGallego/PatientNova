@@ -189,6 +189,7 @@ async function resolveApprovalPatient(
     lastName: request.lastName,
     ...newPatientContact(contact),
     status: PatientStatus.ACTIVE,
+    ...(body?.patientTypeId && { patientTypeId: body.patientTypeId }),
   }, userId, { source: RecordSource.PORTAL });
   return patient.id;
 }

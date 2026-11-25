@@ -11,6 +11,7 @@ import {
   createTestToken,
   createTestUser,
   futureDate,
+  defaultPatientTypeId,
 } from '../helpers.js';
 
 interface RestoreTarget {
@@ -22,7 +23,7 @@ interface RestoreTarget {
 const targets = [
   {
     path: 'patients',
-    seed: (userId) => prisma.patient.create({ data: { userId, name: 'Ana', lastName: 'Lopez', isDeleted: true } }),
+    seed: async (userId) => prisma.patient.create({ data: { userId, name: 'Ana', lastName: 'Lopez', isDeleted: true, patientTypeId: await defaultPatientTypeId(userId) } }),
     read: (id) => prisma.patient.findUnique({ where: { id } }),
   },
   {

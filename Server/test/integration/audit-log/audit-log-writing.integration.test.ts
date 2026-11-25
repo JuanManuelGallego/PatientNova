@@ -5,7 +5,7 @@ import { locationService } from '../../../src/locations/location.service.js';
 import { appointmentTypeService } from '../../../src/appointment-types/appointment-type.service.js';
 import { blockedTimeService } from '../../../src/blocked-time/blocked-time.service.js';
 import { medicalRecordService } from '../../../src/medical-records/medical-record.service.js';
-import { createTestUser, unique } from '../helpers.js';
+import { defaultPatientTypeId, createTestUser, unique } from '../helpers.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
 
 let userId: string;
@@ -171,7 +171,7 @@ describe('Audit writing: blocked time (integration)', () => {
 describe('Audit writing: medical records (integration)', () => {
   it('creates an audit log on medical record create', async () => {
     const patient = await prisma.patient.create({
-      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId, patientTypeId: await defaultPatientTypeId(userId) },
     });
 
     const record = await withAuditContext(() => medicalRecordService.create({
@@ -186,7 +186,7 @@ describe('Audit writing: medical records (integration)', () => {
 
   it('creates an audit log on medical record update with diff', async () => {
     const patient = await prisma.patient.create({
-      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId, patientTypeId: await defaultPatientTypeId(userId) },
     });
 
     const record = await withAuditContext(() => medicalRecordService.create({
@@ -205,7 +205,7 @@ describe('Audit writing: medical records (integration)', () => {
 
   it('creates an audit log on medical record softDelete', async () => {
     const patient = await prisma.patient.create({
-      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId },
+      data: { name: 'Test', lastName: 'Patient', email: unique('patient@test.local'), status: 'ACTIVE', userId, patientTypeId: await defaultPatientTypeId(userId) },
     });
 
     const record = await withAuditContext(() => medicalRecordService.create({

@@ -7,9 +7,10 @@ import { createPatientSchema, updatePatientSchema } from '../../../src/patients/
 import { createTestUser, unique } from '../helpers.js';
 
 let userId: string;
+let patientTypeId: string;
 
 beforeEach(async () => {
-  userId = (await createTestUser()).id;
+  ({ id: userId, defaultPatientTypeId: patientTypeId } = await createTestUser());
 });
 
 const base = (email: string | null) => ({
@@ -17,19 +18,22 @@ const base = (email: string | null) => ({
   lastName: 'Lopez',
   email,
   status: 'ACTIVE' as const,
+  patientTypeId,
 });
+
+const TYPE_ID = '00000000-0000-4000-8000-000000000001';
 
 describe('patient email normalization (schema)', () => {
   it('trims and lower-cases before validating', () => {
-    const parsed = createPatientSchema.parse({ name: 'A', lastName: 'B', email: '  Ana.Lopez@Example.COM ' });
+    const parsed = createPatientSchema.parse({ name: 'A', lastName: 'B', email: '  Ana.Lopez@Example.COM ', patientTypeId: TYPE_ID });
     expect(parsed.email).toBe('ana.lopez@example.com');
     expect(updatePatientSchema.parse({ email: ' X@Y.co ' }).email).toBe('x@y.co');
   });
 
   it('still rejects invalid emails and keeps null/undefined', () => {
-    expect(createPatientSchema.safeParse({ name: 'A', lastName: 'B', email: 'nope' }).success).toBe(false);
-    expect(createPatientSchema.parse({ name: 'A', lastName: 'B', email: null }).email).toBeNull();
-    expect(createPatientSchema.parse({ name: 'A', lastName: 'B' }).email).toBeUndefined();
+    expect(createPatientSchema.safeParse({ name: 'A', lastName: 'B', email: 'nope', patientTypeId: TYPE_ID }).success).toBe(false);
+    expect(createPatientSchema.parse({ name: 'A', lastName: 'B', email: null, patientTypeId: TYPE_ID }).email).toBeNull();
+    expect(createPatientSchema.parse({ name: 'A', lastName: 'B', patientTypeId: TYPE_ID }).email).toBeUndefined();
   });
 });
 
@@ -55,7 +59,7 @@ describe('patient email uniqueness (integration)', () => {
     const email = unique('raw@test.local');
     await patientRepository.create(base(email), userId);
     await expect(
-      prisma.patient.create({ data: { name: 'X', lastName: 'Y', email: `  ${email.toUpperCase()} `, userId } }),
+      prisma.patient.create({ data: { name: 'X', lastName: 'Y', email: `  ${email.toUpperCase()} `, userId, patientTypeId } }),
     ).rejects.toBeTruthy();
   });
 

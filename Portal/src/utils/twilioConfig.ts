@@ -12,7 +12,7 @@ export type TemplateVariableAutoFill =
   | "locationAddress"
   | "locationInstructions"
   | "price"
-  | "userId";
+  | "consentDocumentId";
 
 export type TemplateVariable = {
   key: string;
@@ -68,7 +68,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "5", label: "A nombre de", autoFill: "accountHolder" },
             { key: "6", label: "Cédula", autoFill: "nationalId" },
             { key: "7", label: "Llave", autoFill: "bankingKey" },
-            { key: "8", label: "UserId", autoFill: "userId" },
+            { key: "8", label: "Consentimiento", autoFill: "consentDocumentId" },
         ],
         canBulkSend: false,
     },
@@ -79,7 +79,7 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
         variables: [
             { key: "1", label: "Nombre del paciente", autoFill: "patientName" },
             { key: "2", label: "Doctor", autoFill: "doctorName" },
-            { key: "3", label: "UserId", autoFill: "userId" },
+            { key: "3", label: "Consentimiento", autoFill: "consentDocumentId" },
         ],
         canBulkSend: false,
     },

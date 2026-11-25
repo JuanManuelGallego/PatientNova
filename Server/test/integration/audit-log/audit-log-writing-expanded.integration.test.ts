@@ -21,7 +21,7 @@ import { appointmentService } from '../../../src/appointments/appointment.servic
 import { reminderService } from '../../../src/reminders/reminder.service.js';
 import { userService } from '../../../src/users/user.service.js';
 import { authService } from '../../../src/auth/auth.service.js';
-import { consentDocumentService } from '../../../src/consent-documents/consent-document.service.js';
+import { patientTypeService } from '../../../src/patient-types/patient-type.service.js';
 import { patientService } from '../../../src/patients/patient.service.js';
 import { createTestUser, createTestPatient, createTestLocation, createTestAppointmentType, appointmentTimeRange, unique } from '../helpers.js';
 import { runInAuditContext } from '../../../src/audit-log/audit-log-context.js';
@@ -403,51 +403,30 @@ describe('Audit writing: auth (integration)', () => {
   });
 });
 
-describe('Audit writing: consent documents (integration)', () => {
-  it('creates an audit log on consent document create', async () => {
-    await withAuditContext(() => consentDocumentService.create({
-      name: 'Privacy Policy',
-      content: 'base64content==',
-      mimeType: 'application/pdf',
-    }, userId));
+describe('Audit writing: patient types and consent versions (integration)', () => {
+  const PDF = Buffer.from('%PDF-1.4 consent').toString('base64');
 
-    const log = await getLatestAuditLog('CONSENT_DOCUMENT', userId);
-    expect(log).toBeTruthy();
+  it('audits creating, renaming and deleting a patient type', async () => {
+    const type = await withAuditContext(() => patientTypeService.create(userId, { name: 'Pareja' }));
+    await withAuditContext(() => patientTypeService.update(userId, type.id, { name: 'Pareja y familia' }));
+    await withAuditContext(() => patientTypeService.delete(userId, type.id));
+
+    const logs = await getAuditLogsForEntity('PATIENT_TYPE', type.id);
+    expect(logs.map((l) => l.actionType).sort()).toEqual([ 'CREATE', 'DELETE', 'UPDATE' ]);
+    const rename = logs.find((l) => l.actionType === 'UPDATE')!;
+    expect(rename.actorId).toBe(userId);
+    expect(rename.fieldsBefore).toEqual({ name: 'Pareja' });
+    expect(rename.fieldsAfter).toEqual({ name: 'Pareja y familia' });
+  });
+
+  it('audits a consent version upload with its number, never its bytes', async () => {
+    const type = await withAuditContext(() => patientTypeService.create(userId, { name: 'Nutrición' }));
+    const version = await withAuditContext(() => patientTypeService.addVersion(userId, type.id, { name: 'Consent.pdf', content: PDF }));
+
+    const log = await getLatestAuditLog('CONSENT_DOCUMENT', version.id);
     expect(log!.actionType).toBe('CREATE');
-    expect(log!.actorId).toBe(userId);
-    expect(log!.affectedFields).toContain('name');
-  });
-
-  it('creates an audit log on consent document update', async () => {
-    await withAuditContext(() => consentDocumentService.create({
-      name: 'Privacy Policy',
-      content: 'base64content==',
-      mimeType: 'application/pdf',
-    }, userId));
-
-    await withAuditContext(() => consentDocumentService.update(userId, {
-      name: 'Updated Policy',
-    }));
-
-    const logs = await getAuditLogsForEntity('CONSENT_DOCUMENT', userId);
-    const updateLog = logs.find(l => l.actionType === 'UPDATE');
-    expect(updateLog).toBeTruthy();
-    expect(updateLog!.affectedFields).toContain('name');
-  });
-
-  it('creates an audit log on consent document delete', async () => {
-    await withAuditContext(() => consentDocumentService.create({
-      name: 'Privacy Policy',
-      content: 'base64content==',
-      mimeType: 'application/pdf',
-    }, userId));
-
-    await withAuditContext(() => consentDocumentService.delete(userId));
-
-    const logs = await getAuditLogsForEntity('CONSENT_DOCUMENT', userId);
-    const deleteLog = logs.find(l => l.actionType === 'DELETE');
-    expect(deleteLog).toBeTruthy();
-    expect(deleteLog!.description).toContain('eliminado');
+    expect(log!.fieldsAfter).toMatchObject({ patientTypeId: type.id, version: 1, name: 'Consent.pdf' });
+    expect(JSON.stringify(log!.fieldsAfter)).not.toContain(PDF);
   });
 });
 

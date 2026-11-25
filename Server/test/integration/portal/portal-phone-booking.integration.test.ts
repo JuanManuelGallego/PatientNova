@@ -27,7 +27,7 @@ import {
   PatientStatus,
   RecordSource,
 } from '../../../generated/prisma/enums.js';
-import { createTestToken, invokeRoute, unique } from '../helpers.js';
+import { defaultPatientTypeId, createTestToken, invokeRoute, unique } from '../helpers.js';
 import {
   bookViaConfirmation, buildPortalApp, createLiveProvider, phoneSessionFor, portalPost, slotStarts,
   type LiveProvider, type TestSession,
@@ -69,6 +69,7 @@ async function patientWith(userId: string, opts: PatientOpts) {
   const patient = await prisma.patient.create({
     data: {
       name: name ?? 'Lucia', lastName: 'Rojas', userId, status: PatientStatus.ACTIVE, reminderChannel: Channel.WHATSAPP,
+      patientTypeId: await defaultPatientTypeId(userId),
       ...data,
       ...(isDeleted && { isDeleted: true, deletedAt: new Date() }),
     },

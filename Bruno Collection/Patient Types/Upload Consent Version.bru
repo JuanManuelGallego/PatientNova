@@ -1,0 +1,26 @@
+meta {
+  name: Upload Consent Version
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/patient-types/{{patientTypeId}}/consent-versions
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Consentimiento.pdf",
+    "content": "JVBERi0xLjQKJSBleGFtcGxl"
+  }
+}
+
+docs {
+  PDF only (checked on the bytes), up to 10 MB, base64 or a data URL. Each upload is a new version; versions are never edited or deleted.
+}

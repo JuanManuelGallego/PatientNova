@@ -17,6 +17,7 @@ import {
   createTestLocation,
   createTestUser,
   unique,
+  defaultPatientTypeId,
 } from '../helpers.js';
 
 let userId: string;
@@ -36,6 +37,7 @@ async function newPatient(overrides: Partial<{ name: string; lastName: string; e
       whatsappNumber: overrides.whatsappNumber === undefined ? '+57 300 123 4567' : overrides.whatsappNumber,
       smsNumber: overrides.smsNumber ?? null,
       status: PatientStatus.ACTIVE,
+      patientTypeId: await defaultPatientTypeId(userId),
     } as never,
     userId,
   );
@@ -199,8 +201,9 @@ describe('sorting by encrypted fields', () => {
 describe('pii backfill', () => {
   async function insertLegacyPatient(email: string) {
     const [ row ] = await prisma.$queryRaw<{ id: string; updatedAt: Date }[]>`
-      INSERT INTO "patients" ("id", "name", "lastName", "email", "whatsappNumber", "status", "userId", "updatedAt")
-      VALUES (gen_random_uuid(), 'Legacy Ñoño', 'Plain', ${email}, '+57 311 000 1111', 'ACTIVE', ${userId}, '2020-01-01T00:00:00Z')
+      INSERT INTO "patients" ("id", "name", "lastName", "email", "whatsappNumber", "status", "userId", "patientTypeId", "updatedAt")
+      VALUES (gen_random_uuid(), 'Legacy Ñoño', 'Plain', ${email}, '+57 311 000 1111', 'ACTIVE', ${userId},
+        CAST(${await defaultPatientTypeId(userId)} AS uuid), '2020-01-01T00:00:00Z')
       RETURNING "id"::text AS "id", "updatedAt"`;
     return row!;
   }

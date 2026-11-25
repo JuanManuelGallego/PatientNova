@@ -44,7 +44,7 @@ export const StepTemplate = memo(function StepTemplate({
   const sharedVars: TemplateVariable[] = useMemo(() => {
     if (!template) return [];
     return template.variables.filter(
-      (v) => v.autoFill !== "patientName" && v.autoFill !== "userId",
+      (v) => v.autoFill !== "patientName" && v.autoFill !== "consentDocumentId",
     );
   }, [template]);
 

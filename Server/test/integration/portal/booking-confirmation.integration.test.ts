@@ -215,6 +215,9 @@ describe('POST /v1/public/booking-confirmations/confirm', () => {
       name: 'Lucia', lastName: 'Rojas', email, whatsappNumber: null, whatsappUnverified: false,
       reminderChannel: Channel.EMAIL, source: RecordSource.PORTAL, status: PatientStatus.ACTIVE,
     });
+    // Auto-confirm gives a new patient the provider's default type.
+    const { defaultPatientTypeId } = await prisma.user.findUniqueOrThrow({ where: { id: provider.id } });
+    expect(patient!.patientTypeId).toBe(defaultPatientTypeId);
     const [ consent ] = await prisma.patientConsent.findMany({ where: { userId: provider.id } });
     expect(consent!.patientId).toBe(patient!.id);
     expect(consent!.policyVersion).toBe(PRIVACY_POLICY_VERSION);

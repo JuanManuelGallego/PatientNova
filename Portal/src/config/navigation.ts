@@ -111,7 +111,7 @@ export function activityHref(filter: { entityId?: string; portalPatientId?: stri
     return query ? `${ACTIVITY_PATH}?${query}` : ACTIVITY_PATH;
 }
 
-export type SettingsSectionId = "account" | "notifications" | "practice" | "services" | "booking" | "integrations";
+export type SettingsSectionId = "account" | "notifications" | "practice" | "services" | "patient-types" | "booking" | "integrations";
 
 export function settingsHref(id: SettingsSectionId, anchor?: string): string {
     return `/settings/${id}${anchor ? `#${anchor}` : ""}`;
@@ -132,6 +132,7 @@ export const SETTINGS_NAV: NavGroup<SettingsSectionId>[] = [
         items: [
             { id: "practice", path: settingsHref("practice"), label: "Consultorio" },
             { id: "services", path: settingsHref("services"), label: "Servicios" },
+            { id: "patient-types", path: settingsHref("patient-types"), label: "Tipos de paciente" },
             { id: "booking", path: settingsHref("booking"), label: "Reserva en línea" },
         ],
     },

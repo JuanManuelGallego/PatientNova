@@ -20,6 +20,7 @@ import {
   createTestUser,
   futureDate,
   unique,
+  defaultPatientTypeId,
 } from '../helpers.js';
 import { useKeys } from './use-keys.js';
 
@@ -102,6 +103,7 @@ async function seedEveryModel() {
       data: {
         ...pii,
         userId: user.id,
+        patientTypeId: await defaultPatientTypeId(user.id),
         status: extra.status ?? PatientStatus.ACTIVE,
         isDeleted: extra.isDeleted ?? false,
         deletedAt: extra.isDeleted ? new Date() : null,

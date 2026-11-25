@@ -1,0 +1,21 @@
+meta {
+  name: Create Patient Type
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/patient-types
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Familia"
+  }
+}

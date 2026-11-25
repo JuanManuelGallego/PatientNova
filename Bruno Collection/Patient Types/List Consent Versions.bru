@@ -1,0 +1,11 @@
+meta {
+  name: List Consent Versions
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/patient-types/{{patientTypeId}}/consent-versions
+  body: none
+  auth: inherit
+}

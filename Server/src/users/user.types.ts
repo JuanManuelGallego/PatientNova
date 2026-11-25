@@ -25,16 +25,7 @@ export const userInclude = {
   accountNumber: true,
   nationalId: true,
   bankingKey: true,
-  consentDocument: {
-    select: {
-      id: true,
-      name: true,
-      mimeType: true,
-      sizeBytes: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  },
+  defaultPatientTypeId: true,
 } as const;
 
 // Same as userInclude but without the heavy base64 media columns
@@ -49,7 +40,7 @@ export const userListInclude = {
   accountNumber: false,
   nationalId: false,
   bankingKey: false,
-  consentDocument: false,
+  defaultPatientTypeId: false,
   isDeleted: true,
 } as const;
 

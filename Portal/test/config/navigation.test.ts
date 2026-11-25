@@ -88,12 +88,13 @@ describe("settings navigation", () => {
     it("lists the settings menu in spec order with Spanish labels", () => {
         expect(SETTINGS_NAV.map((g) => g.label)).toEqual([ "Tu cuenta", "Tu consulta", "Conexiones" ]);
         expect(SETTINGS_NAV.flatMap((g) => g.items).map((i) => i.label)).toEqual([
-            "Cuenta", "Notificaciones", "Consultorio", "Servicios", "Reserva en línea", "Integraciones",
+            "Cuenta", "Notificaciones", "Consultorio", "Servicios", "Tipos de paciente", "Reserva en línea", "Integraciones",
         ]);
     });
 
     it.each([
         [ "/settings/services", "services" ],
+        [ "/settings/patient-types", "patient-types" ],
         [ "/settings/account", "account" ],
         [ "/settings", null ],
         [ "/settingsx", null ],

@@ -14,7 +14,7 @@ export function VariablesAndPreviewStep({
   preview: string;
 }) {
   const userEditableVariables = selectedTemplate.variables.filter(
-    (v) => v.autoFill !== "userId",
+    (v) => v.autoFill !== "consentDocumentId",
   );
 
   return (

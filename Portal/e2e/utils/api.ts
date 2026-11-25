@@ -71,7 +71,6 @@ export interface ApiClient {
   updateMedicalRecord(id: string, data: Record<string, unknown>): Promise<ApiResponse>;
   deleteMedicalRecord(id: string): Promise<ApiResponse>;
   updateProfile(data: Record<string, unknown>): Promise<ApiResponse>;
-  deleteConsentDocument(): Promise<ApiResponse>;
   get(path: string): Promise<ApiResponse>;
   patch(path: string, data: Record<string, unknown>): Promise<ApiResponse>;
   // ── Read helpers (post-action verification) ──────────────────────────────────
@@ -165,8 +164,12 @@ export function createApiClient(page: Page): ApiClient {
 
   return {
     // Patients
-    createPatient(data: Record<string, unknown>) {
-      return request('POST', '/patients', data);
+    /** Without a `patientTypeId`, the patient gets the provider's default type (the API requires one). */
+    async createPatient(data: Record<string, unknown>) {
+      if (data.patientTypeId) return request('POST', '/patients', data);
+      const types = await request<{ id: string; isDefault: boolean }[]>('GET', '/patient-types');
+      const patientTypeId = types.data?.find((t) => t.isDefault)?.id;
+      return request('POST', '/patients', { ...data, patientTypeId });
     },
     deletePatient(id: string) {
       return request('DELETE', `/patients/${id}`);
@@ -229,11 +232,6 @@ export function createApiClient(page: Page): ApiClient {
     // Users
     updateProfile(data: Record<string, unknown>) {
       return request('PATCH', '/users/me', data);
-    },
-
-    // Consent
-    deleteConsentDocument() {
-      return request('DELETE', '/consent-document');
     },
 
     // Generic

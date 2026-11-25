@@ -52,6 +52,7 @@ const G = {
   family: '0a7a0009',
   note: '0a7a000a',
   subsystem: '0a7a000b',
+  patientType: '0a7a000c',
 } as const;
 
 const uuid = (group: string, n: number) => `${group}-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -213,10 +214,28 @@ async function seedData() {
       ],
     });
 
+    // The types a provider has after the #144 migration: "Individual" (default) and "Familia" for family records.
+    const individualTypeId = uuid(G.patientType, 1);
+    const familyTypeId = uuid(G.patientType, 2);
+    for (const [ id, name, family ] of [ [ individualTypeId, 'Individual', false ], [ familyTypeId, 'Familia', true ] ] as const) {
+      await tx.patientType.upsert({
+        where: { id },
+        update: {},
+        create: { id, userId, name, familyMembersEnabled: family, subsystemRelationsEnabled: family },
+      });
+    }
+    await tx.user.update({ where: { id: userId }, data: { defaultPatientTypeId: individualTypeId } });
+    // The empty "General" a new account starts with: a migrated provider has none, so the screenshots show none.
+    await tx.patientType.deleteMany({
+      where: { userId, id: { notIn: [ individualTypeId, familyTypeId ] }, name: 'General', patients: { none: {} } },
+    });
+    const isFamilyPatient = (i: number) => { const r = RECORDS[ i ]; return !!r && 'isFamily' in r && r.isFamily; };
+
     await tx.patient.createMany({
       data: PATIENTS.map((p, i) => ({
         id: patientId(i),
         userId,
+        patientTypeId: isFamilyPatient(i) ? familyTypeId : individualTypeId,
         name: p.first,
         lastName: p.last,
         email: p.email,
