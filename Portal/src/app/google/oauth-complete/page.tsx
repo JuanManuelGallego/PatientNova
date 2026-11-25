@@ -4,7 +4,28 @@ import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { STATUS_ICONS } from "@/src/config/icons";
 import { settingsHref } from "@/src/config/navigation";
-import { OAUTH_REDIRECT_KEY } from "@/src/hooks/useGoogleOAuthPopup";
+import { OAUTH_POPUP_CHANNEL_KEY, OAUTH_REDIRECT_KEY } from "@/src/hooks/useGoogleOAuthPopup";
+import type { OAuthCompletionResult } from "@/src/types/Google";
+
+function notifyCompletion(message: OAuthCompletionResult & { type: string }) {
+  let notified = false;
+  try {
+    const name = sessionStorage.getItem(OAUTH_POPUP_CHANNEL_KEY);
+    sessionStorage.removeItem(OAUTH_POPUP_CHANNEL_KEY);
+    if (name && typeof BroadcastChannel !== "undefined") {
+      const channel = new BroadcastChannel(name);
+      channel.postMessage(message);
+      channel.close();
+      notified = true;
+    }
+  } catch { /* The opener remains the fallback when storage or channels are unavailable. */ }
+  if (window.opener) {
+    window.opener.postMessage(message, window.location.origin);
+    notified = true;
+  }
+  // Defer close so the parent can process the message first.
+  if (notified) setTimeout(() => window.close(), 150);
+}
 
 function GoogleOAuthCompleteContent() {
   const router = useRouter();
@@ -39,14 +60,12 @@ function GoogleOAuthCompleteContent() {
       const message = {
         type: "GOOGLE_OAUTH_COMPLETE",
         success: true,
-        returnPath: rp,
+        returnPath: rp ?? undefined,
       };
       if (redirected) {
         router.replace(rp ?? settingsHref("integrations"));
-      } else if (window.opener) {
-        window.opener.postMessage(message, window.location.origin);
-        // Defer close so the parent can process the message first.
-        setTimeout(() => window.close(), 150);
+      } else {
+        notifyCompletion(message);
       }
     } else if (success === "false" || error) {
       setStatus("error");
@@ -67,10 +86,7 @@ function GoogleOAuthCompleteContent() {
         success: false,
         error: msg,
       };
-      if (window.opener) {
-        window.opener.postMessage(message, window.location.origin);
-        setTimeout(() => window.close(), 150);
-      }
+      notifyCompletion(message);
     }
   }, [ success, error, rp, router ]);
 

@@ -1,6 +1,7 @@
 import { render, screen, act } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import GoogleOAuthCompletePage from "@/src/app/google/oauth-complete/page";
+import { OAUTH_POPUP_CHANNEL_KEY } from "@/src/hooks/useGoogleOAuthPopup";
 
 let params = new URLSearchParams();
 const push = vi.fn();
@@ -12,6 +13,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("GoogleOAuthCompletePage", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   beforeEach(() => {
     params = new URLSearchParams();
     push.mockReset();
@@ -46,6 +49,28 @@ describe("GoogleOAuthCompletePage", () => {
 
     expect(await screen.findByText("No se pudo conectar Google")).toBeInTheDocument();
     expect(screen.getByText(/No se concedió el permiso de Google Meet/)).toBeInTheDocument();
+  });
+
+  it.each([true, false])("broadcasts success=%s and closes when Chrome removed its opener", async (success) => {
+    vi.useFakeTimers();
+    params = new URLSearchParams(`success=${success}&error=${success ? "" : "scope_missing"}`);
+    Object.defineProperty(window, "opener", { configurable: true, value: null });
+    sessionStorage.setItem(OAUTH_POPUP_CHANNEL_KEY, "oauth-attempt");
+    const channel = { postMessage: vi.fn(), close: vi.fn() };
+    const Channel = vi.fn(function () { return channel; });
+    vi.stubGlobal("BroadcastChannel", Channel);
+    const close = vi.spyOn(window, "close").mockImplementation(() => undefined);
+
+    await act(async () => { render(<GoogleOAuthCompletePage />); });
+
+    expect(Channel).toHaveBeenCalledExactlyOnceWith("oauth-attempt");
+    expect(channel.postMessage).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      type: "GOOGLE_OAUTH_COMPLETE", success,
+    }));
+    expect(channel.close).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(OAUTH_POPUP_CHANNEL_KEY)).toBeNull();
+    act(() => vi.advanceTimersByTime(200));
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it("returns to the starting page after a redirect-flow success", async () => {
