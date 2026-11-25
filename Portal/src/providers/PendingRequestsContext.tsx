@@ -28,7 +28,9 @@ export function PendingRequestsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!enabled) return;
-    const id = window.setInterval(() => { void refetch(); }, REFRESH_MS);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refetch();
+    }, REFRESH_MS);
     return () => window.clearInterval(id);
   }, [ enabled, refetch ]);
 
