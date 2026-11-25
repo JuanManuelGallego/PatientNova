@@ -351,9 +351,7 @@ describe("buildMessageBody", () => {
   it("writes the consent link below the text on email and SMS", () => {
     for (const channel of [ Channel.EMAIL, Channel.SMS ]) {
       const body = buildMessageBody(consentTemplate, vars, channel, "application/pdf");
-      expect(body).toMatch(/^Hola Lucia, completa el consentimiento\.
-
-Documento de consentimiento: http.+\/v1\/consent-document\/public\/download\/cversion000000000000000001\.pdf$/);
+      expect(body).toMatch(/^Hola Lucia, completa el consentimiento\.\n\nDocumento de consentimiento: http.+\/v1\/consent-document\/public\/download\/cversion000000000000000001\.pdf$/);
     }
   });
 
