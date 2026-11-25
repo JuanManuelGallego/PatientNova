@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OAUTH_REDIRECT_KEY, useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
+import { OAUTH_POPUP_CHANNEL_KEY, OAUTH_REDIRECT_KEY, useGoogleOAuthPopup } from "@/src/hooks/useGoogleOAuthPopup";
 
 const assignLocation = vi.fn();
 vi.mock("@/src/utils/browserNavigation", () => ({ assignLocation: (u: string) => assignLocation(u) }));
@@ -19,6 +19,7 @@ afterEach(() => {
   sessionStorage.clear();
   Reflect.deleteProperty(window, "matchMedia");
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -71,6 +72,60 @@ describe("useGoogleOAuthPopup", () => {
     await act(() => result.current.openOAuth(async () => ({ authUrl: "https://accounts.google.test" })));
 
     expect(result.current.error).toMatch(/Configuración/);
+  });
+
+  it("completes through its own channel when Chrome severs the popup reference", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const channel = { onmessage: null as ((event: MessageEvent) => void) | null, close: vi.fn() };
+    const Channel = vi.fn(function () { return channel; });
+    vi.stubGlobal("BroadcastChannel", Channel);
+    const popup = { closed: false, close: vi.fn(), location: { href: "" }, sessionStorage };
+    vi.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useGoogleOAuthPopup(onComplete));
+    await act(() => result.current.openOAuth(async () => ({ authUrl: "https://accounts.google.test" })));
+
+    expect(Channel).toHaveBeenCalledWith(sessionStorage.getItem(OAUTH_POPUP_CHANNEL_KEY));
+    popup.closed = true;
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.waiting).toBe(true);
+    expect(result.current.error).toBeNull();
+
+    const complete = channel.onmessage!;
+    act(() => complete(new MessageEvent("message", { data: { type: "unrelated", success: true } })));
+    expect(onComplete).not.toHaveBeenCalled();
+    const message = new MessageEvent("message", { data: { type: "GOOGLE_OAUTH_COMPLETE", success: true } });
+    act(() => complete(message));
+    act(() => complete(message));
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ success: true }));
+    expect(result.current.waiting).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(channel.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows a late completion to clear a closed-window error after returning to the app", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const channel = { onmessage: null as ((event: MessageEvent) => void) | null, close: vi.fn() };
+    vi.stubGlobal("BroadcastChannel", vi.fn(function () { return channel; }));
+    const popup = { closed: false, close: vi.fn(), location: { href: "" }, sessionStorage };
+    vi.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useGoogleOAuthPopup(onComplete));
+    await act(() => result.current.openOAuth(async () => ({ authUrl: "https://accounts.google.test" })));
+
+    popup.closed = true;
+    act(() => vi.advanceTimersByTime(500));
+    expect(result.current.waiting).toBe(false);
+    expect(result.current.error).toMatch(/La ventana de Google se cerró/);
+
+    act(() => channel.onmessage!(new MessageEvent("message", {
+      data: { type: "GOOGLE_OAUTH_COMPLETE", success: true },
+    })));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
   });
 
   it("redirects the whole app instead of opening a popup when installed", async () => {

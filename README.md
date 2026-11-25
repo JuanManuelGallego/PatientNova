@@ -143,7 +143,7 @@ PatientNova/
 ### Prerequisites
 
 - **Node.js 26.x**, with the exact development/CI version pinned in [`.nvmrc`](.nvmrc)
-- **pnpm 12.14.0**, pinned in both app manifests; install with `npm install -g pnpm@12.14.0`
+- **pnpm 12.23.0**, pinned in both app manifests; install with `npm install -g pnpm@12.23.0`
 - **PostgreSQL** with permission to create the `btree_gist` extension used by calendar constraints; the test stack uses PostgreSQL 18
 - **Docker** for the disposable integration-test database
 - **Twilio** credentials, WhatsApp/SMS senders, and approved WhatsApp Content Templates for messaging

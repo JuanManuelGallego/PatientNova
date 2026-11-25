@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PendingRequestsProvider } from "@/src/providers/PendingRequestsContext";
 
@@ -16,10 +16,14 @@ function setVisibility(state: "visible" | "hidden") {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
   refetch.mockClear();
   user = { role: "ADMIN" };
 });
-afterEach(() => Reflect.deleteProperty(document, "visibilityState"));
+afterEach(() => {
+  vi.useRealTimers();
+  Reflect.deleteProperty(document, "visibilityState");
+});
 
 describe("PendingRequestsProvider foreground refresh", () => {
   it("refetches when the document becomes visible", () => {
@@ -39,5 +43,26 @@ describe("PendingRequestsProvider foreground refresh", () => {
     render(<PendingRequestsProvider><p>x</p></PendingRequestsProvider>);
     setVisibility("visible");
     expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("skips hidden-tab polling and resumes when the tab becomes visible", () => {
+    setVisibility("visible");
+    const { unmount } = render(<PendingRequestsProvider><p>x</p></PendingRequestsProvider>);
+    act(() => { vi.advanceTimersByTime(2 * 60_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    setVisibility("hidden");
+    act(() => { vi.advanceTimersByTime(6 * 60_000); });
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    setVisibility("visible");
+    expect(refetch).toHaveBeenCalledTimes(2);
+    act(() => { vi.advanceTimersByTime(2 * 60_000); });
+    expect(refetch).toHaveBeenCalledTimes(3);
+
+    unmount();
+    act(() => { vi.advanceTimersByTime(2 * 60_000); });
+    setVisibility("visible");
+    expect(refetch).toHaveBeenCalledTimes(3);
   });
 });
