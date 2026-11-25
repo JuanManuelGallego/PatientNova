@@ -6,7 +6,7 @@ step is not actually in place, say so (the privacy policy must never promise mor
 ## Deploying the API
 
 Both apps require Node.js 26.x (`engines.node` in each app's `package.json`). Local development and
-all three CI jobs use the exact version in the root `.node-version`; keep it on the latest tested
+all three CI jobs use the exact version in the root `.nvmrc`; keep it on the latest tested
 26.x patch. pnpm stays pinned by each `packageManager` field.
 
 For a runtime upgrade, record the previous deployment IDs, Node versions and release/start commands
