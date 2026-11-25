@@ -195,7 +195,8 @@ PatientNova/
 
 ### Prerequisites
 
-- **Node.js 22+**
+- **Node.js 26 LTS** (26.13.1, pinned in `.node-version`)
+- **pnpm 12.14.0** (`npm install -g pnpm@12.14.0`; Node 26 does not bundle Corepack)
 - **PostgreSQL** database
 - A [Twilio](https://www.twilio.com) account with:
   - A WhatsApp-enabled sender (Sandbox or approved number)
