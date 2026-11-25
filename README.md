@@ -1,8 +1,6 @@
 # PatientNova
 
-A full-stack medical practice management platform for healthcare providers to manage patients, appointments, medical records, and automated notifications via WhatsApp, SMS, and email.
-
----
+PatientNova is a medical practice management platform with a Spanish-language provider dashboard and public online booking. It brings together patients, appointments, clinical records, and notifications through WhatsApp, SMS, and email.
 
 ## Table of Contents
 
@@ -22,490 +20,410 @@ A full-stack medical practice management platform for healthcare providers to ma
 - [Background Workers](#background-workers)
 - [Security](#security)
 - [Testing](#testing)
-
----
+- [Operations and Documentation](#operations-and-documentation)
 
 ## Overview
 
-PatientNova is a private admin dashboard built for a medical practice. It centralizes patient records, medical histories, appointment scheduling, and outbound notification delivery — sending appointment reminders to patients through **WhatsApp**, **SMS**, or **Email** via Twilio.
+The provider dashboard manages patient records, clinical histories, scheduling, payments, booking requests, and message delivery. Each provider has their own data, timezone, availability, and booking settings.
 
-The system supports both **immediate dispatch** (send now) and **scheduled delivery** (pg-boss background worker). All notification history is persisted for audit and tracking.
+Patients can book through `/book/<slug>` without creating an account. They choose a service, location, and time, enter their name and an email address or WhatsApp number, accept the portal authorization, and receive a confirmation link. Only clicking **Confirmar mi cita** on that page books the appointment or submits it for provider approval.
 
----
+**Current scope:** booking by confirmation link is implemented. Patient self-service ("Mis citas": listing, cancellation, and rescheduling) remains deferred behind `ENABLE_SELF_SERVE=false`. No patient login or session-issuing flow currently exists; leave this flag off.
 
 ## Features
 
-### Patients
-- Create, update, and delete patient records
-- Track contact info: WhatsApp number, SMS number, email, date of birth, notes
-- Patient statuses: `ACTIVE`, `INACTIVE`
-- Searchable and filterable list with pagination and status stats
+### Patients and Medical Records
 
-### Medical Records
-- Full clinical history per patient: consultation reason, development, lifestyle, trauma, mental history
-- Family member tracking with relationships (Father, Mother, Sibling, Spouse, etc.)
-- Evolution notes with timestamped entries
-- Atomic updates via database transactions
+- Patient creation, editing, soft deletion, status management, search, pagination, and statistics
+- Email, WhatsApp, and SMS contacts, preferred reminder channel, notes, and portal access controls
+- Clinical histories with personal and family background, family members, evolution notes, and attached documents
+- Medical record PDF export and provider consent document management
+- Encrypted patient and clinical fields, with blind indexes for supported searches
+- Versioned patient consent records and an activity log for provider, patient-portal, and background actions
 
-### Appointments
-- Schedule appointments with start/end time, type, price, and location
-- **Conflict detection** — prevents double-booking patients in overlapping time slots
-- Configurable appointment types with predefined durations and pricing
-- Configurable locations with color-coded badges
+### Appointments and Calendar
+
+- Calendar and list views, filters, revenue statistics, payment tracking, and blocked time
+- Appointment types with default duration and price; physical and virtual locations
+- Provider-wide conflict detection for active appointments, backed by database locking and an exclusion constraint
 - Statuses: `SCHEDULED`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `NO_SHOW`
-- Mark appointments as paid with a single action
-- Calendar view (monthly) and list view with filtering
-- Revenue stats and status breakdowns
-- Google Meet link generation for virtual appointments
+- Provider timezone display and patient timezone handling for booking and messages
+- Google Meet integration, connection checks, and a manual link workflow when automatic provisioning is unavailable
 
-### Reminders & Notifications
-- Create reminders linked to patients and/or appointments
-- Channels: `WHATSAPP`, `SMS`, `EMAIL`
-- Modes: `IMMEDIATE` (instant dispatch) or `SCHEDULED` (queued for later)
-- Uses Twilio **Content Templates** for WhatsApp (pre-approved message templates with variable substitution)
-- Full delivery history with statuses: `PENDING`, `SENT`, `FAILED`, `CANCELLED`, `QUEUED`
-- Bulk send wizard for sending reminders to multiple patients at once
-- Stats by channel and status, auto-refreshed every 60 seconds
+### Public Booking and Request Review
 
-### Settings
-- User profile management with avatar and logo upload
-- Appointment type and location configuration (soft-delete support)
-- Multi-user support with role-based access (`SUPER_ADMIN`, `ADMIN`, `VIEWER`)
-- Banking info configuration for payment notifications
+- Public provider profiles with specialty, biography, branding, public contact details, and legal identity
+- Weekly availability, booking horizon, lead time, buffers, bookable services and locations, and readiness checks
+- Confirmation links by email or WhatsApp, with a slot held for up to 15 minutes, capped at the appointment start
+- Opening a link only displays its state; confirmation requires an explicit button click
+- `AUTO_CONFIRM` books after contact confirmation; `REQUIRE_APPROVAL` sends the request to the provider inbox
+- Requests needing patient matching review also enter the inbox; providers can link, reactivate, or restore eligible records when approving
+- Confirmed pending requests hold their time for up to 48 hours, capped at the appointment start, with expiry and provider nudges
+- Paused booking keeps the provider profile reachable; search indexing is an explicit provider opt-in while booking is open
 
----
+### Reminders, Notifications, and Settings
+
+- Immediate and scheduled messages through WhatsApp and SMS via Twilio, and email via Brevo
+- Bulk messaging, delivery tracking, failure alerts, and a daily provider agenda
+- Configurable reminder timing for online bookings, plus booking, approval, cancellation, and meeting-link notices
+- Provider profile, avatar/logo, banking information, timezone, and notification preferences
+- Roles: `SUPER_ADMIN`, `ADMIN`, `VIEWER`, with super-admin user management and account safeguards
+- Responsive provider dashboard, public marketing pages, and a provider PWA shell with an offline fallback
 
 ## Tech Stack
 
-### Frontend — `Portal/`
-
-| Layer | Technology |
+| Area | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript 6 |
-| UI Library | React 19 |
-| Component Libraries | In-house picker components (`src/components/Pickers`) |
-| Styling | Tailwind CSS v4, CSS Modules |
-| Date Handling | dayjs |
-| State | nuqs (URL query state) |
-| Testing | Vitest, React Testing Library |
-
-### Backend — `Server/`
-
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js (ESM) |
-| Framework | Express 5 |
-| Language | TypeScript 6 |
-| ORM | Prisma 7 |
-| Database | PostgreSQL |
-| Validation | Zod 4 |
-| Scheduler | pg-boss 12 |
-| Notifications | Twilio SDK 6 (WhatsApp + SMS) |
-| Video Conferencing | Google Meet API |
-| Security | Helmet, express-rate-limit, CORS, bcrypt |
-| Auth | JWT (httpOnly cookies) with account lockout |
-| Logging | Pino |
-| Testing | Vitest |
-
----
+| Frontend | Next.js 16 App Router, React 19, TypeScript 6 |
+| UI | Tailwind CSS 4, CSS Modules, Lucide icons, in-house components and date/time pickers |
+| Frontend utilities | dayjs, nuqs, React PDF |
+| Backend | Node.js 26.x (ESM), Express 5, TypeScript 6, Zod 4 |
+| Database | PostgreSQL, Prisma 7 with the pg adapter |
+| Jobs and time | pg-boss 12, Luxon |
+| Messaging | Twilio SDK 6 (WhatsApp/SMS), Brevo transactional email |
+| Video calls | Google OAuth and Google Meet API |
+| Security and observability | JWT, bcrypt, Helmet, CORS, rate limiting, Cloudflare Turnstile, Pino, optional Sentry |
+| Testing | Vitest, React Testing Library, real-Postgres integration tests, Playwright |
 
 ## Architecture
 
-The application follows a **clean layered architecture**:
-
+```text
+Request → Routes / Validation → Service → Repository → Prisma → PostgreSQL
+                                     ↘ pg-boss → Workers → Messaging / Google APIs
 ```
-Request → Routes → Service → Repository → Prisma → PostgreSQL
-```
 
-- **Routes** — Express route handlers, request validation (Zod schemas), response formatting
-- **Service** — Business logic, ownership verification, cross-entity coordination
-- **Repository** — Data access layer, Prisma queries, pagination helpers
-- **Middleware** — Authentication (JWT), validation, async error handling, rate limiting
-
-Key architectural patterns:
-- **Multi-tenant by user** — All data is scoped to the authenticated user via `userId` foreign keys
-- **Soft deletes** — All entities use `isDeleted` flags rather than hard deletes
-- **Optimistic audit trail** — Notifications create a `PENDING` record before dispatch, then update status (ensures audit trail even if the server crashes mid-send)
-- **Background workers** — pg-boss queues/schedules for reminder dispatch, delivery tracking, and appointment auto-completion
-- **Error boundaries** — React ErrorBoundary at root level catches render failures gracefully
-- **Retry with backoff** — Frontend data-fetching hooks retry failed requests with exponential backoff
-- **Entity mutation factories** — CRUD hooks generated via `useEntityMutation` factories to eliminate boilerplate
-
----
+- **Provider isolation:** authenticated operations scope records to the provider's `userId`; public booking exposes allow-listed provider and slot data.
+- **Separate API boundaries:** anonymous public booking and optional patient sessions have their own routers, CORS rules, parsers, and limiters, ahead of provider middleware.
+- **Calendar integrity:** appointment, blocked-time, and booking changes use a provider lock and transactions. Slot rules account for availability, active appointments, blocked time, buffers, and live booking holds.
+- **Audit and jobs:** transactional audits and queued booking/reminder jobs commit with their domain changes. Workers reread state before sending or provisioning.
+- **Data lifecycle:** supported records use soft deletion; consent revocation, permanent erasure, and clinic export have dedicated operator commands.
+- **Time handling:** availability uses wall-clock time in the provider's IANA timezone; appointment instants and calendar-only dates have distinct conversion helpers.
 
 ## Project Structure
 
-```
+```text
 PatientNova/
-├── Portal/                       # Next.js 16 frontend
-│   └── src/
-│       ├── api/                  # Data-fetching hooks (useApiQuery, useApiMutation, entity factories)
-│       ├── app/                  # Next.js App Router
-│       │   ├── AuthContext.tsx   # Auth provider (session management, login/logout)
-│       │   ├── providers.tsx     # Root providers (auth, error boundary, URL state)
-│       │   ├── page.tsx          # Public landing page
-│       │   ├── login/            # Login page
-│       │   └── (protected)/      # Auth-guarded routes
-│       │       ├── dashboard/    # Overview with stats, today's appointments, active reminders
-│       │       ├── patients/     # Patient CRUD with search and filtering
-│       │       ├── appointments/ # Appointment management with conflict detection
-│       │       ├── calendar/     # Monthly calendar view
-│       │       ├── reminders/    # Reminder management and bulk send wizard
-│       │       ├── medical-records/ # Clinical history per patient
-│       │       └── settings/     # Profile, locations, appointment types, security
-│       ├── components/           # Shared UI components
-│       │   ├── Drawers/          # Create/edit side panels
-│       │   ├── Info/             # Stat cards, status pills, badges
-│       │   ├── Modals/           # Confirmation dialogs, appointment/reminder modals
-│       │   └── MedicalRecord/    # Medical record PDF and document components
-│       ├── config/               # Theme, icons, and app configuration
-│       ├── hooks/                # Custom React hooks
-│       ├── styles/               # Global CSS, PDF styles
-│       ├── types/                # TypeScript interfaces and enums
-│       ├── utils/                # Helpers (formatting, time, avatar, debounce)
-│       └── test/                 # Vitest test suites
-│
-├── Server/                       # Express 5 backend
-│   ├── schema.prisma             # Prisma schema (models, indexes, enums)
-│   └── src/
-│       ├── auth/                 # Login, logout, session refresh, account lockout
-│       ├── users/                # User CRUD, password change, role management
-│       ├── patients/             # Patient CRUD with search, stats, ownership checks
-│       ├── appointments/         # Appointment CRUD, conflict detection, stats, auto-complete
-│       ├── appointment-types/    # Configurable types (soft-delete)
-│       ├── locations/            # Configurable locations (soft-delete)
-│       ├── reminders/            # Reminder CRUD, stats, status management
-│       ├── medical-records/      # Clinical records with family members, evolution notes
-│       ├── consent-document/     # Consent document management and public download
-│       ├── notify/               # Immediate WhatsApp/SMS dispatch
-│       ├── twilio/               # Twilio client wrapper, webhook handler, signature validation
-│       ├── google/               # Google Meet integration
-│       ├── scheduler/            # pg-boss workers (reminders, delivery tracking, appointment auto-complete, daily summary)
-│       ├── middlewares/          # Auth (JWT), Zod validation, async error handler
-│       ├── prisma/               # Prisma client, seed scripts
-│       └── utils/                # Config, logger, errors, pagination, time helpers, encryption
-│
-└── Bruno Collection/             # Bruno API collection (manual testing)
+├── Portal/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (provider)/          # Landing, login, and (protected) dashboard routes
+│   │   │   ├── (marketing)/         # Product pages and FAQ
+│   │   │   └── book/                # Public profiles, booking, confirmation, deferred Mis citas
+│   │   ├── api/                     # Provider, public, and patient-session API hooks
+│   │   ├── components/              # Calendar, pickers, drawers, clinical records, public booking
+│   │   ├── providers/               # Auth, theme, timezone, and other React providers
+│   │   └── config/, hooks/, types/, utils/
+│   ├── test/                        # Vitest and React Testing Library
+│   ├── e2e/                         # Playwright, fixtures, mock Brevo, screenshot tooling
+│   └── public/                      # Static assets, service worker, offline fallback
+├── Server/
+│   ├── schema.prisma
+│   ├── migrations/                  # Prisma and raw-SQL constraints/indexes
+│   ├── src/
+│   │   ├── auth/, users/            # Provider sessions and account management
+│   │   ├── patients/, medical-records/, consent-documents/
+│   │   ├── appointments/, appointment-types/, locations/, blocked-time/
+│   │   ├── booking-settings/, public-booking/, booking-requests/
+│   │   ├── portal/, patient-consents/ # Confirmation flow, patient actions, consent
+│   │   ├── reminders/, twilio/, brevo/, google/
+│   │   ├── audit-log/, middlewares/
+│   │   ├── scheduler/               # pg-boss queues and workers
+│   │   └── utils/                   # Config, encryption, Prisma, time, logging, operators
+│   ├── test/unit/
+│   ├── test/integration/
+│   └── docker-compose.test.yml      # Disposable PostgreSQL on localhost:5433
+├── ops/db-backup/                   # Encrypted offsite database backup and smoke test
+├── docs/                           # Operations, patient-data procedures, versioned legal texts
+├── .github/workflows/ci.yml         # Portal, Server, and self-contained e2e jobs
+└── Bruno Collection/               # Manual API requests
 ```
-
----
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Node.js 26 LTS** (26.13.1, pinned in `.node-version`)
-- **pnpm 12.14.0** (`npm install -g pnpm@12.14.0`; Node 26 does not bundle Corepack)
-- **PostgreSQL** database
-- A [Twilio](https://www.twilio.com) account with:
-  - A WhatsApp-enabled sender (Sandbox or approved number)
-  - An SMS-enabled phone number
-  - Approved Content Template SIDs for WhatsApp messages
+- **Node.js 26.x**, with the exact development/CI version pinned in [`.nvmrc`](.nvmrc)
+- **pnpm 12.14.0**, pinned in both app manifests; install with `npm install -g pnpm@12.14.0`
+- **PostgreSQL** with permission to create the `btree_gist` extension used by calendar constraints; the test stack uses PostgreSQL 18
+- **Docker** for the disposable integration-test database
+- **Twilio** credentials, WhatsApp/SMS senders, and approved WhatsApp Content Templates for messaging
+- **Brevo** credentials and a verified sender for email
+- **Cloudflare Turnstile** keys for public booking; local test keys are shown below
+- Optional **Google OAuth** credentials for Meet integration
 
 ### Environment Variables
 
-**Backend** — copy `Server/.env.example` to `Server/.env`:
+From the repository root, copy the examples and fill in the values before running backend commands:
 
-| Variable | Description |
+```bash
+cp Server/.env.example Server/.env
+cp Portal/.env.example Portal/.env.local
+```
+
+Use the examples as a starting point; backend runtime settings are defined in [`Server/src/utils/config/config.ts`](Server/src/utils/config/config.ts). The main backend settings are:
+
+| Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | JWT signing secret (generate with `openssl rand -hex 64`) |
-| `ENCRYPTION_KEY` | AES-256-GCM key for field encryption (generate with `openssl rand -hex 32`) |
-| `ENCRYPTION_KEY_PREVIOUS` | Optional previous field-encryption key. Set only during a rotation. Procedure: "Rotating keys" in `docs/operations.md` |
-| `TWILIO_ACCOUNT_SID` | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio auth token |
-| `TWILIO_WHATSAPP_FROM` | WhatsApp sender (e.g. `whatsapp:+14155238886`) |
-| `TWILIO_SMS_FROM` | SMS sender phone number |
-| `TWILIO_WEBHOOK_BASE_URL` | Public URL for Twilio webhooks |
-| `ALLOWED_ORIGINS` | JSON array of allowed CORS origins |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Initial admin account, read only by `db:seed-admin` (not by the server; leave them out of production) |
-| `GOOGLE_CLIENT_ID` | Optional Google OAuth web client ID for Meet link generation |
-| `GOOGLE_CLIENT_SECRET` | Optional Google OAuth web client secret |
-| `GOOGLE_OAUTH_REDIRECT_URI` | Exact backend callback registered with Google, for example `http://localhost:3001/v1/google/oauth/callback` |
-| `PORTAL_URL` | Exact Portal origin used for the OAuth completion redirect |
+| `NODE_ENV` | Set `development` explicitly locally. An unset/blank value is treated as production. |
+| `DATABASE_URL` | Connection string for your development PostgreSQL database |
+| `AUTH_SECRET` | Provider JWT/CSRF secret; generate with `openssl rand -hex 64` |
+| `PORTAL_AUTH_SECRET` | Required separate patient-session secret, even with self-service off; generate independently from `AUTH_SECRET` |
+| `ENCRYPTION_KEY` | 64-character hex AES-256-GCM key; generate with `openssl rand -hex 32`; required in production |
+| `BLIND_INDEX_KEY` | Separate 64-character hex key for encrypted-field search/uniqueness; required in production |
+| `ENCRYPTION_KEY_PREVIOUS` | Optional previous encryption key during a rotation; follow the operations runbook |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Required Twilio credentials |
+| `TWILIO_WHATSAPP_FROM`, `TWILIO_SMS_FROM` | Required sender numbers |
+| `TWILIO_WEBHOOK_BASE_URL` | Public API base URL used to validate Twilio webhook signatures |
+| `BREVO_API_KEY`, `BREVO_FROM_EMAIL`, `BREVO_WEBHOOK_SECRET` | Required email credentials, verified sender, and webhook secret; `BREVO_FROM_NAME` is optional |
+| `ALLOWED_ORIGINS` | JSON array of allowed provider origins, including `http://localhost:3000` locally |
+| `PORTAL_URL` | Portal origin for booking links, patient-session origin checks, and OAuth completion |
+| `CAPTCHA_SECRET` | Required Turnstile secret; local test value: `1x0000000000000000000000000000000AA` |
+| `CAPTCHA_EXPECTED_HOSTNAMES` | Optional comma-separated hostname allow-list; defaults to the `PORTAL_URL` hostname |
+| `ENABLE_SCHEDULER` | Set `true` to run pg-boss workers and scheduled maintenance |
+| `ENABLE_SELF_SERVE` | Leave `false`; patient session routes are deferred and no session login flow exists |
+| `PORTAL_WHATSAPP_DAILY_CAP` | Distinct numbers allowed WhatsApp booking links per 24 hours across providers; default 60 |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Seed-only credentials for `db:seed-admin`; choose your own password and remove them from production runtime configuration |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` | Optional Google OAuth configuration; local callback: `http://localhost:3001/v1/google/oauth/callback` |
+| `SENTRY_DSN` | Optional backend error reporting; leave empty to disable |
 
-Google OAuth settings may be omitted when running in manual-link-only mode. Generated Meet spaces use `OPEN` access, so links must only be shared with the intended patient.
+WhatsApp template SIDs live in [`Server/src/twilio/whatsapp-templates.ts`](Server/src/twilio/whatsapp-templates.ts), rather than environment variables. Google credentials may be omitted for manual video-call links.
 
-**Frontend** — copy `Portal/.env.example` to `Portal/.env.local`:
+Frontend configuration:
 
-| Variable | Description |
+| Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | Backend API URL (default: `http://localhost:3001`) |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key for the patient portal login (test key `1x00000000000000000000AA` locally) |
+| `NEXT_PUBLIC_API_URL` | API origin without `/v1`, e.g. `http://localhost:3001` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Booking CAPTCHA site key; local test value: `1x00000000000000000000AA` |
+| `NEXT_PUBLIC_SENTRY_DSN` | Optional browser error reporting |
+| `CSP_ENFORCE` | `true` enforces the content security policy; otherwise it is report-only |
+
+Use the Turnstile test keys only for development/tests. Vercel production builds require `SENTRY_AUTH_TOKEN` for source-map upload; see the operations runbook.
 
 ### Installation
 
-```bash
-# Backend
-cd Server
-pnpm install
-pnpm exec prisma migrate deploy
-pnpm run db:seed-admin        # Creates the initial admin user
+Start your development database and configure the environment files, then run these commands from the repository root:
 
-# Frontend
-cd Portal
-pnpm install
+```bash
+cd Server
+pnpm install --frozen-lockfile
+pnpm exec prisma generate
+pnpm exec prisma migrate deploy
+pnpm run db:seed-admin
+
+cd ../Portal
+pnpm install --frozen-lockfile
 ```
+
+The admin seed creates the initial super admin once. Prisma generation is also part of the backend build; it is needed before typechecking or running code that imports the generated client.
 
 ### Running the App
 
-**Development:**
+Development, in separate terminals from the repository root:
+
 ```bash
-# Terminal 1 — Backend (hot reload)
+# Terminal 1 — API at http://localhost:3001
 cd Server
 pnpm run dev
-# → http://localhost:3001
+```
 
-# Terminal 2 — Frontend (hot reload)
+```bash
+# Terminal 2 — Portal at http://localhost:3000
 cd Portal
 pnpm run dev
-# → http://localhost:3000
 ```
 
-**Production:**
+Log in at `http://localhost:3000/login` with the seeded credentials. Configure the provider's public profile, legal identity and contact, availability, and bookable services/locations in booking settings before enabling online booking.
+
+Production builds, with each block starting at the repository root:
+
 ```bash
-# Backend
 cd Server
 pnpm run build
-pnpm start          # Runs migrations, seeds admin, starts server
-
-# Frontend
-cd Portal
-pnpm run build
-pnpm start          # Starts Next.js production server
+pnpm start
+# Runs migrations, PII backfill, and the API; does not seed an admin
 ```
 
----
+```bash
+cd Portal
+pnpm run build
+pnpm start
+```
+
+For a separate deployment release step, use `pnpm run migrate:deploy` followed by `pnpm run pii:backfill`, then start with `pnpm run start:app`. Deployment, secret management, and backup procedures are in [the operations runbook](docs/operations.md).
 
 ## API Reference
 
-All endpoints require authentication via JWT cookie (except `/health`, `/auth/login`, and Twilio webhooks).
+Application routes are under `/v1`. Provider routes use JWT authentication and role checks; cookie-authenticated writes require `X-CSRF-Token` from `GET /v1/auth/csrf`. The frontend provider client handles this automatically.
+
+Anonymous booking routes are under `/v1/public` and do not use cookies. The optional `/v1/portal` session routes return 404 with the default `ENABLE_SELF_SERVE=false`.
+
+### Provider API
+
+This is an overview; route modules and the [Bruno collection](Bruno%20Collection/) contain the individual requests and validation details.
+
+| Route | Purpose |
+|---|---|
+| `/v1/auth` | Login, logout, refresh, CSRF token, password change |
+| `/v1/users/me` | Read/update the provider profile |
+| `/v1/users` | Super-admin user management |
+| `/v1/patients` | Patient CRUD, statistics, and permitted restoration |
+| `/v1/appointments` | Appointment CRUD, statistics, pay/confirm/cancel actions, and missing meeting links |
+| `/v1/appointment-types`, `/v1/locations` | Service and location configuration |
+| `/v1/blocked-time` | Calendar blocks |
+| `/v1/medical-records` | Medical record CRUD by record ID, with nested clinical data |
+| `/v1/consent-document` | Provider document management, with a separate public download route |
+| `/v1/reminders` | Reminder CRUD, statistics, cancellation, and retry |
+| `/v1/notify/{whatsapp,sms,email,bulk}` | Immediate and bulk messaging |
+| `/v1/booking/settings`, `/v1/booking/availability` | Public profile, booking rules, readiness, and weekly availability |
+| `/v1/booking-requests` | Inbox, pending count, detail, approval, and rejection |
+| `/v1/audit-logs` | Activity history |
+| `/v1/google` | Connection status, verification, OAuth, and Meet creation |
+
+### Anonymous Booking API
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/v1/public/providers` | Indexable provider slugs for the sitemap |
+| `GET` | `/v1/public/providers/:slug` | Public provider profile and booking state |
+| `GET` | `/v1/public/providers/:slug/slots` | Available slots for a service and date range |
+| `GET` | `/v1/public/providers/:slug/{avatar,logo}` | Public profile image bytes |
+| `POST` | `/v1/public/providers/:slug/bookings` | Start a hold and send the confirmation link; requires booking CAPTCHA; returns 202 |
+| `POST` | `/v1/public/booking-confirmations/view` | Read link state without confirming |
+| `POST` | `/v1/public/booking-confirmations/confirm` | Confirm the contact and book or submit for approval |
+| `POST` | `/v1/public/booking-confirmations/release` | Release a mistaken hold; returns 204 |
+
+Confirmation API calls put tokens in JSON bodies. The patient-facing URL is `/book/confirmar/<token>`; confirmation pages use `noindex` and `no-referrer`.
+
+`GET /health` (also `/v1/health`) checks database connectivity. External webhooks use `POST /webhooks/twilio`, `POST /webhooks/twilio/status`, and `POST /webhooks/brevo`, with vendor authentication.
 
 ### Response Format
 
-Success:
-```json
-{
-  "success": true,
-  "data": { ... },
-  "timestamp": "2026-03-22T12:00:00.000Z"
-}
-```
-
-Paginated:
-```json
-{
-  "success": true,
-  "data": {
-    "data": [...],
-    "total": 100,
-    "page": 1,
-    "pageSize": 20,
-    "totalPages": 5
-  }
-}
-```
-
-Error:
-```json
-{
-  "success": false,
-  "error": "Error description",
-  "timestamp": "2026-03-22T12:00:00.000Z"
-}
-```
-
-### Endpoints
-
-#### Auth
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/auth/login` | Authenticate and set session cookie |
-| `POST` | `/auth/logout` | Clear session cookie |
-| `POST` | `/auth/refresh` | Refresh JWT token |
-
-#### Health
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | DB connectivity check and service uptime |
-| `GET` | `/messages/:messageSid` | Fetch live Twilio delivery status (rate-limited) |
-
-#### Users
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/users/me` | Get current user profile |
-| `GET` | `/users` | List all users (Super Admin only) |
-| `POST` | `/users` | Create a new user (Super Admin only) |
-| `PATCH` | `/users/:id` | Update user profile |
-| `POST` | `/users/change-password` | Change password |
-
-#### Patients
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/patients` | List patients (search, status, pagination, sorting) |
-| `GET` | `/patients/stats` | Count breakdown by status |
-| `GET` | `/patients/:id` | Get single patient with relations |
-| `POST` | `/patients` | Create a new patient |
-| `PATCH` | `/patients/:id` | Partially update a patient |
-| `DELETE` | `/patients/:id` | Delete a patient |
-
-#### Appointments
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/appointments` | List appointments (patient, status, dates, paid, pagination) |
-| `GET` | `/appointments/stats` | Revenue and status aggregates |
-| `GET` | `/appointments/:id` | Get appointment with linked patient and reminder |
-| `POST` | `/appointments` | Create appointment (with conflict detection) |
-| `PATCH` | `/appointments/:id` | Update appointment (with conflict detection on time changes) |
-| `POST` | `/appointments/:id/pay` | Mark as paid |
-| `POST` | `/appointments/:id/cancel` | Cancel appointment |
-| `DELETE` | `/appointments/:id` | Delete appointment |
-
-#### Appointment Types & Locations
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/appointment-types` | List active appointment types |
-| `POST` | `/appointment-types` | Create type |
-| `PATCH` | `/appointment-types/:id` | Update type (including soft-delete via `isActive`) |
-| `GET` | `/locations` | List active locations |
-| `POST` | `/locations` | Create location |
-| `PATCH` | `/locations/:id` | Update location (including soft-delete via `isActive`) |
-
-#### Reminders
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/reminders` | List reminders (status, channel, patient, dates, pagination) |
-| `GET` | `/reminders/stats` | Count by status and channel |
-| `GET` | `/reminders/:id` | Get single reminder with linked appointment |
-| `POST` | `/reminders` | Create a new reminder |
-| `PATCH` | `/reminders/:id` | Update a reminder |
-| `POST` | `/reminders/:id/cancel` | Cancel a pending reminder |
-| `DELETE` | `/reminders/:id` | Delete a reminder |
-
-#### Notify (Immediate Dispatch)
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/notify/whatsapp` | Send immediate WhatsApp message |
-| `POST` | `/notify/sms` | Send immediate SMS |
-
-#### Medical Records
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/medical-records/:patientId` | Get patient's medical record |
-| `PUT` | `/medical-records/:patientId` | Create or update medical record (atomic transaction) |
-
----
+JSON success responses use `{ success: true, data, timestamp }`. Paginated `data` contains `data`, `total`, `page`, `pageSize`, and `totalPages`. Errors use `{ success: false, error, timestamp }`, with `requestId` when available. Routes returning 204 have no response body.
 
 ## Database Schema
 
-The database uses PostgreSQL with Prisma ORM. Key models:
+The schema is in [`Server/schema.prisma`](Server/schema.prisma), with migrations in [`Server/migrations/`](Server/migrations/).
 
-### Core Models
+| Models | Purpose |
+|---|---|
+| `User` | Provider identity, role/status, timezone, branding, notification preferences, and booking rules |
+| `Patient` | Provider-owned patient records, encrypted contacts, blind indexes, source, and access controls |
+| `Appointment` | Patient visits, time, price, status, payment, source, and meeting state |
+| `AppointmentType`, `AppointmentLocation`, `BlockedTime` | Services, venues, and unavailable calendar time |
+| `Reminder` | Channel, destination, content, dispatch time, and delivery state; optional one-to-one appointment link |
+| `MedicalRecord`, `FamilyMember`, `SubsystemRelation`, `EvolutionNote`, `MedicalDocument` | Clinical histories and related records |
+| `Document` | Provider consent document |
+| `AvailabilityRule` | Provider weekly availability windows |
+| `BookingRequest` | Unconfirmed holds, confirmed approval/review requests, consent evidence, and hashed tokens |
+| `PatientConsent` | Versioned consent and revocation evidence |
+| `GoogleConnection`, `GoogleOAuthState` | Encrypted Google refresh tokens and one-time OAuth state |
+| `AuditLog` | Provider, public-portal, and job activity |
 
-| Model | Purpose | Key Fields |
-|---|---|---|
-| `User` | Admin users | email, role (`SUPER_ADMIN`/`ADMIN`/`VIEWER`), status, timezone, banking info |
-| `Patient` | Patient records | name, contact info, status (`ACTIVE`/`INACTIVE`) |
-| `Appointment` | Scheduled visits | startAt, endAt, price, status, paid |
-| `Reminder` | Notifications | channel, to, status, sendMode, sendAt, messageId |
-| `MedicalRecord` | Clinical history | consultation reason, development, lifestyle, trauma, mental history |
-| `FamilyMember` | Patient family | name, sex, age, relationship |
-| `EvolutionNote` | Progress notes | date, text (timestamped entries) |
-| `AppointmentLocation` | Configurable venues | name, color, bg, isActive |
-| `AppointmentType` | Visit categories | name, defaultDuration, defaultPrice, isActive |
-
-### Relationships
-
-- A **User** owns many **Patients** (multi-tenant isolation)
-- A **Patient** has many **Appointments**, many **Reminders**, and one optional **MedicalRecord**
-- A **MedicalRecord** has many **FamilyMembers** and many **EvolutionNotes**
-- An **Appointment** optionally links to one **Reminder** (one-to-one)
-- **Appointments** reference an **AppointmentType** and **AppointmentLocation**
-
-### Indexes
-
-Composite indexes are defined for common query patterns:
-- `Patient`: `[userId, status]`, `[userId, email]` (unique), `[name]`, `[lastName]`
-- `Appointment`: `[startAt, status]`, `[patientId]`, `[locationId]`, `[typeId]`
-- `Reminder`: `[status, sendAt]`, `[patientId]`
-
----
+Raw-SQL migrations maintain partial unique indexes for non-deleted patient emails and current consents, plus exclusion constraints for appointment and booking-hold overlaps. These objects are listed in [`AGENTS.md`](AGENTS.md) and must be preserved when generating migrations.
 
 ## Notification System
 
-### Immediate Dispatch
+- **Channels:** Twilio sends WhatsApp/SMS; Brevo sends email. WhatsApp uses approved Content Templates from the code registry.
+- **Delivery history:** reminders are persisted before dispatch and track `PENDING`, `QUEUED`, `SENT`, `FAILED`, or `CANCELLED`. Twilio/Brevo callbacks update delivery state; background tracking provides a fallback.
+- **Scheduling:** each scheduled reminder has a pg-boss job due at `sendAt`. Appointment changes reconcile the linked reminder; cancelling an appointment cancels its pending reminder.
+- **Booking links:** go only to the email or WhatsApp contact selected on the booking form. Failed sends release the hold and return an error. No patient, appointment, or patient-consent record is created before confirmation.
+- **Patient routing:** later booking notices use the patient's preferred usable channel, falling back to email, WhatsApp, then SMS. Unverified WhatsApp numbers and patients with messages stopped are excluded.
+- **Virtual visits:** automatic Meet provisioning runs in a worker. Patient confirmation waits for the link or the explicit manual-link fallback; providers see appointments needing a link.
+- **Timezones:** patient messages use the booking's patient timezone when present; provider notices use the provider timezone.
 
-Call `POST /notify/whatsapp` or `POST /notify/sms`:
-
-1. A `PENDING` reminder record is created first (audit trail)
-2. The message is sent via Twilio API
-3. On success: status → `SENT`, Twilio `messageSid` stored
-4. On failure: status → `FAILED`, error message recorded
-
-This **create-first-then-send** pattern ensures an audit trail exists even if the server crashes between sending and recording.
-
-### Scheduled Dispatch
-
-1. Create a reminder via `POST /reminders` with `sendMode: "SCHEDULED"` and a future `sendAt`
-2. The background **reminderWorker** polls every minute for `PENDING` reminders with `sendAt ≤ now`
-3. Each matching reminder is dispatched through Twilio
-4. Status is updated to `SENT` or `FAILED` with the result
-
-WhatsApp messages require a Twilio **Content Template SID** (`contentSid`) and optionally `contentVariables` for template placeholders — required by WhatsApp Business API policy.
-
----
+Booking and request notices use separate queues. With the scheduler disabled, their immediate notices are attempted after commit; scheduled reminders and maintenance require the scheduler.
 
 ## Background Workers
 
-Background work is orchestrated by **pg-boss** (Postgres-backed job queue) with four queues/schedules:
+Set `ENABLE_SCHEDULER=true` to initialize pg-boss. Queue configuration is in [`Server/src/scheduler/pg-boss.ts`](Server/src/scheduler/pg-boss.ts).
 
-| Queue / Schedule | Worker | Purpose |
-|---|---|---|
-| `send-reminder` (per-reminder jobs) | `sendReminderWorker` | Dispatches `PENDING` reminders whose `sendAt` time has passed. On send, enqueues a `track-delivery` job to poll Twilio for status updates. Failed jobs retry with backoff and dead-letter. |
-| `track-delivery` (every 5 min) | `trackDeliveryWorker` | Polls Twilio for stale `SENT` messages (>30 min with no confirmation) and marks them `FAILED`. |
-| `complete-appointments` (every 15 min) | `completeAppointmentsWorker` | Auto-transitions `SCHEDULED`/`CONFIRMED` appointments to `COMPLETED` when more than 1 hour past `endAt`. |
-| `daily-reminder` (hourly) | `dailyReminderWorker` | Sends a daily "tomorrow's appointments" summary via WhatsApp to users with reminders enabled. |
+| Queue / Schedule | Purpose |
+|---|---|
+| `send-reminder` (per reminder) | Send due reminders, retry with backoff, and schedule delivery checks |
+| `bulk-send-message` (per message) | Dispatch bulk messages with bounded concurrency and retries |
+| `track-delivery` (per-message jobs and hourly sweep) | Poll queued Twilio messages and fail tracking that has timed out; email delivery uses Brevo callbacks |
+| `daily-reminder` (hourly) | Send tomorrow's agenda at the configured local provider summary hour |
+| `complete-appointments` (every 15 minutes) | Complete scheduled/confirmed appointments whose end time has passed |
+| `portal-booking-notify` (per event) | Send appointment and meeting-link notices |
+| `booking-request-notify` (per event) | Send request notices, nudges, and unused-link expiry notices |
+| `provision-meet` (per appointment) | Create Google Meet links or hand off to manual linking |
+| `sweep-pending-meetings` (every 15 minutes) | Move links pending for more than 30 minutes to manual follow-up |
+| `sweep-booking-requests` (every 15 minutes) | Expire stale holds and nudge confirmed pending requests |
+| `purge-booking-requests` (daily, 03:45 UTC) | Remove old resolved requests and never-confirmed rows according to retention rules |
+| `check-google-connections` (daily, 11:00 UTC) | Detect revoked/expired Google refresh tokens |
 
-All workers:
-- Start automatically on server boot via `initializePgBoss()` (requires `ENABLE_SCHEDULER=true`)
-- Shut down cleanly on `SIGTERM`/`SIGINT` via `stopPgBoss({ graceful: true })`
-- Are wrapped in error handling — a failure in one cycle logs the error and lets pg-boss retry
-
----
+Reminder and bulk-send queues have dead-letter queues. Shutdown is graceful on `SIGTERM`/`SIGINT`. Hold validity is determined by the clock, so stale holds stop blocking slots even before a sweep runs.
 
 ## Security
 
-- **Authentication** — JWT tokens stored in httpOnly, secure cookies with configurable sameSite policy
-- **Account lockout** — Configurable max failed attempts and lockout duration
-- **Timing-safe login** — Dummy bcrypt comparison on unknown emails to prevent user enumeration
-- **Field encryption** — Sensitive fields (banking info, medical data) encrypted at rest with AES-256-GCM
-- **Input validation** — All request bodies and query parameters validated via Zod schemas
-- **IANA timezone validation** — Timezone strings validated against the Intl API
-- **Rate limiting** — Global rate limiter + dedicated limit on message status endpoint
-- **CORS** — Configurable allowed origins
-- **Helmet** — Standard HTTP security headers
-- **Soft-delete filtering** — Inactive locations and appointment types are excluded from list queries
-- **Email normalization** — Emails lowercased on creation to prevent case-based duplicates
-- **Input sanitization** — Twilio message SIDs validated against regex pattern before API calls
-
----
+- Provider JWTs use issuer/audience validation, httpOnly cookies, CSRF protection for cookie writes, bcrypt, and login lockout.
+- Super-admin role/status checks reread the actor; account changes invalidate refresh tokens and guard against self-lockout.
+- Sensitive patient, clinical, reminder, banking, booking-request, audit, and Google-token fields use AES-256-GCM encryption. Searchable encrypted fields use separate blind indexes.
+- Public booking uses Turnstile, per-IP limits, and transactionally enforced contact/provider caps, including WhatsApp spending limits.
+- Confirmation/release tokens are random, stored only as hashes, and excluded from API URLs, logs, audit fields, and error reporting.
+- Provider/public/session CORS rules are separate. Body limits, Zod validation, Helmet, and a Portal content security policy protect request boundaries.
+- Twilio and Brevo webhook authentication is enforced in every environment.
+- Logs mask contacts and omit token-bearing paths/queries; optional Sentry events disable automatic data collection and are scrubbed.
+- Patient consent is versioned; revocation stops messaging and portal access through the documented operator workflow.
 
 ## Testing
 
-```bash
-# Server tests (168 tests across 12 suites)
-cd Server
-pnpm test                 # Run once
-pnpm run test:watch       # Watch mode
-pnpm run test:coverage    # With coverage report
+Commands below start from the repository root unless stated otherwise.
 
-# Dashboard tests (41 tests across 4 suites)
-cd Portal
-pnpm test                 # Run once
-pnpm run test:watch       # Watch mode
+### Unit Tests and Static Checks
+
+```bash
+cd Server
+pnpm exec prisma generate
+pnpm run typecheck
+pnpm run lint
+pnpm test
+pnpm run test:coverage
+
+cd ../Portal
+pnpm exec tsc --noEmit
+pnpm run lint
+pnpm test
 ```
 
-Test suites cover:
-- **Server**: Service logic (patients, appointments, reminders, medical records, auth, users, locations, appointment types, consent documents, Google Meet), error handling, Prisma error mapping, pagination utilities, time utilities, encryption
-- **Dashboard**: API query/mutation hooks (loading, error, retry, refetch), time formatting, query string building
+Server unit tests mock Prisma and external services; they still need the required configuration values in `Server/.env`. Both apps provide `pnpm run test:watch`.
+
+### Backend Integration Tests
+
+```bash
+cd Server
+docker compose -f docker-compose.test.yml up -d --wait
+pnpm exec prisma generate
+pnpm run test:integration
+docker compose -f docker-compose.test.yml down
+```
+
+Integration setup loads `Server/.env.test`, applies migrations, runs serially, and truncates application tables between tests. The local database listens on port **5433**. Inherited environment variables take precedence, and `DATABASE_URL` must contain `test`: use only the disposable database. External messaging/CAPTCHA services are mocked.
+
+### End-to-End Tests
+
+Playwright covers authenticated desktop/mobile workflows, the provider PWA, and anonymous booking on desktop/mobile. Use a disposable test/e2e database, seed it with `pnpm run db:seed-e2e` from `Server/`, and run the API, Portal, and mock Brevo server with the environment in the CI e2e job.
+
+Once that stack is running:
+
+```bash
+cd Portal
+pnpm exec playwright install chromium
+pnpm e2e
+# Optional interactive runner:
+pnpm e2e:ui
+```
+
+The environment template is [`Portal/e2e/.env.example`](Portal/e2e/.env.example); full stack settings are in [CI](.github/workflows/ci.yml) and [the e2e runbook](docs/operations.md#end-to-end-tests). Tests run serially against one provider calendar and read booking links from the mock Brevo server. Public booking limits remain active; wait for their 15-minute window before repeating the full public suite.
+
+CI runs Portal lint/typecheck/build/unit tests, Server lint/typecheck/unit/integration tests, and a self-contained Playwright stack with enforced production CSP.
+
+## Operations and Documentation
+
+- [Operations runbook](docs/operations.md): deployment, encrypted backups and restore, key rotation, Sentry/source maps, Google connection recovery, booking templates/caps, and e2e setup
+- [Patient-data procedures](docs/compliance-patient-data.md): consent, access restrictions, revocation, erasure, and export
+- [Versioned legal texts](docs/legal/versions/README.md) and [clinic data-processing annex](docs/legal/clinic-data-processing-annex.md)
+- [Backup tooling](ops/db-backup/): nightly encrypted offsite database backups and an end-to-end smoke test, separate from pg-boss
+- [Repository conventions](AGENTS.md): calendar, audit, encryption, API, and test invariants
+
+Backend operator scripts include `consent:revoke`, `patient:erase`, `clinic:export`, `pii:backfill`, `pii:reencrypt`, `pii:key-id`, and `db:verify-restore`. Follow the runbook for their arguments and safeguards.
