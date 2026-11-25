@@ -13,7 +13,7 @@ import { deliverBookingNotification, type BookingNotificationKind } from '../../
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
 import { createPortalAppointmentWithin } from '../../../src/portal/portal-booking.service.js';
 import { patientService } from '../../../src/patients/patient.service.js';
-import { unique } from '../helpers.js';
+import { defaultPatientTypeId, unique } from '../helpers.js';
 import {
   bookViaConfirmation, buildPortalApp, createConsentedPatient, createLiveProvider, portalPost, sessionFor, slotStarts,
   type LiveProvider,
@@ -46,7 +46,7 @@ type Contact = Partial<{
 
 async function patientWith(userId: string, contact: Contact, source: RecordSource = RecordSource.PROVIDER) {
   return prisma.patient.create({
-    data: { name: 'Lucia', lastName: 'Rojas', status: PatientStatus.ACTIVE, userId, source, reminderChannel: Channel.EMAIL, ...contact },
+    data: { name: 'Lucia', lastName: 'Rojas', status: PatientStatus.ACTIVE, userId, source, reminderChannel: Channel.EMAIL, patientTypeId: await defaultPatientTypeId(userId), ...contact },
   });
 }
 

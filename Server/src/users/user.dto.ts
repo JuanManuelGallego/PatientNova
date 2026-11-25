@@ -15,11 +15,8 @@ export type UserResponse = Prisma.UserGetPayload<{ select: typeof userInclude }>
  * Useful in auth handlers that already hold the full user record in memory and want to
  * avoid a second `SELECT` with a `select` clause.
  */
-export function toUserResponse(
-  user: Parameters<typeof _extractFields>[ 0 ],
-  consentDocument: UserResponse[ 'consentDocument' ] = null,
-): UserResponse {
-  return _extractFields(user, consentDocument);
+export function toUserResponse(user: Parameters<typeof _extractFields>[ 0 ]): UserResponse {
+  return _extractFields(user);
 }
 
 function _extractFields(
@@ -48,8 +45,8 @@ function _extractFields(
     accountNumber: string | null;
     nationalId: string | null;
     bankingKey: string | null;
+    defaultPatientTypeId: string | null;
   },
-  consentDocument: UserResponse[ 'consentDocument' ] = null,
 ): UserResponse {
   return {
     id: user.id,
@@ -76,6 +73,6 @@ function _extractFields(
     accountNumber: user.accountNumber,
     nationalId: user.nationalId,
     bankingKey: user.bankingKey,
-    consentDocument,
+    defaultPatientTypeId: user.defaultPatientTypeId,
   };
 }

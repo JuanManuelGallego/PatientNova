@@ -32,6 +32,7 @@ export interface Patient {
   dateOfBirth?: string | null;
   notes?: string | null;
   appointmentTypeId?: string | null;
+  patientTypeId: string;
 
   status: PatientStatus;
   createdAt: string;
@@ -41,6 +42,7 @@ export interface Patient {
   reminders?: Reminder[];
   medicalRecord?: MedicalRecord;
   appointmentType?: AppointmentType;
+  patientType?: { id: string; name: string };
 }
 
 type PatientContacts = Pick<Patient, "whatsappNumber" | "smsNumber" | "email">;

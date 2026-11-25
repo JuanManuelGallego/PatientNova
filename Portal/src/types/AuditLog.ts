@@ -8,6 +8,7 @@ export enum EntityType {
   APPOINTMENT_LOCATION = "APPOINTMENT_LOCATION",
   BLOCKED_TIME = "BLOCKED_TIME",
   CONSENT_DOCUMENT = "CONSENT_DOCUMENT",
+  PATIENT_TYPE = "PATIENT_TYPE",
   GOOGLE_CONNECTION = "GOOGLE_CONNECTION",
   GOOGLE_MEET_SPACE = "GOOGLE_MEET_SPACE",
   BOOKING_REQUEST = "BOOKING_REQUEST",
@@ -20,6 +21,7 @@ export enum ActionType {
   DELETE = "DELETE",
   RESTORE = "RESTORE",
   LOGIN = "LOGIN",
+  SEND = "SEND",
 }
 
 export enum ActionSource {
@@ -72,6 +74,7 @@ export const ENTITY_TYPE_CONFIG: Record<
   [EntityType.APPOINTMENT_LOCATION]: { label: "Ubicación", color: "#0D9488", bg: "#F0FDFA" }, 
   [EntityType.BLOCKED_TIME]: { label: "Tiempo bloqueado", color: "#4B5563", bg: "#F9FAFB" },
   [EntityType.CONSENT_DOCUMENT]: { label: "Consentimiento", color: "#475569", bg: "#F8FAFC" },
+  [EntityType.PATIENT_TYPE]: { label: "Tipo de paciente", color: "#9333EA", bg: "#FAF5FF" },
   [EntityType.GOOGLE_CONNECTION]: { label: "Conexión de Google", color: "#2563EB", bg: "#EFF6FF" },
   [EntityType.GOOGLE_MEET_SPACE]: { label: "Sala Google Meet", color: "#0891B2", bg: "#ECFEFF" },
   [EntityType.BOOKING_REQUEST]: { label: "Solicitud de reserva", color: "#B45309", bg: "#FFFBEB" },
@@ -86,6 +89,7 @@ export const ACTION_TYPE_CONFIG: Record<ActionType, { label: string; color: stri
   [ActionType.DELETE]: { label: "Eliminación", color: "#E11D48" },
   [ActionType.RESTORE]: { label: "Restauración", color: "#0D9488" },
   [ActionType.LOGIN]: { label: "Inicio de sesión", color: "#6366F1" },
+  [ActionType.SEND]: { label: "Envío", color: "#D97706" },
 };
 
 export const actionTypeLabel = (action: ActionType): string => ACTION_TYPE_CONFIG[action]?.label ?? action;

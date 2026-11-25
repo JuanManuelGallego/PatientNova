@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RequestDrawer } from "@/src/components/Drawers/RequestDrawer";
@@ -16,6 +16,13 @@ vi.mock("@/src/api/booking-requests/useFetchBookingRequest", () => ({
 }));
 vi.mock("@/src/api/booking-requests/useResolveBookingRequest", () => ({
   useResolveBookingRequest: () => ({ approve, reject, loading: false, error: resolveError }),
+}));
+const patientTypes = [
+  { id: "type-general", name: "General", isDefault: true },
+  { id: "type-family", name: "Familia", isDefault: false },
+];
+vi.mock("@/src/api/patient-types/useFetchPatientTypes", () => ({
+  useFetchPatientTypes: () => ({ patientTypes, defaultType: patientTypes[ 0 ], loading: false, error: null, refetch: vi.fn() }),
 }));
 vi.mock("@/src/hooks/useDisplayTimezone", () => ({ useDisplayTimezone: () => "America/Bogota" }));
 vi.mock("next/navigation", async (importOriginal) => ({
@@ -92,8 +99,25 @@ describe("RequestDrawer", () => {
     expect(screen.getByText("Correo (verificado)")).toBeInTheDocument();
     expect(screen.getByTestId("request-outcome")).toHaveTextContent("Se creará un paciente nuevo");
     await userEvent.click(screen.getByTestId("request-approve"));
-    expect(approve).toHaveBeenCalledWith("r1", {});
+    expect(approve).toHaveBeenCalledWith("r1", { patientTypeId: "type-general" });
     await waitFor(() => expect(onResolved).toHaveBeenCalled());
+  });
+
+  it("lets the provider pick the type of the patient the approval creates", async () => {
+    renderDrawer();
+    const select = screen.getByTestId("request-patient-type-select");
+    await userEvent.click(within(select).getByRole("combobox"));
+    await userEvent.click(screen.getByRole("option", { name: "Familia" }));
+    await userEvent.click(screen.getByTestId("request-approve"));
+    expect(approve).toHaveBeenCalledWith("r1", { patientTypeId: "type-family" });
+  });
+
+  it("offers no type when the approval reuses a patient", async () => {
+    request = makeRequest({ candidates: [ candidate() ] });
+    renderDrawer();
+    expect(screen.queryByTestId("request-patient-type-select")).toBeNull();
+    await userEvent.click(screen.getByTestId("request-approve"));
+    expect(approve).toHaveBeenCalledWith("r1", {});
   });
 
   it("says an inactive match will be reactivated, with no restore choice", () => {

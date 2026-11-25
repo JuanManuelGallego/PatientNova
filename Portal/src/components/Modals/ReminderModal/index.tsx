@@ -12,7 +12,8 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useState, useMemo } from "react";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
-import { getPatientContact } from "@/src/types/Patient";
+import { getPatientContact, Patient } from "@/src/types/Patient";
+import { useFetchPatientTypes } from "@/src/api/patient-types/useFetchPatientTypes";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -21,7 +22,7 @@ import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import {
   computeAutoFilledVariables,
-  buildPreview,
+  buildMessageBody,
   selectTemplateForAppointment,
 } from "./utils";
 import { SendModeAndPatientStep } from "./SendModeAndPatientStep";
@@ -64,6 +65,7 @@ const [ form, setForm ] = useState<ReminderForm>({
   });
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
+  const { patientTypes } = useFetchPatientTypes();
   // Reminders go out on the selected patient's own channel.
   const channel = selectedPatient?.reminderChannel ?? Channel.WHATSAPP;
   const { patient: fullPatient } = useFetchPatient(form.patientId);
@@ -79,9 +81,10 @@ const [ form, setForm ] = useState<ReminderForm>({
     ? patientAppointments.find((a) => a.id === form.appointmentId)
     : null;
 
+  const consentMimeType = patientTypes.find((t) => t.id === selectedPatient?.patientTypeId)?.currentVersion?.mimeType;
   const preview = useMemo(
-    () => buildPreview(selectedTemplate, form.contentVariables),
-    [ selectedTemplate, form.contentVariables ],
+    () => buildMessageBody(selectedTemplate, form.contentVariables, channel, consentMimeType),
+    [ selectedTemplate, form.contentVariables, channel, consentMimeType ],
   );
 
   const channelAvailable =
@@ -101,25 +104,31 @@ const [ form, setForm ] = useState<ReminderForm>({
           ) && (channel === Channel.WHATSAPP || !!preview.trim())
           : true;
 
+  function consentVersionFor(patient?: Patient) {
+    return patientTypes.find((t) => t.id === patient?.patientTypeId)?.currentVersion?.id ?? null;
+  }
+
   function computeAutoFill(
     templateKey: string,
     appointment?: Appointment | null,
     appointmentType?: AppointmentType | null,
+    patient: Patient | undefined = selectedPatient,
   ) {
     const tmpl = TWILIO_CONFIG[templateKey];
     return computeAutoFilledVariables(
       tmpl,
-      selectedPatient?.name ?? "",
+      patient?.name ?? "",
       getUserName(user),
       appointment,
       user,
       appointmentType,
+      consentVersionFor(patient),
     );
   }
 
   function handlePatientChange(patientId: string) {
     const patient = patients.find((p) => p.id === patientId);
-    const autoFilled = computeAutoFill(form.selectedTemplate, undefined, patient?.appointmentType);
+    const autoFilled = computeAutoFill(form.selectedTemplate, undefined, patient?.appointmentType, patient);
     setForm((f) => ({
       ...f,
       patientId,

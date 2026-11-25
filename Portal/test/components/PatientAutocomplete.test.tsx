@@ -36,6 +36,7 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     name: "Juan",
     lastName: "García",
     reminderChannel: Channel.WHATSAPP,
+    patientTypeId: "type-1",
     status: PatientStatus.ACTIVE,
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-01T00:00:00Z",

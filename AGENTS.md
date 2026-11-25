@@ -57,7 +57,7 @@ pnpm run test:integration
 - Encrypted fields: `Patient.name/lastName/email/whatsappNumber/smsNumber`, `Reminder.to/subject`, `MedicalRecord.name/birthPlace`. Never SQL-filter, sort or `contains` on ciphertext.
 - Search through `patientSearchWhere`/`medicalRecordNameWhere` (`src/utils/encryption/pii-search.ts`); exact lookups use blind indexes (`emailHash`, `toHash`, etc.). The Prisma extension maintains `BLIND_INDEXES`; never set them manually.
 - Raw SQL bypasses encryption: never `$executeRaw` encrypted fields outside `backfill-pii.ts`, `reencrypt-pii.ts` and the constants of `patient-erasure.service.ts`. New PII fields require `ENCRYPTED_FIELDS`, `BLIND_INDEXES` if searched, a `TEXT` column, `REENCRYPT_TABLES` (`reencrypt-pii.ts`) for a new model, and tests.
-- Global JSON/urlencoded limit: `100kb`. Mount larger parsers BEFORE it: `/v1/users` 2mb, `/v1/consent-document` and `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb. First parser wins. Limiters run before parsing; global per-IP limiting skips signature-authenticated `/webhooks/*`. `trust proxy` is exactly 1 hop.
+- Global JSON/urlencoded limit: `100kb`. Mount larger parsers BEFORE it: `/v1/users` 2mb, `/v1/patient-types` and `/v1/medical-records` 15mb, `/webhooks/brevo` 1mb. First parser wins. Limiters run before parsing; global per-IP limiting skips signature-authenticated `/webhooks/*`. `trust proxy` is exactly 1 hop.
 
 ## Public API, booking links and sessions
 
@@ -77,6 +77,12 @@ pnpm run test:integration
 - Consent gates only the portal. Revocation is the operator command `consent:revoke` (`src/patient-consents/consent-revocation.service.ts`, procedure in `docs/compliance-patient-data.md` section 4). It never cancels care. `Patient.messagesStoppedAt` makes `resolvePatientRoute` return null, and the send workers cancel anything queued. Approval refuses a request older than a revocation (`findRevokedSince`).
 - The authorization text has one source, `Portal/src/config/consentText.ts`. Changing it, the policy or the patient conditions bumps `PRIVACY_POLICY_VERSION` and adds a folder under `docs/legal/versions/`, because consent rows store only the version. Booking needs the clinic's legal identity plus a public phone or WhatsApp (`hasLegalIdentity` readiness), which is the real alternative that keeps the portal voluntary.
 - Two commands rewrite audit rows through raw SQL: `patient:erase` (`src/patients/patient-erasure.service.ts`) with constants, `pii:reencrypt` (`reencrypt-pii.ts`) with ciphertext only. Audit rows keep names until erasure.
+
+## Patient types
+
+- Every patient has exactly one `PatientType` of its own provider (`src/patient-types/`). Create patients only through `createPatientWithin`: without a `patientTypeId` it takes the provider's default (`ensureDefaultPatientType`). `User.defaultPatientTypeId` is nullable only because the user row comes first; every path that creates a user calls `ensureDefaultPatientType` in the same transaction, and test users get it from `createTestUser`.
+- Consent PDFs are `ConsentDocumentVersion` rows per type, never updated or deleted on their own; new uploads must be PDF bytes. The approved WhatsApp welcome template links `https://api.patientnova.net/v1/consent-document/public/download/{{8}}.pdf`, so that path is fixed: `{{8}}` is a version id, or a legacy user id answered with the current version of the default type. The server sends the welcome (`POST /v1/patients/:id/welcome`) and audits the version as `SEND`.
+- The Portal shows only curated Spanish for API errors (`src/api/base/errorMessages.ts`): a server message already written in curated Spanish for the provider goes in `PASSTHROUGH`, or the UI shows the status fallback.
 
 ## Booking and patient actions
 

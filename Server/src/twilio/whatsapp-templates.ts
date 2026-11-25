@@ -19,6 +19,9 @@ export const WHATSAPP_TEMPLATES = {
 
   // Patient templates
   appointmentMeetingLinkSid: 'HX1320fb500fa5374b2fca01ac25c0b616',
+  // {{1}} patient, {{2}} provider, {{3}}-{{7}} banking details, {{8}} consent version id in the PDF link
+  // (https://api.patientnova.net/v1/consent-document/public/download/{{8}}.pdf).
+  patientWelcomeSid: 'HX5e1bff9b1e1afccb0602456fca397773',
   patientPortal: {
     confirmationSid: 'HXd6d6860c676d13275fe60f1f41a21715',
     cancelSid: 'HX3b33a0d9e3b33971bcf6f6b9204a1b3d',

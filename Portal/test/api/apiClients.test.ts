@@ -104,6 +104,17 @@ describe("portalApi (patient session)", () => {
 });
 
 describe("toSpanishMessage", () => {
+  it("shows the server's own Spanish for patient types and the welcome message, counts included", () => {
+    const inUse = "Este tipo de paciente lo usan 4 pacientes (incluidos los eliminados). Cámbialos de tipo antes de eliminarlo.";
+    expect(toSpanishMessage(409, inUse)).toBe(inUse);
+    expect(toSpanishMessage(400, "El formulario de consentimiento debe ser un archivo PDF")).toBe("El formulario de consentimiento debe ser un archivo PDF");
+    const welcome = "El paciente no tiene un contacto al que enviar el mensaje de bienvenida";
+    expect(toSpanishMessage(409, welcome)).toBe(welcome);
+    expect(toSpanishMessage(404, "Patient type not found")).toMatch(/tipo de paciente ya no existe/);
+    // Anything else still gets the curated fallback, never raw server text.
+    expect(toSpanishMessage(409, "Este tipo de paciente es raro")).toMatch(/conflicto/);
+  });
+
   it("maps known server messages and falls back by status", () => {
     expect(toSpanishMessage(409, "Appointment overlaps with another appointment of this provider")).toBe("Ya existe una cita en ese horario.");
     expect(toSpanishMessage(409, "Appointment overlaps with blocked time \"Lunch\" (x)")).toBe("Ese horario está bloqueado en la agenda.");

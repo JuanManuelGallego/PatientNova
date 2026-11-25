@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computeAutoFilledVariables,
   buildPreview,
+  buildMessageBody,
   selectTemplateForAppointment,
 } from "@/src/components/Modals/ReminderModal/utils";
 import { TwilioTemplate, TemplateVariableAutoFill } from "@/src/utils/twilioConfig";
@@ -214,21 +215,21 @@ describe("computeAutoFilledVariables", () => {
     expect(result["1"]).toBe("");
   });
 
-  it("resolves userId from user", () => {
+  it("links the consent version of the patient's type", () => {
     const tmpl = makeTemplate([
-      { key: "1", label: "User ID", autoFill: "userId" },
+      { key: "1", label: "Consentimiento", autoFill: "consentDocumentId" },
     ]);
     const user = makeUser({ id: "user-42" });
-    const result = computeAutoFilledVariables(tmpl, "", "", null, user);
-    expect(result["1"]).toBe("user-42");
+    const result = computeAutoFilledVariables(tmpl, "", "", null, user, null, "cversion000000000000000001");
+    expect(result["1"]).toBe("cversion000000000000000001");
   });
 
-  it("returns empty string for userId when user is null", () => {
+  it("falls back to the provider's id (their default type's PDF) when the type has no version", () => {
     const tmpl = makeTemplate([
-      { key: "1", label: "User ID", autoFill: "userId" },
+      { key: "1", label: "Consentimiento", autoFill: "consentDocumentId" },
     ]);
-    const result = computeAutoFilledVariables(tmpl, "", "", null, null);
-    expect(result["1"]).toBe("");
+    expect(computeAutoFilledVariables(tmpl, "", "", null, makeUser({ id: "user-42" }), null, null)["1"]).toBe("user-42");
+    expect(computeAutoFilledVariables(tmpl, "", "", null, null)["1"]).toBe("");
   });
 
   it("returns empty string for unknown autoFill type", () => {
@@ -331,5 +332,38 @@ describe("selectTemplateForAppointment", () => {
     expect(selectTemplateForAppointment(appt)).toBe(
       "PATIENT_APPOINTMENT_REMINDER_CONFIRMATION_PRESENTIAL",
     );
+  });
+});
+
+describe("buildMessageBody", () => {
+  const consentTemplate = {
+    label: "Consentimiento",
+    contentSid: "HXconsent",
+    template: "Hola {{1}}, completa el consentimiento.",
+    variables: [
+      { key: "1", label: "Paciente", autoFill: "patientName" as const },
+      { key: "2", label: "Consentimiento", autoFill: "consentDocumentId" as const },
+    ],
+    canBulkSend: false,
+  } satisfies TwilioTemplate;
+  const vars = { "1": "Lucia", "2": "cversion000000000000000001" };
+
+  it("writes the consent link below the text on email and SMS", () => {
+    for (const channel of [ Channel.EMAIL, Channel.SMS ]) {
+      const body = buildMessageBody(consentTemplate, vars, channel, "application/pdf");
+      expect(body).toMatch(/^Hola Lucia, completa el consentimiento\.
+
+Documento de consentimiento: http.+\/v1\/consent-document\/public\/download\/cversion000000000000000001\.pdf$/);
+    }
+  });
+
+  it("uses the extension of the stored file, and leaves WhatsApp to the template's own document", () => {
+    expect(buildMessageBody(consentTemplate, vars, Channel.SMS, "image/jpeg")).toMatch(/cversion000000000000000001\.jpeg$/);
+    expect(buildMessageBody(consentTemplate, vars, Channel.WHATSAPP, "application/pdf")).toBe("Hola Lucia, completa el consentimiento.");
+  });
+
+  it("adds nothing to templates without a consent document", () => {
+    const tmpl = makeTemplate([ { key: "1", label: "Paciente", autoFill: "patientName" } ]);
+    expect(buildMessageBody(tmpl, { "1": "Lucia" }, Channel.EMAIL)).toBe("Lucia");
   });
 });
