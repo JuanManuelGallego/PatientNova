@@ -1,10 +1,6 @@
 {
   "compilerOptions": {
-    // TS6: default is now es2025 (floating). ES2017 still works but is old.
-    // With noEmit: true, Next handles the actual transpilation anyway.
     "target": "ES2025",
-    // TS6: add "es2025" for Temporal API types and new Map/WeakMap methods.
-    // Drop "dom.iterable" — it's now included in "dom" itself.
     "lib": [
       "dom",
       "esnext",
@@ -12,29 +8,18 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    // TS6: strict is now the default — keeping it explicit is fine but redundant.
     "strict": true,
     "noEmit": true,
-    // TS6: esModuleInterop can no longer be false — always true. Keeping
-    // it explicit is harmless but you could drop it.
     "esModuleInterop": true,
-    // TS6: esnext is now the default for module too. Keeping explicit is fine.
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    // TS6: types now defaults to [] (empty), not all @types/* packages.
-    // Add whatever globals your project actually uses. "node" is common for
-    // Next.js apps (process, Buffer, etc.). next-env.d.ts covers Next's own types.
     "types": [
       "node"
     ],
-    // TS6: noUncheckedSideEffectImports is now true by default.
-    // If you have bare CSS/image imports (e.g. import './global.css') and
-    // they start erroring, either fix the import paths or set this to false.
-    // "noUncheckedSideEffectImports": false,
     "plugins": [
       {
         "name": "next"
