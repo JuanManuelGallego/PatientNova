@@ -74,10 +74,10 @@ Patients can book through `/book/<slug>` without creating an account. They choos
 
 | Area | Technology |
 |---|---|
-| Frontend | Next.js 16 App Router, React 19, TypeScript 6 |
+| Frontend | Next.js 16 App Router, React 19, TypeScript 7.0 typecheck (TS 6 for ESLint and next build) |
 | UI | Tailwind CSS 4, CSS Modules, Lucide icons, in-house components and date/time pickers |
 | Frontend utilities | dayjs, nuqs, React PDF |
-| Backend | Node.js 26.x (ESM), Express 5, TypeScript 6, Zod 4 |
+| Backend | Node.js 26.x (ESM), Express 5, TypeScript 7.0 typecheck (TS 6 for ESLint), Zod 4 |
 | Database | PostgreSQL, Prisma 7 with the pg adapter |
 | Jobs and time | pg-boss 12, Luxon |
 | Messaging | Twilio SDK 6 (WhatsApp/SMS), Brevo transactional email |
@@ -381,7 +381,7 @@ pnpm test
 pnpm run test:coverage
 
 cd ../Portal
-pnpm exec tsc --noEmit
+pnpm run typecheck
 pnpm run lint
 pnpm test
 ```
