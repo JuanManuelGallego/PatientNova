@@ -7,9 +7,7 @@ step is not actually in place, say so (the privacy policy must never promise mor
 
 Both apps require Node.js 26.x (`engines.node` in each app's `package.json`). Local development and
 all three CI jobs use the exact version in the root `.nvmrc`; keep it on the latest tested
-26.x patch. Both apps accept pnpm `>=12.23.0 <13` through `devEngines.packageManager`
-with `onFail: error`, allowing compatible installed versions without switching to a lockfile pin.
-CI installs the same range; application dependencies remain fixed by the frozen lockfiles.
+26.x patch. pnpm stays pinned by each `packageManager` field.
 
 For a runtime upgrade, record the previous deployment IDs, Node versions and release/start commands
 before deploying. On Railway, confirm the API builder uses 26.x and update any conflicting
