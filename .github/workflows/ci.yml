@@ -7,7 +7,7 @@ on:
 
 jobs:
   portal:
-    name: Portal (Node 22.x)
+    name: Portal (Node 26.x)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,10 +18,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: Portal/package.json
-      - name: Use Node.js 22.x
+      - name: Use Node.js from .node-version
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: Portal/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
@@ -33,7 +33,7 @@ jobs:
       - run: pnpm test
 
   server:
-    name: Server (Node 22.x)
+    name: Server (Node 26.x)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,10 +87,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: Server/package.json
-      - name: Use Node.js 22.x
+      - name: Use Node.js from .node-version
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: Server/pnpm-lock.yaml
       - name: Generate encryption key
@@ -114,7 +114,7 @@ jobs:
       - run: pnpm run test:integration
 
   e2e:
-    name: E2E Tests (Playwright, self-contained stack)
+    name: E2E Tests (Node 26.x, Playwright, self-contained stack)
     runs-on: ubuntu-latest
     needs: [portal]
 
@@ -164,10 +164,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: Server/package.json
-      - name: Use Node.js 22.x
+      - name: Use Node.js from .node-version
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: |
             Server/pnpm-lock.yaml

@@ -5,6 +5,20 @@ step is not actually in place, say so (the privacy policy must never promise mor
 
 ## Deploying the API
 
+Both apps require Node.js 26.x (`engines.node` in each app's `package.json`). Local development and
+all three CI jobs use the exact version in the root `.node-version`; keep it on the latest tested
+26.x patch. pnpm stays pinned by each `packageManager` field.
+
+For a runtime upgrade, record the previous deployment IDs, Node versions and release/start commands
+before deploying. On Railway, confirm the API builder uses 26.x and update any conflicting
+`RAILPACK_NODE_VERSION` or legacy `NIXPACKS_NODE_VERSION` override. On Vercel, select Node 26.x for
+the Portal and verify both the build and function runtimes; Vercel manages minor/patch updates.
+Validate previews/staging first, including scheduler-enabled API startup, booking confirmations,
+server-rendered Portal API reads and Sentry source-map upload/removal. Deploy the API first, then
+the Portal, checking health, errors and reminder delivery after each. If a service regresses,
+restore its previous deployment and Node settings. This runtime upgrade adds no database migrations;
+confirm there are no unexpected pending migrations/backfills before deploying or rolling back.
+
 `pnpm start` runs `prisma migrate deploy`, the PII backfill (`pii:backfill`) and starts the server. It
 no longer seeds the admin: on a new database run `pnpm run db:seed-admin` once, with `ADMIN_EMAIL` and
 `ADMIN_PASSWORD` set for that command only. That is fine for a
