@@ -20,6 +20,7 @@ pnpm run test:integration
 - Env holds only secrets and what differs per environment (URLs, feature flags, limits e2e raises). Security policy and product defaults (bcrypt rounds, lockout, default timezone, daily summary hour, timeouts) are constants in `config.ts`; numeric env goes through `positiveIntEnv`. `ADMIN_EMAIL`/`ADMIN_PASSWORD` are read only by the seed scripts.
 - Adding `requireEnv(...)` in `src/utils/config/config.ts` requires updating `.env.test`, `.github/workflows/ci.yml` (CI supplies env directly), `.env.example`, and local `Server/.env` (used by unit tests).
 - After changing `schema.prisma`, run `pnpm exec prisma generate`; `Server/generated/` is gitignored and produced by `prisma generate` (the build script), and typechecking needs it.
+- `pnpm run typecheck` runs TypeScript 7.0 (the `typescript-7` alias, called by path); `typescript` stays 6 because typescript-eslint and `next build` need its compiler API until 7.1. Never call bare `tsc`: `.bin/tsc` may resolve to either.
 - Unit tests (`test/unit/**/*.test.ts`) mock Prisma/DB. Integration tests cover repositories, services and HTTP routes; consult the tests for coverage.
 - Reuse `test/integration/helpers.ts`: entity factories, `appointmentTimeRange`, `futureDate`, `unique`, `makeRes`, and `invokeRoute`. The latter runs validation/middleware and waits for `asyncHandler` to settle.
 - `asyncHandler` writes errors through `handleError(res, err)`, does not call `next(err)`, and drops its promise. Direct-handler tests must flush microtasks and assert `res.statusCode`/`res.body`.
