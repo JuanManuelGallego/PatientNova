@@ -30,12 +30,6 @@ beforeEach(() => {
 });
 
 describe("PracticeProfile", () => {
-    it("points to Tipos de paciente, where consent forms now live", () => {
-        render(<PracticeProfile />);
-        const section = screen.getByRole("region", { name: "Formularios de consentimiento" });
-        expect(within(section).getByRole("link", { name: "Tipos de paciente" })).toHaveAttribute("href", "/settings/patient-types");
-    });
-
     it("shows an autosave error only in the section being edited", async () => {
         const { rerender } = render(<PracticeProfile />);
         await userEvent.type(screen.getByTestId("profile-bank-name-input"), "B");

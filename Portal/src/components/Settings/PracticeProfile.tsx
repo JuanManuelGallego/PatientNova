@@ -5,8 +5,6 @@ import { TextField } from "@/src/components/Form/TextField";
 import { ImageField } from "@/src/components/Form/ImageField";
 import { User } from "@/src/types/User";
 import { useState } from "react";
-import Link from "next/link";
-import { settingsHref } from "@/src/config/navigation";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { SettingsSection } from "./SettingsSection";
 
