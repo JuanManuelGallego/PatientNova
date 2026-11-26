@@ -63,7 +63,7 @@ function VersionList({ patientType, timezone }: { patientType: PatientType; time
             {v.name} · {fmtSize(v.sizeBytes)} · {fmtDateTime(v.createdAt, timezone)}
           </span>
           <button type="button" className="btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => download(v)}>
-            Descargar
+            <ACTION_ICONS.download size={14} aria-hidden="true" />
           </button>
         </div>
       ))}
