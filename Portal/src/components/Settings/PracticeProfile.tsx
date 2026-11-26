@@ -141,16 +141,6 @@ export function PracticeProfile() {
         </div>
         {sectionError("banking")}
       </SettingsSection>
-
-      <SettingsSection
-        title="Formularios de consentimiento"
-        description="Cada tipo de paciente tiene su propio formulario de consentimiento."
-      >
-        <p style={{ fontSize: 13, color: "var(--c-gray-600)", margin: 0 }}>
-          Súbelos y consulta sus versiones en{" "}
-          <Link href={settingsHref("patient-types")} data-testid="practice-patient-types-link">Tipos de paciente</Link>.
-        </p>
-      </SettingsSection>
     </div>
   );
 }
