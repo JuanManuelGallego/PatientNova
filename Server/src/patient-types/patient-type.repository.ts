@@ -1,10 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 
-/** Name of the type every new account starts with (#116: an empty template, the provider adds fields). */
 export const DEFAULT_PATIENT_TYPE_NAME = 'General';
 
-/** Version metadata: never the PDF bytes. */
 export const consentVersionMetaSelect = {
   id: true,
   version: true,
@@ -14,15 +12,8 @@ export const consentVersionMetaSelect = {
   createdAt: true,
 } as const;
 
-/** The highest version of a type: its current consent document. */
 const latestVersion = { orderBy: { version: 'desc' }, take: 1 } as const;
 
-/**
- * Writes a user together with its default patient type ("General"), on `tx`. `write` creates (or upserts) the user
- * with the given `defaultPatientTypeId`; the type is then created under that id. The two rows reference each other,
- * and the user's foreign key is checked at commit, so both writes must share one transaction. An upsert that found
- * an existing user keeps that user's default, and no type is created.
- */
 export async function createUserWithDefaultType<T extends { id: string; defaultPatientTypeId: string }>(
   tx: TransactionClient,
   write: (defaultPatientTypeId: string) => Promise<T>,
@@ -51,13 +42,20 @@ export const patientTypeRepository = {
     return tx.patientType.findFirst({ where: { id, userId } });
   },
 
+  async nameTaken(userId: string, name: string, exceptId: string | null, tx: TransactionClient = prisma): Promise<boolean> {
+    const found = await tx.patientType.findFirst({
+      where: { userId, name: { equals: name, mode: 'insensitive' }, ...(exceptId && { NOT: { id: exceptId } }) },
+      select: { id: true },
+    });
+    return found !== null;
+  },
+
   async defaultIdOf(userId: string, tx: TransactionClient = prisma): Promise<string> {
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { defaultPatientTypeId: true } });
     return user.defaultPatientTypeId;
   },
 
   async countPatients(patientTypeId: string, tx: TransactionClient = prisma): Promise<number> {
-    // Soft-deleted patients count: a restore needs their type.
     return tx.patient.count({ where: { patientTypeId } });
   },
 
@@ -84,12 +82,10 @@ export const patientTypeRepository = {
     return prisma.consentDocumentVersion.findFirst({ where: { id: versionId, patientTypeId } });
   },
 
-  /** A version with its bytes, by id alone: only for the public link, whose id is the proof. */
   async findVersionWithContent(id: string) {
     return prisma.consentDocumentVersion.findUnique({ where: { id } });
   },
 
-  /** The current version (with bytes) of a provider's default type, or null when `userId` is no user. */
   async findDefaultCurrentWithContent(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { defaultPatientTypeId: true } });
     if (!user) return null;

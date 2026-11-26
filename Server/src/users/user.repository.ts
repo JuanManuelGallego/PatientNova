@@ -22,7 +22,6 @@ export const userRepository = {
         );
 
         const passwordHash = await bcrypt.hash(dto.password, config.auth.bcryptRounds);
-        // Every account starts with one default patient type ("General"), in the same transaction.
         return prisma.$transaction(async (tx) => {
             const { id } = await createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
                 data: {

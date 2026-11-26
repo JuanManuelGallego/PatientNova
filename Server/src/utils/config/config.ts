@@ -68,8 +68,6 @@ export const config = {
     idleTimeout: positiveIntEnv('DATABASE_IDLE_TIMEOUT', 30000),
   },
 
-  // The API's public origin, for links patients open (consent PDFs). Twilio must reach the API at
-  // TWILIO_WEBHOOK_BASE_URL, so its origin is the API's public address in every environment.
   publicApiOrigin: new URL(requireEnv('TWILIO_WEBHOOK_BASE_URL')).origin,
 
   twilio: {

@@ -277,9 +277,6 @@ model User {
   contactHours        String? @db.VarChar(120)
   searchIndexable     Boolean @default(false)
 
-  // Every user has one. The user and its type reference each other, so this foreign key is DEFERRABLE INITIALLY
-  // DEFERRED (raw SQL, migration 20261125000100_default_patient_type_required) and both rows are written in one
-  // transaction (createUserWithDefaultType). NO ACTION, not RESTRICT: Postgres cannot defer RESTRICT.
   defaultPatientTypeId String      @unique @db.Uuid
   defaultPatientType   PatientType @relation("UserDefaultPatientType", fields: [defaultPatientTypeId], references: [id], onDelete: NoAction)
 
@@ -673,7 +670,6 @@ model PatientType {
   user   User   @relation("UserPatientTypes", fields: [userId], references: [id], onDelete: Cascade)
 
   name String @db.VarChar(80)
-  // Record template: { sections: [...] }. Not PII. Validated and written from #145 on.
   template                  Json    @default("{\"sections\": []}")
   familyMembersEnabled      Boolean @default(false)
   subsystemRelationsEnabled Boolean @default(false)
@@ -690,8 +686,6 @@ model PatientType {
   @@map("patient_types")
 }
 
-// A consent form as sent to patients. Never updated: each upload is a new version, and a version goes only with its
-// type. The id is a cuid because the approved WhatsApp welcome template links /public/download/{{8}}.pdf with it.
 model ConsentDocumentVersion {
   id            String      @id @default(cuid())
   patientTypeId String      @db.Uuid

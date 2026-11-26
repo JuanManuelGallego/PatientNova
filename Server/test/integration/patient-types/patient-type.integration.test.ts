@@ -92,6 +92,15 @@ describe('patientTypeService', () => {
     await expect(patientTypeService.create(other.id, { name: 'Familia' })).resolves.toMatchObject({ name: 'Familia' });
   });
 
+  it('treats names that differ only in letter case as the same, but lets a type change its own case', async () => {
+    const familia = await patientTypeService.create(userId, { name: 'Familia' });
+    await expect(patientTypeService.create(userId, { name: 'familia' })).rejects.toBeInstanceOf(PatientTypeNameConflictError);
+    const pareja = await patientTypeService.create(userId, { name: 'Pareja' });
+    await expect(patientTypeService.update(userId, pareja.id, { name: 'FAMILIA' })).rejects.toBeInstanceOf(PatientTypeNameConflictError);
+
+    await expect(patientTypeService.update(userId, familia.id, { name: 'familia' })).resolves.toMatchObject({ name: 'familia' });
+  });
+
   it('renames a type', async () => {
     const type = await patientTypeService.create(userId, { name: 'Pareja' });
     expect(await patientTypeService.update(userId, type.id, { name: 'Terapia de pareja' })).toMatchObject({ name: 'Terapia de pareja' });

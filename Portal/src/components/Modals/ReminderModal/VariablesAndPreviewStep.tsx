@@ -14,7 +14,6 @@ export function VariablesAndPreviewStep({
   setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
   selectedTemplate: TwilioTemplate;
   preview: string;
-  /** The patient's type, when the template links a consent form and that type has none (the send stays blocked). */
   missingConsentType?: string | null;
 }) {
   const userEditableVariables = selectedTemplate.variables.filter(

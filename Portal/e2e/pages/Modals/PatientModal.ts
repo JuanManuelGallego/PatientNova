@@ -144,7 +144,6 @@ export class PatientModal {
     whatsapp?: string;
     sms?: string;
     appointmentType?: string;
-    /** The patient type's name: required, as in the modal. */
     patientType: string;
     notes?: string;
   }): Promise<string> {

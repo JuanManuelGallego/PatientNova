@@ -24,7 +24,6 @@ function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
   return numberChanged || dto.reminderChannel === Channel.WHATSAPP;
 }
 
-/** A type, if given, must be the provider's; without one the patient gets the provider's default type. */
 export async function createPatientWithin(
   tx: TransactionClient,
   dto: NewPatientDto,

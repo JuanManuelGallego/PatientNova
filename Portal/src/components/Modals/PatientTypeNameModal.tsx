@@ -8,7 +8,6 @@ import { LBL_CANCEL, LBL_SAVING } from "@/src/constants/ui";
 import { useCreatePatientType, useRenamePatientType } from "@/src/api/patient-types/usePatientTypeMutations";
 import { PatientType } from "@/src/types/PatientType";
 
-/** Creates a patient type, or renames one when `patientType` is given. */
 export function PatientTypeNameModal({
   patientType,
   onClose,
@@ -78,7 +77,7 @@ export function PatientTypeNameModal({
                 maxLength={80}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Familia, Nutrición, Pareja"
-                autoFocus
+                data-autofocus
                 data-testid="patient-type-name-input"
               />
             </label>

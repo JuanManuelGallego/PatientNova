@@ -13,11 +13,9 @@ export type ImmediateMessage =
   | { channel: typeof Channel.SMS; to: string; body: string; patientId: string }
   | { channel: typeof Channel.EMAIL; to: string; body: string; subject?: string; patientId: string };
 
-/** What differs per channel once a message is built: its log label, how its address is masked, how errors read. */
 const CHANNELS: Record<Channel, { label: string; mask: (to: string) => string; describe: (code: number | null | undefined, message: string) => string }> = {
   [ Channel.WHATSAPP ]: { label: 'WhatsApp', mask: maskPhone, describe: resolveTwilioError },
   [ Channel.SMS ]: { label: 'SMS', mask: maskPhone, describe: resolveTwilioError },
-  // Brevo errors carry no Twilio code: the message is kept as is.
   [ Channel.EMAIL ]: { label: 'Email', mask: maskEmail, describe: (_code, message) => message },
 };
 
@@ -51,10 +49,6 @@ function reminderOf(message: ImmediateMessage): CreateReminderDto {
   }
 }
 
-/**
- * Sends one message now and keeps its reminder row in step: PENDING before the send, QUEUED with the provider's
- * message id after it, FAILED (plus the provider's failure alert) when it fails, and the error rethrown.
- */
 export async function sendNow(message: ImmediateMessage, userId: string): Promise<{ reminderId: string; result: NotificationResult }> {
   const channel = CHANNELS[ message.channel ];
   const reminder = await reminderService.create(reminderOf(message), userId, false);

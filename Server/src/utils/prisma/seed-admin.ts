@@ -16,7 +16,6 @@ async function seedAdmin() {
   }
 
   const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
-  // The account and its default patient type ("General") in one transaction.
   await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
     data: {
       defaultPatientTypeId,

@@ -46,12 +46,10 @@ function approvalOutcome(request: BookingRequestDetail, choice: PatientChoice): 
   return reused ? reusedOutcome(reused) : "Se creará un paciente nuevo con los datos de la solicitud.";
 }
 
-/** Approving creates a patient only when none is chosen and the contact matches no single active record. */
 function createsPatient(request: BookingRequestDetail, choice: PatientChoice): boolean {
   return !request.candidates.some((c) => c.id === choice) && !defaultMatch(request);
 }
 
-/** A reused or restored patient keeps its own type: the type goes only with a new patient. */
 function approveBody(request: BookingRequestDetail, choice: PatientChoice, patientTypeId: string) {
   const chosen = request.candidates.find((c) => c.id === choice);
   if (!chosen) return createsPatient(request, choice) && patientTypeId ? { patientTypeId } : {};

@@ -111,7 +111,6 @@ describe("toSpanishMessage", () => {
     const welcome = "El paciente no tiene un contacto al que enviar el mensaje de bienvenida";
     expect(toSpanishMessage(409, welcome)).toBe(welcome);
     expect(toSpanishMessage(404, "Patient type not found")).toMatch(/tipo de paciente ya no existe/);
-    // Anything else still gets the curated fallback, never raw server text.
     expect(toSpanishMessage(409, "Este tipo de paciente es raro")).toMatch(/conflicto/);
   });
 

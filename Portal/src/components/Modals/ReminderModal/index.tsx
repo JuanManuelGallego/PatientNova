@@ -67,7 +67,6 @@ const [ form, setForm ] = useState<ReminderForm>({
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
   const { patientTypes } = useFetchPatientTypes();
-  /** The current consent version of a patient's type: the only form a consent template may link. */
   function consentVersionFor(patient?: Patient) {
     return patientTypes.find((t) => t.id === patient?.patientTypeId)?.currentVersion ?? null;
   }

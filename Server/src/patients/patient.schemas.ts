@@ -54,7 +54,6 @@ export const patientDetailQuerySchema = z.object({
 });
 
 export type CreatePatientDto = z.infer<typeof createPatientSchema>;
-/** A patient created by the server (portal booking, approval): without a type it gets the provider's default. */
 export type NewPatientDto = Omit<CreatePatientDto, 'patientTypeId'> & { patientTypeId?: string };
 export type UpdatePatientDto = z.infer<typeof updatePatientSchema>;
 export type ListPatientsQuery = z.infer<typeof listPatientsSchema>;

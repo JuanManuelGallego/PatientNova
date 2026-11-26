@@ -214,7 +214,6 @@ async function seedData() {
       ],
     });
 
-    // The types a provider has after the #144 migration: "Individual" (default) and "Familia" for family records.
     const individualTypeId = uuid(G.patientType, 1);
     const familyTypeId = uuid(G.patientType, 2);
     for (const [ id, name, family ] of [ [ individualTypeId, 'Individual', false ], [ familyTypeId, 'Familia', true ] ] as const) {
@@ -225,7 +224,6 @@ async function seedData() {
       });
     }
     await tx.user.update({ where: { id: userId }, data: { defaultPatientTypeId: individualTypeId } });
-    // The empty "General" a new account starts with: a migrated provider has none, so the screenshots show none.
     await tx.patientType.deleteMany({
       where: { userId, id: { notIn: [ individualTypeId, familyTypeId ] }, name: 'General', patients: { none: {} } },
     });

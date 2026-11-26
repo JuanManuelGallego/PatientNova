@@ -47,9 +47,7 @@ export function PatientModal({
   const [ error, setError ] = useState<string | null>(null);
   const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
   const [ refreshing, setRefreshing ] = useState(false);
-  // Set once the patient exists but the welcome failed: the modal then only closes (submitting again would duplicate).
   const [ welcomeFailed, setWelcomeFailed ] = useState(false);
-  // Empty until chosen: a new patient starts on the provider's default type. A type change comes with #146.
   const [ chosenTypeId, setChosenTypeId ] = useState(patient?.patientTypeId ?? "");
   const patientTypeId = chosenTypeId || defaultType?.id || "";
   const selectedType = patientTypes.find((t) => t.id === patientTypeId);
@@ -200,6 +198,19 @@ export function PatientModal({
             </label>
           </div>
           <label className="form-label">
+            {isEdit ? "Tipo de paciente" : <RequiredField label="Tipo de paciente" />}
+            {isEdit ? (
+              <input className="form-input" value={patient?.patientType?.name ?? selectedType?.name ?? ""} disabled data-testid="patient-type-readonly" />
+            ) : (
+              <CustomSelect
+                value={patientTypeId}
+                options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
+                onChange={(v) => setChosenTypeId(v)}
+                data-testid="patient-type-select"
+              />
+            )}
+          </label>
+          <label className="form-label">
             Correo electrónico
             <input
               className="form-input"
@@ -228,19 +239,6 @@ export function PatientModal({
               />
             </label>
           </div>
-          <label className="form-label">
-            {isEdit ? "Tipo de paciente" : <RequiredField label="Tipo de paciente" />}
-            {isEdit ? (
-              <input className="form-input" value={patient?.patientType?.name ?? selectedType?.name ?? ""} disabled data-testid="patient-type-readonly" />
-            ) : (
-              <CustomSelect
-                value={patientTypeId}
-                options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
-                onChange={(v) => setChosenTypeId(v)}
-                data-testid="patient-type-select"
-              />
-            )}
-          </label>
           <label className="form-label">
             Canal de recordatorios
             <CustomSelect
@@ -290,7 +288,9 @@ export function PatientModal({
                 <span style={{ flex: 1 }}>
                   {profileReady
                     ? `El tipo «${selectedType?.name ?? ""}» no tiene formulario de consentimiento. Súbelo en Configuración › Tipos de paciente para poder enviar mensajes de bienvenida.`
-                    : "Completa tu perfil (datos bancarios e identificación) en Configuración y sube el formulario de consentimiento del tipo de paciente para poder enviar mensajes de bienvenida."}
+                    : typeHasConsent
+                      ? "Completa tu perfil (datos bancarios e identificación) en Configuración para poder enviar mensajes de bienvenida."
+                      : `Completa tu perfil (datos bancarios e identificación) en Configuración y sube el formulario de consentimiento del tipo «${selectedType?.name ?? ""}» para poder enviar mensajes de bienvenida.`}
                 </span>
                 <button
                   type="button"

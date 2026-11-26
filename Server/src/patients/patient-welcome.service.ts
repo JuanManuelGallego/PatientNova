@@ -10,10 +10,6 @@ import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { prisma } from '../utils/prisma/prisma-client.js';
 import { WelcomeConsentMissingError, WelcomeNoContactError, WelcomeProviderDataMissingError } from './patient.errors.js';
 
-/**
- * The approved WhatsApp template's text, for email and SMS. WhatsApp carries the PDF in the template itself; here the
- * consent link ({{9}}) is written into the text.
- */
 const WELCOME_TEXT = '¡Hola {{1}}! Te damos la bienvenida a Patient Nova, la plataforma de recordatorios de citas de {{2}}. '
   + 'A través de este canal, podrás confirmar o cancelar tus próximas citas de forma rápida. Te recordamos que el pago '
   + 'de la consulta se realiza antes de asistir a tu cita. Banco: {{3}} Número de cuenta: {{4}} A nombre de: {{5}} '
@@ -30,11 +26,6 @@ export interface WelcomeResult {
   consentVersionId: string;
 }
 
-/**
- * Sends the welcome message on the patient's route, linking the current consent version of the patient's type
- * (`{{8}}`), and audits which version was sent. Refuses (409) before sending when the provider's display name or
- * banking details are missing, the type has no consent PDF, or the patient has no reachable contact.
- */
 export async function sendPatientWelcome(userId: string, patientId: string): Promise<WelcomeResult> {
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, userId, isDeleted: false },
@@ -55,7 +46,6 @@ export async function sendPatientWelcome(userId: string, patientId: string): Pro
   const route = resolvePatientRoute(patient);
   if (!route) throw new WelcomeNoContactError();
 
-  // A template variable is never empty: the account holder falls back to the display name.
   const holder = [ provider.firstName, provider.lastName ].filter(Boolean).join(' ') || displayName;
   const variables: Record<string, string> = {
     '1': patient.name,
@@ -73,7 +63,6 @@ export async function sendPatientWelcome(userId: string, patientId: string): Pro
 
   const { reminderId } = await sendNow(message, userId);
 
-  // Best effort: the message has already left, so a failed audit write must not turn the send into an error.
   await logAudit({
     entityType: EntityType.CONSENT_DOCUMENT,
     entityId: version.id,

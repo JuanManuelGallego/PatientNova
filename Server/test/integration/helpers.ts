@@ -26,7 +26,6 @@ export async function createTestUser(overrides: {
   const email = overrides.email ?? unique('user@test.local');
   const password = overrides.password ?? 'Password123!';
   const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
-  // Like every account: a default patient type ("General"), in the same transaction.
   return prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
     data: {
       defaultPatientTypeId,
@@ -44,7 +43,6 @@ export async function createTestUser(overrides: {
   })));
 }
 
-/** The provider's default patient type. */
 export async function defaultPatientTypeId(userId: string): Promise<string> {
   return patientTypeRepository.defaultIdOf(userId);
 }

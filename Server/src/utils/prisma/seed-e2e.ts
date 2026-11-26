@@ -51,7 +51,6 @@ async function seedE2e() {
 
   const email = requireEnv('ADMIN_EMAIL');
   const passwordHash = await bcrypt.hash(requireEnv('ADMIN_PASSWORD'), config.auth.bcryptRounds);
-  // A new account gets its default patient type in the same transaction; an existing one keeps its own.
   const user = await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.upsert({
     where: { email },
     update: { passwordHash, status: AdminStatus.ACTIVE, failedLoginAttempts: 0, lockedUntil: null, ...profile },
@@ -79,7 +78,6 @@ async function seedE2e() {
     create: { id: E2E_SEED.locationId, name: E2E_SEED.locationName, isVirtual: false, userId: user.id },
   });
 
-  // The default patient type holds the consent PDF the welcome message links.
   const content = Buffer.from('%PDF-1.4 e2e consent');
   await prisma.$transaction(async (tx) => {
     const patientTypeId = user.defaultPatientTypeId;

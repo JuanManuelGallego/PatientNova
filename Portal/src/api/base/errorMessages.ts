@@ -59,7 +59,6 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^a patient type applies only to a new patient$/i, "El tipo de paciente solo se elige al crear un paciente nuevo." ],
 ];
 
-/** Server messages written for the provider in curated Spanish: shown as they are (they carry counts and details). */
 const PASSTHROUGH: RegExp[] = [
     /^Ya existe un tipo de paciente con ese nombre$/,
     /^No puedes eliminar el tipo de paciente predeterminado\./,

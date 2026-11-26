@@ -85,7 +85,6 @@ describe('POST /patients/:id/welcome', () => {
     const body = vi.mocked(sendEmail).mock.calls[ 0 ]![ 0 ].body;
     expect(body).toContain('¡Hola Maria!');
     expect(body).toContain('Banco: Bancolombia');
-    // TWILIO_WEBHOOK_BASE_URL (https://example.com/twilio in .env.test) gives the API's public origin.
     expect(body).toContain(`consentimiento antes de tu primera consulta: https://example.com/v1/consent-document/public/download/${version.id}.pdf`);
     expect(body).not.toContain('adjunto');
     expect(body).not.toMatch(/\{\{\d\}\}/);

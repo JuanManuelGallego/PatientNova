@@ -12,10 +12,8 @@ import {
 import { patientTypeService } from './patient-type.service.js';
 import { sendConsentDocument } from '../consent-documents/send-consent-document.js';
 
-/** Mounted with `authenticate` + `requireAdminForWrites`: a VIEWER reads, ADMIN and SUPER_ADMIN write. */
 export const patientTypeRouter = Router();
 
-/** GET /patient-types — the provider's types, each with its patient count and current consent version. */
 patientTypeRouter.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
@@ -23,7 +21,6 @@ patientTypeRouter.get(
   }),
 );
 
-/** POST /patient-types */
 patientTypeRouter.post(
   '/',
   validateBody(createPatientTypeSchema),
@@ -32,7 +29,6 @@ patientTypeRouter.post(
   }),
 );
 
-/** PATCH /patient-types/:id — rename. */
 patientTypeRouter.patch(
   '/:id',
   validateParams(patientTypeParamsSchema),
@@ -42,7 +38,6 @@ patientTypeRouter.patch(
   }),
 );
 
-/** POST /patient-types/:id/default — make it the type new patients start with. */
 patientTypeRouter.post(
   '/:id/default',
   validateParams(patientTypeParamsSchema),
@@ -51,7 +46,6 @@ patientTypeRouter.post(
   }),
 );
 
-/** DELETE /patient-types/:id — 409 for the default type or while any patient uses it. */
 patientTypeRouter.delete(
   '/:id',
   validateParams(patientTypeParamsSchema),
@@ -60,7 +54,6 @@ patientTypeRouter.delete(
   }),
 );
 
-/** GET /patient-types/:id/consent-versions — newest first, metadata only. */
 patientTypeRouter.get(
   '/:id/consent-versions',
   validateParams(patientTypeParamsSchema),
@@ -69,7 +62,6 @@ patientTypeRouter.get(
   }),
 );
 
-/** POST /patient-types/:id/consent-versions — upload a PDF as the next version. */
 patientTypeRouter.post(
   '/:id/consent-versions',
   validateParams(patientTypeParamsSchema),
@@ -79,7 +71,6 @@ patientTypeRouter.post(
   }),
 );
 
-/** GET /patient-types/:id/consent-versions/:versionId/download — the PDF bytes. */
 patientTypeRouter.get(
   '/:id/consent-versions/:versionId/download',
   validateParams(consentVersionParamsSchema),

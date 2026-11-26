@@ -7,10 +7,6 @@ import { patientTypeService } from '../patient-types/patient-type.service.js';
 import { sendConsentDocument } from './send-consent-document.js';
 import { EXTENSIONS_BY_MIME } from './consent-document-url.js';
 
-/**
- * Public consent downloads. Providers manage consent PDFs per patient type (`/v1/patient-types`); this router keeps
- * only the link patients receive.
- */
 export const consentDocumentRouter = Router();
 const CUID_RE = /^c[a-z0-9]{24}$/;
 const ALLOWED_MIME_TYPES = new Set([ 'application/pdf', 'image/jpeg', 'image/png' ]);
@@ -20,11 +16,9 @@ const ALLOWED_MIME_TYPES = new Set([ 'application/pdf', 'image/jpeg', 'image/png
 const publicDownloadLimiter = createPublicLimiter({ name: 'consent-download', windowMs: 60_000, max: 20 });
 
 /**
- * GET /consent-document/public/download/:id.:ext
- * No authentication. The approved WhatsApp welcome template links
- * `https://api.patientnova.net/v1/consent-document/public/download/{{8}}.pdf`, so this path must not change.
- * `:id` is a consent version id, or (messages sent before patient types) a provider's user id, which serves the
- * current version of that provider's default type. New versions are PDF only; images are migrated legacy uploads.
+ * GET /consent-documents/public/download/:id.:ext
+ * Public endpoint — download a consent document by ID and file extension.
+ * No authentication required. Validates extension, ID format, and MIME type.
  */
 consentDocumentRouter.get(
     '/public/download/:id.:ext',

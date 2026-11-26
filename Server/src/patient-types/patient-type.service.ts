@@ -29,7 +29,6 @@ export interface ConsentVersionDto {
   mimeType: string;
   sizeBytes: number;
   createdAt: Date;
-  /** The public link patients receive (the Portal writes it into email and SMS bodies). */
   url: string;
 }
 
@@ -67,7 +66,6 @@ function toDto(row: ListedType, defaultId: string): PatientTypeDto {
   };
 }
 
-/** The type a new patient gets: the one asked for (it must be the provider's), else the provider's default. */
 export async function resolvePatientTypeId(tx: TransactionClient, userId: string, requested?: string | null): Promise<string> {
   if (!requested) return patientTypeRepository.defaultIdOf(userId, tx);
   const type = await patientTypeRepository.findOwned(userId, requested, tx);
@@ -98,7 +96,6 @@ function nameConflict<T>(promise: Promise<T>): Promise<T> {
   });
 }
 
-/** Accepts plain base64 or a data URL; checks the bytes are a PDF, whatever the client declared. */
 function decodePdf(content: string): Buffer {
   const base64 = content.startsWith('data:') ? content.slice(content.indexOf(',') + 1) : content;
   const bytes = Buffer.from(base64, 'base64');
@@ -121,6 +118,7 @@ export const patientTypeService = {
   async create(userId: string, dto: CreatePatientTypeDto): Promise<PatientTypeDto> {
     return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
+      if (await patientTypeRepository.nameTaken(userId, dto.name, null, tx)) throw new PatientTypeNameConflictError();
       const type = await nameConflict(tx.patientType.create({ data: { userId, name: dto.name } }));
       await logAudit({
         entityType: EntityType.PATIENT_TYPE,
@@ -142,6 +140,7 @@ export const patientTypeService = {
       await withProviderLock(tx, userId);
       const before = await requireOwned(userId, id, tx);
       if (before.name !== dto.name) {
+        if (await patientTypeRepository.nameTaken(userId, dto.name, id, tx)) throw new PatientTypeNameConflictError();
         await nameConflict(tx.patientType.update({ where: { id }, data: { name: dto.name } }));
         await logAudit({
           entityType: EntityType.PATIENT_TYPE,
@@ -184,7 +183,6 @@ export const patientTypeService = {
     });
   },
 
-  /** Refused for the default type and while any patient (soft-deleted ones included) uses it; versions go with it. */
   async delete(userId: string, id: string): Promise<{ id: string }> {
     return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
@@ -214,7 +212,6 @@ export const patientTypeService = {
     return (await patientTypeRepository.listVersions(id)).map(toVersionDto);
   },
 
-  /** A new version, numbered after the last one. Versions are never updated or deleted on their own. */
   async addVersion(userId: string, id: string, dto: CreateConsentVersionDto): Promise<ConsentVersionDto> {
     const content = decodePdf(dto.content);
     return prisma.$transaction(async (tx) => {
@@ -252,10 +249,6 @@ export const patientTypeService = {
     return version;
   },
 
-  /**
-   * The document behind a public link: a version id (welcome messages since #144), or a provider's user id (messages
-   * sent before), which serves the current version of that provider's default type. Both ids are cuids.
-   */
   async findPublicDocument(id: string) {
     return await patientTypeRepository.findVersionWithContent(id)
       ?? patientTypeRepository.findDefaultCurrentWithContent(id);

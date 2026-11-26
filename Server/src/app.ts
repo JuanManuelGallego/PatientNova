@@ -69,7 +69,7 @@ const authWriteLimit = rateLimit({ windowMs: FIFTEEN_MINUTES_MS, max: 50, standa
 app.use('/v1/auth/login', authWriteLimit);
 
 // Small default body limit; only routes that accept base64 files (avatars/logos, consent
-// PDFs per patient type, medical-record attachments) and batched Brevo webhooks get a larger one. The first parser to run wins.
+// documents, medical-record attachments) and batched Brevo webhooks get a larger one. The first parser to run wins.
 app.use('/v1/users', express.json({ limit: LARGE_BODY_LIMITS.users }));
 app.use([ '/v1/patient-types', '/v1/medical-records' ], express.json({ limit: LARGE_BODY_LIMITS.files }));
 app.use('/webhooks/brevo', express.json({ limit: LARGE_BODY_LIMITS.webhooks })); // batched events

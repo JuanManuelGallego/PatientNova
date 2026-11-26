@@ -25,9 +25,22 @@ const uploadConsentVersion = vi.fn();
 const setDefaultPatientType = vi.fn();
 const deletePatientType = vi.fn();
 
+let types: PatientType[] = [ general, family ];
+const loadVersions = vi.fn((url: string) => [ { ...general.currentVersion!, url } ]);
+
 vi.mock("@/src/api/patient-types/useFetchPatientTypes", () => ({
-  useFetchPatientTypes: () => ({ data: [ general, family ], patientTypes: [ general, family ], defaultType: general, loading: false, error: null, refetch }),
+  useFetchPatientTypes: () => ({ data: types, patientTypes: types, defaultType: types[ 0 ], loading: false, error: null, refetch }),
 }));
+vi.mock("@/src/api/base/useApiQuery", async () => {
+  const { useEffect, useState } = await import("react");
+  return {
+    useApiQuery: (url: string) => {
+      const [ data, setData ] = useState<unknown>(null);
+      useEffect(() => { setData(loadVersions(url)); }, [ url ]);
+      return { data, loading: false, error: null, refetch: vi.fn() };
+    },
+  };
+});
 vi.mock("@/src/api/patient-types/usePatientTypeMutations", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/src/api/patient-types/usePatientTypeMutations")>()),
   useUploadConsentVersion: () => ({ uploadConsentVersion, loading: false, error: null }),
@@ -44,6 +57,7 @@ const renderTab = () => render(<FocusTrapProvider><PatientTypesTab /></FocusTrap
 beforeEach(() => {
   vi.clearAllMocks();
   role = AdminRole.ADMIN;
+  types = [ general, family ];
   uploadConsentVersion.mockResolvedValue({});
   setDefaultPatientType.mockResolvedValue({});
   deletePatientType.mockResolvedValue(undefined);
@@ -86,6 +100,23 @@ describe("PatientTypesTab", () => {
     await userEvent.upload(input, pdf);
     expect(uploadConsentVersion).toHaveBeenCalledWith("type-family", pdf);
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("reloads an open version list when a new version becomes current", async () => {
+    const { rerender } = renderTab();
+    await userEvent.click(screen.getByRole("button", { name: "Versiones" }));
+    expect(loadVersions).toHaveBeenCalledTimes(1);
+
+    types = [ { ...general, currentVersion: { ...general.currentVersion!, id: "cv3", version: 3 } }, family ];
+    rerender(<FocusTrapProvider><PatientTypesTab /></FocusTrapProvider>);
+    expect(screen.getByTestId("patient-type-consent-type-general")).toHaveTextContent("Versión 3");
+    expect(loadVersions).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the name modal with the name field focused", async () => {
+    renderTab();
+    await userEvent.click(screen.getByTestId("settings-new-patient-type-button"));
+    expect(screen.getByTestId("patient-type-name-input")).toHaveFocus();
   });
 
   it("makes a type the default", async () => {

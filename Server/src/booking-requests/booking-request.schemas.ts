@@ -19,8 +19,7 @@ export const listBookingRequestsQuerySchema = z.strictObject({
 /**
  * Approve: with no choice the request reuses the contact's single active match (reactivating an inactive one) or creates
  * a new patient. `existingPatientId` picks one of the contact's active records, needed when a number is shared;
- * `restorePatientId` restores one of its deleted records. At most one. `patientTypeId` is the type of the patient the
- * approval creates (the provider's default without it); a reused or restored patient keeps its own type.
+ * `restorePatientId` restores one of its deleted records. At most one.
  */
 export const approveBookingRequestSchema = z.strictObject({
   existingPatientId: z.uuid().optional(),

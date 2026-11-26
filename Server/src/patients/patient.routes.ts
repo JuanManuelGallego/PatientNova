@@ -87,10 +87,6 @@ patientRouter.patch(
   })
 );
 
-/**
- * POST /patients/:id/welcome
- * Send the welcome message, linking the current consent PDF of the patient's type.
- */
 patientRouter.post(
   '/:id/welcome',
   validateParams(uuidParamSchema),

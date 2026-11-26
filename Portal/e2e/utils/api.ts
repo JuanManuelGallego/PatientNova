@@ -56,7 +56,6 @@ export interface BlockedTimeData {
 export interface ApiClient {
   createPatient(data: Record<string, unknown>): Promise<ApiResponse>;
   deletePatient(id: string): Promise<ApiResponse>;
-  /** The provider's default patient type (every provider has one). */
   defaultPatientType(): Promise<{ id: string; name: string; isDefault: boolean }>;
   createLocation(data: Record<string, unknown>): Promise<ApiResponse>;
   deleteLocation(id: string): Promise<ApiResponse>;
@@ -164,7 +163,6 @@ export function createApiClient(page: Page): ApiClient {
     return resp.json() as Promise<ApiResponse<T>>;
   }
 
-  /** The provider's default patient type (every provider has one). */
   async function defaultPatientType() {
     const types = await request<{ id: string; name: string; isDefault: boolean }[]>('GET', '/patient-types');
     const type = types.data?.find((t) => t.isDefault);
@@ -174,7 +172,6 @@ export function createApiClient(page: Page): ApiClient {
 
   return {
     // Patients
-    /** Without a `patientTypeId`, the patient gets the provider's default type (the API requires one). */
     async createPatient(data: Record<string, unknown>) {
       if (data.patientTypeId) return request('POST', '/patients', data);
       const patientTypeId = (await defaultPatientType()).id;

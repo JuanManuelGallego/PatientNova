@@ -22,12 +22,19 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { isAdminRole } from "@/src/types/User";
 import { ConsentVersion, PatientType } from "@/src/types/PatientType";
-import { fmtDate } from "@/src/utils/TimeUtils";
+import { fmtDateTime } from "@/src/utils/TimeUtils";
 import { downloadBlob } from "@/src/utils/saveFile";
 import { OnlineBadge } from "@/src/components/OnlineBadge";
 import { SettingsList } from "./SettingsList";
 
-const fmtSize = (bytes: number) => `${(bytes / 1024).toFixed(0)} KB`;
+const ACTION_HEIGHT = 32;
+const iconAction = { height: ACTION_HEIGHT, width: ACTION_HEIGHT, padding: 0, justifyContent: "center" } as const;
+
+function fmtSize(bytes: number) {
+  if (bytes < 1024) return "< 1 KB";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function VersionList({ patientType, timezone }: { patientType: PatientType; timezone: string }) {
   const { data, loading, error } = useApiQuery<ConsentVersion[]>(
@@ -53,7 +60,7 @@ function VersionList({ patientType, timezone }: { patientType: PatientType; time
         <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--c-gray-600)" }}>
           <span style={{ fontWeight: 600 }}>v{v.version}</span>
           <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
-            {v.name} · {fmtSize(v.sizeBytes)} · {fmtDate(v.createdAt, timezone)}
+            {v.name} · {fmtSize(v.sizeBytes)} · {fmtDateTime(v.createdAt, timezone)}
           </span>
           <button type="button" className="btn-secondary" style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => download(v)}>
             Descargar
@@ -109,11 +116,11 @@ function PatientTypeCard({
   const patients = patientType.patientCount === 1 ? "1 paciente" : `${patientType.patientCount} pacientes`;
 
   return (
-    <div className="location-card" style={{ padding: 0, overflow: "hidden" }} data-testid={`patient-type-card-${patientType.id}`}>
+    <div className="location-card" style={{ height: "auto", justifyContent: "flex-start", padding: 0, overflow: "hidden" }} data-testid={`patient-type-card-${patientType.id}`}>
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span className="card-icon-tile" aria-hidden="true"><Users size={17} /></span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14 }}>
+        <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, fontWeight: 600, fontSize: 14, overflowWrap: "anywhere" }}>
             {patientType.name}
             {patientType.isDefault && (
               <OnlineBadge testId={`patient-type-default-badge-${patientType.id}`} label="Predeterminado" />
@@ -122,19 +129,27 @@ function PatientTypeCard({
           <div style={{ fontSize: 12, color: "var(--c-gray-500)", marginTop: 2 }}>{patients}</div>
         </div>
         {canEdit && (
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {!patientType.isDefault && (
-              <button type="button" className="btn-secondary" style={{ fontSize: 12 }} onClick={onMakeDefault} data-testid={`patient-type-default-button-${patientType.id}`}>
+              <button type="button" className="btn-secondary" style={{ fontSize: 12, height: ACTION_HEIGHT, padding: "0 14px" }} onClick={onMakeDefault} data-testid={`patient-type-default-button-${patientType.id}`}>
                 Hacer predeterminado
               </button>
             )}
-            <button type="button" className="btn-action-edit" onClick={onRename} data-testid={`patient-type-rename-button-${patientType.id}`}>
-              <ACTION_ICONS.edit size={14} /> Renombrar
+            <button
+              type="button"
+              className="btn-action-edit"
+              style={iconAction}
+              onClick={onRename}
+              aria-label={`Renombrar tipo de paciente ${patientType.name}`}
+              data-testid={`patient-type-rename-button-${patientType.id}`}
+            >
+              <ACTION_ICONS.edit size={14} aria-hidden="true" />
             </button>
             {!patientType.isDefault && (
               <button
                 type="button"
                 className="btn-action-delete"
+                style={iconAction}
                 onClick={onDelete}
                 aria-label={`Eliminar tipo de paciente ${patientType.name}`}
                 data-testid={`patient-type-delete-button-${patientType.id}`}
@@ -149,12 +164,12 @@ function PatientTypeCard({
       <div style={{ padding: "12px 16px", borderTop: "1px solid var(--c-gray-200)", background: "var(--c-gray-50)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <FileText size={18} aria-hidden="true" style={{ flexShrink: 0, color: "var(--c-gray-500)" }} />
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13 }} data-testid={`patient-type-consent-${patientType.id}`}>
+          <div style={{ flex: "1 1 200px", minWidth: 0, fontSize: 13 }} data-testid={`patient-type-consent-${patientType.id}`}>
             {current ? (
               <>
                 <div style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{current.name}</div>
                 <div style={{ fontSize: 12, color: "var(--c-gray-500)" }}>
-                  Versión {current.version} · {fmtSize(current.sizeBytes)} · {fmtDate(current.createdAt, timezone)}
+                  Versión {current.version} · {fmtSize(current.sizeBytes)} · {fmtDateTime(current.createdAt, timezone)}
                 </div>
               </>
             ) : (
@@ -192,13 +207,12 @@ function PatientTypeCard({
           data-testid={`patient-type-file-input-${patientType.id}`}
         />
         {uploadError && <div style={{ marginTop: 8 }}><InlineError message={uploadError} /></div>}
-        {showVersions && current && <div style={{ marginTop: 10 }}><VersionList patientType={patientType} timezone={timezone} /></div>}
+        {showVersions && current && <div style={{ marginTop: 10 }}><VersionList key={current.id} patientType={patientType} timezone={timezone} /></div>}
       </div>
     </div>
   );
 }
 
-/** Settings › Tipos de paciente: each type with its consent PDF versions. A VIEWER sees it read-only. */
 export function PatientTypesTab({ onReady }: { onReady?: () => void } = {}) {
   const { user } = useAuthContext();
   const canEdit = isAdminRole(user?.role);

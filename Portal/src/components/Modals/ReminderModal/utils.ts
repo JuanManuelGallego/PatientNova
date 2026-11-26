@@ -61,8 +61,6 @@ function resolveAutoFill(
       const price = appointment?.price ?? appointmentType?.defaultPrice;
       return price != null ? String(price) : "";
     }
-    // The consent PDF link ({{N}}.pdf): the current version of the patient's type. Without one it stays empty and
-    // the message cannot be sent: another type's form (the provider's default) could be the wrong one.
     case "consentDocumentId":
       return consentVersionId ?? "";
     default:
@@ -81,15 +79,10 @@ export function buildPreview(
   return text;
 }
 
-/** Whether a template links the patient's consent document (its `{{N}}` is the version id). */
 export function linksConsentDocument(template: TwilioTemplate): boolean {
   return template.variables.some((v) => v.autoFill === "consentDocumentId");
 }
 
-/**
- * The text sent on email and SMS. The WhatsApp template carries the consent document itself; the other channels get
- * its link (`currentVersion.url`, built by the server) written below the text.
- */
 export function buildMessageBody(
   template: TwilioTemplate,
   contentVariables: Record<string, string>,
