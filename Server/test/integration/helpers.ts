@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { signAccessToken } from '../../src/auth/tokens.js';
 import { config } from '../../src/utils/config/config.js';
 import { createCsrfToken, CSRF_HEADER } from '../../src/utils/security/csrf.js';
-import { ensureDefaultPatientType } from '../../src/patient-types/patient-type.service.js';
+import { createUserWithDefaultType, patientTypeRepository } from '../../src/patient-types/patient-type.repository.js';
 import {
   Channel,
   PatientStatus,
@@ -26,8 +26,10 @@ export async function createTestUser(overrides: {
   const email = overrides.email ?? unique('user@test.local');
   const password = overrides.password ?? 'Password123!';
   const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
-  const user = await prisma.user.create({
+  // Like every account: a default patient type ("General"), in the same transaction.
+  return prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
     data: {
+      defaultPatientTypeId,
       email,
       passwordHash,
       role: overrides.role ?? AdminRole.ADMIN,
@@ -39,15 +41,12 @@ export async function createTestUser(overrides: {
       reminderChannel: Channel.WHATSAPP,
       timezone: config.defaults.timezone,
     },
-  });
-  // Like every account: a default patient type ("General").
-  const defaultPatientTypeId = await prisma.$transaction((tx) => ensureDefaultPatientType(tx, user.id));
-  return { ...user, defaultPatientTypeId };
+  })));
 }
 
-/** The provider's default patient type, created if the provider has none (users written directly in a test). */
+/** The provider's default patient type. */
 export async function defaultPatientTypeId(userId: string): Promise<string> {
-  return prisma.$transaction((tx) => ensureDefaultPatientType(tx, userId));
+  return patientTypeRepository.defaultIdOf(userId);
 }
 
 export async function createTestPatient(

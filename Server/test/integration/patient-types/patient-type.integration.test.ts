@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import app from '../../../src/app.js';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
@@ -13,6 +14,7 @@ import {
   PatientTypeNotFoundError,
 } from '../../../src/patient-types/patient-type.errors.js';
 import { patientTypeRouter } from '../../../src/patient-types/patient-type.routes.js';
+import { createUserWithDefaultType } from '../../../src/patient-types/patient-type.repository.js';
 import { userService } from '../../../src/users/user.service.js';
 import { AdminRole, AdminStatus } from '../../../generated/prisma/client.ts';
 import { authReq, createTestPatient, createTestToken, createTestUser, invokeRoute, unique } from '../helpers.js';
@@ -45,12 +47,22 @@ describe('new accounts', () => {
     expect(created.defaultPatientTypeId).toBe(types[ 0 ]!.id);
   });
 
-  it('gives a user written without one a default type the first time it is needed', async () => {
-    const bare = await prisma.user.create({ data: { email: unique('bare@test.local'), passwordHash: 'x' } });
-    const types = await patientTypeService.list(bare.id);
-    expect(types.map((t) => [ t.name, t.isDefault ])).toEqual([ [ 'General', true ] ]);
-    // Idempotent: a second read creates nothing.
-    expect(await patientTypeService.list(bare.id)).toHaveLength(1);
+  it('refuses a user whose default type is never written (the foreign key is checked at commit)', async () => {
+    await expect(prisma.user.create({
+      data: { email: unique('bare@test.local'), passwordHash: 'x', defaultPatientTypeId: randomUUID() },
+    })).rejects.toThrow();
+    expect(await prisma.user.count({ where: { email: { startsWith: 'bare@test.local' } } })).toBe(0);
+  });
+
+  it('keeps the default of an existing user when an upsert finds it', async () => {
+    const before = await prisma.patientType.count({ where: { userId } });
+    const found = await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { email: unique('never@test.local'), passwordHash: 'x', defaultPatientTypeId },
+    })));
+    expect(found.defaultPatientTypeId).toBe(defaultTypeId);
+    expect(await prisma.patientType.count({ where: { userId } })).toBe(before);
   });
 });
 
@@ -66,7 +78,7 @@ describe('patientTypeService', () => {
     const types = await patientTypeService.list(userId);
     expect(types.map((t) => t.name)).toEqual([ 'General', 'Familia' ]);
     expect(types[ 0 ]).toMatchObject({ isDefault: true, patientCount: 1, currentVersion: null });
-    expect(types[ 1 ]).toMatchObject({ isDefault: false, patientCount: 1, currentVersion: { id: v2.id, version: 2, name: 'v2.pdf' } });
+    expect(types[ 1 ]).toMatchObject({ isDefault: false, patientCount: 1, currentVersion: { id: v2.id, version: 2, name: 'v2.pdf', url: expect.stringMatching(new RegExp(`/v1/consent-document/public/download/${v2.id}\\.pdf$`)) } });
     expect(types[ 1 ]!.currentVersion).not.toHaveProperty('content');
   });
 

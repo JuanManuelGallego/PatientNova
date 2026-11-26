@@ -67,10 +67,3 @@ export async function downloadConsentVersion(patientTypeId: string, versionId: s
     if (!res.ok) throw new ApiClientError(toSpanishMessage(res.status), res.status);
     return res.blob();
 }
-
-/** Sends the welcome message from the server, linking the patient type's current consent PDF. */
-export function useSendWelcome() {
-    const { mutate, loading, error } = useApiMutation<{ reminderId: string }>("POST", "No pudimos enviar el mensaje de bienvenida.");
-    const sendWelcome = useCallback((patientId: string) => mutate(`${API_BASE}/patients/${patientId}/welcome`), [ mutate ]);
-    return { sendWelcome, loading, error };
-}

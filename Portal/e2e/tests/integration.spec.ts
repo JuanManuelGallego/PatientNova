@@ -14,6 +14,7 @@ import { Env } from '../utils/env';
 test.describe('Appointment-Reminder lifecycle', () => {
   test('Create, update, and cancel appointment with reminder via UI', async ({
     page,
+    api,
     trackedAppointments,
     trackedPatients,
     trackedReminders,
@@ -61,7 +62,8 @@ test.describe('Appointment-Reminder lifecycle', () => {
       lastName: patientLastName,
       email: patientEmail,
       whatsapp: patientPhone,
-      appointmentType: typeName
+      appointmentType: typeName,
+      patientType: (await api.defaultPatientType()).name,
     });
     trackedPatients.track(patientId);
 

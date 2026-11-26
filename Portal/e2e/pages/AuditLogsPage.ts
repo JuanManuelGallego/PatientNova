@@ -32,14 +32,14 @@ export class AuditLogsPage extends BasePage {
   async selectEntityFilter(label: string) {
     const trigger = this.page.getByTestId('audit-entity-filter-trigger');
     await trigger.click();
-    await this.page.getByTestId('audit-entity-filter').getByRole('option', { name: label }).click();
+    await this.page.getByTestId('audit-entity-filter').getByRole('option', { name: label, exact: true }).click();
     await trigger.click();
   }
 
   async selectActionFilter(label: string) {
     const trigger = this.page.getByTestId('audit-action-filter-trigger');
     await trigger.click();
-    await this.page.getByTestId('audit-action-filter').getByRole('option', { name: label }).click();
+    await this.page.getByTestId('audit-action-filter').getByRole('option', { name: label, exact: true }).click();
     await trigger.click();
   }
 

@@ -23,6 +23,7 @@ import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import {
   computeAutoFilledVariables,
   buildMessageBody,
+  linksConsentDocument,
   selectTemplateForAppointment,
 } from "./utils";
 import { SendModeAndPatientStep } from "./SendModeAndPatientStep";
@@ -66,6 +67,10 @@ const [ form, setForm ] = useState<ReminderForm>({
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
   const { patientTypes } = useFetchPatientTypes();
+  /** The current consent version of a patient's type: the only form a consent template may link. */
+  function consentVersionFor(patient?: Patient) {
+    return patientTypes.find((t) => t.id === patient?.patientTypeId)?.currentVersion ?? null;
+  }
   // Reminders go out on the selected patient's own channel.
   const channel = selectedPatient?.reminderChannel ?? Channel.WHATSAPP;
   const { patient: fullPatient } = useFetchPatient(form.patientId);
@@ -81,10 +86,13 @@ const [ form, setForm ] = useState<ReminderForm>({
     ? patientAppointments.find((a) => a.id === form.appointmentId)
     : null;
 
-  const consentMimeType = patientTypes.find((t) => t.id === selectedPatient?.patientTypeId)?.currentVersion?.mimeType;
+  const consentUrl = consentVersionFor(selectedPatient)?.url;
+  const missingConsentType = selectedPatient && linksConsentDocument(selectedTemplate) && !consentUrl
+    ? patientTypes.find((t) => t.id === selectedPatient.patientTypeId)?.name ?? ""
+    : null;
   const preview = useMemo(
-    () => buildMessageBody(selectedTemplate, form.contentVariables, channel, consentMimeType),
-    [ selectedTemplate, form.contentVariables, channel, consentMimeType ],
+    () => buildMessageBody(selectedTemplate, form.contentVariables, channel, consentUrl),
+    [ selectedTemplate, form.contentVariables, channel, consentUrl ],
   );
 
   const channelAvailable =
@@ -104,10 +112,6 @@ const [ form, setForm ] = useState<ReminderForm>({
           ) && (channel === Channel.WHATSAPP || !!preview.trim())
           : true;
 
-  function consentVersionFor(patient?: Patient) {
-    return patientTypes.find((t) => t.id === patient?.patientTypeId)?.currentVersion?.id ?? null;
-  }
-
   function computeAutoFill(
     templateKey: string,
     appointment?: Appointment | null,
@@ -122,7 +126,7 @@ const [ form, setForm ] = useState<ReminderForm>({
       appointment,
       user,
       appointmentType,
-      consentVersionFor(patient),
+      consentVersionFor(patient)?.id ?? null,
     );
   }
 
@@ -352,6 +356,7 @@ const [ form, setForm ] = useState<ReminderForm>({
             setForm={setForm}
             selectedTemplate={selectedTemplate}
             preview={preview}
+            missingConsentType={missingConsentType}
           />
         )}
         {step === 4 && (

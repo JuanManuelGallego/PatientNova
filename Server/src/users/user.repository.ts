@@ -11,7 +11,7 @@ import { Channel } from '../../generated/prisma/enums.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
-import { ensureDefaultPatientType } from '../patient-types/patient-type.service.js';
+import { createUserWithDefaultType } from '../patient-types/patient-type.repository.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {
@@ -24,8 +24,9 @@ export const userRepository = {
         const passwordHash = await bcrypt.hash(dto.password, config.auth.bcryptRounds);
         // Every account starts with one default patient type ("General"), in the same transaction.
         return prisma.$transaction(async (tx) => {
-            const { id } = await tx.user.create({
+            const { id } = await createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
                 data: {
+                    defaultPatientTypeId,
                     email: dto.email.toLowerCase(),
                     passwordHash,
                     role: dto.role,
@@ -43,9 +44,8 @@ export const userRepository = {
                     reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
                     timezone: dto.timezone ?? config.defaults.timezone,
                 },
-                select: { id: true },
-            });
-            await ensureDefaultPatientType(tx, id);
+                select: { id: true, defaultPatientTypeId: true },
+            }));
             return tx.user.findUniqueOrThrow({ where: { id }, select: userInclude });
         });
     },

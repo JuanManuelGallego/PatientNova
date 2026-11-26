@@ -20,7 +20,7 @@ vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({ useFetc
 vi.mock("@/src/api/patient-types/useFetchPatientTypes", () => ({
   useFetchPatientTypes: () => ({ patientTypes, defaultType: patientTypes[ 0 ], loading: false, error: null, refetch: vi.fn() }),
 }));
-vi.mock("@/src/api/patient-types/usePatientTypeMutations", () => ({ useSendWelcome: () => ({ sendWelcome, loading: false, error: null }) }));
+vi.mock("@/src/api/patients/useSendWelcome", () => ({ useSendWelcome: () => ({ sendWelcome, loading: false, error: null }) }));
 vi.mock("@/src/providers/AuthContext", () => ({
   useAuthContext: () => ({
     user: { id: "u1", displayName: "Dra. Ana", firstName: "Ana", lastName: "Ruiz", bankName: "Banco", accountNumber: "1", nationalId: "2", bankingKey: "@k" },

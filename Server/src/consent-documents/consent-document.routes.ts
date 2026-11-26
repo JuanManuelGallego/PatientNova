@@ -5,7 +5,7 @@ import { logger } from '../utils/api/logger.js';
 import { createPublicLimiter } from '../middlewares/public-rate-limit.js';
 import { patientTypeService } from '../patient-types/patient-type.service.js';
 import { sendConsentDocument } from './send-consent-document.js';
-import { config } from '../utils/config/config.js';
+import { EXTENSIONS_BY_MIME } from './consent-document-url.js';
 
 /**
  * Public consent downloads. Providers manage consent PDFs per patient type (`/v1/patient-types`); this router keeps
@@ -14,22 +14,6 @@ import { config } from '../utils/config/config.js';
 export const consentDocumentRouter = Router();
 const CUID_RE = /^c[a-z0-9]{24}$/;
 const ALLOWED_MIME_TYPES = new Set([ 'application/pdf', 'image/jpeg', 'image/png' ]);
-
-/** File extensions a link may use for each stored MIME type (the extension must match the content). */
-const EXTENSIONS_BY_MIME: Record<string, string[]> = {
-    'application/pdf': [ 'pdf' ],
-    'image/png': [ 'png' ],
-    'image/jpeg': [ 'jpeg', 'jpg' ],
-};
-
-/**
- * The link a patient opens for a consent version: the path the approved WhatsApp welcome template uses. The extension
- * follows the stored type (a migrated legacy upload may be an image); new versions are PDF.
- */
-export function consentDocumentUrl(version: { id: string; mimeType: string }): string {
-    const ext = EXTENSIONS_BY_MIME[ version.mimeType ]?.[ 0 ] ?? 'pdf';
-    return `${config.publicApiOrigin}/v1/consent-document/public/download/${version.id}.${ext}`;
-}
 
 // Public, unauthenticated download: stricter than the provider API limiter. In-memory, so the limit
 // is per instance and resets on restart (see AGENTS.md).

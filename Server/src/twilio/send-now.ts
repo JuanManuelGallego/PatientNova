@@ -9,31 +9,45 @@ import { resolveTwilioError } from './twilio-errors.js';
 import type { NotificationResult } from './types.js';
 
 export type ImmediateMessage =
-  | { channel: typeof Channel.WHATSAPP; to: string; contentSid: string; contentVariables?: Record<string, string>; patientId?: string }
-  | { channel: typeof Channel.SMS; to: string; body: string; patientId?: string }
-  | { channel: typeof Channel.EMAIL; to: string; body: string; subject?: string; patientId?: string };
+  | { channel: typeof Channel.WHATSAPP; to: string; contentSid: string; contentVariables?: Record<string, string>; patientId: string }
+  | { channel: typeof Channel.SMS; to: string; body: string; patientId: string }
+  | { channel: typeof Channel.EMAIL; to: string; body: string; subject?: string; patientId: string };
+
+/** What differs per channel once a message is built: its log label, how its address is masked, how errors read. */
+const CHANNELS: Record<Channel, { label: string; mask: (to: string) => string; describe: (code: number | null | undefined, message: string) => string }> = {
+  [ Channel.WHATSAPP ]: { label: 'WhatsApp', mask: maskPhone, describe: resolveTwilioError },
+  [ Channel.SMS ]: { label: 'SMS', mask: maskPhone, describe: resolveTwilioError },
+  // Brevo errors carry no Twilio code: the message is kept as is.
+  [ Channel.EMAIL ]: { label: 'Email', mask: maskEmail, describe: (_code, message) => message },
+};
 
 function twilioCodeOf(err: unknown): number | undefined {
   return typeof err === 'object' && err !== null && 'code' in err ? (err as { code: number }).code : undefined;
 }
 
-async function deliver(message: ImmediateMessage): Promise<NotificationResult> {
+function deliver(message: ImmediateMessage): Promise<NotificationResult> {
   switch (message.channel) {
-    case Channel.WHATSAPP: {
-      const result = await sendWhatsApp(message);
-      if (!result.success) throw new Error(resolveTwilioError(result.errorCode, result.error ?? 'WhatsApp send failed'));
-      return result;
-    }
-    case Channel.SMS: {
-      const result = await sendSms(message);
-      if (!result.success) throw new Error(resolveTwilioError(result.errorCode, result.error ?? 'SMS send failed'));
-      return result;
-    }
-    case Channel.EMAIL: {
-      const result = await sendEmail(message);
-      if (!result.success) throw new Error(result.error ?? 'Email send failed');
-      return result;
-    }
+    case Channel.WHATSAPP: return sendWhatsApp(message);
+    case Channel.SMS: return sendSms(message);
+    case Channel.EMAIL: return sendEmail(message);
+  }
+}
+
+function reminderOf(message: ImmediateMessage): CreateReminderDto {
+  const base = {
+    sendMode: ReminderMode.IMMEDIATE,
+    sendAt: new Date(),
+    status: ReminderStatus.PENDING,
+    to: message.to,
+    patientId: message.patientId,
+  };
+  switch (message.channel) {
+    case Channel.WHATSAPP:
+      return { ...base, channel: message.channel, contentSid: message.contentSid, contentVariables: message.contentVariables };
+    case Channel.SMS:
+      return { ...base, channel: message.channel, body: message.body };
+    case Channel.EMAIL:
+      return { ...base, channel: message.channel, body: message.body, subject: message.subject };
   }
 }
 
@@ -42,34 +56,20 @@ async function deliver(message: ImmediateMessage): Promise<NotificationResult> {
  * message id after it, FAILED (plus the provider's failure alert) when it fails, and the error rethrown.
  */
 export async function sendNow(message: ImmediateMessage, userId: string): Promise<{ reminderId: string; result: NotificationResult }> {
-  // The notify routes accept a message with no patient, as they always have; the DTO type assumes one.
-  const dto = {
-    channel: message.channel,
-    ...(message.channel === Channel.WHATSAPP
-      ? { contentSid: message.contentSid, contentVariables: message.contentVariables }
-      : { body: message.body }),
-    ...(message.channel === Channel.EMAIL && { subject: message.subject }),
-    sendMode: ReminderMode.IMMEDIATE,
-    patientId: message.patientId,
-    sendAt: new Date(),
-    status: ReminderStatus.PENDING,
-    to: message.to,
-  } as CreateReminderDto;
-  const reminder = await reminderService.create(dto, userId, false);
+  const channel = CHANNELS[ message.channel ];
+  const reminder = await reminderService.create(reminderOf(message), userId, false);
 
   try {
     const result = await deliver(message);
+    if (!result.success) throw new Error(channel.describe(result.errorCode, result.error ?? `${channel.label} send failed`));
     await reminderService.update(reminder.id, { status: ReminderStatus.QUEUED, messageId: result.messageSid ?? undefined }, userId);
     return { reminderId: reminder.id, result };
   } catch (err) {
-    const maskedTo = message.channel === Channel.EMAIL ? maskEmail(message.to) : maskPhone(message.to);
     logger.error(
-      { reminderId: reminder.id, channel: message.channel, maskedTo, error: err instanceof Error ? err.message : err },
-      `${message.channel === Channel.EMAIL ? 'Email' : message.channel === Channel.SMS ? 'SMS' : 'WhatsApp'} send failed`,
+      { reminderId: reminder.id, channel: message.channel, maskedTo: channel.mask(message.to), error: err instanceof Error ? err.message : err },
+      `${channel.label} send failed`,
     );
-    const error = message.channel === Channel.EMAIL
-      ? (err instanceof Error ? err.message : 'Unknown send error')
-      : resolveTwilioError(twilioCodeOf(err), err instanceof Error ? err.message : 'Unknown send error');
+    const error = channel.describe(twilioCodeOf(err), err instanceof Error ? err.message : 'Unknown send error');
     await reminderService.update(reminder.id, { status: ReminderStatus.FAILED, error }, userId);
     await sendReminderFailureAlert(reminder.id);
     throw err;

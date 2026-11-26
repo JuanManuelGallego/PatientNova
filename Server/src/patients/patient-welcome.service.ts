@@ -1,6 +1,6 @@
 import { ActionType, Channel, EntityType } from '../../generated/prisma/enums.ts';
 import { logAudit } from '../audit-log/audit-log.utils.js';
-import { consentDocumentUrl } from '../consent-documents/consent-document.routes.js';
+import { consentDocumentUrl } from '../consent-documents/consent-document-url.js';
 import { patientTypeRepository } from '../patient-types/patient-type.repository.js';
 import { patientRouteSelect, resolvePatientRoute } from '../portal/patient-route.js';
 import { sendNow, type ImmediateMessage } from '../twilio/send-now.js';

@@ -11,7 +11,7 @@ const general: PatientType = {
   name: "General",
   isDefault: true,
   patientCount: 3,
-  currentVersion: { id: "cv2", version: 2, name: "Consentimiento.pdf", mimeType: "application/pdf", sizeBytes: 20480, createdAt: "2026-11-20T15:00:00.000Z" },
+  currentVersion: { id: "cv2", version: 2, name: "Consentimiento.pdf", mimeType: "application/pdf", sizeBytes: 20480, createdAt: "2026-11-20T15:00:00.000Z", url: "https://api.example.test/v1/consent-document/public/download/cv2.pdf" },
   familyMembersEnabled: false,
   subsystemRelationsEnabled: false,
   createdAt: "2026-11-01T00:00:00.000Z",

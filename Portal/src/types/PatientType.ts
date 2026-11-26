@@ -6,6 +6,8 @@ export interface ConsentVersion {
   mimeType: string;
   sizeBytes: number;
   createdAt: string;
+  /** The public link patients receive, built by the server. */
+  url: string;
 }
 
 /** A provider's patient type: sets the record template and the consent PDF of its patients. */

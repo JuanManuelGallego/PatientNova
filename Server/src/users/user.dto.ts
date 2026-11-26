@@ -45,7 +45,7 @@ function _extractFields(
     accountNumber: string | null;
     nationalId: string | null;
     bankingKey: string | null;
-    defaultPatientTypeId: string | null;
+    defaultPatientTypeId: string;
   },
 ): UserResponse {
   return {

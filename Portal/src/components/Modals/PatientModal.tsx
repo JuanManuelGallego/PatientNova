@@ -20,7 +20,7 @@ import {
 } from "@/src/constants/ui";
 import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
 import { useFetchPatientTypes } from "@/src/api/patient-types/useFetchPatientTypes";
-import { useSendWelcome } from "@/src/api/patient-types/usePatientTypeMutations";
+import { useSendWelcome } from "@/src/api/patients/useSendWelcome";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";

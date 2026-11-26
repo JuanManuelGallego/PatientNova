@@ -24,6 +24,7 @@ test.describe('Patients', () => {
       whatsapp: number,
       sms: number,
       appointmentType: Env.apptTypeName,
+      patientType: (await api.defaultPatientType()).name,
       notes: randomString(100)
     });
 

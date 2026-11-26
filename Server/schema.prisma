@@ -277,10 +277,11 @@ model User {
   contactHours        String? @db.VarChar(120)
   searchIndexable     Boolean @default(false)
 
-  // Set for every user (see ensureDefaultPatientType). Nullable only because the user row must exist before
-  // its first patient type.
-  defaultPatientTypeId String?      @unique @db.Uuid
-  defaultPatientType   PatientType? @relation("UserDefaultPatientType", fields: [defaultPatientTypeId], references: [id], onDelete: NoAction)
+  // Every user has one. The user and its type reference each other, so this foreign key is DEFERRABLE INITIALLY
+  // DEFERRED (raw SQL, migration 20261125000100_default_patient_type_required) and both rows are written in one
+  // transaction (createUserWithDefaultType). NO ACTION, not RESTRICT: Postgres cannot defer RESTRICT.
+  defaultPatientTypeId String      @unique @db.Uuid
+  defaultPatientType   PatientType @relation("UserDefaultPatientType", fields: [defaultPatientTypeId], references: [id], onDelete: NoAction)
 
   lastPasswordChange  DateTime?
   failedLoginAttempts Int       @default(0)

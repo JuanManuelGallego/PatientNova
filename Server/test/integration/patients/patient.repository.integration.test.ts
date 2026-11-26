@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { patientRepository } from '../../../src/patients/patient.repository.js';
 import { PatientNotFoundError } from '../../../src/utils/errors/errors.js';
-import { defaultPatientTypeId } from '../helpers.js';
+import { createTestUser } from '../helpers.js';
 
 // Integration test — runs against a real Postgres database.
 // The DB is truncated before each test by test/integration/setup.ts.
@@ -11,14 +11,7 @@ let userId: string;
 let patientTypeId: string;
 
 beforeEach(async () => {
-  const user = await prisma.user.create({
-    data: {
-      email: `owner-${Date.now()}@test.local`,
-      passwordHash: 'x',
-    },
-  });
-  userId = user.id;
-  patientTypeId = await defaultPatientTypeId(userId);
+  ({ id: userId, defaultPatientTypeId: patientTypeId } = await createTestUser());
 });
 
 describe('patientRepository (integration)', () => {
@@ -82,9 +75,7 @@ describe('patientRepository (integration)', () => {
       userId,
     );
 
-    const other = await prisma.user.create({
-      data: { email: `other-${Date.now()}@test.local`, passwordHash: 'x' },
-    });
+    const other = await createTestUser();
 
     await expect(patientRepository.findById(created.id, other.id)).rejects.toThrow(
       PatientNotFoundError,

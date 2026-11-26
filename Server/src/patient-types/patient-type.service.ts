@@ -13,7 +13,8 @@ import {
   PatientTypeNameConflictError,
   PatientTypeNotFoundError,
 } from './patient-type.errors.js';
-import { DEFAULT_PATIENT_TYPE_NAME, patientTypeRepository } from './patient-type.repository.js';
+import { patientTypeRepository } from './patient-type.repository.js';
+import { consentDocumentUrl } from '../consent-documents/consent-document-url.js';
 import type { CreateConsentVersionDto, CreatePatientTypeDto, UpdatePatientTypeDto } from './patient-type.schemas.js';
 
 export const CONSENT_PDF_MAX_BYTES = 10 * 1024 * 1024;
@@ -28,6 +29,14 @@ export interface ConsentVersionDto {
   mimeType: string;
   sizeBytes: number;
   createdAt: Date;
+  /** The public link patients receive (the Portal writes it into email and SMS bodies). */
+  url: string;
+}
+
+type VersionMeta = Omit<ConsentVersionDto, 'url'>;
+
+function toVersionDto(version: VersionMeta): ConsentVersionDto {
+  return { ...version, url: consentDocumentUrl(version) };
 }
 
 export interface PatientTypeDto {
@@ -43,7 +52,7 @@ export interface PatientTypeDto {
   updatedAt: Date;
 }
 
-function toDto(row: ListedType, defaultId: string | null): PatientTypeDto {
+function toDto(row: ListedType, defaultId: string): PatientTypeDto {
   return {
     id: row.id,
     name: row.name,
@@ -52,29 +61,15 @@ function toDto(row: ListedType, defaultId: string | null): PatientTypeDto {
     familyMembersEnabled: row.familyMembersEnabled,
     subsystemRelationsEnabled: row.subsystemRelationsEnabled,
     patientCount: row._count.patients,
-    currentVersion: row.consentVersions[ 0 ] ?? null,
+    currentVersion: row.consentVersions[ 0 ] ? toVersionDto(row.consentVersions[ 0 ]) : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
-/**
- * The provider's default patient type, created ("General", empty template) when the provider has none yet: a new
- * account, or a user written before patient types. Call it under the provider lock, or in the transaction that
- * creates the user, so two callers cannot both create one.
- */
-export async function ensureDefaultPatientType(tx: TransactionClient, userId: string): Promise<string> {
-  const current = await patientTypeRepository.defaultIdOf(userId, tx);
-  if (current) return current;
-  const type = await tx.patientType.findFirst({ where: { userId, name: DEFAULT_PATIENT_TYPE_NAME }, select: { id: true } })
-    ?? await tx.patientType.create({ data: { userId, name: DEFAULT_PATIENT_TYPE_NAME }, select: { id: true } });
-  await tx.user.update({ where: { id: userId }, data: { defaultPatientTypeId: type.id } });
-  return type.id;
-}
-
 /** The type a new patient gets: the one asked for (it must be the provider's), else the provider's default. */
 export async function resolvePatientTypeId(tx: TransactionClient, userId: string, requested?: string | null): Promise<string> {
-  if (!requested) return ensureDefaultPatientType(tx, userId);
+  if (!requested) return patientTypeRepository.defaultIdOf(userId, tx);
   const type = await patientTypeRepository.findOwned(userId, requested, tx);
   if (!type) throw new PatientTypeNotFoundError();
   return type.id;
@@ -116,12 +111,10 @@ function decodePdf(content: string): Buffer {
 
 export const patientTypeService = {
   async list(userId: string): Promise<PatientTypeDto[]> {
-    // A provider without a default (should not happen after the migration) gets one here, so the list always has one.
-    const defaultId = await patientTypeRepository.defaultIdOf(userId) ?? await prisma.$transaction(async (tx) => {
-      await withProviderLock(tx, userId);
-      return ensureDefaultPatientType(tx, userId);
-    });
-    const rows = await patientTypeRepository.listWithMeta(userId);
+    const [ rows, defaultId ] = await Promise.all([
+      patientTypeRepository.listWithMeta(userId),
+      patientTypeRepository.defaultIdOf(userId),
+    ]);
     return rows.map((r) => toDto(r, defaultId));
   },
 
@@ -218,7 +211,7 @@ export const patientTypeService = {
 
   async listVersions(userId: string, id: string): Promise<ConsentVersionDto[]> {
     await requireOwned(userId, id);
-    return patientTypeRepository.listVersions(id);
+    return (await patientTypeRepository.listVersions(id)).map(toVersionDto);
   },
 
   /** A new version, numbered after the last one. Versions are never updated or deleted on their own. */
@@ -227,18 +220,15 @@ export const patientTypeService = {
     return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       const type = await requireOwned(userId, id, tx);
-      const version = await patientTypeRepository.lastVersionNumber(id, tx) + 1;
-      const created = await tx.consentDocumentVersion.create({
-        data: {
-          patientTypeId: id,
-          version,
-          name: dto.name,
-          content: new Uint8Array(content),
-          mimeType: 'application/pdf',
-          sizeBytes: content.length,
-        },
-        select: { id: true, version: true, name: true, mimeType: true, sizeBytes: true, createdAt: true },
-      });
+      const version = ((await patientTypeRepository.currentVersion(id, tx))?.version ?? 0) + 1;
+      const created = await patientTypeRepository.createVersion({
+        patientTypeId: id,
+        version,
+        name: dto.name,
+        content: new Uint8Array(content),
+        mimeType: 'application/pdf',
+        sizeBytes: content.length,
+      }, tx);
       await logAudit({
         entityType: EntityType.CONSENT_DOCUMENT,
         entityId: created.id,
@@ -251,7 +241,7 @@ export const patientTypeService = {
         required: true,
       });
       logger.info({ userId, patientTypeId: id, version }, 'Consent version uploaded');
-      return created;
+      return toVersionDto(created);
     });
   },
 
@@ -267,10 +257,7 @@ export const patientTypeService = {
    * sent before), which serves the current version of that provider's default type. Both ids are cuids.
    */
   async findPublicDocument(id: string) {
-    const version = await prisma.consentDocumentVersion.findUnique({ where: { id } });
-    if (version) return version;
-    const defaultId = await patientTypeRepository.defaultIdOf(id);
-    if (!defaultId) return null;
-    return prisma.consentDocumentVersion.findFirst({ where: { patientTypeId: defaultId }, orderBy: { version: 'desc' } });
+    return await patientTypeRepository.findVersionWithContent(id)
+      ?? patientTypeRepository.findDefaultCurrentWithContent(id);
   },
 };

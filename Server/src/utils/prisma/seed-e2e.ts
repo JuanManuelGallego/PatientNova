@@ -3,7 +3,7 @@ import { prisma } from './prisma-client.js';
 import { maskEmail } from '../api/logger.js';
 import { config, requireEnv } from '../config/config.js';
 import { AdminRole, AdminStatus, BookingApprovalMode, Channel } from '../../../generated/prisma/client.ts';
-import { ensureDefaultPatientType } from '../../patient-types/patient-type.service.js';
+import { createUserWithDefaultType } from '../../patient-types/patient-type.repository.js';
 
 /**
  * Deterministic data for the Playwright suite against a throwaway stack. The ids/names match the
@@ -51,10 +51,12 @@ async function seedE2e() {
 
   const email = requireEnv('ADMIN_EMAIL');
   const passwordHash = await bcrypt.hash(requireEnv('ADMIN_PASSWORD'), config.auth.bcryptRounds);
-  const user = await prisma.user.upsert({
+  // A new account gets its default patient type in the same transaction; an existing one keeps its own.
+  const user = await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.upsert({
     where: { email },
     update: { passwordHash, status: AdminStatus.ACTIVE, failedLoginAttempts: 0, lockedUntil: null, ...profile },
     create: {
+      defaultPatientTypeId,
       email,
       passwordHash,
       firstName: 'E2E',
@@ -64,7 +66,7 @@ async function seedE2e() {
       status: AdminStatus.ACTIVE,
       reminderChannel: Channel.WHATSAPP,
     },
-  });
+  })));
 
   await prisma.appointmentType.upsert({
     where: { id: E2E_SEED.appointmentTypeId },
@@ -80,7 +82,7 @@ async function seedE2e() {
   // The default patient type holds the consent PDF the welcome message links.
   const content = Buffer.from('%PDF-1.4 e2e consent');
   await prisma.$transaction(async (tx) => {
-    const patientTypeId = await ensureDefaultPatientType(tx, user.id);
+    const patientTypeId = user.defaultPatientTypeId;
     if (!await tx.consentDocumentVersion.findFirst({ where: { patientTypeId }, select: { id: true } })) {
       await tx.consentDocumentVersion.create({
         data: { patientTypeId, version: 1, name: 'Consentimiento E2E.pdf', content: new Uint8Array(content), mimeType: 'application/pdf', sizeBytes: content.length },
@@ -142,13 +144,14 @@ async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
     slotIntervalMinutes: 60, bufferMinutes: 0, minLeadMinutes: 0, maxHorizonDays: 60,
     reminderChannel: Channel.EMAIL, reminderActive: true,
   };
-  const provider = await prisma.user.upsert({
+  const provider = await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.upsert({
     where: { email: seed.email },
     update: {
       status: AdminStatus.ACTIVE, deletedAt: null, isDeleted: false, passwordHash: seed.passwordHash,
       failedLoginAttempts: 0, lockedUntil: null, ...booking,
     },
     create: {
+      defaultPatientTypeId,
       email: seed.email,
       passwordHash: seed.passwordHash,
       firstName: seed.firstName,
@@ -159,8 +162,7 @@ async function seedPortalProvider(seed: PortalProviderSeed): Promise<string> {
       status: AdminStatus.ACTIVE,
       ...booking,
     },
-  });
-  await prisma.$transaction((tx) => ensureDefaultPatientType(tx, provider.id));
+  })));
   await prisma.availabilityRule.deleteMany({ where: { userId: provider.id } });
   await prisma.availabilityRule.createMany({
     data: [ 1, 2, 3, 4, 5, 6, 7 ].map((weekday) => ({ userId: provider.id, weekday, startMinute: 8 * 60, endMinute: 18 * 60 })),

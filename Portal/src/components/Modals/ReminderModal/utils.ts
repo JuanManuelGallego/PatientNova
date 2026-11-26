@@ -1,7 +1,6 @@
 import { Appointment, AppointmentType } from "@/src/types/Appointment";
 import { User } from "@/src/types/User";
 import { Channel } from "@/src/types/Reminder";
-import { API_BASE } from "@/src/config/api";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import {
   TwilioTemplate,
@@ -62,10 +61,10 @@ function resolveAutoFill(
       const price = appointment?.price ?? appointmentType?.defaultPrice;
       return price != null ? String(price) : "";
     }
-    // The consent PDF link ({{N}}.pdf): the current version of the patient's type. Without one, the provider's id,
-    // which the server answers with the current version of the default type (the link before patient types).
+    // The consent PDF link ({{N}}.pdf): the current version of the patient's type. Without one it stays empty and
+    // the message cannot be sent: another type's form (the provider's default) could be the wrong one.
     case "consentDocumentId":
-      return consentVersionId || user?.id || "";
+      return consentVersionId ?? "";
     default:
       return "";
   }
@@ -82,28 +81,24 @@ export function buildPreview(
   return text;
 }
 
-const EXTENSION_BY_MIME: Record<string, string> = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpeg" };
-
-/** The public link of a consent document: a version id, or a provider id (their default type's current version). */
-export function consentDocumentLink(id: string, mimeType?: string | null): string {
-  return `${API_BASE}/consent-document/public/download/${id}.${EXTENSION_BY_MIME[ mimeType ?? "" ] ?? "pdf"}`;
+/** Whether a template links the patient's consent document (its `{{N}}` is the version id). */
+export function linksConsentDocument(template: TwilioTemplate): boolean {
+  return template.variables.some((v) => v.autoFill === "consentDocumentId");
 }
 
 /**
  * The text sent on email and SMS. The WhatsApp template carries the consent document itself; the other channels get
- * its link written below the text.
+ * its link (`currentVersion.url`, built by the server) written below the text.
  */
 export function buildMessageBody(
   template: TwilioTemplate,
   contentVariables: Record<string, string>,
   channel: Channel,
-  consentMimeType?: string | null,
+  consentUrl?: string | null,
 ): string {
   const text = buildPreview(template, contentVariables);
-  if (channel === Channel.WHATSAPP) return text;
-  const consentVariable = template.variables.find((v) => v.autoFill === "consentDocumentId");
-  const consentId = consentVariable ? contentVariables[ consentVariable.key ] : undefined;
-  return consentId ? `${text}\n\nDocumento de consentimiento: ${consentDocumentLink(consentId, consentMimeType)}` : text;
+  if (channel === Channel.WHATSAPP || !consentUrl || !linksConsentDocument(template)) return text;
+  return `${text}\n\nDocumento de consentimiento: ${consentUrl}`;
 }
 
 export function selectTemplateForAppointment(appointment: Appointment): string {

@@ -224,11 +224,11 @@ describe("computeAutoFilledVariables", () => {
     expect(result["1"]).toBe("cversion000000000000000001");
   });
 
-  it("falls back to the provider's id (their default type's PDF) when the type has no version", () => {
+  it("leaves the consent empty when the type has no version, never another type's form", () => {
     const tmpl = makeTemplate([
       { key: "1", label: "Consentimiento", autoFill: "consentDocumentId" },
     ]);
-    expect(computeAutoFilledVariables(tmpl, "", "", null, makeUser({ id: "user-42" }), null, null)["1"]).toBe("user-42");
+    expect(computeAutoFilledVariables(tmpl, "", "", null, makeUser({ id: "user-42" }), null, null)["1"]).toBe("");
     expect(computeAutoFilledVariables(tmpl, "", "", null, null)["1"]).toBe("");
   });
 
@@ -348,20 +348,22 @@ describe("buildMessageBody", () => {
   } satisfies TwilioTemplate;
   const vars = { "1": "Lucia", "2": "cversion000000000000000001" };
 
-  it("writes the consent link below the text on email and SMS", () => {
+  const url = "https://api.example.test/v1/consent-document/public/download/cversion000000000000000001.pdf";
+
+  it("writes the server's consent link below the text on email and SMS", () => {
     for (const channel of [ Channel.EMAIL, Channel.SMS ]) {
-      const body = buildMessageBody(consentTemplate, vars, channel, "application/pdf");
-      expect(body).toMatch(/^Hola Lucia, completa el consentimiento\.\n\nDocumento de consentimiento: http.+\/v1\/consent-document\/public\/download\/cversion000000000000000001\.pdf$/);
+      expect(buildMessageBody(consentTemplate, vars, channel, url))
+        .toBe(`Hola Lucia, completa el consentimiento.\n\nDocumento de consentimiento: ${url}`);
     }
   });
 
-  it("uses the extension of the stored file, and leaves WhatsApp to the template's own document", () => {
-    expect(buildMessageBody(consentTemplate, vars, Channel.SMS, "image/jpeg")).toMatch(/cversion000000000000000001\.jpeg$/);
-    expect(buildMessageBody(consentTemplate, vars, Channel.WHATSAPP, "application/pdf")).toBe("Hola Lucia, completa el consentimiento.");
+  it("leaves WhatsApp to the template's own document", () => {
+    expect(buildMessageBody(consentTemplate, vars, Channel.WHATSAPP, url)).toBe("Hola Lucia, completa el consentimiento.");
   });
 
-  it("adds nothing to templates without a consent document", () => {
+  it("adds nothing without a link, or to templates without a consent document", () => {
+    expect(buildMessageBody(consentTemplate, vars, Channel.EMAIL, null)).toBe("Hola Lucia, completa el consentimiento.");
     const tmpl = makeTemplate([ { key: "1", label: "Paciente", autoFill: "patientName" } ]);
-    expect(buildMessageBody(tmpl, { "1": "Lucia" }, Channel.EMAIL)).toBe("Lucia");
+    expect(buildMessageBody(tmpl, { "1": "Lucia" }, Channel.EMAIL, url)).toBe("Lucia");
   });
 });
