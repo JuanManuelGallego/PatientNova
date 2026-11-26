@@ -1,5 +1,6 @@
 import { useCreateReminder } from "@/src/api/reminders/useCreateReminder";
 import { useNotify } from "@/src/api/notify/useNotify";
+import { useSendWelcome } from "@/src/api/patients/useSendWelcome";
 import {
   Reminder,
   ReminderMode,
@@ -25,6 +26,8 @@ import {
   buildMessageBody,
   linksConsentDocument,
   selectTemplateForAppointment,
+  templateKeysFor,
+  WELCOME_TEMPLATE_KEY,
 } from "./utils";
 import { SendModeAndPatientStep } from "./SendModeAndPatientStep";
 import { TemplateAndChannelStep } from "./TemplateAndChannelStep";
@@ -47,6 +50,7 @@ export function ReminderModal({
 
   const { createReminder } = useCreateReminder();
   const { notify } = useNotify();
+  const { sendWelcome } = useSendWelcome();
   const { patients } = useFetchPatients();
 
   const [ step, setStep ] = useState(1);
@@ -74,6 +78,7 @@ const [ form, setForm ] = useState<ReminderForm>({
   const channel = selectedPatient?.reminderChannel ?? Channel.WHATSAPP;
   const { patient: fullPatient } = useFetchPatient(form.patientId);
   const selectedTemplate = TWILIO_CONFIG[form.selectedTemplate];
+  const isWelcome = form.selectedTemplate === WELCOME_TEMPLATE_KEY;
 
   const { appointments: patientAppointments } = useFetchAppointments(
     form.patientId
@@ -152,6 +157,11 @@ const [ form, setForm ] = useState<ReminderForm>({
       contentVariables: autoFilled,
       message: "",
     }));
+  }
+
+  function handleModeChange(mode: ReminderMode) {
+    setMode(mode);
+    if (!templateKeysFor(mode).includes(form.selectedTemplate)) handleTemplateChange(defaultTemplate);
   }
 
   function handleAppointmentChange(appointmentId: string) {
@@ -272,7 +282,9 @@ const [ form, setForm ] = useState<ReminderForm>({
     setSaving(true);
     setError(null);
     try {
-      if (sendMode === ReminderMode.IMMEDIATE) {
+      if (isWelcome) {
+        await sendWelcome(form.patientId);
+      } else if (sendMode === ReminderMode.IMMEDIATE) {
         await notify(channel!, buildPayload());
       } else {
         await createReminder(buildScheduledPayload());
@@ -332,7 +344,7 @@ const [ form, setForm ] = useState<ReminderForm>({
         {step === 1 && (
           <SendModeAndPatientStep
             sendMode={sendMode}
-            setMode={setMode}
+            setMode={handleModeChange}
             form={form}
             setForm={setForm}
             patients={patients}
@@ -346,6 +358,7 @@ const [ form, setForm ] = useState<ReminderForm>({
             form={form}
             selectedPatient={selectedPatient}
             channel={channel}
+            templateKeys={templateKeysFor(sendMode)}
             onTemplateChange={handleTemplateChange}
           />
         )}
@@ -356,6 +369,7 @@ const [ form, setForm ] = useState<ReminderForm>({
             selectedTemplate={selectedTemplate}
             preview={preview}
             missingConsentType={missingConsentType}
+            sentByServer={isWelcome}
           />
         )}
         {step === 4 && (

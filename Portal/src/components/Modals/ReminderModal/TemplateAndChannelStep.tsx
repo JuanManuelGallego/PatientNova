@@ -7,20 +7,19 @@ import {
 import { CustomSelect } from "@/src/components/CustomSelect";
 import { RequiredField } from "@/src/components/Info/Required";
 import { ChannelBanner } from "@/src/components/Info/ChannelBanner";
-import {
-  TWILIO_CONFIG,
-  TEMPLATE_KEYS,
-} from "@/src/utils/twilioConfig";
+import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 
 export function TemplateAndChannelStep({
   form,
   selectedPatient,
   channel,
+  templateKeys,
   onTemplateChange,
 }: {
   form: ReminderForm;
   selectedPatient: Patient | undefined;
   channel: Channel;
+  templateKeys: string[];
   onTemplateChange: (key: string) => void;
 }) {
   const contact = selectedPatient
@@ -52,7 +51,7 @@ export function TemplateAndChannelStep({
         <CustomSelect
           value={form.selectedTemplate}
           placeholder="Seleccionar plantilla…"
-          options={TEMPLATE_KEYS.map((key) => ({
+          options={templateKeys.map((key) => ({
             value: key,
             label: TWILIO_CONFIG[key].label,
           }))}

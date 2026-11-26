@@ -1,10 +1,11 @@
 import { Appointment, AppointmentType } from "@/src/types/Appointment";
 import { User } from "@/src/types/User";
-import { Channel } from "@/src/types/Reminder";
+import { Channel, ReminderMode } from "@/src/types/Reminder";
 import { fmtDate, fmtTime } from "@/src/utils/TimeUtils";
 import {
   TwilioTemplate,
   TemplateVariableAutoFill,
+  TEMPLATE_KEYS,
 } from "@/src/utils/twilioConfig";
 
 export function computeAutoFilledVariables(
@@ -52,7 +53,7 @@ function resolveAutoFill(
     case "accountNumber":
       return user?.accountNumber ?? "";
     case "accountHolder":
-      return user ? `${user.firstName} ${user.lastName}` : "";
+      return user ? [ user.firstName, user.lastName ].filter(Boolean).join(" ") || user.displayName : "";
     case "nationalId":
       return user?.nationalId ?? "";
     case "bankingKey":
@@ -79,6 +80,14 @@ export function buildPreview(
   return text;
 }
 
+/** The welcome is sent by the server (POST /patients/:id/welcome), which audits the consent version. */
+export const WELCOME_TEMPLATE_KEY = "PATIENT_WELCOME_MESSAGE";
+
+/** Template keys offered for a send mode: the welcome goes out only now, never scheduled. */
+export function templateKeysFor(sendMode: ReminderMode): string[] {
+  return TEMPLATE_KEYS.filter((key) => sendMode === ReminderMode.IMMEDIATE || key !== WELCOME_TEMPLATE_KEY);
+}
+
 export function linksConsentDocument(template: TwilioTemplate): boolean {
   return template.variables.some((v) => v.autoFill === "consentDocumentId");
 }
@@ -89,6 +98,10 @@ export function buildMessageBody(
   channel: Channel,
   consentUrl?: string | null,
 ): string {
+  if (channel !== Channel.WHATSAPP && template.textTemplate) {
+    return buildPreview({ ...template, template: template.textTemplate }, contentVariables)
+      .replaceAll("{{9}}", consentUrl || "{{9}}");
+  }
   const text = buildPreview(template, contentVariables);
   if (channel === Channel.WHATSAPP || !consentUrl || !linksConsentDocument(template)) return text;
   return `${text}\n\nDocumento de consentimiento: ${consentUrl}`;

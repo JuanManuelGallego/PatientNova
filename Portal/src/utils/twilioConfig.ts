@@ -26,6 +26,8 @@ export type TwilioTemplate = {
   template: string;
   variables: TemplateVariable[];
   canBulkSend: boolean;
+  /** Email/SMS text when it differs from the WhatsApp template; `{{9}}` is the consent document URL. */
+  textTemplate?: string;
 };
 
 export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
@@ -71,6 +73,8 @@ export const TWILIO_CONFIG: Record<string, TwilioTemplate> = {
             { key: "8", label: "Consentimiento", autoFill: "consentDocumentId" },
         ],
         canBulkSend: false,
+        // Mirrors WELCOME_TEXT in Server/src/patients/patient-welcome.service.ts, which sends it.
+        textTemplate: "¡Hola {{1}}! Te damos la bienvenida a Patient Nova, la plataforma de recordatorios de citas de {{2}}. A través de este canal, podrás confirmar o cancelar tus próximas citas de forma rápida. Te recordamos que el pago de la consulta se realiza antes de asistir a tu cita. Banco: {{3}} Número de cuenta: {{4}} A nombre de: {{5}} Cédula: {{6}} Llave: {{7}} Por favor, descarga y completa el documento de consentimiento antes de tu primera consulta: {{9}} ¡Muchas gracias!",
     },
     PATIENT_CONSENT_DOCUMENT:{
         label: "Documento de consentimiento",

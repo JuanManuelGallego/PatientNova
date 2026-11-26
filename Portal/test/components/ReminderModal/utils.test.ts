@@ -4,12 +4,14 @@ import {
   buildPreview,
   buildMessageBody,
   selectTemplateForAppointment,
+  templateKeysFor,
+  WELCOME_TEMPLATE_KEY,
 } from "@/src/components/Modals/ReminderModal/utils";
 import { TwilioTemplate, TemplateVariableAutoFill } from "@/src/utils/twilioConfig";
 import { Appointment, AppointmentType, AppointmentLocation, AppointmentStatus } from "@/src/types/Appointment";
 import { AdminRole, AdminStatus, User } from "@/src/types/User";
 import { Patient } from "@/src/types/Patient";
-import { Channel } from "@/src/types/Reminder";
+import { Channel, ReminderMode } from "@/src/types/Reminder";
 
 function makeTemplate(variables: TwilioTemplate["variables"]): TwilioTemplate {
   return {
@@ -168,6 +170,15 @@ describe("computeAutoFilledVariables", () => {
     const user = makeUser({ firstName: "Juan", lastName: "Garcia" });
     const result = computeAutoFilledVariables(tmpl, "", "", null, user);
     expect(result["1"]).toBe("Juan Garcia");
+  });
+
+  it("falls back to displayName for accountHolder, as the server's welcome does", () => {
+    const tmpl = makeTemplate([
+      { key: "1", label: "Holder", autoFill: "accountHolder" },
+    ]);
+    expect(computeAutoFilledVariables(tmpl, "", "", null, makeUser({ lastName: "" }))["1"]).toBe("Juan");
+    const nameless = makeUser({ firstName: "", lastName: "" });
+    expect(computeAutoFilledVariables(tmpl, "", "", null, nameless)["1"]).toBe("Dr. Garcia");
   });
 
   it("resolves nationalId from user", () => {
@@ -365,5 +376,39 @@ describe("buildMessageBody", () => {
     expect(buildMessageBody(consentTemplate, vars, Channel.EMAIL, null)).toBe("Hola Lucia, completa el consentimiento.");
     const tmpl = makeTemplate([ { key: "1", label: "Paciente", autoFill: "patientName" } ]);
     expect(buildMessageBody(tmpl, { "1": "Lucia" }, Channel.EMAIL, url)).toBe("Lucia");
+  });
+});
+
+describe("buildMessageBody with an email/SMS text", () => {
+  const welcome = {
+    label: "Bienvenida",
+    contentSid: "HXwelcome",
+    template: "Hola {{1}}, documento adjunto.",
+    variables: [
+      { key: "1", label: "Paciente", autoFill: "patientName" as const },
+      { key: "8", label: "Consentimiento", autoFill: "consentDocumentId" as const },
+    ],
+    canBulkSend: false,
+    textTemplate: "Hola {{1}}, descarga el documento: {{9}} Gracias",
+  } satisfies TwilioTemplate;
+  const vars = { "1": "Lucia", "8": "cversion1" };
+  const url = "https://api.example.test/v1/consent-document/public/download/cversion1.pdf";
+
+  it("writes the link into the text on email and SMS, without appending it again", () => {
+    for (const channel of [ Channel.EMAIL, Channel.SMS ]) {
+      expect(buildMessageBody(welcome, vars, channel, url)).toBe(`Hola Lucia, descarga el documento: ${url} Gracias`);
+    }
+  });
+
+  it("keeps the WhatsApp template on WhatsApp", () => {
+    expect(buildMessageBody(welcome, vars, Channel.WHATSAPP, url)).toBe("Hola Lucia, documento adjunto.");
+  });
+});
+
+describe("templateKeysFor", () => {
+  it("offers the welcome only when sending now", () => {
+    expect(templateKeysFor(ReminderMode.IMMEDIATE)).toContain(WELCOME_TEMPLATE_KEY);
+    expect(templateKeysFor(ReminderMode.SCHEDULED)).not.toContain(WELCOME_TEMPLATE_KEY);
+    expect(templateKeysFor(ReminderMode.SCHEDULED)).toContain("PATIENT_CONSENT_DOCUMENT");
   });
 });

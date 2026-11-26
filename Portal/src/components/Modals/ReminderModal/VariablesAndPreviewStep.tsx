@@ -9,12 +9,15 @@ export function VariablesAndPreviewStep({
   selectedTemplate,
   preview,
   missingConsentType,
+  sentByServer = false,
 }: {
   form: ReminderForm;
   setForm: React.Dispatch<React.SetStateAction<ReminderForm>>;
   selectedTemplate: TwilioTemplate;
   preview: string;
   missingConsentType?: string | null;
+  /** The server fills the variables from the patient and the provider's profile: shown, not editable. */
+  sentByServer?: boolean;
 }) {
   const userEditableVariables = selectedTemplate.variables.filter(
     (v) => v.autoFill !== "consentDocumentId",
@@ -48,6 +51,11 @@ export function VariablesAndPreviewStep({
           <div className="channel-section-label">
             Variables de la plantilla
           </div>
+          {sentByServer && (
+            <p className="form-input-hint" style={{ marginBottom: 8 }} data-testid="reminder-welcome-hint">
+              Se completan con los datos del paciente y de tu perfil. Para cambiarlos, edítalos en Configuración.
+            </p>
+          )}
           <div className="form-grid-2">
             {userEditableVariables.map((v) => (
               <label key={v.key} className="form-label">
@@ -56,6 +64,7 @@ export function VariablesAndPreviewStep({
                   className="form-input"
                   type="text"
                   value={form.contentVariables[v.key] || ""}
+                  disabled={sentByServer}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
