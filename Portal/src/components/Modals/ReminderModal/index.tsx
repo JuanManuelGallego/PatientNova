@@ -1,5 +1,6 @@
 import { useCreateReminder } from "@/src/api/reminders/useCreateReminder";
 import { useNotify } from "@/src/api/notify/useNotify";
+import { useSendWelcome } from "@/src/api/patients/useSendWelcome";
 import {
   Reminder,
   ReminderMode,
@@ -12,7 +13,8 @@ import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useState, useMemo } from "react";
 import { useFetchPatients } from "@/src/api/patients/useFetchPatients";
 import { useFetchPatient } from "@/src/api/patients/useFetchPatient";
-import { getPatientContact } from "@/src/types/Patient";
+import { getPatientContact, Patient } from "@/src/types/Patient";
+import { useFetchPatientTypes } from "@/src/api/patient-types/useFetchPatientTypes";
 import { useFetchAppointments } from "@/src/api/appointments/useFetchAppointments";
 import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
 import { useAuthContext } from "@/src/providers/AuthContext";
@@ -21,8 +23,11 @@ import { useFocusTrap } from "@/src/hooks/useFocusTrap";
 import { validateEmail, validatePhoneNumber } from "@/src/utils/DataValidator";
 import {
   computeAutoFilledVariables,
-  buildPreview,
+  buildMessageBody,
+  linksConsentDocument,
   selectTemplateForAppointment,
+  templateKeysFor,
+  WELCOME_TEMPLATE_KEY,
 } from "./utils";
 import { SendModeAndPatientStep } from "./SendModeAndPatientStep";
 import { TemplateAndChannelStep } from "./TemplateAndChannelStep";
@@ -45,6 +50,7 @@ export function ReminderModal({
 
   const { createReminder } = useCreateReminder();
   const { notify } = useNotify();
+  const { sendWelcome } = useSendWelcome();
   const { patients } = useFetchPatients();
 
   const [ step, setStep ] = useState(1);
@@ -64,10 +70,15 @@ const [ form, setForm ] = useState<ReminderForm>({
   });
 
   const selectedPatient = patients.find((p) => p.id === form.patientId);
+  const { patientTypes } = useFetchPatientTypes();
+  function consentVersionFor(patient?: Patient) {
+    return patientTypes.find((t) => t.id === patient?.patientTypeId)?.currentVersion ?? null;
+  }
   // Reminders go out on the selected patient's own channel.
   const channel = selectedPatient?.reminderChannel ?? Channel.WHATSAPP;
   const { patient: fullPatient } = useFetchPatient(form.patientId);
   const selectedTemplate = TWILIO_CONFIG[form.selectedTemplate];
+  const isWelcome = form.selectedTemplate === WELCOME_TEMPLATE_KEY;
 
   const { appointments: patientAppointments } = useFetchAppointments(
     form.patientId
@@ -79,9 +90,13 @@ const [ form, setForm ] = useState<ReminderForm>({
     ? patientAppointments.find((a) => a.id === form.appointmentId)
     : null;
 
+  const consentUrl = consentVersionFor(selectedPatient)?.url;
+  const missingConsentType = selectedPatient && linksConsentDocument(selectedTemplate) && !consentUrl
+    ? patientTypes.find((t) => t.id === selectedPatient.patientTypeId)?.name ?? ""
+    : null;
   const preview = useMemo(
-    () => buildPreview(selectedTemplate, form.contentVariables),
-    [ selectedTemplate, form.contentVariables ],
+    () => buildMessageBody(selectedTemplate, form.contentVariables, channel, consentUrl),
+    [ selectedTemplate, form.contentVariables, channel, consentUrl ],
   );
 
   const channelAvailable =
@@ -105,21 +120,23 @@ const [ form, setForm ] = useState<ReminderForm>({
     templateKey: string,
     appointment?: Appointment | null,
     appointmentType?: AppointmentType | null,
+    patient: Patient | undefined = selectedPatient,
   ) {
     const tmpl = TWILIO_CONFIG[templateKey];
     return computeAutoFilledVariables(
       tmpl,
-      selectedPatient?.name ?? "",
+      patient?.name ?? "",
       getUserName(user),
       appointment,
       user,
       appointmentType,
+      consentVersionFor(patient)?.id ?? null,
     );
   }
 
   function handlePatientChange(patientId: string) {
     const patient = patients.find((p) => p.id === patientId);
-    const autoFilled = computeAutoFill(form.selectedTemplate, undefined, patient?.appointmentType);
+    const autoFilled = computeAutoFill(form.selectedTemplate, undefined, patient?.appointmentType, patient);
     setForm((f) => ({
       ...f,
       patientId,
@@ -140,6 +157,11 @@ const [ form, setForm ] = useState<ReminderForm>({
       contentVariables: autoFilled,
       message: "",
     }));
+  }
+
+  function handleModeChange(mode: ReminderMode) {
+    setMode(mode);
+    if (!templateKeysFor(mode).includes(form.selectedTemplate)) handleTemplateChange(defaultTemplate);
   }
 
   function handleAppointmentChange(appointmentId: string) {
@@ -260,7 +282,9 @@ const [ form, setForm ] = useState<ReminderForm>({
     setSaving(true);
     setError(null);
     try {
-      if (sendMode === ReminderMode.IMMEDIATE) {
+      if (isWelcome) {
+        await sendWelcome(form.patientId);
+      } else if (sendMode === ReminderMode.IMMEDIATE) {
         await notify(channel!, buildPayload());
       } else {
         await createReminder(buildScheduledPayload());
@@ -320,7 +344,7 @@ const [ form, setForm ] = useState<ReminderForm>({
         {step === 1 && (
           <SendModeAndPatientStep
             sendMode={sendMode}
-            setMode={setMode}
+            setMode={handleModeChange}
             form={form}
             setForm={setForm}
             patients={patients}
@@ -334,6 +358,7 @@ const [ form, setForm ] = useState<ReminderForm>({
             form={form}
             selectedPatient={selectedPatient}
             channel={channel}
+            templateKeys={templateKeysFor(sendMode)}
             onTemplateChange={handleTemplateChange}
           />
         )}
@@ -343,6 +368,8 @@ const [ form, setForm ] = useState<ReminderForm>({
             setForm={setForm}
             selectedTemplate={selectedTemplate}
             preview={preview}
+            missingConsentType={missingConsentType}
+            sentByServer={isWelcome}
           />
         )}
         {step === 4 && (

@@ -56,6 +56,7 @@ export interface BlockedTimeData {
 export interface ApiClient {
   createPatient(data: Record<string, unknown>): Promise<ApiResponse>;
   deletePatient(id: string): Promise<ApiResponse>;
+  defaultPatientType(): Promise<{ id: string; name: string; isDefault: boolean }>;
   createLocation(data: Record<string, unknown>): Promise<ApiResponse>;
   deleteLocation(id: string): Promise<ApiResponse>;
   createAppointmentType(data: Record<string, unknown>): Promise<ApiResponse>;
@@ -71,7 +72,6 @@ export interface ApiClient {
   updateMedicalRecord(id: string, data: Record<string, unknown>): Promise<ApiResponse>;
   deleteMedicalRecord(id: string): Promise<ApiResponse>;
   updateProfile(data: Record<string, unknown>): Promise<ApiResponse>;
-  deleteConsentDocument(): Promise<ApiResponse>;
   get(path: string): Promise<ApiResponse>;
   patch(path: string, data: Record<string, unknown>): Promise<ApiResponse>;
   // ── Read helpers (post-action verification) ──────────────────────────────────
@@ -163,11 +163,21 @@ export function createApiClient(page: Page): ApiClient {
     return resp.json() as Promise<ApiResponse<T>>;
   }
 
+  async function defaultPatientType() {
+    const types = await request<{ id: string; name: string; isDefault: boolean }[]>('GET', '/patient-types');
+    const type = types.data?.find((t) => t.isDefault);
+    if (!type) throw new Error('The provider has no default patient type');
+    return type;
+  }
+
   return {
     // Patients
-    createPatient(data: Record<string, unknown>) {
-      return request('POST', '/patients', data);
+    async createPatient(data: Record<string, unknown>) {
+      if (data.patientTypeId) return request('POST', '/patients', data);
+      const patientTypeId = (await defaultPatientType()).id;
+      return request('POST', '/patients', { ...data, patientTypeId });
     },
+    defaultPatientType,
     deletePatient(id: string) {
       return request('DELETE', `/patients/${id}`);
     },
@@ -229,11 +239,6 @@ export function createApiClient(page: Page): ApiClient {
     // Users
     updateProfile(data: Record<string, unknown>) {
       return request('PATCH', '/users/me', data);
-    },
-
-    // Consent
-    deleteConsentDocument() {
-      return request('DELETE', '/consent-document');
     },
 
     // Generic

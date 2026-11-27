@@ -13,6 +13,7 @@ import {
   type PatientDetailQuery,
 } from './patient.schemas.js';
 import { patientService } from './patient.service.js';
+import { sendPatientWelcome } from './patient-welcome.service.js';
 import { validateBody, validateQuery, validateParams } from '../middlewares/validate.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
@@ -83,6 +84,14 @@ patientRouter.patch(
   asyncHandler(async (req: Request, res: Response) => {
     const patient = await patientService.update(req.params.id as string, req.body, req.user!.id);
     ok(res, patient);
+  })
+);
+
+patientRouter.post(
+  '/:id/welcome',
+  validateParams(uuidParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    ok(res, await sendPatientWelcome(req.user!.id, req.params.id as string), 201);
   })
 );
 

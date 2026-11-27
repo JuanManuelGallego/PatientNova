@@ -17,6 +17,7 @@ type PatientWithRelations = Patient & {
   reminders: { id: string; sendAt: Date }[];
   medicalRecord: { id: string } | null;
   appointmentType: { id: string; name: string; defaultPrice: number | null } | null;
+  patientType: { id: string; name: string };
 };
 
 const ENCRYPTED_SORT_FIELDS = new Set([ 'name', 'lastName', 'email' ]);
@@ -82,6 +83,7 @@ export const patientRepository = {
           notes: dto.notes ?? null,
           status: dto.status,
           appointmentTypeId: dto.appointmentTypeId ?? null,
+          patientTypeId: dto.patientTypeId,
           userId,
         },
       });
@@ -166,6 +168,7 @@ export const patientRepository = {
         reminders: { take, orderBy: { sendAt: 'desc' } },
         medicalRecord: true,
         appointmentType: { select: { id: true, name: true, defaultPrice: true } },
+        patientType: { select: { id: true, name: true } },
       },
     });
     if (!patient) throw new PatientNotFoundError(id);

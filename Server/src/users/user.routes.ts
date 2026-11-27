@@ -10,7 +10,6 @@ import { requireActiveSuperAdmin } from '../middlewares/require-active-super-adm
 import { validateBody } from '../middlewares/validate.js';
 import { ok } from '../utils/api/api-utils.js';
 import { asyncHandler } from '../utils/api/async-handler.js';
-import { consentDocumentRouter } from '../consent-documents/consent-document.routes.js';
 import { config } from '../utils/config/config.js';
 
 export const userRouter = Router();
@@ -83,8 +82,6 @@ userRouter.patch(
         ok(res, user);
     })
 );
-
-userRouter.use('/me/consent-document', consentDocumentRouter);
 
 /**
  * PATCH /users/:id

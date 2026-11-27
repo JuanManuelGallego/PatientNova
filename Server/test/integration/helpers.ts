@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { signAccessToken } from '../../src/auth/tokens.js';
 import { config } from '../../src/utils/config/config.js';
 import { createCsrfToken, CSRF_HEADER } from '../../src/utils/security/csrf.js';
+import { createUserWithDefaultType, patientTypeRepository } from '../../src/patient-types/patient-type.repository.js';
 import {
   Channel,
   PatientStatus,
@@ -25,8 +26,9 @@ export async function createTestUser(overrides: {
   const email = overrides.email ?? unique('user@test.local');
   const password = overrides.password ?? 'Password123!';
   const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
-  return prisma.user.create({
+  return prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
     data: {
+      defaultPatientTypeId,
       email,
       passwordHash,
       role: overrides.role ?? AdminRole.ADMIN,
@@ -38,15 +40,21 @@ export async function createTestUser(overrides: {
       reminderChannel: Channel.WHATSAPP,
       timezone: config.defaults.timezone,
     },
-  });
+  })));
+}
+
+export async function defaultPatientTypeId(userId: string): Promise<string> {
+  return patientTypeRepository.defaultIdOf(userId);
 }
 
 export async function createTestPatient(
   userId: string,
-  overrides: { name?: string; lastName?: string; email?: string } = {},
+  overrides: { name?: string; lastName?: string; email?: string; patientTypeId?: string } = {},
 ) {
+  const patientTypeId = overrides.patientTypeId ?? await defaultPatientTypeId(userId);
   return prisma.patient.create({
     data: {
+      patientTypeId,
       name: overrides.name ?? 'Maria',
       lastName: overrides.lastName ?? 'Garcia',
       email: (overrides.email ?? unique('patient@test.local')).toLowerCase(),

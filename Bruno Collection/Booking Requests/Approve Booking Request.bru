@@ -15,7 +15,9 @@ headers {
 }
 
 body:json {
-  {}
+  {
+    "patientTypeId": "{{patientTypeId}}"
+  }
 }
 
 docs {
@@ -28,7 +30,10 @@ docs {
   `{ "existingPatientId": "<uuid>" }` picks one of the active candidates, which a shared number needs.
   `{ "restorePatientId": "<uuid>" }` restores one of the deleted candidates instead (409 while an active
   patient holds the email; a number may be shared). At most one of the two; 404 for an id that is not a
-  candidate. Picking a record whose number this request proved clears its unverified flag. 409 "Booking request is no longer pending" for a resolved
+  candidate. Picking a record whose number this request proved clears its unverified flag.
+  `patientTypeId` (optional, one of the provider's types, else 404) is used only when approval creates a
+  new patient; without it the new patient gets the provider's default type. A reused, restored or picked
+  patient keeps its own type. 409 "Booking request is no longer pending" for a resolved
   or expired request; a slot conflict is also 409 and leaves the request PENDING. Cookie requests
   need `X-CSRF-Token`.
 }

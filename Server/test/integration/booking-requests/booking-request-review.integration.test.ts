@@ -32,6 +32,7 @@ import { bookingRequestService } from '../../../src/booking-requests/booking-req
 import { deliverBookingRequestNotification } from '../../../src/booking-requests/booking-request-notifications.js';
 import { PRIVACY_POLICY_VERSION } from '../../../src/portal/privacy-policy.js';
 import { createTestPatient, createTestToken, createTestUser, csrfHeaders, unique } from '../helpers.js';
+import { patientTypeService } from '../../../src/patient-types/patient-type.service.js';
 import { createLiveProvider, createPendingRequestWithin, slotStarts, type LiveProvider } from '../portal/portal-helpers.js';
 
 const scheduler = config.scheduler as { enabled: boolean };
@@ -286,6 +287,41 @@ describe('POST /v1/booking-requests/:id/approve', () => {
     expect((await prisma.patient.findUniqueOrThrow({ where: { id: deleted.id } })).isDeleted).toBe(false);
     const restoreAudit = await prisma.auditLog.findFirst({ where: { entityId: deleted.id, actionType: 'RESTORE' } });
     expect(restoreAudit).not.toBeNull();
+  });
+
+  it('gives the new patient the type the provider picked, or the default type without one', async () => {
+    const p = await provider();
+    const starts = await slotStarts(p);
+    const family = await patientTypeService.create(p.id, { name: 'Familia' });
+    const picked = await seedRequest(p, { start: starts[ 0 ] });
+    const plain = await seedRequest(p, { start: starts[ 1 ] });
+
+    expect((await approve(p, picked.id, { patientTypeId: family.id })).status).toBe(200);
+    expect((await approve(p, plain.id)).status).toBe(200);
+
+    const typeOf = async (requestId: string) => {
+      const { patientId } = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+      return (await prisma.patient.findUniqueOrThrow({ where: { id: patientId! } })).patientTypeId;
+    };
+    expect(await typeOf(picked.id)).toBe(family.id);
+    expect(await typeOf(plain.id)).toBe((await patientTypeService.list(p.id)).find((t) => t.isDefault)!.id);
+  });
+
+  it("keeps a reused patient's type, and refuses a type with a chosen patient or from another provider", async () => {
+    const p = await provider();
+    const starts = await slotStarts(p);
+    const family = await patientTypeService.create(p.id, { name: 'Familia' });
+    const existing = await createTestPatient(p.id);
+    const reuse = await seedRequest(p, { start: starts[ 0 ], email: existing.email! });
+
+    expect((await approve(p, reuse.id, { existingPatientId: existing.id, patientTypeId: family.id })).status).toBe(400);
+    expect((await approve(p, reuse.id, { patientTypeId: family.id })).status).toBe(200);
+    expect((await prisma.patient.findUniqueOrThrow({ where: { id: existing.id } })).patientTypeId).toBe(existing.patientTypeId);
+
+    const other = await createTestUser();
+    const foreign = await seedRequest(p, { start: starts[ 1 ] });
+    expect((await approve(p, foreign.id, { patientTypeId: other.defaultPatientTypeId })).status).toBe(404);
+    expect((await prisma.bookingRequest.findUniqueOrThrow({ where: { id: foreign.id } })).status).toBe(BookingRequestStatus.PENDING);
   });
 
   it('refuses to restore a patient that is not a candidate of the request', async () => {

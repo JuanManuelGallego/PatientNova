@@ -1,0 +1,15 @@
+meta {
+  name: Delete Patient Type
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/patient-types/{{patientTypeId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  409 for the default type, or while any patient (soft-deleted included) uses it.
+}

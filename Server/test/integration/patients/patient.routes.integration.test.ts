@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { patientRouter } from '../../../src/patients/patient.routes.js';
 import { createTestUser, createTestPatient, invokeRoute } from '../helpers.js';
+import { patientTypeService } from '../../../src/patient-types/patient-type.service.js';
 import { Channel, PatientStatus } from '../../../generated/prisma/client.ts';
 
 let userId: string;
+let defaultTypeId: string;
 
 beforeEach(async () => {
-  const user = await createTestUser();
-  userId = user.id;
+  ({ id: userId, defaultPatientTypeId: defaultTypeId } = await createTestUser());
 });
 
 function baseReq(extra: Record<string, unknown> = {}) {
@@ -26,6 +27,7 @@ function createBody(overrides: Record<string, unknown> = {}) {
     email: `ana-${Date.now()}@test.local`,
     whatsappNumber: '+57300123456',
     status: PatientStatus.ACTIVE,
+    patientTypeId: defaultTypeId,
     ...overrides,
   };
 }
@@ -48,6 +50,33 @@ describe('patient routes (integration)', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('POST / requires a patient type, and stores the one chosen', async () => {
+    const { patientTypeId, ...untyped } = createBody();
+    expect((await invokeRoute(patientRouter, 'post', '/', baseReq({ body: untyped }))).statusCode).toBe(400);
+
+    const family = await patientTypeService.create(userId, { name: 'Familia' });
+    const res = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody({ patientTypeId: family.id }) }));
+    expect(res.statusCode).toBe(201);
+    const stored = await prisma.patient.findUniqueOrThrow({ where: { id: (res.body as any).data.id } });
+    expect(stored.patientTypeId).toBe(family.id);
+    expect(patientTypeId).toBe(defaultTypeId);
+  });
+
+  it("POST / refuses another provider's patient type (404) and creates nothing", async () => {
+    const other = await createTestUser();
+    const res = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody({ patientTypeId: other.defaultPatientTypeId }) }));
+    expect(res.statusCode).toBe(404);
+    expect(await prisma.patient.count({ where: { userId } })).toBe(0);
+  });
+
+  it('PATCH /:id does not change the patient type (that needs the record archive of #146)', async () => {
+    const family = await patientTypeService.create(userId, { name: 'Familia' });
+    const patient = await createTestPatient(userId);
+    const res = await invokeRoute(patientRouter, 'patch', `/${patient.id}`, baseReq({ params: { id: patient.id }, body: { name: 'Otra', patientTypeId: family.id } }));
+    expect(res.statusCode).toBe(200);
+    expect((await prisma.patient.findUniqueOrThrow({ where: { id: patient.id } })).patientTypeId).toBe(defaultTypeId);
+  });
+
   it('GET /:id returns the patient with relations', async () => {
     const created = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;
@@ -56,6 +85,7 @@ describe('patient routes (integration)', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).data.id).toBe(id);
     expect((res.body as any).data.appointments).toBeDefined();
+    expect((res.body as any).data.patientType).toEqual({ id: defaultTypeId, name: 'General' });
   });
 
   it('GET /:id returns 404 for a non-owned patient', async () => {

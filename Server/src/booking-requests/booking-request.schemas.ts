@@ -24,9 +24,13 @@ export const listBookingRequestsQuerySchema = z.strictObject({
 export const approveBookingRequestSchema = z.strictObject({
   existingPatientId: z.uuid().optional(),
   restorePatientId: z.uuid().optional(),
+  patientTypeId: z.uuid().optional(),
 }).refine(
   (b) => !(b.existingPatientId && b.restorePatientId),
   { message: 'Choose one patient', path: [ 'existingPatientId' ] },
+).refine(
+  (b) => !(b.patientTypeId && (b.existingPatientId || b.restorePatientId)),
+  { message: 'A patient type applies only to a new patient', path: [ 'patientTypeId' ] },
 ).optional();
 
 export const rejectBookingRequestSchema = z.strictObject({}).optional();

@@ -23,6 +23,7 @@ import { apiError } from './utils/api/api-utils.js';
 import cookieParser from 'cookie-parser';
 
 import { consentDocumentRouter } from './consent-documents/consent-document.routes.js';
+import { patientTypeRouter } from './patient-types/patient-type.routes.js';
 import { blockedTimeRouter } from './blocked-time/blocked-time.routes.js';
 import { auditLogRouter } from './audit-log/audit-log.routes.js';
 import { googleRouter } from './google/google.routes.js';
@@ -70,7 +71,7 @@ app.use('/v1/auth/login', authWriteLimit);
 // Small default body limit; only routes that accept base64 files (avatars/logos, consent
 // documents, medical-record attachments) and batched Brevo webhooks get a larger one. The first parser to run wins.
 app.use('/v1/users', express.json({ limit: LARGE_BODY_LIMITS.users }));
-app.use([ '/v1/consent-document', '/v1/medical-records' ], express.json({ limit: LARGE_BODY_LIMITS.files }));
+app.use([ '/v1/patient-types', '/v1/medical-records' ], express.json({ limit: LARGE_BODY_LIMITS.files }));
 app.use('/webhooks/brevo', express.json({ limit: LARGE_BODY_LIMITS.webhooks })); // batched events
 app.use(express.json({ limit: DEFAULT_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: DEFAULT_BODY_LIMIT }));
@@ -102,6 +103,7 @@ v1.use('/reminders', authenticate, requireAdminForWrites, reminderRouter);
 v1.use('/appointments', authenticate, requireAdminForWrites, appointmentRouter);
 v1.use('/locations', authenticate, requireAdminForWrites, locationRouter);
 v1.use('/appointment-types', authenticate, requireAdminForWrites, appointmentTypeRouter);
+v1.use('/patient-types', authenticate, requireAdminForWrites, patientTypeRouter);
 v1.use('/medical-records', authenticate, requireAdminForWrites, medicalRecordRouter);
 v1.use('/blocked-time', authenticate, requireAdminForWrites, blockedTimeRouter);
 v1.use('/booking', authenticate, requireAdminForWrites, bookingSettingsRouter);

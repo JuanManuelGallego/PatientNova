@@ -98,7 +98,7 @@ export const authService = {
     const refreshToken = signRefreshToken({ id: user.id, version: user.refreshTokenVersion, sid });
 
     return {
-      user: toUserResponse(updatedUser, updatedUser.consentDocument ?? null),
+      user: toUserResponse(updatedUser),
       accessToken,
       refreshToken,
     };

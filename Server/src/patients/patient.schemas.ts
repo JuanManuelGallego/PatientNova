@@ -16,6 +16,7 @@ export const createPatientSchema = z.object({
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).default(PatientStatus.ACTIVE),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
+  patientTypeId: z.uuid('Invalid patientTypeId'),
 });
 
 export const updatePatientSchema = z.object({
@@ -53,6 +54,7 @@ export const patientDetailQuerySchema = z.object({
 });
 
 export type CreatePatientDto = z.infer<typeof createPatientSchema>;
+export type NewPatientDto = Omit<CreatePatientDto, 'patientTypeId'> & { patientTypeId?: string };
 export type UpdatePatientDto = z.infer<typeof updatePatientSchema>;
 export type ListPatientsQuery = z.infer<typeof listPatientsSchema>;
 export type PatientStatsQuery = z.infer<typeof patientStatsSchema>;

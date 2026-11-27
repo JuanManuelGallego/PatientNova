@@ -12,6 +12,7 @@ import {
   createTestLocation,
   createTestAppointmentType,
   appointmentTimeRange,
+  defaultPatientTypeId,
 } from '../helpers.js';
 import { PatientNotFoundError, LocationNotFoundError } from '../../../src/utils/errors/errors.js';
 import { AppointmentNotFoundError } from '../../../src/appointments/appointment.errors.js';
@@ -51,7 +52,7 @@ describe('tenant isolation: Patient', () => {
 
   beforeEach(async () => {
     patientA = await patientRepository.create(
-      { name: 'Maria', lastName: 'Garcia', status: PatientStatus.ACTIVE },
+      { name: 'Maria', lastName: 'Garcia', status: PatientStatus.ACTIVE, patientTypeId: await defaultPatientTypeId(userA.id) },
       userA.id,
     );
   });

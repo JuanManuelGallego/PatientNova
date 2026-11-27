@@ -5,12 +5,16 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/consent-document/public/download/cmn8dfo4f0000rcqoqbvqx1r2.pdf
+  url: {{baseUrl}}/consent-document/public/download/{{consentVersionId}}.pdf
   body: none
-  auth: inherit
+  auth: none
 }
 
 settings {
   encodeUrl: true
   timeout: 0
+}
+
+docs {
+  Public link sent in the welcome message. The id is a consent version id, or a provider's user id (messages sent before patient types), which serves the current version of that provider's default type.
 }

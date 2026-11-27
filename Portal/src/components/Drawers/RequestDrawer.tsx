@@ -13,6 +13,8 @@ import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 import { fmtDate, fmtDateTime, fmtTime } from "@/src/utils/TimeUtils";
 import { DETAIL_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import type { BookingRequestDetail, RequestCandidate } from "@/src/types/BookingRequest";
+import { CustomSelect } from "@/src/components/CustomSelect";
+import { useFetchPatientTypes } from "@/src/api/patient-types/useFetchPatientTypes";
 
 /** `null` = no explicit choice: reuse the contact's single match or create a new patient. */
 type PatientChoice = string | null;
@@ -44,9 +46,13 @@ function approvalOutcome(request: BookingRequestDetail, choice: PatientChoice): 
   return reused ? reusedOutcome(reused) : "Se creará un paciente nuevo con los datos de la solicitud.";
 }
 
-function approveBody(request: BookingRequestDetail, choice: PatientChoice) {
+function createsPatient(request: BookingRequestDetail, choice: PatientChoice): boolean {
+  return !request.candidates.some((c) => c.id === choice) && !defaultMatch(request);
+}
+
+function approveBody(request: BookingRequestDetail, choice: PatientChoice, patientTypeId: string) {
   const chosen = request.candidates.find((c) => c.id === choice);
-  if (!chosen) return {};
+  if (!chosen) return createsPatient(request, choice) && patientTypeId ? { patientTypeId } : {};
   return chosen.isDeleted ? { restorePatientId: chosen.id } : { existingPatientId: chosen.id };
 }
 
@@ -160,6 +166,9 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
   const { request, loading, error, fetchRequest } = useFetchBookingRequest(requestId);
   const { approve, reject, loading: resolving, error: resolveError } = useResolveBookingRequest();
   const [ choice, setChoice ] = useState<PatientChoice>(null);
+  const { patientTypes, defaultType } = useFetchPatientTypes();
+  const [ chosenTypeId, setChosenTypeId ] = useState("");
+  const patientTypeId = chosenTypeId || defaultType?.id || "";
   const [ confirmReject, setConfirmReject ] = useState(false);
   const [ done, setDone ] = useState<string | null>(null);
 
@@ -194,7 +203,7 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
         className="btn-primary"
         disabled={resolving}
         onClick={() => run(
-          () => approve(requestId, request ? approveBody(request, choice) : {}),
+          () => approve(requestId, request ? approveBody(request, choice, patientTypeId) : {}),
           "Solicitud aprobada. La cita quedó en tu agenda y le avisamos al paciente.",
         )}
         data-testid="request-approve"
@@ -257,6 +266,17 @@ export function RequestDrawer({ requestId, onClose, onResolved }: {
             <CandidatesSection request={request} choice={choice} onChoose={setChoice} timezone={timezone} />
             {pending && (
               <p className="form-input-hint" data-testid="request-outcome">{approvalOutcome(request, choice)}</p>
+            )}
+            {pending && createsPatient(request, choice) && patientTypes.length > 0 && (
+              <label className="form-label" style={{ marginBottom: 16 }}>
+                Tipo de paciente
+                <CustomSelect
+                  value={patientTypeId}
+                  options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
+                  onChange={(v) => setChosenTypeId(v)}
+                  data-testid="request-patient-type-select"
+                />
+              </label>
             )}
             <Section title="Información del sistema" quiet>
               <OverlayLink

@@ -11,6 +11,7 @@ import { Channel } from '../../generated/prisma/enums.js';
 import { assertUnique } from '../utils/validation/assertUnique.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
+import { createUserWithDefaultType } from '../patient-types/patient-type.repository.js';
 
 export const userRepository = {
     async create(dto: CreateUserDto) {
@@ -21,26 +22,30 @@ export const userRepository = {
         );
 
         const passwordHash = await bcrypt.hash(dto.password, config.auth.bcryptRounds);
-        return prisma.user.create({
-            data: {
-                email: dto.email.toLowerCase(),
-                passwordHash,
-                role: dto.role,
-                status: dto.status,
-                firstName: dto.firstName,
-                lastName: dto.lastName ?? null,
-                displayName: dto.displayName ?? [ dto.firstName, dto.lastName ].filter(Boolean).join(' ') ?? null,
-                avatar: dto.avatar ?? null,
-                logo: dto.logo ?? null,
-                altLogo: dto.altLogo ?? null,
-                jobTitle: dto.jobTitle ?? null,
-                phoneNumber: dto.phoneNumber ?? null,
-                whatsappNumber: dto.whatsappNumber ?? null,
-                reminderActive: dto.reminderActive ?? false,
-                reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
-                timezone: dto.timezone ?? config.defaults.timezone,
-            },
-            select: userInclude,
+        return prisma.$transaction(async (tx) => {
+            const { id } = await createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
+                data: {
+                    defaultPatientTypeId,
+                    email: dto.email.toLowerCase(),
+                    passwordHash,
+                    role: dto.role,
+                    status: dto.status,
+                    firstName: dto.firstName,
+                    lastName: dto.lastName ?? null,
+                    displayName: dto.displayName ?? [ dto.firstName, dto.lastName ].filter(Boolean).join(' ') ?? null,
+                    avatar: dto.avatar ?? null,
+                    logo: dto.logo ?? null,
+                    altLogo: dto.altLogo ?? null,
+                    jobTitle: dto.jobTitle ?? null,
+                    phoneNumber: dto.phoneNumber ?? null,
+                    whatsappNumber: dto.whatsappNumber ?? null,
+                    reminderActive: dto.reminderActive ?? false,
+                    reminderChannel: dto.reminderChannel ?? Channel.WHATSAPP,
+                    timezone: dto.timezone ?? config.defaults.timezone,
+                },
+                select: { id: true, defaultPatientTypeId: true },
+            }));
+            return tx.user.findUniqueOrThrow({ where: { id }, select: userInclude });
         });
     },
 

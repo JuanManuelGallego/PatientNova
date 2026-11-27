@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { prisma } from './prisma-client.js';
 import { config, requireEnv } from '../config/config.js';
 import { AdminRole, AdminStatus, Channel } from '../../../generated/prisma/client.ts';
+import { createUserWithDefaultType } from '../../patient-types/patient-type.repository.js';
 
 async function seedAdmin() {
   // Seed-only credentials: the server never reads them, so production need not keep them in env.
@@ -15,8 +16,9 @@ async function seedAdmin() {
   }
 
   const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
-  await prisma.user.create({
+  await prisma.$transaction((tx) => createUserWithDefaultType(tx, (defaultPatientTypeId) => tx.user.create({
     data: {
+      defaultPatientTypeId,
       email,
       passwordHash,
       firstName: 'Super',
@@ -25,7 +27,7 @@ async function seedAdmin() {
       status: AdminStatus.ACTIVE,
       reminderChannel: Channel.WHATSAPP
     },
-  });
+  })));
 
   console.log(`✅ Admin created: ${email}`);
   console.log('⚠️  Change the default password immediately after first login!');

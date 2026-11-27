@@ -22,21 +22,14 @@ export interface User {
     accountNumber?: string | null
     nationalId?: string | null
     bankingKey?: string | null
-    consentDocument?: Document | null
+    defaultPatientTypeId?: string | null
     selfServeEnabled?: boolean
 }
 
-export type ManagedUser = Omit<User, "avatar" | "logo" | "altLogo" | "consentDocument" | "bankName" | "accountNumber" | "nationalId" | "bankingKey" | "selfServeEnabled"> & {
+export type ManagedUser = Omit<User, "avatar" | "logo" | "altLogo" | "defaultPatientTypeId" | "bankName" | "accountNumber" | "nationalId" | "bankingKey" | "selfServeEnabled"> & {
     isDeleted: boolean
     lastLoginAt: string | null
     createdAt: string
-}
-
-export interface Document {
-    id: string
-    name: string
-    mimeType: string
-    sizeBytes: string,
 }
 
 export enum AdminRole {

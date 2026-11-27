@@ -1,0 +1,11 @@
+meta {
+  name: Set Default Patient Type
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/patient-types/{{patientTypeId}}/default
+  body: none
+  auth: inherit
+}

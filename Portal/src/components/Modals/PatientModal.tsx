@@ -18,9 +18,9 @@ import {
   LBL_SAVE_CHANGES,
   LBL_SAVING,
 } from "@/src/constants/ui";
-import { Channel, CHANNEL_CFG, ReminderMode } from "@/src/types/Reminder";
-import { useNotify } from "@/src/api/notify/useNotify";
-import { TWILIO_CONFIG } from "@/src/utils/twilioConfig";
+import { Channel, CHANNEL_CFG } from "@/src/types/Reminder";
+import { useFetchPatientTypes } from "@/src/api/patient-types/useFetchPatientTypes";
+import { useSendWelcome } from "@/src/api/patients/useSendWelcome";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
@@ -35,7 +35,8 @@ export function PatientModal({
   patient?: Patient;
 }) {
   const isEdit = !!patient;
-  const { notify } = useNotify();
+  const { sendWelcome } = useSendWelcome();
+  const { patientTypes, defaultType, refetch: refetchPatientTypes } = useFetchPatientTypes();
   const { user, refreshUser } = useAuthContext();
   const { createPatient } = useCreatePatient();
   const { updatePatient } = useUpdatePatient();
@@ -46,6 +47,10 @@ export function PatientModal({
   const [ error, setError ] = useState<string | null>(null);
   const [ sendWelcomeMessage, setSendWelcomeMessage ] = useState(false);
   const [ refreshing, setRefreshing ] = useState(false);
+  const [ welcomeFailed, setWelcomeFailed ] = useState(false);
+  const [ chosenTypeId, setChosenTypeId ] = useState(patient?.patientTypeId ?? "");
+  const patientTypeId = chosenTypeId || defaultType?.id || "";
+  const selectedType = patientTypes.find((t) => t.id === patientTypeId);
 
   useEffect(() => {
     refreshUser();
@@ -63,14 +68,15 @@ export function PatientModal({
     status: patient?.status ?? ("ACTIVE" as PatientStatus),
     appointmentTypeId: patient?.appointmentTypeId,
   });
-  const isValid = !!form.name && !!form.lastName;
-  const canSendWelcome =
+  const isValid = !!form.name && !!form.lastName && (isEdit || !!patientTypeId);
+  const profileReady =
     !!user?.displayName &&
     !!user?.bankName &&
     !!user?.accountNumber &&
     !!user?.nationalId &&
-    !!user?.bankingKey &&
-    !!user.consentDocument;
+    !!user?.bankingKey;
+  const typeHasConsent = !!selectedType?.currentVersion;
+  const canSendWelcome = profileReady && typeHasConsent;
   // Welcome message goes out on the patient's own reminder channel.
   const hasWelcomeContact = !!getPatientContact(form);
 
@@ -110,34 +116,15 @@ export function PatientModal({
       if (isEdit) {
         await updatePatient(patient!.id, form);
       } else {
-        const patient = await createPatient(form);
-        if (sendWelcomeMessage && patient) {
-          if (user && canSendWelcome) {
-            notify(patient.reminderChannel, {
-              patientId: patient.id,
-              to: getPatientContact(patient)!,
-              sendMode: ReminderMode.IMMEDIATE,
-              sendAt: new Date().toISOString(),
-              body: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.template
-                .replace("{{1}}", patient.name)
-                .replace("{{2}}", user.displayName)
-                .replace("{{3}}", user.bankName!)
-                .replace("{{4}}", user.accountNumber!)
-                .replace("{{5}}", `${user.firstName} ${user.lastName}`)
-                .replace("{{6}}", user.nationalId!)
-                .replace("{{7}}", user.bankingKey!),
-              contentSid: TWILIO_CONFIG.PATIENT_WELCOME_MESSAGE.contentSid,
-              contentVariables: {
-                "1": patient.name,
-                "2": user.displayName,
-                "3": user.bankName!,
-                "4": user.accountNumber!,
-                "5": `${user.firstName} ${user.lastName}`,
-                "6": user.nationalId!,
-                "7": user.bankingKey!,
-                "8": user.id,
-              },
-            });
+        const created = await createPatient({ ...form, patientTypeId });
+        if (sendWelcomeMessage && created && canSendWelcome) {
+          try {
+            await sendWelcome(created.id);
+          } catch (err) {
+            onSaved();
+            setWelcomeFailed(true);
+            setError(`Paciente creado, pero no se envió el mensaje de bienvenida. ${err instanceof Error ? err.message : ""}`.trim());
+            return;
           }
         }
       }
@@ -210,6 +197,19 @@ export function PatientModal({
               />
             </label>
           </div>
+          <label className="form-label">
+            {isEdit ? "Tipo de paciente" : <RequiredField label="Tipo de paciente" />}
+            {isEdit ? (
+              <input className="form-input" value={patient?.patientType?.name ?? selectedType?.name ?? ""} disabled data-testid="patient-type-readonly" />
+            ) : (
+              <CustomSelect
+                value={patientTypeId}
+                options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
+                onChange={(v) => setChosenTypeId(v)}
+                data-testid="patient-type-select"
+              />
+            )}
+          </label>
           <label className="form-label">
             Correo electrónico
             <input
@@ -286,15 +286,18 @@ export function PatientModal({
               <div className="info-banner" style={{ fontSize: 13 }} data-testid="patient-welcome-info-banner">
                 <STATUS_ICONS.info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>
-                  Completa tu perfil (datos bancarios, identificación y consentimiento)
-                  en Configuración para poder enviar mensajes de bienvenida.
+                  {profileReady
+                    ? `El tipo «${selectedType?.name ?? ""}» no tiene formulario de consentimiento. Súbelo en Configuración › Tipos de paciente para poder enviar mensajes de bienvenida.`
+                    : typeHasConsent
+                      ? "Completa tu perfil (datos bancarios e identificación) en Configuración para poder enviar mensajes de bienvenida."
+                      : `Completa tu perfil (datos bancarios e identificación) en Configuración y sube el formulario de consentimiento del tipo «${selectedType?.name ?? ""}» para poder enviar mensajes de bienvenida.`}
                 </span>
                 <button
                   type="button"
                   disabled={refreshing}
                   onClick={async () => {
                     setRefreshing(true);
-                    try { await refreshUser(); } finally { setRefreshing(false); }
+                    try { await Promise.all([ refreshUser(), refetchPatientTypes() ]); } finally { setRefreshing(false); }
                   }}
                   style={{
                     background: "none",
@@ -362,6 +365,11 @@ export function PatientModal({
             </label>
           )}
         </div>
+        {welcomeFailed ? (
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn-primary" data-testid="patient-modal-close-after-welcome">Cerrar</button>
+        </div>
+        ) : (
         <div className="modal-footer">
           <button onClick={onClose} className="btn-secondary" disabled={saving} data-testid="patient-modal-cancel-button">
             {LBL_CANCEL}
@@ -379,6 +387,7 @@ export function PatientModal({
                 : LBL_CREATE_PATIENT}
           </button>
         </div>
+        )}
       </div>
     </div>
   );

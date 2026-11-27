@@ -1393,6 +1393,7 @@ body {
   padding: 10px 14px 10px 8px;
   outline: none;
   flex: 1;
+  width: 0;
   min-width: 0;
 }
 

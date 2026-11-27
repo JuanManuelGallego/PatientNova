@@ -13,6 +13,7 @@ export class PatientModal {
   readonly welcomeCheckbox: Locator;
   readonly welcomeInfoBanner: Locator;
   readonly appointmentTypeSelect: Locator;
+  readonly patientTypeSelect: Locator;
   readonly notesInput: Locator;
   readonly statusSelect: Locator;
   readonly error: Locator;
@@ -32,6 +33,7 @@ export class PatientModal {
     this.welcomeCheckbox = this.dialog.getByTestId('patient-welcome-checkbox');
     this.welcomeInfoBanner = this.dialog.getByTestId('patient-welcome-info-banner');
     this.appointmentTypeSelect = this.dialog.getByTestId('patient-appointment-type-select');
+    this.patientTypeSelect = this.dialog.getByTestId('patient-type-select');
     this.notesInput = this.dialog.getByTestId('patient-notes-input');
     this.statusSelect = this.dialog.getByTestId('patient-status-select');
     this.error = this.dialog.getByTestId('patient-modal-error');
@@ -80,6 +82,11 @@ export class PatientModal {
   async selectAppointmentType(type: string) {
     await this.appointmentTypeSelect.getByRole('combobox').click();
     await this.page.getByRole('option', { name: type }).click();
+  }
+
+  async selectPatientType(type: string) {
+    await this.patientTypeSelect.getByRole('combobox').click();
+    await this.page.getByRole('option', { name: type, exact: true }).click();
   }
 
   async selectStatus(status: string) {
@@ -137,9 +144,11 @@ export class PatientModal {
     whatsapp?: string;
     sms?: string;
     appointmentType?: string;
+    patientType: string;
     notes?: string;
   }): Promise<string> {
     await this.fillRequiredFields(data.name, data.lastName);
+    await this.selectPatientType(data.patientType);
     if (data.email) await this.fillEmail(data.email);
     if (data.whatsapp) await this.fillWhatsappNumber(data.whatsapp);
     if (data.sms) await this.fillSmsNumber(data.sms);
@@ -158,6 +167,7 @@ export class PatientModal {
 
     const response = await createPatientPromise;
     expect(response.ok()).toBeTruthy();
+    expect(response.request().postDataJSON()).toHaveProperty('patientTypeId');
 
     const createdPatient = await response.json();
     return createdPatient.data.id;

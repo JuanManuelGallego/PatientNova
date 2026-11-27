@@ -1,7 +1,7 @@
 import { MAX_PATIENTS_PER_PROVIDER, patientRepository, type CreatePatientOptions } from './patient.repository.js';
 import { PatientLimitReachedError } from './patient.errors.js';
 import { withProviderLock } from '../utils/prisma/provider-lock.js';
-import type { CreatePatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
+import type { CreatePatientDto, NewPatientDto, UpdatePatientDto, ListPatientsQuery, PatientStatsQuery } from './patient.schemas.js';
 import { updatePatientSchema } from './patient.schemas.js';
 import type { Patient } from '../../generated/prisma/client.ts';
 import type { Paginated } from '../utils/api/pagination.ts';
@@ -9,6 +9,7 @@ import { ActionType, Channel, EntityType } from '../../generated/prisma/enums.ts
 import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { resolvePatientTypeId } from '../patient-types/patient-type.service.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
@@ -25,7 +26,7 @@ function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
 
 export async function createPatientWithin(
   tx: TransactionClient,
-  dto: CreatePatientDto,
+  dto: NewPatientDto,
   userId: string,
   opts: CreatePatientOptions = {},
 ): Promise<Patient> {
@@ -33,15 +34,16 @@ export async function createPatientWithin(
   if (await patientRepository.countActive(userId, tx) >= MAX_PATIENTS_PER_PROVIDER) {
     throw new PatientLimitReachedError(MAX_PATIENTS_PER_PROVIDER);
   }
-  const createdPatient = await patientRepository.create(dto, userId, tx, opts);
+  const typed: CreatePatientDto = { ...dto, patientTypeId: await resolvePatientTypeId(tx, userId, dto.patientTypeId) };
+  const createdPatient = await patientRepository.create(typed, userId, tx, opts);
   await logAudit({
     entityType: EntityType.PATIENT,
     entityId: createdPatient.id,
     userId,
     actionType: ActionType.CREATE,
     description: `Paciente creado ${createdPatient.name} ${createdPatient.lastName}`,
-    affectedFields: Object.keys(dto),
-    fieldsAfter: dto as unknown as Record<string, unknown>,
+    affectedFields: Object.keys(typed),
+    fieldsAfter: typed as unknown as Record<string, unknown>,
     tx,
     required: true,
   });
@@ -124,7 +126,7 @@ export const patientService = {
     return patientRepository.getStats(userId, query);
   },
 
-  async create(dto: CreatePatientDto, userId: string): Promise<Patient> {
+  async create(dto: NewPatientDto, userId: string): Promise<Patient> {
     return prisma.$transaction((tx) => createPatientWithin(tx, dto, userId));
   },
 

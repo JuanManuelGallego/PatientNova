@@ -2,26 +2,22 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { patientRepository } from '../../../src/patients/patient.repository.js';
 import { PatientNotFoundError } from '../../../src/utils/errors/errors.js';
+import { createTestUser } from '../helpers.js';
 
 // Integration test — runs against a real Postgres database.
 // The DB is truncated before each test by test/integration/setup.ts.
 
 let userId: string;
+let patientTypeId: string;
 
 beforeEach(async () => {
-  const user = await prisma.user.create({
-    data: {
-      email: `owner-${Date.now()}@test.local`,
-      passwordHash: 'x',
-    },
-  });
-  userId = user.id;
+  ({ id: userId, defaultPatientTypeId: patientTypeId } = await createTestUser());
 });
 
 describe('patientRepository (integration)', () => {
   it('creates and reads back a patient', async () => {
     const created = await patientRepository.create(
-      { name: 'Maria', lastName: 'Garcia', email: 'maria@test.local', status: 'ACTIVE' },
+      { name: 'Maria', lastName: 'Garcia', email: 'maria@test.local', status: 'ACTIVE', patientTypeId },
       userId,
     );
 
@@ -34,7 +30,7 @@ describe('patientRepository (integration)', () => {
 
   it('normalizes email to lowercase on create', async () => {
     const created = await patientRepository.create(
-      { name: 'Ana', lastName: 'Lopez', email: 'ANA@TEST.LOCAL', status: 'ACTIVE' },
+      { name: 'Ana', lastName: 'Lopez', email: 'ANA@TEST.LOCAL', status: 'ACTIVE', patientTypeId },
       userId,
     );
     expect(created.email).toBe('ana@test.local');
@@ -42,7 +38,7 @@ describe('patientRepository (integration)', () => {
 
   it('soft-deletes a patient and excludes it from findMany', async () => {
     const created = await patientRepository.create(
-      { name: 'Luis', lastName: 'Ramirez', status: 'ACTIVE' },
+      { name: 'Luis', lastName: 'Ramirez', status: 'ACTIVE', patientTypeId },
       userId,
     );
 
@@ -60,7 +56,7 @@ describe('patientRepository (integration)', () => {
 
   it('finds a patient when search contains both name and last name', async () => {
     await patientRepository.create(
-      { name: 'Maria', lastName: 'Garcia', status: 'ACTIVE' },
+      { name: 'Maria', lastName: 'Garcia', status: 'ACTIVE', patientTypeId },
       userId,
     );
 
@@ -75,13 +71,11 @@ describe('patientRepository (integration)', () => {
 
   it('throws PatientNotFoundError for another user\'s patient', async () => {
     const created = await patientRepository.create(
-      { name: 'Sofia', lastName: 'Diaz', status: 'ACTIVE' },
+      { name: 'Sofia', lastName: 'Diaz', status: 'ACTIVE', patientTypeId },
       userId,
     );
 
-    const other = await prisma.user.create({
-      data: { email: `other-${Date.now()}@test.local`, passwordHash: 'x' },
-    });
+    const other = await createTestUser();
 
     await expect(patientRepository.findById(created.id, other.id)).rejects.toThrow(
       PatientNotFoundError,
@@ -89,9 +83,9 @@ describe('patientRepository (integration)', () => {
   });
 
   it('getStats aggregates patient counts by status', async () => {
-    await patientRepository.create({ name: 'One', lastName: 'A', status: 'ACTIVE' }, userId);
-    await patientRepository.create({ name: 'Two', lastName: 'B', status: 'INACTIVE' }, userId);
-    await patientRepository.create({ name: 'Three', lastName: 'C', status: 'ACTIVE' }, userId);
+    await patientRepository.create({ name: 'One', lastName: 'A', status: 'ACTIVE', patientTypeId }, userId);
+    await patientRepository.create({ name: 'Two', lastName: 'B', status: 'INACTIVE', patientTypeId }, userId);
+    await patientRepository.create({ name: 'Three', lastName: 'C', status: 'ACTIVE', patientTypeId }, userId);
 
     const stats = await patientRepository.getStats(userId);
     expect(stats.total).toBe(3);
@@ -101,7 +95,7 @@ describe('patientRepository (integration)', () => {
 
   it('findByIdWithRelations includes appointments, reminders and medical record', async () => {
     const patient = await patientRepository.create(
-      { name: 'Rel', lastName: 'Patient', status: 'ACTIVE' },
+      { name: 'Rel', lastName: 'Patient', status: 'ACTIVE', patientTypeId },
       userId,
     );
 
@@ -127,7 +121,7 @@ describe('patientRepository (integration)', () => {
 
   it('findByIdWithRelations caps appointments via take and orders them by startAt desc', async () => {
     const patient = await patientRepository.create(
-      { name: 'Cap', lastName: 'Patient', status: 'ACTIVE' },
+      { name: 'Cap', lastName: 'Patient', status: 'ACTIVE', patientTypeId },
       userId,
     );
     const location = await prisma.appointmentLocation.create({ data: { name: 'Loc', userId } });

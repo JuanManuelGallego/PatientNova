@@ -55,6 +55,16 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^patient not found for this request$/i, "Ese paciente ya no coincide con esta solicitud. Actualizamos la lista." ],
     [ /^the phone number comes from the session$/i, "Usa el número con el que ingresaste." ],
     [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],
+    [ /^patient type not found$/i, "Ese tipo de paciente ya no existe. Recarga la página e inténtalo de nuevo." ],
+    [ /^a patient type applies only to a new patient$/i, "El tipo de paciente solo se elige al crear un paciente nuevo." ],
+];
+
+const PASSTHROUGH: RegExp[] = [
+    /^Ya existe un tipo de paciente con ese nombre$/,
+    /^No puedes eliminar el tipo de paciente predeterminado\./,
+    /^Este tipo de paciente lo usan? \d+ pacientes? \(incluidos los eliminados\)\./,
+    /^El formulario de consentimiento debe (ser un archivo PDF|pesar menos de \d+ MB)$/,
+    /el mensaje de bienvenida$/,
 ];
 
 /** `statusMessages` replaces the status fallback (not a matched server message) where context differs. */
@@ -64,6 +74,7 @@ export function toSpanishMessage(
     statusMessages: Partial<Record<number, string>> = {},
 ): string {
     const text = typeof serverMessage === "string" ? serverMessage : "";
+    if (PASSTHROUGH.some((pattern) => pattern.test(text))) return text;
     for (const [ pattern, message ] of PATTERNS) {
         if (pattern.test(text)) return message;
     }

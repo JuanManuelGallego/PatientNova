@@ -1,0 +1,15 @@
+meta {
+  name: Send Welcome Message
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/patients/{{patientId}}/welcome
+  body: none
+  auth: none
+}
+
+docs {
+  Sends the welcome message on the patient's route, linking the current consent version of the patient's type. 409 when banking details, the PDF or a contact are missing.
+}

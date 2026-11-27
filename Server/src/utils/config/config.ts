@@ -68,6 +68,8 @@ export const config = {
     idleTimeout: positiveIntEnv('DATABASE_IDLE_TIMEOUT', 30000),
   },
 
+  publicApiOrigin: new URL(requireEnv('TWILIO_WEBHOOK_BASE_URL')).origin,
+
   twilio: {
     accountSid: requireEnv('TWILIO_ACCOUNT_SID'),
     authToken: requireEnv('TWILIO_AUTH_TOKEN'),
