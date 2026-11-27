@@ -10,6 +10,7 @@ const general: PatientType = {
   id: "type-general",
   name: "General",
   isDefault: true,
+  template: { sections: [] },
   patientCount: 3,
   currentVersion: { id: "cv2", version: 2, name: "Consentimiento.pdf", mimeType: "application/pdf", sizeBytes: 20480, createdAt: "2026-11-20T15:00:00.000Z", url: "https://api.example.test/v1/consent-document/public/download/cv2.pdf" },
   familyMembersEnabled: false,

@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { templateWriteSchema } from './record-template.js';
 
 const name = z.string().trim().min(1, 'name is required').max(80);
 
 export const createPatientTypeSchema = z.object({ name });
 
-export const updatePatientTypeSchema = z.object({ name });
+export const updatePatientTypeSchema = z.object({ name: name.optional(), template: templateWriteSchema.optional() })
+  .refine((dto) => dto.name !== undefined || dto.template !== undefined, { message: 'name or template is required' });
 
 export const patientTypeParamsSchema = z.object({ id: z.uuid() });
 

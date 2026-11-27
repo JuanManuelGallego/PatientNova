@@ -103,6 +103,16 @@ describe('patient PII at rest', () => {
     expect(m!.birthPlace).toMatch(ENC);
     expect(m!.nameTokens).toEqual(nameTokens('maria jose perez'));
   });
+
+  it('stores the medical record payload as ciphertext and reads it back as the same JSON text', async () => {
+    const p = await newPatient();
+    const payload = '{"consultationReason":"Duelo de María"}';
+    const record = await prisma.medicalRecord.create({ data: { patientId: p.id, data: payload } });
+
+    const [ m ] = await prisma.$queryRaw<{ data: string }[]>`SELECT "data" FROM "medical_records" WHERE "id" = ${record.id}::uuid`;
+    expect(m!.data).toMatch(ENC);
+    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: record.id } })).data).toBe(payload);
+  });
 });
 
 describe('search over encrypted PII', () => {

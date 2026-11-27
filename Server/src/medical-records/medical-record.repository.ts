@@ -5,7 +5,7 @@ import { MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from './m
 import { paginate } from '../utils/api/pagination.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
-import { softDelete, restore } from '../utils/prisma/softDelete.js';
+import { applyDataChanges, CLINICAL_KEYS, columnChanges, dataFromColumns, lockRecord, parseRecordData, sameRecordData } from './record-data.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 import { MATCH_NOTHING, medicalRecordNameWhere } from '../utils/encryption/pii-search.js';
 
@@ -24,11 +24,15 @@ const defaultInclude = {
   subsystemRelations: { orderBy: { subsystem: 'asc' } },
 } satisfies Prisma.MedicalRecordInclude;
 
+const omitData = { data: true } as const;
+
+const clinicalSelect = Object.fromEntries(CLINICAL_KEYS.map((key) => [ key, true ])) as Record<(typeof CLINICAL_KEYS)[ number ], true>;
+
 export const medicalRecordRepository = {
   async create(dto: CreateMedicalRecordDto, userId: string) {
     const patient = await prisma.patient.findFirst({
       where: { id: dto.patientId, userId },
-      include: { medicalRecord: true },
+      include: { medicalRecord: { select: { id: true } } },
     });
     if (!patient) throw new PatientNotFoundError(dto.patientId);
     if (patient.medicalRecord) throw new MedicalRecordAlreadyExistsError(dto.patientId);
@@ -62,6 +66,7 @@ export const medicalRecordRepository = {
         familyContext: dto.familyContext ?? null,
         expectations: dto.expectations ?? null,
         flexibility: dto.flexibility ?? null,
+        data: JSON.stringify(dataFromColumns(dto)),
         patientId: dto.patientId,
         ...(dto.familyMembers?.length && {
           familyMembers: {
@@ -98,6 +103,7 @@ export const medicalRecordRepository = {
         }),
       },
       include: defaultInclude,
+      omit: omitData,
     });
   },
 
@@ -105,6 +111,7 @@ export const medicalRecordRepository = {
     const rec = await prisma.medicalRecord.findFirst({
       where: { id, patient: { userId } },
       include: { patient: true, ...defaultInclude },
+      omit: omitData,
     });
     if (!rec) throw new MedicalRecordNotFoundError(id);
     return rec;
@@ -114,6 +121,7 @@ export const medicalRecordRepository = {
     const rec = await prisma.medicalRecord.findFirst({
       where: { patientId, patient: { userId } },
       include: defaultInclude,
+      omit: omitData,
     });
     if (!rec) throw new MedicalRecordNotFoundError(patientId);
     return rec;
@@ -136,6 +144,7 @@ export const medicalRecordRepository = {
         take: pageSize,
         orderBy: { [ orderBy ]: order },
         include: defaultInclude,
+        omit: omitData,
       }),
       prisma.medicalRecord.count({ where }),
       page,
@@ -147,6 +156,12 @@ export const medicalRecordRepository = {
     await medicalRecordRepository.findById(id, userId);
 
     return prisma.$transaction(async (tx) => {
+      await lockRecord(tx, id);
+      const current = await tx.medicalRecord.findUniqueOrThrow({ where: { id }, select: { data: true, ...clinicalSelect } });
+      const stored = parseRecordData(current.data);
+      const next = applyDataChanges(stored, columnChanges({ ...current, ...columnChanges(dto) }));
+      const payload = current.data === null || !sameRecordData(stored, next) ? { data: JSON.stringify(next) } : {};
+
       if (dto.familyMembers !== undefined) {
         await tx.familyMember.deleteMany({ where: { medicalRecordId: id } });
         if (dto.familyMembers.length > 0) {
@@ -239,19 +254,20 @@ export const medicalRecordRepository = {
 
       return tx.medicalRecord.update({
         where: { id },
-        data,
+        data: { ...data, ...payload },
         include: defaultInclude,
+        omit: omitData,
       });
     });
   },
 
-  async delete(id: string, userId: string): Promise<MedicalRecord> {
+  async delete(id: string, userId: string): Promise<Omit<MedicalRecord, 'data'>> {
     await medicalRecordRepository.findById(id, userId);
-    return softDelete(prisma.medicalRecord, id) as Promise<MedicalRecord>;
+    return prisma.medicalRecord.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() }, omit: omitData });
   },
 
-  async restore(id: string, userId: string): Promise<MedicalRecord> {
+  async restore(id: string, userId: string): Promise<Omit<MedicalRecord, 'data'>> {
     await medicalRecordRepository.findById(id, userId);
-    return restore(prisma.medicalRecord, id) as Promise<MedicalRecord>;
+    return prisma.medicalRecord.update({ where: { id }, data: { isDeleted: false, deletedAt: null }, omit: omitData });
   },
 };

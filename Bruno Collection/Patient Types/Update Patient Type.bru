@@ -1,0 +1,40 @@
+meta {
+  name: Update Patient Type
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/patient-types/{{patientTypeId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Terapia familiar",
+    "template": {
+      "sections": [
+        {
+          "title": "Datos generales",
+          "fields": [
+            { "key": "consultationReason", "label": "Motivo de consulta", "kind": "longText" },
+            { "label": "Expectativas del tratamiento", "kind": "longText", "required": true }
+          ]
+        }
+      ]
+    }
+  }
+}
+
+docs {
+  Send `name`, `template`, or both (ADMIN+). A template write sends every field the template already has:
+  existing fields keep their `key` and `kind`; a field without `key` is new and the server generates its key
+  from the label. Remove a field by sending it with any `removedAt` (the server stamps the time); a removed
+  field stays in the template and cannot be restored. Limits: 20 sections, 100 fields (removed included),
+  titles and labels up to 120 characters. Template changes are audited before and after.
+}

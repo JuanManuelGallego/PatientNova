@@ -590,6 +590,9 @@ model MedicalRecord {
   expectations  String? @db.Text
   flexibility   String? @db.Text
 
+  // Encrypted template payload: JSON object keyed by template field key
+  data String? @db.Text
+
   // Relations
   familyMembers      FamilyMember[]
   evolutionNotes     EvolutionNote[]

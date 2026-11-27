@@ -31,6 +31,7 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
     "familyContext",
     "expectations",
     "flexibility",
+    "data",
   ]),
   FamilyMember: new Set([ "name", "relation" ]),
   EvolutionNote: new Set([ "text" ]),

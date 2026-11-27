@@ -59,7 +59,7 @@ export const medicalRecordService = {
     return { id };
   },
 
-  async restore(id: string, userId: string): Promise<MedicalRecord> {
+  async restore(id: string, userId: string): Promise<Omit<MedicalRecord, 'data'>> {
     const restoredRecord = await medicalRecordRepository.restore(id, userId);
     await logAudit({
       entityType: EntityType.MEDICAL_RECORD,
