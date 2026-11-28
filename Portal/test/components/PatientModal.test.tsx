@@ -10,12 +10,13 @@ const patientTypes = [
   { id: "type-family", name: "Familia", isDefault: false, currentVersion: null },
 ];
 const createPatient = vi.fn();
+const updatePatient = vi.fn();
 const sendWelcome = vi.fn();
 const onSaved = vi.fn();
 const onClose = vi.fn();
 
 vi.mock("@/src/api/patients/useCreatePatient", () => ({ useCreatePatient: () => ({ createPatient, loading: false, error: null }) }));
-vi.mock("@/src/api/patients/useUpdatePatient", () => ({ useUpdatePatient: () => ({ updatePatient: vi.fn(), loading: false, error: null }) }));
+vi.mock("@/src/api/patients/useUpdatePatient", () => ({ useUpdatePatient: () => ({ updatePatient, loading: false, error: null }) }));
 vi.mock("@/src/api/appointment-types/useFetchAppointmentTypes", () => ({ useFetchAppointmentTypes: () => ({ appointmentTypes: [] }) }));
 vi.mock("@/src/api/patient-types/useFetchPatientTypes", () => ({
   useFetchPatientTypes: () => ({ patientTypes, defaultType: patientTypes[ 0 ], loading: false, error: null, refetch: vi.fn() }),
@@ -41,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   createPatient.mockResolvedValue({ id: "p1", reminderChannel: "WHATSAPP" });
   sendWelcome.mockResolvedValue({ reminderId: "r1" });
+  updatePatient.mockResolvedValue({ id: "p1" });
 });
 
 describe("PatientModal patient type", () => {
@@ -93,5 +95,54 @@ describe("PatientModal patient type", () => {
     expect(screen.queryByTestId("patient-modal-submit-button")).toBeNull();
     await userEvent.click(screen.getByTestId("patient-modal-close-after-welcome"));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("PatientModal type change", () => {
+  const patient = {
+    id: "p1", name: "Lucia", lastName: "Rojas", email: "lucia@example.com", reminderChannel: "EMAIL", status: "ACTIVE",
+    patientTypeId: "type-general", patientType: { id: "type-general", name: "General" },
+  } as never;
+  const renderEdit = () => render(
+    <FocusTrapProvider><PatientModal onClose={onClose} onSaved={onSaved} patient={patient} /></FocusTrapProvider>,
+  );
+  const pickFamilia = async () => {
+    await userEvent.click(within(screen.getByTestId("patient-type-select")).getByRole("combobox"));
+    await userEvent.click(screen.getByRole("option", { name: "Familia" }));
+  };
+
+  it("asks for confirmation before changing the type, and sends it only once confirmed", async () => {
+    renderEdit();
+    await pickFamilia();
+    await userEvent.click(screen.getByTestId("patient-modal-submit-button"));
+
+    const dialog = screen.getByTestId("patient-type-change-dialog");
+    expect(dialog).toHaveTextContent("se archivará como solo lectura");
+    expect(dialog).toHaveTextContent("«Familia»");
+    expect(updatePatient).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cambiar tipo" }));
+    expect(updatePatient).toHaveBeenCalledTimes(1);
+    expect(updatePatient).toHaveBeenCalledWith("p1", expect.objectContaining({ patientTypeId: "type-family" }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("sends nothing when the change is cancelled", async () => {
+    renderEdit();
+    await pickFamilia();
+    await userEvent.click(screen.getByTestId("patient-modal-submit-button"));
+    await userEvent.click(within(screen.getByTestId("patient-type-change-dialog")).getByRole("button", { name: "Regresar" }));
+
+    expect(screen.queryByTestId("patient-type-change-dialog")).toBeNull();
+    expect(updatePatient).not.toHaveBeenCalled();
+  });
+
+  it("an unchanged type saves at once and never sends patientTypeId", async () => {
+    renderEdit();
+    await userEvent.click(screen.getByTestId("patient-modal-submit-button"));
+
+    expect(screen.queryByTestId("patient-type-change-dialog")).toBeNull();
+    expect(updatePatient).toHaveBeenCalledTimes(1);
+    expect(updatePatient.mock.calls[ 0 ]![ 1 ]).not.toHaveProperty("patientTypeId");
   });
 });

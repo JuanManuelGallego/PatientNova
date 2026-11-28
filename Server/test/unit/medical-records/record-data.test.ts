@@ -4,6 +4,7 @@ import {
   checkDataChanges,
   CLINICAL_KEYS,
   columnChanges,
+  dataDiff,
   dataFromColumns,
   parseRecordData,
   RECORD_DATA_MAX_LENGTH,
@@ -77,5 +78,19 @@ describe('checkDataChanges', () => {
     ]) {
       expect(() => checkDataChanges(template, changes), JSON.stringify(changes).slice(0, 40)).toThrow(RecordDataInvalidError);
     }
+  });
+});
+
+describe('dataDiff', () => {
+  it('lists only the keys whose value changed, with null for an absent key', () => {
+    expect(dataDiff({ a: '1', b: '2', d: '9' }, { a: '1', b: '3', c: '4' })).toEqual({
+      affectedFields: [ 'data.b', 'data.c', 'data.d' ],
+      fieldsBefore: { 'data.b': '2', 'data.c': null, 'data.d': '9' },
+      fieldsAfter: { 'data.b': '3', 'data.c': '4', 'data.d': null },
+    });
+  });
+
+  it('is empty for equal payloads', () => {
+    expect(dataDiff({ a: '1' }, { a: '1' })).toEqual({ affectedFields: [], fieldsBefore: {}, fieldsAfter: {} });
   });
 });

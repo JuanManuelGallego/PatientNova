@@ -3,8 +3,7 @@ import { expect, Locator, Page } from '@playwright/test';
 
 export class MedicalRecordsPage extends BasePage {
   readonly patientInput: Locator;
-  readonly createIndividualButton: Locator;
-  readonly createFamilyButton: Locator;
+  readonly createButton: Locator;
   readonly downloadPdfButton: Locator;
   readonly saveStatusIndicator: Locator;
   readonly generalDataCard: Locator;
@@ -13,6 +12,7 @@ export class MedicalRecordsPage extends BasePage {
   readonly familySpecificCard: Locator;
   readonly evolutionNotesCard: Locator;
   readonly documentsCard: Locator;
+  readonly snapshotsCard: Locator;
   readonly familyTableAddButton: Locator;
   readonly evolutionNotesAddButton: Locator;
   readonly documentsSection: Locator;
@@ -20,8 +20,7 @@ export class MedicalRecordsPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.patientInput = this.page.getByTestId('medical-records-patient-input');
-    this.createIndividualButton = this.page.getByTestId('medical-records-create-individual-button');
-    this.createFamilyButton = this.page.getByTestId('medical-records-create-family-button');
+    this.createButton = this.page.getByTestId('medical-records-create-button');
     this.downloadPdfButton = this.page.getByTestId('medical-records-download-pdf-button');
     this.saveStatusIndicator = this.page.getByTestId('save-status-indicator');
     this.generalDataCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Datos generales' });
@@ -30,6 +29,7 @@ export class MedicalRecordsPage extends BasePage {
     this.familySpecificCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Aspectos específicos de la familia' });
     this.evolutionNotesCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Notas de evolución' });
     this.documentsCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Documentos relacionados' });
+    this.snapshotsCard = this.page.locator('[data-testid="medical-record-card"]').filter({ hasText: 'Historias archivadas' });
     this.familyTableAddButton = this.page.getByTestId('family-table-add-button');
     this.evolutionNotesAddButton = this.page.getByTestId('evolution-notes-add-button');
     this.documentsSection = this.page.getByTestId('documents-section-container');
@@ -40,12 +40,8 @@ export class MedicalRecordsPage extends BasePage {
     await this.page.getByRole('option', { name: new RegExp(name) }).click();
   }
 
-  async createIndividual() {
-    await this.createIndividualButton.click();
-  }
-
-  async createFamily() {
-    await this.createFamilyButton.click();
+  async createRecord() {
+    await this.createButton.click();
   }
 
   async downloadPdf() {
@@ -53,13 +49,11 @@ export class MedicalRecordsPage extends BasePage {
   }
 
   async expectCreateButtonsVisible() {
-    await expect(this.createIndividualButton).toBeVisible();
-    await expect(this.createFamilyButton).toBeVisible();
+    await expect(this.createButton).toBeVisible();
   }
 
   async expectCreateButtonsHidden() {
-    await expect(this.createIndividualButton).not.toBeVisible();
-    await expect(this.createFamilyButton).not.toBeVisible();
+    await expect(this.createButton).not.toBeVisible();
   }
 
   async expectRecordFormVisible() {
@@ -274,24 +268,18 @@ export class MedicalRecordsPage extends BasePage {
     await this.page.getByRole('option', { name: label }).click();
   }
 
-  // ── Antecedents ─────────────────────────────────────────────────────────────
+  // ── Template fields (keyed by the template's field key) ──────────────────────
 
-  async fillAntecedent(field: string, value: string) {
-    await this.page.getByTestId(`antecedents-${field}-input`).fill(value);
+  async fillRecordField(key: string, value: string) {
+    await this.page.getByTestId(`record-field-${key}`).fill(value);
   }
 
-  async expectAntecedentField(field: string, value: string) {
-    await expect(this.page.getByTestId(`antecedents-${field}-input`)).toHaveValue(value);
+  async expectRecordField(key: string, value: string) {
+    await expect(this.page.getByTestId(`record-field-${key}`)).toHaveValue(value);
   }
 
-  // ── Family-specific fields ──────────────────────────────────────────────────
-
-  async fillFamilySpecific(field: string, value: string) {
-    await this.page.getByTestId(`family-specific-${field}-input`).fill(value);
-  }
-
-  async expectFamilySpecificField(field: string, value: string) {
-    await expect(this.page.getByTestId(`family-specific-${field}-input`)).toHaveValue(value);
+  async openFirstSnapshot() {
+    await this.snapshotsCard.getByRole('button').first().click();
   }
 
   // ── Family member field assertions ─────────────────────────────────────────

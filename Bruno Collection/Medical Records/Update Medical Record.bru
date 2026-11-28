@@ -16,7 +16,9 @@ headers {
 
 body:json {
   {
-    "objective": "Continued focus on cognitive behavioral techniques.",
+    "data": {
+      "objective": "Continued focus on cognitive behavioral techniques."
+    },
     "evolutionNotes": [
       {
         "date": "2025-04-01T10:00:00.000Z",
@@ -24,4 +26,10 @@ body:json {
       }
     ]
   }
+}
+
+docs {
+  Send only what changed. `data` is merged key by key into the payload under a row lock, so saves of different fields
+  never overwrite each other; an empty string clears a key. Keys must be active fields of the patient type's template
+  (a removed or unknown key answers 400). The audit row holds only the changed keys, as `data.<key>`.
 }

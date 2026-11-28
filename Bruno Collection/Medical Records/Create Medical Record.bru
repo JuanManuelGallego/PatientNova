@@ -22,15 +22,11 @@ body:json {
     "sex": "FEMALE",
     "birthDate": "1990-03-15T00:00:00.000Z",
     "birthPlace": "Mexico City, Mexico",
-    "consultationReason": "Anxiety and chronic stress management",
-    "earlyDevelopment": "No notable issues reported.",
-    "schoolAndWork": "University graduate, works as a teacher.",
-    "lifestyleHabits": "Non-smoker, occasional alcohol, exercises 3x/week.",
-    "traumaticEvents": "Lost a parent at age 12.",
-    "emotionalConsiderations": "Reports difficulty sleeping, persistent worry.",
-    "physicalConsiderations": "No chronic conditions. Mild hypertension.",
-    "mentalHistory": "No prior psychiatric treatment.",
-    "objective": "Reduce anxiety symptoms and improve coping strategies.",
+    "data": {
+      "consultationReason": "Anxiety and chronic stress management",
+      "earlyDevelopment": "No notable issues reported.",
+      "objective": "Reduce anxiety symptoms and improve coping strategies."
+    },
     "familyMembers": [
       {
         "name": "Carlos García",
@@ -47,4 +43,10 @@ body:json {
       }
     ]
   }
+}
+
+docs {
+  `data` holds the template answers, keyed by field key of the patient type's template (active fields only, strings up
+  to 50,000 characters; an empty string is skipped). A removed or unknown key answers 400. The response carries `data`,
+  `patientType` (template and family switches) and `snapshots`.
 }

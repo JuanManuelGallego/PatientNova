@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon';
 import { prisma } from './prisma-client.js';
 import { withProviderLock } from './provider-lock.js';
-import { FAMILY_TEMPLATE, INDIVIDUAL_TEMPLATE } from '../../patient-types/migrated-templates.js';
-import { dataFromColumns } from '../../medical-records/record-data.js';
+import { FAMILY_TEMPLATE_WITH_LEGACY, INDIVIDUAL_TEMPLATE_WITH_LEGACY } from '../../patient-types/migrated-templates.js';
+import { activeKeys } from '../../patient-types/record-template.js';
 import { config } from '../config/config.js';
 import { maskEmail } from '../api/logger.js';
 import { PRIVACY_POLICY_VERSION } from '../../portal/privacy-policy.js';
@@ -219,8 +219,8 @@ async function seedData() {
     const individualTypeId = uuid(G.patientType, 1);
     const familyTypeId = uuid(G.patientType, 2);
     const seededTypes = [
-      { id: individualTypeId, name: 'Individual', template: INDIVIDUAL_TEMPLATE, family: false },
-      { id: familyTypeId, name: 'Familia', template: FAMILY_TEMPLATE, family: true },
+      { id: individualTypeId, name: 'Individual', template: INDIVIDUAL_TEMPLATE_WITH_LEGACY, family: false },
+      { id: familyTypeId, name: 'Familia', template: FAMILY_TEMPLATE_WITH_LEGACY, family: true },
     ];
     for (const { id, name, template, family } of seededTypes) {
       const fields = {
@@ -235,6 +235,11 @@ async function seedData() {
       where: { userId, id: { notIn: [ individualTypeId, familyTypeId ] }, name: 'General', patients: { none: {} } },
     });
     const isFamilyPatient = (i: number) => { const r = RECORDS[ i ]; return !!r && 'isFamily' in r && r.isFamily; };
+    // Only the fields the patient's type shows, so the screenshots carry no "Campos anteriores".
+    const payloadOf = (r: (typeof RECORDS)[ number ], family: boolean) => {
+      const shown = activeKeys(family ? FAMILY_TEMPLATE_WITH_LEGACY : INDIVIDUAL_TEMPLATE_WITH_LEGACY);
+      return Object.fromEntries(Object.entries(r).filter(([ k, v ]) => shown.has(k) && typeof v === 'string' && v !== ''));
+    };
 
     await tx.patient.createMany({
       data: PATIENTS.map((p, i) => ({
@@ -282,9 +287,7 @@ async function seedData() {
           sex: p.sex,
           birthDate: calendarDay(DateTime.fromObject({ year: p.birth[0], month: p.birth[1], day: p.birth[2] })),
           birthPlace: p.birthPlace,
-          ...r,
-          data: JSON.stringify(dataFromColumns(r)),
-          isFamily: 'isFamily' in r ? r.isFamily : false,
+          data: JSON.stringify(payloadOf(r, isFamilyPatient(i))),
         };
       }),
     });

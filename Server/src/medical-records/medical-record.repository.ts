@@ -1,11 +1,13 @@
-import { prisma } from '../utils/prisma/prisma-client.js';
-import { type MedicalRecord, type Prisma } from '../../generated/prisma/client.ts';
+import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
+import { type Prisma } from '../../generated/prisma/client.ts';
 import { PatientNotFoundError } from '../utils/errors/errors.js';
 import { MedicalRecordNotFoundError, MedicalRecordAlreadyExistsError } from './medical-record.errors.js';
-import { paginate } from '../utils/api/pagination.js';
+import { buildPaginatedResult, type Paginated } from '../utils/api/pagination.js';
 import { buildUpdateData } from '../utils/prisma/build-update-data.js';
 import { emptyToNull } from '../utils/prisma/empty-to-null.js';
-import { applyDataChanges, CLINICAL_KEYS, columnChanges, dataFromColumns, lockRecord, parseRecordData, sameRecordData } from './record-data.js';
+import { applyDataChanges, checkDataChanges, lockPatientType, lockRecord, mergeRecordData } from './record-data.js';
+import { parseStoredTemplate } from '../patient-types/record-template.js';
+import { recordInclude, toRecordDto, type MedicalRecordDto } from './medical-record.dto.js';
 import type { CreateMedicalRecordDto, ListMedicalRecordsQuery, UpdateMedicalRecordDto } from './medical-record.schemas.js';
 import { MATCH_NOTHING, medicalRecordNameWhere } from '../utils/encryption/pii-search.js';
 
@@ -17,56 +19,30 @@ const subsystemRelationData = (medicalRecordId: string, relations: NonNullable<C
     observation: observation ?? null,
   }));
 
-const defaultInclude = {
-  familyMembers: true,
-  evolutionNotes: { orderBy: { date: 'desc' } },
-  documents: { orderBy: { uploadedAt: 'desc' } },
-  subsystemRelations: { orderBy: { subsystem: 'asc' } },
-} satisfies Prisma.MedicalRecordInclude;
-
-const omitData = { data: true } as const;
-
-const clinicalSelect = Object.fromEntries(CLINICAL_KEYS.map((key) => [ key, true ])) as Record<(typeof CLINICAL_KEYS)[ number ], true>;
+const IDENTITY_FIELDS = [ 'name', 'nationalId', 'sex', 'birthDate', 'birthPlace' ] as const;
 
 export const medicalRecordRepository = {
-  async create(dto: CreateMedicalRecordDto, userId: string) {
-    const patient = await prisma.patient.findFirst({
+  async create(dto: CreateMedicalRecordDto, userId: string, tx?: TransactionClient): Promise<MedicalRecordDto> {
+    if (!tx) return prisma.$transaction((t) => medicalRecordRepository.create(dto, userId, t));
+
+    await lockPatientType(tx, dto.patientId);
+    const patient = await tx.patient.findFirst({
       where: { id: dto.patientId, userId },
-      include: { medicalRecord: { select: { id: true } } },
+      select: { medicalRecord: { select: { id: true } }, patientType: { select: { template: true } } },
     });
     if (!patient) throw new PatientNotFoundError(dto.patientId);
     if (patient.medicalRecord) throw new MedicalRecordAlreadyExistsError(dto.patientId);
+    const changes = dto.data ?? {};
+    checkDataChanges(parseStoredTemplate(patient.patientType.template), changes);
 
-    return prisma.medicalRecord.create({
+    const row = await tx.medicalRecord.create({
       data: {
         name: dto.name ?? null,
         nationalId: dto.nationalId ?? null,
         sex: dto.sex ?? null,
         birthDate: dto.birthDate ?? null,
         birthPlace: dto.birthPlace ?? null,
-        consultationReason: dto.consultationReason ?? null,
-        earlyDevelopment: dto.earlyDevelopment ?? null,
-        schoolAndWork: dto.schoolAndWork ?? null,
-        lifestyleHabits: dto.lifestyleHabits ?? null,
-        traumaticEvents: dto.traumaticEvents ?? null,
-        emotionalConsiderations: dto.emotionalConsiderations ?? null,
-        physicalConsiderations: dto.physicalConsiderations ?? null,
-        mentalHistory: dto.mentalHistory ?? null,
-        objective: dto.objective ?? null,
-        familyObservations: dto.familyObservations ?? null,
-        isFamily: dto.isFamily ?? false,
-        familyType: dto.familyType ?? null,
-        lifecycle: dto.lifecycle ?? null,
-        genogram: dto.genogram ?? null,
-        resources: dto.resources ?? null,
-        difficulties: dto.difficulties ?? null,
-        communication: dto.communication ?? null,
-        rule: dto.rule ?? null,
-        limits: dto.limits ?? null,
-        familyContext: dto.familyContext ?? null,
-        expectations: dto.expectations ?? null,
-        flexibility: dto.flexibility ?? null,
-        data: JSON.stringify(dataFromColumns(dto)),
+        data: JSON.stringify(applyDataChanges({}, changes)),
         patientId: dto.patientId,
         ...(dto.familyMembers?.length && {
           familyMembers: {
@@ -102,32 +78,24 @@ export const medicalRecordRepository = {
           },
         }),
       },
-      include: defaultInclude,
-      omit: omitData,
+      include: recordInclude,
     });
+    return toRecordDto(row);
   },
 
-  async findById(id: string, userId: string) {
-    const rec = await prisma.medicalRecord.findFirst({
-      where: { id, patient: { userId } },
-      include: { patient: true, ...defaultInclude },
-      omit: omitData,
-    });
+  async findById(id: string, userId: string, tx: TransactionClient = prisma): Promise<MedicalRecordDto> {
+    const rec = await tx.medicalRecord.findFirst({ where: { id, patient: { userId } }, include: recordInclude });
     if (!rec) throw new MedicalRecordNotFoundError(id);
-    return rec;
+    return toRecordDto(rec);
   },
 
-  async findByPatientId(patientId: string, userId: string) {
-    const rec = await prisma.medicalRecord.findFirst({
-      where: { patientId, patient: { userId } },
-      include: defaultInclude,
-      omit: omitData,
-    });
+  async findByPatientId(patientId: string, userId: string): Promise<MedicalRecordDto> {
+    const rec = await prisma.medicalRecord.findFirst({ where: { patientId, patient: { userId } }, include: recordInclude });
     if (!rec) throw new MedicalRecordNotFoundError(patientId);
-    return rec;
+    return toRecordDto(rec);
   },
 
-  async findMany(query: ListMedicalRecordsQuery, userId: string) {
+  async findMany(query: ListMedicalRecordsQuery, userId: string): Promise<Paginated<MedicalRecordDto>> {
     const { patientId, search, page, pageSize, orderBy, order, includeDeleted } = query;
     const skip = (page - 1) * pageSize;
 
@@ -137,137 +105,90 @@ export const medicalRecordRepository = {
       where.AND = [ medicalRecordNameWhere(search) ?? MATCH_NOTHING ];
     }
 
-    return paginate(
-      prisma.medicalRecord.findMany({
-        where,
-        skip,
-        take: pageSize,
-        orderBy: { [ orderBy ]: order },
-        include: defaultInclude,
-        omit: omitData,
-      }),
+    const [ rows, total ] = await Promise.all([
+      prisma.medicalRecord.findMany({ where, skip, take: pageSize, orderBy: { [ orderBy ]: order }, include: recordInclude }),
       prisma.medicalRecord.count({ where }),
-      page,
-      pageSize,
-    );
+    ]);
+    return buildPaginatedResult(rows.map(toRecordDto), total, page, pageSize);
   },
 
-  async update(id: string, dto: UpdateMedicalRecordDto, userId: string) {
-    await medicalRecordRepository.findById(id, userId);
+  async update(id: string, dto: UpdateMedicalRecordDto, userId: string, tx?: TransactionClient): Promise<MedicalRecordDto> {
+    if (!tx) return prisma.$transaction((t) => medicalRecordRepository.update(id, dto, userId, t));
 
-    return prisma.$transaction(async (tx) => {
-      await lockRecord(tx, id);
-      const current = await tx.medicalRecord.findUniqueOrThrow({ where: { id }, select: { data: true, ...clinicalSelect } });
-      const stored = parseRecordData(current.data);
-      const next = applyDataChanges(stored, columnChanges({ ...current, ...columnChanges(dto) }));
-      const payload = current.data === null || !sameRecordData(stored, next) ? { data: JSON.stringify(next) } : {};
+    await medicalRecordRepository.findById(id, userId, tx);
+    if (dto.data !== undefined) await mergeRecordData(tx, id, dto.data);
+    else await lockRecord(tx, id);
 
-      if (dto.familyMembers !== undefined) {
-        await tx.familyMember.deleteMany({ where: { medicalRecordId: id } });
-        if (dto.familyMembers.length > 0) {
-          await tx.familyMember.createMany({
-            data: dto.familyMembers.map(({ name, sex, age, relationship, relation }) => ({
-              medicalRecordId: id,
-              name: name ?? null,
-              age: age ?? null,
-              relation: relation ?? null,
-              sex: sex ?? null,
-              relationship: relationship ?? null,
-            })),
-          });
-        }
+    if (dto.familyMembers !== undefined) {
+      await tx.familyMember.deleteMany({ where: { medicalRecordId: id } });
+      if (dto.familyMembers.length > 0) {
+        await tx.familyMember.createMany({
+          data: dto.familyMembers.map(({ name, sex, age, relationship, relation }) => ({
+            medicalRecordId: id,
+            name: name ?? null,
+            age: age ?? null,
+            relation: relation ?? null,
+            sex: sex ?? null,
+            relationship: relationship ?? null,
+          })),
+        });
       }
+    }
 
-      if (dto.evolutionNotes !== undefined) {
-        await tx.evolutionNote.deleteMany({ where: { medicalRecordId: id } });
-        if (dto.evolutionNotes.length > 0) {
-          await tx.evolutionNote.createMany({
-            data: dto.evolutionNotes.map(({ date, text }) => ({
-              medicalRecordId: id,
-              date,
-              text: text ?? null,
-            })),
-          });
-        }
+    if (dto.evolutionNotes !== undefined) {
+      await tx.evolutionNote.deleteMany({ where: { medicalRecordId: id } });
+      if (dto.evolutionNotes.length > 0) {
+        await tx.evolutionNote.createMany({
+          data: dto.evolutionNotes.map(({ date, text }) => ({
+            medicalRecordId: id,
+            date,
+            text: text ?? null,
+          })),
+        });
       }
+    }
 
-      if (dto.documents !== undefined) {
-        await tx.medicalDocument.deleteMany({ where: { medicalRecordId: id } });
-        if (dto.documents.length > 0) {
-          await tx.medicalDocument.createMany({
-            data: dto.documents.map(({ id: docId, name, mimeType, sizeBytes, data, uploadedAt }) => ({
-              id: docId,
-              medicalRecordId: id,
-              name, mimeType, sizeBytes, data,
-              uploadedAt: new Date(uploadedAt),
-            })),
-          });
-        }
+    if (dto.documents !== undefined) {
+      await tx.medicalDocument.deleteMany({ where: { medicalRecordId: id } });
+      if (dto.documents.length > 0) {
+        await tx.medicalDocument.createMany({
+          data: dto.documents.map(({ id: docId, name, mimeType, sizeBytes, data, uploadedAt }) => ({
+            id: docId,
+            medicalRecordId: id,
+            name, mimeType, sizeBytes, data,
+            uploadedAt: new Date(uploadedAt),
+          })),
+        });
       }
+    }
 
-      if (dto.subsystemRelations !== undefined) {
-        await tx.subsystemRelation.deleteMany({ where: { medicalRecordId: id } });
-        if (dto.subsystemRelations.length > 0) {
-          await tx.subsystemRelation.createMany({
-            data: subsystemRelationData(id, dto.subsystemRelations),
-          });
-        }
+    if (dto.subsystemRelations !== undefined) {
+      await tx.subsystemRelation.deleteMany({ where: { medicalRecordId: id } });
+      if (dto.subsystemRelations.length > 0) {
+        await tx.subsystemRelation.createMany({
+          data: subsystemRelationData(id, dto.subsystemRelations),
+        });
       }
+    }
 
-      const data = buildUpdateData(
-        dto,
-        [
-          'name', 'nationalId', 'sex', 'birthDate', 'birthPlace',
-          'consultationReason', 'earlyDevelopment', 'schoolAndWork', 'lifestyleHabits',
-          'traumaticEvents', 'emotionalConsiderations', 'physicalConsiderations',
-          'mentalHistory', 'objective', 'familyObservations', 'isFamily', 'familyType',
-          'lifecycle', 'genogram', 'resources', 'difficulties', 'communication',
-          'rule', 'limits', 'familyContext', 'expectations', 'flexibility',
-        ],
-        {
-          name: emptyToNull,
-          nationalId: emptyToNull,
-          birthPlace: emptyToNull,
-          consultationReason: emptyToNull,
-          earlyDevelopment: emptyToNull,
-          schoolAndWork: emptyToNull,
-          lifestyleHabits: emptyToNull,
-          traumaticEvents: emptyToNull,
-          emotionalConsiderations: emptyToNull,
-          physicalConsiderations: emptyToNull,
-          mentalHistory: emptyToNull,
-          objective: emptyToNull,
-          familyObservations: emptyToNull,
-          familyType: emptyToNull,
-          lifecycle: emptyToNull,
-          genogram: emptyToNull,
-          resources: emptyToNull,
-          difficulties: emptyToNull,
-          communication: emptyToNull,
-          rule: emptyToNull,
-          limits: emptyToNull,
-          familyContext: emptyToNull,
-          expectations: emptyToNull,
-          flexibility: emptyToNull,
-        },
-      );
-
-      return tx.medicalRecord.update({
-        where: { id },
-        data: { ...data, ...payload },
-        include: defaultInclude,
-        omit: omitData,
-      });
+    const identity = buildUpdateData(dto, [ ...IDENTITY_FIELDS ], {
+      name: emptyToNull,
+      nationalId: emptyToNull,
+      birthPlace: emptyToNull,
     });
+    await tx.medicalRecord.update({ where: { id }, data: identity, select: { id: true } });
+    return medicalRecordRepository.findById(id, userId, tx);
   },
 
-  async delete(id: string, userId: string): Promise<Omit<MedicalRecord, 'data'>> {
+  async delete(id: string, userId: string): Promise<MedicalRecordDto> {
     await medicalRecordRepository.findById(id, userId);
-    return prisma.medicalRecord.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() }, omit: omitData });
+    await prisma.medicalRecord.update({ where: { id }, data: { isDeleted: true, deletedAt: new Date() }, select: { id: true } });
+    return medicalRecordRepository.findById(id, userId);
   },
 
-  async restore(id: string, userId: string): Promise<Omit<MedicalRecord, 'data'>> {
+  async restore(id: string, userId: string): Promise<MedicalRecordDto> {
     await medicalRecordRepository.findById(id, userId);
-    return prisma.medicalRecord.update({ where: { id }, data: { isDeleted: false, deletedAt: null }, omit: omitData });
+    await prisma.medicalRecord.update({ where: { id }, data: { isDeleted: false, deletedAt: null }, select: { id: true } });
+    return medicalRecordRepository.findById(id, userId);
   },
 };

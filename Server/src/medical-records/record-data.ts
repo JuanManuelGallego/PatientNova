@@ -1,5 +1,5 @@
 import type { TransactionClient } from '../utils/prisma/prisma-client.js';
-import { activeKeys, type RecordTemplate } from '../patient-types/record-template.js';
+import { activeKeys, parseStoredTemplate, type RecordTemplate } from '../patient-types/record-template.js';
 import { RecordDataCorruptError, RecordDataInvalidError } from './medical-record.errors.js';
 
 export const CLINICAL_KEYS = [
@@ -83,22 +83,53 @@ export function checkDataChanges(template: RecordTemplate, changes: Record<strin
   }
 }
 
+/**
+ * Serializes a patient's type change with the creation of their record: both read the patient's type and must see the
+ * committed one. FOR UPDATE (not NO KEY UPDATE) so the record insert's foreign-key check waits too.
+ */
+export async function lockPatientType(tx: TransactionClient, patientId: string): Promise<void> {
+  await tx.$queryRaw`SELECT 1 FROM "patients" WHERE "id" = ${patientId}::uuid FOR UPDATE`;
+}
+
 export async function lockRecord(tx: TransactionClient, recordId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 FROM "medical_records" WHERE "id" = ${recordId}::uuid FOR UPDATE`;
+}
+
+/** The template of the record's patient type, read on `tx`: call it after `lockRecord` so a type change can't slip in between. */
+export async function templateOfRecord(tx: TransactionClient, recordId: string): Promise<RecordTemplate> {
+  const row = await tx.medicalRecord.findUniqueOrThrow({
+    where: { id: recordId },
+    select: { patient: { select: { patientType: { select: { template: true } } } } },
+  });
+  return parseStoredTemplate(row.patient.patientType.template);
 }
 
 export async function mergeRecordData(
   tx: TransactionClient,
   recordId: string,
   changes: Record<string, unknown>,
-  template: RecordTemplate,
-): Promise<RecordData> {
-  checkDataChanges(template, changes);
+): Promise<{ before: RecordData; after: RecordData }> {
   await lockRecord(tx, recordId);
+  checkDataChanges(await templateOfRecord(tx, recordId), changes);
   const row = await tx.medicalRecord.findUniqueOrThrow({ where: { id: recordId }, select: { data: true } });
-  const next = applyDataChanges(parseRecordData(row.data), changes);
-  await tx.medicalRecord.update({ where: { id: recordId }, data: { data: JSON.stringify(next) }, select: { id: true } });
-  return next;
+  const before = parseRecordData(row.data);
+  const after = applyDataChanges(before, changes);
+  if (row.data === null || !sameRecordData(before, after)) {
+    await tx.medicalRecord.update({ where: { id: recordId }, data: { data: JSON.stringify(after) }, select: { id: true } });
+  }
+  return { before, after };
+}
+
+export function dataDiff(before: RecordData, after: RecordData): {
+  affectedFields: string[];
+  fieldsBefore: Record<string, string | null>;
+  fieldsAfter: Record<string, string | null>;
+} {
+  const keys = [ ...new Set([ ...Object.keys(before), ...Object.keys(after) ]) ].filter((k) => before[ k ] !== after[ k ]).sort();
+  const affectedFields = keys.map((k) => `data.${k}`);
+  const fieldsBefore = Object.fromEntries(keys.map((k) => [ `data.${k}`, before[ k ] ?? null ]));
+  const fieldsAfter = Object.fromEntries(keys.map((k) => [ `data.${k}`, after[ k ] ?? null ]));
+  return { affectedFields, fieldsBefore, fieldsAfter };
 }
 
 export function sameRecordData(a: RecordData, b: RecordData): boolean {

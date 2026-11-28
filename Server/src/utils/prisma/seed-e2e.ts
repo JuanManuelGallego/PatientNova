@@ -4,6 +4,7 @@ import { maskEmail } from '../api/logger.js';
 import { config, requireEnv } from '../config/config.js';
 import { AdminRole, AdminStatus, BookingApprovalMode, Channel } from '../../../generated/prisma/client.ts';
 import { createUserWithDefaultType } from '../../patient-types/patient-type.repository.js';
+import { FAMILY_TEMPLATE_WITH_LEGACY, INDIVIDUAL_TEMPLATE_WITH_LEGACY } from '../../patient-types/migrated-templates.js';
 
 /**
  * Deterministic data for the Playwright suite against a throwaway stack. The ids/names match the
@@ -24,6 +25,7 @@ export const E2E_SEED = {
   approvalSlug: 'e2e-aprobacion',
   approvalTypeId: '00000000-0000-4000-8000-0000000000c1',
   approvalLocationId: '00000000-0000-4000-8000-0000000000c2',
+  familyPatientTypeId: '00000000-0000-4000-8000-0000000000d1',
 } as const;
 
 // A complete profile unlocks UI flows that are gated on it (e.g. the patient welcome message).
@@ -81,6 +83,17 @@ async function seedE2e() {
   const content = Buffer.from('%PDF-1.4 e2e consent');
   await prisma.$transaction(async (tx) => {
     const patientTypeId = user.defaultPatientTypeId;
+    // The record specs use today's two forms: Individual (the default) and Familia.
+    await tx.patientType.update({
+      where: { id: patientTypeId },
+      data: { name: 'Individual', template: INDIVIDUAL_TEMPLATE_WITH_LEGACY as never, familyMembersEnabled: true },
+    });
+    const familia = { template: FAMILY_TEMPLATE_WITH_LEGACY as never, familyMembersEnabled: true, subsystemRelationsEnabled: true };
+    await tx.patientType.upsert({
+      where: { id: E2E_SEED.familyPatientTypeId },
+      update: familia,
+      create: { id: E2E_SEED.familyPatientTypeId, userId: user.id, name: 'Familia', ...familia },
+    });
     if (!await tx.consentDocumentVersion.findFirst({ where: { patientTypeId }, select: { id: true } })) {
       await tx.consentDocumentVersion.create({
         data: { patientTypeId, version: 1, name: 'Consentimiento E2E.pdf', content: new Uint8Array(content), mimeType: 'application/pdf', sizeBytes: content.length },

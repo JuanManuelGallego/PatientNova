@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures';
 import { MedicalRecordsPage } from '../pages/MedicalRecordsPage';
 import { Routes, HttpMethods } from '../utils/const';
 import { createTestPatient, createTestMedicalRecord } from '../utils/helpers';
+import { PatientsPage } from '../pages/PatientsPage';
 import { randomString } from '../utils/test-data';
 import { readFileSync } from 'fs';
 
@@ -50,14 +51,15 @@ test.describe('Medical Records', () => {
         response.url().includes('/v1/medical-records'),
     );
 
-    await medicalRecordsPage.createIndividual();
+    await medicalRecordsPage.createRecord();
     const response = await createResponse;
     expect(response.status()).toBe(201);
 
     const json = await response.json();
     expect(json.data.id).toBeTruthy();
     expect(json.data.patientId).toBe(patient.id);
-    expect(json.data.isFamily).toBe(false);
+    expect(json.data.patientType.name).toBe('Individual');
+    expect(json.data.data).toEqual({});
 
     await medicalRecordsPage.expectRecordFormVisible();
     await medicalRecordsPage.expectAntecedentsVisible();
@@ -66,7 +68,7 @@ test.describe('Medical Records', () => {
   });
 
   test('Create family medical record', async ({ page, api, trackedPatients }) => {
-    const patient = await createTestPatient(api);
+    const patient = await createTestPatient(api, { patientTypeId: (await api.patientTypeNamed('Familia')).id });
     trackedPatients.track(patient.id);
 
     await page.goto(Routes.MEDICAL_RECORDS);
@@ -80,14 +82,14 @@ test.describe('Medical Records', () => {
         response.url().includes('/v1/medical-records'),
     );
 
-    await medicalRecordsPage.createFamily();
+    await medicalRecordsPage.createRecord();
     const response = await createResponse;
     expect(response.status()).toBe(201);
 
     const json = await response.json();
     expect(json.data.id).toBeTruthy();
     expect(json.data.patientId).toBe(patient.id);
-    expect(json.data.isFamily).toBe(true);
+    expect(json.data.patientType.name).toBe('Familia');
 
     await medicalRecordsPage.expectRecordFormVisible();
     await medicalRecordsPage.expectFamilySpecificVisible();
@@ -130,9 +132,9 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.fillGeneralData('national-id', '1029384756');
     await medicalRecordsPage.selectGeneralDataSex('Femenino');
     await medicalRecordsPage.fillGeneralData('birth-place', 'Bogota DC');
-    await medicalRecordsPage.fillGeneralData('consultation-reason', 'Informe psicologico');
-    await medicalRecordsPage.fillAntecedent('early-development', 'Desarrollo normal');
-    await medicalRecordsPage.fillAntecedent('school-and-work', 'Estudiante');
+    await medicalRecordsPage.fillRecordField('consultationReason', 'Informe psicologico');
+    await medicalRecordsPage.fillRecordField('earlyDevelopment', 'Desarrollo normal');
+    await medicalRecordsPage.fillRecordField('schoolAndWork', 'Estudiante');
     const response = await patchPromise;
 
     expect(response.status()).toBe(200);
@@ -141,8 +143,8 @@ test.describe('Medical Records', () => {
     expect(json.data.name).toBe(patient.name);
     expect(json.data.nationalId).toBe('1029384756');
     expect(json.data.sex).toBe('FEMALE');
-    expect(json.data.consultationReason).toBe('Informe psicologico');
-    expect(json.data.earlyDevelopment).toBe('Desarrollo normal');
+    expect(json.data.data.consultationReason).toBe('Informe psicologico');
+    expect(json.data.data.earlyDevelopment).toBe('Desarrollo normal');
 
     await page.reload();
     await medicalRecordsPage.selectPatient(patient.name);
@@ -151,14 +153,14 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectGeneralDataField('name', patient.name);
     await medicalRecordsPage.expectGeneralDataField('national-id', '1029384756');
     await medicalRecordsPage.expectGeneralDataField('birth-place', 'Bogota DC');
-    await medicalRecordsPage.expectGeneralDataField('consultation-reason', 'Informe psicologico');
-    await medicalRecordsPage.expectAntecedentField('early-development', 'Desarrollo normal');
-    await medicalRecordsPage.expectAntecedentField('school-and-work', 'Estudiante');
+    await medicalRecordsPage.expectRecordField('consultationReason', 'Informe psicologico');
+    await medicalRecordsPage.expectRecordField('earlyDevelopment', 'Desarrollo normal');
+    await medicalRecordsPage.expectRecordField('schoolAndWork', 'Estudiante');
 
     const persisted = (await api.getMedicalRecord(recordId)).data as Record<string, unknown>;
     expect(persisted.name).toBe(patient.name);
     expect(persisted.nationalId).toBe('1029384756');
-    expect(persisted.earlyDevelopment).toBe('Desarrollo normal');
+    expect((persisted.data as Record<string, string>).earlyDevelopment).toBe('Desarrollo normal');
   });
 
   test('Family member add and remove persists', async ({ page, api, trackedPatients, trackedMedicalRecords }) => {
@@ -261,10 +263,10 @@ test.describe('Medical Records', () => {
   });
 
   test('Family-specific fields and subsystem relations persist', async ({ page, api, trackedPatients, trackedMedicalRecords }) => {
-    const patient = await createTestPatient(api);
+    const patient = await createTestPatient(api, { patientTypeId: (await api.patientTypeNamed('Familia')).id });
     trackedPatients.track(patient.id);
 
-    const record = await createTestMedicalRecord(api, patient.id, patient.name, { isFamily: true });
+    const record = await createTestMedicalRecord(api, patient.id, patient.name);
     const recordId = record.data.id;
     trackedMedicalRecords.track(recordId);
 
@@ -276,8 +278,8 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectFamilySpecificVisible();
 
     const patchPromise = recordPatchPromise(page, recordId);
-    await medicalRecordsPage.fillFamilySpecific('family-type', 'Familia nuclear');
-    await medicalRecordsPage.fillFamilySpecific('resources', 'Apoyo social fuerte');
+    await medicalRecordsPage.fillRecordField('familyType', 'Familia nuclear');
+    await medicalRecordsPage.fillRecordField('resources', 'Apoyo social fuerte');
     await patchPromise;
 
     const subPromise = recordPatchPromise(page, recordId);
@@ -286,7 +288,7 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectSubsystemMarked('CONJUGAL', 'FUNCIONAL');
 
     let rec = (await api.getMedicalRecord(recordId)).data as Record<string, unknown>;
-    expect(rec.familyType).toBe('Familia nuclear');
+    expect((rec.data as Record<string, string>).familyType).toBe('Familia nuclear');
     const relations = rec.subsystemRelations as Array<Record<string, unknown>>;
     expect(relations.some((r) => r.subsystem === 'CONJUGAL' && r.status === 'FUNCIONAL')).toBeTruthy();
 
@@ -294,7 +296,7 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.selectPatient(patient.name);
     await medicalRecordsPage.expectRecordFormVisible();
     await medicalRecordsPage.expectFamilySpecificVisible();
-    await medicalRecordsPage.expectFamilySpecificField('family-type', 'Familia nuclear');
+    await medicalRecordsPage.expectRecordField('familyType', 'Familia nuclear');
     await medicalRecordsPage.expectSubsystemMarked('CONJUGAL', 'FUNCIONAL');
   });
 
@@ -424,7 +426,7 @@ test.describe('Medical Records', () => {
 
     const newConsultationReason = randomString(50);
     const patchPromise = recordPatchPromise(page, record.data.id);
-    await medicalRecordsPage.fillGeneralData('consultation-reason', newConsultationReason);
+    await medicalRecordsPage.fillRecordField('consultationReason', newConsultationReason);
     await patchPromise;
     await medicalRecordsPage.waitForSaveComplete();
   });
@@ -443,5 +445,35 @@ test.describe('Medical Records', () => {
     await medicalRecordsPage.expectRecordFormVisible();
 
     await medicalRecordsPage.expectDownloadPdfVisible();
+  });
+
+  test('Changing the patient type archives the record after confirmation', async ({ page, api, trackedPatients, trackedMedicalRecords }) => {
+    const patient = await createTestPatient(api);
+    trackedPatients.track(patient.id);
+    const record = await createTestMedicalRecord(api, patient.id, patient.name, { data: { consultationReason: 'Motivo archivado' } });
+    trackedMedicalRecords.track(record.data.id);
+
+    await page.goto(Routes.PATIENTS);
+    const patientsPage = new PatientsPage(page);
+    await patientsPage.searchPatient(patient.name);
+    const editModal = await patientsPage.openEditModal(patient.name);
+    await editModal.selectPatientType('Familia');
+    await editModal.submit();
+    const dialog = page.getByTestId('patient-type-change-dialog');
+    await expect(dialog).toContainText('se archivará como solo lectura');
+    await dialog.getByTestId('patient-type-change-dialog-confirm-button').click();
+    await editModal.waitForClose();
+
+    await page.goto(Routes.MEDICAL_RECORDS);
+    const medicalRecordsPage = new MedicalRecordsPage(page);
+    await medicalRecordsPage.selectPatient(patient.name);
+    await medicalRecordsPage.expectFamilySpecificVisible();
+    await medicalRecordsPage.expectRecordField('consultationReason', '');
+    await expect(medicalRecordsPage.snapshotsCard).toBeVisible();
+    await medicalRecordsPage.openFirstSnapshot();
+    await expect(medicalRecordsPage.snapshotsCard).toContainText('Motivo archivado');
+
+    const persisted = (await api.getMedicalRecord(record.data.id)).data as Record<string, unknown>;
+    expect(persisted.data).toEqual({});
   });
 });

@@ -56,6 +56,7 @@ const PATTERNS: Array<[ RegExp, string ]> = [
     [ /^the phone number comes from the session$/i, "Usa el número con el que ingresaste." ],
     [ /^provider not found$/i, "Las reservas en línea no están disponibles en este momento." ],
     [ /^patient type not found$/i, "Ese tipo de paciente ya no existe. Recarga la página e inténtalo de nuevo." ],
+    [ /^Los datos de la historia clínica no coinciden con la plantilla$/, "El formulario de esta historia clínica cambió. La recargamos: revisa tus últimos cambios." ],
     [ /^a patient type applies only to a new patient$/i, "El tipo de paciente solo se elige al crear un paciente nuevo." ],
 ];
 

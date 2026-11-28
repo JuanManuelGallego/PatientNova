@@ -166,7 +166,7 @@ export const patientRepository = {
       include: {
         appointments: { take, orderBy: { startAt: 'desc' } },
         reminders: { take, orderBy: { sendAt: 'desc' } },
-        medicalRecord: { omit: { data: true } },
+        medicalRecord: { select: { id: true } },
         appointmentType: { select: { id: true, name: true, defaultPrice: true } },
         patientType: { select: { id: true, name: true } },
       },
@@ -219,7 +219,7 @@ export const patientRepository = {
     try {
       const data = buildUpdateData(
         dto,
-        [ 'name', 'lastName', 'whatsappNumber', 'smsNumber', 'email', 'reminderChannel', 'notes', 'status', 'appointmentTypeId' ],
+        [ 'name', 'lastName', 'whatsappNumber', 'smsNumber', 'email', 'reminderChannel', 'notes', 'status', 'appointmentTypeId', 'patientTypeId' ],
         {
           whatsappNumber: (v: string | null) => v || null,
           smsNumber: (v: string | null) => v || null,

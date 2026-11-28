@@ -16,6 +16,7 @@ import { ENCRYPTED_FIELDS, ENCRYPTED_JSON_FIELDS } from '../encryption/encrypted
 export const REENCRYPT_TABLES: Record<string, { table: string; id: 'uuid' | 'text' }> = {
   User: { table: 'users', id: 'text' },
   MedicalRecord: { table: 'medical_records', id: 'uuid' },
+  MedicalRecordSnapshot: { table: 'medical_record_snapshots', id: 'uuid' },
   FamilyMember: { table: 'family_members', id: 'uuid' },
   EvolutionNote: { table: 'evolution_notes', id: 'uuid' },
   Patient: { table: 'patients', id: 'uuid' },

@@ -20,3 +20,9 @@ body:json {
     "status": "ACTIVE"
   }
 }
+
+docs {
+  Optional `patientTypeId` (a type of the same provider, else 404) changes the patient type. If the patient has a medical
+  record with a non-empty payload, the payload and its template are archived as a read-only snapshot and the record
+  starts empty on the new template. The audit row holds the old and new type ids and the snapshot id, no field values.
+}

@@ -1,4 +1,5 @@
 import { calendarDayToIso, todayFormattedString } from "@/src/utils/TimeUtils";
+import type { RecordTemplate } from "@/src/types/PatientType";
 
 // ─── Subsystem enums ──────────────────────────────────────────────────────────
 
@@ -47,6 +48,25 @@ export type SubsystemMap = Partial<
 
 // ─── Core types ───────────────────────────────────────────────────────────────
 
+export type RecordData = Record<string, string>;
+
+export interface RecordPatientType {
+    id: string;
+    name: string;
+    template: RecordTemplate;
+    familyMembersEnabled: boolean;
+    subsystemRelationsEnabled: boolean;
+}
+
+export interface RecordSnapshot {
+    id: string;
+    createdAt: string;
+    patientTypeId: string;
+    patientTypeName: string;
+    template: RecordTemplate;
+    data: RecordData;
+}
+
 export interface MedicalRecord {
     id: string;
     patientId: string;
@@ -55,30 +75,9 @@ export interface MedicalRecord {
     sex: Sex | "";
     birthDate: string;
     birthPlace: string;
-    consultationReason: string;
-    earlyDevelopment: string;
-    schoolAndWork: string;
-    lifestyleHabits: string;
-    traumaticEvents: string;
-    emotionalConsiderations: string;
-    physicalConsiderations: string;
-    mentalHistory: string;
-    objective: string;
-    familyObservations: string;
-
-    // Family fields
-    isFamily: boolean;
-    familyType: string;
-    lifecycle: string;
-    genogram: string;
-    resources: string;
-    difficulties: string;
-    communication: string;
-    rule: string;
-    limits: string;
-    familyContext: string;
-    expectations: string;
-    flexibility: string;
+    data: RecordData;
+    patientType: RecordPatientType;
+    snapshots: RecordSnapshot[];
 
     // Relations
     familyMembers?: FamilyMember[];
@@ -93,30 +92,7 @@ export interface FormValues {
     sex: Sex | "";
     birthDate: string;
     birthPlace: string;
-    consultationReason: string;
-    earlyDevelopment: string;
-    schoolAndWork: string;
-    lifestyleHabits: string;
-    traumaticEvents: string;
-    emotionalConsiderations: string;
-    physicalConsiderations: string;
-    mentalHistory: string;
-    objective: string;
-    familyObservations: string;
-
-    // Family fields
-    isFamily: boolean;
-    familyType: string;
-    lifecycle: string;
-    genogram: string;
-    resources: string;
-    difficulties: string;
-    communication: string;
-    rule: string;
-    limits: string;
-    familyContext: string;
-    expectations: string;
-    flexibility: string;
+    data: RecordData;
 
     // Relations
     familyMembers?: FamilyMember[];
@@ -124,6 +100,10 @@ export interface FormValues {
     documents: MedicalDocument[];
     subsystemRelations: SubsystemRelation[];
 }
+
+export type RecordPatch = Partial<Pick<FormValues,
+    "name" | "nationalId" | "sex" | "birthDate" | "birthPlace" | "familyMembers" | "evolutionNotes" | "documents" | "subsystemRelations">>
+    & { data?: RecordData };
 
 export interface FetchMedicalRecordFilters {
     patientId?: string;
@@ -211,28 +191,7 @@ export const createEmptyForm = (): FormValues => ({
     sex: "",
     birthDate: "",
     birthPlace: "",
-    consultationReason: "",
-    earlyDevelopment: "",
-    schoolAndWork: "",
-    lifestyleHabits: "",
-    traumaticEvents: "",
-    emotionalConsiderations: "",
-    physicalConsiderations: "",
-    mentalHistory: "",
-    objective: "",
-    familyObservations: "",
-    isFamily: false,
-    familyType: "",
-    lifecycle: "",
-    genogram: "",
-    resources: "",
-    difficulties: "",
-    communication: "",
-    rule: "",
-    limits: "",
-    familyContext: "",
-    expectations: "",
-    flexibility: "",
+    data: {},
     familyMembers: [],
     evolutionNotes: [],
     documents: [],
