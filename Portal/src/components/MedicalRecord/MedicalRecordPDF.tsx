@@ -323,7 +323,6 @@ function Identity(form: FormValues) {
   );
 }
 
-/** The record as the patient type's template lays it out: active fields only, no removed fields or snapshots. */
 export function MedicalRecordPDF({ form, type, user }: { form: FormValues; type: RecordPatientType; user: User | null }) {
   const cards = recordLayout(type.template, { familyMembers: type.familyMembersEnabled, subsystemRelations: type.subsystemRelationsEnabled });
   return (

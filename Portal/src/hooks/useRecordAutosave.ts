@@ -6,15 +6,11 @@ import type { RecordPatch } from "@/src/types/MedicalRecord";
 
 type Options = {
   save: (id: string, patch: RecordPatch) => Promise<unknown>;
-  /** The server refused a save (400): the page should reload the record, whose template may have changed. */
   onRejected: () => void;
   delay: number;
 };
 
-/**
- * Autosave of a medical record that sends only what changed. Unsaved changes accumulate per record and leave once the
- * server has them; a failed save keeps them for the next one, except a refused one (400), which would fail forever.
- */
+/** A failed save is resent with the next change, except a refused one (400), which would fail forever. */
 export function useRecordAutosave(recordId: string | undefined, { save, onRejected, delay }: Options) {
   const pendingRef = useRef<{ id: string; patch: RecordPatch }>({ id: "", patch: {} });
   const saveRef = useRef(save);
@@ -51,7 +47,6 @@ export function useRecordAutosave(recordId: string | undefined, { save, onReject
     schedule({ id: recordId, patch: pendingRef.current.patch });
   }, [ recordId, schedule ]);
 
-  /** Drops unsaved changes, when a record is (re)loaded from the server. */
   const reset = useCallback((id: string) => {
     pendingRef.current = { id, patch: {} };
   }, []);

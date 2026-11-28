@@ -616,7 +616,6 @@ model MedicalRecord {
 
 // ─── Subsystem relations ──────────────────────────────────────────────────────
 
-// The payload and template of a record when its patient changed type: read-only, encrypted `data`.
 // `patientTypeId` has no foreign key: the old type may be deleted once no patient uses it.
 model MedicalRecordSnapshot {
   id              String        @id @default(uuid()) @db.Uuid

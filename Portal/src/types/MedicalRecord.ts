@@ -48,10 +48,8 @@ export type SubsystemMap = Partial<
 
 // ─── Core types ───────────────────────────────────────────────────────────────
 
-/** Template answers keyed by field key. */
 export type RecordData = Record<string, string>;
 
-/** The patient's type as the record needs it: its template and family switches. */
 export interface RecordPatientType {
     id: string;
     name: string;
@@ -60,7 +58,6 @@ export interface RecordPatientType {
     subsystemRelationsEnabled: boolean;
 }
 
-/** A read-only copy of the payload archived when the patient changed type, with the template it was written against. */
 export interface RecordSnapshot {
     id: string;
     createdAt: string;
@@ -104,7 +101,6 @@ export interface FormValues {
     subsystemRelations: SubsystemRelation[];
 }
 
-/** What an autosave sends: only the fields that changed, and only the changed keys of `data`. */
 export type RecordPatch = Partial<Pick<FormValues,
     "name" | "nationalId" | "sex" | "birthDate" | "birthPlace" | "familyMembers" | "evolutionNotes" | "documents" | "subsystemRelations">>
     & { data?: RecordData };

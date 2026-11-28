@@ -38,7 +38,6 @@ const medicalRecordBaseSchema = z.object({
   birthDate: z.iso.datetime().optional().catch(() => undefined),
   birthPlace: z.string().optional(),
 
-  // Template answers, keyed by field key: on update only the changed keys
   data: z.record(z.string(), z.string()).optional(),
 
   // Relations

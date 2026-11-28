@@ -112,7 +112,6 @@ export const medicalRecordRepository = {
     return buildPaginatedResult(rows.map(toRecordDto), total, page, pageSize);
   },
 
-  /** Merges `dto.data` into the payload (only the keys sent), replaces any relation sent, updates identity fields. */
   async update(id: string, dto: UpdateMedicalRecordDto, userId: string, tx?: TransactionClient): Promise<MedicalRecordDto> {
     if (!tx) return prisma.$transaction((t) => medicalRecordRepository.update(id, dto, userId, t));
 

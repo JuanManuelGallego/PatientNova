@@ -52,7 +52,6 @@ export function PatientModal({
   const [ chosenTypeId, setChosenTypeId ] = useState(patient?.patientTypeId ?? "");
   const patientTypeId = chosenTypeId || defaultType?.id || "";
   const selectedType = patientTypes.find((t) => t.id === patientTypeId);
-  // Changing an existing patient's type archives their record, so it waits for a confirmation.
   const typeChanged = isEdit && !!patientTypeId && patientTypeId !== patient!.patientTypeId;
   const [ confirmingTypeChange, setConfirmingTypeChange ] = useState(false);
 

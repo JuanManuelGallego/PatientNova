@@ -21,7 +21,6 @@ type PatientWithRelations = Patient & {
 // A type change has its own audit row (`changePatientType`).
 const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema).filter((k) => k !== 'patientTypeId'), 'whatsappUnverified' ];
 
-/** Validates the new type, archives the record payload and audits the change without field values. */
 async function changePatientType(tx: TransactionClient, patient: Patient, requestedTypeId: string, userId: string): Promise<void> {
   const nextTypeId = await resolvePatientTypeId(tx, userId, requestedTypeId);
   const [ oldType, nextType ] = await Promise.all([

@@ -11,7 +11,6 @@ type GeneralDataSectionProps = {
   onChange: (key: IdentityKey, value: string) => void;
 };
 
-/** The identity fields every record keeps, whatever its patient type. */
 export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) {
   const timezone = useDisplayTimezone();
   return (

@@ -15,7 +15,7 @@ type RecordCardBodyProps = {
   onSubsystemRelations: (relations: SubsystemRelation[]) => void;
 };
 
-/** One card of the record, in the PDF's order: identity, family table, template fields, subsystem table. */
+/** Same block order as the PDF. */
 export function RecordCardBody({ card, form, onIdentity, onData, onFamilyMembers, onSubsystemRelations }: RecordCardBodyProps) {
   const hasGrid = card.fields.length > 0 || card.subsystemTable;
   return (

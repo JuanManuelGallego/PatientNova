@@ -6,7 +6,6 @@ import { SELECT_ICONS } from "@/src/config/icons";
 import { MedicalRecordCard } from "./MedicalRecordCard";
 import { ReadOnlyValues, type ReadOnlyValue } from "./ReadOnlyValues";
 
-/** Every answer of a snapshot, labelled from the template stored with it (removed fields included), then unknown keys. */
 function snapshotValues({ template, data }: RecordSnapshot): { title: string; items: ReadOnlyValue[] }[] {
   const known = new Set<string>();
   const groups = template.sections.map((section) => ({
@@ -50,7 +49,6 @@ function SnapshotEntry({ snapshot }: { snapshot: RecordSnapshot }) {
   );
 }
 
-/** Payloads archived when the patient changed type: read-only, only in the record view. */
 export function RecordSnapshots({ snapshots }: { snapshots: RecordSnapshot[] }) {
   if (snapshots.length === 0) return null;
   return (

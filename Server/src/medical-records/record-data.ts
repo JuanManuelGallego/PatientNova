@@ -104,7 +104,6 @@ export async function templateOfRecord(tx: TransactionClient, recordId: string):
   return parseStoredTemplate(row.patient.patientType.template);
 }
 
-/** Locks the record, checks `changes` against its type's current template and merges them into the payload. */
 export async function mergeRecordData(
   tx: TransactionClient,
   recordId: string,
@@ -121,7 +120,6 @@ export async function mergeRecordData(
   return { before, after };
 }
 
-/** Audit entries for the payload: one `data.<key>` per changed key, `null` where the key is absent. */
 export function dataDiff(before: RecordData, after: RecordData): {
   affectedFields: string[];
   fieldsBefore: Record<string, string | null>;

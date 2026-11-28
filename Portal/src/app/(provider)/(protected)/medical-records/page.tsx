@@ -36,7 +36,6 @@ import { missingRequired, previousFields, recordLayout } from "@/src/utils/recor
 
 const MEDICAL_RECORD_AUTOSAVE_MS = 1500;
 
-/** A template card by its index, or one of the fixed cards: the save indicator shows on the card being edited. */
 type RecordSection = number | "evolution" | "documents";
 
 function MedicalRecordsPageContent() {

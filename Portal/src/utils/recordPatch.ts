@@ -2,7 +2,6 @@ import type { RecordPatch } from "@/src/types/MedicalRecord";
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** `b` on top of `a`: `data` merges key by key, every other key is replaced. */
 export function mergePatch(a: RecordPatch, b: RecordPatch): RecordPatch {
   const merged: RecordPatch = { ...a, ...b };
   if (a.data || b.data) merged.data = { ...a.data, ...b.data };

@@ -1,16 +1,11 @@
 import type { RecordTemplate, TemplateField } from "@/src/types/PatientType";
 import type { RecordData } from "@/src/types/MedicalRecord";
 
-/** One card of the record page (and one block of the PDF), in display order. */
 export interface RecordCard {
   title: string;
-  /** Active fields only. */
   fields: TemplateField[];
-  /** Identity fields (name, cédula, sex, birth date and place) at the top. */
   identity: boolean;
-  /** Family members table, above the fields. */
   familyTable: boolean;
-  /** Subsystem relations table, below the fields. */
   subsystemTable: boolean;
 }
 
@@ -48,7 +43,6 @@ export interface PreviousField {
   value: string;
 }
 
-/** Values of removed fields (labelled from the template), then keys the template doesn't know (labelled by key). */
 export function previousFields(template: RecordTemplate, data: RecordData): PreviousField[] {
   const fields = template.sections.flatMap((s) => s.fields);
   const known = new Set(fields.map((f) => f.key));
@@ -62,7 +56,6 @@ export function previousFields(template: RecordTemplate, data: RecordData): Prev
   return [ ...removed, ...unknown ];
 }
 
-/** Labels of active required fields left empty (a hint only: saves are never refused). */
 export function missingRequired(template: RecordTemplate, data: RecordData): string[] {
   return template.sections
     .flatMap((s) => s.fields)

@@ -8,11 +8,7 @@ export interface ArchivedType {
   template: unknown;
 }
 
-/**
- * Before a patient changes type: archives the record's payload with the template it was written against, then empties
- * the payload. Returns the snapshot id, or null when there is no record or nothing to archive. Locks the record row, so a
- * save waiting on it is checked against the new type's template once this transaction commits.
- */
+/** Locks the record row, so a save waiting on it is checked against the new type's template once this commits. */
 export async function archiveRecordForTypeChange(tx: TransactionClient, patientId: string, oldType: ArchivedType): Promise<string | null> {
   const record = await tx.medicalRecord.findUnique({ where: { patientId }, select: { id: true } });
   if (!record) return null;

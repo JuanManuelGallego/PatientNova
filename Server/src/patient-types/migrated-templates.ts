@@ -46,7 +46,6 @@ export const FAMILY_TEMPLATE: RecordTemplate = {
   ],
 };
 
-/** When release B added the migrated keys a template doesn't show, so their copied values keep a label. */
 export const LEGACY_REMOVED_AT = '2026-11-28T00:00:00.000Z';
 
 const removed = (f: TemplateField): TemplateField => ({ ...f, removedAt: LEGACY_REMOVED_AT });

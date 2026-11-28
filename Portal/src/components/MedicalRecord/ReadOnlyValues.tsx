@@ -4,7 +4,6 @@ export interface ReadOnlyValue {
   value: string;
 }
 
-/** Label/value pairs shown as text, never as inputs: archived or removed answers. */
 export function ReadOnlyValues({ items }: { items: ReadOnlyValue[] }) {
   return (
     <dl style={{ display: "grid", gap: 14, margin: 0 }}>

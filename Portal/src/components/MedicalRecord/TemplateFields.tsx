@@ -8,7 +8,6 @@ type TemplateFieldsProps = {
   onChange: (key: string, value: string) => void;
 };
 
-/** The active fields of one template section: `text` as a single line, `longText` as a text area. */
 export function TemplateFields({ fields, data, onChange }: TemplateFieldsProps) {
   return (
     <>
