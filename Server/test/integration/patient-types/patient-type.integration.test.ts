@@ -16,7 +16,7 @@ import {
 import { patientTypeRouter } from '../../../src/patient-types/patient-type.routes.js';
 import { createUserWithDefaultType } from '../../../src/patient-types/patient-type.repository.js';
 import { userService } from '../../../src/users/user.service.js';
-import { AdminRole, AdminStatus } from '../../../generated/prisma/client.ts';
+import { ActionType, AdminRole, AdminStatus, EntityType } from '../../../generated/prisma/client.ts';
 import { authReq, createTestPatient, createTestToken, createTestUser, invokeRoute, unique } from '../helpers.js';
 
 const pdf = (text = 'consent') => Buffer.from(`%PDF-1.4 ${text}`).toString('base64');
@@ -239,5 +239,76 @@ describe('patient type routes', () => {
       .set('Authorization', `Bearer ${createTestToken(user)}`)
       .send({ name: 'Big.pdf', content: big });
     expect(res.status).toBe(201);
+  });
+});
+
+describe('template writes', () => {
+  const patch = (id: string, body: Record<string, unknown>, as = user) =>
+    invokeRoute(patientTypeRouter, 'patch', `/${id}`, { ...authReq(as), params: { id }, body });
+  const templateAudits = (id: string) => prisma.auditLog.findMany({
+    where: { entityType: EntityType.PATIENT_TYPE, entityId: id, actionType: ActionType.UPDATE, affectedFields: { has: 'template' } },
+  });
+  const template = {
+    sections: [ { title: 'Motivo', fields: [ { label: 'Motivo de consulta', kind: 'longText' } ] } ],
+  };
+  const saved = {
+    sections: [ {
+      title: 'Motivo',
+      fields: [ { key: 'motivoDeConsulta', label: 'Motivo de consulta', kind: 'longText', required: false, removedAt: null } ],
+    } ],
+  };
+
+  it('saves a template, generating keys, and audits it before and after', async () => {
+    const res = await patch(defaultTypeId, { template });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.template).toEqual(saved);
+
+    const audits = await templateAudits(defaultTypeId);
+    expect(audits).toHaveLength(1);
+    expect(audits[ 0 ]).toMatchObject({
+      affectedFields: [ 'template' ],
+      fieldsBefore: { template: { sections: [] } },
+      fieldsAfter: { template: saved },
+    });
+  });
+
+  it('refuses an invalid template with 400 and leaves the stored one unchanged', async () => {
+    await patch(defaultTypeId, { template });
+    const changedKind = { sections: [ { title: 'Motivo', fields: [ { ...saved.sections[ 0 ]!.fields[ 0 ], kind: 'text' } ] } ] };
+    const res = await patch(defaultTypeId, { template: changedKind });
+    expect(res.statusCode).toBe(400);
+    const stored = await prisma.patientType.findUniqueOrThrow({ where: { id: defaultTypeId } });
+    expect(stored.template).toEqual(saved);
+  });
+
+  it('refuses a template write from a VIEWER', async () => {
+    const viewer = await createTestUser({ role: AdminRole.VIEWER });
+    const res = await request(app)
+      .patch(`/v1/patient-types/${viewer.defaultPatientTypeId}`)
+      .set('Authorization', `Bearer ${createTestToken(viewer)}`)
+      .send({ template });
+    expect(res.status).toBe(403);
+  });
+
+  it('does not audit a template sent unchanged', async () => {
+    await patch(defaultTypeId, { template });
+    const again = await patch(defaultTypeId, { template: saved });
+    expect(again.statusCode).toBe(200);
+    expect(await templateAudits(defaultTypeId)).toHaveLength(1);
+  });
+
+  it('still renames with { name } alone, and refuses an empty body', async () => {
+    const renamed = await patch(defaultTypeId, { name: 'Adultos' });
+    expect(renamed.statusCode).toBe(200);
+    expect(renamed.body.data).toMatchObject({ name: 'Adultos', template: { sections: [] } });
+    expect((await patch(defaultTypeId, {})).statusCode).toBe(400);
+  });
+
+  it("cannot write another provider's type", async () => {
+    const other = await createTestUser();
+    const res = await patch(other.defaultPatientTypeId, { template });
+    expect(res.statusCode).toBe(404);
+    const stored = await prisma.patientType.findUniqueOrThrow({ where: { id: other.defaultPatientTypeId } });
+    expect(stored.template).toEqual({ sections: [] });
   });
 });

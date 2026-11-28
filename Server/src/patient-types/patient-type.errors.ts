@@ -29,6 +29,12 @@ export class PatientTypeInUseError extends ApiError {
   }
 }
 
+export class RecordTemplateInvalidError extends ApiError {
+  constructor(reason: string) {
+    super(`La plantilla no es válida: ${reason}`, 400);
+  }
+}
+
 export class ConsentVersionNotFoundError extends ApiError {
   constructor() {
     super('Document not found', 404);

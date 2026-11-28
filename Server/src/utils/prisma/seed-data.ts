@@ -1,6 +1,8 @@
 import { DateTime } from 'luxon';
 import { prisma } from './prisma-client.js';
 import { withProviderLock } from './provider-lock.js';
+import { FAMILY_TEMPLATE, INDIVIDUAL_TEMPLATE } from '../../patient-types/migrated-templates.js';
+import { dataFromColumns } from '../../medical-records/record-data.js';
 import { config } from '../config/config.js';
 import { maskEmail } from '../api/logger.js';
 import { PRIVACY_POLICY_VERSION } from '../../portal/privacy-policy.js';
@@ -216,12 +218,17 @@ async function seedData() {
 
     const individualTypeId = uuid(G.patientType, 1);
     const familyTypeId = uuid(G.patientType, 2);
-    for (const [ id, name, family ] of [ [ individualTypeId, 'Individual', false ], [ familyTypeId, 'Familia', true ] ] as const) {
-      await tx.patientType.upsert({
-        where: { id },
-        update: {},
-        create: { id, userId, name, familyMembersEnabled: family, subsystemRelationsEnabled: family },
-      });
+    const seededTypes = [
+      { id: individualTypeId, name: 'Individual', template: INDIVIDUAL_TEMPLATE, family: false },
+      { id: familyTypeId, name: 'Familia', template: FAMILY_TEMPLATE, family: true },
+    ];
+    for (const { id, name, template, family } of seededTypes) {
+      const fields = {
+        template: template as unknown as Prisma.InputJsonValue,
+        familyMembersEnabled: true,
+        subsystemRelationsEnabled: family,
+      };
+      await tx.patientType.upsert({ where: { id }, update: fields, create: { id, userId, name, ...fields } });
     }
     await tx.user.update({ where: { id: userId }, data: { defaultPatientTypeId: individualTypeId } });
     await tx.patientType.deleteMany({
@@ -276,6 +283,7 @@ async function seedData() {
           birthDate: calendarDay(DateTime.fromObject({ year: p.birth[0], month: p.birth[1], day: p.birth[2] })),
           birthPlace: p.birthPlace,
           ...r,
+          data: JSON.stringify(dataFromColumns(r)),
           isFamily: 'isFamily' in r ? r.isFamily : false,
         };
       }),

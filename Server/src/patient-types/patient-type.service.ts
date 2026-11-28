@@ -1,4 +1,6 @@
 import { ActionType, EntityType } from '../../generated/prisma/enums.ts';
+import type { Prisma } from '../../generated/prisma/client.ts';
+import { applyTemplateWrite, parseStoredTemplate } from './record-template.js';
 import { logAudit } from '../audit-log/audit-log.utils.js';
 import { logger } from '../utils/api/logger.js';
 import { isPrismaUniqueConstraintError } from '../utils/errors/prisma-errors.js';
@@ -139,7 +141,7 @@ export const patientTypeService = {
     return prisma.$transaction(async (tx) => {
       await withProviderLock(tx, userId);
       const before = await requireOwned(userId, id, tx);
-      if (before.name !== dto.name) {
+      if (dto.name !== undefined && before.name !== dto.name) {
         if (await patientTypeRepository.nameTaken(userId, dto.name, id, tx)) throw new PatientTypeNameConflictError();
         await nameConflict(tx.patientType.update({ where: { id }, data: { name: dto.name } }));
         await logAudit({
@@ -154,6 +156,25 @@ export const patientTypeService = {
           tx,
           required: true,
         });
+      }
+      if (dto.template !== undefined) {
+        const previous = parseStoredTemplate(before.template);
+        const next = applyTemplateWrite(previous, dto.template, new Date());
+        if (JSON.stringify(next) !== JSON.stringify(previous)) {
+          await tx.patientType.update({ where: { id }, data: { template: next as unknown as Prisma.InputJsonValue } });
+          await logAudit({
+            entityType: EntityType.PATIENT_TYPE,
+            entityId: id,
+            userId,
+            actionType: ActionType.UPDATE,
+            description: `Plantilla de historia clínica actualizada: ${dto.name ?? before.name}`,
+            affectedFields: [ 'template' ],
+            fieldsBefore: { template: previous },
+            fieldsAfter: { template: next },
+            tx,
+            required: true,
+          });
+        }
       }
       return findDto(userId, id, tx);
     });

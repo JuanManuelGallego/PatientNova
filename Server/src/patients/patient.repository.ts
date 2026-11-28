@@ -166,7 +166,7 @@ export const patientRepository = {
       include: {
         appointments: { take, orderBy: { startAt: 'desc' } },
         reminders: { take, orderBy: { sendAt: 'desc' } },
-        medicalRecord: true,
+        medicalRecord: { omit: { data: true } },
         appointmentType: { select: { id: true, name: true, defaultPrice: true } },
         patientType: { select: { id: true, name: true } },
       },
