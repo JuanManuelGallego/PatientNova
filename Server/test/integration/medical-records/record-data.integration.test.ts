@@ -31,7 +31,7 @@ beforeEach(async () => {
   const patient = await createTestPatient(user.id);
   patientTypeId = patient.patientTypeId;
   recordId = (await prisma.medicalRecord.create({
-    data: { patientId: patient.id, objective: 'col', data: JSON.stringify({ consultationReason: 'a', legacy: 'z' }) },
+    data: { patientId: patient.id, data: JSON.stringify({ consultationReason: 'a', legacy: 'z' }) },
   })).id;
 });
 
@@ -60,11 +60,5 @@ describe('mergeRecordData', () => {
     await expect(prisma.$transaction((tx) => mergeRecordData(tx, recordId, { objective: 'b', viejo: 'x' })))
       .rejects.toThrow(RecordDataInvalidError);
     expect(await stored()).toEqual({ consultationReason: 'a', legacy: 'z' });
-  });
-
-  it('never touches the clinical columns', async () => {
-    await useTemplate(templateOf([ 'objective' ]));
-    await prisma.$transaction((tx) => mergeRecordData(tx, recordId, { objective: 'x' }));
-    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: recordId } })).objective).toBe('col');
   });
 });

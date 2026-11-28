@@ -1,8 +1,5 @@
 import { prisma } from '../utils/prisma/prisma-client.js';
-import { CLINICAL_KEYS, parseRecordData } from '../medical-records/record-data.js';
-
-// Frozen since release B (the payload is the record); release C drops them.
-const FROZEN_COLUMNS = Object.fromEntries([ ...CLINICAL_KEYS, 'isFamily' ].map((k) => [ k, true ])) as Record<(typeof CLINICAL_KEYS)[ number ] | 'isFamily', true>;
+import { parseRecordData } from '../medical-records/record-data.js';
 
 /** The clinic's patients in readable form, for leaving the service. Soft-deleted rows are included on purpose. */
 export async function buildClinicExport(userId: string) {
@@ -18,7 +15,7 @@ export async function buildClinicExport(userId: string) {
       consents: true,
       patientType: { select: { id: true, name: true, template: true, familyMembersEnabled: true, subsystemRelationsEnabled: true } },
       medicalRecord: {
-        omit: { nameTokens: true, ...FROZEN_COLUMNS },
+        omit: { nameTokens: true },
         include: { familyMembers: true, evolutionNotes: true, documents: true, subsystemRelations: true, snapshots: true },
       },
     },

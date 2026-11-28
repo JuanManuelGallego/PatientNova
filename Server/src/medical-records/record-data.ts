@@ -2,33 +2,7 @@ import type { TransactionClient } from '../utils/prisma/prisma-client.js';
 import { activeKeys, parseStoredTemplate, type RecordTemplate } from '../patient-types/record-template.js';
 import { RecordDataCorruptError, RecordDataInvalidError } from './medical-record.errors.js';
 
-export const CLINICAL_KEYS = [
-  'consultationReason',
-  'earlyDevelopment',
-  'schoolAndWork',
-  'lifestyleHabits',
-  'traumaticEvents',
-  'emotionalConsiderations',
-  'physicalConsiderations',
-  'mentalHistory',
-  'objective',
-  'familyObservations',
-  'familyType',
-  'lifecycle',
-  'genogram',
-  'resources',
-  'difficulties',
-  'communication',
-  'rule',
-  'limits',
-  'familyContext',
-  'expectations',
-  'flexibility',
-] as const;
-
-export type ClinicalKey = (typeof CLINICAL_KEYS)[ number ];
 export type RecordData = Record<string, string>;
-export type ClinicalColumns = Partial<Record<ClinicalKey, string | null | undefined>>;
 
 export const RECORD_DATA_MAX_LENGTH = 50_000;
 
@@ -45,24 +19,6 @@ export function parseRecordData(stored: string | null): RecordData {
     throw new RecordDataCorruptError();
   }
   return parsed as RecordData;
-}
-
-export function dataFromColumns(row: ClinicalColumns): RecordData {
-  const data: RecordData = {};
-  for (const key of CLINICAL_KEYS) {
-    const value = row[ key ];
-    if (typeof value === 'string' && value !== '') data[ key ] = value;
-  }
-  return data;
-}
-
-export function columnChanges(dto: ClinicalColumns): Record<string, string> {
-  const changes: Record<string, string> = {};
-  for (const key of CLINICAL_KEYS) {
-    const value = dto[ key ];
-    if (value !== undefined) changes[ key ] = value ?? '';
-  }
-  return changes;
 }
 
 export function applyDataChanges(current: RecordData, changes: Record<string, string>): RecordData {

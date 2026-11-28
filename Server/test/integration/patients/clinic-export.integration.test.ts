@@ -45,12 +45,11 @@ describe('buildClinicExport', () => {
     expect(record.snapshots.map((s: any) => [ s.patientTypeName, s.data ])).toEqual([ [ 'Individual', { objective: 'Archivado' } ] ]);
   });
 
-  it('leaves out the frozen clinical columns and gives each patient its type with the template', async () => {
+  it('gives each patient its type with the template', async () => {
     const { user } = await seedClinic();
 
     const [ patient ] = (await buildClinicExport(user.id)).patients as any[];
 
-    for (const key of [ 'objective', 'consultationReason', 'isFamily' ]) expect(patient.medicalRecord).not.toHaveProperty(key);
     expect(patient.patientType).toMatchObject({ name: expect.any(String), template: { sections: expect.any(Array) } });
   });
 

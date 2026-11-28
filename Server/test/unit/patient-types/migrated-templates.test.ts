@@ -9,7 +9,14 @@ import {
   LEGACY_REMOVED_AT,
 } from '../../../src/patient-types/migrated-templates.js';
 import { recordTemplateSchema } from '../../../src/patient-types/record-template.js';
-import { CLINICAL_KEYS } from '../../../src/medical-records/record-data.js';
+
+// The clinical columns release C dropped: the migrated templates are keyed by their names.
+const CLINICAL_KEYS = [
+  'consultationReason', 'earlyDevelopment', 'schoolAndWork', 'lifestyleHabits', 'traumaticEvents',
+  'emotionalConsiderations', 'physicalConsiderations', 'mentalHistory', 'objective', 'familyObservations',
+  'familyType', 'lifecycle', 'genogram', 'resources', 'difficulties', 'communication', 'rule', 'limits',
+  'familyContext', 'expectations', 'flexibility',
+];
 
 const sql = readFileSync(join(__dirname, '../../../migrations/20261127000000_record_templates/migration.sql'), 'utf8');
 const literalIn = (source: string, tag: string) => JSON.parse(new RegExp(`\\$${tag}\\$(.*?)\\$${tag}\\$`, 's').exec(source)![ 1 ]!);
@@ -28,7 +35,7 @@ describe('migrated templates', () => {
     for (const template of [ INDIVIDUAL_TEMPLATE, FAMILY_TEMPLATE ]) {
       expect(recordTemplateSchema.parse(template)).toEqual(template);
       for (const field of template.sections.flatMap((s) => s.fields)) {
-        expect(CLINICAL_KEYS as readonly string[]).toContain(field.key);
+        expect(CLINICAL_KEYS).toContain(field.key);
         expect(field).toMatchObject({ kind: 'longText', required: false, removedAt: null });
       }
     }

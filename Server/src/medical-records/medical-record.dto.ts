@@ -1,6 +1,6 @@
 import type { Prisma } from '../../generated/prisma/client.ts';
 import { parseStoredTemplate, type RecordTemplate } from '../patient-types/record-template.js';
-import { CLINICAL_KEYS, parseRecordData, type ClinicalKey, type RecordData } from './record-data.js';
+import { parseRecordData, type RecordData } from './record-data.js';
 
 export const recordTypeSelect = {
   id: true,
@@ -38,7 +38,7 @@ export interface RecordSnapshotDto {
   data: RecordData;
 }
 
-type HiddenKey = ClinicalKey | 'isFamily' | 'nameTokens' | 'piiVersion' | 'patient' | 'data' | 'snapshots';
+type HiddenKey = 'nameTokens' | 'piiVersion' | 'patient' | 'data' | 'snapshots';
 
 export type MedicalRecordDto = Omit<RecordRow, HiddenKey> & {
   data: RecordData;
@@ -46,8 +46,7 @@ export type MedicalRecordDto = Omit<RecordRow, HiddenKey> & {
   snapshots: RecordSnapshotDto[];
 };
 
-// Release C drops the columns; until then they are stored but never served.
-const HIDDEN = new Set<string>([ ...CLINICAL_KEYS, 'isFamily', 'nameTokens', 'piiVersion', 'patient', 'data', 'snapshots' ]);
+const HIDDEN = new Set<string>([ 'nameTokens', 'piiVersion', 'patient', 'data', 'snapshots' ]);
 
 export function toRecordDto(row: RecordRow): MedicalRecordDto {
   const visible = Object.fromEntries(Object.entries(row).filter(([ key ]) => !HIDDEN.has(key))) as Omit<RecordRow, HiddenKey>;

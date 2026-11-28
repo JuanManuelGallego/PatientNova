@@ -69,16 +69,15 @@ describe('release B: records through the payload', () => {
     orderBy: { eventTimeUtc: 'asc' },
   });
 
-  it('POST stores data, returns data, the type and no clinical columns', async () => {
+  it('POST stores data, returns data and the type', async () => {
     const res = await create({ data: { consultationReason: 'x', objective: '' } });
     const body = (res.body as any).data;
     expect(body.data).toEqual({ consultationReason: 'x' });
     expect(body.patientType).toMatchObject({ name: 'Individual', familyMembersEnabled: true, subsystemRelationsEnabled: false });
     expect(body.patientType.template).toEqual(INDIVIDUAL_TEMPLATE_WITH_LEGACY);
     expect(body.snapshots).toEqual([]);
-    for (const key of [ 'consultationReason', 'isFamily', 'nameTokens', 'piiVersion', 'patient' ]) expect(body).not.toHaveProperty(key);
+    for (const key of [ 'nameTokens', 'piiVersion', 'patient' ]) expect(body).not.toHaveProperty(key);
     expect(await payloadOf(body.id)).toEqual({ consultationReason: 'x' });
-    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: body.id } })).consultationReason).toBeNull();
   });
 
   it('refuses a removed or unknown key on create and update', async () => {
