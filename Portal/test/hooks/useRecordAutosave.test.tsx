@@ -5,6 +5,7 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import type { RecordPatch } from "@/src/types/MedicalRecord";
 
 const DELAY = 100;
+const TEMPLATE_MISMATCH = "Los datos de la historia clínica no coinciden con la plantilla";
 
 async function advance(ms: number) {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
@@ -40,7 +41,7 @@ describe("useRecordAutosave", () => {
 
   it("never resends a change the server refused, and reports it", async () => {
     const onRejected = vi.fn();
-    const save = vi.fn().mockRejectedValueOnce(new ApiClientError("plantilla", 400)).mockResolvedValue(undefined);
+    const save = vi.fn().mockRejectedValueOnce(new ApiClientError("plantilla", 400, TEMPLATE_MISMATCH)).mockResolvedValue(undefined);
     const { result } = setup(save, onRejected);
     act(() => result.current.change({ data: { viejo: "x" } }));
     await advance(DELAY);
@@ -48,6 +49,18 @@ describe("useRecordAutosave", () => {
     act(() => result.current.change({ name: "Ana" }));
     await advance(DELAY);
     expect(save).toHaveBeenLastCalledWith("r1", { name: "Ana" });
+  });
+
+  it("keeps any other refused change for the next save, without reloading", async () => {
+    const onRejected = vi.fn();
+    const save = vi.fn().mockRejectedValueOnce(new ApiClientError("datos", 400, "Validation failed")).mockResolvedValue(undefined);
+    const { result } = setup(save, onRejected);
+    act(() => result.current.change({ familyMembers: [] }));
+    await advance(DELAY);
+    act(() => result.current.change({ name: "Ana" }));
+    await advance(DELAY);
+    expect(onRejected).not.toHaveBeenCalled();
+    expect(save).toHaveBeenLastCalledWith("r1", { familyMembers: [], name: "Ana" });
   });
 
   it("starts empty for another record", async () => {

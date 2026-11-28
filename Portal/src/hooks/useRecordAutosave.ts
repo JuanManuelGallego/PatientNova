@@ -4,13 +4,15 @@ import { ApiClientError } from "@/src/api/base/apiClients";
 import { mergePatch, subtractPatch } from "@/src/utils/recordPatch";
 import type { RecordPatch } from "@/src/types/MedicalRecord";
 
+const TEMPLATE_MISMATCH = "Los datos de la historia clínica no coinciden con la plantilla";
+
 type Options = {
   save: (id: string, patch: RecordPatch) => Promise<unknown>;
   onRejected: () => void;
   delay: number;
 };
 
-/** A failed save is resent with the next change, except a refused one (400), which would fail forever. */
+/** A failed save is resent with the next change, except one refused for a template change, which would fail forever. */
 export function useRecordAutosave(recordId: string | undefined, { save, onRejected, delay }: Options) {
   const pendingRef = useRef<{ id: string; patch: RecordPatch }>({ id: "", patch: {} });
   const saveRef = useRef(save);
@@ -28,7 +30,7 @@ export function useRecordAutosave(recordId: string | undefined, { save, onReject
       try {
         await saveRef.current(id, patch);
       } catch (err) {
-        if (err instanceof ApiClientError && err.status === 400) {
+        if (err instanceof ApiClientError && err.status === 400 && err.details === TEMPLATE_MISMATCH) {
           forget();
           rejectedRef.current();
         }

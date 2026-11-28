@@ -125,8 +125,8 @@ describe('release B: records through the payload', () => {
   it('the create audit holds the sent keys, never the whole payload object', async () => {
     const id = idOf(await create({ name: 'Ana', data: { consultationReason: 'a' } }));
     const [ row ] = await prisma.auditLog.findMany({ where: { entityType: EntityType.MEDICAL_RECORD, entityId: id, actionType: 'CREATE' } });
-    expect([ ...row!.affectedFields ].sort()).toEqual([ 'data.consultationReason', 'name' ]);
-    expect(row!.fieldsAfter).toEqual({ name: 'Ana', 'data.consultationReason': 'a' });
+    expect([ ...row!.affectedFields ].sort()).toEqual([ 'data.consultationReason', 'name', 'patientId' ]);
+    expect(row!.fieldsAfter).toEqual({ patientId, name: 'Ana', 'data.consultationReason': 'a' });
   });
 
   it('GET returns data, the type and the snapshots with parsed data, newest first', async () => {

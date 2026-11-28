@@ -20,7 +20,7 @@ export const medicalRecordService = {
   async create(dto: CreateMedicalRecordDto, userId: string): Promise<MedicalRecordDto> {
     return prisma.$transaction(async (tx) => {
       const created = await medicalRecordRepository.create(dto, userId, tx);
-      const sent = MEDICAL_RECORD_DIFF_FIELDS.filter((k) => (dto as Record<string, unknown>)[ k ] !== undefined);
+      const sent = [ 'patientId', ...MEDICAL_RECORD_DIFF_FIELDS ].filter((k) => (dto as Record<string, unknown>)[ k ] !== undefined);
       const data = dataDiff({}, created.data);
       await logAudit({
         entityType: EntityType.MEDICAL_RECORD,
