@@ -55,45 +55,22 @@ Design and guarantees: `docs/compliance-patient-data.md` section 3.
    Until it finishes, rows it has not reached are not found by search or by email.
 4. Verify: `SELECT count(*) FROM patients WHERE "piiVersion" IS NULL;` must return 0.
 
-### Record payload copy (release A of #145; command removed in release B)
-Migration `20261127000000_record_templates` adds `medical_records.data`, the encrypted template payload,
-and fills the templates of the migrated "Individual" and "Familia" types. From that deploy on, every record
-write keeps the payload in step with the clinical columns, which the app still reads. Records nobody edits
-need the copy. The migration only adds a nullable column, so rolling back the code is safe.
+### Record payload (#145 and #146)
+Release A (`20261127000000_record_templates`) added `medical_records.data`, the encrypted template payload, and
+the one-off `records:copy-data` command that copied every clinical column into it; its verify mode reported zero
+mismatches in production before release B. Both the command and its module are gone.
 
-1. Deploy, then, from `Server/` in Git Bash, paste the production `DATABASE_URL`, `ENCRYPTION_KEY`,
-   `ENCRYPTION_KEY_PREVIOUS` (just Enter when Railway has none) and `BLIND_INDEX_KEY`, each when `read`
-   waits (`config.ts` falls back to `Server/.env` for anything unset):
+Release B (`20261128000000_record_snapshots`) switched the app to the payload and added
+`medical_record_snapshots` (the encrypted payload and template of a record archived when its patient changes type;
+erased with the record, covered by `pii:reencrypt`). It also added the clinical keys each migrated template doesn't
+show as removed fields, so values the copy put there show under "Campos anteriores".
 
-   ```bash
-   read -rs DATABASE_URL; read -rs ENCRYPTION_KEY; read -rs ENCRYPTION_KEY_PREVIOUS; read -rs BLIND_INDEX_KEY
-   export DATABASE_URL ENCRYPTION_KEY ENCRYPTION_KEY_PREVIOUS BLIND_INDEX_KEY NODE_ENV=production
-   pnpm run records:copy-data --dry-run; echo "exit $?"
-   ```
-
-   It writes nothing and prints `scanned N, would write N, unchanged N, skipped 0, failed N`.
-2. Copy: `pnpm run records:copy-data; echo "exit $?"`. It pages through every record, soft-deleted
-   ones included, and writes only payloads that differ from the columns, without touching `updatedAt`.
-   A row the app changed while the copy ran is `skipped` (exit 1): run the copy again. It is safe to rerun
-   at any time; a second run writes 0.
-3. Verify: `pnpm run records:copy-data --verify; echo "exit $?"`. It compares every clinical column with
-   its payload key (an empty column equals an absent key) and prints
-   `scanned N, missing N, mismatched N, failed N`, then one line per problem: `missing <id>`,
-   `mismatched <id>: <key names>` or `failed <id>` (a value no configured key opens). It never prints
-   values. Rerun the copy until verify exits 0 with `missing 0, mismatched 0, failed 0`.
-
-#146 switches the app to the payload. Do not deploy it before verify reports zero in production.
-
-### Records read from the payload (release B of #146)
-Migration `20261128000000_record_snapshots` adds `medical_record_snapshots` (the encrypted payload and template of
-a record archived when its patient changes type; erased with the record, covered by `pii:reencrypt`) and adds the
-clinical keys each migrated template doesn't show as removed fields, so values the copy put there show under
-"Campos anteriores". Only types still on the release A template change.
-
-From this deploy on the app reads and writes only `data`: the clinical columns stay at their release A values and are
-no longer written or served (the clinic export leaves them out too). Release B removes the `records:copy-data`
-command: run after B, the copy would put the frozen column values back over newer payloads. Release C drops the
-columns and `isFamily`: take a backup right before deploying it.
+Release C (`20261129000000_drop_record_columns`) drops the clinical and family columns and `isFamily`. Deploy it
+only after release B has run in production, and take a `pg_dump` (below) right before: the drop cannot be rolled
+back without it. The migration raises before dropping anything while a record still has a column value and no payload
+(the release A copy never reached it). Then the columns are intact: redeploy release B, mark the migration with
+`pnpm exec prisma migrate resolve --rolled-back 20261129000000_drop_record_columns`, and copy those rows before
+trying C again.
 
 ### Forced re-login
 Token audience/issuer enforcement (`src/auth/tokens.ts`) invalidates every existing provider

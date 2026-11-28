@@ -564,32 +564,6 @@ model MedicalRecord {
   nameTokens String[] @default([])
   piiVersion Int?     @db.SmallInt
 
-  // Clinical history
-  consultationReason      String? @db.Text
-  earlyDevelopment        String? @db.Text
-  schoolAndWork           String? @db.Text
-  lifestyleHabits         String? @db.Text
-  traumaticEvents         String? @db.Text
-  emotionalConsiderations String? @db.Text
-  physicalConsiderations  String? @db.Text
-  mentalHistory           String? @db.Text
-  objective               String? @db.Text
-  familyObservations      String? @db.Text
-
-  // Family fields
-  isFamily      Boolean @default(false)
-  familyType    String? @db.Text
-  lifecycle     String? @db.Text
-  genogram      String? @db.Text
-  resources     String? @db.Text
-  difficulties  String? @db.Text
-  communication String? @db.Text
-  rule          String? @db.Text
-  limits        String? @db.Text
-  familyContext String? @db.Text
-  expectations  String? @db.Text
-  flexibility   String? @db.Text
-
   // Encrypted template payload: JSON object keyed by template field key
   data String? @db.Text
 
