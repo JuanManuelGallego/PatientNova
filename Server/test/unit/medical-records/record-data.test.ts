@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyDataChanges,
   checkDataChanges,
-  CLINICAL_KEYS,
-  columnChanges,
   dataDiff,
-  dataFromColumns,
   parseRecordData,
   RECORD_DATA_MAX_LENGTH,
 } from '../../../src/medical-records/record-data.js';
@@ -23,12 +20,6 @@ const template: RecordTemplate = {
 };
 
 describe('record payload helpers', () => {
-  it('lists the 21 clinical columns in schema order', () => {
-    expect(CLINICAL_KEYS).toHaveLength(21);
-    expect(CLINICAL_KEYS[ 0 ]).toBe('consultationReason');
-    expect(CLINICAL_KEYS[ 20 ]).toBe('flexibility');
-  });
-
   it('parses a stored payload, null being empty', () => {
     expect(parseRecordData(null)).toEqual({});
     expect(parseRecordData('{"a":"1"}')).toEqual({ a: '1' });
@@ -46,15 +37,6 @@ describe('record payload helpers', () => {
       expect((error as Error).message).not.toContain('María');
       expect((error as Error).message).not.toContain('Duelo');
     }
-  });
-
-  it('builds the payload from the columns, skipping null and empty ones', () => {
-    expect(dataFromColumns({ consultationReason: 'a', objective: '', genogram: null })).toEqual({ consultationReason: 'a' });
-  });
-
-  it('turns the columns a write sends into changes, null clearing', () => {
-    expect(columnChanges({ objective: null, rule: 'x', genogram: undefined })).toEqual({ objective: '', rule: 'x' });
-    expect(columnChanges({ name: 'N' } as never)).toEqual({});
   });
 
   it('merges changes, an empty string clearing a key and other keys kept', () => {
