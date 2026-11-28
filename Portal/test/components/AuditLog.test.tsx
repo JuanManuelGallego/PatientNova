@@ -99,6 +99,20 @@ describe("AuditDrawer", () => {
     expect(screen.getByText("2026-10-19")).toBeInTheDocument();
   });
 
+  it("labels a type change and the record's payload keys in Spanish", () => {
+    renderDrawer(makeLog({
+      entityType: EntityType.PATIENT,
+      affectedFields: [ "patientTypeId", "data.earlyDevelopment", "data.motivoNuevo", "data.fecha" ],
+      fieldsBefore: { patientTypeId: "t1", "data.earlyDevelopment": "a", "data.motivoNuevo": null },
+      fieldsAfter: { patientTypeId: "t2", snapshotId: "s1", "data.earlyDevelopment": "b", "data.motivoNuevo": "c", "data.fecha": "2024-01-01" },
+    }));
+    expect(screen.getByText("Tipo de paciente")).toBeInTheDocument();
+    expect(screen.getByText("Historia clínica · Desarrollo temprano")).toBeInTheDocument();
+    expect(screen.getByText("Historia clínica · Motivo Nuevo")).toBeInTheDocument();
+    expect(screen.getByText("c")).toBeInTheDocument();
+    expect(screen.getByText("2024-01-01")).toBeInTheDocument();
+  });
+
   it("shows calendar days without shifting them through the timezone", () => {
     renderDrawer(makeLog({
       entityType: EntityType.PATIENT,

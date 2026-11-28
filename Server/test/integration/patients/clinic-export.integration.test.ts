@@ -16,7 +16,10 @@ async function seedClinic() {
       status: AppointmentStatus.SCHEDULED, startAt: range.start, endAt: range.end,
     } as never,
   });
-  const record = await prisma.medicalRecord.create({ data: { patientId: patient.id, name: 'Anabel Quintero' } as never });
+  const record = await prisma.medicalRecord.create({ data: { patientId: patient.id, name: 'Anabel Quintero', data: '{"objective":"Actual"}' } as never });
+  await prisma.medicalRecordSnapshot.create({
+    data: { medicalRecordId: record.id, patientTypeId: patient.patientTypeId, patientTypeName: 'Individual', template: { sections: [] }, data: '{"objective":"Archivado"}' },
+  });
   await prisma.evolutionNote.create({ data: { medicalRecordId: record.id, text: 'Nota clínica', date: new Date() } as never });
   return { user, patient };
 }
@@ -31,6 +34,24 @@ describe('buildClinicExport', () => {
     expect(result.patients[ 0 ]).toMatchObject({ id: patient.id, name: 'Anabel', lastName: 'Quintero' });
     expect(result.patients[ 0 ]!.appointments).toHaveLength(1);
     expect(result.patients[ 0 ]!.medicalRecord?.evolutionNotes[ 0 ]?.text).toBe('Nota clínica');
+  });
+
+  it('exports the record payload and its snapshots as objects', async () => {
+    const { user } = await seedClinic();
+
+    const record = (await buildClinicExport(user.id)).patients[ 0 ]!.medicalRecord as any;
+
+    expect(record.data).toEqual({ objective: 'Actual' });
+    expect(record.snapshots.map((s: any) => [ s.patientTypeName, s.data ])).toEqual([ [ 'Individual', { objective: 'Archivado' } ] ]);
+  });
+
+  it('leaves out the frozen clinical columns and gives each patient its type with the template', async () => {
+    const { user } = await seedClinic();
+
+    const [ patient ] = (await buildClinicExport(user.id)).patients as any[];
+
+    for (const key of [ 'objective', 'consultationReason', 'isFamily' ]) expect(patient.medicalRecord).not.toHaveProperty(key);
+    expect(patient.patientType).toMatchObject({ name: expect.any(String), template: { sections: expect.any(Array) } });
   });
 
   it('leaves out search indexes, which are useless outside the platform', async () => {

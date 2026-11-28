@@ -24,6 +24,7 @@ import { useSendWelcome } from "@/src/api/patients/useSendWelcome";
 import { useAuthContext } from "@/src/providers/AuthContext";
 import { ACTION_ICONS, STATUS_ICONS } from "@/src/config/icons";
 import { useFetchAppointmentTypes } from "@/src/api/appointment-types/useFetchAppointmentTypes";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function PatientModal({
   onClose,
@@ -51,6 +52,9 @@ export function PatientModal({
   const [ chosenTypeId, setChosenTypeId ] = useState(patient?.patientTypeId ?? "");
   const patientTypeId = chosenTypeId || defaultType?.id || "";
   const selectedType = patientTypes.find((t) => t.id === patientTypeId);
+  // Changing an existing patient's type archives their record, so it waits for a confirmation.
+  const typeChanged = isEdit && !!patientTypeId && patientTypeId !== patient!.patientTypeId;
+  const [ confirmingTypeChange, setConfirmingTypeChange ] = useState(false);
 
   useEffect(() => {
     refreshUser();
@@ -108,13 +112,22 @@ export function PatientModal({
     return true;
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!validateForm()) return;
+    if (typeChanged) {
+      setConfirmingTypeChange(true);
+      return;
+    }
+    void save();
+  }
+
+  async function save() {
+    setConfirmingTypeChange(false);
     setSaving(true);
     setError(null);
     try {
       if (isEdit) {
-        await updatePatient(patient!.id, form);
+        await updatePatient(patient!.id, typeChanged ? { ...form, patientTypeId } : form);
       } else {
         const created = await createPatient({ ...form, patientTypeId });
         if (sendWelcomeMessage && created && canSendWelcome) {
@@ -138,6 +151,7 @@ export function PatientModal({
   }
 
   return (
+    <>
     <div
       className="modal-overlay"
       onClick={onClose}
@@ -198,17 +212,13 @@ export function PatientModal({
             </label>
           </div>
           <label className="form-label">
-            {isEdit ? "Tipo de paciente" : <RequiredField label="Tipo de paciente" />}
-            {isEdit ? (
-              <input className="form-input" value={patient?.patientType?.name ?? selectedType?.name ?? ""} disabled data-testid="patient-type-readonly" />
-            ) : (
-              <CustomSelect
-                value={patientTypeId}
-                options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
-                onChange={(v) => setChosenTypeId(v)}
-                data-testid="patient-type-select"
-              />
-            )}
+            <RequiredField label="Tipo de paciente" />
+            <CustomSelect
+              value={patientTypeId}
+              options={patientTypes.map((t) => ({ value: t.id, label: t.name }))}
+              onChange={(v) => setChosenTypeId(v)}
+              data-testid="patient-type-select"
+            />
           </label>
           <label className="form-label">
             Correo electrónico
@@ -390,5 +400,20 @@ export function PatientModal({
         )}
       </div>
     </div>
+    {confirmingTypeChange && (
+      <ConfirmDialog
+        icon={STATUS_ICONS.warning}
+        title="Cambiar tipo de paciente"
+        confirmLabel="Cambiar tipo"
+        nested
+        testId="patient-type-change-dialog"
+        onClose={() => setConfirmingTypeChange(false)}
+        onConfirm={() => void save()}
+      >
+        La historia clínica actual se archivará como solo lectura y la historia empezará vacía con la plantilla
+        de «{selectedType?.name}». Los datos personales, las notas de evolución y los documentos se conservan.
+      </ConfirmDialog>
+    )}
+    </>
   );
 }

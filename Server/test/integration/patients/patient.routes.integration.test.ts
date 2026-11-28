@@ -69,14 +69,6 @@ describe('patient routes (integration)', () => {
     expect(await prisma.patient.count({ where: { userId } })).toBe(0);
   });
 
-  it('PATCH /:id does not change the patient type (that needs the record archive of #146)', async () => {
-    const family = await patientTypeService.create(userId, { name: 'Familia' });
-    const patient = await createTestPatient(userId);
-    const res = await invokeRoute(patientRouter, 'patch', `/${patient.id}`, baseReq({ params: { id: patient.id }, body: { name: 'Otra', patientTypeId: family.id } }));
-    expect(res.statusCode).toBe(200);
-    expect((await prisma.patient.findUniqueOrThrow({ where: { id: patient.id } })).patientTypeId).toBe(defaultTypeId);
-  });
-
   it('GET /:id returns the patient with relations', async () => {
     const created = await invokeRoute(patientRouter, 'post', '/', baseReq({ body: createBody() }));
     const id = (created.body as any).data.id;

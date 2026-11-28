@@ -4,6 +4,8 @@ import { medicalRecordRouter } from '../../../src/medical-records/medical-record
 import { createTestUser, createTestPatient, invokeRoute } from '../helpers.js';
 import { patientRouter } from '../../../src/patients/patient.routes.js';
 import { parseRecordData } from '../../../src/medical-records/record-data.js';
+import { INDIVIDUAL_TEMPLATE_WITH_LEGACY } from '../../../src/patient-types/migrated-templates.js';
+import { EntityType } from '../../../generated/prisma/enums.ts';
 
 let userId: string;
 let patientId: string;
@@ -13,6 +15,10 @@ beforeEach(async () => {
   userId = user.id;
   const patient = await createTestPatient(userId);
   patientId = patient.id;
+  await prisma.patientType.update({
+    where: { id: patient.patientTypeId },
+    data: { name: 'Individual', template: INDIVIDUAL_TEMPLATE_WITH_LEGACY as never, familyMembersEnabled: true },
+  });
 });
 
 function baseReq(extra: Record<string, unknown> = {}) {
@@ -48,85 +54,105 @@ describe('medical-record routes (integration)', () => {
   });
 });
 
-describe('release A: the payload follows the clinical columns', () => {
+describe('release B: records through the payload', () => {
   const payloadOf = async (id: string) => parseRecordData((await prisma.medicalRecord.findUniqueOrThrow({ where: { id } })).data);
   const create = async (body: Record<string, unknown> = {}) => {
     const res = await invokeRoute(medicalRecordRouter, 'post', '/', baseReq({ body: { patientId, ...body } }));
     expect(res.statusCode).toBe(201);
-    return (res.body as any).data.id as string;
-  };
-  const patch = async (id: string, body: Record<string, unknown>) => {
-    const res = await invokeRoute(medicalRecordRouter, 'patch', `/${id}`, baseReq({ params: { id }, body }));
-    expect(res.statusCode).toBe(200);
     return res;
   };
-
-  it('POST writes the payload from the clinical columns, skipping empty ones', async () => {
-    const id = await create({ consultationReason: 'a', objective: '', genogram: 'g', name: 'Ana' });
-    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', genogram: 'g' });
+  const patch = (id: string, body: Record<string, unknown>) =>
+    invokeRoute(medicalRecordRouter, 'patch', `/${id}`, baseReq({ params: { id }, body }));
+  const idOf = (res: { body: unknown }) => (res.body as any).data.id as string;
+  const updateAudits = (id: string) => prisma.auditLog.findMany({
+    where: { entityType: EntityType.MEDICAL_RECORD, entityId: id, actionType: 'UPDATE' },
+    orderBy: { eventTimeUtc: 'asc' },
   });
 
-  it('PATCH keeps the payload equal to the columns, clearing a key when a column is emptied', async () => {
-    const id = await create({ consultationReason: 'a', genogram: 'g' });
-    await patch(id, { objective: 'b' });
-    await patch(id, { consultationReason: '' });
-    expect(await payloadOf(id)).toEqual({ genogram: 'g', objective: 'b' });
+  it('POST stores data, returns data, the type and no clinical columns', async () => {
+    const res = await create({ data: { consultationReason: 'x', objective: '' } });
+    const body = (res.body as any).data;
+    expect(body.data).toEqual({ consultationReason: 'x' });
+    expect(body.patientType).toMatchObject({ name: 'Individual', familyMembersEnabled: true, subsystemRelationsEnabled: false });
+    expect(body.patientType.template).toEqual(INDIVIDUAL_TEMPLATE_WITH_LEGACY);
+    expect(body.snapshots).toEqual([]);
+    for (const key of [ 'consultationReason', 'isFamily', 'nameTokens', 'piiVersion', 'patient' ]) expect(body).not.toHaveProperty(key);
+    expect(await payloadOf(body.id)).toEqual({ consultationReason: 'x' });
+    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: body.id } })).consultationReason).toBeNull();
   });
 
-  it('PATCH of a record never copied fills the payload from every column', async () => {
-    const { id } = await prisma.medicalRecord.create({
-      data: { patientId, consultationReason: 'a', genogram: 'g', objective: 'o' },
-    });
-    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id } })).data).toBeNull();
-    await patch(id, { rule: 'r' });
-    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', genogram: 'g', objective: 'o', rule: 'r' });
-  });
+  it('refuses a removed or unknown key on create and update', async () => {
+    const bad = await invokeRoute(medicalRecordRouter, 'post', '/', baseReq({ body: { patientId, data: { genogram: 'x' } } }));
+    expect(bad.statusCode).toBe(400);
+    expect(await prisma.medicalRecord.count({ where: { patientId } })).toBe(0);
 
-  it('PATCH repairs a payload that fell behind the columns, keeping keys that are not columns', async () => {
-    const id = await create({ consultationReason: 'a', genogram: 'g' });
-    await prisma.medicalRecord.update({ where: { id }, data: { data: JSON.stringify({ consultationReason: 'old', legacy: 'z' }) } });
-    await patch(id, { objective: 'b' });
-    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', genogram: 'g', legacy: 'z', objective: 'b' });
-
-    await prisma.medicalRecord.update({ where: { id }, data: { data: JSON.stringify({ consultationReason: 'old' }) } });
-    await patch(id, { name: 'Solo identidad' });
-    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', genogram: 'g', objective: 'b' });
-  });
-
-  it('PATCH touching only identity columns leaves the payload as is', async () => {
-    const id = await create({ consultationReason: 'a' });
-    const before = (await prisma.medicalRecord.findUniqueOrThrow({ where: { id } })).data;
-    await patch(id, { name: 'Nuevo nombre' });
-    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id } })).data).toBe(before);
-  });
-
-  it('concurrent PATCHes of different columns both reach the payload', async () => {
-    const id = await create({ consultationReason: 'a' });
-    const columns = [ 'rule', 'limits', 'genogram', 'resources', 'objective', 'lifecycle' ];
-    await Promise.all(columns.map((c) => patch(id, { [ c ]: c })));
-    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', ...Object.fromEntries(columns.map((c) => [ c, c ])) });
-  });
-
-  it('no response carries data', async () => {
-    const created = await invokeRoute(medicalRecordRouter, 'post', '/', baseReq({ body: { patientId, consultationReason: 'a' } }));
-    const id = (created.body as any).data.id as string;
-    const responses = [
-      created,
-      await patch(id, { objective: 'b' }),
-      await invokeRoute(medicalRecordRouter, 'get', `/${id}`, baseReq({ params: { id } })),
-    ];
-    const list = await invokeRoute(medicalRecordRouter, 'get', '/', baseReq({ query: { patientId } }));
-    await invokeRoute(medicalRecordRouter, 'delete', `/${id}`, baseReq({ params: { id } }));
-    const restored = await invokeRoute(medicalRecordRouter, 'post', `/${id}/restore`, baseReq({ params: { id }, user: { id: userId, role: 'SUPER_ADMIN', timezone: 'America/Bogota' } }));
-    const patient = await invokeRoute(patientRouter, 'get', `/${patientId}`, baseReq({ params: { id: patientId } }));
-
-    for (const res of [ ...responses, restored ]) {
-      expect(res.statusCode).toBeLessThan(300);
-      expect((res.body as any).data).not.toHaveProperty('data');
+    const id = idOf(await create({ data: { objective: 'o' } }));
+    for (const data of [ { genogram: 'x' }, { inventada: 'x' } ]) {
+      expect((await patch(id, { data })).statusCode).toBe(400);
     }
-    expect((list.body as any).data.data[ 0 ]).not.toHaveProperty('data');
-    expect(patient.statusCode).toBe(200);
-    expect((patient.body as any).data.medicalRecord).toBeTruthy();
-    expect((patient.body as any).data.medicalRecord).not.toHaveProperty('data');
+    expect(await payloadOf(id)).toEqual({ objective: 'o' });
+  });
+
+  it('PATCH merges only the keys it sends; an empty string clears a key', async () => {
+    const id = idOf(await create({ data: { consultationReason: 'a' } }));
+    expect((await patch(id, { data: { objective: 'b' } })).statusCode).toBe(200);
+    expect((await patch(id, { data: { mentalHistory: 'm' } })).statusCode).toBe(200);
+    const cleared = await patch(id, { data: { objective: '' } });
+    expect(cleared.statusCode).toBe(200);
+    expect((cleared.body as any).data.data).toEqual({ consultationReason: 'a', mentalHistory: 'm' });
+    expect(await payloadOf(id)).toEqual({ consultationReason: 'a', mentalHistory: 'm' });
+  });
+
+  it('concurrent PATCHes of different keys all survive', async () => {
+    const id = idOf(await create());
+    const keys = [ 'consultationReason', 'objective', 'mentalHistory', 'schoolAndWork', 'lifestyleHabits', 'familyObservations' ];
+    const results = await Promise.all(keys.map((k) => patch(id, { data: { [ k ]: k } })));
+    expect(results.map((r) => r.statusCode)).toEqual(keys.map(() => 200));
+    expect(await payloadOf(id)).toEqual(Object.fromEntries(keys.map((k) => [ k, k ])));
+  });
+
+  it('audits only the changed keys of the payload', async () => {
+    const id = idOf(await create({ data: { consultationReason: 'a', objective: 'o' } }));
+    await patch(id, { data: { objective: 'nuevo', consultationReason: 'a' } });
+    await patch(id, { name: 'Solo nombre' });
+    const [ edit, rename ] = await updateAudits(id);
+    expect(edit!.affectedFields).toEqual([ 'data.objective' ]);
+    expect(edit!.fieldsBefore).toEqual({ 'data.objective': 'o' });
+    expect(edit!.fieldsAfter).toEqual({ 'data.objective': 'nuevo' });
+    expect(rename!.affectedFields).toEqual([ 'name' ]);
+  });
+
+  it('the create audit holds the sent keys, never the whole payload object', async () => {
+    const id = idOf(await create({ name: 'Ana', data: { consultationReason: 'a' } }));
+    const [ row ] = await prisma.auditLog.findMany({ where: { entityType: EntityType.MEDICAL_RECORD, entityId: id, actionType: 'CREATE' } });
+    expect([ ...row!.affectedFields ].sort()).toEqual([ 'data.consultationReason', 'name' ]);
+    expect(row!.fieldsAfter).toEqual({ name: 'Ana', 'data.consultationReason': 'a' });
+  });
+
+  it('GET returns data, the type and the snapshots with parsed data, newest first', async () => {
+    const id = idOf(await create({ data: { consultationReason: 'a' } }));
+    const patient = await prisma.patient.findUniqueOrThrow({ where: { id: patientId } });
+    for (const [ n, at ] of [ [ 1, '2026-01-01T00:00:00Z' ], [ 2, '2026-02-01T00:00:00Z' ] ] as const) {
+      await prisma.medicalRecordSnapshot.create({
+        data: {
+          medicalRecordId: id, patientTypeId: patient.patientTypeId, patientTypeName: `Tipo ${n}`,
+          template: { sections: [] }, data: JSON.stringify({ viejo: String(n) }), createdAt: new Date(at),
+        },
+      });
+    }
+    const one = await invokeRoute(medicalRecordRouter, 'get', `/${id}`, baseReq({ params: { id } }));
+    const list = await invokeRoute(medicalRecordRouter, 'get', '/', baseReq({ query: { patientId } }));
+    for (const record of [ (one.body as any).data, (list.body as any).data.data[ 0 ] ]) {
+      expect(record.data).toEqual({ consultationReason: 'a' });
+      expect(record.patientType.name).toBe('Individual');
+      expect(record.snapshots.map((s: any) => [ s.patientTypeName, s.data ])).toEqual([ [ 'Tipo 2', { viejo: '2' } ], [ 'Tipo 1', { viejo: '1' } ] ]);
+    }
+  });
+
+  it('the patient detail exposes only the record id', async () => {
+    await create({ data: { consultationReason: 'a' } });
+    const res = await invokeRoute(patientRouter, 'get', `/${patientId}`, baseReq({ params: { id: patientId } }));
+    expect(res.statusCode).toBe(200);
+    expect(Object.keys((res.body as any).data.medicalRecord)).toEqual([ 'id' ]);
   });
 });

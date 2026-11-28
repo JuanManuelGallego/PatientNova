@@ -113,6 +113,20 @@ describe('patient PII at rest', () => {
     expect(m!.data).toMatch(ENC);
     expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: record.id } })).data).toBe(payload);
   });
+
+  it('stores a record snapshot payload as ciphertext and reads it back through the record', async () => {
+    const p = await newPatient();
+    const payload = '{"objective":"Duelo de María"}';
+    const record = await prisma.medicalRecord.create({ data: { patientId: p.id, data: '{}' } });
+    const snapshot = await prisma.medicalRecordSnapshot.create({
+      data: { medicalRecordId: record.id, patientTypeId: p.patientTypeId, patientTypeName: 'Individual', template: { sections: [] }, data: payload },
+    });
+
+    const [ s ] = await prisma.$queryRaw<{ data: string }[]>`SELECT "data" FROM "medical_record_snapshots" WHERE "id" = ${snapshot.id}::uuid`;
+    expect(s!.data).toMatch(ENC);
+    const read = await prisma.medicalRecord.findUniqueOrThrow({ where: { id: record.id }, include: { snapshots: true } });
+    expect(read.snapshots.map((x) => x.data)).toEqual([ payload ]);
+  });
 });
 
 describe('search over encrypted PII', () => {

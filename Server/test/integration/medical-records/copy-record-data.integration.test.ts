@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '../../../src/utils/prisma/prisma-client.js';
 import { copyRecordData, verifyRecordData } from '../../../src/medical-records/copy-record-data.js';
 import { parseRecordData } from '../../../src/medical-records/record-data.js';
-import { medicalRecordRepository } from '../../../src/medical-records/medical-record.repository.js';
 import { createTestPatient, createTestUser } from '../helpers.js';
 
 const ENC = /^enc:v2:[0-9a-f]{8}:/;
@@ -67,13 +66,13 @@ describe('copyRecordData', () => {
       onBatch: async () => {
         if (changed) return;
         changed = true;
-        await medicalRecordRepository.update(first!, { familyType: 'nuevo' }, userId);
+        await prisma.medicalRecord.update({ where: { id: first! }, data: { familyType: 'nuevo' } });
       },
     });
     expect(result).toMatchObject({ written: 2, skipped: 1 });
-    expect((await payloadOf(first!)).familyType).toBe('nuevo');
 
-    expect(await copyRecordData()).toMatchObject({ written: 0, unchanged: 3 });
+    expect(await copyRecordData()).toMatchObject({ written: 1, unchanged: 2 });
+    expect((await payloadOf(first!)).familyType).toBe('nuevo');
     expect(await verifyRecordData()).toMatchObject({ missing: [], mismatched: [], failed: [] });
   });
 

@@ -320,6 +320,7 @@ const RELATION_TO_MODEL: Record<string, string> = {
   familyMembers: "FamilyMember",
   evolutionNotes: "EvolutionNote",
   medicalRecord: "MedicalRecord",
+  snapshots: "MedicalRecordSnapshot",
   patient: "Patient",
   patients: "Patient",
   appointments: "Appointment",

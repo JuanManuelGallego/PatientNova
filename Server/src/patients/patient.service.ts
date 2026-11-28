@@ -10,13 +10,38 @@ import { schemaKeys } from '../utils/validation/schema-keys.js';
 import { logAudit, computeDiff } from '../audit-log/audit-log.utils.js';
 import { prisma, type TransactionClient } from '../utils/prisma/prisma-client.js';
 import { resolvePatientTypeId } from '../patient-types/patient-type.service.js';
+import { archiveRecordForTypeChange } from '../medical-records/record-snapshot.js';
+import { lockPatientType } from '../medical-records/record-data.js';
 
 type PatientWithRelations = Patient & {
   appointments: { id: string }[];
   reminders: { id: string }[];
 };
 
-const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema), 'whatsappUnverified' ];
+// A type change has its own audit row (`changePatientType`).
+const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema).filter((k) => k !== 'patientTypeId'), 'whatsappUnverified' ];
+
+/** Validates the new type, archives the record payload and audits the change without field values. */
+async function changePatientType(tx: TransactionClient, patient: Patient, requestedTypeId: string, userId: string): Promise<void> {
+  const nextTypeId = await resolvePatientTypeId(tx, userId, requestedTypeId);
+  const [ oldType, nextType ] = await Promise.all([
+    tx.patientType.findUniqueOrThrow({ where: { id: patient.patientTypeId }, select: { id: true, name: true, template: true } }),
+    tx.patientType.findUniqueOrThrow({ where: { id: nextTypeId }, select: { name: true } }),
+  ]);
+  const snapshotId = await archiveRecordForTypeChange(tx, patient.id, oldType);
+  await logAudit({
+    entityType: EntityType.PATIENT,
+    entityId: patient.id,
+    userId,
+    actionType: ActionType.UPDATE,
+    description: `Tipo de paciente de ${patient.name} ${patient.lastName} cambiado: ${oldType.name} → ${nextType.name}`,
+    affectedFields: [ 'patientTypeId' ],
+    fieldsBefore: { patientTypeId: patient.patientTypeId },
+    fieldsAfter: { patientTypeId: nextTypeId, snapshotId },
+    tx,
+    required: true,
+  });
+}
 
 function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
   if (!existing.whatsappUnverified) return false;
@@ -58,7 +83,12 @@ export async function updatePatientWithin(
   userId: string,
   opts: { description?: string; endorseWhatsapp?: boolean } = {},
 ): Promise<Patient> {
+  // A type change reads the current type under the lock, so a simultaneous change sees this one committed.
+  if (dto.patientTypeId !== undefined) await lockPatientType(tx, id);
   const existingPatient = await patientRepository.findById(id, userId, tx);
+  if (dto.patientTypeId !== undefined && dto.patientTypeId !== existingPatient.patientTypeId) {
+    await changePatientType(tx, existingPatient, dto.patientTypeId, userId);
+  }
   const updatedPatient = await patientRepository.update(
     id,
     dto,

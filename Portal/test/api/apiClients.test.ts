@@ -111,6 +111,7 @@ describe("toSpanishMessage", () => {
     const welcome = "El paciente no tiene un contacto al que enviar el mensaje de bienvenida";
     expect(toSpanishMessage(409, welcome)).toBe(welcome);
     expect(toSpanishMessage(404, "Patient type not found")).toMatch(/tipo de paciente ya no existe/);
+    expect(toSpanishMessage(400, "Los datos de la historia clínica no coinciden con la plantilla")).toMatch(/formulario de esta historia clínica cambió/);
     expect(toSpanishMessage(409, "Este tipo de paciente es raro")).toMatch(/conflicto/);
   });
 

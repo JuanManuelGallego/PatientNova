@@ -62,7 +62,6 @@ export async function createTestMedicalRecord(
   const defaults = {
     patientId,
     name: patientFullName,
-    isFamily: false,
   };
   return api.createMedicalRecord({ ...defaults, ...overrides });
 }

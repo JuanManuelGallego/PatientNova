@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Text, View, pdf } from "@react-pdf/renderer";
-import { FormValues, RELATIONSHIP_CFG, SEX_CFG, SUBSYSTEM_CFG, RelationshipStatus, SubsystemType } from "@/src/types/MedicalRecord";
+import { FormValues, RELATIONSHIP_CFG, SEX_CFG, SUBSYSTEM_CFG, RelationshipStatus, SubsystemType, type RecordPatientType } from "@/src/types/MedicalRecord";
+import { recordLayout, type RecordCard } from "@/src/utils/recordLayout";
 import { fmtCalendarDay, getAge, todayString } from "@/src/utils/TimeUtils";
 import { S } from "@/src/styles/medicalRecordsPDFStyle";
 import { User } from "@/src/types/User";
@@ -92,24 +93,13 @@ function FamilyMembers(form: FormValues) {
   )
 }
 
-function Antecedents(form: FormValues) {
-  return (
-    [
-      [ "Desarrollo temprano", form.earlyDevelopment ],
-      [ "Escolar y laboral", form.schoolAndWork ],
-      [ "Hábitos y estilo de vida", form.lifestyleHabits ],
-      [ "Eventos traumáticos o estresores previos", form.traumaticEvents ],
-      [ "Consideraciones emocionales", form.emotionalConsiderations ],
-      [ "Consideraciones físicas, etiología y de salud", form.physicalConsiderations ],
-      [ "Antecedentes mentales", form.mentalHistory ],
-      [ "Objetivo clínico", form.objective ],
-    ] as [ string, string | undefined ][]
-  ).map(([ label, value ], i, arr) => (
-    <View key={label}>
-      <Field isText label={label} value={value} last={i === arr.length - 1} />
+function TemplateValues(card: RecordCard, form: FormValues) {
+  return card.fields.map((field, i, arr) => (
+    <View key={field.key}>
+      <Field isText label={field.label} value={form.data[ field.key ]} last={i === arr.length - 1} />
       <View style={S.divider} />
     </View>
-  ))
+  ));
 }
 
 function EvolutionNotes(form: FormValues) {
@@ -300,93 +290,69 @@ function SubsystemRelationsTable(form: FormValues) {
   );
 }
 
-function FamilySpecificContent(form: FormValues) {
+function Identity(form: FormValues) {
   return (
-    [
-      [ "Tipo de familia", form.familyType ],
-      [ "Ciclo vital", form.lifecycle ],
-      [ "Genograma", form.genogram ],
-      [ "Recursos que tiene", form.resources ],
-      [ "Dificultades que tiene", form.difficulties ],
-      [ "Comunicación", form.communication ],
-      [ "Reglas", form.rule ],
-      [ "Límites", form.limits ],
-      [ "Contexto familiar", form.familyContext ],
-      [ "Expectativas", form.expectations ],
-      [ "Flexibilidad al cambio", form.flexibility ],
-    ] as [ string, string | undefined ][]
-  ).map(([ label, value ], i, arr) => (
-    <View key={label}>
-      <Field isText label={label} value={value} last={i === arr.length - 1} />
+    <>
+      <View style={S.row2}>
+        <View style={S.col}>
+          <Field label="Nombre completo" value={form.name} />
+        </View>
+        <View style={S.col}>
+          <Field label="Documento nacional" value={form.nationalId || "—"} />
+        </View>
+        <View style={S.col}>
+          <Field label="Sexo" value={sexLabel(form.sex)} />
+        </View>
+      </View>
+      <View style={S.row2}>
+        <View style={S.col}>
+          <Field
+            label="Fecha de nacimiento"
+            value={form.birthDate ? fmtCalendarDay(form.birthDate) : "—"}
+          />
+        </View>
+        <View style={S.col}>
+          <Field label="Edad" value={form.birthDate ? String(getAge(form.birthDate) ?? "—") : "—"} />
+        </View>
+        <View style={S.col}>
+          <Field label="Lugar de nacimiento" value={form.birthPlace || "—"} />
+        </View>
+      </View>
       <View style={S.divider} />
-    </View>
-  ))
+    </>
+  );
 }
 
-export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User | null }) {
+/** The record as the patient type's template lays it out: active fields only, no removed fields or snapshots. */
+export function MedicalRecordPDF({ form, type, user }: { form: FormValues; type: RecordPatientType; user: User | null }) {
+  const cards = recordLayout(type.template, { familyMembers: type.familyMembersEnabled, subsystemRelations: type.subsystemRelationsEnabled });
   return (
     <Document
       title={`Historia Clínica — ${val(form.name, "Paciente")}`}
       author={AUTHOR}
       creator={AUTHOR}
-      subject="Historia clínica psicológica"
+      subject="Historia clínica"
       language="es"
     >
       <PageLayout user={user}>
-        <View>
-          <View style={S.headerTop}>
-            <Text style={S.headerTitle}>Historia clínica</Text>
-            <Image src={user?.altLogo} style={S.headerLogo} />
-          </View>
-          <View style={S.row2}>
-            <View style={S.col}>
-              <Field label="Nombre completo" value={form.name} />
-            </View>
-            <View style={S.col}>
-              <Field label="Documento nacional" value={form.nationalId || "—"} />
-            </View>
-            <View style={S.col}>
-              <Field label="Sexo" value={sexLabel(form.sex)} />
-            </View>
-          </View>
-          <View style={S.row2}>
-            <View style={S.col}>
-              <Field
-                label="Fecha de nacimiento"
-                value={form.birthDate ? fmtCalendarDay(form.birthDate) : "—"}
-              />
-            </View>
-            <View style={S.col}>
-              <Field label="Edad" value={form.birthDate ? String(getAge(form.birthDate) ?? "—") : "—"} />
-            </View>
-            <View style={S.col}>
-              <Field label="Lugar de nacimiento" value={form.birthPlace || "—"} />
-            </View>
-          </View>
-          <View style={S.divider} />
-          <Field isText label="Motivo de consulta" value={form.consultationReason || "—"} last />
+        <View style={S.headerTop}>
+          <Text style={S.headerTitle}>Historia clínica</Text>
+          <Image src={user?.altLogo} style={S.headerLogo} />
         </View>
-        <View style={S.divider} />
-        <View>
-          <Text style={[ S.fieldTitle, { marginTop: -20 } ]}>Composición familiar</Text>
-          {FamilyMembers(form)}
-          <Field isText label="Observaciones" value={form.familyObservations || "—"} last />
-          <View style={[ S.divider, { marginTop: 20 } ]} />
-        </View>
-        {form.isFamily ? (
-          <View style={{ marginTop: -20 }}>
-            <Text style={S.fieldTitle}>Aspectos específicos de la familia</Text>
-            {FamilySpecificContent(form)}
-            <View style={{ marginTop: 12 }}>
-              <Text style={S.fieldTitle}>Relación entre subsistemas</Text>
-              {SubsystemRelationsTable(form)}
-            </View>
+        {cards.map((card, i) => (
+          <View key={`${i}-${card.title}`}>
+            <Text style={S.fieldTitle}>{card.title}</Text>
+            {card.identity && Identity(form)}
+            {card.familyTable && FamilyMembers(form)}
+            {TemplateValues(card, form)}
+            {card.subsystemTable && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={S.fieldTitle}>Relación entre subsistemas</Text>
+                {SubsystemRelationsTable(form)}
+              </View>
+            )}
           </View>
-        ) : (
-          <View style={{ marginTop: -20 }}>
-            {Antecedents(form)}
-          </View>
-        )}
+        ))}
         <View>
           <Text style={S.fieldTitle}>Notas de evolución</Text>
           {EvolutionNotes(form)}
@@ -396,7 +362,7 @@ export function MedicalRecordPDF({ form, user }: { form: FormValues; user: User 
   );
 }
 
-export async function renderMedicalRecordPdf(user: User | null, form: FormValues): Promise<{ blob: Blob; filename: string }> {
-  const blob = await pdf(<MedicalRecordPDF form={form} user={user} />).toBlob();
+export async function renderMedicalRecordPdf(user: User | null, form: FormValues, type: RecordPatientType): Promise<{ blob: Blob; filename: string }> {
+  const blob = await pdf(<MedicalRecordPDF form={form} type={type} user={user} />).toBlob();
   return { blob, filename: `Historia Clínica — ${form.nationalId || "paciente"}.pdf` };
 }

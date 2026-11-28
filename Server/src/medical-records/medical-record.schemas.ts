@@ -38,31 +38,8 @@ const medicalRecordBaseSchema = z.object({
   birthDate: z.iso.datetime().optional().catch(() => undefined),
   birthPlace: z.string().optional(),
 
-  // Clinical history
-  consultationReason: z.string().optional(),
-  earlyDevelopment: z.string().optional(),
-  schoolAndWork: z.string().optional(),
-  lifestyleHabits: z.string().optional(),
-  traumaticEvents: z.string().optional(),
-  emotionalConsiderations: z.string().optional(),
-  physicalConsiderations: z.string().optional(),
-  mentalHistory: z.string().optional(),
-  objective: z.string().optional(),
-  familyObservations: z.string().optional(),
-
-  // Family fields
-  isFamily: z.boolean().optional(),
-  familyType: z.string().optional(),
-  lifecycle: z.string().optional(),
-  genogram: z.string().optional(),
-  resources: z.string().optional(),
-  difficulties: z.string().optional(),
-  communication: z.string().optional(),
-  rule: z.string().optional(),
-  limits: z.string().optional(),
-  familyContext: z.string().optional(),
-  expectations: z.string().optional(),
-  flexibility: z.string().optional(),
+  // Template answers, keyed by field key: on update only the changed keys
+  data: z.record(z.string(), z.string()).optional(),
 
   // Relations
   familyMembers: z.array(familyMemberSchema).optional(),

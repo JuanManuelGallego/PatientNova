@@ -20,7 +20,6 @@ function baseDto(overrides: Record<string, unknown> = {}) {
   return {
     patientId,
     name: 'Record Name',
-    consultationReason: 'Initial consult',
     familyMembers: [
       { name: 'Mom', relationship: Relationship.MOTHER, relation: 'mother' },
     ],

@@ -63,7 +63,7 @@ const BARE_DATE = /^\d{4}-\d{2}-\d{2}$/;
 function formatString(value: string, timezone: string, field?: string): string {
   const label = field ? VALUE_LABELS[field]?.[value] : undefined;
   if (label) return label;
-  if (field && TEXT_FIELDS.has(field)) return value;
+  if (field && (TEXT_FIELDS.has(field) || field.startsWith(RECORD_DATA_PREFIX))) return value;
   if ((field && CALENDAR_DAY_FIELDS.has(field)) || BARE_DATE.test(value)) {
     return calendarDayOf(value) ? fmtCalendarDay(value) : value;
   }
@@ -166,11 +166,43 @@ const FIELD_LABELS: Record<string, string> = {
   sendMode: "Modo de envío",
   to: "Destinatario",
   body: "Mensaje",
+  patientTypeId: "Tipo de paciente",
 };
 
+// Labels of the medical record keys of the migrated templates: old audit rows name the columns, newer ones `data.<key>`.
+const RECORD_FIELD_LABELS: Record<string, string> = {
+  consultationReason: "Motivo de consulta",
+  earlyDevelopment: "Desarrollo temprano",
+  schoolAndWork: "Escolar y laboral",
+  lifestyleHabits: "Hábitos y estilo de vida",
+  traumaticEvents: "Eventos traumáticos o estresores previos",
+  emotionalConsiderations: "Consideraciones emocionales",
+  physicalConsiderations: "Consideraciones físicas, etiología y de salud",
+  mentalHistory: "Antecedentes mentales",
+  objective: "Objetivo",
+  familyObservations: "Observaciones",
+  familyType: "Tipo de familia",
+  lifecycle: "Ciclo vital",
+  genogram: "Genograma",
+  resources: "Recursos que tienen",
+  difficulties: "Dificultades que tienen",
+  communication: "Comunicación",
+  rule: "Reglas",
+  limits: "Límites",
+  familyContext: "Contexto familiar",
+  expectations: "Expectativas",
+  flexibility: "Flexibilidad al cambio",
+};
+
+const RECORD_DATA_PREFIX = "data.";
+
 function fieldLabel(key: string): string {
+  if (key.startsWith(RECORD_DATA_PREFIX)) {
+    const field = key.slice(RECORD_DATA_PREFIX.length);
+    return `Historia clínica · ${RECORD_FIELD_LABELS[ field ] ?? fieldLabel(field)}`;
+  }
   return (
-    FIELD_LABELS[key] ??
+    FIELD_LABELS[key] ?? RECORD_FIELD_LABELS[key] ??
     key
       .replace(/([A-Z])/g, " $1")
       .replace(/_/g, " ")

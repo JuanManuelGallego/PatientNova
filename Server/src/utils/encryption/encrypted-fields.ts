@@ -33,6 +33,7 @@ export const ENCRYPTED_FIELDS: Record<string, Set<string>> = {
     "flexibility",
     "data",
   ]),
+  MedicalRecordSnapshot: new Set([ "data" ]),
   FamilyMember: new Set([ "name", "relation" ]),
   EvolutionNote: new Set([ "text" ]),
   Patient: new Set([ "name", "lastName", "email", "whatsappNumber", "smsNumber", "notes" ]),

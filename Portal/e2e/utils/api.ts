@@ -57,6 +57,7 @@ export interface ApiClient {
   createPatient(data: Record<string, unknown>): Promise<ApiResponse>;
   deletePatient(id: string): Promise<ApiResponse>;
   defaultPatientType(): Promise<{ id: string; name: string; isDefault: boolean }>;
+  patientTypeNamed(name: string): Promise<{ id: string; name: string; isDefault: boolean }>;
   createLocation(data: Record<string, unknown>): Promise<ApiResponse>;
   deleteLocation(id: string): Promise<ApiResponse>;
   createAppointmentType(data: Record<string, unknown>): Promise<ApiResponse>;
@@ -170,6 +171,13 @@ export function createApiClient(page: Page): ApiClient {
     return type;
   }
 
+  async function patientTypeNamed(name: string) {
+    const types = await request<{ id: string; name: string; isDefault: boolean }[]>('GET', '/patient-types');
+    const type = types.data?.find((t) => t.name === name);
+    if (!type) throw new Error(`The provider has no patient type named ${name}`);
+    return type;
+  }
+
   return {
     // Patients
     async createPatient(data: Record<string, unknown>) {
@@ -178,6 +186,7 @@ export function createApiClient(page: Page): ApiClient {
       return request('POST', '/patients', { ...data, patientTypeId });
     },
     defaultPatientType,
+    patientTypeNamed,
     deletePatient(id: string) {
       return request('DELETE', `/patients/${id}`);
     },

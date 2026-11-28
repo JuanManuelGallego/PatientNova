@@ -1,19 +1,21 @@
-import { sectionGridStyle } from "@/src/config/layout";
 import { FormValues, SEX_CFG } from "@/src/types/MedicalRecord";
 import { DateTimePicker } from "../DateTimePicker";
 import { CustomSelect } from "../CustomSelect";
 import { getAge } from "@/src/utils/TimeUtils";
 import { useDisplayTimezone } from "@/src/hooks/useDisplayTimezone";
 
+export type IdentityKey = "name" | "nationalId" | "sex" | "birthDate" | "birthPlace";
+
 type GeneralDataSectionProps = {
-  form: FormValues;
-  onChange: (key: keyof FormValues, value: string) => void;
+  form: Pick<FormValues, IdentityKey>;
+  onChange: (key: IdentityKey, value: string) => void;
 };
 
+/** The identity fields every record keeps, whatever its patient type. */
 export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) {
   const timezone = useDisplayTimezone();
   return (
-    <div style={sectionGridStyle}>
+    <>
       <label className="form-label">
         Nombre completo
         <input
@@ -78,16 +80,6 @@ export function GeneralDataSection({ form, onChange }: GeneralDataSectionProps) 
           data-testid="general-data-birth-place-input"
         />
       </label>
-      <label className="form-label" style={{ gridColumn: "1 / -1" }}>
-        Motivo de consulta
-        <textarea
-          className="form-input form-input--textarea"
-          value={form.consultationReason}
-          onChange={(e) => onChange("consultationReason", e.target.value)}
-          placeholder="Escriba el motivo principal de consulta"
-          data-testid="general-data-consultation-reason-input"
-        />
-      </label>
-    </div>
+    </>
   );
 }

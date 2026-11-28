@@ -598,6 +598,7 @@ model MedicalRecord {
   evolutionNotes     EvolutionNote[]
   documents          MedicalDocument[]
   subsystemRelations SubsystemRelation[]
+  snapshots          MedicalRecordSnapshot[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -614,6 +615,22 @@ model MedicalRecord {
 }
 
 // ─── Subsystem relations ──────────────────────────────────────────────────────
+
+// The payload and template of a record when its patient changed type: read-only, encrypted `data`.
+// `patientTypeId` has no foreign key: the old type may be deleted once no patient uses it.
+model MedicalRecordSnapshot {
+  id              String        @id @default(uuid()) @db.Uuid
+  medicalRecordId String        @db.Uuid
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  patientTypeId   String        @db.Uuid
+  patientTypeName String        @db.VarChar(80)
+  template        Json
+  data            String        @db.Text
+  createdAt       DateTime      @default(now())
+
+  @@index([medicalRecordId])
+  @@map("medical_record_snapshots")
+}
 
 model SubsystemRelation {
   id String @id @default(uuid()) @db.Uuid

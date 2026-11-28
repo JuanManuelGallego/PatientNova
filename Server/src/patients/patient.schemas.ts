@@ -29,6 +29,8 @@ export const updatePatientSchema = z.object({
   notes: z.string().max(1000).nullish(),
   status: z.enum(PatientStatus).optional(),
   appointmentTypeId: z.uuid('Invalid appointmentTypeId').nullish(),
+  /** Changing it archives the medical record's payload as a snapshot (`archiveRecordForTypeChange`). */
+  patientTypeId: z.uuid('Invalid patientTypeId').optional(),
 }).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'At least one field must be provided for update' }

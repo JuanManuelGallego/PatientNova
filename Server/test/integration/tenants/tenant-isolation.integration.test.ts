@@ -340,7 +340,6 @@ describe('tenant isolation: MedicalRecord', () => {
       {
         patientId: patientA.id,
         name: 'Clinical Record',
-        consultationReason: 'Initial evaluation',
         familyMembers: [{ name: 'Mother', relationship: 'MOTHER' as any, relation: 'mother' }],
         evolutionNotes: [{ date: new Date().toISOString(), text: 'Session 1' }],
         subsystemRelations: [

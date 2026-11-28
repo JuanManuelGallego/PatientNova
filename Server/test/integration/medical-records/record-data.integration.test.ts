@@ -21,12 +21,17 @@ const templateOf = (keys: string[], removed: string[] = []): RecordTemplate => (
 });
 
 let recordId: string;
+let patientTypeId: string;
+
+const useTemplate = (template: RecordTemplate) =>
+  prisma.patientType.update({ where: { id: patientTypeId }, data: { template: template as never } });
 
 beforeEach(async () => {
   const user = await createTestUser();
   const patient = await createTestPatient(user.id);
+  patientTypeId = patient.patientTypeId;
   recordId = (await prisma.medicalRecord.create({
-    data: { patientId: patient.id, data: JSON.stringify({ consultationReason: 'a', legacy: 'z' }) },
+    data: { patientId: patient.id, objective: 'col', data: JSON.stringify({ consultationReason: 'a', legacy: 'z' }) },
   })).id;
 });
 
@@ -34,9 +39,9 @@ const stored = async () => parseRecordData((await prisma.medicalRecord.findUniqu
 
 describe('mergeRecordData', () => {
   it('merges changed keys into the encrypted payload and keeps the others', async () => {
-    const merged = await prisma.$transaction((tx) =>
-      mergeRecordData(tx, recordId, { objective: 'b', consultationReason: '' }, templateOf([ 'consultationReason', 'objective' ])));
-    expect(merged).toEqual({ legacy: 'z', objective: 'b' });
+    await useTemplate(templateOf([ 'consultationReason', 'objective' ]));
+    const merged = await prisma.$transaction((tx) => mergeRecordData(tx, recordId, { objective: 'b', consultationReason: '' }));
+    expect(merged).toEqual({ before: { consultationReason: 'a', legacy: 'z' }, after: { legacy: 'z', objective: 'b' } });
     expect(await stored()).toEqual({ legacy: 'z', objective: 'b' });
 
     const [ row ] = await prisma.$queryRaw<{ data: string }[]>`SELECT "data" FROM "medical_records" WHERE "id" = ${recordId}::uuid`;
@@ -45,15 +50,21 @@ describe('mergeRecordData', () => {
 
   it('concurrent saves of different keys both survive', async () => {
     const keys = Array.from({ length: 12 }, (_, i) => `k${i}`);
-    const template = templateOf(keys);
-    await Promise.all(keys.map((k) => prisma.$transaction((tx) => mergeRecordData(tx, recordId, { [ k ]: k }, template))));
+    await useTemplate(templateOf(keys));
+    await Promise.all(keys.map((k) => prisma.$transaction((tx) => mergeRecordData(tx, recordId, { [ k ]: k }))));
     expect(await stored()).toEqual({ consultationReason: 'a', legacy: 'z', ...Object.fromEntries(keys.map((k) => [ k, k ])) });
   });
 
   it('refuses an invalid change before writing anything', async () => {
-    await expect(prisma.$transaction((tx) =>
-      mergeRecordData(tx, recordId, { objective: 'b', viejo: 'x' }, templateOf([ 'objective' ], [ 'viejo' ]))))
+    await useTemplate(templateOf([ 'objective' ], [ 'viejo' ]));
+    await expect(prisma.$transaction((tx) => mergeRecordData(tx, recordId, { objective: 'b', viejo: 'x' })))
       .rejects.toThrow(RecordDataInvalidError);
     expect(await stored()).toEqual({ consultationReason: 'a', legacy: 'z' });
+  });
+
+  it('never touches the clinical columns', async () => {
+    await useTemplate(templateOf([ 'objective' ]));
+    await prisma.$transaction((tx) => mergeRecordData(tx, recordId, { objective: 'x' }));
+    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: recordId } })).objective).toBe('col');
   });
 });

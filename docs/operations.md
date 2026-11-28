@@ -55,7 +55,7 @@ Design and guarantees: `docs/compliance-patient-data.md` section 3.
    Until it finishes, rows it has not reached are not found by search or by email.
 4. Verify: `SELECT count(*) FROM patients WHERE "piiVersion" IS NULL;` must return 0.
 
-### Record payload copy (release A of #145)
+### Record payload copy (release A of #145; command removed in release B)
 Migration `20261127000000_record_templates` adds `medical_records.data`, the encrypted template payload,
 and fills the templates of the migrated "Individual" and "Familia" types. From that deploy on, every record
 write keeps the payload in step with the clinical columns, which the app still reads. Records nobody edits
@@ -83,6 +83,17 @@ need the copy. The migration only adds a nullable column, so rolling back the co
    values. Rerun the copy until verify exits 0 with `missing 0, mismatched 0, failed 0`.
 
 #146 switches the app to the payload. Do not deploy it before verify reports zero in production.
+
+### Records read from the payload (release B of #146)
+Migration `20261128000000_record_snapshots` adds `medical_record_snapshots` (the encrypted payload and template of
+a record archived when its patient changes type; erased with the record, covered by `pii:reencrypt`) and adds the
+clinical keys each migrated template doesn't show as removed fields, so values the copy put there show under
+"Campos anteriores". Only types still on the release A template change.
+
+From this deploy on the app reads and writes only `data`: the clinical columns stay at their release A values and are
+no longer written or served (the clinic export leaves them out too). Release B removes the `records:copy-data`
+command: run after B, the copy would put the frozen column values back over newer payloads. Release C drops the
+columns and `isFamily`: take a backup right before deploying it.
 
 ### Forced re-login
 Token audience/issuer enforcement (`src/auth/tokens.ts`) invalidates every existing provider

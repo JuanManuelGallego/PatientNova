@@ -43,6 +43,9 @@ async function seed() {
   });
   const record = await prisma.medicalRecord.create({ data: { patientId: patient.id, name: 'Anabel Quintero' } as never });
   await prisma.evolutionNote.create({ data: { medicalRecordId: record.id, text: 'Nota', date: new Date() } as never });
+  await prisma.medicalRecordSnapshot.create({
+    data: { medicalRecordId: record.id, patientTypeId: patient.patientTypeId, patientTypeName: 'Individual', template: { sections: [] }, data: '{"objective":"Anabel"}' },
+  });
   return { user, patient, other, appointment, reminder, consent, record, email };
 }
 
@@ -72,6 +75,7 @@ describe('erasePatient', () => {
     expect(await prisma.patientConsent.count({ where: { id: consent.id } })).toBe(0);
     expect(await prisma.medicalRecord.count({ where: { id: record.id } })).toBe(0);
     expect(await prisma.evolutionNote.count({ where: { medicalRecordId: record.id } })).toBe(0);
+    expect(await prisma.medicalRecordSnapshot.count({ where: { medicalRecordId: record.id } })).toBe(0);
   });
 
   it('removes the booking requests sent from the patient\'s contact', async () => {

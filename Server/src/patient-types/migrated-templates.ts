@@ -45,3 +45,24 @@ export const FAMILY_TEMPLATE: RecordTemplate = {
     },
   ],
 };
+
+/** When release B added the migrated keys a template doesn't show, so their copied values keep a label. */
+export const LEGACY_REMOVED_AT = '2026-11-28T00:00:00.000Z';
+
+const removed = (f: TemplateField): TemplateField => ({ ...f, removedAt: LEGACY_REMOVED_AT });
+const section = (template: RecordTemplate, title: string) => template.sections.find((s) => s.title === title)!;
+
+export const INDIVIDUAL_TEMPLATE_WITH_LEGACY: RecordTemplate = {
+  sections: [
+    ...INDIVIDUAL_TEMPLATE.sections,
+    { title: 'Aspectos específicos de la familia', fields: section(FAMILY_TEMPLATE, 'Aspectos específicos de la familia').fields.map(removed) },
+  ],
+};
+
+export const FAMILY_TEMPLATE_WITH_LEGACY: RecordTemplate = {
+  sections: [
+    ...FAMILY_TEMPLATE.sections,
+    { title: 'Composición familiar', fields: section(INDIVIDUAL_TEMPLATE, 'Composición familiar').fields.map(removed) },
+    { title: 'Antecedentes', fields: section(INDIVIDUAL_TEMPLATE, 'Antecedentes').fields.map(removed) },
+  ],
+};

@@ -130,6 +130,12 @@ async function seedEveryModel() {
   });
   track(expected, 'EvolutionNote', note.id, notePii);
 
+  const snapshotPii = { data: '{"objective":"historia archivada"}' };
+  const snapshot = await prisma.medicalRecordSnapshot.create({
+    data: { ...snapshotPii, medicalRecordId: record.id, patientTypeId: patient.patientTypeId, patientTypeName: 'Individual', template: { sections: [] } },
+  });
+  track(expected, 'MedicalRecordSnapshot', snapshot.id, snapshotPii);
+
   const { start, end } = appointmentTimeRange(24 * 60);
   const appointmentPii = { notes: 'nota de cita' };
   const appointment = await prisma.appointment.create({
