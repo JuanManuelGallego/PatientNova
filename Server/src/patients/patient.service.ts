@@ -18,28 +18,36 @@ type PatientWithRelations = Patient & {
   reminders: { id: string }[];
 };
 
-// A type change has its own audit row (`changePatientType`).
+// The type change goes into the same row, with the snapshot id (`changePatientType`).
 const PATIENT_DIFF_FIELDS = [ ...schemaKeys(updatePatientSchema).filter((k) => k !== 'patientTypeId'), 'whatsappUnverified' ];
 
-async function changePatientType(tx: TransactionClient, patient: Patient, requestedTypeId: string, userId: string): Promise<void> {
+interface TypeChange {
+  before: { patientTypeId: string };
+  after: { patientTypeId: string; snapshotId: string | null };
+  description: string;
+}
+
+async function changePatientType(tx: TransactionClient, patient: Patient, requestedTypeId: string, userId: string): Promise<TypeChange> {
   const nextTypeId = await resolvePatientTypeId(tx, userId, requestedTypeId);
   const [ oldType, nextType ] = await Promise.all([
     tx.patientType.findUniqueOrThrow({ where: { id: patient.patientTypeId }, select: { id: true, name: true, template: true } }),
     tx.patientType.findUniqueOrThrow({ where: { id: nextTypeId }, select: { name: true } }),
   ]);
   const snapshotId = await archiveRecordForTypeChange(tx, patient.id, oldType);
-  await logAudit({
-    entityType: EntityType.PATIENT,
-    entityId: patient.id,
-    userId,
-    actionType: ActionType.UPDATE,
+  return {
+    before: { patientTypeId: patient.patientTypeId },
+    after: { patientTypeId: nextTypeId, snapshotId },
     description: `Tipo de paciente de ${patient.name} ${patient.lastName} cambiado: ${oldType.name} → ${nextType.name}`,
-    affectedFields: [ 'patientTypeId' ],
-    fieldsBefore: { patientTypeId: patient.patientTypeId },
-    fieldsAfter: { patientTypeId: nextTypeId, snapshotId },
-    tx,
-    required: true,
-  });
+  };
+}
+
+function withTypeChange(diff: ReturnType<typeof computeDiff>, change: TypeChange | null): ReturnType<typeof computeDiff> {
+  if (!change) return diff;
+  return {
+    affectedFields: [ ...diff.affectedFields, 'patientTypeId' ],
+    fieldsBefore: { ...diff.fieldsBefore, ...change.before },
+    fieldsAfter: { ...diff.fieldsAfter, ...change.after },
+  };
 }
 
 function endorsesWhatsapp(existing: Patient, dto: UpdatePatientDto): boolean {
@@ -85,9 +93,9 @@ export async function updatePatientWithin(
   // A type change reads the current type under the lock, so a simultaneous change sees this one committed.
   if (dto.patientTypeId !== undefined) await lockPatientType(tx, id);
   const existingPatient = await patientRepository.findById(id, userId, tx);
-  if (dto.patientTypeId !== undefined && dto.patientTypeId !== existingPatient.patientTypeId) {
-    await changePatientType(tx, existingPatient, dto.patientTypeId, userId);
-  }
+  const typeChange = dto.patientTypeId !== undefined && dto.patientTypeId !== existingPatient.patientTypeId
+    ? await changePatientType(tx, existingPatient, dto.patientTypeId, userId)
+    : null;
   const updatedPatient = await patientRepository.update(
     id,
     dto,
@@ -101,8 +109,9 @@ export async function updatePatientWithin(
     entityId: id,
     userId,
     actionType: ActionType.UPDATE,
-    description: opts.description ?? `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`,
-    ...diff,
+    description: opts.description
+      ?? (typeChange && diff.affectedFields.length === 0 ? typeChange.description : `Paciente actualizado ${updatedPatient.name} ${updatedPatient.lastName}`),
+    ...withTypeChange(diff, typeChange),
     tx,
     required: true,
   });

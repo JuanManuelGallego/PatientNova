@@ -69,6 +69,22 @@ describe('changing a patient\'s type', () => {
     expect(JSON.stringify(rows[ 0 ])).not.toContain('valor-secreto');
   });
 
+  it('a type change saved from the patient form writes one audit row, and other edits share it', async () => {
+    await createRecord({ consultationReason: 'a' });
+    const patient = await prisma.patient.findUniqueOrThrow({ where: { id: patientId } });
+    const form = { name: patient.name, lastName: patient.lastName, reminderChannel: patient.reminderChannel, status: patient.status };
+
+    await invokeRoute(patientRouter, 'patch', `/${patientId}`, req({ params: { id: patientId }, body: { ...form, patientTypeId: familiaId } }));
+    const updates = () => prisma.auditLog.findMany({ where: { entityType: EntityType.PATIENT, entityId: patientId, actionType: 'UPDATE' }, orderBy: { eventTimeUtc: 'asc' } });
+    expect(await updates()).toHaveLength(1);
+
+    await invokeRoute(patientRouter, 'patch', `/${patientId}`, req({ params: { id: patientId }, body: { ...form, name: 'Otra', patientTypeId: individualId } }));
+    const rows = await updates();
+    expect(rows).toHaveLength(2);
+    expect([ ...rows[ 1 ]!.affectedFields ].sort()).toEqual([ 'name', 'patientTypeId' ]);
+    expect(rows[ 1 ]!.fieldsAfter).toEqual({ name: 'Otra', patientTypeId: individualId, snapshotId: null });
+  });
+
   it('a patient with no record, or an empty payload, changes type with an audit row and no snapshot', async () => {
     expect((await changeType(familiaId)).statusCode).toBe(200);
     await createRecord({});
